@@ -5,7 +5,7 @@ import { Direction, Topology, TopologyName, topologyName } from './topologyFor';
 //
 // Civ2's orders (M2b) take Civ2's keys, after what those keys already did: O transforms, F builds a fortress and E an
 //  airbase (a unit that builds them neither fortifies nor explores), P paradrops (nothing that cleans up pollution
-//  can) and L airlifts. Paradrop and Airlift then ask where (`distantOrders`).
+//  can) and L airlifts. I builds Farmland (M2c) on a square already irrigated, where irrigating is no longer offered. Paradrop and Airlift then ask where (`distantOrders`).
 export const keyToActionsMap: { [key: string]: string[] } = {
   ' ': ['NoOrders'],
   a: ['Automate'],
@@ -14,7 +14,13 @@ export const keyToActionsMap: { [key: string]: string[] } = {
   e: ['Explore', 'BuildAirbase'],
   f: ['Fortify', 'BuildFortress'],
   h: ['SetHomeCity'],
-  i: ['BuildIrrigation', 'ClearForest', 'ClearSwamp', 'ClearJungle'],
+  i: [
+    'BuildIrrigation',
+    'BuildFarmland',
+    'ClearForest',
+    'ClearSwamp',
+    'ClearJungle',
+  ],
   l: ['Airlift'],
   m: ['BuildMine', 'PlantForest'],
   o: ['TransformTerrain'],

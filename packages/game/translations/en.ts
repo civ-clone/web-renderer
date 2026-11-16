@@ -37,6 +37,8 @@ i18next.addResources('en', 'default', {
   'WorkerFailure.not-answering':
     'The game has stopped answering. It may be busy and carry on; if nothing happens, reload the page.',
   'WorkerFailure.title': 'Something went wrong',
+  'ChoiceWindow.ChooseFromList.capture-city.palace-escape.primary':
+    '{{- choice}}',
   'ChoiceWindow.ChooseFromList.capture-city.steal-advance.primary':
     'Acquire {{- choice}}',
   'ChoiceWindow.ChooseFromList.choose-civilization.primary':

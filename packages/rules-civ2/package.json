@@ -11,7 +11,7 @@
     ".": "./index.ts"
   },
   "peerDependencies": {
-    "@civ-clone/base-city-happiness": "^0.1.1",
+    "@civ-clone/base-city-happiness": "^0.1.2",
     "@civ-clone/base-diplomacy": "^0.1.2",
     "@civ-clone/base-player-action-choose-government": "^0.1.0",
     "@civ-clone/base-player-action-revolution": "^0.1.1",
@@ -30,7 +30,7 @@
     "@civ-clone/civ2-unit": "*",
     "@civ-clone/civ2-wonder": "*",
     "@civ-clone/civ2-world": "*",
-    "@civ-clone/core-city": "^0.1.24",
+    "@civ-clone/core-city": "^0.1.25",
     "@civ-clone/core-data-object": "^0.1.19",
     "@civ-clone/core-engine": "^0.1.6",
     "@civ-clone/core-government": "^0.1.6",

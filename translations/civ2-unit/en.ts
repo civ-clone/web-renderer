@@ -38,6 +38,7 @@ i18next.addResources('en', 'unit', {
 
   'Action.Airlift.name': 'Airlift',
   'Action.BuildAirbase.name': 'Build airbase',
+  'Action.BuildFarmland.name': 'Build farmland',
   'Action.BuildFortress.name': 'Build fortress',
   'Action.Paradrop.name': 'Paradrop',
   'Action.SabotageUnit.name': 'Sabotage unit',
@@ -45,14 +46,17 @@ i18next.addResources('en', 'unit', {
 
   'Action.Airlift.icon': 'AL',
   'Action.BuildAirbase.icon': 'E',
+  'Action.BuildFarmland.icon': 'I',
   'Action.Paradrop.icon': 'PD',
   'Action.TransformTerrain.icon': 'O',
 
   'Busy.BuildingAirbase.name': 'Building airbase',
+  'Busy.BuildingFarmland.name': 'Building farmland',
   'Busy.BuildingFortress.name': 'Building fortress',
   'Busy.TransformingTerrain.name': 'Transforming terrain',
 
   'Busy.BuildingAirbase.icon': 'E',
+  'Busy.BuildingFarmland.icon': 'I',
   'Busy.BuildingFortress.icon': 'F',
   'Busy.TransformingTerrain.icon': 'O',
 });

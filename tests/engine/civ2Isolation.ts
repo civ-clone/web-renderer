@@ -204,6 +204,7 @@ const EXPECTED: Omit<Inventory, 'rules' | 'civ1Rules'> = {
     'Battleship',
     'Bomber',
     'Cannon',
+    'Capitalization',
     'Caravan',
     'Carrier',
     'Catapult',

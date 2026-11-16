@@ -9,6 +9,13 @@ i18next.addResources('en', 'default', {
   'ChooseFromList.capture-city.steal-advance.choice':
     '$t({{value._}}.name, { "defaultValue": "{{value._}}", "ns": "science" })',
   'ChooseFromList.capture-city.steal-advance.title': 'Acquire an advance',
+  // Civ2's Palace escape (M2c): our capital was taken, and the Palace can be moved to another city at a price.
+  'ChooseFromList.capture-city.palace-escape.body':
+    'Our capital has been captured! Move the Palace to {{- data.city, cityName}} for {{data.cost, number}} gold?',
+  'ChooseFromList.capture-city.palace-escape.choice.false': 'No, let it go',
+  'ChooseFromList.capture-city.palace-escape.choice.true':
+    'Yes, move the Palace',
+  'ChooseFromList.capture-city.palace-escape.title': 'Capital captured',
   'ChooseFromList.choose-civilization.body': '',
   'ChooseFromList.choose-civilization.choice':
     '$t(Generic.civilization-name.name, { "civilization": "{{value._}}", "ns": "default" })',
