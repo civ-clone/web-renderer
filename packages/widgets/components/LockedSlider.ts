@@ -55,6 +55,7 @@ export class LockedSlider extends Element {
       maximum.className = 'locked-slider-max';
       maximum.textContent = t('LockedSlider.max', { max: this.#max });
       this.#number.setAttribute('max', String(this.#max));
+      this.#range.setAttribute('aria-valuemax', String(this.#max));
       this.element().querySelector('legend')!.append(' ', maximum);
     }
 
@@ -103,6 +104,12 @@ export class LockedSlider extends Element {
 
   max(): number {
     return this.#max;
+  }
+
+  /** Takes the lock off, as when the rates can only come to 100 by moving it. */
+  unlock(): void {
+    this.#lock.checked = false;
+    this.lock();
   }
 
   set(value: string): void {

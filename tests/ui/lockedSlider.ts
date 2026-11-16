@@ -179,6 +179,40 @@ const tradeRates = (...values: number[]) => {
 }
 
 {
+  // Two locked, and the third at its maximum: the rates (which start short of 100 here) can only come to 100 by moving
+  //  the locked ones, which are unlocked; the range says its maximum.
+  const sliders = [20, 0, 20].map(
+    (value, i) => new LockedSlider(`rate${i}`, value, `Rate ${i}`, 60)
+  );
+
+  new LockedSliderGroup(...sliders);
+
+  [0, 1].forEach((index) => {
+    const lock = sliders[index]!
+      .element()
+      .querySelector('input[type="checkbox"]') as HTMLInputElement;
+
+    lock.checked = true;
+    lock.dispatchEvent(new Event('input'));
+  });
+
+  type(sliders[2]!, '60');
+
+  expect(
+    'a locked slider moved to make 100 is unlocked',
+    [
+      values(sliders),
+      sliders.map((slider) => slider.isLocked() === true),
+      sliders[2]!
+        .element()
+        .querySelector('input[type="range"]')
+        ?.getAttribute('aria-valuemax'),
+    ],
+    [[30, 10, 60], [false, false, false], '60']
+  );
+}
+
+{
   const slider = new LockedSlider('rate', 50, 'Rate');
 
   expect(

@@ -25,6 +25,9 @@ import Timeout from '../Error/Timeout';
 import { awaitTimeout } from './refs';
 import { describeError } from '../answer';
 import { currentWorkerRules } from '../workerRules';
+import { Contact } from '@civ-clone/library-diplomacy/Interactions';
+import { InteractionRegistry } from '@civ-clone/core-diplomacy/InteractionRegistry';
+import Turn from '@civ-clone/core-turn-based-game/Turn';
 
 export type TalksContext = Pick<
   ClientContext,
@@ -40,8 +43,8 @@ export type TalksContext = Pick<
   | 'rules'
   | 'turn'
 > &
-  // The units next to one of ours that has moved.
-  Registries<{ units: 'getByTile' }>;
+  // The units next to one of ours that has moved, and the players still in the game, for an audience asked for.
+  Registries<{ units: 'getByTile'; players: 'entries' }>;
 
 // How many rounds in a row the talks may go without a step before they are ended (see `#negotiate`).
 export const maxStalledRounds = 3;
@@ -60,6 +63,9 @@ export class Talks {
   //  `WorkerRules.audienceEvents`): each heard once, at the start of the player's turn, after the players met on the
   //  way.
   #audiences: Set<Player> = new Set();
+  // The players whose talks the player has opened and that are queued or under way, so a second request for the same
+  //  talks is ignored.
+  #opened: Set<Player> = new Set();
 
   constructor(context: TalksContext) {
     this.#context = context;
@@ -113,15 +119,43 @@ export class Talks {
 
   // Talks the player opens with `other`, from the Foreign Advisor (M2d): led by the player, who proposes, and the other
   //  player answers. Waited for as a Meet with Leader's are.
+  //  Talks already queued or open with them aren't opened again, and the rules are asked again as they start: what
+  //  came before in the chain may have changed whether they may be.
   openTalks(other: Player): void {
+    if (this.#opened.has(other)) {
+      return;
+    }
+
+    this.#opened.add(other);
+
     this.#talks = this.#talks
-      .then(() => this.handleNegotiation(other, true))
+      .then(() =>
+        this.#mayOpenTalks(other)
+          ? this.handleNegotiation(other, true)
+          : undefined
+      )
       .then(
         () => {},
         (error) => console.error(error)
-      );
+      )
+      .then(() => {
+        this.#opened.delete(other);
+      });
 
     this.#countUntilSettled();
+  }
+
+  #mayOpenTalks(other: Player): boolean {
+    const mayOpenTalks = currentWorkerRules()?.mayOpenTalks;
+
+    return (
+      mayOpenTalks !== undefined &&
+      mayOpenTalks(this.player(), other, {
+        interactionRegistry: this.#context.interactions as InteractionRegistry,
+        ruleRegistry: this.#context.rules,
+        turn: this.#context.turn as Turn,
+      })
+    );
   }
 
   // A computer player asks for an audience (M2d): heard at the next hand-over, once however often it asks.
@@ -129,23 +163,40 @@ export class Talks {
     this.#audiences.add(computer);
   }
 
+  // Forgets the audiences asked for: automation's computer player plays the turn, and does its own talking.
+  clearAudiences(): void {
+    this.#audiences.clear();
+  }
+
   handOver(): void {
     // Anyone met by a GoTo carried on at the start of the turn, then the audiences computer players asked for.
     //  With none asked for, no more than before, so the hand-over's talks settle as soon as they always have (#503).
+    //  A computer player just talked to on the way isn't heard again.
     this.#talks = this.#talks
-      .then(() =>
-        this.#audiences.size === 0
-          ? this.talkToPlayersMet()
-          : this.talkToPlayersMet().then(() => this.holdAudiences())
+      .then(
+        (): Promise<any> =>
+          this.#audiences.size === 0
+            ? this.talkToPlayersMet()
+            : this.talkToPlayersMet().then((talkedTo) =>
+                this.holdAudiences(talkedTo)
+              )
       )
       .catch((error) => console.error(error));
 
     this.#countUntilSettled();
   }
 
-  // Each audience asked for since the last hand-over, a computer player's talks as it leads them.
-  async holdAudiences(): Promise<void> {
-    const computers = Array.from(this.#audiences);
+  // Each audience asked for since the last hand-over, a computer player's talks as it leads them: not with one talked to
+  //  already (`talkedTo`), one no longer in the game, or one no longer in contact.
+  async holdAudiences(talkedTo: Player[] = []): Promise<void> {
+    const computers = Array.from(this.#audiences).filter(
+      (computer) =>
+        !talkedTo.includes(computer) &&
+        this.#context.players.entries().includes(computer) &&
+        this.#context.interactions
+          .getByPlayers(computer, this.player())
+          .some((interaction) => interaction instanceof Contact)
+    );
 
     this.#audiences.clear();
 
@@ -171,32 +222,35 @@ export class Talks {
   // TODO: This is duplicated between here and SimpleAIClient, this should be re-usable.
   // Offers talks with each player a unit of ours has moved next to since the last time (`#metOnTheWay`), if they may
   //  talk now (`MayNegotiate`).
-  async talkToPlayersMet(): Promise<void> {
+  //  Answers the players talked to.
+  async talkToPlayersMet(): Promise<Player[]> {
     // TODO: This could be a `Rule`.
     const surroundingPlayers = Array.from(this.#metOnTheWay);
 
     this.#metOnTheWay.clear();
 
     if (surroundingPlayers.length === 0) {
-      return;
+      return [];
     }
 
-    await surroundingPlayers
-      // How often players talk is the ruleset's to say (`MayNegotiate`).
-      .filter((player) =>
-        mayNegotiate(
-          player,
-          this.player(),
-          this.#context.rules,
-          this.#context.interactions,
-          this.#context.turn
-        )
+    // How often players talk is the ruleset's to say (`MayNegotiate`).
+    const talkedTo = surroundingPlayers.filter((player) =>
+      mayNegotiate(
+        player,
+        this.player(),
+        this.#context.rules,
+        this.#context.interactions,
+        this.#context.turn
       )
-      .reduce(
-        (promise, player): Promise<any> =>
-          promise.then(() => this.handleNegotiation(player)),
-        Promise.resolve()
-      );
+    );
+
+    await talkedTo.reduce(
+      (promise, player): Promise<any> =>
+        promise.then(() => this.handleNegotiation(player)),
+      Promise.resolve()
+    );
+
+    return talkedTo;
   }
 
   // Gold given or taken in the talks moves without an event to say so (`civ1-diplomacy`'s `give`), so the player's
@@ -367,7 +421,12 @@ export const registerTalkEvents = (
   //  that mean so are the rule set's (`WorkerRules.audienceEvents`), each with the computer player and the player.
   (currentWorkerRules()?.audienceEvents ?? []).forEach((event) =>
     on(event, (computer: Player, person: Player) => {
-      if (!ctx.view.owns(person) || ctx.view.owns(computer)) {
+      // Automation's own client does the talking for the turns it plays.
+      if (
+        !ctx.view.owns(person) ||
+        ctx.view.owns(computer) ||
+        ctx.automation.enabled
+      ) {
         return;
       }
 

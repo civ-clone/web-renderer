@@ -24,6 +24,11 @@ import notifications from '@civ-clone/ui-rules-civ2/notifications';
 import { reconstituteData } from '@civ-clone/core-data-client/reconstituteData';
 import registerNotifications from '@civ-clone/ui-worker-client/Client/notifications/registerNotifications';
 import reputationNotices from '@civ-clone/ui-rules-civ2/Rules/reputationNotices';
+import warNotices from '@civ-clone/ui-rules-civ2/Rules/warNotices';
+import DeclaredWar from '@civ-clone/base-diplomacy/Rules/DeclaredWar';
+import { War } from '@civ-clone/library-diplomacy/Declarations';
+import BuildingComplete from '@civ-clone/core-city-build/Rules/BulidingComplete';
+import { ManhattanProject } from '@civ-clone/civ2-wonder/Wonders';
 import { setWorkerRules } from '@civ-clone/ui-worker-client/workerRules';
 import { stubView } from './lib/view';
 import UnknownPlayer from '@civ-clone/ui-worker-client/UnknownObjects/Player';
@@ -189,7 +194,8 @@ const run = async (): Promise<void> => {
     [null, null]
   );
 
-  // The Wonders: civ2-wonder changes reputations with a reason, which the rules turn into the events told.
+  // The Wonders: the Eiffel Tower's change of reputation, and the Manhattan Project's completion (whether or not anyone's
+  //  reputation moves), become the events told.
   const emitted: [string, Player][] = [],
     reputations = new Reputation(interactionRegistry, ruleRegistry);
 
@@ -202,9 +208,19 @@ const run = async (): Promise<void> => {
   reputations.set(us, 4, 'eiffel-tower');
   reputations.set(greeks, 2, 'manhattan-project');
   reputations.set(us, 3, 'war');
+  ruleRegistry.process(
+    BuildingComplete,
+    { city: () => ({ player: () => greeks }) } as any,
+    Object.create(ManhattanProject.prototype)
+  );
+  ruleRegistry.process(
+    BuildingComplete,
+    { city: () => ({ player: () => greeks }) } as any,
+    {} as any
+  );
 
   expect(
-    'the Eiffel Tower’s and the Manhattan Project’s changes become events; others don’t',
+    'the Eiffel Tower’s change and the Manhattan Project’s completion become events; nothing else does',
     emitted.map(([event, player]) => [event, player === us]),
     [
       ['civ2:reputation-restored', true],
@@ -212,7 +228,7 @@ const run = async (): Promise<void> => {
     ]
   );
   expect(
-    'and ours are told',
+    'the Eiffel Tower’s told to its owner, the Manhattan Project’s to everyone',
     [
       told('civ2:reputation-restored', us),
       told('civ2:reputations-halved', us),
@@ -221,9 +237,27 @@ const run = async (): Promise<void> => {
     [
       'The Eiffel Tower: The Eiffel Tower wins the world over: our past broken promises count for less.',
       'The Manhattan Project: In the shadow of the Manhattan Project, old grievances fade: every civilization’s broken promises count for less.',
-      null,
+      'The Manhattan Project: In the shadow of the Manhattan Project, old grievances fade: every civilization’s broken promises count for less.',
     ]
   );
+
+  // A war declared is told only while a war is in force after the rules: a war on an ally that they turn into an
+  //  alliance cancelled isn't.
+  const wars: unknown[] = [],
+    warRules = new RuleRegistry(),
+    warInteractions = new InteractionRegistry();
+
+  warRules.register(
+    warNotices(
+      { emit: (...args: any[]) => wars.push(args[3]) } as any,
+      warInteractions
+    )
+  );
+  warRules.process(DeclaredWar, greeks, us, false, 3);
+  warInteractions.register(new War(greeks, us, warRules) as never);
+  warRules.process(DeclaredWar, greeks, us, false, 3);
+
+  expect('war told only once a war is in force', wars, [3]);
 
   // The client registers the rule set's notices after its own, as engine listeners.
   const listened: string[] = [];

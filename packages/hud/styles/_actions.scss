@@ -184,3 +184,20 @@
     opacity: 0;
   }
 }
+
+// The rates dialog under rules with a maximum rate (Civ2's, M2d): each rate's maximum beside its name, and a note under
+//  the sliders where a rate is worth less than it's set to.
+.adjust-trade-rates {
+  .locked-slider-max {
+    font-size: 0.85em;
+    font-weight: normal;
+    opacity: 0.8;
+    white-space: nowrap;
+  }
+
+  .adjust-trade-rates-limit {
+    font-size: 0.9em;
+    margin: 0.5rem 0 0;
+    max-width: 24rem;
+  }
+}

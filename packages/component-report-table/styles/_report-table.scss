@@ -327,6 +327,12 @@
   margin-top: 0.75rem;
   padding: 0.5rem 0.35rem 0;
 
+  // Send an emissary (Civ2's rules, M2d), under what an embassy tells.
+  .ui-report-talks {
+    margin-top: 0.5rem;
+    max-width: 100%;
+  }
+
   h3,
   h4 {
     color: var(--type-eyebrow-colour);

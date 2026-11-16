@@ -36,6 +36,7 @@ import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
 import { instance as engineInstance } from '@civ-clone/core-engine/Engine';
 import { Monarchy } from '@civ-clone/civ2-government/Governments';
 import registerRevolutionOffers from '@civ-clone/ui-worker-client/Client/revolutionOffers';
+import rechoose from '@civ-clone/ui-rules-civ2/AdditionalData/rechoose';
 import Client from '@civ-clone/core-client/Client';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
 
@@ -238,6 +239,14 @@ const run = async (): Promise<void> => {
     chosen: 'Monarchy',
   });
 
+  const rechooseData = rechoose();
+
+  expect(
+    'the government chosen this turn, the Revolution window is told a revolution is a free re-choice',
+    rechooseData.data(playerGovernment),
+    true
+  );
+
   const rechosen = await handleAction(ctx, {
     name: 'Revolution',
     id: playerGovernment.id(),
@@ -260,6 +269,16 @@ const run = async (): Promise<void> => {
     governmentName(),
     'Despotism'
   );
+
+  turnInstance.set(13);
+
+  expect(
+    'and the next turn it isn’t',
+    rechooseData.data(playerGovernment),
+    false
+  );
+
+  turnInstance.set(12);
 
   // The revolution offered as an advance makes a government available (M2d): asked of the person, the refusal first.
   const asked: unknown[][] = [];

@@ -217,6 +217,9 @@ export type Revolution = PlayerAction<PlayerGovernment>;
 export interface PlayerGovernment extends EntityInstance {
   // Turns until the new government can be chosen, or `null` with no revolution under way.
   anarchyTurns: number | null;
+  // Whether a revolution now would be a free re-choice, with no Anarchy (Civ2's rules, in the turn a government was
+  //  chosen, M2d).
+  rechoose?: boolean;
   available: Entity[];
   current: EntityInstance;
 }

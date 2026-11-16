@@ -67,6 +67,7 @@ import cityStyle from './lib/cityStyle';
 import { attitude, leaderTitle, reputation, treaty } from './lib/relations';
 import { audienceEvents, mayOpenTalks } from './lib/talks';
 import leaderTitleData from './AdditionalData/leaderTitle';
+import rechoose from './AdditionalData/rechoose';
 import { limitedRates, maxRates } from './AdditionalData/tradeRates';
 import stagedHappiness from '@civ-clone/civ2-city-happiness/lib/stagedHappiness';
 import civilDisorderDeclared from './AdditionalData/civilDisorderDeclared';
@@ -174,6 +175,7 @@ export const register = (): void => {
     actionTargets(),
     pillageTargets(),
     leaderTitleData(),
+    rechoose(),
     maxRates(),
     limitedRates(),
     ...cities()

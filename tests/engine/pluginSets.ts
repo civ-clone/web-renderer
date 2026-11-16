@@ -36,7 +36,15 @@ import { instance as playerRegistryInstance } from '@civ-clone/core-player/Playe
 import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
 import { tmpdir } from 'os';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
-import { Alliance, Ceasefire } from '@civ-clone/library-diplomacy/Declarations';
+import {
+  Alliance,
+  Ceasefire,
+  Vendetta,
+} from '@civ-clone/library-diplomacy/Declarations';
+import AdvanceTaken from '@civ-clone/base-diplomacy/Dialogues/AdvanceTaken';
+import { Writing } from '@civ-clone/civ2-science/Advances';
+import Advance from '@civ-clone/core-science/Advance';
+import Dialogue from '@civ-clone/core-diplomacy/Negotiation/Dialogue';
 import {
   AskAlly,
   CancelAlliance,
@@ -60,7 +68,6 @@ import TreatyFlagsRecord from '@civ-clone/civ2-diplomacy/Records/TreatyFlagsReco
 import WarnedUnitsRecord from '@civ-clone/civ2-diplomacy/Records/WarnedUnitsRecord';
 import { instance as interactionRegistryInstance } from '@civ-clone/core-diplomacy/InteractionRegistry';
 import isBarbarian from '@civ-clone/base-civilization-barbarian/isBarbarian';
-import { instance as playerResearchRegistryInstance } from '@civ-clone/core-science/PlayerResearchRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 
 const {
@@ -94,6 +101,7 @@ type Report = {
 // What a Civ2 game's diplomacy can hold that its save has to name (M2d, #1007): the ceasefire and alliance, base-
 //  diplomacy's records, civ2-diplomacy's, and every proposal of the talks a person opens, with each kind of gift.
 const CIV2_DIPLOMACY_TYPES = [
+  'AdvanceTaken',
   'Alliance',
   'AskAlly',
   'BorderRecord',
@@ -101,6 +109,7 @@ const CIV2_DIPLOMACY_TYPES = [
   'CancelAlliance',
   'Ceasefire',
   'DemandWithdrawal',
+  'Dialogue',
   'Gift',
   'Gold',
   'JoinWar',
@@ -112,6 +121,7 @@ const CIV2_DIPLOMACY_TYPES = [
   'SenateRecord',
   'ShareMaps',
   'TreatyFlagsRecord',
+  'Vendetta',
   'WarnedUnitsRecord',
 ];
 
@@ -154,7 +164,8 @@ const civ2DiplomacyRecords = (): void => {
     rules = ruleRegistryInstance,
     negotiation = new Negotiation(player, other, rules),
     unit = unitRegistryInstance.getByPlayer(player)[0],
-    advance = playerResearchRegistryInstance.getByPlayer(player).complete()[0],
+    // Civ2's own, as the players may know none yet.
+    advance = new Writing(),
     proposals = [
       new AskAlly(player, negotiation, rules),
       new CancelAlliance(player, negotiation, rules),
@@ -167,6 +178,13 @@ const civ2DiplomacyRecords = (): void => {
       new ProposeAlliance(player, negotiation, rules),
       new SellAdvance(advance, new Gold(30), other, negotiation, rules),
       new ShareMaps(player, negotiation, rules),
+      new Dialogue(other, 'civ2.war', negotiation, rules),
+      new AdvanceTaken(
+        other,
+        Writing as typeof Advance,
+        negotiation,
+        rules
+      ),
     ];
 
   // As the talks hold them, without running their rules.
@@ -178,6 +196,7 @@ const civ2DiplomacyRecords = (): void => {
     negotiation as IInteraction,
     new Ceasefire(player, other, rules) as IInteraction,
     new Alliance(player, other, rules) as IInteraction,
+    new Vendetta(other, player, rules) as IInteraction,
     new PatienceRecord(player, other, 2, rules) as IInteraction,
     new LastContactRecord(player, other, 1, rules) as IInteraction,
     new TreatyFlagsRecord(player, other, 0x1, rules) as IInteraction,

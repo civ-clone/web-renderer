@@ -302,6 +302,7 @@ const run = async (): Promise<void> => {
       transport: { send: () => {} },
       turn: defaultGame.turn,
       units: { getByTile: () => [] },
+      players: defaultGame.players,
     } as unknown as TalksContext),
     actionContext: any = {
       player: () => us,
@@ -636,6 +637,50 @@ const run = async (): Promise<void> => {
     ],
     [1, true, 'Initiate', true]
   );
+
+  // Not again with a computer player the hand-over just talked to, nor one no longer in contact or in the game, nor while
+  //  automation plays the turn (its computer player does its own talking).
+  const stranger = computerPlayer(Egyptian),
+    count = (): number => negotiations.length;
+
+  defaultGame.interactions
+    .getByPlayers(us, stranger)
+    .filter((interaction) => interaction.constructor.name === 'Contact')
+    .forEach((contact) => defaultGame.interactions.unregister(contact));
+
+  let held = count();
+
+  freshTurn();
+  talks.audienceDue(them);
+  await talks.holdAudiences([them]);
+  talks.audienceDue(stranger);
+  await talks.holdAudiences();
+
+  const automated = registerTalkEvents(engine, {
+    view: stubView(() => us),
+    talks,
+    automation: { enabled: true } as any,
+  });
+
+  engine.emit('civ2-diplomacy:audience-due', them, us);
+  automated();
+  talks.handOver();
+  await talks.pending;
+
+  expect(
+    'no audience with a computer player just talked to, one out of contact, or under automation',
+    count() - held,
+    0
+  );
+
+  // Two requests for the same talks open them once.
+  held = count();
+  freshTurn();
+  talks.openTalks(them);
+  talks.openTalks(them);
+  await talks.pending;
+
+  expect('talks asked for twice open once', count() - held, 1);
 
   // Every step of every meeting above is worded: none falls back to its class name.
   await i18next.init({ ...i18nOptions, lng: 'en' });

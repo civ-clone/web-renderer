@@ -197,12 +197,10 @@ export const notifications = (
         ? null
         : new Notification('Diplomacy.reputation-restored', { player }),
   ],
+  // Everyone's, so told to everyone, once.
   [
     'civ2:reputations-halved',
-    (ctx, player: Player) =>
-      !ctx.view.owns(player)
-        ? null
-        : new Notification('Diplomacy.reputations-halved', { player }, true),
+    () => new Notification('Diplomacy.reputations-halved', {}, true),
   ],
 ];
 

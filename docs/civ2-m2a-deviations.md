@@ -8,7 +8,7 @@ Where the numbers are Civ2's, they come from a hand-written table checked agains
 
 ## Saves
 
-Civ2 saves record that they belong to the `civ2` set and load as civ2, but **they will break across M2b to M2f**: rules and saved data will change between phases, and there is no promise that a save from one phase loads in the next. Treat Civ2 games as disposable until the set leaves preview. Civ1 saves are unaffected.
+Civ2 saves record that they belong to the `civ2` set and load as civ2, but **they will break across M2b to M2f**: rules and saved data will change between phases, and there is no promise that a save from one phase loads in the next. Treat Civ2 games as disposable until the set leaves preview. Civ1 saves are unaffected. A Civ2 save from before M2d loads, but civilizations that had met by then start without an attitude toward each other or a record of when they last met.
 
 ## Map
 

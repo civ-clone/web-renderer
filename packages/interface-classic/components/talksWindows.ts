@@ -104,6 +104,18 @@ export const talksWindows: OpenTalksStep = ({
     groupValue = (index: number): string => `@group-${index}`,
     intro = (): HTMLElement | null =>
       last === null ? null : negotiationLines([negotiationLine(last, us)]),
+    // The row the engine's first choice is on the first level: its own, or its group's.
+    firstRow = ((): string => {
+      const index = entries.findIndex((entry) =>
+        'group' in entry
+          ? entry.choices.some(({ id }) => id === choices[0]!.id)
+          : entry.choice.id === choices[0]!.id
+      );
+
+      return index !== -1 && 'group' in entries[index]!
+        ? groupValue(index)
+        : choices[0]!.id;
+    })(),
     open = (): void => {
       const talksWindow = openChoice(
         title,
@@ -138,9 +150,10 @@ export const talksWindows: OpenTalksStep = ({
           intro: intro(),
           canClose: false,
           classes: ['negotiation'],
-          // The stress runner takes the engine's first choice, as an automated seat does, not Good bye (#502).
+          // The stress runner takes the engine's first choice, as an automated seat does, not Good bye (#502): where that
+          //  is in a group, the group's entry is the row it stands under.
           // The engine offers at least one choice.
-          chosen: stressRunner ? choices[0]!.id : null,
+          chosen: stressRunner ? firstRow : null,
         }
       );
 
@@ -148,10 +161,12 @@ export const talksWindows: OpenTalksStep = ({
         stressRunner.automateChoice(talksWindow, choices[0]!.id, reply);
       }
     },
+    // A group's list, with Back; Escape is Back too.
     openGroup = (group: typeof choices): void => {
       const back = '@back';
+      let answered = false;
 
-      openChoice(
+      const groupWindow = openChoice(
         title,
         [
           ...group.map(({ id, value }) => {
@@ -165,12 +180,32 @@ export const talksWindows: OpenTalksStep = ({
             primary: t('Negotiation.back'),
           },
         ],
-        (choice) => (choice === back ? open() : reply(choice)),
+        (choice) => {
+          answered = true;
+
+          if (choice === back) {
+            open();
+
+            return;
+          }
+
+          reply(choice);
+        },
         {
           intro: intro(),
-          canClose: false,
+          canClose: true,
           classes: ['negotiation'],
         }
+      );
+
+      // A choice closes the window before it's answered: only a close with no answer after it is Escape.
+      groupWindow.on('close', () =>
+        queueMicrotask(() => {
+          if (!answered) {
+            answered = true;
+            open();
+          }
+        })
       );
     };
 

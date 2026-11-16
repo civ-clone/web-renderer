@@ -550,6 +550,29 @@ const run = async (): Promise<void> => {
 
   expect('Back returns to the menu', labels().length, 4);
 
+  // Escape in a group's list is Back too.
+  choose(
+    (
+      Array.from(top().querySelectorAll('option')).find(
+        (option) => option.textContent === 'Ask a favor…'
+      ) as HTMLOptionElement
+    ).value
+  );
+  top().dispatchEvent(
+    new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      key: 'Escape',
+    })
+  );
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  expect(
+    'Escape in the favours’ list returns to the menu, sending nothing',
+    [labels().length, sent, open().length],
+    [4, [], 1]
+  );
+
   choose('peace');
 
   expect(
@@ -690,6 +713,33 @@ const run = async (): Promise<void> => {
     'and a step of the talks with one answer',
     [handed, sent],
     [['automated-1', 'choice-2'], [['chooseFromList', 'choice-2']]]
+  );
+
+  // A menu of talks the player leads whose first choice is in a group (M2d): the stress runner is still handed that
+  //  first choice, with its group's row selected.
+  open().forEach((window) => window.remove());
+  reset();
+  handed.length = 0;
+  ask(
+    'negotiation.next-step',
+    [
+      {
+        id: 'gift-1',
+        value: proposal('Gift', {
+          kind: 'gold',
+          gift: { _: 'Gold', value: 30 },
+        }),
+      },
+      { id: 'peace-1', value: proposal('OfferPeace') },
+      { id: 'goodbye-1', value: terminate },
+    ],
+    negotiation
+  );
+
+  expect(
+    'the stress runner answers a grouped first choice',
+    [handed, sent],
+    [['gift-1'], [['chooseFromList', 'gift-1']]]
   );
 
   debugFlags.uiStressRunner = null;

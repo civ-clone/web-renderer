@@ -95,11 +95,16 @@ export class LockedSliderGroup {
       this.spread([slider], 100 - this.total());
     }
 
+    // A locked slider that has to move is unlocked, so what the window shows is what it holds.
     if (this.total() !== 100) {
-      this.spread(
-        others.filter((other) => other.isLocked()),
-        100 - this.total()
-      );
+      const locked = others.filter((other) => other.isLocked()),
+        before = locked.map((other) => other.value());
+
+      this.spread(locked, 100 - this.total());
+
+      locked
+        .filter((other, index) => other.value() !== before[index])
+        .forEach((other) => other.unlock());
     }
   }
 
