@@ -36,7 +36,13 @@ export const interactionContext = (
         .join('-') || undefined
     );
   },
-  interactionLabel = (interaction: Interactions, own = false) => {
+  // `answer`: a resolution the other player made of one of our own proposals (in talks we lead, Civ2's, M2d), worded as
+  //  their answer to us where there are words for it (`Answer.<proposal>.<resolution>`), and otherwise as it always is.
+  interactionLabel = (
+    interaction: Interactions,
+    own = false,
+    answer = false
+  ) => {
     const context = interactionContext(interaction, own);
 
     if (instanceOf(interaction, 'Dialogue')) {
@@ -57,9 +63,10 @@ export const interactionContext = (
     }
 
     if (instanceOf(interaction, 'Resolution')) {
-      const { proposal } = interaction as Resolution;
+      const { proposal } = interaction as Resolution,
+        key = `Resolution.${proposal._}.${interaction._}`;
 
-      return t(`Resolution.${proposal._}.${interaction._}`, {
+      return t(answer ? [`Answer.${proposal._}.${interaction._}`, key] : key, {
         context,
         interaction,
         defaultValue: interaction._,
@@ -121,12 +128,18 @@ export const interactionContext = (
     interaction: Interactions,
     us: Player | null
   ): NegotiationLine => {
-    const speaker = narrated(interaction) ? null : speakerOf(interaction),
-      // Only by id, and only one there is: a player sent without one is nobody's but their own.
-      own =
+    const by = speakerOf(interaction),
+      speaker = narrated(interaction) ? null : by,
+      // Only by id, and only one there is: a player sent without one is nobody's but their own. The scene is ours too
+      //  where it's our doing: our emissary sent, in talks we open (M2d).
+      ours = us?.id !== undefined && by?.id !== undefined && by.id === us.id,
+      own = speaker !== null && ours,
+      // Their answer to a proposal of ours.
+      answer =
+        !ours &&
+        instanceOf(interaction, 'Resolution') &&
         us?.id !== undefined &&
-        speaker?.id !== undefined &&
-        speaker.id === us.id;
+        (interaction as Resolution).proposal?.by?.id === us.id;
 
     return {
       speaker:
@@ -135,7 +148,7 @@ export const interactionContext = (
           : own
           ? t('Negotiation.you')
           : playerName(speaker),
-      text: interactionLabel(interaction, own),
+      text: interactionLabel(interaction, ours, answer),
       own,
     };
   };

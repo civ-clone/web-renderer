@@ -171,6 +171,7 @@ const run = async (): Promise<void> => {
   await import('../../translations/civ1-civilization/en');
   await import('../../translations/civ1-difficulty/en');
   await import('../../translations/civ1-diplomacy/en');
+  await import('../../translations/civ2-diplomacy/en');
 
   // A step of the talks with one answer.
   ask(
@@ -497,6 +498,64 @@ const run = async (): Promise<void> => {
     'and Enter with nothing moved sends it',
     [open().length, sent],
     [0, [['chooseFromList', 'goodbye']]]
+  );
+
+  // Talks the player leads (Civ2's, M2d): the favours and the gifts under an entry each, which opens their list, with
+  //  Back; choosing an entry sends nothing.
+  const proposal = (_: string, fields: object = {}) => ({
+    _,
+    __: [_, 'Proposal', 'Interaction'],
+    ...fields,
+  });
+
+  reset();
+  ask(
+    'negotiation.next-step',
+    [
+      { id: 'peace', value: proposal('OfferPeace') },
+      { id: 'maps', value: proposal('ShareMaps') },
+      {
+        id: 'gift',
+        value: proposal('Gift', {
+          kind: 'gold',
+          gift: { _: 'Gold', value: 30 },
+        }),
+      },
+      { id: 'goodbye', value: terminate },
+    ],
+    negotiation
+  );
+
+  expect(
+    'the classic menu lists the favours and the gifts as entries',
+    labels(),
+    ['Good bye!', 'Propose a peace treaty.', 'Ask a favor…', 'Offer a gift…']
+  );
+
+  choose(
+    (
+      Array.from(top().querySelectorAll('option')).find(
+        (option) => option.textContent === 'Offer a gift…'
+      ) as HTMLOptionElement
+    ).value
+  );
+
+  expect(
+    'the gifts’ entry opens the gift picker, sending nothing',
+    [labels(), sent],
+    [['Give them 30 gold.', 'Back'], []]
+  );
+
+  choose('@back');
+
+  expect('Back returns to the menu', labels().length, 4);
+
+  choose('peace');
+
+  expect(
+    'and a proposal chosen there is sent',
+    [open().length, sent],
+    [0, [['chooseFromList', 'peace']]]
   );
 
   // Any other list, Random among the civilizations.

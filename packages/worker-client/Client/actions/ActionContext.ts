@@ -15,15 +15,23 @@ export type ActionContext = Pick<
   | 'actions'
   // Whole, as a city told to choose its own builds hands them to `autoBuild`.
   | 'rules'
+  // Talks the player opens (M2d): with a player met, whom the rules may let them talk to.
+  | 'hasMet'
+  | 'interactions'
+  | 'turn'
 > &
   Registries<{
     cities: 'getBy' | 'getByPlayer';
     cityImprovements: 'getByCity';
     playerTreasuries: 'getBy';
+    players: 'entries';
   }> & {
     // The talks a unit's action waits for, and those it offers with the players it met on the way. `EndTurn` waits for
     //  those under way too.
-    talks: Pick<Talks, 'pending' | 'talkToPlayersMet' | 'underWay'>;
+    talks: Pick<
+      Talks,
+      'pending' | 'talkToPlayersMet' | 'underWay' | 'openTalks'
+    >;
   };
 
 // Acts on one of the player's actions, as the UI sent it (`action`) and as the player has it (`playerAction`), and

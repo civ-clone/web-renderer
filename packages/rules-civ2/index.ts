@@ -58,6 +58,7 @@ import {
 } from '@civ-clone/civ2-city/lib/autoMode';
 import cityStyle from './lib/cityStyle';
 import { attitude, leaderTitle, reputation, treaty } from './lib/relations';
+import { audienceEvents, mayOpenTalks } from './lib/talks';
 import leaderTitleData from './AdditionalData/leaderTitle';
 import stagedHappiness from '@civ-clone/civ2-city-happiness/lib/stagedHappiness';
 import civilDisorderDeclared from './AdditionalData/civilDisorderDeclared';
@@ -115,6 +116,9 @@ export const civ2Rules: WorkerRules = {
   attitude,
   reputation,
   leaderTitle,
+  // Talks a person opens from the Foreign Advisor, and the audiences computer players ask for.
+  mayOpenTalks,
+  audienceEvents,
   // How a rival's city is drawn, from its owner's advances, as one's own is (`style`).
   cityStyle: (city) => cityStyle(city),
   // No score in M2a, so nothing for conquest either.

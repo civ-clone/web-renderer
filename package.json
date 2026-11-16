@@ -192,6 +192,7 @@
     "test:civ2-worker-rules": "node tools/run-suite.js engine civ2WorkerRules",
     "test:civ2-units-engine": "node tools/run-suite.js engine civ2Units",
     "test:civ2-cities-engine": "node tools/run-suite.js engine civ2Cities",
+    "test:civ2-talks": "node tools/run-suite.js engine civ2Talks",
     "test:observer": "node tools/run-suite.js engine observer",
     "test:save-seats": "node tools/run-suite.js engine saveSeats",
     "test:respawn": "node tools/run-suite.js engine respawn",

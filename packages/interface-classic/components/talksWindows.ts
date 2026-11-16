@@ -8,6 +8,7 @@ import { OpenTalksStep } from '@civ-clone/ui-hud/components/talks';
 import instanceOf from '@civ-clone/ui-client/lib/instanceOf';
 import { openChoice } from '@civ-clone/ui-hud/components/choiceList';
 import { s } from '@dom111/element';
+import { talksGroupLabel, talksMenu } from '@civ-clone/ui-client/lib/talksMenu';
 import { t } from 'i18next';
 
 // The lines of the talks, each with who said it, set as text (#751).
@@ -97,28 +98,83 @@ export const talksWindows: OpenTalksStep = ({
     return null;
   }
 
-  const talksWindow = openChoice(
-    title,
-    goodbyeFirst(choices).map(({ id, value }) => {
-      const label = interactionLabel(value as Interactions, true);
+  // The menu of talks the player leads (Civ2's, M2d) lists the favours and the gifts under an entry of their own each,
+  //  which opens their list, with Back to return. Choosing a group's entry isn't an answer: the list is opened again.
+  const entries = talksMenu(goodbyeFirst(choices)),
+    groupValue = (index: number): string => `@group-${index}`,
+    intro = (): HTMLElement | null =>
+      last === null ? null : negotiationLines([negotiationLine(last, us)]),
+    open = (): void => {
+      const talksWindow = openChoice(
+        title,
+        entries.map((entry, index) => {
+          if ('group' in entry) {
+            const label = talksGroupLabel(entry.group);
 
-      return { label, value: id, primary: label };
-    }),
-    (choice) => reply(choice),
-    {
-      intro:
-        last === null ? null : negotiationLines([negotiationLine(last, us)]),
-      canClose: false,
-      classes: ['negotiation'],
-      // The stress runner takes the engine's first choice, as an automated seat does, not Good bye (#502).
-      // The engine offers at least one choice.
-      chosen: stressRunner ? choices[0]!.id : null,
-    }
-  );
+            return { label, value: groupValue(index), primary: label };
+          }
 
-  if (stressRunner && !talksWindow.autoChosen()) {
-    stressRunner.automateChoice(talksWindow, choices[0]!.id, reply);
-  }
+          const label = interactionLabel(
+            entry.choice.value as Interactions,
+            true
+          );
+
+          return { label, value: entry.choice.id, primary: label };
+        }),
+        (choice) => {
+          const group = entries.find(
+            (entry, index) => 'group' in entry && groupValue(index) === choice
+          );
+
+          if (group !== undefined && 'group' in group) {
+            openGroup(group.choices);
+
+            return;
+          }
+
+          reply(choice);
+        },
+        {
+          intro: intro(),
+          canClose: false,
+          classes: ['negotiation'],
+          // The stress runner takes the engine's first choice, as an automated seat does, not Good bye (#502).
+          // The engine offers at least one choice.
+          chosen: stressRunner ? choices[0]!.id : null,
+        }
+      );
+
+      if (stressRunner && !talksWindow.autoChosen()) {
+        stressRunner.automateChoice(talksWindow, choices[0]!.id, reply);
+      }
+    },
+    openGroup = (group: typeof choices): void => {
+      const back = '@back';
+
+      openChoice(
+        title,
+        [
+          ...group.map(({ id, value }) => {
+            const label = interactionLabel(value as Interactions, true);
+
+            return { label, value: id, primary: label };
+          }),
+          {
+            label: t('Negotiation.back'),
+            value: back,
+            primary: t('Negotiation.back'),
+          },
+        ],
+        (choice) => (choice === back ? open() : reply(choice)),
+        {
+          intro: intro(),
+          canClose: false,
+          classes: ['negotiation'],
+        }
+      );
+    };
+
+  open();
 
   return null;
 };

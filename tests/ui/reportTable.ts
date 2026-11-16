@@ -855,6 +855,7 @@ const run = async (): Promise<void> => {
         treaty: 'war' as const,
         attitude: null,
         theirEmbassy: true,
+        talks: false,
         firstMet: null,
         details: {
           traits: ['Aggressive'],
@@ -876,6 +877,7 @@ const run = async (): Promise<void> => {
         treaty: 'peace' as const,
         attitude: null,
         theirEmbassy: false,
+        talks: false,
         firstMet: null,
         details: null,
       },
@@ -1025,6 +1027,38 @@ const run = async (): Promise<void> => {
   );
 
   civ2Intelligence.close();
+
+  // Where the rules let the player open talks with them (Civ2's, M2d), their details have Send an emissary, which asks
+  //  for talks with them and makes way for the meeting.
+  const talksSent: unknown[] = [],
+    talksTransport = {
+      request: () => new Promise(() => {}),
+      send: (channel: string, data: unknown) => talksSent.push([channel, data]),
+    } as unknown as Transport,
+    talksIntelligence = new IntelligenceTable(talksTransport);
+
+  talksIntelligence.show([{ ...intelligenceRows[1]!, talks: true }]);
+  (
+    talksIntelligence.table().element().querySelector('tbody tr') as HTMLElement
+  ).click();
+
+  const emissary = talksIntelligence
+    .element()
+    .querySelector('.ui-report-talks') as HTMLButtonElement | null;
+
+  expect(
+    'Intelligence: Send an emissary, where talks may be opened',
+    emissary?.textContent?.trim(),
+    'Send an emissary'
+  );
+
+  emissary?.click();
+
+  expect(
+    'which asks for talks with them, and closes the report',
+    [talksSent, talksIntelligence.element().isConnected],
+    [[['action', { name: 'OpenTalks', civilization: 'Zulu' }]], false]
+  );
 
   // Happiness: each city's citizens and their counts, a View button that opens the city, and a row that shows why.
   const happyCities = [

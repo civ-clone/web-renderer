@@ -119,6 +119,10 @@ i18next.addResources('en', 'default', {
   'GameSetup.custom': 'Custom ({{width}} × {{height}})',
   'GameSetup.earth': 'Earth, {{size}}',
   'Negotiation.you': 'You',
+  // The lists the menu of talks you lead opens (Civ2's, M2d), and the way back from one.
+  'Negotiation.group.favour': 'Ask a favor…',
+  'Negotiation.group.gift': 'Offer a gift…',
+  'Negotiation.back': 'Back',
   'NewGameWindow.civilizations_one': '1 civilization',
   'NewGameWindow.civilizations_other': '{{count}} civilizations',
   'NewGameWindow.WorldSize.tiny': 'Tiny ({{width}} × {{height}})',

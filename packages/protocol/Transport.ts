@@ -290,6 +290,11 @@ declare global {
     LaunchSpaceship: {
       id: string;
     };
+    // Talks with another civilization, opened from the Foreign Advisor where the rules let the player (Civ2's, M2d),
+    //  named as the Intelligence Report names its rows.
+    OpenTalks: {
+      civilization: string;
+    };
     ReassignWorkers: {
       city: string;
     };

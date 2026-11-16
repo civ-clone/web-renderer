@@ -25,6 +25,7 @@ import {
   handleRenameCity,
 } from './actions/city';
 import { ActionContext, ActionHandler } from './actions/ActionContext';
+import handleOpenTalks from './actions/talks';
 import AdjustTradeRates from '@civ-clone/base-player-action-adjust-trade-rates/AdjustTradeRates';
 import ChangeSpecialist from '@civ-clone/core-city/PlayerActions/ChangeSpecialist';
 import ChangeWorkedTile from '@civ-clone/core-city/PlayerActions/ChangeWorkedTile';
@@ -88,6 +89,11 @@ const dispatchAction = (
 
   if (name === 'RenameCity') {
     return handleRenameCity(ctx, action);
+  }
+
+  // Talks with another civilization, from the Foreign Advisor (M2d).
+  if (name === 'OpenTalks') {
+    return handleOpenTalks(ctx, action);
   }
 
   if (name === 'EndTurn') {

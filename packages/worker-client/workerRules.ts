@@ -102,6 +102,21 @@ export type WorkerRules = {
    */
   seenCityMeets?: boolean;
   /**
+   * The engine events by which a computer player asks for an audience with a person (each with the computer player and
+   *  the person), which the person's client opens at the start of their turn, led by the computer player. None by
+   *  default: Civ1's computer players talk only when their units meet.
+   */
+  audienceEvents?: string[];
+  /**
+   * Whether `player` may open talks with `other` (from the Foreign Advisor), under rules where a person can (Civ2's).
+   *  Not by default: in Civ1 only the computer players open talks (#1071).
+   */
+  mayOpenTalks?: (
+    player: Player,
+    other: Player,
+    registries: RelationRegistries
+  ) => boolean;
+  /**
    * Where `player` and `other` stand, for the reports and the talks. By default at peace while a `Peace` is in force
    *  between them, and otherwise at war, as v474.05 has it for any two who have met.
    */

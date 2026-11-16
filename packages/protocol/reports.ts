@@ -77,6 +77,8 @@ export type IntelligenceRow = {
   firstMet: number | null;
   // Only for a civilization the player holds an embassy with.
   details: IntelligenceDetails | null;
+  // Whether the player may open talks with them from the report, under rules where a person can (Civ2's, M2d).
+  talks: boolean;
 };
 
 export type MilitaryStatusRow = {

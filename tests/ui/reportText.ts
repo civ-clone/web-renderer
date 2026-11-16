@@ -142,6 +142,7 @@ const run = async (): Promise<void> => {
       treaty: 'peace',
       attitude: null,
       theirEmbassy: false,
+      talks: false,
       firstMet: null,
       details: {
         traits: [],

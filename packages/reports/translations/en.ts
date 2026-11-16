@@ -176,6 +176,8 @@ i18next.addResources('en', 'default', {
   'IntelligenceReport.at-ceasefire': 'At CEASEFIRE with {{nation}}.',
   'IntelligenceReport.at-contact': 'No treaty with {{nation}}.',
   'IntelligenceReport.reputation': 'Reputation: {{- reputation}}',
+  // Opens talks with them, where the rules let you (Civ2's).
+  'IntelligenceReport.talks': 'Send an emissary',
   // Already escaped by `Generic.city-name`.
   'IntelligenceReport.capital': 'Capital: {{- city}}',
   'IntelligenceReport.empty': 'We have not met any other civilizations yet.',

@@ -24,6 +24,7 @@ import { ClientContext, Disposer, Registries } from './ClientContext';
 import Timeout from '../Error/Timeout';
 import { awaitTimeout } from './refs';
 import { describeError } from '../answer';
+import { currentWorkerRules } from '../workerRules';
 
 export type TalksContext = Pick<
   ClientContext,
@@ -55,6 +56,10 @@ export class Talks {
   #talks: Promise<void> = Promise.resolve();
   // How many of the links in `#talks` have yet to settle: talks are under way while any has (#491).
   #unsettled: number = 0;
+  // The computer players that asked for an audience with the player since the last hand-over (Civ2's rules, M2d,
+  //  `WorkerRules.audienceEvents`): each heard once, at the start of the player's turn, after the players met on the
+  //  way.
+  #audiences: Set<Player> = new Set();
 
   constructor(context: TalksContext) {
     this.#context = context;
@@ -106,13 +111,45 @@ export class Talks {
     this.#countUntilSettled();
   }
 
+  // Talks the player opens with `other`, from the Foreign Advisor (M2d): led by the player, who proposes, and the other
+  //  player answers. Waited for as a Meet with Leader's are.
+  openTalks(other: Player): void {
+    this.#talks = this.#talks
+      .then(() => this.handleNegotiation(other, true))
+      .then(
+        () => {},
+        (error) => console.error(error)
+      );
+
+    this.#countUntilSettled();
+  }
+
+  // A computer player asks for an audience (M2d): heard at the next hand-over, once however often it asks.
+  audienceDue(computer: Player): void {
+    this.#audiences.add(computer);
+  }
+
   handOver(): void {
-    // Anyone met by a GoTo carried on at the start of the turn.
+    // Anyone met by a GoTo carried on at the start of the turn, then the audiences computer players asked for.
     this.#talks = this.#talks
       .then(() => this.talkToPlayersMet())
+      .then(() => this.holdAudiences())
       .catch((error) => console.error(error));
 
     this.#countUntilSettled();
+  }
+
+  // Each audience asked for since the last hand-over, a computer player's talks as it leads them.
+  async holdAudiences(): Promise<void> {
+    const computers = Array.from(this.#audiences);
+
+    this.#audiences.clear();
+
+    await computers.reduce(
+      (promise, computer): Promise<any> =>
+        promise.then(() => this.handleNegotiation(computer)),
+      Promise.resolve()
+    );
   }
 
   // Counts the link just added to `#talks` until it settles, either way. Off to one side, so the chain an action waits
@@ -161,26 +198,33 @@ export class Talks {
   // Gold given or taken in the talks moves without an event to say so (`civ1-diplomacy`'s `give`), so the player's
   //  treasuries and research are compared before and after, and what changed is sent (#492). Inside an action the flush
   //  is held, and goes with the action's patch.
-  async handleNegotiation(player: Player): Promise<Negotiation> {
+  // `player` leads them, as every meeting did before Civ2's, unless the player `leads` them (talks they open).
+  async handleNegotiation(
+    player: Player,
+    leads: boolean = false
+  ): Promise<Negotiation> {
     const before = this.#context.patches.playerState();
 
     try {
-      return await this.#negotiate(player);
+      return await this.#negotiate(player, leads);
     } finally {
       this.#context.patches.playerStateChanged(before);
       this.#context.patches.flush();
     }
   }
 
-  async #negotiate(player: Player): Promise<Negotiation> {
-    const negotiation = new Negotiation(
-      player,
-      this.player(),
-      this.#context.rules
-    );
+  async #negotiate(player: Player, leads: boolean): Promise<Negotiation> {
+    // Whoever opens them comes first (`initiator()`), and asks for the audience.
+    const negotiation = leads
+      ? new Negotiation(this.player(), player, this.#context.rules)
+      : new Negotiation(player, this.player(), this.#context.rules);
 
     negotiation.proceed(
-      new Initiate(player, negotiation, this.#context.rules) as IAction
+      new Initiate(
+        negotiation.initiator(),
+        negotiation,
+        this.#context.rules
+      ) as IAction
     );
 
     // Rounds in a row in which nobody took a step: a chooser that threw, timed out or gave nothing. Asked again, as a
@@ -286,7 +330,7 @@ export class Talks {
 export const registerTalkEvents = (
   engine: Pick<Engine, 'on' | 'off'>,
   ctx: Pick<ClientContext, 'view'> & {
-    talks: Pick<Talks, 'meetNeighboursOf' | 'meetWithLeader'>;
+    talks: Pick<Talks, 'meetNeighboursOf' | 'meetWithLeader' | 'audienceDue'>;
     // Whether automation is on, read as each unit moves: it is turned on and off mid-game.
     automation: Pick<Automation, 'enabled'>;
   }
@@ -314,6 +358,18 @@ export const registerTalkEvents = (
 
     ctx.talks.meetWithLeader(other);
   });
+
+  // A computer player asking for an audience with the player, under rules that have it ask (Civ2's, M2d): the events
+  //  that mean so are the rule set's (`WorkerRules.audienceEvents`), each with the computer player and the player.
+  (currentWorkerRules()?.audienceEvents ?? []).forEach((event) =>
+    on(event, (computer: Player, person: Player) => {
+      if (!ctx.view.owns(person) || ctx.view.owns(computer)) {
+        return;
+      }
+
+      ctx.talks.audienceDue(computer);
+    })
+  );
 
   return (): void =>
     listeners.forEach(([event, listener]) => engine.off(event, listener));

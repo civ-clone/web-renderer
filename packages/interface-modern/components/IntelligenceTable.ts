@@ -8,6 +8,7 @@ import ReportTable from '@civ-clone/ui-component-report-table/ReportTable';
 import Transport from '@civ-clone/ui-client/Transport';
 import { advanceNames } from '@civ-clone/ui-client/lib/advances';
 import { cityNameText } from '@civ-clone/ui-client/components/lib/city';
+import { button } from '@civ-clone/ui-component-button/button';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
@@ -109,9 +110,15 @@ const leader = (row: IntelligenceRow): HTMLElement => {
 
 const line = (text: string): HTMLElement => s('<p></p>', text);
 
-/** What only an embassy tells you, under the table, for the civilization chosen in it. */
-export const renderIntelligenceDetails = (row: IntelligenceRow): HTMLElement =>
-  s(
+/**
+ * What only an embassy tells you, under the table, for the civilization chosen in it, and a way to open talks with them
+ *  where the rules let you (`talks`, Civ2's: `onTalks` sends the emissary).
+ */
+export const renderIntelligenceDetails = (
+  row: IntelligenceRow,
+  onTalks: ((row: IntelligenceRow) => void) | null = null
+): HTMLElement => {
+  const section = s(
     '<section class="ui-report-details"></section>',
     s(
       '<h3 class="ui-report-details-title"></h3>',
@@ -124,6 +131,19 @@ export const renderIntelligenceDetails = (row: IntelligenceRow): HTMLElement =>
       ? [line(t('IntelligenceReport.no-embassy'))]
       : embassyDetails(row.details))
   );
+
+  if (row.talks && onTalks !== null) {
+    const talks = button(t('IntelligenceReport.talks'), {
+      variant: 'primary',
+      className: 'ui-report-talks',
+    }) as HTMLButtonElement;
+
+    talks.addEventListener('click', () => onTalks(row));
+    section.append(s('<p></p>', talks));
+  }
+
+  return section;
+};
 
 const embassyDetails = ({
   capital,
@@ -297,7 +317,19 @@ export class IntelligenceTable extends FilterableWindow {
   }
 
   #showDetails(row: IntelligenceRow): void {
-    this.#details.replaceChildren(renderIntelligenceDetails(row));
+    this.#details.replaceChildren(
+      renderIntelligenceDetails(row, (chosen) => this.#openTalks(chosen))
+    );
+  }
+
+  // Sends an emissary (M2d): the talks open in their own window, so the report makes way for them.
+  #openTalks(row: IntelligenceRow): void {
+    this.#transport.send('action', {
+      name: 'OpenTalks',
+      civilization: row.civilization,
+    });
+
+    this.close();
   }
 
   // Asked for afresh each time the report opens; it doesn't follow the game while it's open.

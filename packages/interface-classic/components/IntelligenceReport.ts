@@ -124,7 +124,11 @@ const renderDetails = ({
   ),
 ];
 
-export const renderIntelligenceRow = (row: IntelligenceRow): HTMLElement => {
+// `onTalks` sends an emissary, where the rules let the player open talks with them (`talks`, Civ2's, M2d).
+export const renderIntelligenceRow = (
+  row: IntelligenceRow,
+  onTalks: ((row: IntelligenceRow) => void) | null = null
+): HTMLElement => {
   const element = s(
     `<section class="civilization${
       row.details === null ? ' no-embassy' : ''
@@ -149,6 +153,17 @@ export const renderIntelligenceRow = (row: IntelligenceRow): HTMLElement => {
       ? [line(t('IntelligenceReport.no-embassy'))]
       : renderDetails(row.details))
   );
+
+  if (row.talks && onTalks !== null) {
+    const talks = s(
+      `<button type="button" class="send-emissary">${t(
+        'IntelligenceReport.talks'
+      )}</button>`
+    );
+
+    talks.addEventListener('click', () => onTalks(row));
+    element.append(s('<p></p>', talks));
+  }
 
   if (row.colors) {
     const [primary, secondary] = row.colors;
@@ -190,7 +205,19 @@ export class IntelligenceReport extends FilterableWindow {
         super.update(
           shown.length === 0
             ? s(`<p>${t('IntelligenceReport.empty')}</p>`)
-            : s('<div></div>', ...shown.map(renderIntelligenceRow))
+            : s(
+                '<div></div>',
+                ...shown.map((row) =>
+                  renderIntelligenceRow(row, (chosen) => {
+                    this.#transport.send('action', {
+                      name: 'OpenTalks',
+                      civilization: chosen.civilization,
+                    });
+
+                    this.close();
+                  })
+                )
+              )
         );
       })
       // Not answered: the player has been told, and an empty report would only be in the way (#580).

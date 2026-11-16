@@ -325,5 +325,11 @@ export const intelligenceRows = (
         )
           ? details(reader, player, hasMet, dependencies)
           : null,
+        talks:
+          currentWorkerRules()?.mayOpenTalks?.(
+            reader,
+            player,
+            relationRegistries(dependencies)
+          ) ?? false,
       };
     });
