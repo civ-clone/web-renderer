@@ -206,7 +206,7 @@ const tradeRates = (...values: number[]) => {
       sliders[2]!
         .element()
         .querySelector('input[type="range"]')
-        ?.getAttribute('aria-valuemax'),
+        ?.getAttribute('max'),
     ],
     [[30, 10, 60], [false, false, false], '60']
   );

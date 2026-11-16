@@ -169,6 +169,10 @@ i18next.addResources('en', 'notification', {
   'GoodyHut.action-performed.Unit.body':
     'You have discovered a friendly tribe of skilled mercenaries...',
   'GoodyHut.action-performed.Unit.title': 'Exploration',
+  // Talks the player asked for from the Foreign Advisor that the rules no longer allow (M2d).
+  'Talks.refused.body':
+    'Our emissary cannot reach $t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" }) now: we are no longer in contact.',
+  'Talks.refused.title': 'No talks',
   'Player.declaration-broken.body':
     'We have broken our $t(Declaration.{{declaration._}}, { "defaultValue": "{{declaration._}}", "ns": "diplomacy" }) with $t(Generic.civilization-name.nation, { "civilization": "{{enemy.civilization._}}", "ns": "default" }).',
   'Player.declaration-broken.title': 'Treaty broken',

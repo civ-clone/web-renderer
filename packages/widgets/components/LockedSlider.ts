@@ -55,7 +55,8 @@ export class LockedSlider extends Element {
       maximum.className = 'locked-slider-max';
       maximum.textContent = t('LockedSlider.max', { max: this.#max });
       this.#number.setAttribute('max', String(this.#max));
-      this.#range.setAttribute('aria-valuemax', String(this.#max));
+      // The track ends at the maximum: its thumb at the end is the most the rate can be.
+      this.#range.setAttribute('max', String(this.#max));
       this.element().querySelector('legend')!.append(' ', maximum);
     }
 
@@ -127,7 +128,10 @@ export class LockedSlider extends Element {
     }
 
     // How far along the track the thumb is, 0 to 1, for the theme to fill it to (#739).
-    this.#range.style.setProperty('--fill', String(parseInt(value, 10) / 100));
+    this.#range.style.setProperty(
+      '--fill',
+      String(this.#max === 0 ? 0 : parseInt(value, 10) / this.#max)
+    );
 
     if (this.#number.value !== value) {
       this.#number.value = value;

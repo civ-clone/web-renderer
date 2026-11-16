@@ -229,7 +229,6 @@ export class TurnHandover {
       if (automation.enabled) {
         // Automation's own client does the talking.
         this.#context.talks.metOnTheWay.clear();
-        this.#context.talks.clearAudiences();
         this.#heldHalts.splice(0);
 
         automation.client

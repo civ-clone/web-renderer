@@ -207,11 +207,6 @@ const metOnTheWay = new Set<any>(),
     metOnTheWay,
     handOver: () => record('talks.handOver'),
     underWay: false,
-    // The audiences computer players asked for, which an automated turn forgets (M2d).
-    audiences: 1,
-    clearAudiences: () => {
-      talks.audiences = 0;
-    },
   };
 
 const automationClient: any = {
@@ -511,11 +506,7 @@ const run = async (): Promise<void> => {
     'patches.wholePlayer()',
     'gameDataPatch',
   ]);
-  expect(
-    'who was met is dropped, and the audiences asked for',
-    [metOnTheWay.size, talks.audiences],
-    [0, 0]
-  );
+  expect('who was met is dropped', metOnTheWay.size, 0);
 
   automation.setEnabled(false);
 

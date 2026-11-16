@@ -22,30 +22,23 @@ export const talksWith = (
     ) ?? null;
 
 /**
- * Opens talks with the civilization the UI names, if the rules let the player (`mayOpenTalks`), and waits for them:
- *  the turn doesn't end while they're open, as it doesn't for a Meet with Leader's. Never ends the turn.
+ * Opens talks with the civilization the UI names, under rules where a person can (`mayOpenTalks`, asked as they
+ *  start), and waits for them: the turn doesn't end while they're open, as it doesn't for a Meet with Leader's. Never
+ *  ends the turn.
  */
 export const handleOpenTalks = (
   ctx: ActionContext,
   { civilization }: { civilization?: unknown }
 ): Promise<boolean> => {
-  const other = talksWith(ctx, civilization),
-    mayOpenTalks = currentWorkerRules()?.mayOpenTalks;
+  const other = talksWith(ctx, civilization);
 
-  if (
-    other === null ||
-    !mayOpenTalks ||
-    !mayOpenTalks(ctx.player(), other, {
-      interactionRegistry: ctx.interactions,
-      ruleRegistry: ctx.rules,
-      turn: ctx.turn,
-    })
-  ) {
+  if (other === null || !currentWorkerRules()?.mayOpenTalks) {
     console.warn(`talks with ${String(civilization)} can't be opened`);
 
     return Promise.resolve(false);
   }
 
+  // The talks ask the rules as they start, and say so if they can't be opened.
   ctx.talks.openTalks(other);
 
   return ctx.talks.pending.then(

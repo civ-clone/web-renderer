@@ -25,6 +25,7 @@ import Timeout from '../Error/Timeout';
 import { awaitTimeout } from './refs';
 import { describeError } from '../answer';
 import { currentWorkerRules } from '../workerRules';
+import Notification from '@civ-clone/ui-protocol/Notification';
 import { Contact } from '@civ-clone/library-diplomacy/Interactions';
 import { InteractionRegistry } from '@civ-clone/core-diplomacy/InteractionRegistry';
 import Turn from '@civ-clone/core-turn-based-game/Turn';
@@ -38,6 +39,8 @@ export type TalksContext = Pick<
   | 'patches'
   // Talks given up on are said, as `workerError` (#470).
   | 'transport'
+  // Talks the player asked for that can't be opened are said (M2d).
+  | 'notifier'
   // Each handed whole to a negotiation and the rules that say whether players may talk.
   | 'interactions'
   | 'rules'
@@ -129,11 +132,18 @@ export class Talks {
     this.#opened.add(other);
 
     this.#talks = this.#talks
-      .then(() =>
-        this.#mayOpenTalks(other)
-          ? this.handleNegotiation(other, true)
-          : undefined
-      )
+      .then(() => {
+        if (this.#mayOpenTalks(other)) {
+          return this.handleNegotiation(other, true);
+        }
+
+        // Said, rather than nothing happening: the rules no longer let them talk (contact lost, say).
+        this.#context.notifier.notify(
+          new Notification('Talks.refused', { player: other })
+        );
+
+        return undefined;
+      })
       .then(
         () => {},
         (error) => console.error(error)
@@ -161,11 +171,6 @@ export class Talks {
   // A computer player asks for an audience (M2d): heard at the next hand-over, once however often it asks.
   audienceDue(computer: Player): void {
     this.#audiences.add(computer);
-  }
-
-  // Forgets the audiences asked for: automation's computer player plays the turn, and does its own talking.
-  clearAudiences(): void {
-    this.#audiences.clear();
   }
 
   handOver(): void {
@@ -421,12 +426,10 @@ export const registerTalkEvents = (
   //  that mean so are the rule set's (`WorkerRules.audienceEvents`), each with the computer player and the player.
   (currentWorkerRules()?.audienceEvents ?? []).forEach((event) =>
     on(event, (computer: Player, person: Player) => {
-      // Automation's own client does the talking for the turns it plays.
-      if (
-        !ctx.view.owns(person) ||
-        ctx.view.owns(computer) ||
-        ctx.automation.enabled
-      ) {
+      // Kept while automation plays the turns too: one per computer player, held at the first hand-over the player
+      //  plays, if it's still in the game and in contact then (`holdAudiences`). civ2-diplomacy raises each once (a
+      //  ceasefire's end, a demand to withdraw, a call for help), so one dropped would never be heard.
+      if (!ctx.view.owns(person) || ctx.view.owns(computer)) {
         return;
       }
 

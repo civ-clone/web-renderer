@@ -34,7 +34,9 @@ export const confirmRevolution = (
       onConfirm();
     },
     {
-      okLabel: 'Actions.Revolution.confirm',
+      okLabel: government.rechoose
+        ? 'Actions.Revolution.rechoose-confirm'
+        : 'Actions.Revolution.confirm',
     }
   );
 

@@ -14,6 +14,8 @@ import {
   Chinese,
   Egyptian,
   Greek,
+  Japanese,
+  Mongol,
   Roman,
   Zulu,
 } from '@civ-clone/civ2-civilization/Civilizations';
@@ -277,6 +279,7 @@ const run = async (): Promise<void> => {
       turn: defaultGame.turn,
     },
     negotiations: Negotiation[] = [],
+    notices: string[] = [],
     talks = new Talks({
       player: () => us,
       clients: { getByPlayer: clientOf },
@@ -303,6 +306,9 @@ const run = async (): Promise<void> => {
       turn: defaultGame.turn,
       units: { getByTile: () => [] },
       players: defaultGame.players,
+      notifier: {
+        notify: (notification: any) => notices.push(notification.key()),
+      },
     } as unknown as TalksContext),
     actionContext: any = {
       player: () => us,
@@ -348,13 +354,14 @@ const run = async (): Promise<void> => {
     };
 
   expect(
-    'without contact, a person may not open talks',
+    'without contact, a person may not open talks, and is told so',
     [
       currentWorkerRules()!.mayOpenTalks!(us, them, dependencies),
       await handleOpenTalks(actionContext, { civilization: 'Greek' }),
       negotiations.length,
+      notices.splice(0),
     ],
-    [false, false, 0]
+    [false, false, 0, ['Talks.refused']]
   );
 
   makeContact(
@@ -656,21 +663,31 @@ const run = async (): Promise<void> => {
   talks.audienceDue(stranger);
   await talks.holdAudiences();
 
+  expect(
+    'no audience with a computer player just talked to, nor one out of contact',
+    count() - held,
+    0
+  );
+
+  // Asked for while automation plays the turn, twice: kept, once, for the first hand-over the person plays.
   const automated = registerTalkEvents(engine, {
     view: stubView(() => us),
     talks,
     automation: { enabled: true } as any,
   });
 
+  held = count();
+  engine.emit('civ2-diplomacy:audience-due', them, us);
   engine.emit('civ2-diplomacy:audience-due', them, us);
   automated();
+  freshTurn();
   talks.handOver();
   await talks.pending;
 
   expect(
-    'no audience with a computer player just talked to, one out of contact, or under automation',
+    'one asked for under automation is kept, once, for the next hand-over',
     count() - held,
-    0
+    1
   );
 
   // Two requests for the same talks open them once.
@@ -681,6 +698,40 @@ const run = async (): Promise<void> => {
   await talks.pending;
 
   expect('talks asked for twice open once', count() - held, 1);
+
+  // A war the person declares, through the registered rules: the victim's ally joins it quietly, which is told as an
+  //  ally joining (`civ2-diplomacy:ally-joins-war`), not as a war declared on the person as well.
+  const victim = computerPlayer(Japanese),
+    victimsAlly = computerPlayer(Mongol),
+    warsOn: [Player, Player][] = [],
+    joined: [Player, Player, Player][] = [],
+    warOn = (by: Player, against: Player): void => {
+      warsOn.push([by, against]);
+    },
+    joins = (ally: Player, by: Player, against: Player): void => {
+      joined.push([ally, by, against]);
+    };
+
+  makeAlliance(dependencies, victim, victimsAlly);
+  freshTurn(victim);
+  engine.on('civ2:war-on', warOn);
+  engine.on('civ2-diplomacy:ally-joins-war', joins);
+  declareWar(dependencies, us, victim);
+  engine.off('civ2:war-on', warOn);
+  engine.off('civ2-diplomacy:ally-joins-war', joins);
+
+  expect(
+    'the person’s war is told, and the victim’s ally joining it once, as that',
+    [
+      warsOn.map(([by, against]) => [by === us, against === victim]),
+      joined.map(([ally, by, against]) => [
+        ally === victimsAlly,
+        by === us,
+        against === victim,
+      ]),
+    ],
+    [[[true, true]], [[true, true, true]]]
+  );
 
   // Every step of every meeting above is worded: none falls back to its class name.
   await i18next.init({ ...i18nOptions, lng: 'en' });

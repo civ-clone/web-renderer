@@ -25,6 +25,7 @@ i18next.addResources('en', 'default', {
   'Actions.Revolution.body':
     'Overthrow your government? Your civilization will fall into Anarchy for a few turns before you can choose a new one, unless you have the Pyramids.',
   'Actions.Revolution.confirm': 'Revolution!',
+  'Actions.Revolution.rechoose-confirm': 'Choose again',
   'Actions.Revolution.rechoose':
     'Choose your government again? You chose it this turn, so you can change your mind at once, with no Anarchy.',
   'Actions.Revolution.title': 'Revolution',
