@@ -52,6 +52,7 @@ import { instance as engineInstance } from '@civ-clone/core-engine/Engine';
 import promoted from './Rules/promoted';
 import notifications from './notifications';
 import reputationNotices from './Rules/reputationNotices';
+import warNotices from './Rules/warNotices';
 import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
 import anarchyTurns from './AdditionalData/anarchyTurns';
 import attackSound from './AdditionalData/attackSound';
@@ -134,6 +135,8 @@ export const civ2Rules: WorkerRules = {
   },
   // What it tells a person of its diplomacy.
   notifications: notifications(),
+  // A treaty's end is told by what ended it (`civ2:war-on`, and civ2-diplomacy's own events), not as each ends.
+  replacesNotices: ['player:declaration-expired'],
   // How a rival's city is drawn, from its owner's advances, as one's own is (`style`).
   cityStyle: (city) => cityStyle(city),
   // No score in M2a, so nothing for conquest either.
@@ -178,7 +181,8 @@ export const register = (): void => {
 
   ruleRegistryInstance.register(
     promoted(engineInstance),
-    ...reputationNotices(engineInstance)
+    ...reputationNotices(engineInstance),
+    warNotices(engineInstance)
   );
 };
 

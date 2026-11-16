@@ -123,6 +123,8 @@ export type WorkerRules = {
    *  order. None by default.
    */
   notifications?: NotificationTable;
+  /** Events every rule set tells of that this one's `notifications` tell of in their place. None by default. */
+  replacesNotices?: string[];
   /**
    * A revolution the rules offer when an advance makes a government available: the engine event that offers it (with
    *  the player and the government), and accepting it, which starts the revolution as the rules have it. None by

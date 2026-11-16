@@ -19,6 +19,7 @@ import {
   instance as ruleRegistryInstance,
 } from '@civ-clone/core-rule/RuleRegistry';
 import Player from '@civ-clone/core-player/Player';
+import { TreatyLevel } from '@civ-clone/base-diplomacy/lib/treatyLevel';
 import { hasEmbassy } from '@civ-clone/base-diplomacy/lib/embassy';
 
 // The news of two other players, for a person with an embassy with either who has met them both.
@@ -121,9 +122,22 @@ export const notifications = (
   [
     'civ2-diplomacy:war-declared',
     (ctx, by: Player, against: Player) =>
+      toUs(ctx, 'Diplomacy.war-declared', by, against),
+  ],
+  // Any war declared on us (`Rules/warNotices`): a treaty it broke is said, as Civ1's sneak attack is.
+  [
+    'civ2:war-on',
+    (ctx, by: Player, against: Player, broken: TreatyLevel) =>
       ctx.view.owns(by)
-        ? toUs(ctx, 'Diplomacy.war-declared', by, against)
-        : toUs(ctx, 'Diplomacy.war-declared-on-us', against, by),
+        ? null
+        : toUs(
+            ctx,
+            broken >= TreatyLevel.Ceasefire
+              ? 'Diplomacy.treaty-broken-by-war'
+              : 'Diplomacy.war-declared-on-us',
+            against,
+            by
+          ),
   ],
   [
     'civ2-diplomacy:ally-joins-war',

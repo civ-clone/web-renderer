@@ -128,6 +128,10 @@ const run = async (): Promise<void> => {
       told('civ2-diplomacy:senate-forced-treaty', us, greeks, 'peace'),
       told('civ2-diplomacy:refusal-overruled', greeks, us, {}),
       told('civ2-diplomacy:war-declared', us, greeks),
+      // A war declared on us, breaking a treaty or not; ours isn't told this way.
+      told('civ2:war-on', greeks, us, 3),
+      told('civ2:war-on', greeks, us, 1),
+      told('civ2:war-on', us, greeks, 3),
       told('civ2-diplomacy:ally-joins-war', babylon, us, greeks),
       told('civ2-diplomacy:treaty-broken', greeks, us),
     ],
@@ -141,6 +145,9 @@ const run = async (): Promise<void> => {
       'The Senate: The Senate has overruled us, and signed a peace treaty with the Greeks.',
       'Peace: Our refusal counted for nothing: we are now at peace with the Greeks.',
       'War: We are now at war with the Greeks.',
+      'Treaty broken: The Greeks have broken their treaty with us, and declared war!',
+      'War: The Greeks have declared war on us!',
+      null,
       'War: The Babylonians stand by their allies, and have declared war on us!',
       'Treaty broken: The Greeks have broken their treaty with us!',
     ]
@@ -221,7 +228,10 @@ const run = async (): Promise<void> => {
   // The client registers the rule set's notices after its own, as engine listeners.
   const listened: string[] = [];
 
-  setWorkerRules({ notifications: table } as any);
+  setWorkerRules({
+    notifications: table,
+    replacesNotices: ['player:declaration-expired'],
+  } as any);
   registerNotifications(
     {
       on: (event: string) => {
@@ -233,9 +243,12 @@ const run = async (): Promise<void> => {
   );
 
   expect(
-    'the client listens for each of the rule set’s events, after its own',
-    listened.slice(-table.length),
-    table.map(([event]) => event)
+    'the client listens for each of the rule set’s events, after its own, and not for those it replaces: a treaty’s end is told by what ended it',
+    [
+      listened.slice(-table.length),
+      listened.includes('player:declaration-expired'),
+    ],
+    [table.map(([event]) => event), false]
   );
 
   finished = true;

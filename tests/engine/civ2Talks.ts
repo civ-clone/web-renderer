@@ -70,6 +70,9 @@ import pluginSets from '../../src/js/pluginSets';
 import { pluginsFrom } from '@civ-clone/ui-worker-client/Plugins';
 import { stubView } from './lib/view';
 import { talksGroup } from '@civ-clone/ui-client/lib/talksMenu';
+import i18next from 'i18next';
+import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
+import { interactionLabel } from '@civ-clone/ui-client/lib/interactionLabels';
 
 const failures: string[] = [];
 let checks = 0,
@@ -633,6 +636,46 @@ const run = async (): Promise<void> => {
     ],
     [1, true, 'Initiate', true]
   );
+
+  // Every step of every meeting above is worded: none falls back to its class name.
+  await i18next.init({ ...i18nOptions, lng: 'en' });
+  await import('../ui/lib/strings');
+  await import('../../translations/civ1-diplomacy/en');
+  await import('../../translations/civ2-diplomacy/en');
+
+  const plain = (step: any): any => ({
+      _: step.constructor.name,
+      __: inheritance(step),
+      kind: typeof step.kind === 'function' ? step.kind() : undefined,
+      key: typeof step.key === 'function' ? step.key() : undefined,
+      by: typeof step.by === 'function' ? { id: step.by()?.id() } : undefined,
+      proposal:
+        typeof step.proposal === 'function'
+          ? plain(step.proposal())
+          : undefined,
+    }),
+    unworded = [
+      ...new Set(
+        negotiations
+          .flatMap((negotiation) => negotiation.interactions())
+          .map((step: any) => {
+            const value = plain(step),
+              own = value.by?.id === us.id(),
+              answer =
+                !own &&
+                value.__.includes('Resolution') &&
+                value.proposal?.by?.id === us.id(),
+              label = interactionLabel(value, own, answer);
+
+            return label === value._ || label === ''
+              ? `${stepName(step)}${value.key ? ` ${value.key}` : ''}`
+              : null;
+          })
+          .filter((name): name is string => name !== null)
+      ),
+    ];
+
+  expect('every step of the talks is worded', unworded, []);
 
   finished = true;
 };

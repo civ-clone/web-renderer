@@ -197,6 +197,12 @@ i18next.addResources('en', 'notification', {
   )} have declared war on us!`,
   'Diplomacy.war-declared-on-us.unmet.title': 'War',
   'Diplomacy.war-declared-on-us.unmet.body': `${Unknown} has declared war on us!`,
+  'Diplomacy.treaty-broken-by-war.title': `Treaty broken`,
+  'Diplomacy.treaty-broken-by-war.body': `${The(
+    'player'
+  )} have broken their treaty with us, and declared war!`,
+  'Diplomacy.treaty-broken-by-war.unmet.title': 'Treaty broken',
+  'Diplomacy.treaty-broken-by-war.unmet.body': `${Unknown} has broken its treaty with us, and declared war!`,
   'Diplomacy.ally-joins-war.title': 'War',
   'Diplomacy.ally-joins-war.body': `${The(
     'player'
