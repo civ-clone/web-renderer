@@ -28,7 +28,7 @@ import {
   Temple,
 } from '@civ-clone/civ2-city-improvement/CityImprovements';
 import { Grassland, Ocean } from '@civ-clone/civ2-world/Terrains';
-import { Settlers, Warrior } from '@civ-clone/civ2-unit/Units';
+import { Musketman, Settlers, Warrior } from '@civ-clone/civ2-unit/Units';
 import Capitalization from '@civ-clone/base-city-improvement-capitalization/Capitalization';
 import City from '@civ-clone/core-city/City';
 import Client from '@civ-clone/core-client/Client';
@@ -40,6 +40,12 @@ import Tile from '@civ-clone/core-world/Tile';
 import { Greek, Roman } from '@civ-clone/civ2-civilization/Civilizations';
 import { Gold, Production } from '@civ-clone/civ2-city/Yields';
 import processCityYields from '@civ-clone/base-player/lib/processCityYields';
+import {
+  unknownCityOf,
+  unknownUnitOf,
+} from '@civ-clone/ui-worker-client/Client/standIns';
+import { playerView } from '@civ-clone/ui-worker-client/Client/View';
+import { registerPatchEvents } from '@civ-clone/ui-worker-client/Client/events/patchEvents';
 import Added from '@civ-clone/core-player/Rules/Added';
 import UnknownCity from '@civ-clone/ui-worker-client/UnknownObjects/City';
 import World from '@civ-clone/core-world/World';
@@ -408,6 +414,109 @@ const run = async (): Promise<void> => {
     additional(build, 'autoMode'),
     'any'
   );
+
+  // What the client patches (M2c): a changed square's cities, a rival's upgraded unit, and a rival's cities drawn in a
+  //  new era.
+  {
+    defaultGame.playerWorlds
+      .getByPlayer(us)
+      .register(
+        ...world
+          .tiles()
+          .filter(
+            (tile: Tile) =>
+              defaultGame.playerWorlds.getByPlayer(us).getByTile(tile) === null
+          )
+      );
+
+    const view = playerView(() => us, {
+        cities: defaultGame.cities,
+        interactions: defaultGame.interactions,
+        playerWorlds: defaultGame.playerWorlds,
+      } as any),
+      listeners: { [event: string]: ((...args: any[]) => void)[] } = {},
+      patched: string[] = [];
+
+    registerPatchEvents(
+      {
+        on: (event: string, listener: (...args: any[]) => void) =>
+          (listeners[event] = [...(listeners[event] ?? []), listener]),
+        off: () => {},
+      } as any,
+      {
+        view,
+        cities: defaultGame.cities,
+        units: defaultGame.units,
+        dataFilter: () => (object: any) => object,
+        patches: {
+          tile: (tile: any) => tile && patched.push(`tile ${tile.id()}`),
+          unit: (unit: any) => patched.push(`unit ${unit.id()}`),
+          city: (city: any) => patched.push(`city ${city.name()}`),
+          update: (id: string) => patched.push(`update ${id}`),
+          playerKey: () => {},
+          flush: () => {},
+        },
+      } as any
+    );
+
+    const emit = (event: string, ...args: unknown[]) => {
+        patched.length = 0;
+        listeners[event]!.forEach((listener) => listener(...args));
+
+        return [...patched];
+      },
+      tileId = (tile: Tile) => view.tile(tile)!.id();
+
+    expect(
+      "an improvement built in a city's radius sends the city again, with its figures; one out of every radius doesn't",
+      [
+        emit('tile-improvement:built', oceanSquare),
+        emit('tile-improvement:built', world.get(45, 5)),
+      ],
+      [
+        [`tile ${oceanSquare.id()}`, 'city Coastal'],
+        [`tile ${world.get(45, 5).id()}`],
+      ]
+    );
+
+    const rivalUnit = new Warrior(
+        null,
+        them,
+        world.get(31, 30),
+        defaultGame.rules
+      ),
+      standIn = unknownUnitOf(rivalUnit),
+      was = standIn._();
+
+    // Upgraded in place, as base-unit-upgrade does it.
+    Object.setPrototypeOf(rivalUnit, Musketman.prototype);
+
+    expect(
+      "a rival's upgraded unit: its stand-in is its new type, its square goes again, and the unit itself doesn't",
+      [was, standIn._(), emit('unit:upgraded', rivalUnit, Warrior, Musketman)],
+      ['Warrior', 'Musketman', [`tile ${tileId(rivalUnit.tile())}`]]
+    );
+
+    const theirCity = unknownCityOf(theirs),
+      theirResearch = defaultGame.playerResearch.getByPlayer(them);
+
+    expect(
+      "a rival's advance that doesn't change its cities' era sends nothing",
+      emit('player:research-complete', theirResearch),
+      []
+    );
+
+    theirResearch.addAdvance(Industrialization);
+
+    expect(
+      "a rival's advance into a new era: its city's stand-in is drawn in it, and goes again with its square",
+      [emit('player:research-complete', theirResearch), theirCity.style()],
+      [
+        [`update ${theirCity.id()}`, `tile ${tileId(theirs.tile())}`],
+        { era: 'industrial', people: 'industrial', larger: false },
+      ]
+    );
+  }
 
   // Taken off Auto, it forgets its mode, so a later Auto doesn't take it up again.
   workerRules().autoBuild(build, defaultGame.rules, 'units');

@@ -42,8 +42,9 @@ export class Unit extends DataObject {
     return new Unit(unit.constructor.name, unit.tile(), unit.player(), unit);
   }
 
+  // What it is now: a unit upgraded in place (M2c) is its new type.
   _(): string {
-    return this.#_;
+    return this.#unit?.constructor.name ?? this.#_;
   }
 
   hitPoints(): unknown {

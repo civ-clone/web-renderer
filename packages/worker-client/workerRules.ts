@@ -74,6 +74,8 @@ export type WorkerRules = {
     Item: Buildable,
     rules: RuleRegistry
   ) => { progressAfterChange?: number; goldPerTurn?: number };
+  /** Whether a square yields each city its own figures (`City.squareYields`, Civ2), so a city goes again when a square in its radius changes. Not by default. */
+  citySquareYields?: boolean;
   /** A city taken off Auto, for rules that keep more than the flag (Civ2's Auto mode, M2c). Nothing by default. */
   autoBuildStopped?: (cityBuild: CityBuild) => void;
   /** Whether a city that grows while it celebrates is told so (Civ2's rapture growth). Not by default. */

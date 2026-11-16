@@ -632,6 +632,20 @@ const unitMoves = (state: GameState, id: string): number | undefined =>
     queuedIds() === 'Tile-1'
   );
 
+  // Its worker made a specialist and its figures changed (a Harbour sold, say): the square it worked is drawn again
+  //  too, as its icons showed what the city no longer gets.
+  state.applyPatches([
+    sent('City-1', {
+      ...yielding(3),
+      tilesWorked: [],
+    }),
+  ]);
+
+  check(
+    'the squares it worked before are queued with the ones it works now',
+    queuedIds().split(',').sort().join(',') === 'Tile-1,Tile-2'
+  );
+
   state.applyPatches([sent('City-1', city('City-1'))]);
   queuedIds();
 

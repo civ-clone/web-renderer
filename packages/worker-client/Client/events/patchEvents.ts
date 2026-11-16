@@ -25,6 +25,7 @@ import { CityNewsCollector } from '../cityNews';
 import { ClientContext, Disposer, Registries } from '../ClientContext';
 import { filterToReference, filterToReferenceAllExcept } from '../refs';
 import { knownUnknownCity } from '../standIns';
+import { workerRules } from '../../workerRules';
 
 export type PatchEventsContext = Pick<
   ClientContext,
@@ -34,9 +35,10 @@ export type PatchEventsContext = Pick<
   // What the player may see, which a rival's city, a build or research goes through when it changes.
   | 'dataFilter'
 > &
-  // What the player knows of a square, the city on one and the units on one.
+  // What the player knows of a square, the city on one and the units on one; and a player's cities, and every city, for
+  //  the cities a changed square or a rival's advance changes (M2c).
   Registries<{
-    cities: 'getByTile';
+    cities: 'getByTile' | 'getByPlayer' | 'entries';
     units: 'getByTile';
   }> & {
     // Whether this is our turn, automated, read as each event happens: automation is turned on and off mid-game.
@@ -139,14 +141,19 @@ export const registerPatchEvents = (
     ctx.patches.unit(unit);
   });
 
-  // A unit of ours upgraded in place (M2c, `unit:upgraded`): it goes again as its new type, with its square.
+  // A unit upgraded in place (M2c, `unit:upgraded`): its square goes again, which a rival's unit's stand-in, as its
+  //  type is read from the unit, is drawn on as its new type, where the player knows the square; and one of ours goes
+  //  again in full.
   on('unit:upgraded', (unit: Unit) => {
-    if (!ctx.view.owns(unit.player())) {
-      return;
+    const playerTile = ctx.view.tile(unit.tile());
+
+    if (playerTile) {
+      ctx.patches.tile(playerTile);
     }
 
-    ctx.patches.tile(ctx.view.tile(unit.tile()));
-    ctx.patches.unit(unit);
+    if (ctx.view.owns(unit.player())) {
+      ctx.patches.unit(unit);
+    }
   });
 
   ['unit:destroyed'].forEach((event) => {
@@ -203,7 +210,26 @@ export const registerPatchEvents = (
     'tile-improvement:pillaged',
     'tile-improvement:removed',
   ].forEach((event) => {
-    on(event, (tile) => ctx.patches.tile(tile));
+    on(event, (tile: Tile) => {
+      ctx.patches.tile(tile);
+
+      // Under rules where a square yields its city something of its own (Civ2's `squareYields`, M2c), each of our
+      //  cities with the square in its radius goes again too, with its figures. Not under Civ1's, whose payload and
+      //  cost stay as they were.
+      if (workerRules().citySquareYields !== true) {
+        return;
+      }
+
+      ctx.cities
+        .entries()
+        .filter(
+          (city: City) =>
+            ctx.view.owns(city.player()) &&
+            city.tile().distanceFrom(tile) <= 3 &&
+            city.tiles().entries().includes(tile)
+        )
+        .forEach((city: City) => ctx.patches.city(city));
+    });
   });
 
   on(
@@ -433,6 +459,36 @@ export const registerPatchEvents = (
   // The advance is told of in `Client/notifications/player.ts`.
   on('player:research-complete', (playerResearch) => {
     if (!ctx.view.owns(playerResearch.player())) {
+      // A rival's advance can change how its cities are drawn (Civ2's eras, M2c): each of its cities the player has
+      //  been sent goes again, with its square, where its stand-in's style changes. None under rules without styles.
+      if (workerRules().cityStyle === undefined) {
+        return;
+      }
+
+      ctx.cities.getByPlayer(playerResearch.player()).forEach((city: City) => {
+        const unknownCity = knownUnknownCity(city),
+          playerTile = ctx.view.tile(city.tile());
+
+        if (!unknownCity || !playerTile) {
+          return;
+        }
+
+        const before = JSON.stringify(unknownCity.style());
+
+        unknownCity.update(city);
+
+        if (JSON.stringify(unknownCity.style()) === before) {
+          return;
+        }
+
+        ctx.patches.update(unknownCity.id(), () =>
+          unknownCity.toPlainObject(
+            ctx.dataFilter(filterToReference(Tile, Unit, Player))
+          )
+        );
+        ctx.patches.tile(playerTile);
+      });
+
       return;
     }
 
