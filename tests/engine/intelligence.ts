@@ -45,6 +45,23 @@ import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 import TraitRegistry from '@civ-clone/core-civilization/TraitRegistry';
 import { instance as turn } from '@civ-clone/core-turn-based-game/Turn';
 import registerTraits from '@civ-clone/civ1-civilization/registerTraits';
+import { Alliance, Ceasefire } from '@civ-clone/library-diplomacy/Declarations';
+import {
+  WorkerRules,
+  setWorkerRules,
+} from '@civ-clone/ui-worker-client/workerRules';
+import {
+  attitude,
+  leaderTitle,
+  reputation,
+  treaty,
+} from '@civ-clone/ui-rules-civ2/lib/relations';
+import {
+  attitude as attitudes,
+  reputation as reputations,
+} from '@civ-clone/civ2-diplomacy/lib/relations';
+import Effect from '@civ-clone/core-rule/Effect';
+import LeaderTitle from '@civ-clone/core-civilization/Rules/LeaderTitle';
 
 const failures: string[] = [];
 let checks = 0;
@@ -150,15 +167,29 @@ expect(
 );
 
 expect(
-  'what we know of anyone we have met: the leader, peace or war, and their embassy with us',
-  rows.map(({ leader, atPeace, theirEmbassy }) => ({
+  'what we know of anyone we have met: the leader, peace or war, and their embassy with us; under Civ1’s rules no title and no attitude',
+  rows.map(({ leader, leaderTitle, treaty, attitude, theirEmbassy }) => ({
     leader,
-    atPeace,
+    leaderTitle,
+    treaty,
+    attitude,
     theirEmbassy,
   })),
   [
-    { leader: 'JuliusCaesar', atPeace: true, theirEmbassy: false },
-    { leader: 'AlexanderTheGreat', atPeace: false, theirEmbassy: true },
+    {
+      leader: 'JuliusCaesar',
+      leaderTitle: null,
+      treaty: 'peace',
+      attitude: null,
+      theirEmbassy: false,
+    },
+    {
+      leader: 'AlexanderTheGreat',
+      leaderTitle: null,
+      treaty: 'war',
+      attitude: null,
+      theirEmbassy: true,
+    },
   ]
 );
 
@@ -171,10 +202,11 @@ expect('the details an embassy gives', rows[0].details, {
   cities: 1,
   units: 7,
   foreignAffairs: [
-    { civilization: 'Babylonian', atPeace: true },
-    { civilization: null, atPeace: false },
+    { civilization: 'Babylonian', treaty: 'peace' },
+    { civilization: null, treaty: 'war' },
   ],
   advances: ['BronzeWorking', 'Monarchy'],
+  reputation: null,
 });
 
 expect(
@@ -209,6 +241,74 @@ expect(
     'Perfectionist',
     'Civilized',
     'Militaristic',
+  ]
+);
+
+// Under Civ2's rules (M2d, #1007): the treaty between us has a ceasefire and an alliance, a row says how they feel
+//  toward us and what their leader is called, and the embassy's details give their reputation.
+setWorkerRules({ treaty, attitude, reputation, leaderTitle } as WorkerRules);
+
+const civ2Interactions = new InteractionRegistry(),
+  civ2Rules = new RuleRegistry(),
+  civ2Dependencies = {
+    ...dependencies,
+    interactionRegistry: civ2Interactions,
+    ruleRegistry: civ2Rules,
+    turn,
+  } as unknown as IntelligenceDependencies,
+  relationRegistries = {
+    interactionRegistry: civ2Interactions,
+    ruleRegistry: civ2Rules,
+    turn,
+  };
+
+civ2Interactions.register(
+  new Embassy(reader, rival, civ2Rules) as never,
+  new Ceasefire(rival, reader, civ2Rules) as never,
+  new Alliance(rival, unmet, civ2Rules) as never
+);
+civ2Rules.register(
+  new LeaderTitle(
+    new Effect((leader: unknown, government: unknown) =>
+      government instanceof Monarchy ? 'LeaderTitle.civ2.Monarchy' : undefined
+    )
+  )
+);
+attitudes(relationRegistries).set(rival, reader, 30);
+reputations(relationRegistries).set(rival, 3);
+
+const civ2Rows = intelligenceRows(
+  reader,
+  (other) => [rival, unmet].includes(other),
+  civ2Dependencies
+);
+
+expect(
+  'under Civ2’s rules, a row has the treaty (a ceasefire), how they feel toward us (30, the fourth band) and their leader’s title',
+  civ2Rows.map(({ treaty, attitude, leaderTitle }) => ({
+    treaty,
+    attitude,
+    leaderTitle,
+  })),
+  [
+    {
+      treaty: 'ceasefire',
+      attitude: 3,
+      leaderTitle: 'LeaderTitle.civ2.Monarchy',
+    },
+    // No leader set, so no title.
+    { treaty: 'contact', attitude: null, leaderTitle: null },
+  ]
+);
+expect(
+  'and the embassy’s details their reputation, and their foreign affairs with each treaty',
+  [civ2Rows[0]!.details?.reputation, civ2Rows[0]!.details?.foreignAffairs],
+  [
+    3,
+    [
+      { civilization: 'Babylonian', treaty: 'ceasefire' },
+      { civilization: 'English', treaty: 'alliance' },
+    ],
   ]
 );
 

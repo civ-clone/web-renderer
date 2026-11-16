@@ -33,6 +33,12 @@ import { instance as playerGovernmentRegistryInstance } from '@civ-clone/core-go
 import { instance as playerResearchRegistryInstance } from '@civ-clone/core-science/PlayerResearchRegistry';
 import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
 import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
+import { instance as engineInstance } from '@civ-clone/core-engine/Engine';
+import { Monarchy } from '@civ-clone/civ2-government/Governments';
+import registerRevolutionOffers from '@civ-clone/ui-worker-client/Client/revolutionOffers';
+import rechoose from '@civ-clone/ui-rules-civ2/AdditionalData/rechoose';
+import Client from '@civ-clone/core-client/Client';
+import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
 
 const failures: string[] = [];
 let checks = 0,
@@ -217,6 +223,121 @@ const run = async (): Promise<void> => {
     [pendingKeys(), turnsUntilChoice(playerGovernment), offered()],
     [[], null, ['Revolution']]
   );
+
+  // In the turn a person chose a government, a Revolution is a free re-choice (M2d): no Anarchy, and the choice at once.
+  //  A person's: the player's client isn't a computer player's.
+  clientRegistryInstance.register(
+    Object.assign(Object.create(Client.prototype), { player: () => player })
+  );
+
+  turnInstance.set(9);
+  await handleAction(ctx, { name: 'Revolution', id: playerGovernment.id() });
+  turnInstance.set(12);
+  await handleAction(ctx, {
+    name: 'ChooseGovernment',
+    id: playerGovernment.id(),
+    chosen: 'Monarchy',
+  });
+
+  const rechooseData = rechoose();
+
+  expect(
+    'the government chosen this turn, the Revolution window is told a revolution is a free re-choice',
+    rechooseData.data(playerGovernment),
+    true
+  );
+
+  const rechosen = await handleAction(ctx, {
+    name: 'Revolution',
+    id: playerGovernment.id(),
+  });
+
+  expect(
+    'a Revolution in the turn a government was chosen keeps it, and offers the choice again at once',
+    [rechosen, governmentName(), offered(), turnsUntilChoice(playerGovernment)],
+    [false, 'Monarchy', ['ChooseGovernment'], 0]
+  );
+
+  await handleAction(ctx, {
+    name: 'ChooseGovernment',
+    id: playerGovernment.id(),
+    chosen: 'Despotism',
+  });
+
+  expect(
+    'and the government chosen again is taken',
+    governmentName(),
+    'Despotism'
+  );
+
+  turnInstance.set(13);
+
+  expect(
+    'and the next turn it isn’t',
+    rechooseData.data(playerGovernment),
+    false
+  );
+
+  turnInstance.set(12);
+
+  // The revolution offered as an advance makes a government available (M2d): asked of the person, the refusal first.
+  const asked: unknown[][] = [];
+  let answer = false;
+  const dispose = registerRevolutionOffers(engineInstance, {
+    view: { owns: (other: Player) => other === player },
+    automation: { enabled: false },
+    patches: { player: () => patched.push('player'), flush: () => {} },
+    rules: ruleRegistryInstance,
+    turn: turnInstance,
+    choose: async (meta: any) => {
+      asked.push([
+        meta.key(),
+        meta.choices().map((choice: any) => choice.value()),
+        meta.data(),
+      ]);
+
+      return answer;
+    },
+  } as any);
+
+  engineInstance.emit('player:government:available', player, Monarchy);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  expect(
+    'an offer is asked, Not now first, naming the government, and refused changes nothing',
+    [asked, governmentName()],
+    [
+      [
+        [
+          'government.revolution-offer',
+          [false, true],
+          { government: 'Monarchy' },
+        ],
+      ],
+      'Despotism',
+    ]
+  );
+
+  answer = true;
+  engineInstance.emit('player:government:available', player, Monarchy);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  expect(
+    'accepted, it starts a revolution with Anarchy, even in the turn a government was chosen, as the original sets it',
+    [governmentName(), turnsUntilChoice(playerGovernment)],
+    ['Anarchy', 4]
+  );
+
+  engineInstance.emit('player:government:available', player, Monarchy);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  expect(
+    'and another offer while it lasts starts nothing more',
+    [governmentName(), turnsUntilChoice(playerGovernment)],
+    ['Anarchy', 4]
+  );
+
+  dispose();
 
   finished = true;
 

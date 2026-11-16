@@ -6,21 +6,40 @@ import { CityRegistry } from '@civ-clone/core-city/CityRegistry';
 import { InteractionRegistry } from '@civ-clone/core-diplomacy/InteractionRegistry';
 import Player from '@civ-clone/core-player/Player';
 import { PlayerWorldRegistry } from '@civ-clone/core-player-world/PlayerWorldRegistry';
+import RelationRecord from '@civ-clone/core-diplomacy/Records/RelationRecord';
+import { RuleRegistry } from '@civ-clone/core-rule/RuleRegistry';
+import { currentWorkerRules } from '../workerRules';
+import { hasEmbassy } from '@civ-clone/base-diplomacy/lib/embassy';
 import isBarbarian from '@civ-clone/base-civilization-barbarian/isBarbarian';
 
 export type HasMetDependencies = {
   interactions: Pick<InteractionRegistry, 'getByPlayers'>;
   cities: Pick<CityRegistry, 'entries'>;
   playerWorlds: Pick<PlayerWorldRegistry, 'getByPlayer'>;
+  // The rules, for an embassy one of them gives (`HasEmbassy`: a Wonder that is an embassy with everyone). Without
+  //  them, only an embassy a Diplomat established counts.
+  rules?: RuleRegistry;
+  // Whether having seen a city they hold or founded is meeting them. The rule set's (`WorkerRules.seenCityMeets`) when
+  //  not given.
+  seenCityMeets?: boolean;
 };
 
-// There is no formal first-contact record, so this stands in: any interaction between us (a negotiation or a
-//  declaration), or having seen a city they hold or founded. The founder counts because a defeated player holds no
-//  cities by the time we are told.
+// Any dealings between us: a negotiation, a declaration, a contact or an embassy, but not one of the records the rules
+//  keep about a pair (how one feels about the other, its patience, the turn they last met: `RelationRecord`s), which
+//  can be kept before they've met (#1067). An embassy either of the rules gives counts, as it shows them everything
+//  (`HasEmbassy`). And, under rules where it counts (Civ1's), having seen a city they hold or founded: the founder
+//  counts because a defeated player holds no cities by the time we are told. Civ2's don't: there, the Apollo Program
+//  shows every city without anyone meeting (#1067).
 export const hasMet = (
   self: Player,
   other: Player,
-  { interactions, cities, playerWorlds }: HasMetDependencies
+  {
+    interactions,
+    cities,
+    playerWorlds,
+    rules,
+    seenCityMeets = currentWorkerRules()?.seenCityMeets ?? true,
+  }: HasMetDependencies
 ): boolean => {
   if (other === self) {
     return true;
@@ -31,8 +50,30 @@ export const hasMet = (
     return true;
   }
 
-  if (interactions.getByPlayers(self, other).length > 0) {
+  if (
+    interactions
+      .getByPlayers(self, other)
+      .some((interaction) => !(interaction instanceof RelationRecord))
+  ) {
     return true;
+  }
+
+  if (
+    rules !== undefined &&
+    hasEmbassy(
+      {
+        interactionRegistry: interactions as InteractionRegistry,
+        ruleRegistry: rules,
+      },
+      self,
+      other
+    )
+  ) {
+    return true;
+  }
+
+  if (!seenCityMeets) {
+    return false;
   }
 
   const playerWorld = playerWorlds.getByPlayer(self);

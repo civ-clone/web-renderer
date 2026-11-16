@@ -74,7 +74,15 @@ const categories: [NoticeCategory, string[]][] = [
       'Wonder',
     ],
   ],
-  ['diplomacy', ['Player.declaration-broken', 'Player.declaration-expired']],
+  [
+    'diplomacy',
+    [
+      // Civ2's treaties, wars and Senate (M2d).
+      'Diplomacy',
+      'Player.declaration-broken',
+      'Player.declaration-expired',
+    ],
+  ],
 ];
 
 export const noticeCategory = (key: string): NoticeCategory | null =>

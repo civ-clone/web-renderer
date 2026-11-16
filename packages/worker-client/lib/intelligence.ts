@@ -36,20 +36,31 @@ import {
 } from '@civ-clone/core-unit/UnitRegistry';
 import { Year, instance as yearInstance } from '@civ-clone/core-game-year/Year';
 import {
+  RuleRegistry,
+  instance as ruleRegistryInstance,
+} from '@civ-clone/core-rule/RuleRegistry';
+import {
+  Turn,
+  instance as turnInstance,
+} from '@civ-clone/core-turn-based-game/Turn';
+import {
   NormalAggression,
   NormalDevelopment,
   NormalMilitarism,
 } from '@civ-clone/library-civilization/Traits';
-import Embassy from '@civ-clone/base-unit-action-establish-embassy/Embassy';
+import { RelationRegistries, currentWorkerRules } from '../workerRules';
 import { Gold } from '@civ-clone/library-city/Yields';
 import { Palace } from '@civ-clone/library-city/CityImprovements';
 import { Peace } from '@civ-clone/library-diplomacy/Declarations';
 import Player from '@civ-clone/core-player/Player';
+import RelationRecord from '@civ-clone/core-diplomacy/Records/RelationRecord';
+import { hasEmbassy as hasEmbassyWith } from '@civ-clone/base-diplomacy/lib/embassy';
 import isBarbarian from '@civ-clone/base-civilization-barbarian/isBarbarian';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 import {
   IntelligenceDetails,
   IntelligenceRow,
+  Treaty,
 } from '@civ-clone/ui-protocol/reports';
 
 export type IntelligenceDependencies = {
@@ -62,6 +73,10 @@ export type IntelligenceDependencies = {
   playerTreasuryRegistry: PlayerTreasuryRegistry;
   unitRegistry: UnitRegistry;
   year: Year;
+  // The rules, for an embassy one of them gives (`HasEmbassy`) and the rule set's relations; and the turn, which they
+  //  read too.
+  ruleRegistry: RuleRegistry;
+  turn: Turn;
 };
 
 const defaultDependencies: IntelligenceDependencies = {
@@ -74,23 +89,33 @@ const defaultDependencies: IntelligenceDependencies = {
   playerTreasuryRegistry: playerTreasuryRegistryInstance,
   unitRegistry: unitRegistryInstance,
   year: yearInstance,
+  ruleRegistry: ruleRegistryInstance,
+  turn: turnInstance,
 };
 
 const civilizationOf = (player: Player): string =>
   typeNameOf(player.civilization().sourceClass());
 
+// Whether `holder` has an embassy with `host`: one a Diplomat established, or one a rule gives (base-diplomacy's
+//  `hasEmbassy`: Marco Polo's Embassy and the United Nations in Civ2). One way, as an embassy is.
 export const hasEmbassy = (
   holder: Player,
   host: Player,
-  interactionRegistry: InteractionRegistry = interactionRegistryInstance
+  interactionRegistry: InteractionRegistry = interactionRegistryInstance,
+  ruleRegistry: RuleRegistry | undefined = undefined
 ): boolean =>
+  hasEmbassyWith({ interactionRegistry, ruleRegistry }, holder, host);
+
+// The dealings between the two: not the records the rules keep about a pair (how one feels toward the other, its
+//  patience), which aren't dealings and can be kept before they've met (#1067).
+const dealings = (
+  player: Player,
+  other: Player,
+  interactionRegistry: InteractionRegistry
+) =>
   interactionRegistry
-    .getByPlayers(holder, host)
-    .some(
-      (interaction) =>
-        interaction instanceof Embassy &&
-        (interaction as unknown as Embassy).holder() === holder
-    );
+    .getByPlayers(player, other)
+    .filter((interaction) => !(interaction instanceof RelationRecord));
 
 // At peace while a `Peace` between the two is in force; otherwise at war, as v474.05 has it for any two who have met.
 const atPeace = (
@@ -105,15 +130,42 @@ const atPeace = (
         interaction instanceof Peace && (interaction as Peace).active()
     );
 
+const relationRegistries = ({
+  interactionRegistry,
+  ruleRegistry,
+  turn,
+}: IntelligenceDependencies): RelationRegistries => ({
+  interactionRegistry,
+  ruleRegistry,
+  turn,
+});
+
+// Where the two stand: as the rule set has it, and otherwise as v474.05 has it, at peace or at war.
+const treatyOf = (
+  player: Player,
+  other: Player,
+  dependencies: IntelligenceDependencies
+): Treaty => {
+  const treaty = currentWorkerRules()?.treaty;
+
+  if (treaty) {
+    return treaty(player, other, relationRegistries(dependencies));
+  }
+
+  return atPeace(player, other, dependencies.interactionRegistry)
+    ? 'peace'
+    : 'war';
+};
+
 // The earliest of the two's dealings: `when` is the turn it happened in.
 const firstMet = (
   player: Player,
   other: Player,
   { interactionRegistry, year }: IntelligenceDependencies
 ): number | null => {
-  const turns = interactionRegistry
-    .getByPlayers(player, other)
-    .map((interaction) => interaction.when());
+  const turns = dealings(player, other, interactionRegistry).map(
+    (interaction) => interaction.when()
+  );
 
   return turns.length === 0
     ? null
@@ -139,7 +191,9 @@ const details = (
   reader: Player,
   subject: Player,
   hasMet: (player: Player) => boolean,
-  {
+  dependencies: IntelligenceDependencies
+): IntelligenceDetails => {
+  const {
     cityImprovementRegistry,
     cityRegistry,
     interactionRegistry,
@@ -148,8 +202,8 @@ const details = (
     playerResearchRegistry,
     playerTreasuryRegistry,
     unitRegistry,
-  }: IntelligenceDependencies
-): IntelligenceDetails => {
+  } = dependencies;
+
   const leader = subject.civilization().leader(),
     capital = cityRegistry
       .getByPlayer(subject)
@@ -197,12 +251,12 @@ const details = (
       .filter(
         (other) =>
           other !== subject &&
-          interactionRegistry.getByPlayers(subject, other).length > 0
+          dealings(subject, other, interactionRegistry).length > 0
       )
       .map((other) => ({
         civilization:
           other === reader || hasMet(other) ? civilizationOf(other) : null,
-        atPeace: atPeace(subject, other, interactionRegistry),
+        treaty: treatyOf(subject, other, dependencies),
       })),
     advances: attempt(
       () =>
@@ -214,6 +268,11 @@ const details = (
           .map((advance) => advance.sourceClass().name),
       []
     ),
+    reputation:
+      currentWorkerRules()?.reputation?.(
+        subject,
+        relationRegistries(dependencies)
+      ) ?? null,
   };
 };
 
@@ -238,15 +297,39 @@ export const intelligenceRows = (
         civilization: civilizationOf(player),
         colors: colors ? (colors.value() as [string, string]) : null,
         leader: leaderOf(player),
-        atPeace: atPeace(reader, player, dependencies.interactionRegistry),
+        leaderTitle:
+          currentWorkerRules()?.leaderTitle?.(
+            player,
+            dependencies.ruleRegistry,
+            dependencies.playerGovernmentRegistry
+          ) ?? null,
+        treaty: treatyOf(reader, player, dependencies),
+        attitude:
+          currentWorkerRules()?.attitude?.(
+            player,
+            reader,
+            relationRegistries(dependencies)
+          ) ?? null,
         theirEmbassy: hasEmbassy(
           player,
           reader,
-          dependencies.interactionRegistry
+          dependencies.interactionRegistry,
+          dependencies.ruleRegistry
         ),
         firstMet: firstMet(reader, player, dependencies),
-        details: hasEmbassy(reader, player, dependencies.interactionRegistry)
+        details: hasEmbassy(
+          reader,
+          player,
+          dependencies.interactionRegistry,
+          dependencies.ruleRegistry
+        )
           ? details(reader, player, hasMet, dependencies)
           : null,
+        talks:
+          currentWorkerRules()?.mayOpenTalks?.(
+            reader,
+            player,
+            relationRegistries(dependencies)
+          ) ?? false,
       };
     });

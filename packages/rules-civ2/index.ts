@@ -13,7 +13,11 @@
 //  an Auto city's next build, and scoring and conquest. It imports nothing of Civ1's (the civ2 set's isolation suite checks that none of it loads).
 
 import { citizenSummary } from '@civ-clone/base-city-happiness/lib/calculateCitizenState';
-import { handleChooseGovernment, handleRevolution } from './actions/government';
+import {
+  acceptRevolution,
+  handleChooseGovernment,
+  handleRevolution,
+} from './actions/government';
 import {
   handleCompleteProduction,
   handleSellImprovement,
@@ -33,6 +37,12 @@ import {
   unitHitPoints,
 } from './AdditionalData/unitCombat';
 import AdvanceTaken from '@civ-clone/base-diplomacy/Dialogues/AdvanceTaken';
+import BorderRecord from '@civ-clone/civ2-diplomacy/Records/BorderRecord';
+import CallForHelpRecord from '@civ-clone/civ2-diplomacy/Records/CallForHelpRecord';
+import { SaveableClass } from '@civ-clone/core-data-object/ClassRegistry';
+import SenateRecord from '@civ-clone/civ2-diplomacy/Records/SenateRecord';
+import TreatyFlagsRecord from '@civ-clone/civ2-diplomacy/Records/TreatyFlagsRecord';
+import WarnedUnitsRecord from '@civ-clone/civ2-diplomacy/Records/WarnedUnitsRecord';
 import ChooseGovernment from '@civ-clone/base-player-action-choose-government/ChooseGovernment';
 import CompleteProduction from '@civ-clone/base-treasury/PlayerActions/CompleteProduction';
 import Revolution from '@civ-clone/base-player-action-revolution/Revolution';
@@ -40,6 +50,9 @@ import SellImprovement from '@civ-clone/base-treasury/PlayerActions/SellImprovem
 import { instance as additionalDataRegistryInstance } from '@civ-clone/core-data-object/AdditionalDataRegistry';
 import { instance as engineInstance } from '@civ-clone/core-engine/Engine';
 import promoted from './Rules/promoted';
+import notifications from './notifications';
+import reputationNotices from './Rules/reputationNotices';
+import warNotices from './Rules/warNotices';
 import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
 import anarchyTurns from './AdditionalData/anarchyTurns';
 import attackSound from './AdditionalData/attackSound';
@@ -51,6 +64,11 @@ import {
   setAutoMode,
 } from '@civ-clone/civ2-city/lib/autoMode';
 import cityStyle from './lib/cityStyle';
+import { attitude, leaderTitle, reputation, treaty } from './lib/relations';
+import { audienceEvents, mayOpenTalks } from './lib/talks';
+import leaderTitleData from './AdditionalData/leaderTitle';
+import rechoose from './AdditionalData/rechoose';
+import { limitedRates, maxRates } from './AdditionalData/tradeRates';
 import stagedHappiness from '@civ-clone/civ2-city-happiness/lib/stagedHappiness';
 import civilDisorderDeclared from './AdditionalData/civilDisorderDeclared';
 import { levelOf } from '@civ-clone/civ2-difficulty/level';
@@ -67,8 +85,16 @@ export const civ2Rules: WorkerRules = {
     [Revolution, handleRevolution],
     [ChooseGovernment, handleChooseGovernment],
   ],
-  // What a computer player took in an exchange of knowledge.
-  saveableClasses: [AdvanceTaken],
+  // What a computer player took in an exchange of knowledge, and civ2-diplomacy's own records: the treaty flags, the
+  //  Senate's roll, a call for help, the border incidents and the units warned.
+  saveableClasses: [
+    AdvanceTaken,
+    BorderRecord,
+    CallForHelpRecord,
+    SenateRecord,
+    TreatyFlagsRecord,
+    WarnedUnitsRecord,
+  ] as unknown as SaveableClass[],
   civilDisorder: (city) => civilDisorder(city) !== null,
   // A city put on Auto chooses at once, from what its mode allows (civ2-city's three, M2c).
   autoBuild: (cityBuild, rules, mode) => {
@@ -92,6 +118,26 @@ export const civ2Rules: WorkerRules = {
   },
   // Rapture growth is told, as a city's growth.
   celebrationGrowthNotice: true,
+  // Seeing a city isn't meeting its owner: the Apollo Program shows every city, and makes no contact (#1067).
+  seenCityMeets: false,
+  // M2d's relations: the treaty with a ceasefire and an alliance, a computer player's feelings, reputation and titles.
+  treaty,
+  attitude,
+  reputation,
+  leaderTitle,
+  // Talks a person opens from the Foreign Advisor, and the audiences computer players ask for.
+  mayOpenTalks,
+  audienceEvents,
+  // A revolution offered as an advance makes a government available, which a person is asked about.
+  revolutionOffer: {
+    event: 'player:government:available',
+    accept: (player, GovernmentType, rules) =>
+      acceptRevolution(player, GovernmentType, rules),
+  },
+  // What it tells a person of its diplomacy.
+  notifications: notifications(),
+  // A treaty's end is told by what ended it (`civ2:war-on`, and civ2-diplomacy's own events), not as each ends.
+  replacesNotices: ['player:declaration-expired'],
   // How a rival's city is drawn, from its owner's advances, as one's own is (`style`).
   cityStyle: (city) => cityStyle(city),
   // No score in M2a, so nothing for conquest either.
@@ -128,10 +174,18 @@ export const register = (): void => {
     unitFuel(),
     actionTargets(),
     pillageTargets(),
+    leaderTitleData(),
+    rechoose(),
+    maxRates(),
+    limitedRates(),
     ...cities()
   );
 
-  ruleRegistryInstance.register(promoted(engineInstance));
+  ruleRegistryInstance.register(
+    promoted(engineInstance),
+    ...reputationNotices(engineInstance),
+    warNotices(engineInstance)
+  );
 };
 
 register();

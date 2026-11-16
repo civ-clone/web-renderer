@@ -19,7 +19,12 @@ export const confirmRevolution = (
 ): ConfirmationWindow =>
   new ConfirmationWindow(
     t('Actions.Revolution.title'),
-    t('Actions.Revolution.body'),
+    // In the turn a government was chosen, under rules that allow it, choosing again costs no Anarchy (M2d).
+    t(
+      government.rechoose
+        ? 'Actions.Revolution.rechoose'
+        : 'Actions.Revolution.body'
+    ),
     () => {
       transport.send('action', {
         name: 'Revolution',
@@ -29,7 +34,9 @@ export const confirmRevolution = (
       onConfirm();
     },
     {
-      okLabel: 'Actions.Revolution.confirm',
+      okLabel: government.rechoose
+        ? 'Actions.Revolution.rechoose-confirm'
+        : 'Actions.Revolution.confirm',
     }
   );
 

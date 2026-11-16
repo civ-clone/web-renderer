@@ -8,13 +8,13 @@ Where the numbers are Civ2's, they come from a hand-written table checked agains
 
 ## Saves
 
-Civ2 saves record that they belong to the `civ2` set and load as civ2, but **they will break across M2b to M2f**: rules and saved data will change between phases, and there is no promise that a save from one phase loads in the next. Treat Civ2 games as disposable until the set leaves preview. Civ1 saves are unaffected.
+Civ2 saves record that they belong to the `civ2` set and load as civ2, but **they will break across M2b to M2f**: rules and saved data will change between phases, and there is no promise that a save from one phase loads in the next. Treat Civ2 games as disposable until the set leaves preview. Civ1 saves are unaffected. A Civ2 save from before M2d loads, but civilizations that had met by then start without an attitude toward each other or a record of when they last met.
 
 ## Map
 
 - **Interim world.** The map comes from the shared generator with Glacier at the poles and a simple downhill river walk afterwards, not Civ2's own generator. Start positions are simple, plus Civ2's start balancing (extra Settlers or advances for poor starts). Only staggered-iso grids are offered. (civ2-world, civ2-player.) Planned: Civ2's own generator (M2f).
 - **Rivers** give +1 trade, a source of water for irrigation and a river-side site bonus, but Civ2's river movement and display rules are approximated. (civ2-world.) Not scheduled.
-- **No commodities.** (civ2-world.) Planned (M2d, with trade routes).
+- **No commodities.** (civ2-world.) Planned (M2d part 2, with trade routes).
 - **Farmland** (M2c) can be built with Refrigeration on an irrigated square that isn't a city's, and gives +50% food with a Supermarket in the city; the city's own square counts as Farmland. (civ2-world, civ2-unit, civ2-city-improvement.)
 - **What a square yields its city** follows Civ2's order since M2c: the square itself, then the Harbour, Offshore Platform, Colossus, Supermarket, the city square's mine and minimum shield, King Richard's, the railroad, the government's penalty and trade bonus (no penalty while celebrating), Superhighways, then pollution. The map, the square tooltip and the city screen show what a square yields the city on it or working it; any other square shows its own yields. (civ2-city, civ2-city-improvement, civ2-wonder, web-renderer.)
 
@@ -26,10 +26,10 @@ M2b (#1007) brought Civ2's combat and units: hit points and firepower, damage th
 - **Generic unit names.** Units that Civ1 also has use its names (Spearman, not Civ2's); Civ2's own names will come with a later import. (base-unit-\* packages.) Planned.
 - **No barbarians.** Nothing raises them, so a hut that would release a horde gives mercenaries instead, and the Great Wall's effect on them is absent. Civ2's own odds for battles with barbarians aren't in either. (civ2-goody-hut, civ2-wonder, civ2-unit.) Planned (M2e).
 - **Zones of control** and the Civ2 move and defence rows are in; City Walls and the Great Wall triple land defence as Civ2 does. (civ2-unit.)
-- **No Senate rows.** Under the Republic and Democracy nothing stops you declaring war or breaking a treaty. (civ2-unit, civ2-diplomacy.) Planned (M2d).
-- **No incite, bribe or trade routes.** Inciting a city, bribing a unit and setting up a trade route are not offered. A Diplomat or Spy can establish an embassy and investigate a city, and a Spy's only mission against a unit is Sabotage Unit. (civ2-unit, civ2-city.) Planned (M2d).
+- **The Senate** (M2d) can stop a person under the Republic or Democracy attacking, entering or pillaging across a treaty, or attacking a civilization they have met and aren't at war with; you're asked first, then told it overruled you. An attack on a civilization you have met and aren't at war with forces war, and a Senate that lets it through doesn't ask first: only an attack it stops is asked about. (civ2-unit, civ2-diplomacy, web-renderer.) Not scheduled: the question before an attack the Senate lets through.
+- **Allies** (M2d) can't attack each other's units or pillage each other's land, a damaged unit can be repaired in an ally's city (not a Diplomat or a Caravan), and allies' units don't count for zones of control. (civ2-unit, civ2-diplomacy.)
+- **No incite, bribe or trade routes.** Inciting a city, bribing a unit and setting up a trade route are not offered. A Diplomat or Spy can establish an embassy and investigate a city, and a Spy's only mission against a unit is Sabotage Unit. There is no Meet with Leader: talks with a computer player open from the Foreign Advisor, as in Civ2. (civ2-unit, civ2-city.) Planned (M2d part 2).
 - **No ×2 sneak attack.** Civ2 doubles an attack that breaks a treaty; here it fights at its normal strength. (civ2-unit.) Not scheduled.
-- **No instant heal in an allied city.** A unit heals by Civ2's steps wherever it is, but moving into an ally's city doesn't heal it at once. (civ2-unit.) Not scheduled.
 - **Computer players' aircraft** don't lose the extra turn of fuel Civ2 takes from a computer player's attacker after a win. (civ2-unit.) Not scheduled.
 - **An Airbase is only an airbase.** It refuels and heals aircraft, keeps a stack from dying with its defender, and launches paradrops. Civ2's code also treats it like a city for the square's yields, road and railroad moves and a fortress order; that looks accidental, and isn't followed. (civ2-unit, civ2-world.) By design.
 - **Carriers and Submarines hold 8.** Civ2's code lets a carrier or a submarine hold 20 and doesn't check it on landing, and its unit table gives neither a hold; here both hold 8, Civ1's number. (civ2-unit.) By design.
@@ -43,7 +43,7 @@ M2b (#1007) brought Civ2's combat and units: hit points and firepower, damage th
 
 M2c (#1007) brought Civ2's cities: shield waste and the capital link, Entertainers only below size 5, plunder, Partisans, rehoming, Farmland, Capitalization, the change penalty, Auto build, the computer players' late food and shield rows, rapture growth, angry citizens and the stages of happiness.
 
-- **Waste and corruption:** trade corruption and shield waste by Civ2's distance, with the capital link walked as Civ2 walks it (one shortest land route of roads or railroads). There are no alliances yet, so every other player's city or unit blocks the link. Land masses are the world's as built (Civ2 recounts them when terrain changes). (civ2-city.) Partly planned (M2d, alliances).
+- **Waste and corruption:** trade corruption and shield waste by Civ2's distance, with the capital link walked as Civ2 walks it (one shortest land route of roads or railroads). An ally's cities and units don't block the link (M2d); an alliance made or ended during a turn is seen the next turn. Land masses are the world's as built (Civ2 recounts them when terrain changes). (civ2-city.)
 - **The change penalty:** half the shields go when a person changes between units, improvements and Wonders, and the build list says how many before you choose. Capitalization counts as a Wonder, as in Civ2's code, so changing between the two costs nothing. Changing back in the same turn gives the shields back. A computer player loses half only on a change to a Wonder. Not on Chieftain. (civ2-city, civ2-difficulty.)
 - **Carry-over:** computer players keep the shields left over after a build; a person's box empties. That is Civ2's code (and Civ1 v474's), not the manual. (civ2-city.) By design.
 - **Capture:** plunder, rehoming of the loser's units, Partisans and the Palace escape (now offered to a person too, who is asked) are in. Not yet: civil war, a person's captured city starting in disorder under a Republic or a Democracy, the captor's new build, and the size-1 city a computer player may keep whole. Reputation and vendettas aren't kept, so Partisans are never veterans. Power ranks are taken as the capture starts, not at the start of the turn. The Palace escape counts the loser's cities and the city's size after the capture, and measures by the world's own distance, so it can be one off at its thresholds. (civ2-city, civ2-city-improvement.) Planned.
@@ -64,30 +64,47 @@ M2c (#1007) brought Civ2's cities: shield waste and the capital link, Entertaine
 - **Research cost** is Civ2's, but compares with the person who knows the most advances, not Civ2's rank-based reference player. With no person playing it uses 0. (civ2-science.) Not scheduled.
 - **Advances from the start balancing** count towards the cost, which Civ2 does not do. (civ2-science, civ2-player.) Not scheduled.
 - **Disorder** still stops a city's research, as in Civ1. (civ2-science.) By design for now.
-- **Not yet:** Fundamentalism's science cap and loss, the Great Library's and Philosophy's rules in full, the Chieftain and space-race adjustments, and the AI's unit, tribe and city terms when valuing an advance. Plumbing is registered but unreachable. (civ2-science.) Planned.
+- **Fundamentalism's science** (M2d): research gets no more than half of each city's trade when it's split, whatever the research rate, and tax the rest; then it loses half. The rates dialog says so under Fundamentalism. A computer player's luxuries go to science under it. (civ2-science, web-renderer.)
+- **Not yet:** Philosophy's rule in full, the Chieftain and space-race adjustments, and the AI's unit, tribe and city terms when valuing an advance. Plumbing is registered but unreachable. (civ2-science.) Planned.
 
 ## Governments
 
-- **No maximum rate.** Every government allows any tax, luxury and science split. Civ2 caps them (60% to 100%). (civ2-trade-rate.) Planned (M2d).
-- **Fundamentalism is only partly there:** it has its unit support and no unhappy citizens, but the tithes, science penalty and the rest of its rules are only partly in, and Fanatics are not restricted to it. (civ2-government, civ2-city-improvement.) Planned.
-- **Revolutions:** a chosen revolution's Anarchy lasts 1 to 4 turns, to the next turn that is a multiple of 4; a Democracy that falls in civil disorder waits 4 turns more (5 to 8). Not yet: changing back without Anarchy in the turn you chose, the revolution offer on discovering a government's advance, and leader titles. (civ2-government.) Planned.
-- **Senate:** none, see Units and Diplomacy. Planned (M2d).
+- **Maximum rates** (M2d): a person's tax, luxuries and science are each capped by the government (60% under Anarchy and Despotism to 100% under Democracy), and the rates dialog stops each slider at its cap. Computer players' science alone is capped, as in Civ2, and tax takes the rest. (civ2-trade-rate, web-renderer.)
+- **Fundamentalism** has its unit support, tithes, free buildings, no unhappy citizens, Fanatics only under it and its science rules (see Science). The computer players never choose it. (civ2-government, civ2-city-improvement, civ2-science.)
+- **Revolutions:** a chosen revolution's Anarchy lasts 1 to 4 turns, to the next turn that is a multiple of 4; a Democracy that falls in civil disorder waits 4 turns more (5 to 8). In the turn a person chose a government, Revolution chooses again with no Anarchy. Discovering a government's advance offers a revolution to it, which a person is asked about. (civ2-government, web-renderer.)
+- **The revolution offer** taken in the turn you chose a government gives the full Anarchy; Civ2 lets you choose again at once. (civ2-government.) By design.
+- **Leader titles** are one per government, in our own words, not Civ2's own by tribe and by a male or female leader, and titles from your own RULES.TXT aren't read. (civ2-civilization, web-renderer.) Not scheduled.
+- **The Senate:** see Units and Diplomacy.
 
 ## Improvements and wonders
 
 - **In place:** 34 improvements and 28 wonders with Civ2's costs, upkeep and requirements, the Palace rules, veterans, defences, pollution, and Civ2's growth caps.
 - **Capitalization** (M2c) turns a city's shields into gold each turn, after its units' support and waste, and its box is frozen while it does; none under Anarchy or in disorder. The build list shows its gold per turn. (civ2-city, civ2-city-improvement.)
 - **No spaceship parts.** (civ2-city-improvement.) Planned (M2e).
-- **Wonders with no effect yet:** Marco Polo's Embassy, the Eiffel Tower, the United Nations, the Great Wall's diplomatic effect, the Manhattan Project's reputation cost, the Apollo Program's spaceship parts. (civ2-wonder.) Planned (M2d, M2e).
-- **The Apollo Program** shows every player the whole map. The interface still names a civilization once one of its cities has been seen, so after the reveal every civilization is named in notices and reports, where Civ2 makes no contact. (web-renderer.) Planned: it needs a record of first contact in the engine.
+- **The diplomatic Wonders** (M2d): Marco Polo's Embassy and the United Nations give their owner an embassy with everyone, without making contact; the Eiffel Tower restores its owner's reputation and makes everyone think better of it; the Manhattan Project brings everyone's reputation down; the United Nations and the Great Wall weigh in talks as Civ2 has them. Marco Polo's doesn't hide the Diplomat's embassy mission, so an embassy made while it stands outlives it. (civ2-wonder, civ2-diplomacy.)
+- **Wonders with no effect yet:** the Apollo Program's spaceship parts. (civ2-wonder.) Planned (M2e).
+- **The Apollo Program** shows every player the whole map. Seeing a city doesn't count as meeting its owner under Civ2's rules, so the reveal names nobody new (#1067). (web-renderer.)
 - **Darwin's Voyage's second advance** waits for the player's next choice of research. (civ2-wonder.) Not scheduled.
-- **Harbour, Offshore Platform, Superhighways and the Supermarket** apply to each square, in Civ2's order (see Map). The Airport's and Superhighways' trade route parts wait for trade routes. (civ2-city-improvement.) Planned (M2d).
+- **Harbour, Offshore Platform, Superhighways and the Supermarket** apply to each square, in Civ2's order (see Map). The Airport's and Superhighways' trade route parts wait for trade routes. (civ2-city-improvement.) Planned (M2d part 2).
 - **Treasury:** a bankruptcy sale leaves a few gold less than Civ2, a purchase is not offered once the box is already covered, and there is no 30,000 gold cap. (civ2-treasury.) Not scheduled.
 
 ## Diplomacy
 
-- **Baseline diplomacy only:** contact, peace, tribute, cancelled treaties, shared knowledge, war, and the vendetta after a nuclear strike. No ceasefire, no alliance, and the computer players negotiate by Civ1's numbers. (civ2-diplomacy.) Planned.
-- **No Senate**, see above. Planned (M2d).
+M2d part 1 (#1007) brought Civ2's diplomacy: ceasefires and alliances, each computer player's attitude toward you and every civilization's reputation, the Senate, talks you open, the computer players' own audiences, shared maps and gifts.
+
+- **In place:** the treaties (war, contact, ceasefire, peace, alliance) with Civ2's rules for breaking them; a ceasefire ends at the computer player's next audience, after 15 turns without contact or after an incident; attitude, seeded at contact, changed by what's said and done and drifting each turn; reputation, lost by breaking treaties and recovering slowly; the Senate's roll; talks a person opens from the Foreign Advisor with any civilization it is in contact with (or every one, with Marco Polo's Embassy or the United Nations), with Civ2's menu (an alliance, peace, an ally's help, tribute, withdrawal, an end to an alliance, and the favours and gifts) and the computer player's answers by Civ2's formulas and patience; the computer player's own audiences, in Civ2's order; computer players meeting each other. The Foreign Advisor and the meeting window show the treaty, how they feel toward you (in nine words of our own), their leader's title and, with an embassy, their reputation. You're told of ceasefires ending, alliances ended, units withdrawn, maps shared, treaties the Senate forced, wars, allies joining them, and (with an embassy) the computer players' treaties and wars. (civ2-diplomacy, civ2-wonder, civ2-unit, web-renderer.)
+- **The original's slips** are followed in the civ2 rules: a computer player's attitude to a person is pinned at its coldest except in a turn with a border incident (B3), only the first intruded square of each city counts (B4), and a computer player breaks a treaty without a word (B37). The **civ2-enhanced** rules fix all three, each a rule set a game can switch off. (civ2-diplomacy, civ2-enhanced.) By design.
+- **Audiences:** a computer player's audience always opens with its request; Civ2 asks for the emissary only when it has something to say. An audience a computer player asks for is held at the start of your next turn. One asked for and not yet held isn't saved, so after a reload it waits for that player's next audience; the demand or call for help it was for is saved. (civ2-diplomacy, web-renderer.) By design.
+- **Patience** is kept per pair; Civ2 keeps one count per computer player. (civ2-diplomacy.) By design.
+- **Border incidents:** a unit's warning mark is saved by the unit's id and forgotten one turn in four by a number made from it; a demand to withdraw and an ally's call for help wait for the next audience rather than coming at once. (civ2-diplomacy.) By design.
+- **Computer players meeting** decide at most once a turn for each pair, when their land units meet on land; Civ2 decides at every meeting. (civ2-diplomacy.) By design.
+- **A treaty a computer player breaks** ends for both sides; in Civ2 the person is still bound by it. (civ2-diplomacy.) By design: one treaty per pair.
+- **Talks you open:** the original lists every civilization once anyone has built the United Nations; here only its owner sees them all. (web-renderer.) Not scheduled.
+- **Reputation shown** is the other civilization's, with an embassy; Civ2's foreign minister shows your own. (web-renderer.) By design for now.
+- **The war menu** offers war on every other civilization, met or not, as the engine lists them. (civ2-diplomacy.) Not scheduled.
+- **An advance's worth** in talks leaves out a few of Civ2's terms (a militaristic shift at war with a person ahead, expansion by sea, the Port Facility, the Aqueduct and Sewer sizes, the tribe's preferences, the computer players' bonus terms), the space race and scenarios. (civ2-diplomacy.) Not scheduled.
+- **The Great Wall's and the United Nations' blocking of an exchange** reads the wonder the computer player is building, but doesn't compare the players' wonders in its group. (civ2-diplomacy.) Not scheduled.
+- **Espionage incidents** and Diplomat and Spy missions under a treaty come with part 2. (civ2-diplomacy, civ2-unit.) Planned (M2d part 2).
 - **Leaders:** each tribe's temper at a meeting comes from its Civ2 aggression attitude, and its civilised attitude weights the free advances given for a poor start; the expansion attitude is read by nothing yet, and leader names are the shared ones. (civ2-civilization.) Planned.
 - **One tribe per colour** is not enforced, and a destroyed civilization does not return. A game can therefore end by conquest sooner than in Civ2. (civ2-civilization, civ2-game-end.) Planned.
 

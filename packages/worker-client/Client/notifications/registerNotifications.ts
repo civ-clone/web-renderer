@@ -15,6 +15,7 @@ import cityNotifications from './city';
 import diplomatNotifications from './diplomat';
 import playerNotifications from './player';
 import unitNotifications from './unit';
+import { currentWorkerRules } from '../../workerRules';
 
 export const notificationTables: NotificationTable[] = [
   cityNotifications,
@@ -80,7 +81,13 @@ export const registerNotifications = (
   engine: Pick<Engine, 'on' | 'off'>,
   ctx: NotificationContext & { notifier: Pick<Notifier, 'notify'> }
 ): Disposer => {
-  const handlers = notificationTables.flat();
+  const replaced = currentWorkerRules()?.replacesNotices ?? [],
+    handlers = notificationTables
+      .flat()
+      // Those the rule set tells of in its own way (M2d).
+      .filter(([event]) => !replaced.includes(event)),
+    // The rule set's own (M2d), after every rule set's, in its own order.
+    ruleSetHandlers = currentWorkerRules()?.notifications ?? [];
 
   handlers.forEach(([event]) => {
     if (!registrationOrder.includes(event)) {
@@ -88,8 +95,15 @@ export const registerNotifications = (
     }
   });
 
-  const listeners = registrationOrder.flatMap((event) =>
-    handlers
+  const listeners = [
+    ...registrationOrder,
+    ...new Set(
+      ruleSetHandlers
+        .map(([event]) => event)
+        .filter((event) => !registrationOrder.includes(event))
+    ),
+  ].flatMap((event) =>
+    [...handlers, ...ruleSetHandlers]
       .filter(([handlerEvent]) => handlerEvent === event)
       .map(([, handler]): [string, (...args: any[]) => void] => {
         const listener = (...args: any[]): void => {

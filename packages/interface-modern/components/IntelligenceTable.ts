@@ -8,9 +8,16 @@ import ReportTable from '@civ-clone/ui-component-report-table/ReportTable';
 import Transport from '@civ-clone/ui-client/Transport';
 import { advanceNames } from '@civ-clone/ui-client/lib/advances';
 import { cityNameText } from '@civ-clone/ui-client/components/lib/city';
+import { button } from '@civ-clone/ui-component-button/button';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
+import {
+  attitudeName,
+  reputationName,
+  titledLeader,
+  treatyRank,
+} from '@civ-clone/ui-client/lib/relations';
 
 const plural = (civilization: string): string =>
   t(`${civilization}.plural`, {
@@ -18,10 +25,28 @@ const plural = (civilization: string): string =>
     ns: 'civilization',
   });
 
-const leaderName = (leader: string | null): string =>
+const leaderName = (
+  leader: string | null,
+  title: string | null = null
+): string =>
   leader === null
     ? t('IntelligenceReport.unknown')
-    : t(`Leader.${leader}.name`, { defaultValue: leader, ns: 'civilization' });
+    : titledLeader(
+        t(`Leader.${leader}.name`, {
+          defaultValue: leader,
+          ns: 'civilization',
+        }),
+        title
+      );
+
+// The treaty between us, and how they feel toward us where the rules keep it (Civ2's).
+const relations = ({ treaty, attitude }: IntelligenceRow): string =>
+  attitude === null
+    ? t(`ReportTable.Intelligence.${treaty}`)
+    : t('ReportTable.Intelligence.relations-attitude', {
+        treaty: t(`ReportTable.Intelligence.${treaty}`),
+        attitude: attitudeName(attitude),
+      });
 
 const governmentName = (row: IntelligenceRow): string =>
   row.details?.government
@@ -67,7 +92,7 @@ const leader = (row: IntelligenceRow): HTMLElement => {
 
   return s(
     '<span></span>',
-    leaderName(row.leader),
+    leaderName(row.leader, row.leaderTitle),
     ...(traits.length === 0
       ? []
       : [
@@ -85,9 +110,15 @@ const leader = (row: IntelligenceRow): HTMLElement => {
 
 const line = (text: string): HTMLElement => s('<p></p>', text);
 
-/** What only an embassy tells you, under the table, for the civilization chosen in it. */
-export const renderIntelligenceDetails = (row: IntelligenceRow): HTMLElement =>
-  s(
+/**
+ * What only an embassy tells you, under the table, for the civilization chosen in it, and a way to open talks with them
+ *  where the rules let you (`talks`, Civ2's: `onTalks` sends the emissary).
+ */
+export const renderIntelligenceDetails = (
+  row: IntelligenceRow,
+  onTalks: ((row: IntelligenceRow) => void) | null = null
+): HTMLElement => {
+  const section = s(
     '<section class="ui-report-details"></section>',
     s(
       '<h3 class="ui-report-details-title"></h3>',
@@ -101,11 +132,34 @@ export const renderIntelligenceDetails = (row: IntelligenceRow): HTMLElement =>
       : embassyDetails(row.details))
   );
 
+  if (row.talks && onTalks !== null) {
+    const talks = button(t('IntelligenceReport.talks'), {
+      variant: 'primary',
+      className: 'ui-report-talks',
+    }) as HTMLButtonElement;
+
+    talks.addEventListener('click', () => onTalks(row));
+    section.append(s('<p></p>', talks));
+  }
+
+  return section;
+};
+
 const embassyDetails = ({
   capital,
   foreignAffairs,
   advances,
+  reputation,
 }: IntelligenceDetails): HTMLElement[] => [
+  ...(reputation === null
+    ? []
+    : [
+        line(
+          t('IntelligenceReport.reputation', {
+            reputation: reputationName(reputation),
+          })
+        ),
+      ]),
   line(
     capital === null
       ? t('IntelligenceReport.no-capital')
@@ -123,9 +177,9 @@ const embassyDetails = ({
     s('<h4></h4>', t('IntelligenceReport.foreign-affairs')),
     ...(foreignAffairs.length === 0
       ? [line(t('IntelligenceReport.no-foreign-affairs'))]
-      : foreignAffairs.map(({ civilization, atPeace }) =>
+      : foreignAffairs.map(({ civilization, treaty }) =>
           line(
-            t(`IntelligenceReport.${atPeace ? 'at-peace' : 'at-war'}`, {
+            t(`IntelligenceReport.at-${treaty}`, {
               nation:
                 civilization === null
                   ? t('Generic.unknown-civilization')
@@ -188,16 +242,16 @@ export class IntelligenceTable extends FilterableWindow {
           key: 'leader',
           heading: t('ReportTable.Intelligence.leader'),
           cell: leader,
-          sortValue: ({ leader }) => leaderName(leader),
+          sortValue: ({ leader, leaderTitle }) =>
+            leaderName(leader, leaderTitle),
         },
         {
           key: 'relations',
           heading: t('ReportTable.Intelligence.relations'),
-          cell: ({ atPeace }) =>
-            t(`ReportTable.Intelligence.${atPeace ? 'peace' : 'war'}`),
-          sortValue: ({ atPeace }) => (atPeace ? 1 : 0),
+          cell: relations,
+          sortValue: ({ treaty }) => treatyRank(treaty),
           sortFirst: 'ascending',
-          tone: ({ atPeace }) => (atPeace ? null : 'negative'),
+          tone: ({ treaty }) => (treaty === 'war' ? 'negative' : null),
         },
         {
           key: 'embassy',
@@ -263,7 +317,19 @@ export class IntelligenceTable extends FilterableWindow {
   }
 
   #showDetails(row: IntelligenceRow): void {
-    this.#details.replaceChildren(renderIntelligenceDetails(row));
+    this.#details.replaceChildren(
+      renderIntelligenceDetails(row, (chosen) => this.#openTalks(chosen))
+    );
+  }
+
+  // Sends an emissary (M2d): the talks open in their own window, so the report makes way for them.
+  #openTalks(row: IntelligenceRow): void {
+    this.#transport.send('action', {
+      name: 'OpenTalks',
+      civilization: row.civilization,
+    });
+
+    this.close();
   }
 
   // Asked for afresh each time the report opens; it doesn't follow the game while it's open.

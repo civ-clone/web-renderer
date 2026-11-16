@@ -65,8 +65,11 @@ const civilization = (_: string, leader: string) => ({
       civilization: 'German',
       colors: ['#ff0000', '#ffffff'],
       leader: 'FrederickTheGreat',
-      atPeace: false,
+      leaderTitle: null,
+      treaty: 'war',
+      attitude: null,
       theirEmbassy: false,
+      talks: false,
       firstMet: -3000,
       details: {
         traits: [],
@@ -77,6 +80,7 @@ const civilization = (_: string, leader: string) => ({
         units: 9,
         foreignAffairs: [],
         advances: [],
+        reputation: null,
       },
     },
   ];
@@ -191,6 +195,8 @@ const run = async (): Promise<void> => {
   await import('../../translations/civ1-diplomacy/en');
   await import('../../translations/civ1-government/en');
   await import('../../translations/civ1-science/en');
+  await import('../../translations/civ1-unit/en');
+  await import('../../translations/civ2-diplomacy/en');
 
   applyInterface('modern', null);
 
@@ -433,6 +439,140 @@ const run = async (): Promise<void> => {
     'Escape leaves',
     [open().length, sent],
     [0, [['chooseFromList', 'goodbye']]]
+  );
+
+  // Talks the player leads (Civ2's, M2d): our emissary sent, their answer, then the menu, its favours and its gifts
+  //  each under an entry of their own that opens them, with Back (and Escape) to return.
+  const ownInitiate = action('Initiate', ['Proposal'], {
+      by: mongols,
+      for: [germans],
+    }),
+    received = action('Accept', ['Resolution'], {
+      by: germans,
+      for: [mongols],
+      proposal: ownInitiate,
+    }),
+    own = (_: string, fields: object = {}) =>
+      action(_, ['Proposal'], { by: mongols, for: [germans], ...fields }),
+    zulus = { civilization: civilization('Zulu', 'ShakaZulu') };
+
+  reset();
+  step(
+    [ownInitiate, received],
+    [
+      ['peace', own('OfferPeace')],
+      ['tribute', demandTribute(mongols, { _: 'Gold', value: 50 }, 'gold')],
+      [
+        'exchange',
+        own('ExchangeKnowledge', { advances: [{ _: 'BronzeWorking' }] }),
+      ],
+      ['war', own('JoinWar', { against: zulus })],
+      ['maps', own('ShareMaps')],
+      [
+        'gift-gold',
+        own('Gift', { kind: 'gold', gift: { _: 'Gold', value: 50 } }),
+      ],
+      [
+        'gift-advance',
+        own('Gift', { kind: 'advance', gift: { _: 'BronzeWorking' } }),
+      ],
+      ['gift-unit', own('Gift', { kind: 'unit', gift: { _: 'Warriors' } })],
+      ['goodbye', terminate],
+    ]
+  );
+
+  expect(
+    'in talks the player leads, the emissary is ours and the answer theirs, and the menu’s first level has the favours and the gifts under an entry each',
+    [conversation(), replies()],
+    [
+      ['(You send an emissary to Germany.)', 'Frederick the Great: Yes'],
+      [
+        '1Propose a peace treaty.',
+        '2Demand tribute.',
+        '3Ask a favor…',
+        '4Offer a gift…',
+        '5Good bye!',
+      ],
+    ]
+  );
+
+  key('3');
+
+  expect(
+    'the favours’ entry opens them, with Back, and sends nothing',
+    [
+      replies(),
+      sent,
+      top()
+        .querySelector('.ui-meeting-reply:last-child')
+        ?.getAttribute('aria-keyshortcuts'),
+    ],
+    [
+      [
+        '1Propose an exchange of advances, for Bronze Working.',
+        '2Ask them to declare war on the Zulus.',
+        '3Offer to share our maps.',
+        '4Back',
+      ],
+      [],
+      '4 Escape',
+    ]
+  );
+
+  key('Escape');
+
+  expect(
+    'Escape goes back to the first level',
+    [replies().length, sent],
+    [5, []]
+  );
+
+  key('4');
+
+  expect(
+    'the gifts’ entry opens the gift picker: gold, an advance, a unit',
+    replies(),
+    [
+      '1Give them 50 gold.',
+      '2Give them Bronze Working.',
+      '3Give them our Warriors.',
+      '4Back',
+    ]
+  );
+
+  key('1');
+
+  expect(
+    'and a gift chosen there is the answer sent',
+    [open().length, sent],
+    [0, [['chooseFromList', 'gift-gold']]]
+  );
+
+  // Their answer to a proposal of ours reads as theirs to us.
+  const proposed = own('ShareMaps');
+
+  reset();
+  step(
+    [
+      ownInitiate,
+      received,
+      proposed,
+      action('Decline', ['Resolution'], {
+        by: germans,
+        for: [mongols],
+        proposal: proposed,
+      }),
+    ],
+    [['goodbye', terminate]]
+  );
+
+  expect(
+    'their refusal of our proposal, in their words',
+    conversation().slice(-2),
+    [
+      'You: Offer to share our maps.',
+      'Frederick the Great: Our maps are our own.',
+    ]
   );
 
   // Enter on a reply is that reply's own, as the browser clicks it: not the default as well.

@@ -5,6 +5,9 @@ i18next.addResources('en', 'default', {
   'Generic.no': 'No',
   'Generic.yes': 'Yes',
   'Actions.AdjustTradeRates.title': 'Adjust trade rates',
+  // Civ2's Fundamentalism: research takes no more than half of each city's trade, whatever its rate (M2d).
+  'Actions.AdjustTradeRates.limited':
+    'Under this government, {{rate}} gets no more than {{limit}}% of each city’s trade, however high its rate. The rest goes to taxes.',
   'Actions.ChooseGovernment.body':
     'Your revolution is over. Which government would you like?',
   'Actions.ChooseGovernment.title': 'Choose government',
@@ -22,6 +25,9 @@ i18next.addResources('en', 'default', {
   'Actions.Revolution.body':
     'Overthrow your government? Your civilization will fall into Anarchy for a few turns before you can choose a new one, unless you have the Pyramids.',
   'Actions.Revolution.confirm': 'Revolution!',
+  'Actions.Revolution.rechoose-confirm': 'Choose again',
+  'Actions.Revolution.rechoose':
+    'Choose your government again? You chose it this turn, so you can change your mind at once, with no Anarchy.',
   'Actions.Revolution.title': 'Revolution',
   'Actions.ShowCity.label': '$t(Generic.view-city)',
   'Actions.Spaceship.chance-of-success': 'Chance of success',
@@ -154,6 +160,9 @@ i18next.addResources('en', 'default', {
   'Senate.title': 'The Senate',
   'SneakAttack.title': 'Sneak attack?',
   'SneakAttack.body': `Are you sure you want to attack {{nation}}? (This will terminate your current peace treaty)`,
+  // Attacking a player you've met and aren't at war with, but have no treaty with (Civ2, #1007).
+  'UndeclaredAttack.title': 'Attack without war?',
+  'UndeclaredAttack.body': `You are not at war with {{nation}}. Attacking them will start one. Attack anyway?`,
   'SquareTooltip.city': 'City',
   'SquareTooltip.defence': 'Defense',
   'SquareTooltip.defence-bonus':

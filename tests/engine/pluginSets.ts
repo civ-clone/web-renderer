@@ -36,6 +36,39 @@ import { instance as playerRegistryInstance } from '@civ-clone/core-player/Playe
 import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
 import { tmpdir } from 'os';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
+import {
+  Alliance,
+  Ceasefire,
+  Vendetta,
+} from '@civ-clone/library-diplomacy/Declarations';
+import AdvanceTaken from '@civ-clone/base-diplomacy/Dialogues/AdvanceTaken';
+import { Writing } from '@civ-clone/civ2-science/Advances';
+import Advance from '@civ-clone/core-science/Advance';
+import Dialogue from '@civ-clone/core-diplomacy/Negotiation/Dialogue';
+import {
+  AskAlly,
+  CancelAlliance,
+  DemandWithdrawal,
+  Gift,
+  JoinWar,
+  OfferCeasefire,
+  ProposeAlliance,
+  SellAdvance,
+  ShareMaps,
+} from '@civ-clone/library-diplomacy/Proposals';
+import BorderRecord from '@civ-clone/civ2-diplomacy/Records/BorderRecord';
+import CallForHelpRecord from '@civ-clone/civ2-diplomacy/Records/CallForHelpRecord';
+import { Gold } from '@civ-clone/library-city/Yields';
+import { IInteraction } from '@civ-clone/core-diplomacy/Interaction';
+import LastContactRecord from '@civ-clone/base-diplomacy/Records/LastContactRecord';
+import Negotiation from '@civ-clone/core-diplomacy/Negotiation';
+import PatienceRecord from '@civ-clone/base-diplomacy/Records/PatienceRecord';
+import SenateRecord from '@civ-clone/civ2-diplomacy/Records/SenateRecord';
+import TreatyFlagsRecord from '@civ-clone/civ2-diplomacy/Records/TreatyFlagsRecord';
+import WarnedUnitsRecord from '@civ-clone/civ2-diplomacy/Records/WarnedUnitsRecord';
+import { instance as interactionRegistryInstance } from '@civ-clone/core-diplomacy/InteractionRegistry';
+import isBarbarian from '@civ-clone/base-civilization-barbarian/isBarbarian';
+import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 
 const {
   defaultSetProblems,
@@ -61,7 +94,36 @@ type Report = {
   topologyId: string | null;
   // What the page's requests were answered (#668), where the scenario asks them.
   protocol: { [request: string]: unknown } | null;
+  // Every type of entity in the save.
+  types: string[];
 };
+
+// What a Civ2 game's diplomacy can hold that its save has to name (M2d, #1007): the ceasefire and alliance, base-
+//  diplomacy's records, civ2-diplomacy's, and every proposal of the talks a person opens, with each kind of gift.
+const CIV2_DIPLOMACY_TYPES = [
+  'AdvanceTaken',
+  'Alliance',
+  'AskAlly',
+  'BorderRecord',
+  'CallForHelpRecord',
+  'CancelAlliance',
+  'Ceasefire',
+  'DemandWithdrawal',
+  'Dialogue',
+  'Gift',
+  'Gold',
+  'JoinWar',
+  'LastContactRecord',
+  'OfferCeasefire',
+  'PatienceRecord',
+  'ProposeAlliance',
+  'SellAdvance',
+  'SenateRecord',
+  'ShareMaps',
+  'TreatyFlagsRecord',
+  'Vendetta',
+  'WarnedUnitsRecord',
+];
 
 const EXTRA_CIVILIZATIONS = [
     'Australian',
@@ -93,6 +155,57 @@ const EXTRA_CIVILIZATIONS = [
   scenarioIndex = process.argv.indexOf('--scenario'),
   scenario = scenarioIndex === -1 ? null : process.argv[scenarioIndex + 1],
   file = scenarioIndex === -1 ? null : process.argv[scenarioIndex + 2];
+
+// Registers one of each of `CIV2_DIPLOMACY_TYPES` between the first two players, in a negotiation where it's a proposal.
+const civ2DiplomacyRecords = (): void => {
+  const [player, other, third] = playerRegistryInstance
+      .entries()
+      .filter((candidate) => !isBarbarian(candidate)),
+    rules = ruleRegistryInstance,
+    negotiation = new Negotiation(player, other, rules),
+    unit = unitRegistryInstance.getByPlayer(player)[0],
+    // Civ2's own, as the players may know none yet.
+    advance = new Writing(),
+    proposals = [
+      new AskAlly(player, negotiation, rules),
+      new CancelAlliance(player, negotiation, rules),
+      new DemandWithdrawal(player, negotiation, rules),
+      new Gift(new Gold(25), player, negotiation, rules),
+      new Gift(unit, player, negotiation, rules),
+      new Gift(advance, player, negotiation, rules),
+      new JoinWar(third, player, negotiation, rules),
+      new OfferCeasefire(other, negotiation, rules),
+      new ProposeAlliance(player, negotiation, rules),
+      new SellAdvance(advance, new Gold(30), other, negotiation, rules),
+      new ShareMaps(player, negotiation, rules),
+      new Dialogue(other, 'civ2.war', negotiation, rules),
+      new AdvanceTaken(
+        other,
+        Writing as typeof Advance,
+        negotiation,
+        rules
+      ),
+    ];
+
+  // As the talks hold them, without running their rules.
+  (negotiation as unknown as { _interactions: unknown[] })._interactions.push(
+    ...proposals
+  );
+
+  interactionRegistryInstance.register(
+    negotiation as IInteraction,
+    new Ceasefire(player, other, rules) as IInteraction,
+    new Alliance(player, other, rules) as IInteraction,
+    new Vendetta(other, player, rules) as IInteraction,
+    new PatienceRecord(player, other, 2, rules) as IInteraction,
+    new LastContactRecord(player, other, 1, rules) as IInteraction,
+    new TreatyFlagsRecord(player, other, 0x1, rules) as IInteraction,
+    new SenateRecord(player, 42, true, rules) as IInteraction,
+    new CallForHelpRecord(player, other, third, rules) as IInteraction,
+    new BorderRecord(player, other, ['a'], rules) as IInteraction,
+    new WarnedUnitsRecord(player, [unit.id()], rules) as IInteraction
+  );
+};
 
 const play = (name: string, path: string): void => {
   const receivers = new Map<string, (data: any, meta?: any) => void>(),
@@ -219,6 +332,11 @@ const play = (name: string, path: string): void => {
             written?.entities?.find(({ type }: any) => type === 'World')?.state
               ?._topologyId ?? null,
           protocol,
+          types: [
+            ...new Set<string>(
+              (written?.entities ?? []).map(({ type }: any) => type)
+            ),
+          ].sort(),
         } as Report) + '\n'
       );
       process.exit(0);
@@ -332,6 +450,9 @@ const play = (name: string, path: string): void => {
           )}`
         );
       }
+
+      // One of each of the diplomacy's records and proposals, as a game with talks would have them.
+      civ2DiplomacyRecords();
 
       const written = saved();
 
@@ -696,6 +817,7 @@ if (scenario !== null) {
   const civ1 = pluginSets.sets.find(({ id }) => id === 'civ1')!,
     enhanced = pluginSets.sets.find(({ id }) => id === 'civ1-enhanced')!,
     civ2 = pluginSets.sets.find(({ id }) => id === 'civ2')!,
+    civ2Enhanced = pluginSets.sets.find(({ id }) => id === 'civ2-enhanced')!,
     installed = Object.keys(pluginSets.loaders).filter(
       (name) => !pluginSets.sets.some(({ rules }) => rules === name)
     ),
@@ -709,19 +831,27 @@ if (scenario !== null) {
       name.startsWith('@civ-clone/civ2-')
     ),
     civ2Only = [...civ2Packages, ...CIV2_ONLY_TRAITS].sort(byPackageName),
+    // civ2-enhanced is the civ2-enhanced set's own, as civ1-enhanced is civ1-enhanced's.
+    civ2SetOnly = civ2Only.filter(
+      (name) => name !== '@civ-clone/civ2-enhanced'
+    ),
     config = require('../../package.json')['civ-clone'];
 
   expect(
-    'civ.one has civ1, civ1-enhanced and civ2, and plays civ1-enhanced, as are saves from before sets',
+    'civ.one has civ1, civ1-enhanced, civ2 and civ2-enhanced, and plays civ1-enhanced, as are saves from before sets',
     [
       pluginSets.sets.map(({ id }) => id),
       pluginSets.default,
       pluginSets.withoutOne,
     ],
-    [['civ1', 'civ1-enhanced', 'civ2'], 'civ1-enhanced', 'civ1-enhanced']
+    [
+      ['civ1', 'civ1-enhanced', 'civ2', 'civ2-enhanced'],
+      'civ1-enhanced',
+      'civ1-enhanced',
+    ]
   );
   expect(
-    'civ2 is hidden, so the page offers only the two Civ1 sets until Civ2’s art can be imported',
+    'civ2 and civ2-enhanced are hidden, so the page offers only the two Civ1 sets until Civ2’s art can be imported',
     [
       pluginSets.sets.map(({ id, hidden }) => [id, hidden]),
       offeredSets(pluginsFrom(pluginSets)).map(({ id }) => id),
@@ -731,12 +861,13 @@ if (scenario !== null) {
         ['civ1', false],
         ['civ1-enhanced', false],
         ['civ2', true],
+        ['civ2-enhanced', true],
       ],
       ['civ1', 'civ1-enhanced'],
     ]
   );
   expect(
-    'and it is drawn with Civ2’s art, so a page that has imported it is offered civ2 too',
+    'and they are drawn with Civ2’s art, so a page that has imported it is offered both Civ2 sets too',
     [
       pluginSets.sets.map(({ id, tileset }) => [id, tileset]),
       offeredSets(pluginsFrom(pluginSets), ['civ1', 'civ2']).map(
@@ -748,8 +879,9 @@ if (scenario !== null) {
         ['civ1', null],
         ['civ1-enhanced', null],
         ['civ2', 'civ2'],
+        ['civ2-enhanced', 'civ2'],
       ],
-      ['civ1', 'civ1-enhanced', 'civ2'],
+      ['civ1', 'civ1-enhanced', 'civ2', 'civ2-enhanced'],
     ]
   );
   expect(
@@ -774,7 +906,16 @@ if (scenario !== null) {
         .sort(byPackageName),
       civ2.plugins.filter((name) => /^@civ-clone\/(civ1|library)-/.test(name)),
     ],
-    [civ2Only, []]
+    [civ2SetOnly, []]
+  );
+  expect(
+    'civ2-enhanced is civ2 and civ2-enhanced',
+    civ2Enhanced.plugins
+      .filter((name) => !civ2.plugins.includes(name))
+      .concat(
+        civ2.plugins.filter((name) => !civ2Enhanced.plugins.includes(name))
+      ),
+    ['@civ-clone/civ2-enhanced']
   );
   expect(
     'and neither Civ1 set has a civ2 plugin',
@@ -811,11 +952,14 @@ if (scenario !== null) {
   );
   expect(
     'and each set saves the versions of its own plugins, and no others',
-    [civ1, enhanced, civ2].map(({ plugins, manifest }) => [
+    [civ1, enhanced, civ2, civ2Enhanced].map(({ plugins, manifest }) => [
       Object.keys(manifest).sort(),
       Object.values(manifest).every((version) => typeof version === 'string'),
     ]),
-    [civ1, enhanced, civ2].map(({ plugins }) => [[...plugins].sort(), true])
+    [civ1, enhanced, civ2, civ2Enhanced].map(({ plugins }) => [
+      [...plugins].sort(),
+      true,
+    ])
   );
 
   const directory = mkdtempSync(join(tmpdir(), 'plugin-sets-')),
@@ -949,6 +1093,7 @@ if (scenario !== null) {
         ['civ1', null],
         ['civ1-enhanced', null],
         ['civ2', 'civ2'],
+        ['civ2-enhanced', 'civ2'],
       ],
       null,
     ]
@@ -1007,6 +1152,13 @@ if (scenario !== null) {
       civ2Loaded.manifest.sort(),
     ],
     [null, null, 'civ2', 0, 'staggered-iso', [...civ2.plugins].sort()]
+  );
+  expect(
+    'a civ2 game’s ceasefire, alliance, diplomacy records and every proposal of the talks, with a gift of each kind, are saved, loaded and saved again (M2d)',
+    [civ2Game.types, civ2Loaded.types].map((types) =>
+      CIV2_DIPLOMACY_TYPES.filter((type) => !types.includes(type))
+    ),
+    [[], []]
   );
 
   finished = true;

@@ -6,6 +6,18 @@ import { h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
+import { attitudeName } from '@civ-clone/ui-client/lib/relations';
+import {
+  TalksGroup,
+  talksGroupLabel,
+} from '@civ-clone/ui-client/lib/talksMenu';
+
+// What a reply button does when pressed, and how it's drawn: the first is the default.
+type ReplyButton = {
+  label: string;
+  leave: boolean;
+  press: () => void;
+};
 
 /** Who the player is meeting, already translated, set as text. */
 export interface MeetingNation {
@@ -24,6 +36,9 @@ export interface MeetingReply {
   label: string;
   // Leaves the talks: Escape says it.
   leave?: boolean;
+  // The list on the menu of talks the player leads that it's shown in, with the others of its group, rather than on
+  //  the first level (Civ2's favours and gifts, M2d): a picker its group's entry opens.
+  group?: TalksGroup;
 }
 
 export interface MeetingWindowOptions {
@@ -61,13 +76,19 @@ const fact = (label: string, value: string, tone: string | null = null) => {
   return item;
 };
 
-/** What the player knows of them: peace or war, when they met, and with an embassy their government, cities and gold. */
+/**
+ * What the player knows of them: the treaty between us, how they feel toward us where the rules keep it, when they met,
+ *  and with an embassy their government, cities and gold.
+ */
 const facts = (row: IntelligenceRow): HTMLElement[] => [
   fact(
     t('Meeting.relations'),
-    t(`ReportTable.Intelligence.${row.atPeace ? 'peace' : 'war'}`),
-    row.atPeace ? null : 'negative'
+    t(`ReportTable.Intelligence.${row.treaty}`),
+    row.treaty === 'war' ? 'negative' : null
   ),
+  ...(row.attitude === null
+    ? []
+    : [fact(t('Meeting.attitude'), attitudeName(row.attitude))]),
   ...(row.firstMet === null
     ? []
     : [fact(t('Meeting.first-met'), year(row.firstMet))]),
@@ -130,8 +151,11 @@ const line = ({ speaker, text, own }: NegotiationLine): HTMLElement => {
 export class MeetingWindow extends Window {
   #chosen: boolean = false;
   #conversation: HTMLElement;
-  #default: HTMLButtonElement | null;
-  #replies: HTMLButtonElement[];
+  #default: HTMLButtonElement | null = null;
+  #replies: HTMLButtonElement[] = [];
+  #repliesArea: HTMLElement;
+  // What Escape does in the list shown: leave, where leaving is a reply; go back, in a group's list.
+  #cancel: (() => void) | null = null;
 
   constructor(
     title: string,
@@ -168,38 +192,63 @@ export class MeetingWindow extends Window {
         this.close();
         onChoose(value);
       },
-      // Numbered as they come: the keys are the numbers shown.
-      buttons = replies.map(({ value, label, leave = false }, index) => {
-        const reply = h(
-          button('', {
-            variant: index === 0 ? 'primary' : leave ? 'quiet' : 'secondary',
-            hotkey: leave ? 'Escape' : null,
-            className: 'ui-meeting-reply',
-          }),
-          { click: () => choose(value) }
-        ) as HTMLButtonElement;
+      repliesArea = s(
+        `<div class="ui-meeting-replies" role="group" aria-label="${t(
+          'Meeting.replies'
+        )}"></div>`
+      ),
+      // The first level: each reply not in a group, and each group once, where its first reply is.
+      groups = new Map<TalksGroup, MeetingReply[]>(),
+      firstLevel: (MeetingReply | TalksGroup)[] = [];
 
-        if (index < 9) {
-          const key = s(
-            '<kbd class="ui-meeting-key" aria-hidden="true"></kbd>'
-          );
+    replies.forEach((reply) => {
+      if (reply.group === undefined) {
+        firstLevel.push(reply);
 
-          key.textContent = String(index + 1);
-          reply.append(key);
-          reply.setAttribute(
-            'aria-keyshortcuts',
-            leave ? `${index + 1} Escape` : String(index + 1)
-          );
-        }
+        return;
+      }
 
-        const text = s('<span class="ui-meeting-reply-text"></span>');
+      if (!groups.has(reply.group)) {
+        groups.set(reply.group, []);
+        firstLevel.push(reply.group);
+      }
 
-        text.textContent = label;
-        reply.append(text);
+      groups.get(reply.group)!.push(reply);
+    });
 
-        return reply;
+    const asButton = ({
+        value,
+        label,
+        leave = false,
+      }: MeetingReply): ReplyButton => ({
+        label,
+        leave,
+        press: () => choose(value),
       }),
-      leave = replies.findIndex(({ leave }) => leave);
+      showFirstLevel = (): void =>
+        this.#show(
+          firstLevel.map((entry) =>
+            typeof entry === 'string'
+              ? {
+                  label: talksGroupLabel(entry),
+                  leave: false,
+                  press: () =>
+                    this.#show(
+                      [
+                        ...groups.get(entry)!.map(asButton),
+                        {
+                          label: t('Negotiation.back'),
+                          leave: true,
+                          press: showFirstLevel,
+                        },
+                      ],
+                      true
+                    ),
+                }
+              : asButton(entry)
+          ),
+          true
+        );
 
     leader.textContent = nation.leader;
     nationName.textContent = nation.nation;
@@ -209,28 +258,22 @@ export class MeetingWindow extends Window {
 
     super(
       title,
-      s(
-        '<div class="ui-meeting"></div>',
-        strip,
-        conversation,
-        s(
-          `<div class="ui-meeting-replies" role="group" aria-label="${t(
-            'Meeting.replies'
-          )}"></div>`,
-          ...buttons
-        )
-      ),
+      s('<div class="ui-meeting"></div>', strip, conversation, repliesArea),
       {
         autoDisplay: false,
         canClose: false,
-        cancel: leave === -1 ? null : () => buttons[leave]!.click(),
+        cancel:
+          groups.size === 0 && !replies.some(({ leave }) => leave)
+            ? null
+            : () => this.#cancel?.(),
         classes: ['negotiation', 'ui-meeting-window'],
       }
     );
 
     this.#conversation = conversation;
-    this.#default = buttons[0] ?? null;
-    this.#replies = buttons;
+    this.#repliesArea = repliesArea;
+
+    showFirstLevel();
 
     // Ahead of the window's own keys, which take every key pressed in it.
     this.on('keydown', (event: KeyboardEvent) => {
@@ -311,6 +354,49 @@ export class MeetingWindow extends Window {
   /** The replies, in the order shown. */
   replies(): HTMLButtonElement[] {
     return this.#replies;
+  }
+
+  // Shows a list of replies, numbered as they come (the keys are the numbers shown), the first the default and focused.
+  #show(list: ReplyButton[], focus: boolean): void {
+    const buttons = list.map(({ label, leave, press }, index) => {
+      const reply = h(
+        button('', {
+          variant: index === 0 ? 'primary' : leave ? 'quiet' : 'secondary',
+          hotkey: leave ? 'Escape' : null,
+          className: 'ui-meeting-reply',
+        }),
+        { click: press }
+      ) as HTMLButtonElement;
+
+      if (index < 9) {
+        const key = s('<kbd class="ui-meeting-key" aria-hidden="true"></kbd>');
+
+        key.textContent = String(index + 1);
+        reply.append(key);
+        reply.setAttribute(
+          'aria-keyshortcuts',
+          leave ? `${index + 1} Escape` : String(index + 1)
+        );
+      }
+
+      const text = s('<span class="ui-meeting-reply-text"></span>');
+
+      text.textContent = label;
+      reply.append(text);
+
+      return reply;
+    });
+
+    const leave = list.findIndex(({ leave }) => leave);
+
+    this.#repliesArea.replaceChildren(...buttons);
+    this.#replies = buttons;
+    this.#default = buttons[0] ?? null;
+    this.#cancel = leave === -1 ? null : () => buttons[leave]!.click();
+
+    if (focus && this.element().isConnected) {
+      this.#default?.focus();
+    }
   }
 }
 

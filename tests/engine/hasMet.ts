@@ -13,6 +13,9 @@ import { Peace } from '@civ-clone/library-diplomacy/Declarations';
 import Player from '@civ-clone/core-player/Player';
 import RuleRegistry from '@civ-clone/core-rule/RuleRegistry';
 import Tile from '@civ-clone/core-world/Tile';
+import AttitudeRecord from '@civ-clone/core-diplomacy/Records/AttitudeRecord';
+import Effect from '@civ-clone/core-rule/Effect';
+import HasEmbassy from '@civ-clone/base-diplomacy/Rules/HasEmbassy';
 
 const failures: string[] = [];
 let checks = 0,
@@ -21,7 +24,7 @@ let checks = 0,
 const expect = (description: string, actual: unknown, expected: unknown) => {
   checks++;
 
-  if (actual !== expected) {
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
     failures.push(
       `${description}\n    expected: ${JSON.stringify(
         expected
@@ -119,6 +122,56 @@ expect(
   'no interaction and no city seen is not having met them',
   hasMet(reader, stranger, dependencies),
   false
+);
+
+// Civ2's rules (M2d, #1007): the Apollo Program shows every city, and seeing one isn't meeting its owner; nor is a
+//  record the rules keep about a pair (an attitude, kept before talks), while an embassy a Wonder gives everyone is.
+const civ2 = { ...dependencies, seenCityMeets: false } as HasMetDependencies;
+
+expect(
+  'under rules where seeing a city isn’t meeting its owner (Civ2’s, after the Apollo Program), a city they hold seen is not meeting them',
+  hasMet(reader, holder, civ2),
+  false
+);
+expect('nor one they founded', hasMet(reader, founder, civ2), false);
+expect(
+  'but an interaction between the two still is',
+  hasMet(reader, atPeace, civ2),
+  true
+);
+
+const felt = new Player(ruleRegistry),
+  wonderEmbassy = new Player(ruleRegistry);
+
+interactions.register(
+  new AttitudeRecord(felt, reader, 50, ruleRegistry) as never,
+  new AttitudeRecord(reader, felt, 50, ruleRegistry) as never
+);
+
+expect(
+  'a record the rules keep about the pair, such as how one feels toward the other, is not meeting them (#1067)',
+  hasMet(reader, felt, civ2),
+  false
+);
+
+const withRules = {
+  ...civ2,
+  rules: new RuleRegistry(),
+} as HasMetDependencies;
+
+withRules.rules!.register(
+  new HasEmbassy(
+    new Effect((player: Player, other: Player) => other === wonderEmbassy)
+  )
+);
+
+expect(
+  'an embassy a rule gives (Marco Polo’s Embassy) is meeting them',
+  [
+    hasMet(reader, wonderEmbassy, withRules),
+    hasMet(reader, wonderEmbassy, civ2),
+  ],
+  [true, false]
 );
 
 finished = true;

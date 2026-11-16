@@ -114,7 +114,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1167,
+        "total": 1168,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -201,6 +201,7 @@
           "ScienceBias": 2,
           "Score": 6,
           "Sell": 1,
+          "SenateIntervenes": 1,
           "Shrink": 4,
           "Sold": 2,
           "Spawn": 1,
@@ -365,7 +366,7 @@
       "randomCalls": 8643,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1167,
+        "total": 1168,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -452,6 +453,7 @@
           "ScienceBias": 2,
           "Score": 6,
           "Sell": 1,
+          "SenateIntervenes": 1,
           "Shrink": 4,
           "Sold": 2,
           "Spawn": 1,
@@ -809,7 +811,7 @@
       "randomCalls": 8902,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1167,
+        "total": 1168,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -896,6 +898,7 @@
           "ScienceBias": 2,
           "Score": 6,
           "Sell": 1,
+          "SenateIntervenes": 1,
           "Shrink": 4,
           "Sold": 2,
           "Spawn": 1,

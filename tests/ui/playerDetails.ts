@@ -12,6 +12,7 @@ import PlayerDetails, {
   PlayerDetailsReports,
 } from '@civ-clone/ui-hud/components/PlayerDetails';
 import Transport from '@civ-clone/ui-client/Transport';
+import { confirmRevolution } from '@civ-clone/ui-hud/components/Actions/Revolution';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
@@ -484,6 +485,44 @@ const run = async (): Promise<void> => {
         .querySelector('button.research [role="progressbar"]')
         ?.getAttribute('aria-label'),
       '12 / 60 (6 / turn)'
+    );
+  }
+
+  // The Revolution's question, and a re-choice's in the turn a government was chosen (Civ2's rules, M2d).
+  {
+    const sent: unknown[] = [],
+      revolutionTransport = {
+        send: (...args: unknown[]) => sent.push(args),
+      } as unknown as Transport,
+      asked = (rechoose: boolean): string[] => {
+        const window = confirmRevolution(
+            { id: 'government', rechoose } as any,
+            revolutionTransport
+          ),
+          dialog = window.element(),
+          words = [
+            dialog.querySelector('p')?.textContent?.trim() ?? '',
+            ...Array.from(dialog.querySelectorAll('footer button')).map(
+              (button) => button.textContent?.trim() ?? ''
+            ),
+          ];
+
+        window.close();
+
+        return words;
+      };
+
+    expect(
+      'a revolution asks about Anarchy; a re-choice says there is none, and its button says so',
+      [asked(false)[0]!.includes('Anarchy for a few turns'), asked(true)],
+      [
+        true,
+        [
+          'Choose your government again? You chose it this turn, so you can change your mind at once, with no Anarchy.',
+          'Choose again',
+          'Cancel',
+        ],
+      ]
     );
   }
 

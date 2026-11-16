@@ -27,6 +27,13 @@ export class LockedSliderGroup {
       return;
     }
 
+    // With a maximum on any of them (Civ2's rates, M2d), each takes only what its bounds allow.
+    if (this.#sliders.some((each) => each.max() < 100)) {
+      this.rebalanceWithin(slider);
+
+      return;
+    }
+
     const otherSliders = this.#sliders.filter(
         (otherSlider) => otherSlider !== slider
       ),
@@ -71,6 +78,71 @@ export class LockedSliderGroup {
         slider.set((100 - this.total(otherSliders)).toString());
       }
     }
+  }
+
+  // The difference from 100 shared between the other unlocked sliders, each within 0 and its maximum; what they can't
+  //  take goes back to the slider moved, and failing that (the others locked, or at their bounds), to the locked ones,
+  //  so the rates always come to 100.
+  private rebalanceWithin(slider: LockedSlider): void {
+    const others = this.#sliders.filter((other) => other !== slider);
+
+    this.spread(
+      others.filter((other) => !other.isLocked()),
+      100 - this.total()
+    );
+
+    if (this.total() !== 100) {
+      this.spread([slider], 100 - this.total());
+    }
+
+    // A locked slider that has to move is unlocked, so what the window shows is what it holds.
+    if (this.total() !== 100) {
+      const locked = others.filter((other) => other.isLocked()),
+        before = locked.map((other) => other.value());
+
+      this.spread(locked, 100 - this.total());
+
+      locked
+        .filter((other, index) => other.value() !== before[index])
+        .forEach((other) => other.unlock());
+    }
+  }
+
+  // Adds `amount` (or takes it, if it's negative) across `sliders` in equal shares, each within its bounds.
+  private spread(sliders: LockedSlider[], amount: number): void {
+    let remaining = amount;
+
+    while (remaining !== 0) {
+      const room = sliders.filter((each) =>
+        remaining > 0 ? each.value() < each.max() : each.value() > 0
+      );
+
+      if (room.length === 0) {
+        return;
+      }
+
+      const chunk = Math.ceil(Math.abs(remaining) / room.length);
+
+      room.forEach((each) => {
+        if (remaining === 0) {
+          return;
+        }
+
+        const before = each.value();
+
+        each.set(
+          String(
+            before + Math.sign(remaining) * Math.min(chunk, Math.abs(remaining))
+          )
+        );
+        remaining -= each.value() - before;
+      });
+    }
+  }
+
+  /** Whether the rates come to 100, as the engine needs them to. */
+  balanced(): boolean {
+    return this.total() === 100;
   }
 
   sliders(): LockedSlider[] {

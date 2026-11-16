@@ -29,10 +29,14 @@ export type CivilizationScore = {
   scoringComplete: boolean;
 };
 
+// Where two players stand, lowest first: at war, met with no treaty, or a ceasefire, peace or an alliance between
+//  them. Civ1's rules have only war and peace: any two who have met with no peace are at war.
+export type Treaty = 'war' | 'contact' | 'ceasefire' | 'peace' | 'alliance';
+
 export type IntelligenceAffair = {
   // Only for a civilization the player has met (#59).
   civilization: string | null;
-  atPeace: boolean;
+  treaty: Treaty;
 };
 
 export type IntelligenceDetails = {
@@ -49,6 +53,8 @@ export type IntelligenceDetails = {
   units: number;
   foreignAffairs: IntelligenceAffair[];
   advances: string[];
+  // Their reputation, 0 the best to 7 the worst, under rules that keep one (Civ2's), or `null`.
+  reputation: number | null;
 };
 
 export type IntelligenceRow = {
@@ -56,8 +62,14 @@ export type IntelligenceRow = {
   colors: [string, string] | null;
   // Known to anyone who has met them, as v474.05 shows it without an embassy (#419).
   leader: string | null;
-  // The player's own dealings with them, embassy or not: at peace, or at war, as `atPeace` below counts it.
-  atPeace: boolean;
+  // What the leader is called under their government, as a translation key, under rules with titles (Civ2's), or
+  //  `null`. Shown with the leader, as Civ2's foreign minister does without an embassy.
+  leaderTitle: string | null;
+  // The player's own dealings with them, embassy or not.
+  treaty: Treaty;
+  // How they feel toward the player, one of nine bands from 0, the warmest, to 8, the coldest, under rules that keep
+  //  it (Civ2's), or `null`. Shown without an embassy, as Civ2's foreign minister does.
+  attitude: number | null;
   // Whether they hold an embassy with the player.
   theirEmbassy: boolean;
   // The year of the first dealings between the two, or `null` for none: met only by seeing a city. Units meeting
@@ -65,6 +77,8 @@ export type IntelligenceRow = {
   firstMet: number | null;
   // Only for a civilization the player holds an embassy with.
   details: IntelligenceDetails | null;
+  // Whether the player may open talks with them from the report, under rules where a person can (Civ2's, M2d).
+  talks: boolean;
 };
 
 export type MilitaryStatusRow = {

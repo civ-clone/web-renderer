@@ -2,6 +2,28 @@
 import i18next from 'i18next';
 
 i18next.addResources('en', 'default', {
+  // How one civilization feels toward another under Civ2's rules (M2d, #1007), warmest first: nine bands, in our own
+  //  words.
+  'Attitude.0': 'Adoring',
+  'Attitude.1': 'Admiring',
+  'Attitude.2': 'Friendly',
+  'Attitude.3': 'Well disposed',
+  'Attitude.4': 'Indifferent',
+  'Attitude.5': 'Guarded',
+  'Attitude.6': 'Suspicious',
+  'Attitude.7': 'Resentful',
+  'Attitude.8': 'Furious',
+  // A civilization's reputation under Civ2's rules, best first, in our own words.
+  'Reputation.0': 'Impeccable',
+  'Reputation.1': 'Trusted',
+  'Reputation.2': 'Reliable',
+  'Reputation.3': 'Doubtful',
+  'Reputation.4': 'Unreliable',
+  'Reputation.5': 'Untrustworthy',
+  'Reputation.6': 'Treacherous',
+  'Reputation.7': 'Notorious',
+  // A leader with the title their government gives them (Civ2): "Chairman Mao".
+  'Generic.leader-titled': '{{- title}} {{- leader}}',
   'Generic.civilization-name.plural':
     '$t({{- civilization}}.plural, { "defaultValue": "{{player.civilization._}}", "ns": "civilization" })',
   'ChooseFromList.capture-city.steal-advance.body':
@@ -16,6 +38,14 @@ i18next.addResources('en', 'default', {
   'ChooseFromList.capture-city.palace-escape.choice.true':
     'Yes, move the Palace',
   'ChooseFromList.capture-city.palace-escape.title': 'Capital captured',
+  // Civ2's offer of a revolution when an advance makes a government available (M2d): not now first, as it costs
+  //  nothing.
+  'ChooseFromList.government.revolution-offer.body':
+    'Our people have learned of $t({{data.government}}.name, { "defaultValue": "{{data.government}}", "ns": "government" }). Shall we start a revolution to adopt it? We will be in Anarchy until it can be chosen.',
+  'ChooseFromList.government.revolution-offer.choice.false': 'Not now',
+  'ChooseFromList.government.revolution-offer.choice.true':
+    'Yes, start a revolution',
+  'ChooseFromList.government.revolution-offer.title': 'Revolution?',
   'ChooseFromList.choose-civilization.body': '',
   'ChooseFromList.choose-civilization.choice':
     '$t(Generic.civilization-name.name, { "civilization": "{{value._}}", "ns": "default" })',
@@ -97,6 +127,10 @@ i18next.addResources('en', 'default', {
   'GameSetup.custom': 'Custom ({{width}} × {{height}})',
   'GameSetup.earth': 'Earth, {{size}}',
   'Negotiation.you': 'You',
+  // The lists the menu of talks you lead opens (Civ2's, M2d), and the way back from one.
+  'Negotiation.group.favour': 'Ask a favor…',
+  'Negotiation.group.gift': 'Offer a gift…',
+  'Negotiation.back': 'Back',
   'NewGameWindow.civilizations_one': '1 civilization',
   'NewGameWindow.civilizations_other': '{{count}} civilizations',
   'NewGameWindow.WorldSize.tiny': 'Tiny ({{width}} × {{height}})',

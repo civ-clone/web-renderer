@@ -8,6 +8,7 @@ import Intelligence from '@civ-clone/ui-protocol/Requests/Intelligence';
 import MeetingWindow from './MeetingWindow';
 import { OpenTalksStep } from '@civ-clone/ui-hud/components/talks';
 import instanceOf from '@civ-clone/ui-client/lib/instanceOf';
+import { talksGroup } from '@civ-clone/ui-client/lib/talksMenu';
 import { t } from 'i18next';
 
 // The talks in the meeting window (#752): the talks so far, and the replies in the engine's order, the one that costs
@@ -45,6 +46,8 @@ export const meetingTalks: OpenTalksStep = ({
           value: id,
           label: interactionLabel(value as Interactions, true),
           leave: instanceOf(value as Interactions, 'Terminate'),
+          // The favours and gifts of talks the player leads, each in its picker (M2d).
+          group: talksGroup(value as Interactions) ?? undefined,
         })),
         // The stress runner sends its own answer, whatever is chosen in the window meanwhile.
         onChoose: (choice) => {

@@ -1,19 +1,33 @@
 import {
-  CancelTreaty,
-  DemandTribute,
-  ExchangeKnowledge,
-  OfferPeace,
-  OfferPeaceWithGift,
-} from '@civ-clone/library-diplomacy/Proposals';
-import {
+  Alliance,
+  Ceasefire,
   Peace,
   ShamPeace,
   Vendetta,
   War,
 } from '@civ-clone/library-diplomacy/Declarations';
+import {
+  AskAlly,
+  CancelAlliance,
+  CancelTreaty,
+  DemandTribute,
+  DemandWithdrawal,
+  ExchangeKnowledge,
+  Gift,
+  JoinWar,
+  OfferCeasefire,
+  OfferPeace,
+  OfferPeaceWithGift,
+  ProposeAlliance,
+  SellAdvance,
+  ShareMaps,
+} from '@civ-clone/library-diplomacy/Proposals';
 import AdvanceStolen from '@civ-clone/base-unit-action-steal-technology/AdvanceStolen';
 import { Contact } from '@civ-clone/library-diplomacy/Interactions';
 import Embassy from '@civ-clone/base-unit-action-establish-embassy/Embassy';
+import { Gold } from '@civ-clone/library-city/Yields';
+import LastContactRecord from '@civ-clone/base-diplomacy/Records/LastContactRecord';
+import PatienceRecord from '@civ-clone/base-diplomacy/Records/PatienceRecord';
 import { Game } from '@civ-clone/core-game/Game';
 import Interaction from '@civ-clone/core-diplomacy/Interaction';
 import { SaveGame } from '@civ-clone/core-save-game/SaveGame';
@@ -34,19 +48,37 @@ export const registerDiplomacyClasses = (game: Game): void =>
     ...([
       // A Diplomat's theft, so a city is robbed only once (#58).
       AdvanceStolen,
+      // The treaties beyond peace, a ceasefire and an alliance (Civ2, #1007).
+      Alliance,
+      // And what a person may propose in talks they open, and the computer player's own proposals there.
+      AskAlly,
+      CancelAlliance,
+      Ceasefire,
       // A call to cancel a treaty with a third player (#427).
       CancelTreaty,
       Contact,
       DemandTribute,
+      DemandWithdrawal,
       // A Diplomat's embassy (#58).
       Embassy,
       ExchangeKnowledge,
+      Gift,
+      // What a gift of gold, a tribute or a price carries.
+      Gold,
+      JoinWar,
+      // When a pair last met, and how much patience one has left with the other (base-diplomacy).
+      LastContactRecord,
+      OfferCeasefire,
       OfferPeace,
       // A peace offer sweetened with an advance or gold (#427).
       OfferPeaceWithGift,
+      PatienceRecord,
       Peace,
+      ProposeAlliance,
+      SellAdvance,
       // A computer player keeping a peace it means to drop, and a grudge (#427).
       ShamPeace,
+      ShareMaps,
       Vendetta,
       War,
     ] as unknown as SaveableClass[]),

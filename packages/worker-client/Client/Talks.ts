@@ -24,6 +24,11 @@ import { ClientContext, Disposer, Registries } from './ClientContext';
 import Timeout from '../Error/Timeout';
 import { awaitTimeout } from './refs';
 import { describeError } from '../answer';
+import { currentWorkerRules } from '../workerRules';
+import Notification from '@civ-clone/ui-protocol/Notification';
+import { Contact } from '@civ-clone/library-diplomacy/Interactions';
+import { InteractionRegistry } from '@civ-clone/core-diplomacy/InteractionRegistry';
+import Turn from '@civ-clone/core-turn-based-game/Turn';
 
 export type TalksContext = Pick<
   ClientContext,
@@ -34,13 +39,15 @@ export type TalksContext = Pick<
   | 'patches'
   // Talks given up on are said, as `workerError` (#470).
   | 'transport'
+  // Talks the player asked for that can't be opened are said (M2d).
+  | 'notifier'
   // Each handed whole to a negotiation and the rules that say whether players may talk.
   | 'interactions'
   | 'rules'
   | 'turn'
 > &
-  // The units next to one of ours that has moved.
-  Registries<{ units: 'getByTile' }>;
+  // The units next to one of ours that has moved, and the players still in the game, for an audience asked for.
+  Registries<{ units: 'getByTile'; players: 'entries' }>;
 
 // How many rounds in a row the talks may go without a step before they are ended (see `#negotiate`).
 export const maxStalledRounds = 3;
@@ -55,6 +62,13 @@ export class Talks {
   #talks: Promise<void> = Promise.resolve();
   // How many of the links in `#talks` have yet to settle: talks are under way while any has (#491).
   #unsettled: number = 0;
+  // The computer players that asked for an audience with the player since the last hand-over (Civ2's rules, M2d,
+  //  `WorkerRules.audienceEvents`): each heard once, at the start of the player's turn, after the players met on the
+  //  way.
+  #audiences: Set<Player> = new Set();
+  // The players whose talks the player has opened and that are queued or under way, so a second request for the same
+  //  talks is ignored.
+  #opened: Set<Player> = new Set();
 
   constructor(context: TalksContext) {
     this.#context = context;
@@ -106,13 +120,96 @@ export class Talks {
     this.#countUntilSettled();
   }
 
-  handOver(): void {
-    // Anyone met by a GoTo carried on at the start of the turn.
+  // Talks the player opens with `other`, from the Foreign Advisor (M2d): led by the player, who proposes, and the other
+  //  player answers. Waited for as a Meet with Leader's are.
+  //  Talks already queued or open with them aren't opened again, and the rules are asked again as they start: what
+  //  came before in the chain may have changed whether they may be.
+  openTalks(other: Player): void {
+    if (this.#opened.has(other)) {
+      return;
+    }
+
+    this.#opened.add(other);
+
     this.#talks = this.#talks
-      .then(() => this.talkToPlayersMet())
+      .then(() => {
+        if (this.#mayOpenTalks(other)) {
+          return this.handleNegotiation(other, true);
+        }
+
+        // Said, rather than nothing happening: the rules no longer let them talk (contact lost, say).
+        this.#context.notifier.notify(
+          new Notification('Talks.refused', { player: other })
+        );
+
+        return undefined;
+      })
+      .then(
+        () => {},
+        (error) => console.error(error)
+      )
+      .then(() => {
+        this.#opened.delete(other);
+      });
+
+    this.#countUntilSettled();
+  }
+
+  #mayOpenTalks(other: Player): boolean {
+    const mayOpenTalks = currentWorkerRules()?.mayOpenTalks;
+
+    return (
+      mayOpenTalks !== undefined &&
+      mayOpenTalks(this.player(), other, {
+        interactionRegistry: this.#context.interactions as InteractionRegistry,
+        ruleRegistry: this.#context.rules,
+        turn: this.#context.turn as Turn,
+      })
+    );
+  }
+
+  // A computer player asks for an audience (M2d): heard at the next hand-over, once however often it asks.
+  audienceDue(computer: Player): void {
+    this.#audiences.add(computer);
+  }
+
+  handOver(): void {
+    // Anyone met by a GoTo carried on at the start of the turn, then the audiences computer players asked for.
+    //  With none asked for, no more than before, so the hand-over's talks settle as soon as they always have (#503).
+    //  A computer player just talked to on the way isn't heard again.
+    this.#talks = this.#talks
+      .then(
+        (): Promise<any> =>
+          this.#audiences.size === 0
+            ? this.talkToPlayersMet()
+            : this.talkToPlayersMet().then((talkedTo) =>
+                this.holdAudiences(talkedTo)
+              )
+      )
       .catch((error) => console.error(error));
 
     this.#countUntilSettled();
+  }
+
+  // Each audience asked for since the last hand-over, a computer player's talks as it leads them: not with one talked to
+  //  already (`talkedTo`), one no longer in the game, or one no longer in contact.
+  async holdAudiences(talkedTo: Player[] = []): Promise<void> {
+    const computers = Array.from(this.#audiences).filter(
+      (computer) =>
+        !talkedTo.includes(computer) &&
+        this.#context.players.entries().includes(computer) &&
+        this.#context.interactions
+          .getByPlayers(computer, this.player())
+          .some((interaction) => interaction instanceof Contact)
+    );
+
+    this.#audiences.clear();
+
+    await computers.reduce(
+      (promise, computer): Promise<any> =>
+        promise.then(() => this.handleNegotiation(computer)),
+      Promise.resolve()
+    );
   }
 
   // Counts the link just added to `#talks` until it settles, either way. Off to one side, so the chain an action waits
@@ -130,57 +227,67 @@ export class Talks {
   // TODO: This is duplicated between here and SimpleAIClient, this should be re-usable.
   // Offers talks with each player a unit of ours has moved next to since the last time (`#metOnTheWay`), if they may
   //  talk now (`MayNegotiate`).
-  async talkToPlayersMet(): Promise<void> {
+  //  Answers the players talked to.
+  async talkToPlayersMet(): Promise<Player[]> {
     // TODO: This could be a `Rule`.
     const surroundingPlayers = Array.from(this.#metOnTheWay);
 
     this.#metOnTheWay.clear();
 
     if (surroundingPlayers.length === 0) {
-      return;
+      return [];
     }
 
-    await surroundingPlayers
-      // How often players talk is the ruleset's to say (`MayNegotiate`).
-      .filter((player) =>
-        mayNegotiate(
-          player,
-          this.player(),
-          this.#context.rules,
-          this.#context.interactions,
-          this.#context.turn
-        )
+    // How often players talk is the ruleset's to say (`MayNegotiate`).
+    const talkedTo = surroundingPlayers.filter((player) =>
+      mayNegotiate(
+        player,
+        this.player(),
+        this.#context.rules,
+        this.#context.interactions,
+        this.#context.turn
       )
-      .reduce(
-        (promise, player): Promise<any> =>
-          promise.then(() => this.handleNegotiation(player)),
-        Promise.resolve()
-      );
+    );
+
+    await talkedTo.reduce(
+      (promise, player): Promise<any> =>
+        promise.then(() => this.handleNegotiation(player)),
+      Promise.resolve()
+    );
+
+    return talkedTo;
   }
 
   // Gold given or taken in the talks moves without an event to say so (`civ1-diplomacy`'s `give`), so the player's
   //  treasuries and research are compared before and after, and what changed is sent (#492). Inside an action the flush
   //  is held, and goes with the action's patch.
-  async handleNegotiation(player: Player): Promise<Negotiation> {
+  // `player` leads them, as every meeting did before Civ2's, unless the player `leads` them (talks they open).
+  async handleNegotiation(
+    player: Player,
+    leads: boolean = false
+  ): Promise<Negotiation> {
     const before = this.#context.patches.playerState();
 
     try {
-      return await this.#negotiate(player);
+      return await this.#negotiate(player, leads);
     } finally {
       this.#context.patches.playerStateChanged(before);
       this.#context.patches.flush();
     }
   }
 
-  async #negotiate(player: Player): Promise<Negotiation> {
-    const negotiation = new Negotiation(
-      player,
-      this.player(),
-      this.#context.rules
-    );
+  async #negotiate(player: Player, leads: boolean): Promise<Negotiation> {
+    // Whoever opens them comes first (`initiator()`), and asks for the audience.
+    const negotiation = leads
+      ? new Negotiation(this.player(), player, this.#context.rules)
+      : new Negotiation(player, this.player(), this.#context.rules);
 
     negotiation.proceed(
-      new Initiate(player, negotiation, this.#context.rules) as IAction
+      new Initiate(
+        negotiation.initiator(),
+        negotiation,
+        this.#context.rules
+      ) as IAction
     );
 
     // Rounds in a row in which nobody took a step: a chooser that threw, timed out or gave nothing. Asked again, as a
@@ -286,7 +393,7 @@ export class Talks {
 export const registerTalkEvents = (
   engine: Pick<Engine, 'on' | 'off'>,
   ctx: Pick<ClientContext, 'view'> & {
-    talks: Pick<Talks, 'meetNeighboursOf' | 'meetWithLeader'>;
+    talks: Pick<Talks, 'meetNeighboursOf' | 'meetWithLeader' | 'audienceDue'>;
     // Whether automation is on, read as each unit moves: it is turned on and off mid-game.
     automation: Pick<Automation, 'enabled'>;
   }
@@ -314,6 +421,21 @@ export const registerTalkEvents = (
 
     ctx.talks.meetWithLeader(other);
   });
+
+  // A computer player asking for an audience with the player, under rules that have it ask (Civ2's, M2d): the events
+  //  that mean so are the rule set's (`WorkerRules.audienceEvents`), each with the computer player and the player.
+  (currentWorkerRules()?.audienceEvents ?? []).forEach((event) =>
+    on(event, (computer: Player, person: Player) => {
+      // Kept while automation plays the turns too: one per computer player, held at the first hand-over the player
+      //  plays, if it's still in the game and in contact then (`holdAudiences`). civ2-diplomacy raises each once (a
+      //  ceasefire's end, a demand to withdraw, a call for help), so one dropped would never be heard.
+      if (!ctx.view.owns(person) || ctx.view.owns(computer)) {
+        return;
+      }
+
+      ctx.talks.audienceDue(computer);
+    })
+  );
 
   return (): void =>
     listeners.forEach(([event, listener]) => engine.off(event, listener));

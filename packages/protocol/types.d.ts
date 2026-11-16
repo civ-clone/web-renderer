@@ -173,6 +173,8 @@ export interface Attribute extends EntityInstance<'Attribute'> {
 export interface Civilization extends EntityInstance {
   attributes: Attribute[];
   leader: Leader;
+  // What the leader is called under their government, as a translation key, under rules with titles (Civ2's, M2d).
+  leaderTitle?: string | null;
 }
 
 export interface Leader extends EntityInstance {
@@ -215,6 +217,9 @@ export type Revolution = PlayerAction<PlayerGovernment>;
 export interface PlayerGovernment extends EntityInstance {
   // Turns until the new government can be chosen, or `null` with no revolution under way.
   anarchyTurns: number | null;
+  // Whether a revolution now would be a free re-choice, with no Anarchy (Civ2's rules, in the turn a government was
+  //  chosen, M2d).
+  rechoose?: boolean;
   available: Entity[];
   current: EntityInstance;
 }
@@ -237,6 +242,12 @@ export interface PlayerResearch extends EntityInstance {
 
 export interface PlayerTradeRates extends EntityInstance {
   all: Yield[];
+  // The most each rate may be set to, as a whole percentage by the rate's name, under rules with a maximum (Civ2's,
+  //  M2d). A rate not listed has none.
+  maxRates?: { [rate: string]: number };
+  // Where a rate is worth less than it's set to, as a whole percentage by the rate's name: Civ2's Fundamentalism takes
+  //  no more than half the trade for research, whatever the research rate.
+  limitedRates?: { [rate: string]: number };
 }
 
 export interface Unit extends EntityInstance {

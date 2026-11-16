@@ -136,6 +136,92 @@ const tradeRates = (...values: number[]) => {
   );
 }
 
+// Civ2's maximum rates (M2d, #1007): a slider stops at its maximum, the others take what's left within theirs, and the
+//  rates always come to 100.
+{
+  const sliders = [60, 0, 40].map(
+    (value, i) => new LockedSlider(`rate${i}`, value, `Rate ${i}`, 60)
+  );
+
+  new LockedSliderGroup(...sliders);
+
+  type(sliders[2], '80');
+
+  expect(
+    'a rate set over its maximum stops at it, and the others make up 100',
+    values(sliders),
+    [40, 0, 60]
+  );
+
+  type(sliders[0], '10');
+
+  expect(
+    'a rate lowered leaves the rest to the others, each within its maximum',
+    values(sliders),
+    [10, 30, 60]
+  );
+
+  type(sliders[1], '0');
+
+  expect(
+    'what the others can’t take goes back to the rate moved',
+    [values(sliders), values(sliders).reduce((total, value) => total + value)],
+    [[40, 0, 60], 100]
+  );
+  expect(
+    'and the maximum is said beside the rate’s name, and the number box stops at it',
+    [
+      sliders[0]!.element().querySelector('legend .locked-slider-max') !== null,
+      numberBox(sliders[0]!).getAttribute('max'),
+    ],
+    [true, '60']
+  );
+}
+
+{
+  // Two locked, and the third at its maximum: the rates (which start short of 100 here) can only come to 100 by moving
+  //  the locked ones, which are unlocked; the range says its maximum.
+  const sliders = [20, 0, 20].map(
+    (value, i) => new LockedSlider(`rate${i}`, value, `Rate ${i}`, 60)
+  );
+
+  new LockedSliderGroup(...sliders);
+
+  [0, 1].forEach((index) => {
+    const lock = sliders[index]!
+      .element()
+      .querySelector('input[type="checkbox"]') as HTMLInputElement;
+
+    lock.checked = true;
+    lock.dispatchEvent(new Event('input'));
+  });
+
+  type(sliders[2]!, '60');
+
+  expect(
+    'a locked slider moved to make 100 is unlocked',
+    [
+      values(sliders),
+      sliders.map((slider) => slider.isLocked() === true),
+      sliders[2]!
+        .element()
+        .querySelector('input[type="range"]')
+        ?.getAttribute('max'),
+    ],
+    [[30, 10, 60], [false, false, false], '60']
+  );
+}
+
+{
+  const slider = new LockedSlider('rate', 50, 'Rate');
+
+  expect(
+    'without a maximum, nothing is said',
+    [slider.element().querySelector('legend .locked-slider-max'), slider.max()],
+    [null, 100]
+  );
+}
+
 if (failures.length) {
   process.stderr.write(
     `FAIL lockedSlider\n${failures

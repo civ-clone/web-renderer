@@ -171,6 +171,7 @@ const run = async (): Promise<void> => {
   await import('../../translations/civ1-civilization/en');
   await import('../../translations/civ1-difficulty/en');
   await import('../../translations/civ1-diplomacy/en');
+  await import('../../translations/civ2-diplomacy/en');
 
   // A step of the talks with one answer.
   ask(
@@ -499,6 +500,87 @@ const run = async (): Promise<void> => {
     [0, [['chooseFromList', 'goodbye']]]
   );
 
+  // Talks the player leads (Civ2's, M2d): the favours and the gifts under an entry each, which opens their list, with
+  //  Back; choosing an entry sends nothing.
+  const proposal = (_: string, fields: object = {}) => ({
+    _,
+    __: [_, 'Proposal', 'Interaction'],
+    ...fields,
+  });
+
+  reset();
+  ask(
+    'negotiation.next-step',
+    [
+      { id: 'peace', value: proposal('OfferPeace') },
+      { id: 'maps', value: proposal('ShareMaps') },
+      {
+        id: 'gift',
+        value: proposal('Gift', {
+          kind: 'gold',
+          gift: { _: 'Gold', value: 30 },
+        }),
+      },
+      { id: 'goodbye', value: terminate },
+    ],
+    negotiation
+  );
+
+  expect(
+    'the classic menu lists the favours and the gifts as entries',
+    labels(),
+    ['Good bye!', 'Propose a peace treaty.', 'Ask a favor…', 'Offer a gift…']
+  );
+
+  choose(
+    (
+      Array.from(top().querySelectorAll('option')).find(
+        (option) => option.textContent === 'Offer a gift…'
+      ) as HTMLOptionElement
+    ).value
+  );
+
+  expect(
+    'the gifts’ entry opens the gift picker, sending nothing',
+    [labels(), sent],
+    [['Give them 30 gold.', 'Back'], []]
+  );
+
+  choose('@back');
+
+  expect('Back returns to the menu', labels().length, 4);
+
+  // Escape in a group's list is Back too.
+  choose(
+    (
+      Array.from(top().querySelectorAll('option')).find(
+        (option) => option.textContent === 'Ask a favor…'
+      ) as HTMLOptionElement
+    ).value
+  );
+  top().dispatchEvent(
+    new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      key: 'Escape',
+    })
+  );
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  expect(
+    'Escape in the favours’ list returns to the menu, sending nothing',
+    [labels().length, sent, open().length],
+    [4, [], 1]
+  );
+
+  choose('peace');
+
+  expect(
+    'and a proposal chosen there is sent',
+    [open().length, sent],
+    [0, [['chooseFromList', 'peace']]]
+  );
+
   // Any other list, Random among the civilizations.
   reset();
 
@@ -631,6 +713,33 @@ const run = async (): Promise<void> => {
     'and a step of the talks with one answer',
     [handed, sent],
     [['automated-1', 'choice-2'], [['chooseFromList', 'choice-2']]]
+  );
+
+  // A menu of talks the player leads whose first choice is in a group (M2d): the stress runner is still handed that
+  //  first choice, with its group's row selected.
+  open().forEach((window) => window.remove());
+  reset();
+  handed.length = 0;
+  ask(
+    'negotiation.next-step',
+    [
+      {
+        id: 'gift-1',
+        value: proposal('Gift', {
+          kind: 'gold',
+          gift: { _: 'Gold', value: 30 },
+        }),
+      },
+      { id: 'peace-1', value: proposal('OfferPeace') },
+      { id: 'goodbye-1', value: terminate },
+    ],
+    negotiation
+  );
+
+  expect(
+    'the stress runner answers a grouped first choice',
+    [handed, sent],
+    [['gift-1'], [['chooseFromList', 'gift-1']]]
   );
 
   debugFlags.uiStressRunner = null;

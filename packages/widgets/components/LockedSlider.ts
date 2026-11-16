@@ -16,16 +16,24 @@ export type onInputHandler = () => void;
 export class LockedSlider extends Element {
   #key: string;
   #label: string;
+  // The most it may be set to (M2d: Civ2's maximum rates), 100 where there's none.
+  #max: number;
   #range: HTMLInputElement;
   #number: HTMLInputElement;
   #lock: HTMLInputElement;
   #listeners: onInputHandler[] = [];
 
-  constructor(key: string, currentValue: number, label: string) {
+  constructor(
+    key: string,
+    currentValue: number,
+    label: string,
+    max: number = 100
+  ) {
     super(template(label, currentValue));
 
     this.#key = key;
     this.#label = label;
+    this.#max = Math.min(Math.max(max, 0), 100);
     this.#range = this.element().querySelector(
       'input[type="range"]'
     ) as HTMLInputElement;
@@ -40,7 +48,41 @@ export class LockedSlider extends Element {
     this.#range.setAttribute('aria-label', label);
     this.#number.setAttribute('aria-label', label);
 
+    this.#showMax();
     this.build();
+  }
+
+  // A maximum below 100 is said, and the number box stops at it as the slider does; the track ends at it, so its thumb
+  //  at the end is the most the rate can be.
+  #showMax(): void {
+    const legend = this.element().querySelector('legend')!;
+
+    legend.querySelector('.locked-slider-max')?.remove();
+
+    if (this.#max >= 100) {
+      this.#number.removeAttribute('max');
+      this.#range.setAttribute('max', '100');
+
+      return;
+    }
+
+    const maximum = document.createElement('small');
+
+    maximum.className = 'locked-slider-max';
+    maximum.textContent = t('LockedSlider.max', { max: this.#max });
+    this.#number.setAttribute('max', String(this.#max));
+    this.#range.setAttribute('max', String(this.#max));
+    legend.append(maximum);
+  }
+
+  /**
+   * A new maximum (the government changed while the window is open): said, and the value brought within it, which
+   *  rebalances the others as moving it does.
+   */
+  setMax(max: number): void {
+    this.#max = Math.min(Math.max(max, 0), 100);
+    this.#showMax();
+    this.set(String(this.value()));
   }
 
   build(): void {
@@ -83,6 +125,16 @@ export class LockedSlider extends Element {
     return this.#lock.checked;
   }
 
+  max(): number {
+    return this.#max;
+  }
+
+  /** Takes the lock off, as when the rates can only come to 100 by moving it. */
+  unlock(): void {
+    this.#lock.checked = false;
+    this.lock();
+  }
+
   set(value: string): void {
     const parsed = parseInt(value, 10);
 
@@ -91,14 +143,17 @@ export class LockedSlider extends Element {
       return;
     }
 
-    value = Math.min(Math.max(parsed, 0), 100).toString();
+    value = Math.min(Math.max(parsed, 0), this.#max).toString();
 
     if (this.#range.value !== value) {
       this.#range.value = value;
     }
 
     // How far along the track the thumb is, 0 to 1, for the theme to fill it to (#739).
-    this.#range.style.setProperty('--fill', String(parseInt(value, 10) / 100));
+    this.#range.style.setProperty(
+      '--fill',
+      String(this.#max === 0 ? 0 : parseInt(value, 10) / this.#max)
+    );
 
     if (this.#number.value !== value) {
       this.#number.value = value;
