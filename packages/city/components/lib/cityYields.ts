@@ -54,7 +54,8 @@ const peoplePack = (): TilesetDescriptor | null =>
 
 /**
  * The keys of a pack's own `face` to try first, for a city whose rules send its citizens' era (`City.style.people`,
- *  M2c): the era's, then the pack's one without an era. None without an era or such a pack.
+ *  M2c): the pack's small one without an era, which fits the citizens' row, then the era's large one. None without an
+ *  era or such a pack.
  */
 const peopleKeys = (face: string, era: string | undefined): string[] => {
   const pack = era === undefined ? null : peoplePack();
