@@ -156,6 +156,8 @@ i18next.addResources('en', 'default', {
   //  are a preview, and its saves may not load once more of them is in.
   'PluginSet.civ1-enhanced': 'Civilization',
   'PluginSet.civ2': 'Civilization II (preview)',
+  // Civ2's rules with the fixes of the original's slips, which a game can turn off one by one (M2d).
+  'PluginSet.civ2-enhanced': 'Civilization II, enhanced (preview)',
   'ReleaseWindow.behind-the-scenes': 'Behind the scenes',
   'ReleaseWindow.external-changes': 'External changes',
   'ReleaseWindow.failed': 'The release notes could not be loaded.',

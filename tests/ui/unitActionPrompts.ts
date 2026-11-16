@@ -385,6 +385,58 @@ const latest = () => {
   expect('then is overruled', shown().title, 'The Senate');
   expect('and sends Overruled', sent.slice(-1), ['Overruled']);
 
+  // Civ2 (M2d, #1007): an attack on a player met and not at war with, which the Senate overrules, asks whether to attack
+  //  without war first, then says the Senate stopped it. A nuclear one too.
+  ['UndeclaredAttack', 'UndeclaredNuclearAttack'].forEach((name) => {
+    chooseUnitAction(
+      roman(0),
+      [
+        action(
+          'Overruled',
+          { action: { _: name, enemy: babylonian }, moves: 0 },
+          unitTile
+        ),
+      ],
+      perform
+    );
+
+    expect(`an overruled ${name} asks whether to attack without war`, shown(), {
+      title: 'Attack without war?',
+      body: 'You are not at war with Babylon. Attacking them will start one. Attack anyway?',
+      options: [],
+      buttons: ['OK', 'Cancel'],
+    });
+
+    press('OK');
+
+    expect(`then ${name} is overruled`, shown().title, 'The Senate');
+    expect(`and ${name} sends Overruled`, sent.slice(-1), ['Overruled']);
+  });
+
+  // And a pillage of a treaty partner's land the Senate overrules (civ2-unit's overruled pillage form).
+  chooseUnitAction(
+    roman(0),
+    [
+      action(
+        'Overruled',
+        { action: { _: 'SneakPillage', enemy: babylonian }, moves: 1 },
+        landTile
+      ),
+      action('AbortMove', { partner: babylonian }, landTile),
+    ],
+    perform
+  );
+
+  expect('an overruled pillage asks about the treaty', shown().buttons, [
+    'Cancel action',
+    'Break treaty',
+  ]);
+
+  press('Break treaty');
+
+  expect('and is overruled', shown().title, 'The Senate');
+  expect('sending Overruled', sent.slice(-1), ['Overruled']);
+
   // An overruled Diplomat is offered what it asked for, at its price.
   const overruledDiplomat = [
     action('Overruled', {

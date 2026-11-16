@@ -33,6 +33,12 @@ import {
   unitHitPoints,
 } from './AdditionalData/unitCombat';
 import AdvanceTaken from '@civ-clone/base-diplomacy/Dialogues/AdvanceTaken';
+import BorderRecord from '@civ-clone/civ2-diplomacy/Records/BorderRecord';
+import CallForHelpRecord from '@civ-clone/civ2-diplomacy/Records/CallForHelpRecord';
+import { SaveableClass } from '@civ-clone/core-data-object/ClassRegistry';
+import SenateRecord from '@civ-clone/civ2-diplomacy/Records/SenateRecord';
+import TreatyFlagsRecord from '@civ-clone/civ2-diplomacy/Records/TreatyFlagsRecord';
+import WarnedUnitsRecord from '@civ-clone/civ2-diplomacy/Records/WarnedUnitsRecord';
 import ChooseGovernment from '@civ-clone/base-player-action-choose-government/ChooseGovernment';
 import CompleteProduction from '@civ-clone/base-treasury/PlayerActions/CompleteProduction';
 import Revolution from '@civ-clone/base-player-action-revolution/Revolution';
@@ -67,8 +73,16 @@ export const civ2Rules: WorkerRules = {
     [Revolution, handleRevolution],
     [ChooseGovernment, handleChooseGovernment],
   ],
-  // What a computer player took in an exchange of knowledge.
-  saveableClasses: [AdvanceTaken],
+  // What a computer player took in an exchange of knowledge, and civ2-diplomacy's own records: the treaty flags, the
+  //  Senate's roll, a call for help, the border incidents and the units warned.
+  saveableClasses: [
+    AdvanceTaken,
+    BorderRecord,
+    CallForHelpRecord,
+    SenateRecord,
+    TreatyFlagsRecord,
+    WarnedUnitsRecord,
+  ] as unknown as SaveableClass[],
   civilDisorder: (city) => civilDisorder(city) !== null,
   // A city put on Auto chooses at once, from what its mode allows (civ2-city's three, M2c).
   autoBuild: (cityBuild, rules, mode) => {

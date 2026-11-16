@@ -29,7 +29,11 @@ const sneakActions = [
     'SneakNuclearAttack',
     'SneakStealTechnology',
     'SneakInciteRevolt',
+    // Civ2's attack on a player met and not at war with, offered only as what an `Overruled` stands for (#1007).
+    'UndeclaredAttack',
+    'UndeclaredNuclearAttack',
   ],
+  undeclaredActions = ['UndeclaredAttack', 'UndeclaredNuclearAttack'],
   // Onto, or pillaging, a treaty partner's land (#287).
   treatyActions = ['SneakMove', 'SneakPillage'],
   caravanActions = ['EstablishTradeRoute', 'HelpBuildWonder'],
@@ -99,8 +103,19 @@ const confirmSneak = (action: UnitAction, perform: Perform): void => {
   // Closed before the treaty is broken: breaking it can open the part-of-a-move question, and closing this window after
   //  that would take the focus back from it, so a second Enter dismissed it without attacking.
   const confirmation: ConfirmationWindow = new ConfirmationWindow(
-    t('SneakAttack.title'),
-    ['SneakStealTechnology', 'SneakInciteRevolt'].includes(name)
+    t(
+      undeclaredActions.includes(name)
+        ? 'UndeclaredAttack.title'
+        : 'SneakAttack.title'
+    ),
+    undeclaredActions.includes(name)
+      ? t('UndeclaredAttack.body', {
+          nation: t(`${enemy.civilization._}.nation`, {
+            defaultValue: enemy.civilization._,
+            ns: 'civilization',
+          }),
+        })
+      : ['SneakStealTechnology', 'SneakInciteRevolt'].includes(name)
       ? t('Diplomat.peace-treaty', {
           nation: civilization(enemy, 'plural'),
         })

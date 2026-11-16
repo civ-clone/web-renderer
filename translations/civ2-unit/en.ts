@@ -43,6 +43,11 @@ i18next.addResources('en', 'unit', {
   'Action.Paradrop.name': 'Paradrop',
   'Action.SabotageUnit.name': 'Sabotage unit',
   'Action.TransformTerrain.name': 'Transform terrain',
+  // M2d (#1007): a unit repaired in an ally's city, which it can't otherwise enter, and an attack on a player you've met
+  //  and aren't at war with, which the Senate may stop (offered only in its place, as `Overruled`'s).
+  'Action.AlliedRepair.name': 'Repair in an ally’s city',
+  'Action.UndeclaredAttack.name': 'Attack',
+  'Action.UndeclaredNuclearAttack.name': 'Nuclear attack',
 
   'Action.Airlift.icon': 'AL',
   'Action.BuildAirbase.icon': 'E',

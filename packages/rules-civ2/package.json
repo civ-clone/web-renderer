@@ -13,7 +13,7 @@
   "peerDependencies": {
     "@civ-clone/base-city-happiness": "^0.1.2",
     "@civ-clone/base-city-improvement-capitalization": "^0.1.0",
-    "@civ-clone/base-diplomacy": "^0.1.2",
+    "@civ-clone/base-diplomacy": "^0.1.3",
     "@civ-clone/base-player-action-choose-government": "^0.1.0",
     "@civ-clone/base-player-action-revolution": "^0.1.1",
     "@civ-clone/base-terrain-properties": "^0.1.0",
@@ -28,6 +28,7 @@
     "@civ-clone/civ2-city-happiness": "*",
     "@civ-clone/civ2-city-improvement": "*",
     "@civ-clone/civ2-difficulty": "*",
+    "@civ-clone/civ2-diplomacy": "*",
     "@civ-clone/civ2-government": "*",
     "@civ-clone/civ2-rules": "*",
     "@civ-clone/civ2-science": "*",

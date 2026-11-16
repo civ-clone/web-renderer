@@ -154,6 +154,9 @@ i18next.addResources('en', 'default', {
   'Senate.title': 'The Senate',
   'SneakAttack.title': 'Sneak attack?',
   'SneakAttack.body': `Are you sure you want to attack {{nation}}? (This will terminate your current peace treaty)`,
+  // Attacking a player you've met and aren't at war with, but have no treaty with (Civ2, #1007).
+  'UndeclaredAttack.title': 'Attack without war?',
+  'UndeclaredAttack.body': `You are not at war with {{nation}}. Attacking them will start one. Attack anyway?`,
   'SquareTooltip.city': 'City',
   'SquareTooltip.defence': 'Defense',
   'SquareTooltip.defence-bonus':
