@@ -23,11 +23,21 @@ import type { CityImprovementRegistry } from '@civ-clone/core-city-improvement/C
 import type { InteractionRegistry } from '@civ-clone/core-diplomacy/InteractionRegistry';
 import type { PlayerGovernmentRegistry } from '@civ-clone/core-government/PlayerGovernmentRegistry';
 import type { Treaty } from '@civ-clone/ui-protocol/reports';
+import type { NotificationTable } from './Client/notifications/NotificationContext';
+import Notification from '@civ-clone/ui-protocol/Notification';
 import type Turn from '@civ-clone/core-turn-based-game/Turn';
 
 export type PlayerActionType = new (...args: any[]) => PlayerAction;
 
 export type { Treaty };
+
+// What a rule set's own notices are made of (`notifications`), so a rule set's worker rules needn't reach past the
+//  worker client.
+export type {
+  NotificationContext,
+  NotificationTable,
+} from './Client/notifications/NotificationContext';
+export { Notification };
 
 /** The registries the relations between players are read from. */
 export type RelationRegistries = {
@@ -107,6 +117,11 @@ export type WorkerRules = {
    *  default: Civ1's computer players talk only when their units meet.
    */
   audienceEvents?: string[];
+  /**
+   * The rule set's own notices: its engine events and how each is told, registered after every rule set's own, in this
+   *  order. None by default.
+   */
+  notifications?: NotificationTable;
   /**
    * Whether `player` may open talks with `other` (from the Foreign Advisor), under rules where a person can (Civ2's).
    *  Not by default: in Civ1 only the computer players open talks (#1071).

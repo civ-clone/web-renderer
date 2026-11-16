@@ -46,6 +46,8 @@ import SellImprovement from '@civ-clone/base-treasury/PlayerActions/SellImprovem
 import { instance as additionalDataRegistryInstance } from '@civ-clone/core-data-object/AdditionalDataRegistry';
 import { instance as engineInstance } from '@civ-clone/core-engine/Engine';
 import promoted from './Rules/promoted';
+import notifications from './notifications';
+import reputationNotices from './Rules/reputationNotices';
 import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
 import anarchyTurns from './AdditionalData/anarchyTurns';
 import attackSound from './AdditionalData/attackSound';
@@ -119,6 +121,8 @@ export const civ2Rules: WorkerRules = {
   // Talks a person opens from the Foreign Advisor, and the audiences computer players ask for.
   mayOpenTalks,
   audienceEvents,
+  // What it tells a person of its diplomacy.
+  notifications: notifications(),
   // How a rival's city is drawn, from its owner's advances, as one's own is (`style`).
   cityStyle: (city) => cityStyle(city),
   // No score in M2a, so nothing for conquest either.
@@ -159,7 +163,10 @@ export const register = (): void => {
     ...cities()
   );
 
-  ruleRegistryInstance.register(promoted(engineInstance));
+  ruleRegistryInstance.register(
+    promoted(engineInstance),
+    ...reputationNotices(engineInstance)
+  );
 };
 
 register();

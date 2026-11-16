@@ -123,3 +123,123 @@ i18next.addResources('en', 'diplomacy', {
   'Dialogue.civ2.violators-refused':
     'Our units will stay where they are. If you want them gone, come and move them.',
 });
+
+// What a person is told of their diplomacy under Civilization II's rules (M2d), by `ui-rules-civ2`'s notices. A
+//  civilization not yet met is `.unmet`, and not named (#59).
+const the = (path: string): string =>
+    `the $t(Generic.civilization-name.plural, { "civilization": "{{${path}.civilization._}}", "ns": "default" })`,
+  The = (path: string): string =>
+    `The $t(Generic.civilization-name.plural, { "civilization": "{{${path}.civilization._}}", "ns": "default" })`,
+  unknown = '$t(Generic.unknown-civilization, { "ns": "default" })',
+  Unknown = '$t(Generic.unknown-civilization-start, { "ns": "default" })';
+
+i18next.addResources('en', 'notification', {
+  'Diplomacy.ceasefire-expired.title': 'Ceasefire over',
+  'Diplomacy.ceasefire-expired.body': `Our ceasefire with ${the(
+    'player'
+  )} has run out. We are no longer bound by it, and nor are they.`,
+  'Diplomacy.ceasefire-expired.unmet.title': 'Ceasefire over',
+  'Diplomacy.ceasefire-expired.unmet.body': `Our ceasefire with ${unknown} has run out.`,
+  'Diplomacy.alliance-cancelled.title': 'Alliance ended',
+  'Diplomacy.alliance-cancelled.body': `${The(
+    'player'
+  )} have ended our alliance. Our units in their land, and theirs in ours, have been sent home.`,
+  'Diplomacy.alliance-cancelled.unmet.title': 'Alliance ended',
+  'Diplomacy.alliance-cancelled.unmet.body': `${Unknown} has ended our alliance.`,
+  'Diplomacy.alliance-ended.title': 'Alliance ended',
+  'Diplomacy.alliance-ended.body': `Our alliance with ${the(
+    'player'
+  )} is over. Our units in their land, and theirs in ours, have been sent home.`,
+  'Diplomacy.alliance-ended.unmet.title': 'Alliance ended',
+  'Diplomacy.alliance-ended.unmet.body': `Our alliance with ${unknown} is over.`,
+  'Diplomacy.units-withdrawn.title': 'Units withdrawn',
+  'Diplomacy.units-withdrawn.body': `${The(
+    'player'
+  )} have withdrawn their units from our land.`,
+  'Diplomacy.units-withdrawn.unmet.title': 'Units withdrawn',
+  'Diplomacy.units-withdrawn.unmet.body': `${Unknown} has withdrawn its units from our land.`,
+  'Diplomacy.maps-shared.title': 'Maps shared',
+  'Diplomacy.maps-shared.body': `We have shared our maps with ${the(
+    'player'
+  )}, and they theirs with us.`,
+  'Diplomacy.maps-shared.unmet.title': 'Maps shared',
+  'Diplomacy.maps-shared.unmet.body': `We have shared our maps with ${unknown}.`,
+  'Diplomacy.senate-forced-ceasefire.title': 'The Senate',
+  'Diplomacy.senate-forced-ceasefire.body': `The Senate has overruled us, and agreed to a ceasefire with ${the(
+    'player'
+  )}.`,
+  'Diplomacy.senate-forced-ceasefire.unmet.title': 'The Senate',
+  'Diplomacy.senate-forced-ceasefire.unmet.body': `The Senate has overruled us, and agreed to a ceasefire with ${unknown}.`,
+  'Diplomacy.senate-forced-peace.title': 'The Senate',
+  'Diplomacy.senate-forced-peace.body': `The Senate has overruled us, and signed a peace treaty with ${the(
+    'player'
+  )}.`,
+  'Diplomacy.senate-forced-peace.unmet.title': 'The Senate',
+  'Diplomacy.senate-forced-peace.unmet.body': `The Senate has overruled us, and signed a peace treaty with ${unknown}.`,
+  'Diplomacy.refusal-overruled.ceasefire.title': 'Ceasefire',
+  'Diplomacy.refusal-overruled.ceasefire.body': `Our refusal counted for nothing: we are now at a ceasefire with ${the(
+    'player'
+  )}.`,
+  'Diplomacy.refusal-overruled.ceasefire.unmet.title': 'Ceasefire',
+  'Diplomacy.refusal-overruled.ceasefire.unmet.body': `Our refusal counted for nothing: we are now at a ceasefire with ${unknown}.`,
+  'Diplomacy.refusal-overruled.peace.title': 'Peace',
+  'Diplomacy.refusal-overruled.peace.body': `Our refusal counted for nothing: we are now at peace with ${the(
+    'player'
+  )}.`,
+  'Diplomacy.refusal-overruled.peace.unmet.title': 'Peace',
+  'Diplomacy.refusal-overruled.peace.unmet.body': `Our refusal counted for nothing: we are now at peace with ${unknown}.`,
+  'Diplomacy.war-declared.title': 'War',
+  'Diplomacy.war-declared.body': `We are now at war with ${the('player')}.`,
+  'Diplomacy.war-declared.unmet.title': 'War',
+  'Diplomacy.war-declared.unmet.body': `We are now at war with ${unknown}.`,
+  'Diplomacy.war-declared-on-us.title': 'War',
+  'Diplomacy.war-declared-on-us.body': `${The(
+    'player'
+  )} have declared war on us!`,
+  'Diplomacy.war-declared-on-us.unmet.title': 'War',
+  'Diplomacy.war-declared-on-us.unmet.body': `${Unknown} has declared war on us!`,
+  'Diplomacy.ally-joins-war.title': 'War',
+  'Diplomacy.ally-joins-war.body': `${The(
+    'player'
+  )} stand by their allies, and have declared war on us!`,
+  'Diplomacy.ally-joins-war.unmet.title': 'War',
+  'Diplomacy.ally-joins-war.unmet.body': `${Unknown} stands by its allies, and has declared war on us!`,
+  'Diplomacy.ally-joins-our-war.title': 'Allies',
+  'Diplomacy.ally-joins-our-war.body': `Our allies ${the(
+    'player'
+  )} have joined our war.`,
+  'Diplomacy.ally-joins-our-war.unmet.title': 'Allies',
+  'Diplomacy.ally-joins-our-war.unmet.body': `${Unknown} has joined our war.`,
+  'Diplomacy.treaty-broken.title': 'Treaty broken',
+  'Diplomacy.treaty-broken.body': `${The(
+    'player'
+  )} have broken their treaty with us!`,
+  'Diplomacy.treaty-broken.unmet.title': 'Treaty broken',
+  'Diplomacy.treaty-broken.unmet.body': `${Unknown} has broken its treaty with us!`,
+  'Diplomacy.computers-made-peace.title': 'Foreign affairs',
+  'Diplomacy.computers-made-peace.body': `Our ambassadors report that ${the(
+    'player'
+  )} and ${the('other')} have made peace.`,
+  'Diplomacy.computers-went-to-war.title': 'Foreign affairs',
+  'Diplomacy.computers-went-to-war.body': `Our ambassadors report that ${the(
+    'player'
+  )} and ${the('other')} are at war.`,
+  'Diplomacy.computers-allied.title': 'Foreign affairs',
+  'Diplomacy.computers-allied.body': `Our ambassadors report that ${the(
+    'player'
+  )} and ${the('other')} have formed an alliance.`,
+  'Diplomacy.computers-ended-alliance.title': 'Foreign affairs',
+  'Diplomacy.computers-ended-alliance.body': `Our ambassadors report that the alliance between ${the(
+    'player'
+  )} and ${the('other')} is over.`,
+  'Diplomacy.contact-lapsed.title': 'Foreign affairs',
+  'Diplomacy.contact-lapsed.body': `Our ambassadors report that ${the(
+    'player'
+  )} and ${the('other')} have lost touch with each other.`,
+  'Diplomacy.reputation-restored.title': 'The Eiffel Tower',
+  'Diplomacy.reputation-restored.body':
+    'The Eiffel Tower wins the world over: our past broken promises count for less.',
+  'Diplomacy.reputations-halved.title': 'The Manhattan Project',
+  'Diplomacy.reputations-halved.body':
+    'In the shadow of the Manhattan Project, old grievances fade: every civilization’s broken promises count for less.',
+});
