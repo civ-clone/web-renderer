@@ -16,8 +16,13 @@ import {
   getLabelForBuildable,
   heldText,
   toggleAuto,
+  autoModeChoices,
 } from '@civ-clone/ui-client/components/lib/cityBuild';
-import { offeredHold } from '@civ-clone/ui-client/lib/cityTurns';
+import {
+  changeLoss,
+  offeredHold,
+  offeredProgress,
+} from '@civ-clone/ui-client/lib/cityTurns';
 import { instance as localeProvider } from '@civ-clone/ui-platform/LocaleProvider';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
@@ -54,16 +59,30 @@ export const buildRow = (
 ): ChoiceRow => {
   const item = getLabelForBuildable(buildItem),
     turns = turnsLeft(
-      { ...cityBuild, ...buildItem } as unknown as CityBuild,
+      {
+        ...cityBuild,
+        ...buildItem,
+        progress: { value: offeredProgress(cityBuild, buildItem) },
+      } as unknown as CityBuild,
       cityBuild.city.yields,
       'Production'
     ),
-    hold = offeredHold(cityBuild, buildItem);
+    hold = offeredHold(cityBuild, buildItem),
+    // Under rules that take part of the shields on a change (Civ2's change penalty, M2c), what this one would lose, as
+    //  the engine says.
+    loss = changeLoss(cityBuild, buildItem),
+    gold = buildItem.goldPerTurn,
+    meta = [
+      ...(hold && gold === undefined ? [heldText(hold)] : []),
+      ...(loss > 0
+        ? [t('ChoiceWindow.Build.change-loses', { count: loss })]
+        : []),
+    ];
 
   return {
     value: buildItem.item._,
     label: item,
-    meta: hold ? heldText(hold) : null,
+    meta: meta.length > 0 ? meta.join(' · ') : null,
     ...(buildItem.group
       ? { group: t(`ChoiceWindow.Build.group.${buildItem.group}`) as string }
       : {}),
@@ -88,18 +107,29 @@ export const buildRow = (
       : {}),
     facts: [
       ...(buildItem.stats ? unitFacts(buildItem.stats) : []),
-      {
-        icon: () => yieldIcon('Production'),
-        label: t('ChoiceWindow.Build.cost'),
-        value: localeProvider.number(buildItem.cost.value),
-      },
-      ...(hold?.now
-        ? []
+      // An item that turns shields into gold in place of completing (Capitalization, M2c): the gold, not a cost or turns.
+      ...(gold !== undefined
+        ? [
+            {
+              icon: () => yieldIcon('Gold'),
+              label: t('ChoiceWindow.Build.gold-per-turn'),
+              value: localeProvider.number(gold),
+            },
+          ]
         : [
             {
-              label: t('ChoiceWindow.turns'),
-              value: t('Progress.turns', { count: turns }),
+              icon: () => yieldIcon('Production'),
+              label: t('ChoiceWindow.Build.cost'),
+              value: localeProvider.number(buildItem.cost.value),
             },
+            ...(hold?.now
+              ? []
+              : [
+                  {
+                    label: t('ChoiceWindow.turns'),
+                    value: t('Progress.turns', { count: turns }),
+                  },
+                ]),
           ]),
     ],
     primary: t('ChoiceWindow.Build.build', {
@@ -214,6 +244,21 @@ export class CityBuildChoice extends ChoiceWindow {
               this.#onComplete(true);
             },
           },
+          // Under rules with a choice of what an Auto city chooses from (Civ2's, M2c), the other two ways.
+          ...Object.fromEntries(
+            autoModeChoices(cityBuild).map(({ mode, label }) => [
+              `auto-${mode}`,
+              {
+                label,
+                action: (window) => {
+                  toggleAuto(cityBuild, transport, mode);
+
+                  window.close();
+                  this.#onComplete(true);
+                },
+              },
+            ])
+          ),
           // What the city can't build, and why (#183). The list stays open behind it.
           unavailable: {
             label: t('City.Build.unavailable'),

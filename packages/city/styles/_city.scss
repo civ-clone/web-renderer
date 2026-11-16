@@ -433,3 +433,39 @@
     }
   }
 }
+
+// An angry citizen (Civ2, M2c) drawn with the interface's unhappy face, which has no angry one of its own: reddened, so
+//  it reads apart from the unhappy citizens beside it, wherever a face is drawn.
+.citizen.angry-fallback img {
+  filter: sepia(1) saturate(5) hue-rotate(-35deg);
+}
+
+// Civ2's stages of happiness (M2c): each stage's name beside a row of the citizens as it leaves them.
+.happiness-stages {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 8px;
+  align-items: center;
+
+  .happiness-stage {
+    display: contents;
+  }
+
+  .population {
+    display: flex;
+
+    .citizen {
+      max-width: var(--tileset-citizen-step);
+      min-width: 0;
+
+      img {
+        width: var(--tileset-citizen-width);
+        image-rendering: pixelated;
+      }
+    }
+  }
+}
+
+.happiness-stages-panel > summary {
+  cursor: pointer;
+}

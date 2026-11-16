@@ -34,6 +34,7 @@ import { RuleRegistry } from '@civ-clone/core-rule/RuleRegistry';
 import { unavailableBuildItems } from '../lib/civilopedia';
 import { standalone } from './refs';
 import answer from '../answer';
+import { workerRules } from '../workerRules';
 
 export type RequestsContext = Pick<
   ClientContext,
@@ -145,9 +146,16 @@ export const cityBuildAvailable = (
     const plainObject = objectMap.objects[buildItem.id()];
 
     if (plainObject) {
-      Object.assign(plainObject, buildListDetails(buildItem.item(), rules), {
-        held: cityBuild.heldFor(buildItem.item()),
-      });
+      Object.assign(
+        plainObject,
+        buildListDetails(buildItem.item(), rules),
+        {
+          held: cityBuild.heldFor(buildItem.item()),
+        },
+        // The rule set's own (M2c): what a change to it would keep.
+        workerRules().buildItemDetails?.(cityBuild, buildItem.item(), rules) ??
+          {}
+      );
     }
   });
 

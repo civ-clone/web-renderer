@@ -48,7 +48,49 @@ const lostDefence = (city: City, cause: unknown): Action | null => {
     : null;
 };
 
+// The upgrades each client has told (M2c, `unit:upgraded`): the engine upgrades all of a player's units at once, one
+//  event each, so one notice goes for each old type and new type in a turn, not one for each unit.
+const upgradesTold: WeakMap<
+  NotificationContext,
+  Map<string, number>
+> = new WeakMap();
+
 export const unitNotifications: NotificationTable = [
+  // A unit of ours upgraded in place (M2c: Civ2's Leonardo's Workshop, through base-unit-upgrade).
+  [
+    'unit:upgraded',
+    (
+      ctx: NotificationContext,
+      unit: Unit,
+      from: typeof Unit,
+      to: typeof Unit
+    ) => {
+      if (!ctx.view.owns(unit.player()) || from === to) {
+        return null;
+      }
+
+      if (!upgradesTold.has(ctx)) {
+        upgradesTold.set(ctx, new Map());
+      }
+
+      const told = upgradesTold.get(ctx)!,
+        key = `${from.name}>${to.name}`,
+        turn = ctx.turn.value();
+
+      if (told.get(key) === turn) {
+        return null;
+      }
+
+      told.set(key, turn);
+
+      return new Notification(
+        'Unit.upgraded',
+        { unit, from: { _: from.name }, to: { _: to.name } },
+        true
+      );
+    },
+  ],
+
   // A nuclear detonation (#129), told to everyone but the player who set it off. One a missile defence stopped is
   //  told as that (`unit:nuclear-stopped`) instead.
   [

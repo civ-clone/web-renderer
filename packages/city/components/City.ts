@@ -55,7 +55,12 @@ const heldNoteId = (city: CityData): string => `city-held-${city.id}`,
           city.build,
           perTurn,
           turnsLeft(city.build, city.yields, 'Production'),
-          hold?.now ? heldText(hold) : null
+          // A build that turns the shields into gold (Capitalization, M2c) says how much, as the engine says.
+          typeof city.build.goldPerTurn === 'number'
+            ? t('City.Build.gold-per-turn', { count: city.build.goldPerTurn })
+            : hold?.now
+            ? heldText(hold)
+            : null
         ),
       ];
     }

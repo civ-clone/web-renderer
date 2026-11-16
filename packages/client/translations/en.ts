@@ -9,6 +9,13 @@ i18next.addResources('en', 'default', {
   'ChooseFromList.capture-city.steal-advance.choice':
     '$t({{value._}}.name, { "defaultValue": "{{value._}}", "ns": "science" })',
   'ChooseFromList.capture-city.steal-advance.title': 'Acquire an advance',
+  // Civ2's Palace escape (M2c): our capital was taken, and the Palace can be moved to another city at a price.
+  'ChooseFromList.capture-city.palace-escape.body':
+    'Our capital has been captured! Move the Palace to {{- data.city, cityName}} for {{data.cost, number}} gold?',
+  'ChooseFromList.capture-city.palace-escape.choice.false': 'No, let it go',
+  'ChooseFromList.capture-city.palace-escape.choice.true':
+    'Yes, move the Palace',
+  'ChooseFromList.capture-city.palace-escape.title': 'Capital captured',
   'ChooseFromList.choose-civilization.body': '',
   'ChooseFromList.choose-civilization.choice':
     '$t(Generic.civilization-name.name, { "civilization": "{{value._}}", "ns": "default" })',
@@ -32,6 +39,9 @@ i18next.addResources('en', 'default', {
     'Negotiation between $t(Generic.civilization-name.nation, { "civilization": "{{data.players.0.civilization._}}", "ns": "default" }) and $t(Generic.civilization-name.nation, { "civilization": "{{data.players.1.civilization._}}", "ns": "default" })',
   'City.Build.auto': 'Auto',
   'City.Build.auto-stop': 'Stop Auto',
+  // Civ2's other two ways to put a city on Auto (M2c).
+  'City.Build.auto-improvements': 'Auto: improvements only',
+  'City.Build.auto-units': 'Auto: units only',
   'City.Build.buy': 'Buy',
   // Why the production picker has opened (#716).
   'City.Build.cleared.cancelled': 'Production cancelled: {{- item}}',
@@ -59,6 +69,9 @@ i18next.addResources('en', 'default', {
   'City.Citizens.content_other': '{{count, number}} content',
   'City.Citizens.unhappy_one': '{{count, number}} unhappy',
   'City.Citizens.unhappy_other': '{{count, number}} unhappy',
+  // Civ2's angry citizens (M2c).
+  'City.Citizens.angry_one': '{{count, number}} angry',
+  'City.Citizens.angry_other': '{{count, number}} angry',
   'City.Citizens.Specialist.Entertainer_one': '{{count, number}} Entertainer',
   'City.Citizens.Specialist.Entertainer_other':
     '{{count, number}} Entertainers',

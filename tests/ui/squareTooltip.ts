@@ -326,6 +326,60 @@ const run = async (): Promise<void> => {
       ],
     }
   );
+  // Civ2 (M2c): what the square yields the city working it, as the engine sends it with the city (`squareYields`),
+  //  where that differs from the square's own yields: here a celebration's extra trade and a Supermarket's food.
+  expect(
+    "Civ2: the working city's figures for the square, not the square's own",
+    plain(
+      squareTooltip(
+        {
+          ...grassland,
+          workedBy: {
+            ...babylon,
+            squareYields: [
+              { x: 1, y: 1, yields: [{ _: 'Food', value: 9 }] },
+              {
+                x: 0,
+                y: 0,
+                yields: [
+                  { _: 'Food', value: 3 },
+                  { _: 'Trade', value: 2 },
+                ],
+              },
+            ],
+          },
+        } as unknown as Tile,
+        'Player-1'
+      )
+    ).rows[0],
+    ['Yields', 'Food: 3, Trade: 2']
+  );
+  expect(
+    'Civ2: and on the city square, the figures of the city on it',
+    plain(
+      squareTooltip(
+        {
+          ...grassland,
+          workedBy: null,
+          city: {
+            ...babylon,
+            squareYields: [
+              {
+                x: 0,
+                y: 0,
+                yields: [
+                  { _: 'Food', value: 4 },
+                  { _: 'Production', value: 1 },
+                ],
+              },
+            ],
+          },
+        } as unknown as Tile,
+        'Player-1'
+      )
+    ).rows[0],
+    ['Yields', 'Food: 4, Production: 1']
+  );
   expect(
     'a city on the square, rather than working it',
     plain(squareTooltip({ ...grassland, city: babylon } as Tile, 'Player-1'))

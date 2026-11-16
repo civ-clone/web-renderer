@@ -16,6 +16,14 @@ i18next.addResources('en', 'default', {
     '{{- item}} {{attack, number}}/{{defence, number}}/{{movement, number}}/{{visibility, number}} (Cost: {{cost, number}} / $t(Progress.turns, {"count": {{turns}} })) – {{- held}}',
   'City.Build.build-unit_waiting':
     '{{- item}} {{attack, number}}/{{defence, number}}/{{movement, number}}/{{visibility, number}} (Cost: {{cost, number}} / {{- held}})',
+  // M2c: an item that turns shields into gold in place of completing (Capitalization), and one that a change to would
+  //  lose shields (Civ2's change penalty).
+  'City.Build.build-gold_one': '{{- item}} ({{count, number}} gold per turn)',
+  'City.Build.build-gold_other': '{{- item}} ({{count, number}} gold per turn)',
+  'City.Build.change-loses_one':
+    '{{- label}} – changing loses {{count, number}} shield',
+  'City.Build.change-loses_other':
+    '{{- label}} – changing loses {{count, number}} shields',
   'City.Build.group.improvement': 'City Improvements',
   'City.Build.group.spaceship': 'Spaceship Parts',
   'City.Build.group.unit': 'Units (A/D/M/V)',

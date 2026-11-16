@@ -6,7 +6,11 @@ import {
 } from '@civ-clone/ui-component-tooltip/Tooltip';
 import { Tile } from '@civ-clone/ui-protocol/types';
 import { cityNameText } from '@civ-clone/ui-client/components/lib/city';
-import { netTileYields } from '@civ-clone/ui-client/lib/yieldMap';
+import {
+  netTileYields,
+  squareCity,
+  squareYields,
+} from '@civ-clone/ui-client/lib/yieldMap';
 import { s } from '@dom111/element';
 import { yieldIcon } from '@civ-clone/ui-city/components/lib/cityYields';
 
@@ -54,7 +58,8 @@ export const squareTooltip = (
   playerId: string | null
 ): TooltipContent => {
   const { terrain } = tile,
-    yields = netTileYields(tile.yields ?? [])
+    // What the square yields the city on it or working it, where the rules say that differs (M2c, Civ2).
+    yields = netTileYields(squareYields(tile, squareCity(tile)))
       // Food, Production, Trade, as the map draws them.
       .sort((a, b) => a._.charCodeAt(0) - b._.charCodeAt(0)),
     rows: TooltipContent['rows'] = [

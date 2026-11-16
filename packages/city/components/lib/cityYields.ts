@@ -2,6 +2,7 @@ import {
   City as CityData,
   City,
   CitizenMood,
+  CitizenStage,
   CityBuild,
   CityGrowth,
   PlayerResearch,
@@ -14,12 +15,20 @@ import {
   yieldGroup,
 } from '@civ-clone/ui-client/lib/yieldMap';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
-import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
-import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+import currentTileset, {
+  installedTilesets,
+} from '@civ-clone/ui-assets/lib/tilesets';
+import {
+  TilesetDescriptor,
+  expandName,
+  spriteKey,
+} from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import {
   citizenMoods,
-  citizenSprites,
+  citizenSpriteChoices,
   citizenSummary,
+  peopleFaces,
+  specialistFaces,
   specialistSprites,
 } from '@civ-clone/ui-client/lib/citizens';
 import { orderSpecialists } from '@civ-clone/ui-client/lib/specialists';
@@ -39,19 +48,61 @@ const specialistIcons: { [key: string]: string } = {
   Scientist: 'science',
 };
 
-// Draws the first of the tileset's `sprites` (`city/people_tax_f`, `city/people_tax`) that has been imported.
-const renderCitizen = (sprites: string[], title?: string): HTMLElement => {
-  const citizen = s('<span class="citizen"></span>');
+// The installed pack with citizens of its own (Civ2's people, M2c), if any.
+const peoplePack = (): TilesetDescriptor | null =>
+  installedTilesets().find(({ people }) => people !== undefined) ?? null;
+
+/**
+ * The keys of a pack's own `face` to try first, for a city whose rules send its citizens' era (`City.style.people`,
+ *  M2c): the pack's small one without an era, which fits the citizens' row, then the era's large one. None without an
+ *  era or such a pack.
+ */
+const peopleKeys = (face: string, era: string | undefined): string[] => {
+  const pack = era === undefined ? null : peoplePack();
+
+  if (pack === null) {
+    return [];
+  }
+
+  const { sprite, small } = pack.people!;
+
+  // The small faces first: they fit the citizens' row, where the era's large ones are shrunk past reading.
+  return [
+    ...(small ? [spriteKey(pack, expandName(small, { face }))] : []),
+    spriteKey(pack, expandName(sprite, { era: era!, face })),
+  ];
+};
+
+// Draws the first of `keys` that has been imported: a pack's own face (M2c), then the interface tileset's `sprites`
+//  (`city/people_tax_f`, `city/people_tax`). An angry citizen drawn with the interface's unhappy face, which is all it
+//  has, is marked so it can be told apart (`angry-fallback`).
+const renderCitizen = (
+  sprites: string[],
+  title?: string,
+  packKeys: string[] = []
+): HTMLElement => {
+  const citizen = s('<span class="citizen"></span>'),
+    interfaceKeys = sprites.map((sprite) =>
+      spriteKey(currentTileset(), sprite)
+    );
 
   if (title) {
     citizen.setAttribute('title', title);
   }
 
   assetStore
-    .firstImported(sprites.map((sprite) => spriteKey(currentTileset(), sprite)))
-    .then((path) =>
-      assetStore.shownAtURL(path, currentTileset().ui.citizen.width)
-    )
+    .firstImported([...packKeys, ...interfaceKeys])
+    .then((path) => {
+      if (
+        sprites[0]?.includes('people_angry_') &&
+        path !== interfaceKeys[0] &&
+        !packKeys.includes(path)
+      ) {
+        citizen.classList.add('angry-fallback');
+      }
+
+      return assetStore.shownAtURL(path, currentTileset().ui.citizen.width);
+    })
     .then((url) =>
       // Decorative: the population as a whole is summarised in words (#272).
       citizen.append(s(`<img src="${url}" alt="">`))
@@ -62,7 +113,7 @@ const renderCitizen = (sprites: string[], title?: string): HTMLElement => {
 
 /** One citizen's face for `mood`, as a report's column heading (#744). Decorative: the heading says the mood. */
 export const citizenFace = (mood: CitizenMood): HTMLElement => {
-  const face = renderCitizen(citizenSprites([mood], mood));
+  const face = renderCitizen(citizenSpriteChoices([mood], mood)[0]!);
 
   face.setAttribute('aria-hidden', 'true');
 
@@ -82,7 +133,11 @@ export const renderPopulation = (
     moods,
     orderSpecialists(city.specialists ?? []),
     city.name,
-    onSpecialistClick
+    // A specialist the rules allow no other kind of (Civ2's Entertainers below size 5, M2c) has nothing to change to.
+    onSpecialistClick && (city.specialistsAvailable?.length ?? 2) > 1
+      ? onSpecialistClick
+      : undefined,
+    city.style?.people
   );
 
 // Draws the workers, one citizen per mood, and then the specialists.
@@ -90,7 +145,8 @@ const drawCitizens = <SpecialistType extends { _: string }>(
   moods: CitizenMood[],
   specialists: SpecialistType[],
   seed: string,
-  onSpecialistClick?: (specialist: SpecialistType) => void
+  onSpecialistClick?: (specialist: SpecialistType) => void,
+  era?: string
 ): HTMLElement => {
   const population = s('<div class="population"></div>'),
     summary = citizenSummary(
@@ -107,8 +163,12 @@ const drawCitizens = <SpecialistType extends { _: string }>(
     population.setAttribute('aria-label', summary);
   }
 
-  citizenSprites(moods, seed).forEach((path) =>
-    population.append(renderCitizen([path]))
+  const faces = peopleFaces(moods);
+
+  citizenSpriteChoices(moods, seed).forEach((sprites, index) =>
+    population.append(
+      renderCitizen(sprites, undefined, peopleKeys(faces[index]!, era))
+    )
   );
 
   const sprites = specialistSprites(
@@ -121,7 +181,10 @@ const drawCitizens = <SpecialistType extends { _: string }>(
     const citizen = renderCitizen(
       // One for each specialist.
       sprites[index]!,
-      t(`City.Specialist.${specialist._}`)
+      t(`City.Specialist.${specialist._}`),
+      specialistFaces[specialist._]
+        ? peopleKeys(specialistFaces[specialist._]!, era)
+        : []
     );
 
     citizen.classList.add('specialist');
@@ -160,6 +223,73 @@ const drawCitizens = <SpecialistType extends { _: string }>(
   });
 
   return population;
+};
+
+/** The moods a stage's counts come to (M2c): happy, content, unhappy, then angry, `workers` in all. */
+export const stageMoods = (
+  { happy, unhappy, angry }: CitizenStage,
+  workers: number
+): CitizenMood[] => {
+  const angryShown = Math.min(angry, unhappy),
+    unhappyShown = Math.min(unhappy, workers) - angryShown,
+    happyShown = Math.min(happy, workers - unhappyShown - angryShown);
+
+  return [
+    ...new Array<CitizenMood>(happyShown).fill('happy'),
+    ...new Array<CitizenMood>(
+      Math.max(0, workers - happyShown - unhappyShown - angryShown)
+    ).fill('content'),
+    ...new Array<CitizenMood>(unhappyShown).fill('unhappy'),
+    ...new Array<CitizenMood>(angryShown).fill('angry'),
+  ];
+};
+
+/**
+ * The city's citizens after each of its rules' stages of happiness (Civ2's: the base, luxuries, buildings, martial law
+ *  or units, and Wonders, M2c), as Civ2's city screen lists them: a row of faces for each, with the stage's name.
+ *  `null` under rules that don't send stages (Civ1), whose screens show nothing more.
+ */
+export const renderHappinessStages = (city: CityData): HTMLElement | null => {
+  const stages = city.citizens?.stages;
+
+  if (!stages || stages.length === 0) {
+    return null;
+  }
+
+  const workers = citizenMoods(city).length;
+
+  return s(
+    '<div class="happiness-stages"></div>',
+    ...stages.map((stage) =>
+      s(
+        `<div class="happiness-stage" data-stage="${stage.name}"></div>`,
+        s(
+          '<span class="happiness-stage-name"></span>',
+          t(`City.Happiness.stage.${stage.name}`, { defaultValue: stage.name })
+        ),
+        drawCitizens(
+          stageMoods(stage, workers),
+          [],
+          city.name,
+          undefined,
+          city.style?.people
+        )
+      )
+    )
+  );
+};
+
+/** The stages under a heading that opens them, for a city screen: empty under rules without stages. */
+export const renderHappinessPanel = (city: CityData): HTMLElement | string => {
+  const stages = renderHappinessStages(city);
+
+  return stages === null
+    ? ''
+    : s(
+        '<details class="happiness-stages-panel"></details>',
+        s('<summary></summary>', t('City.Happiness.title')),
+        stages
+      );
 };
 
 /**

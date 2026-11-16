@@ -1842,13 +1842,14 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
         Object.values(civ2.yields!.names).map((word) =>
           expandName(civ2.yields!.sprite, { yield: word })
         ),
-        civ2.assets.optional,
+        // The icons among its optional sprites, beside its citizens (M2c).
+        civ2.assets.optional.filter((name) => name.startsWith('icons/')),
         civ2.yields!.area,
       ],
       [
         'icons/small/{yield}',
         ['food', 'shield', 'trade'],
-        civ2.assets.optional,
+        civ2.assets.optional.filter((name) => name.startsWith('icons/')),
         [
           'icons/small/food',
           'icons/small/shield',

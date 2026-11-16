@@ -1,4 +1,10 @@
-import { City, Coordinate, PlayerTile } from '@civ-clone/ui-protocol/types';
+import {
+  City,
+  Coordinate,
+  PlayerTile,
+  Yield,
+} from '@civ-clone/ui-protocol/types';
+import { squareYields } from '@civ-clone/ui-client/lib/yieldMap';
 import topologyFor from '@civ-clone/ui-client/lib/topologyFor';
 
 export type CityMapLayout = {
@@ -80,7 +86,16 @@ export const cityMapLayout = (city: City): CityMapLayout => {
     toLocal = (tile: PlayerTile): PlayerTile => {
       const { x, y } = offset(tile);
 
-      return { ...tile, x: center.x + x, y: center.y + y };
+      // What the square yields this city, under rules where that differs from its own yields (M2c, Civ2), which
+      //  every layer and label of the city's map reads.
+      return {
+        ...tile,
+        yields: squareYields(tile, city) as Yield[],
+        // Already the city's, at coordinates that aren't the world's: not to be looked up again by them.
+        squareYieldsApplied: true,
+        x: center.x + x,
+        y: center.y + y,
+      };
     },
     localWidth = center.x + right + borderX + 1,
     rows = center.y + bottom + borderY + 1,

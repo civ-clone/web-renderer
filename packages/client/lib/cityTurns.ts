@@ -117,3 +117,22 @@ export const buildTurnsOrder = ({ turns, hold }: BuildOutlook): number =>
 
 export const growthTurns = (city: City) =>
   turnsLeft(city.growth, city.yields, 'Food');
+
+/**
+ * The progress a city's build would have if it changed to `buildItem` now (M2c): the engine's answer, sent with the
+ *  build list under rules that take part of it on a change (Civ2's change penalty), or the progress as it is.
+ */
+export const offeredProgress = (
+  cityBuild: CityBuild,
+  buildItem: BuildItem
+): number =>
+  cityBuild.building?.item?._ === buildItem.item._
+    ? cityBuild.progress.value
+    : buildItem.progressAfterChange ?? cityBuild.progress.value;
+
+/** The shields changing to `buildItem` would lose (M2c), 0 for none. */
+export const changeLoss = (
+  cityBuild: CityBuild,
+  buildItem: BuildItem
+): number =>
+  Math.max(0, cityBuild.progress.value - offeredProgress(cityBuild, buildItem));

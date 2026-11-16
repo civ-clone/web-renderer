@@ -5,6 +5,13 @@ i18next.addResources('en', 'default', {
   'ChoiceWindow.Build.attack': 'Attack',
   'ChoiceWindow.Build.build': 'Build {{- item}}',
   'ChoiceWindow.Build.cost': 'Cost in shields',
+  // M2c: what a change to an item would lose (Civ2's change penalty), and the gold an item that never completes makes
+  //  each turn in place of a cost (Capitalization).
+  'ChoiceWindow.Build.change-loses_one':
+    'Changing loses {{count, number}} shield',
+  'ChoiceWindow.Build.change-loses_other':
+    'Changing loses {{count, number}} shields',
+  'ChoiceWindow.Build.gold-per-turn': 'Gold per turn',
   'ChoiceWindow.Build.defence': 'Defense',
   'ChoiceWindow.Build.group.improvement': 'City Improvements',
   'ChoiceWindow.Build.group.spaceship': 'Spaceship Parts',
@@ -52,6 +59,9 @@ i18next.addResources('en', 'default', {
   'ReportTable.city': 'City',
   'ReportTable.CityStatus.build': 'Building',
   'ReportTable.CityStatus.corruption': 'Corruption',
+  // Civ2's (M2c): the shields a city wastes, and its angry citizens.
+  'ReportTable.CityStatus.waste': 'Waste',
+  'ReportTable.CityStatus.angry': 'Angry',
   'ReportTable.CityStatus.disorder': 'Civil disorder',
   'ReportTable.CityStatus.food-stored':
     'Food $t(Progress.data, { "progress": {{progress}}, "total": {{total}} })',

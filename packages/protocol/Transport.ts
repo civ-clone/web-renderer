@@ -252,6 +252,8 @@ declare global {
       id: string;
       chosen?: string;
       auto?: boolean;
+      // With `auto`, what the city chooses from, under rules with a choice (Civ2's `units` or `improvements`, M2c).
+      autoMode?: string;
       queue?: QueueEdit;
     };
     ChooseGovernment: {
@@ -273,6 +275,8 @@ declare global {
       id: string;
       chosen?: string;
       auto?: boolean;
+      // With `auto`, what the city chooses from, under rules with a choice (Civ2's `units` or `improvements`, M2c).
+      autoMode?: string;
       queue?: QueueEdit;
     };
     CompleteProduction: {

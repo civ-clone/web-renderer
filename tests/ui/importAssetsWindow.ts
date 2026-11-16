@@ -703,7 +703,7 @@ const run = async (): Promise<void> => {
     expect(
       'the instructions ask for the required files, and the icons as well',
       window.element().querySelector('.import-assets p')?.textContent,
-      'Upload SP257.PIC and TER257.PIC from the original Civilization files to extract assets (these will be stored locally). This only takes a moment. Add SP299.PIC as well for the improvement and Wonder icons. Add ASOUND.CVL for the music. To play on an isometric map, add TERRAIN1.GIF, TERRAIN2.GIF, UNITS.GIF, and CITIES.GIF from Civilization II as well (optional). Add ICONS.GIF too for Civilization II’s own food, shield and trade icons on that map (optional).'
+      'Upload SP257.PIC and TER257.PIC from the original Civilization files to extract assets (these will be stored locally). This only takes a moment. Add SP299.PIC as well for the improvement and Wonder icons. Add ASOUND.CVL for the music. To play on an isometric map, add TERRAIN1.GIF, TERRAIN2.GIF, UNITS.GIF, and CITIES.GIF from Civilization II as well (optional). Add ICONS.GIF and PEOPLE.GIF too for Civilization II’s own food, shield and trade icons on that map, and its citizens in the city screen (optional).'
     );
 
     await upload(window, [sheet('SP257.PIC')]);
@@ -1107,9 +1107,9 @@ const run = async (): Promise<void> => {
       ],
       [
         ['CITIES.GIF', 'TERRAIN1.GIF', 'TERRAIN2.GIF', 'UNITS.GIF'],
-        ['ICONS.GIF'],
-        ['ICONS.GIF'],
-        5,
+        ['ICONS.GIF', 'PEOPLE.GIF'],
+        ['ICONS.GIF', 'PEOPLE.GIF'],
+        6,
       ]
     );
 
@@ -1618,7 +1618,10 @@ const run = async (): Promise<void> => {
       [
         civ2FilesToImport([], fullMetadata as any),
         civ2FilesToImport(civ2Required, null),
-        civ2Json.assets.optional.every((name) => name.startsWith('icons/')),
+        // Its icons, and its citizens (M2c, PEOPLE.GIF): optional too.
+        civ2Json.assets.optional.every(
+          (name) => name.startsWith('icons/') || name.startsWith('people/')
+        ),
       ],
       [[], ['TERRAIN1.GIF', 'TERRAIN2.GIF', 'UNITS.GIF', 'CITIES.GIF'], true]
     );

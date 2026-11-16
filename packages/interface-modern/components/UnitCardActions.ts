@@ -59,6 +59,7 @@ const groupOf: { [name: string]: ActionGroup } = {
   Sleep: 'orders',
   Unload: 'orders',
   BuildAirbase: 'terrain',
+  BuildFarmland: 'terrain',
   BuildFortress: 'terrain',
   BuildIrrigation: 'terrain',
   BuildMine: 'terrain',

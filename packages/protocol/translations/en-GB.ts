@@ -7,6 +7,13 @@ i18next.addResources('en-GB', 'default', {
 });
 
 i18next.addResources('en-GB', 'notification', {
+  // M2c's (#1007): the Apollo Program's reveal.
+  'Wonder.apollo-revealed.body':
+    '$t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" }) $t({{wonder._}}.name, { "defaultValue": "{{wonder._}}", "ns": "wonder" }) has revealed the whole world to every civilisation.',
+  'Wonder.apollo-revealed.ours.body':
+    'Our $t({{wonder._}}.name, { "defaultValue": "{{wonder._}}", "ns": "wonder" }) in {{- city, cityName}} has revealed the whole world to every civilisation.',
+  'Wonder.apollo-revealed.unmet.body':
+    'A far away civilisation’s $t({{wonder._}}.name, { "defaultValue": "{{wonder._}}", "ns": "wonder" }) has revealed the whole world to every civilisation.',
   'City.leader-celebration-ended.body': `Leader celebration cancelled in {{- city, cityName}}!`,
   'City.sdi-protected.title': 'SDI Defence',
   'Unit.nuclear-stopped.body':

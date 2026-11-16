@@ -592,6 +592,63 @@ const unitMoves = (state: GameState, id: string): number | undefined =>
     queuedIds() === ''
   );
 
+  // M2c: a rival's city in a later era's style (Civ2) is drawn again.
+  state.applyPatches([
+    sent('City-2', {
+      ...rivalCity('City-2'),
+      style: { era: 'industrial', people: 'industrial', larger: false },
+    }),
+  ]);
+
+  check(
+    "a rival's city whose style changes queues its square",
+    queuedIds() === 'Tile-2'
+  );
+
+  state.applyPatches([sent('City-2', rivalCity('City-2'))]);
+  queuedIds();
+
+  // M2c: what your city's squares yield it (Civ2's `squareYields`) changes, a Harbour say: the squares it works are
+  //  drawn again, as their yield icons show it; sent again the same, only its own square, for its banner.
+  const yielding = (food: number): PlainObject => ({
+    ...city('City-1'),
+    tilesWorked: [ref('Tile-2')],
+    squareYields: [{ x: 1, y: 0, yields: [{ _: 'Food', value: food }] }],
+  });
+
+  state.applyPatches([sent('City-1', yielding(1))]);
+  queuedIds();
+  state.applyPatches([sent('City-1', yielding(2))]);
+
+  check(
+    "your city's figures for its squares changed queues the squares it works",
+    queuedIds().split(',').sort().join(',') === 'Tile-1,Tile-2'
+  );
+
+  state.applyPatches([sent('City-1', yielding(2))]);
+
+  check(
+    'the same figures again queue only its own square',
+    queuedIds() === 'Tile-1'
+  );
+
+  // Its worker made a specialist and its figures changed (a Harbour sold, say): the square it worked is drawn again
+  //  too, as its icons showed what the city no longer gets.
+  state.applyPatches([
+    sent('City-1', {
+      ...yielding(3),
+      tilesWorked: [],
+    }),
+  ]);
+
+  check(
+    'the squares it worked before are queued with the ones it works now',
+    queuedIds().split(',').sort().join(',') === 'Tile-1,Tile-2'
+  );
+
+  state.applyPatches([sent('City-1', city('City-1'))]);
+  queuedIds();
+
   // What the new interface's banner shows of your own city (#747): what it builds and how far along,
   //  each sent on its own, without the city.
   const cityBuild = (building: string | null): PlainObject => ({

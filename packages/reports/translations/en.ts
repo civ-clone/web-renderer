@@ -75,6 +75,7 @@ i18next.addResources('en', 'default', {
   'Civilopedia.condition.river': 'a River on the square',
   'Civilopedia.condition.no-river': 'a square without a River',
   'Civilopedia.condition.no-fortress': 'a square without a Fortress',
+  'Civilopedia.condition.no-city': 'a square without a city',
   'ScienceReport.progress_notresearching': '',
   'ScienceReport.progress_researching':
     '$t(Progress.body, { "progress": {{progress}}, "total": {{total}}, "turns": {{turns }} })',

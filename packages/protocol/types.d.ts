@@ -14,7 +14,25 @@ export interface EntityInstance<Types = string> extends Entity<Types> {
   id: string;
 }
 
-export type CitizenMood = 'unhappy' | 'content' | 'happy';
+// `angry` only under rules that have angry citizens (Civ2, M2c): an unhappy citizen beyond what the city's size allows for.
+export type CitizenMood = 'unhappy' | 'content' | 'happy' | 'angry';
+
+// The happy, unhappy and angry citizens after one of the rules' stages of happiness (Civ2's: 'base', 'luxuries',
+//  'buildings', 'units', 'wonders'). `unhappy` counts the angry ones too.
+export interface CitizenStage {
+  name: string;
+  happy: number;
+  unhappy: number;
+  angry: number;
+}
+
+// How a city is drawn, under rules with eras (Civ2, M2c): its row of city sprites, its citizens' row, and whether it's
+//  drawn a size larger (a capital, as the rules have it).
+export interface CityStyle {
+  era: 'ancient' | 'industrial' | 'modern';
+  people: 'ancient' | 'renaissance' | 'industrial' | 'modern';
+  larger: boolean;
+}
 
 export interface City extends EntityInstance<'City'> {
   name: string;
@@ -25,6 +43,8 @@ export interface City extends EntityInstance<'City'> {
   citizens?: {
     moods: CitizenMood[];
     causes: { yield: Yield; moods: CitizenMood[] }[];
+    // The counts after each of the rules' stages, under rules that have them (Civ2, M2c).
+    stages?: CitizenStage[];
   };
   civilDisorder: boolean;
   // Whether the engine has declared the city in civil disorder (#193), as the
@@ -38,6 +58,17 @@ export interface City extends EntityInstance<'City'> {
   //  when the city risks polluting the land around it (#402). Absent under rules that don't send it.
   pollution?: number;
   specialists: Specialist[];
+  // The kinds of specialist the city may have now, by type name, under rules that limit them (Civ2, M2c).
+  specialistsAvailable?: string[];
+  // What each square in the city's radius yields this city, under rules where that differs from the square's own
+  //  yields (Civ2's Harbour, Supermarket, celebration, M2c). Read through `squareYields` (`ui-client/lib/yieldMap`).
+  squareYields?: {
+    x: number;
+    y: number;
+    yields: { _: string; value: number }[];
+  }[];
+  // How it's drawn, under rules with eras (Civ2, M2c), a rival's city's too.
+  style?: CityStyle;
   tile: PlayerTile;
   tiles: PlayerTile[];
   tilesWorked: PlayerTile[];
@@ -78,6 +109,12 @@ export interface BuildItem extends EntityInstance<'BuildItem'> {
   //  item (#970), for the city as it is now, `null` for a rule without one, as a build's `held` is for the item being
   //  built. Empty when nothing would. Read through `offeredHold` (`ui-client/lib/cityTurns`).
   held?: (string | null)[];
+  // Only in a city's build list, under rules that take part of the progress on a change of item (Civ2, M2c): the
+  //  progress the build would have after changing to this item now.
+  progressAfterChange?: number;
+  // Only in a city's build list, for an item that never completes but turns the city's shields into gold
+  //  (Capitalization, Civ2, M2c): the gold it would make each turn.
+  goldPerTurn?: number;
 }
 
 export interface CityBuild extends EntityInstance<'CityBuild'> {
@@ -103,6 +140,12 @@ export interface CityBuild extends EntityInstance<'CityBuild'> {
   //  now. Empty while nothing holds it or nothing is being built. Missing from an engine before core-city-build 0.1.21.
   //  The page reads the state from this and `remaining` alone, through `buildHold` (`ui-client/lib/cityTurns`).
   held?: (string | null)[];
+  // The gold a city building Capitalization makes each turn (Civ2, M2c), `null` for any other build. Under rules without
+  //  it, never sent.
+  goldPerTurn?: number | null;
+  // What the city chooses from on Auto, under rules with a choice (Civ2: 'any', 'units' or 'improvements', M2c), `null`
+  //  while it isn't on Auto. Never sent under rules without one.
+  autoMode?: string | null;
   progress: Yield;
   // The cost less the progress: at or below 0 once the item is paid for.
   remaining?: number;
@@ -272,6 +315,9 @@ export interface Coordinate {
 }
 
 export interface Tile extends EntityInstance, Coordinate {
+  // Only on the city map's copies of a city's squares (M2c): their `yields` are already the city's figures, and their x
+  //  and y are the small map's, not the world's.
+  squareYieldsApplied?: boolean;
   city: City | null;
   goodyHut: EntityInstance | null;
   improvements: EntityInstance[];

@@ -22,6 +22,7 @@ import {
 } from '@civ-clone/ui-client/components/lib/cityBuild';
 import {
   renderFigures,
+  renderHappinessPanel,
   renderPopulation,
   turnsLeft,
   yieldImages,
@@ -287,7 +288,8 @@ const renderBuild = (
           s(
             '<div class="info"></div>',
             renderGarrisonedUnits(city, portal, transport, readOnly),
-            renderTradeRoutes(city)
+            renderTradeRoutes(city),
+            renderHappinessPanel(city)
           )
         ),
         renderBuild(city, chooseProduction, completeProduction, readOnly, () =>

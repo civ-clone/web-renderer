@@ -47,7 +47,9 @@ import i18next from 'i18next';
 import playerNotifications from '@civ-clone/ui-worker-client/Client/notifications/player';
 import unitNotifications from '@civ-clone/ui-worker-client/Client/notifications/unit';
 // Civ1's worker rules, which the client asks for once it acts (#865).
-import '@civ-clone/ui-rules-civ1';
+import civ1Rules from '@civ-clone/ui-rules-civ1';
+import CelebrateLeader from '@civ-clone/core-city-happiness/Rules/CelebrateLeader';
+import { setWorkerRules } from '@civ-clone/ui-worker-client/workerRules';
 
 const failures: string[] = [];
 let checks = 0,
@@ -144,6 +146,9 @@ type World = {
   abandoned: unknown[];
 };
 
+// The turn the context says it is (M2c's upgrades are told once a turn for each type).
+let turn = 1;
+
 const contextOf = ({
     met = [],
     seen = [],
@@ -161,6 +166,7 @@ const contextOf = ({
         is: (Government: unknown) => Government === government,
       }),
       cityNews: { abandoned: (city: unknown) => abandoned.includes(city) },
+      turn: { value: () => turn },
     } as unknown as NotificationContext),
   handlerOf = (table: NotificationTable, event: string) => {
     const entries = table.filter(([tableEvent]) => tableEvent === event);
@@ -663,6 +669,136 @@ const contextOf = ({
     null
   );
 
+  // M2c's (#1007): units upgraded in place, one notice for each old and new type a turn, for the client's context.
+  const upgradeContext = contextOf(),
+    upgraded = (...args: unknown[]) =>
+      describe(
+        handlerOf(unitNotifications, 'unit:upgraded')(
+          upgradeContext,
+          ...args
+        ) as Notification | null
+      );
+
+  expect(
+    'our units upgraded: one notice for each old type and new type in a turn',
+    [
+      upgraded(unitOf(us, Warrior.prototype), Warrior, Bomber),
+      upgraded(unitOf(us, Warrior.prototype), Warrior, Bomber),
+      upgraded(unitOf(us, Trireme.prototype), Trireme, Bomber),
+      upgraded(unitOf(rival, Warrior.prototype), Warrior, Bomber),
+      // Upgraded to its own type, as the original does for a veteran: nothing to tell.
+      upgraded(unitOf(us, Fighter.prototype), Fighter, Fighter),
+    ],
+    [
+      [
+        'Unit.upgraded',
+        true,
+        { unit: 'Warrior of us', from: { _: 'Warrior' }, to: { _: 'Bomber' } },
+      ],
+      null,
+      [
+        'Unit.upgraded',
+        true,
+        { unit: 'Trireme of us', from: { _: 'Trireme' }, to: { _: 'Bomber' } },
+      ],
+      null,
+      null,
+    ]
+  );
+
+  keysMade.add('Unit.upgraded');
+  turn = 2;
+
+  expect(
+    'and again the next turn',
+    (
+      upgraded(unitOf(us, Warrior.prototype), Warrior, Bomber) as unknown[]
+    )?.[0],
+    'Unit.upgraded'
+  );
+
+  turn = 1;
+
+  expect(
+    "a captured city's plunder, told to the captor and the loser, and to no one else",
+    [
+      city('city:plundered', [rivalCity, us, rival, 120]),
+      city('city:plundered', [ourCity, rival, us, 80]),
+      city('city:plundered', [rivalCity, other, rival, 50]),
+    ],
+    [
+      ['City.plundered-by-us', true, { city: 'Babylon', amount: 120 }],
+      ['City.plundered', true, { city: 'Rome', amount: 80 }],
+      null,
+    ]
+  );
+  expect(
+    'Partisans, told to the loser and the captor',
+    [
+      city('city:partisans', [ourCity, us, [1, 2], rival]),
+      city('city:partisans', [rivalCity, rival, [1, 2, 3], us]),
+      city('city:partisans', [rivalCity, rival, [1], other]),
+    ],
+    [
+      ['City.partisans', false, { city: 'Rome', count: 2 }],
+      ['City.partisans-against-us', false, { city: 'Babylon', count: 3 }],
+      null,
+    ]
+  );
+  expect(
+    "a meltdown in our city, and none for a rival's",
+    [
+      city('city:nuclear-meltdown', [ourCity]),
+      city('city:nuclear-meltdown', [rivalCity]),
+    ],
+    [['City.nuclear-meltdown', false, { city: 'Rome' }], null]
+  );
+
+  const apollo = named('ApolloProgram', { _: 'ApolloProgram' });
+
+  expect(
+    'the whole map revealed: ours, by a met player, by an unmet one',
+    [
+      city('wonder:apollo-revealed', [apollo, ourCity]),
+      city('wonder:apollo-revealed', [apollo, rivalCity], { met: [rival] }),
+      city('wonder:apollo-revealed', [apollo, rivalCity]),
+    ],
+    [
+      [
+        'Wonder.apollo-revealed.ours',
+        false,
+        { city: 'Rome', wonder: 'ApolloProgram' },
+      ],
+      [
+        'Wonder.apollo-revealed',
+        false,
+        { wonder: 'ApolloProgram', player: 'rival' },
+      ],
+      ['Wonder.apollo-revealed.unmet', false, { wonder: 'ApolloProgram' }],
+    ]
+  );
+
+  // Growth while celebrating (Civ2's rapture growth): told only under rules that ask for it, so not under Civ1's.
+  expect(
+    "a city's growth while celebrating, under Civ1's rules",
+    city('city:grow', [ourCity, CelebrateLeader]),
+    null
+  );
+
+  setWorkerRules({ ...civ1Rules, celebrationGrowthNotice: true });
+
+  expect(
+    "a city's growth while celebrating, under rules that tell it; not its everyday growth, nor a rival's",
+    [
+      city('city:grow', [ourCity, CelebrateLeader]),
+      city('city:grow', [ourCity, undefined]),
+      city('city:grow', [rivalCity, CelebrateLeader]),
+    ],
+    [['City.celebration-growth', true, { city: 'Rome' }], null, null]
+  );
+
+  setWorkerRules(civ1Rules);
+
   const ourMissile = unitOf(us, Nuclear.prototype),
     rivalMissile = unitOf(rival, Nuclear.prototype);
 
@@ -1150,11 +1286,17 @@ const contextOf = ({
     'City.building-held.unit',
     'City.building-held.wonder',
     'City.captured-by-us',
+    'City.celebration-growth',
     'City.civil-disorder',
     'City.improvement-unsupported',
     'City.leader-celebration',
     'City.leader-celebration-ended',
+    'City.nuclear-meltdown',
     'City.order-restored',
+    'City.partisans',
+    'City.partisans-against-us',
+    'City.plundered',
+    'City.plundered-by-us',
     'City.polluted',
     'City.queue-dropped.city-improvement',
     'City.queue-dropped.other',
@@ -1205,6 +1347,10 @@ const contextOf = ({
     'Unit.out-of-fuel',
     'Unit.promoted',
     'Unit.trade-route-established',
+    'Unit.upgraded',
+    'Wonder.apollo-revealed',
+    'Wonder.apollo-revealed.ours',
+    'Wonder.apollo-revealed.unmet',
     'Wonder.building-complete.other-player.known',
     'Wonder.building-complete.other-player.unknown',
     'Wonder.obsolete',
@@ -1320,6 +1466,12 @@ const contextOf = ({
       'player:government:collapsed',
       'city:leader-celebration',
       'city:leader-celebration-ended',
+      'city:grow',
+      'city:plundered',
+      'city:partisans',
+      'city:nuclear-meltdown',
+      'wonder:apollo-revealed',
+      'unit:upgraded',
       'player:respawned',
       'player:spaceship:part-built',
       'player:spaceship:lost',

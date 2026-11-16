@@ -114,3 +114,38 @@ export const splitYield = (
     free: Math.max(0, produced - consumed),
   };
 };
+
+/**
+ * What a square yields its city (M2c): the city's own figure for it, under rules where that differs from what the
+ *  square yields on its own (Civ2's Harbour, Supermarket, celebration and the rest, `City.squareYields`), or the
+ *  square's own yields. `city` is the city whose figure it is: the city screen's own, or, on the map, the city on the
+ *  square or working it. Only a city of one's own has the figures; any other square is as the engine sends it.
+ */
+export const squareYields = (
+  tile: {
+    x: number;
+    y: number;
+    yields?: Yield[];
+    // Set on a square already given its city's figures, whose x and y aren't the world's (the city map's copies).
+    squareYieldsApplied?: boolean;
+  },
+  city?: {
+    squareYields?: {
+      x: number;
+      y: number;
+      yields: { _: string; value: number }[];
+    }[];
+  } | null
+): Pick<Yield<string>, '_' | 'value'>[] =>
+  (tile.squareYieldsApplied
+    ? undefined
+    : city?.squareYields?.find(({ x, y }) => x === tile.x && y === tile.y)
+        ?.yields) ??
+  tile.yields ??
+  [];
+
+/** The city a square's yields go to on the map: the one on it, or the one working it. */
+export const squareCity = <C>(tile: {
+  city?: C | null;
+  workedBy?: C | null;
+}): C | null => tile.city ?? tile.workedBy ?? null;

@@ -81,6 +81,8 @@ const drawnCity = (
         (growth ?? value.growth)?.size,
         // The new interface's banners say whether it's celebrating (#747).
         value.celebrateLeader,
+        // Its style, under rules with eras (Civ2, M2c), a rival's as last seen.
+        value.style,
       ])
     : null;
 
@@ -272,6 +274,21 @@ export class GameState {
       const city = objects[id],
         previous = before.has(id) ? before.get(id) : city,
         drawn = drawnCity(city, growthNow(city));
+
+      // What its squares yield it, under rules where that differs from their own yields (Civ2, M2c): a change (a
+      //  Harbour, a celebration) redraws the squares it works, whose icons show it. Under rules without, both are
+      //  undefined, and nothing more is drawn.
+      if (
+        city?.squareYields !== previous?.squareYields &&
+        JSON.stringify(city?.squareYields) !==
+          JSON.stringify(previous?.squareYields)
+      ) {
+        queueTiles(
+          city?.tile,
+          ...(city?.tilesWorked ?? []),
+          ...(previous?.tilesWorked ?? [])
+        );
+      }
 
       if (
         drawn === null ||

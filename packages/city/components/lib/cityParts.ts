@@ -6,6 +6,7 @@ import {
 import { TOptions, t } from 'i18next';
 import {
   netTileYields,
+  squareYields,
   splitYield,
   yieldGroup,
 } from '@civ-clone/ui-client/lib/yieldMap';
@@ -217,7 +218,8 @@ const squareLabel = (tile: PlayerTile, city: CityData): string => {
         ),
       ],
     }),
-    yields = netTileYields(tile.yields ?? [])
+    // What it yields this city, where the rules say that differs from the square's own (M2c, Civ2).
+    yields = netTileYields(squareYields(tile, city))
       // Food, Production, Trade, as the map draws them.
       .sort((a, b) => a._.charCodeAt(0) - b._.charCodeAt(0))
       .map(({ _, value }) =>

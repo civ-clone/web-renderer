@@ -16,12 +16,14 @@ export const chooseFromListBody = (key: string, data: unknown): string =>
     defaultValue: t('ChooseFromList.default.body'),
   });
 
-// A choice with no label of its own shows its class name.
-export const chooseFromListChoice = (
-  key: string,
-  value: { _?: string } | null
-): string =>
-  t(`ChooseFromList.${key}.choice`, {
-    value,
-    defaultValue: value?._,
-  });
+// A choice with no label of its own shows its class name. A choice that is a plain value, such as the yes or no of
+//  Civ2's Palace escape (M2c, `capture-city.palace-escape`), has a label for each value, and shows the value without.
+export const chooseFromListChoice = (key: string, value: unknown): string =>
+  typeof value === 'object' && value !== null
+    ? t(`ChooseFromList.${key}.choice`, {
+        value,
+        defaultValue: (value as { _?: string })._,
+      })
+    : t(`ChooseFromList.${key}.choice.${String(value)}`, {
+        defaultValue: String(value),
+      });
