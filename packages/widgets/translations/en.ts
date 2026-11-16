@@ -7,6 +7,8 @@ i18next.addResources('en', 'default', {
   'Generic.ok': 'OK',
   'ChoiceWindow.choose': 'Choose',
   'LockedSlider.lock': 'Lock',
+  // A rate's maximum under the government (Civ2's), beside its name.
+  'LockedSlider.max': '(at most {{max}}%)',
   'ReportTable.total': 'Total',
   'SelectionWindow.default-body': 'Please choose one of the following:',
   'Window.maximize': 'Maximize',

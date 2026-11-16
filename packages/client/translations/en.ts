@@ -38,6 +38,14 @@ i18next.addResources('en', 'default', {
   'ChooseFromList.capture-city.palace-escape.choice.true':
     'Yes, move the Palace',
   'ChooseFromList.capture-city.palace-escape.title': 'Capital captured',
+  // Civ2's offer of a revolution when an advance makes a government available (M2d): not now first, as it costs
+  //  nothing.
+  'ChooseFromList.government.revolution-offer.body':
+    'Our people have learned of $t({{data.government}}.name, { "defaultValue": "{{data.government}}", "ns": "government" }). Shall we start a revolution to adopt it? We will be in Anarchy until it can be chosen.',
+  'ChooseFromList.government.revolution-offer.choice.false': 'Not now',
+  'ChooseFromList.government.revolution-offer.choice.true':
+    'Yes, start a revolution',
+  'ChooseFromList.government.revolution-offer.title': 'Revolution?',
   'ChooseFromList.choose-civilization.body': '',
   'ChooseFromList.choose-civilization.choice':
     '$t(Generic.civilization-name.name, { "civilization": "{{value._}}", "ns": "default" })',

@@ -5,6 +5,9 @@ i18next.addResources('en', 'default', {
   'Generic.no': 'No',
   'Generic.yes': 'Yes',
   'Actions.AdjustTradeRates.title': 'Adjust trade rates',
+  // Civ2's Fundamentalism: research takes no more than half of each city's trade, whatever its rate (M2d).
+  'Actions.AdjustTradeRates.limited':
+    'Under this government, {{rate}} gets no more than {{limit}}% of each city’s trade, however high its rate. The rest goes to taxes.',
   'Actions.ChooseGovernment.body':
     'Your revolution is over. Which government would you like?',
   'Actions.ChooseGovernment.title': 'Choose government',

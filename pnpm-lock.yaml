@@ -25,6 +25,12 @@ importers:
       '@civ-clone/base-diplomacy':
         specifier: ^0.1.3
         version: 0.1.3
+      '@civ-clone/base-government-change':
+        specifier: ^0.1.2
+        version: 0.1.2
+      '@civ-clone/base-government-fundamentalism':
+        specifier: ^0.1.1
+        version: 0.1.1
       '@civ-clone/base-leader-personality':
         specifier: ^0.1.2
         version: 0.1.2
@@ -49,6 +55,9 @@ importers:
       '@civ-clone/base-terrain-properties':
         specifier: ^0.1.0
         version: 0.1.0
+      '@civ-clone/base-trade-rate-research':
+        specifier: ^0.1.1
+        version: 0.1.1
       '@civ-clone/base-treasury':
         specifier: ^0.1.2
         version: 0.1.2
@@ -280,6 +289,9 @@ importers:
       '@civ-clone/core-government':
         specifier: ^0.1.6
         version: 0.1.6
+      '@civ-clone/core-pending-effect':
+        specifier: ^0.1.2
+        version: 0.1.2
       '@civ-clone/core-player':
         specifier: ^0.1.10
         version: 0.1.10

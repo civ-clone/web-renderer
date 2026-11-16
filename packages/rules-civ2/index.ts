@@ -13,7 +13,11 @@
 //  an Auto city's next build, and scoring and conquest. It imports nothing of Civ1's (the civ2 set's isolation suite checks that none of it loads).
 
 import { citizenSummary } from '@civ-clone/base-city-happiness/lib/calculateCitizenState';
-import { handleChooseGovernment, handleRevolution } from './actions/government';
+import {
+  acceptRevolution,
+  handleChooseGovernment,
+  handleRevolution,
+} from './actions/government';
 import {
   handleCompleteProduction,
   handleSellImprovement,
@@ -62,6 +66,7 @@ import cityStyle from './lib/cityStyle';
 import { attitude, leaderTitle, reputation, treaty } from './lib/relations';
 import { audienceEvents, mayOpenTalks } from './lib/talks';
 import leaderTitleData from './AdditionalData/leaderTitle';
+import { limitedRates, maxRates } from './AdditionalData/tradeRates';
 import stagedHappiness from '@civ-clone/civ2-city-happiness/lib/stagedHappiness';
 import civilDisorderDeclared from './AdditionalData/civilDisorderDeclared';
 import { levelOf } from '@civ-clone/civ2-difficulty/level';
@@ -121,6 +126,12 @@ export const civ2Rules: WorkerRules = {
   // Talks a person opens from the Foreign Advisor, and the audiences computer players ask for.
   mayOpenTalks,
   audienceEvents,
+  // A revolution offered as an advance makes a government available, which a person is asked about.
+  revolutionOffer: {
+    event: 'player:government:available',
+    accept: (player, GovernmentType, rules) =>
+      acceptRevolution(player, GovernmentType, rules),
+  },
   // What it tells a person of its diplomacy.
   notifications: notifications(),
   // How a rival's city is drawn, from its owner's advances, as one's own is (`style`).
@@ -160,6 +171,8 @@ export const register = (): void => {
     actionTargets(),
     pillageTargets(),
     leaderTitleData(),
+    maxRates(),
+    limitedRates(),
     ...cities()
   );
 

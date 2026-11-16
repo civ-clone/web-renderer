@@ -30,26 +30,41 @@ export const openTradeRates = (
     return open;
   }
 
-  const sliders: LockedSlider[] = [];
+  const sliders: LockedSlider[] = [],
+    rateName = (rate: string): string =>
+      t(`${rate}.name`, { defaultValue: rate, ns: 'trade' }),
+    // A rate worth less than it's set to, under this government (Civ2's Fundamentalism and research).
+    limited = Object.entries(tradeRates.limitedRates ?? {}).map(
+      ([rate, limit]) => {
+        const note = s('<p class="adjust-trade-rates-limit"></p>');
+
+        note.textContent = t('Actions.AdjustTradeRates.limited', {
+          rate: rateName(rate),
+          limit,
+        });
+
+        return note;
+      }
+    );
 
   const window = new Window(
     t('Actions.AdjustTradeRates.title'),
     s(
       '<div></div>',
       ...tradeRates.all.map((tradeRate) => {
+        // Each stops at its maximum, where the rules have one (Civ2's, M2d).
         const slider = new LockedSlider(
           tradeRate._,
           tradeRate.value,
-          t(`${tradeRate._}.name`, {
-            defaultValue: tradeRate._,
-            ns: 'trade',
-          })
+          rateName(tradeRate._),
+          tradeRates.maxRates?.[tradeRate._] ?? 100
         );
 
         sliders.push(slider);
 
         return slider;
-      })
+      }),
+      ...limited
     ),
     {
       classes: 'adjust-trade-rates',
@@ -66,6 +81,11 @@ export const openTradeRates = (
     const value = sliderGroup
       .sliders()
       .map((slider): [string, number] => [slider.key(), slider.value()]);
+
+    // Rates that don't come to 100 can't be set: they're left as they were.
+    if (!sliderGroup.balanced()) {
+      return;
+    }
 
     transport.send('action', {
       name: 'AdjustTradeRates',

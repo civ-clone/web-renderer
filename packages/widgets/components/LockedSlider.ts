@@ -16,16 +16,24 @@ export type onInputHandler = () => void;
 export class LockedSlider extends Element {
   #key: string;
   #label: string;
+  // The most it may be set to (M2d: Civ2's maximum rates), 100 where there's none.
+  #max: number;
   #range: HTMLInputElement;
   #number: HTMLInputElement;
   #lock: HTMLInputElement;
   #listeners: onInputHandler[] = [];
 
-  constructor(key: string, currentValue: number, label: string) {
+  constructor(
+    key: string,
+    currentValue: number,
+    label: string,
+    max: number = 100
+  ) {
     super(template(label, currentValue));
 
     this.#key = key;
     this.#label = label;
+    this.#max = Math.min(Math.max(max, 0), 100);
     this.#range = this.element().querySelector(
       'input[type="range"]'
     ) as HTMLInputElement;
@@ -39,6 +47,16 @@ export class LockedSlider extends Element {
     // Each named after its rate: the legend alone leaves a screen reader saying "slider, 50" (#857).
     this.#range.setAttribute('aria-label', label);
     this.#number.setAttribute('aria-label', label);
+
+    // A maximum below 100 is said, and the number box stops at it as the slider does.
+    if (this.#max < 100) {
+      const maximum = document.createElement('small');
+
+      maximum.className = 'locked-slider-max';
+      maximum.textContent = t('LockedSlider.max', { max: this.#max });
+      this.#number.setAttribute('max', String(this.#max));
+      this.element().querySelector('legend')!.append(' ', maximum);
+    }
 
     this.build();
   }
@@ -83,6 +101,10 @@ export class LockedSlider extends Element {
     return this.#lock.checked;
   }
 
+  max(): number {
+    return this.#max;
+  }
+
   set(value: string): void {
     const parsed = parseInt(value, 10);
 
@@ -91,7 +113,7 @@ export class LockedSlider extends Element {
       return;
     }
 
-    value = Math.min(Math.max(parsed, 0), 100).toString();
+    value = Math.min(Math.max(parsed, 0), this.#max).toString();
 
     if (this.#range.value !== value) {
       this.#range.value = value;

@@ -46,6 +46,7 @@ import registerGameEnd, { gameOver as gameOverFor } from './Client/gameEnd';
 import registerNotifications from './Client/notifications/registerNotifications';
 import registerPatchEvents from './Client/events/patchEvents';
 import Talks, { registerTalkEvents } from './Client/Talks';
+import registerRevolutionOffers from './Client/revolutionOffers';
 import ChoicePrompt from './Client/ChoicePrompt';
 import registerBattleEvents from './Client/battleEvents';
 import registerDiplomatEvents from './Client/diplomatEvents';
@@ -174,6 +175,11 @@ export class DataTransferClient extends Client implements IClient {
       this.#disposers.push(
         registerBattleEvents(engineInstance, this.#context),
         registerTalkEvents(engineInstance, this.#context),
+        // A revolution the rules offer (Civ2's, M2d), asked as any other choice.
+        registerRevolutionOffers(engineInstance, {
+          ...this.#context,
+          choose: (meta) => this.chooseFromList(meta),
+        }),
         registerTurnHandoverEvents(engineInstance, this.#turnHandover)
       );
     }

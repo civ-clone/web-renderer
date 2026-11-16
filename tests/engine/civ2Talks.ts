@@ -26,6 +26,15 @@ import {
   clearBoth,
 } from '@civ-clone/civ2-diplomacy/lib/flags';
 import Civilization from '@civ-clone/core-civilization/Civilization';
+import { JuliusCaesar } from '@civ-clone/civ2-civilization/Leaders';
+import { Fundamentalism } from '@civ-clone/civ2-government/Governments';
+import PlayerTradeRates from '@civ-clone/core-trade-rate/PlayerTradeRates';
+import { instance as additionalDataRegistryInstance } from '@civ-clone/core-data-object/AdditionalDataRegistry';
+import leaderTitleData from '@civ-clone/ui-rules-civ2/AdditionalData/leaderTitle';
+import {
+  limitedRates,
+  maxRates,
+} from '@civ-clone/ui-rules-civ2/AdditionalData/tradeRates';
 import {
   cancelAlliance,
   declareWar,
@@ -184,6 +193,55 @@ const run = async (): Promise<void> => {
       player === us ? person : computers.get(player)!;
 
   defaultGame.clients.register(person, ...computers.values());
+
+  // M2d's other worker data under Civ2's rules: the maximum rates a person may set (60% each under Despotism, 80% under
+  //  Fundamentalism), the research Fundamentalism limits at the split (50%), and the leader's title.
+  us.civilization().setLeader(new JuliusCaesar());
+
+  const rates = defaultGame.playerTradeRates.getByPlayer(us),
+    playerGovernment = defaultGame.playerGovernments.getByPlayer(us),
+    rateData = () => [
+      maxRates().data(rates),
+      limitedRates().data(rates),
+      leaderTitleData().data(us.civilization()),
+    ];
+
+  expect(
+    'under Despotism, each rate at most 60%, none limited, and the leader a tyrant',
+    rateData(),
+    [{ Luxuries: 60, Research: 60, Tax: 60 }, {}, 'LeaderTitle.civ2.Despotism']
+  );
+
+  const despotism = playerGovernment.current()!;
+
+  playerGovernment.set(new Fundamentalism());
+
+  expect(
+    'under Fundamentalism, each at most 80%, research limited to 50% at the split, and the leader’s title its own',
+    rateData(),
+    [
+      { Luxuries: 80, Research: 80, Tax: 80 },
+      { Research: 50 },
+      'LeaderTitle.civ2.Fundamentalism',
+    ]
+  );
+
+  playerGovernment.set(despotism);
+
+  expect(
+    'and the rules-civ2 data is sent with the rates and with every civilization',
+    [
+      additionalDataRegistryInstance
+        .getByType(PlayerTradeRates)
+        .map((data) => data.key())
+        .filter((key) => ['maxRates', 'limitedRates'].includes(key)),
+      additionalDataRegistryInstance
+        .getByType(Civilization)
+        .map((data) => data.key())
+        .includes('leaderTitle'),
+    ],
+    [['maxRates', 'limitedRates'], true]
+  );
 
   // Another computer player to talk to, in contact with the person.
   const computerPlayer = (CivilizationType: new () => Civilization): Player => {

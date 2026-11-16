@@ -239,6 +239,12 @@ export interface PlayerResearch extends EntityInstance {
 
 export interface PlayerTradeRates extends EntityInstance {
   all: Yield[];
+  // The most each rate may be set to, as a whole percentage by the rate's name, under rules with a maximum (Civ2's,
+  //  M2d). A rate not listed has none.
+  maxRates?: { [rate: string]: number };
+  // Where a rate is worth less than it's set to, as a whole percentage by the rate's name: Civ2's Fundamentalism takes
+  //  no more than half the trade for research, whatever the research rate.
+  limitedRates?: { [rate: string]: number };
 }
 
 export interface Unit extends EntityInstance {

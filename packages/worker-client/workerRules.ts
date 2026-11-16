@@ -11,6 +11,7 @@ import type { IBuildable as Buildable } from '@civ-clone/core-city-build/Buildab
 import type { GameDifficultyRegistry } from '@civ-clone/core-difficulty/GameDifficultyRegistry';
 import type { GameResultRegistry } from '@civ-clone/core-turn-based-game/GameResultRegistry';
 import type Player from '@civ-clone/core-player/Player';
+import type Government from '@civ-clone/core-government/Government';
 import type PlayerAction from '@civ-clone/core-player/PlayerAction';
 import type { PlayerWorldRegistry } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import type RuleRegistry from '@civ-clone/core-rule/RuleRegistry';
@@ -122,6 +123,19 @@ export type WorkerRules = {
    *  order. None by default.
    */
   notifications?: NotificationTable;
+  /**
+   * A revolution the rules offer when an advance makes a government available: the engine event that offers it (with
+   *  the player and the government), and accepting it, which starts the revolution as the rules have it. None by
+   *  default: Civ1's rules make no offer.
+   */
+  revolutionOffer?: {
+    event: string;
+    accept: (
+      player: Player,
+      GovernmentType: typeof Government,
+      rules: RuleRegistry
+    ) => void;
+  };
   /**
    * Whether `player` may open talks with `other` (from the Foreign Advisor), under rules where a person can (Civ2's).
    *  Not by default: in Civ1 only the computer players open talks (#1071).
