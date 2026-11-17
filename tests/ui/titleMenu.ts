@@ -386,6 +386,8 @@ const save = (
     installTilesets({
       civ1: { complete: false, metadata: null },
       'civ1-pixelart': { complete: false, metadata: null },
+      // Nor the hexagonal one's, which has interface art too and is tried next (#1063).
+      'hex-pixelart': { complete: false, metadata: null },
     });
 
     const { menu, element } = await openMenu();
@@ -449,6 +451,8 @@ const save = (
         },
       },
       'civ1-pixelart': { complete: false, metadata: null },
+      // Nor the hexagonal one's, which has interface art too and is tried next (#1063).
+      'hex-pixelart': { complete: false, metadata: null },
     });
 
     expect(

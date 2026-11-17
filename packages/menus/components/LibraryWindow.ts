@@ -29,6 +29,7 @@ import ImportAssetsWindow from './ImportAssetsWindow';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { loadFailed } from '@civ-clone/ui-assets/lib/installPacks';
 import { button } from '@civ-clone/ui-component-button/button';
+import { hiddenGrids } from '@civ-clone/ui-map/lib/supportedTopologies';
 import chooseUiTheme from '../lib/chooseUiTheme';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';
@@ -151,29 +152,35 @@ export const setStatus = async (pack: PackImport): Promise<SetStatus> => {
   };
 };
 
-/** The sets with art for the map, by grid, in the order the grids' first sets were registered. */
+/**
+ * The sets with art for the map, by grid, in the order the grids' first sets were registered: but a grid new games
+ *  don't offer yet (`hiddenGrids`, hex without `?hex=1`), whose sets aren't listed.
+ */
 const mapSets = (): [string, LibrarySet[]][] => {
-  const grids = new Map<string, LibrarySet[]>();
+  const grids = new Map<string, LibrarySet[]>(),
+    hidden: string[] = hiddenGrids();
 
-  bundledTilesets().forEach(({ id, name, grid, source, licence, assets }) =>
-    grids.set(grid, [
-      ...(grids.get(grid) ?? []),
-      {
-        id,
-        name,
-        grid,
-        source,
-        licence,
-        provides: [
-          t('LibraryWindow.provides.map', { grid: t(`Grid.${grid}`) }),
-          ...(assets.ui.length > 0
-            ? [t('LibraryWindow.provides.interface')]
-            : []),
-        ],
-        pack: packImportOf(id),
-      },
-    ])
-  );
+  bundledTilesets()
+    .filter(({ grid }) => !hidden.includes(grid))
+    .forEach(({ id, name, grid, source, licence, assets }) =>
+      grids.set(grid, [
+        ...(grids.get(grid) ?? []),
+        {
+          id,
+          name,
+          grid,
+          source,
+          licence,
+          provides: [
+            t('LibraryWindow.provides.map', { grid: t(`Grid.${grid}`) }),
+            ...(assets.ui.length > 0
+              ? [t('LibraryWindow.provides.interface')]
+              : []),
+          ],
+          pack: packImportOf(id),
+        },
+      ])
+    );
 
   return [...grids.entries()];
 };

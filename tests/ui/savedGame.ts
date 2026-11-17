@@ -368,19 +368,34 @@ const reset = () => {
 
   thrown = null;
 
+  // No set is installed for hex here, as none is where the pixel art's hexagonal sheet couldn't be loaded: it ships with
+  //  civ.one, so there's nothing to import, and the grid is said to be one that can't be drawn (#1063).
   await loadSaveFromFile(
-    new File([onGrid('triangles')], 'triangles.civ-clone.json')
+    new File([onGrid('hex-odd-r')], 'hex.civ-clone.json')
   ).catch((error: Error) => (thrown = error));
 
   expect(
-    'a save on a grid that cannot be drawn is refused, naming the grid, one nobody has heard of as it is',
+    'a save on a grid that cannot be drawn is refused, naming the grid, and no art that ships to import',
     alerts.join(),
-    t('SavedGame.needs-grid', { grid: 'triangles' })
+    t('SavedGame.needs-grid', { grid: 'Hex' })
   );
   expect('and nothing is handed over', storedRecords().size, 0);
   expect('and no marker is left', session.size, 0);
   expect('and the page stays on the menu', reloads, 0);
   expect('and it rejects', thrown !== null, true);
+
+  reset();
+
+  await loadSaveFromFile(
+    new File([onGrid('triangles')], 'triangles.civ-clone.json')
+  ).catch(() => {});
+
+  expect(
+    'a grid nobody has heard of is named as it is',
+    alerts.join(),
+    t('SavedGame.needs-grid', { grid: 'triangles' })
+  );
+  expect('and is not handed over either', storedRecords().size, 0);
 
   reset();
 

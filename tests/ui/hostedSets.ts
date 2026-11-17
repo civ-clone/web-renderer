@@ -939,15 +939,16 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
 
     keys = [];
 
-    // The hexagonal set's sheet isn't fetched until a hex game wants it, so nothing has failed for it yet.
+    // The hexagonal set has interface art too, so it's tried next for the interface, and can't be fetched either.
     expect(
-      "offline with nothing imported: the pixel art's sheet can't be fetched, which is said, and it isn't installed",
+      "offline with nothing imported: neither pixel art's sheet can be fetched, which is said, and neither is installed",
       [
         ids(await installPacks(new AssetStore(civ1))),
         logged.includes("Could not load the civ1-pixelart set's sheet."),
+        logged.includes("Could not load the hex-pixelart set's sheet."),
         interfaceArt().id,
       ],
-      [['hex-pixelart'], true, 'civ1']
+      [[], true, true, 'civ1']
     );
 
     offline = false;

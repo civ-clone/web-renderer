@@ -274,6 +274,8 @@ const run = async (): Promise<void> => {
   installTilesets({
     civ1: { complete: false, metadata: null },
     'civ1-pixelart': { complete: false, metadata: null },
+    // Nor the hexagonal one's, which has interface art too and is tried next (#1063).
+    'hex-pixelart': { complete: false, metadata: null },
   });
 
   expect(
@@ -322,7 +324,13 @@ const run = async (): Promise<void> => {
         interfaceArt().id,
         missingArt(),
       ],
-      [['civ1-pixelart'], ['civ1-pixelart'], 'civ1-pixelart', null]
+      // The hexagonal pixel art is installed as it ships too, its sheet fetched only for a hex game (#1063).
+      [
+        ['civ1-pixelart', 'hex-pixelart'],
+        ['civ1-pixelart'],
+        'civ1-pixelart',
+        null,
+      ]
     );
   }
 
@@ -345,7 +353,7 @@ const run = async (): Promise<void> => {
         interfaceArt().id,
         missingArt(),
       ],
-      [['civ1', 'civ1-pixelart'], [], 'civ1', null]
+      [['civ1', 'civ1-pixelart', 'hex-pixelart'], [], 'civ1', null]
     );
   }
 
@@ -364,7 +372,7 @@ const run = async (): Promise<void> => {
         missingArt(),
       ],
       [
-        ['civ1-pixelart'],
+        ['civ1-pixelart', 'hex-pixelart'],
         ['civ1-pixelart'],
         'civ1-pixelart',
         'civ1-pixelart',
