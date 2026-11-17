@@ -2,6 +2,7 @@
 //  starts the game. Both interfaces draw it: the new interface's form (`GameSetupForm`, #750) and the classic
 //  `GameSetupWindow`, which differs only in how it treats a civilization's lone leader (#868).
 
+import prepareStart from './startPreparation';
 import {
   WorldSize,
   customSizeProblem,
@@ -538,6 +539,13 @@ export class GameSetup {
     } while (pending !== this.#ruleSetChange);
 
     if (this.#changeFailed || this.#cancelled || this.ruleSetsBlockStart()) {
+      this.#starting = false;
+
+      return false;
+    }
+
+    // The art its map is drawn with, which may have to be fetched (#1063): without it, the setup stays open.
+    if (!(await prepareStart(this.topologyId))) {
       this.#starting = false;
 
       return false;

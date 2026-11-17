@@ -7,6 +7,7 @@ import {
   installedTilesets,
   interfaceTileset,
   isHosted,
+  setRuleSetTileset,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import {
   GameSetupPreset,
@@ -98,8 +99,14 @@ export const gameGrid = (
 export const playGame = async (
   transport: Transport,
   id: string,
-  choices: Pick<GameChoices, 'default' | 'chosen'>
+  choices: Pick<GameChoices, 'default' | 'chosen'> &
+    Partial<Pick<GameChoices, 'games'>>
 ): Promise<void> => {
+  // Its map drawn with the art its rule set names, when it names some (#1063, decision 2 of docs/asset-library.md).
+  setRuleSetTileset(
+    choices.games?.find((game) => game.id === id)?.tileset ?? null
+  );
+
   if (
     choices.chosen === id ||
     (choices.chosen === null && id === choices.default)

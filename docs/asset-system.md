@@ -122,9 +122,9 @@ staggered isometric grid, which `tileset-civ2` registers (`registerTileset(tiles
 
 - At start-up `installPacks()` (`packages/assets/lib/installPacks.ts`) adds every bundled pack to the asset store
   (`packFor`: Civ2's with `metadata: true`, as it was registered), loads them, sets each pack's sprite anchors from its import's record
-  (`setSpriteAnchors`), and installs (`installTilesets`) Civ1's unless its sprites are missing, each hosted set whose
-  sheet loaded (#1063), and each pack that has every required sprite and a readable record whose flags' colours pass
-  `isFlagRow`. A pack that fails any of that, or a store that fails, is
+  (`setSpriteAnchors`), and installs (`installTilesets`) Civ1's unless its sprites are missing, each hosted set unless
+  its sheet failed to load (#1063), and each pack that has every required sprite and a readable record whose flags'
+  colours pass `isFlagRow`. A pack that fails any of that, or a store that fails, is
   left uninstalled, and the game still starts with Civ1's. The import reloads the page, which runs it again.
 - `installedTilesets()` is then synchronous, so `supportedTopologies()` is `['square', 'staggered-iso']` with Civ2's art
   imported and `['square']` without. New Game's grid question and the setup forms' grid select appear only with more
@@ -209,24 +209,32 @@ A set that ships with civ.one is served beside the game rather than imported. Th
   it passes to `registerTileset` (`hosted`). `npm run build:generate-hosted-sets` runs it, and so do `esbuild.js`
   before every build (`build`, `build:dev`, `watch`), the suites' runner for a ui suite (`tools/lib/suite.js`) and
   `npm test`.
-- **Loading.** `installPacks` adds the hosted sets to the store like any other pack (`packFor`, with its `hosted`
-  sheet). `AssetStore.load` fetches each one's sheet and index (`fetchHosted`, given up on after 15 seconds), decodes
-  the sheet (`decodeSprite`) and cuts each sprite the descriptor lists out of it (`cutSprite`), under its usual key
-  (`spriteKey`), into the same lookup the imported sprites go into, beside the read from IndexedDB and whether or not
-  that can be read: nothing of a hosted set is read from or written to the browser's storage, so it loads with
-  storage blocked (#850). For now every hosted set's sheet is fetched at start-up, before anything is drawn. A sheet
-  that can't be fetched or read is logged and its sprites left out; the rest load as ever.
-- **Installed by declaration.** `installTilesets` installs a hosted set without a record of its import, with its
+- **Loading, when it's needed.** `installPacks` adds the hosted sets to the store like any other pack (`packFor`,
+  with its `hosted` sheet), but `AssetStore.load` reads only the imported packs. A hosted set's sheet is fetched once
+  something is to draw from it (`ensureTilesetLoaded`, `AssetStore.loadHostedPack`): at start-up only when the
+  interface's art is that set, as the theme's sets before it aren't there, or a grid's chosen art is; otherwise as a
+  game on its grid starts (`prepareStart`, which `GameSetup.start` and New Game wait for, and `bootstrap.ts` provides
+  as `prepareMapArt`) or loads (`ensureMapArt` in `bootstrap.ts`). So a player who has imported Civ1's art and chosen
+  nothing else fetches nothing. The sheet and index are fetched, the sheet decoded (`decodeSprite`) and each sprite
+  the descriptor lists cut out of it (`cutSprite`), under its usual key (`spriteKey`), into the lookup the imported
+  sprites are in, all within 15 seconds (`loadHosted`). Nothing of a hosted set is read from or written to the
+  browser's storage, so it loads with storage blocked (#850).
+- **When it can't be loaded.** One the page draws from as it starts is logged and left uninstalled, and what's drawn
+  is settled again without it. One a game needs stops that game starting, saying why (`gameFailed`), with the menus
+  still there; a loaded game's stops the start (`showStartFailure`).
+- **Installed by declaration.** `installTilesets` installs a hosted set before its sheet is fetched, with its
   descriptor's own colours (only an imported set goes through `withImportedKeys`), unless its state says it isn't
-  complete: `installPacks` says so of one whose sheet didn't load (`missingAssets` of a hosted pack is what the last
-  load didn't cut from its sheet).
-- **The interface's art.** Both themes list Civ1's art, then the pixel art's (`interfaceArt`). Civ1's is installed
-  unless its sprites are found missing, so a player who has imported it sees what they saw before, and one who
-  hasn't sees the pixel art's interface art. The menus still wait for Civ1's import before a game can start.
-- **The map's art per grid.** `mapTileset(grid)` draws a grid's maps with the installed set the player chose for it
+  complete: `installPacks` says so of one whose sheet didn't load. Civ1's, the interface's pack, is installed unless
+  its sprites are found missing; a store that can't be read to say (`AssetStore.isComplete` is null) leaves it
+  installed, as before.
+- **The interface's art.** Both themes list Civ1's art, then the pixel art's (`interfaceArt`). A player who has
+  imported Civ1's sees what they saw before, and one who hasn't sees the pixel art's interface art. The menus still
+  wait for Civ1's import before a game can start.
+- **The map's art per grid.** `mapTileset(grid)` draws a grid's maps with the art the game's rule set names, as New
+  Game learns it (`setRuleSetTileset`, from `playGame`: Civ2's), then the installed set the player chose for the grid
   (the option `tileset.<grid>`, `chooseMapTileset`), or, unchosen, the one imported for it, or the one that ships;
-  settled once per grid until the installed sets or the choice change. A rule set with art of its own (Civ2's) is
-  played on that art's grid, which has no other set yet. Each hosted set has its zoom (`zoom.<id>`) like the others.
+  settled once per grid until the installed sets, the options (`GameOptionsRegistry.onChange`) or the rule set's art
+  change. Each hosted set has its zoom (`zoom.<id>`) like the others.
 - **What isn't a game's.** New Game asks the worker for other games only once the player has imported art beyond
   Civ1's (`mayOfferOtherGames`, `importedTilesets`): the hosted sets are no game's own.
 

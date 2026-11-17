@@ -1,3 +1,4 @@
+import prepareStart from '@civ-clone/ui-client/lib/startPreparation';
 import {
   WorldSize,
   defaultWorldSize,
@@ -87,7 +88,7 @@ export const askGame = (
 const ask = (
   title: string,
   rows: ChoiceRow[],
-  chosen: string,
+  chosen: string | null,
   onChoose: (value: string) => void
 ): void => {
   openChoice(title, rows, onChoose, {
@@ -110,8 +111,8 @@ export const askMapGrid = (
   ask(
     t('NewGameWindow.map-grid'),
     grids.map((grid) => ({ label: t(`Grid.${grid}`) as string, value: grid })),
-    // Square, at least, can always be drawn.
-    grids[0]!,
+    // The first there is: square, whose art ships with civ.one, so there is one unless that art isn't registered.
+    grids[0] ?? null,
     (selection) => onChoose(selection as TopologyId)
   );
 
@@ -195,6 +196,11 @@ export const askPlayerCount = (
         // Not answered: the player has been told, and the main menu is still there, with no game started (#580).
         unlessRequestFailed(error);
 
+        return;
+      }
+
+      // The art its map is drawn with, which may have to be fetched (#1063): without it, the menus are still there.
+      if (!(await prepareStart(worldOptions.topologyId ?? 'square'))) {
         return;
       }
 

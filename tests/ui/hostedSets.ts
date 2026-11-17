@@ -6,7 +6,7 @@
 //  from disk here (the suite's runner builds it), with no network.
 
 // Must stay first: it gives the store a `document`, and an `indexedDB` that never opens.
-import './lib/dom';
+import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/artPacks';
 
@@ -36,6 +36,7 @@ import {
   mapTileset,
   mapTilesetOption,
   registerTileset,
+  setRuleSetTileset,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import {
   importedTilesets,
@@ -43,6 +44,7 @@ import {
 } from '@civ-clone/ui-menus/lib/pluginSets';
 import interfaceArt, {
   interfaceSpriteKey,
+  provideInterfaceArt,
   requiredInterfaceNames,
 } from '@civ-clone/ui-assets/lib/interfaceArt';
 import { readFileSync, existsSync } from 'fs';
@@ -50,7 +52,16 @@ import { Store } from '@civ-clone/ui-platform/Store';
 import civ1Json from '@civ-clone/ui-tileset-civ1/civ1.json';
 import civ2Json from '@civ-clone/ui-tileset-civ2/civ2.json';
 import getPreloadedImage from '@civ-clone/ui-assets/lib/getPreloadedImage';
-import installPacks from '@civ-clone/ui-assets/lib/installPacks';
+import installPacks, {
+  ensureMapArt,
+} from '@civ-clone/ui-assets/lib/installPacks';
+import prepareStart, {
+  provideStartPreparation,
+} from '@civ-clone/ui-client/lib/startPreparation';
+import prepareMapArt from '@civ-clone/ui-menus/lib/mapArt';
+import { GameSetup } from '@civ-clone/ui-client/lib/gameSetup';
+import i18next from 'i18next';
+import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import { join } from 'path';
 import pixelArt from '@civ-clone/ui-tileset-pixelart';
 import pixelArtJson from '@civ-clone/civ1-tileset-pixelart/pack/tileset.json';
@@ -238,6 +249,10 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
   };
 
 (async () => {
+  // The interface's words, for what the player is told.
+  await i18next.init({ ...i18nOptions, lng: 'en' });
+  await import('./lib/strings');
+
   // The sheet and its index.
   {
     const fixture = {
@@ -439,11 +454,28 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
 
     asked.length = 0;
     cuts.length = 0;
+    fetched.length = 0;
     await store.load();
 
     expect(
-      'each sprite is cut from the sheet where the index says, under its key',
+      'a hosted set is not fetched as the store loads',
       [
+        fetched,
+        await store.missingAssets(fixturePack),
+        store.hostedLoaded(fixturePack),
+      ],
+      [[], ['./assets/fixture/a.png', './assets/fixture/b.png'], false]
+    );
+
+    await Promise.all([
+      store.loadHostedPack(fixturePack),
+      store.loadHostedPack(fixturePack),
+    ]);
+
+    expect(
+      'but when it is asked for, once: each sprite is cut from the sheet where the index says, under its key',
+      [
+        fetched,
         cuts.length,
         ['a', 'b', 'c'].map((name) => [
           fixtureSprite(name).width,
@@ -454,6 +486,7 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
         await store.has(spriteKey(fixturePack, 'e')),
       ],
       [
+        ['sets/fixture.png', 'sets/fixture.json'],
         3,
         [
           [2, 2, 0],
@@ -464,14 +497,19 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
         false,
       ]
     );
+
+    await store.load();
+
     expect(
-      'nothing of it is read from storage, and it is complete without anything imported',
+      'nothing of it is read from storage, it is complete without anything imported, and a load after keeps it',
       [
         asked.filter((key) => key.startsWith('./assets/fixture/')),
         await store.hasAllAssets(fixturePack),
         await store.missingAssets(fixturePack),
+        fixtureSprite('a').width,
+        fetched.length,
       ],
-      [[], true, []]
+      [[], true, [], 2, 2]
     );
   }
 
@@ -488,16 +526,18 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
     logged.length = 0;
 
     await store.load();
+    await store.loadHostedPack(fixturePack);
 
     expect(
-      "with storage blocked, a hosted set's sprites still load, and the rest are said not to",
+      "with storage blocked, a hosted set's sprites still load, and the rest are said not to, or not to be known",
       [
         fixtureSprite('a').width,
         await store.hasAllAssets(fixturePack),
         await store.hasAllAssets(),
+        await store.isComplete(),
         logged,
       ],
-      [2, true, false, ['Could not load the assets.']]
+      [2, true, false, null, ['Could not load the assets.']]
     );
 
     Store.prototype.get = get;
@@ -512,28 +552,31 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
       name: civ1Keys[0],
       blob: new Blob([readFileSync(sheets['civ1-pixelart']!.sheet)]),
     });
+    await store.load();
     offline = true;
-    logged.length = 0;
 
-    const loading = await store.load().then(
-      () => 'resolved',
-      () => 'rejected'
+    const failure = await store.loadHostedPack(fixturePack).then(
+      () => null,
+      (error: Error) => error.message
     );
 
     offline = false;
 
     expect(
-      "a sheet that can't be fetched doesn't fail the load: it's said, and the set is incomplete, the rest loaded",
+      "a sheet that can't be fetched: the set is incomplete, the rest loaded, and it can be asked for again",
       [
-        loading,
-        logged,
+        failure,
         await store.missingAssets(fixturePack),
         await store.has(civ1Keys[0]!),
+        await store.loadHostedPack(fixturePack).then(
+          () => store.hostedLoaded(fixturePack),
+          () => 'rejected'
+        ),
       ],
       [
-        'resolved',
-        ["Could not load the fixture set's sheet."],
+        'Failed to fetch',
         ['./assets/fixture/a.png', './assets/fixture/b.png'],
+        true,
         true,
       ]
     );
@@ -541,7 +584,7 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
     records.clear();
 
     expect(
-      "nor one that isn't there, nor an index for another set, nor a request, or its body, that doesn't come in time",
+      "nor one that isn't there, nor an index for another set, nor a request, its body, or the decoding, that doesn't come in time",
       await Promise.all([
         loadHosted(fixturePack, {
           sheet: 'sets/gone.png',
@@ -555,7 +598,8 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
           (error: Error) => error.message
         ),
         (async () => {
-          const fetching = (globalThis as any).fetch;
+          const fetching = (globalThis as any).fetch,
+            decoding = (globalThis as any).createImageBitmap;
 
           (globalThis as any).fetch = () => new Promise(() => {});
 
@@ -581,9 +625,22 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
             (error: Error) => error.message
           );
 
+          // A sheet that comes, and a decode that never finishes.
           (globalThis as any).fetch = fetching;
+          (globalThis as any).createImageBitmap = () => new Promise(() => {});
 
-          return [hung, stalled];
+          const undecoded = await loadHosted(
+            fixturePack,
+            fixturePack.hosted!,
+            20
+          ).then(
+            () => null,
+            (error: Error) => error.message
+          );
+
+          (globalThis as any).createImageBitmap = decoding;
+
+          return [hung, stalled, undecoded];
         })(),
       ]),
       [
@@ -592,14 +649,18 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
         [
           "sets/fixture.png didn't come within 5 ms.",
           "sets/fixture.json didn't come within 5 ms.",
+          "The fixture set's sheet didn't come within 20 ms.",
         ],
       ]
     );
   }
 
-  // Installing (`installPacks`): the pixel art is installed as it's declared, once its sheet has loaded, whatever's
-  //  imported; Civ1's once its sprites are all in.
+  // Installing (`installPacks`): the pixel art is installed as it's declared, and its sheet fetched as the page starts
+  //  only when the interface draws with it; Civ1's once its sprites are all in, or when the store can't say.
   {
+    const theme = uiThemeArt('slate');
+
+    provideInterfaceArt(() => theme);
     keys = civ1Keys;
     fetched.length = 0;
 
@@ -607,22 +668,15 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
       withCiv1 = ids(await installPacks(store));
 
     expect(
-      "with Civ1's art imported: Civ1's and the pixel art installed, the sheet fetched once, and Civ1's drawn on the square map and the interface, as before",
+      "with Civ1's art imported: Civ1's and the pixel art installed, nothing fetched, and Civ1's drawn on the square map and the interface, as before",
       [
         withCiv1,
         fetched,
         mapTileset('square').id,
-        interfaceArt(uiThemeArt('slate')).id,
-        (getPreloadedImage('terrain/ocean', pixelArt) as unknown as Pixels)
-          .width,
+        interfaceArt().id,
+        store.hostedLoaded(pixelArt),
       ],
-      [
-        ['civ1', 'civ1-pixelart'],
-        [sheets['civ1-pixelart']!.sheet, sheets['civ1-pixelart']!.index],
-        'civ1',
-        'civ1',
-        32,
-      ]
+      [['civ1', 'civ1-pixelart'], [], 'civ1', 'civ1', false]
     );
     expect(
       "nothing is asked of the worker for a game of another kind: the pixel art is no game's own",
@@ -630,17 +684,49 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
       [false, ['civ1']]
     );
 
-    keys = [];
+    await ensureMapArt('square', store);
 
     expect(
-      'with nothing imported, the pixel art draws the square map and the interface',
+      "a game on the square grid drawn with Civ1's art fetches nothing",
+      fetched,
+      []
+    );
+
+    chooseMapTileset('square', 'civ1-pixelart');
+    await ensureMapArt('square', store);
+
+    expect(
+      'one drawn with the pixel art fetches its sheet first, and draws from it',
       [
-        ids(await installPacks(store)),
-        mapTileset('square').id,
-        interfaceArt(uiThemeArt('slate')).id,
-        interfaceArt(uiThemeArt('civ1-classic')).id,
+        fetched,
+        (getPreloadedImage('terrain/ocean', pixelArt) as unknown as Pixels)
+          .width,
       ],
-      [['civ1-pixelart'], 'civ1-pixelart', 'civ1-pixelart', 'civ1-pixelart']
+      [[sheets['civ1-pixelart']!.sheet, sheets['civ1-pixelart']!.index], 32]
+    );
+
+    fetched.length = 0;
+
+    expect(
+      'and a chosen hosted set is fetched as the page starts',
+      [ids(await installPacks(new AssetStore(civ1))), fetched.length],
+      [['civ1', 'civ1-pixelart'], 2]
+    );
+
+    chooseMapTileset('square', '');
+    keys = [];
+    fetched.length = 0;
+
+    expect(
+      'with nothing imported, the pixel art draws the square map and the interface, its sheet fetched as the page starts',
+      [
+        ids(await installPacks(new AssetStore(civ1))),
+        mapTileset('square').id,
+        interfaceArt().id,
+        interfaceArt(uiThemeArt('civ1-classic')).id,
+        fetched.length,
+      ],
+      [['civ1-pixelart'], 'civ1-pixelart', 'civ1-pixelart', 'civ1-pixelart', 2]
     );
 
     keys = civ1Keys;
@@ -648,17 +734,117 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
     logged.length = 0;
 
     expect(
-      "offline with Civ1's art: the pixel art isn't installed, which is said, and the game starts with Civ1's",
+      "offline with Civ1's art: nothing is fetched, so nothing fails, and the pixel art is still declared",
+      [ids(await installPacks(new AssetStore(civ1))), logged],
+      [['civ1', 'civ1-pixelart'], []]
+    );
+
+    keys = [];
+
+    expect(
+      "offline with nothing imported: the pixel art's sheet can't be fetched, which is said, and it isn't installed",
       [
-        ids(await installPacks(store)),
+        ids(await installPacks(new AssetStore(civ1))),
         logged.includes("Could not load the civ1-pixelart set's sheet."),
-        mapTileset('square').id,
+        interfaceArt().id,
       ],
-      [['civ1'], true, 'civ1']
+      [[], true, 'civ1']
     );
 
     offline = false;
-    keys = [];
+
+    // A store that can't be read says nothing of Civ1's sprites: it stays installed, as it was before (#850).
+    const storedKeys = Store.prototype.keys;
+
+    Store.prototype.keys = async () => {
+      throw new Error('The user denied permission to access the database.');
+    };
+    fetched.length = 0;
+
+    expect(
+      "a store that can't be read leaves Civ1's installed, and the pixel art declared and not fetched",
+      [ids(await installPacks(new AssetStore(civ1))), fetched],
+      [['civ1', 'civ1-pixelart'], []]
+    );
+
+    Store.prototype.keys = storedKeys;
+
+    // The start of a game waits for its map's art, through the page's preparation, and stops, saying why, without it.
+    provideStartPreparation(prepareMapArt);
+    chooseMapTileset('square', 'civ1-pixelart');
+    offline = true;
+    logged.length = 0;
+
+    const refused = await prepareStart('square');
+
+    offline = false;
+    fetched.length = 0;
+
+    expect(
+      "a game whose art can't be fetched doesn't start, and the player is told why",
+      [
+        refused,
+        logged.some((message) =>
+          message.startsWith(
+            "Error: Pixel art (civ1-pixelart) couldn't be loaded: Failed to fetch"
+          )
+        ),
+        (document as unknown as Document).body.textContent?.includes(
+          "Pixel art (civ1-pixelart) couldn't be loaded"
+        ) ?? false,
+      ],
+      [false, true, true]
+    );
+
+    expect(
+      'and one whose art can be starts once it has been fetched',
+      [await prepareStart('square'), fetched],
+      [true, [sheets['civ1-pixelart']!.sheet, sheets['civ1-pixelart']!.index]]
+    );
+
+    // The game setup's Start waits for it too, and stays open without it.
+    {
+      const sent: string[] = [],
+        transport = {
+          request: async () => ({}),
+          send: (channel: string) => sent.push(channel),
+        } as any,
+        setup = new GameSetup(
+          {
+            aiClients: ['SimpleAIClient'],
+            civilizations: [{ name: 'Roman', leaders: ['JuliusCaesar'] }],
+            difficulties: [],
+            existing: {},
+          } as any,
+          {}
+        );
+
+      const prepared: string[] = [];
+      let ready = false;
+
+      provideStartPreparation(async (topologyId) => {
+        prepared.push(topologyId);
+
+        return ready;
+      });
+
+      const refusedStart = await setup.start(transport, {} as any, '');
+
+      ready = true;
+
+      const started = await setup.start(transport, {} as any, '');
+
+      expect(
+        "the game setup's Start waits for its map's art: without it nothing is sent, and the setup stays open; with it, the game starts",
+        [refusedStart, started, sent, prepared],
+        [false, true, ['start'], ['square', 'square']]
+      );
+
+      provideStartPreparation(prepareMapArt);
+    }
+
+    chooseMapTileset('square', '');
+    provideInterfaceArt(() => []);
     installTilesets({});
   }
 
@@ -791,6 +977,30 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
         options.get(mapTilesetOption('square')),
       ],
       ['civ1-pixelart', 'hosted-iso', 'civ1-pixelart']
+    );
+
+    setRuleSetTileset('civ2');
+
+    expect(
+      "a rule set that names its art (Civ2's) has its grid drawn with it, over the player's choice, and not another grid",
+      [mapTileset('staggered-iso').id, mapTileset('square').id],
+      ['civ2', 'civ1-pixelart']
+    );
+
+    setRuleSetTileset(null);
+
+    expect(
+      'and the choice again for a rule set that names none',
+      mapTileset('staggered-iso').id,
+      'hosted-iso'
+    );
+
+    options.set(mapTilesetOption('staggered-iso'), '');
+
+    expect(
+      'the option changed however it is changed, the map follows',
+      mapTileset('staggered-iso').id,
+      'civ2'
     );
 
     chooseMapTileset('square', 'civ2');

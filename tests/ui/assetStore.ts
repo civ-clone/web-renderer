@@ -405,7 +405,8 @@ onPreloadedImagesChanged(() => changed++);
 
   // Installing the bundled packs (#97): Civ2's sprites are loaded beside Civ1's, its anchors set from what its import
   //  said, and it is installed, with its flag's colours, only once every sprite it requires is in. Civ1's are all in,
-  //  and the pixel art's sheet (#1063) can't be fetched here, so it isn't installed (see hostedSets.ts).
+  //  so the interface draws with them, and the pixel art (#1063) is installed as it's declared, its sheet, which
+  //  couldn't be fetched here, not asked for (see hostedSets.ts).
   {
     const keys = Store.prototype.keys,
       fetching = (globalThis as any).fetch,
@@ -459,7 +460,7 @@ onPreloadedImagesChanged(() => changed++);
         ],
         { anchors, colours },
         anchors,
-        [tileset.id],
+        [tileset.id, 'civ1-pixelart'],
       ]
     );
 
@@ -477,8 +478,8 @@ onPreloadedImagesChanged(() => changed++);
         (whole[1]?.cities.colouring as { keys: string[] }).keys,
       ],
       [
-        [tileset.id, 'civ2'],
-        [tileset.id, 'civ2'],
+        [tileset.id, 'civ2', 'civ1-pixelart'],
+        [tileset.id, 'civ2', 'civ1-pixelart'],
         ['#f30000', '#a70000'],
       ]
     );
@@ -488,7 +489,7 @@ onPreloadedImagesChanged(() => changed++);
     expect(
       "Civ2's pack: without its import's record of anchors, it isn't installed",
       (await installPacks(packs)).map(({ id }) => id),
-      [tileset.id]
+      [tileset.id, 'civ1-pixelart']
     );
 
     // An import whose record can't be drawn from, or a store that fails: the pack isn't installed, and the game still
@@ -519,7 +520,7 @@ onPreloadedImagesChanged(() => changed++);
     expect(
       "Civ2's pack: a flag whose colours can't be read, or a store that fails, leaves it uninstalled, said, and Civ1's still installed",
       [corrupt, failed, logged.length > errors],
-      [[tileset.id], [tileset.id], true]
+      [[tileset.id, 'civ1-pixelart'], [tileset.id, 'civ1-pixelart'], true]
     );
 
     records.delete(metadataKey(civ2));

@@ -89,37 +89,28 @@ export const decodeSprite = async (
   return imageFrom(blob);
 };
 
-/** How long a hosted set's sheet or index is waited for, in ms, before the set is left out (#1063). */
+/** How long a hosted set's sheet is waited for, in ms, fetched, decoded and cut up, before it's given up on (#1063). */
 export const HOSTED_TIMEOUT = 15000;
 
 /**
- * What `read` makes of the response to fetching `url`, a hosted set's sheet or index (#1063), once it has come, said
- *  it's there, and been read whole. Rejects for one that isn't all there within `timeout` ms, its body too, so a
- *  request that hangs doesn't hold the game's start.
+ * What `work` makes, given a signal that aborts once `timeout` ms have gone: rejects, naming `what`, if it hasn't
+ *  finished by then, so a request that hangs, or a decode that does, doesn't hold up whatever waits on it.
  */
-export const fetchHosted = async <T>(
-  url: string,
-  read: (response: Response) => Promise<T>,
-  timeout: number = HOSTED_TIMEOUT
+const withinTime = async <T>(
+  what: string,
+  timeout: number,
+  work: (signal: AbortSignal) => Promise<T>
 ): Promise<T> => {
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
 
   try {
     return await Promise.race([
-      (async (): Promise<T> => {
-        const response = await fetch(url, { signal: controller.signal });
-
-        if (!response.ok) {
-          throw new Error(`${url} couldn't be fetched (${response.status}).`);
-        }
-
-        return read(response);
-      })(),
+      work(controller.signal),
       new Promise<never>((_, reject) => {
         timer = setTimeout(() => {
           controller.abort();
-          reject(new Error(`${url} didn't come within ${timeout} ms.`));
+          reject(new Error(`${what} didn't come within ${timeout} ms.`));
         }, timeout);
       }),
     ]);
@@ -127,6 +118,32 @@ export const fetchHosted = async <T>(
     clearTimeout(timer);
   }
 };
+
+// What `read` makes of the response to fetching `url`, once it has said it's there.
+const fetched = async <T>(
+  url: string,
+  read: (response: Response) => Promise<T>,
+  signal?: AbortSignal
+): Promise<T> => {
+  const response = await fetch(url, { signal });
+
+  if (!response.ok) {
+    throw new Error(`${url} couldn't be fetched (${response.status}).`);
+  }
+
+  return read(response);
+};
+
+/**
+ * What `read` makes of the response to fetching `url`, a hosted set's sheet or index (#1063), once it has come, said
+ *  it's there, and been read whole. Rejects for one that isn't all there within `timeout` ms, its body too.
+ */
+export const fetchHosted = <T>(
+  url: string,
+  read: (response: Response) => Promise<T>,
+  timeout: number = HOSTED_TIMEOUT
+): Promise<T> =>
+  withinTime(url, timeout, (signal) => fetched(url, read, signal));
 
 /**
  * The sprite at `rectangle` in `sheet`, a hosted set's decoded sheet (#1063), as an image of its own, its own size. A
@@ -186,17 +203,28 @@ const isSheetIndex = (index: unknown, id: string): index is SheetIndex => {
 
 /**
  * The sprites of `pack`, a hosted set (#1063), by key (`spriteKey`), as `hosted` serves them: its sheet and its index
- *  fetched, the sheet decoded (`decodeSprite`), and each sprite the pack lists cut out of it (`cutSprite`). Nothing is
- *  read from or written to the browser's storage, so it loads with storage blocked (#850). Rejects when the sheet or
- *  its index can't be fetched or read; a sprite the index doesn't have is left out, and drawn as missing.
+ *  fetched, the sheet decoded (`decodeSprite`), and each sprite the pack lists cut out of it (`cutSprite`), all within
+ *  `timeout` ms. Nothing is read from or written to the browser's storage, so it loads with storage blocked (#850).
+ *  Rejects when the sheet or its index can't be fetched or read in time; a sprite the index doesn't have is left out,
+ *  and drawn as missing.
  */
-export const loadHosted = async (
+export const loadHosted = (
   pack: AssetPack,
-  { sheet, index }: HostedSheet
+  hosted: HostedSheet,
+  timeout: number = HOSTED_TIMEOUT
+): Promise<Map<string, CanvasImageSource>> =>
+  withinTime(`The ${pack.id} set's sheet`, timeout, (signal) =>
+    cutHosted(pack, hosted, signal)
+  );
+
+const cutHosted = async (
+  pack: AssetPack,
+  { sheet, index }: HostedSheet,
+  signal: AbortSignal
 ): Promise<Map<string, CanvasImageSource>> => {
   const [blob, json] = await Promise.all([
-    fetchHosted(sheet, (response) => response.blob()),
-    fetchHosted(index, (response): Promise<unknown> => response.json()),
+    fetched(sheet, (response) => response.blob(), signal),
+    fetched(index, (response): Promise<unknown> => response.json(), signal),
   ]);
 
   if (!isSheetIndex(json, pack.id)) {
@@ -261,6 +289,9 @@ export class AssetStore extends Store<{
   #cachedURLs = new Map<string, string>();
   #loaded = new Map<string, CanvasImageSource>();
   #metadata = new Map<string, PackMetadata>();
+  // The hosted sets' sprites, by set id, once each one's sheet has loaded (`loadHostedPack`), and each one loading.
+  #hosted = new Map<string, Map<string, CanvasImageSource>>();
+  #hostedLoading = new Map<string, Promise<void>>();
   #loads = 0;
   // The packs loaded beside the store's own tileset.
   #others: AssetPack[] = [];
@@ -322,8 +353,8 @@ export class AssetStore extends Store<{
   /**
    * Decodes the sprites of the store's packs, and only theirs (#730), for the map and the interface to draw from, and
    * reads what each pack's import says about them (`metadata`). One that cannot be decoded is left out and drawn as
-   * missing, rather than holding the game up. A hosted set's come from its sheet (#1063), fetched beside what is read
-   * from the browser's storage and whether or not that can be read; a set whose sheet can't be loaded is left out.
+   * missing, rather than holding the game up. A hosted set's sprites (#1063) aren't fetched here, but once something
+   * is to draw from them (`loadHostedPack`), and are kept from one load to the next.
    */
   load(): Promise<void> {
     // Never rejects: if the store can't be read, the game goes on without the sprites, so the main menu and the import
@@ -338,25 +369,12 @@ export class AssetStore extends Store<{
   async #load(): Promise<void> {
     const load = ++this.#loads,
       loaded = new Map<string, CanvasImageSource>(),
-      metadata = new Map<string, PackMetadata>(),
-      hosted = this.packs.filter(
-        (pack): pack is AssetPack & { hosted: HostedSheet } =>
-          pack.hosted !== undefined
-      );
+      metadata = new Map<string, PackMetadata>();
 
-    await Promise.all([
-      // A store that can't be read leaves the imported packs' sprites out, and not the hosted sets' too.
-      this.#loadImported(loaded, metadata).catch((error) =>
-        console.error('Could not load the assets.', error)
-      ),
-      ...hosted.map((pack) =>
-        loadHosted(pack, pack.hosted).then(
-          (sprites) => sprites.forEach((image, key) => loaded.set(key, image)),
-          (error) =>
-            console.error(`Could not load the ${pack.id} set's sheet.`, error)
-        )
-      ),
-    ]);
+    // A store that can't be read leaves the imported packs' sprites out, and not the hosted sets' loaded already.
+    await this.#loadImported(loaded, metadata).catch((error) =>
+      console.error('Could not load the assets.', error)
+    );
 
     // A later load has started since: its sprites are the ones to draw (#152 loads another tileset on a switch).
     if (load !== this.#loads) {
@@ -366,9 +384,58 @@ export class AssetStore extends Store<{
     this.#cachedAssets.clear();
     this.#cachedScaledImages.clear();
     this.#cachedURLs.clear();
-    this.#loaded = loaded;
     this.#metadata = metadata;
+    this.#show(loaded);
+  }
+
+  // Draws from `loaded`, the imported packs' sprites, and the hosted sets' that have loaded.
+  #show(loaded: Map<string, CanvasImageSource>): void {
+    this.#hosted.forEach((sprites) =>
+      sprites.forEach((image, key) => loaded.set(key, image))
+    );
+    this.#loaded = loaded;
     setSprites(loaded);
+  }
+
+  /**
+   * Fetches `pack`'s sheet, a hosted set's (#1063), and draws from its sprites from then on: once, however often it's
+   *  asked, until it fails, when it can be asked again. Rejects, saying why, when the sheet can't be loaded within
+   *  `timeout` ms (`loadHosted`). Resolves at once for a pack that isn't hosted.
+   */
+  loadHostedPack(
+    pack: AssetPack,
+    timeout: number = HOSTED_TIMEOUT
+  ): Promise<void> {
+    const { id, hosted } = pack;
+
+    if (hosted === undefined || this.#hosted.has(id)) {
+      return Promise.resolve();
+    }
+
+    const loading =
+      this.#hostedLoading.get(id) ??
+      loadHosted(pack, hosted, timeout).then(
+        (sprites) => {
+          this.#hosted.set(id, sprites);
+          this.#hostedLoading.delete(id);
+          // What's drawn from already, and this set's sprites beside it.
+          this.#show(new Map(this.#loaded));
+        },
+        (error) => {
+          this.#hostedLoading.delete(id);
+
+          throw error;
+        }
+      );
+
+    this.#hostedLoading.set(id, loading);
+
+    return loading;
+  }
+
+  /** Whether `pack`'s sheet, a hosted set's, has loaded (`loadHostedPack`). */
+  hostedLoaded({ id }: Pick<AssetPack, 'id'>): boolean {
+    return this.#hosted.has(id);
   }
 
   // The sprites of the packs the player imports, from the browser's storage, into `loaded`, and what each one's import
@@ -633,14 +700,37 @@ export class AssetStore extends Store<{
   }
 
   /**
+   * Whether every sprite `pack` requires has been imported, or null when the store can't be read to say: unlike
+   *  `hasAllAssets`, which takes a store that can't be read for one with nothing in it. For a hosted set (#1063),
+   *  whether its sheet has loaded with every one.
+   */
+  async isComplete(
+    pack: AssetPack = this.#ownTileset()
+  ): Promise<boolean | null> {
+    if (pack.hosted !== undefined) {
+      return (await this.missingAssets(pack)).length === 0;
+    }
+
+    let stored: Set<string>;
+
+    try {
+      stored = new Set(await this.keys());
+    } catch {
+      return null;
+    }
+
+    return requiredKeys(pack).every((key) => stored.has(key));
+  }
+
+  /**
    * The keys of the sprites `pack` requires that haven't been imported: by default, the store's own tileset's. For a
-   *  hosted set (#1063), those the last `load` didn't cut from its sheet: all of them when it couldn't be loaded.
+   *  hosted set (#1063), those not cut from its sheet: all of them until it has loaded (`loadHostedPack`).
    */
   async missingAssets(pack: AssetPack = this.#ownTileset()): Promise<string[]> {
     if (pack.hosted !== undefined) {
-      await this.#ready;
+      const sprites = this.#hosted.get(pack.id);
 
-      return requiredKeys(pack).filter((key) => !this.#loaded.has(key));
+      return requiredKeys(pack).filter((key) => !sprites?.has(key));
     }
 
     const dbAssets = new Set(await this.#imported());

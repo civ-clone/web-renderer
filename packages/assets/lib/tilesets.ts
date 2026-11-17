@@ -231,21 +231,54 @@ export const mapTilesetOption = (grid: TopologyId | string): string =>
   `tileset.${grid}`;
 
 // What `mapTileset` settled on for each grid, as the map's layers ask on every draw: settled again once the installed
-//  sets or the choice change.
+//  sets, the choice, or the game's rule set's art change.
 const settledMaps = new Map<string, TilesetDescriptor>();
 
-// The installed set for `topologyId` that the player chose, or the one imported for it, or the one that ships with
-//  civ.one; or, with none installed, the bundled one.
+gameOptions.onChange((key) => {
+  if (key.startsWith('tileset.')) {
+    settledMaps.clear();
+  }
+});
+
+// The art the game's rule set names (`civ-clone.sets.<id>.tileset`, Civ2's), when the page knows it: see
+//  `setRuleSetTileset`.
+let ruleSetTileset: string | null = null;
+
+/**
+ * Has the map drawn with `id`, the art the rule set of the game about to be played names (Civ2's `civ2`), on its grid,
+ *  over the player's choice for that grid (decision 2 of docs/asset-library.md); or, given null, for a rule set that
+ *  names none, with the player's choice again.
+ */
+export const setRuleSetTileset = (id: string | null): void => {
+  ruleSetTileset = id;
+  settledMaps.clear();
+};
+
+/** The installed set the player chose for the `grid` grid's maps (`mapTilesetOption`), or null without one. */
+export const chosenMapTileset = (
+  grid: TopologyId | string
+): TilesetDescriptor | null => {
+  const chosen: unknown = gameOptions.get(mapTilesetOption(grid), '');
+
+  return (
+    installedTilesets().find(
+      (tileset) => tileset.grid === grid && tileset.id === chosen
+    ) ?? null
+  );
+};
+
+// The rule set's art for `topologyId`, or the installed set the player chose for it, or the one imported for it, or the
+//  one that ships with civ.one; or, with none installed, the bundled one.
 const settleMapTileset = (
   topologyId: string
 ): TilesetDescriptor | undefined => {
   const installed = installedTilesets().filter(
-      ({ grid }) => grid === topologyId
-    ),
-    chosen: unknown = gameOptions.get(mapTilesetOption(topologyId), '');
+    ({ grid }) => grid === topologyId
+  );
 
   return (
-    installed.find(({ id }) => id === chosen) ??
+    installed.find(({ id }) => id === ruleSetTileset) ??
+    chosenMapTileset(topologyId) ??
     installed.find((tileset) => !isHosted(tileset)) ??
     installed[0] ??
     bundledTilesets().find(({ grid }) => grid === topologyId)
@@ -253,13 +286,13 @@ const settleMapTileset = (
 };
 
 /**
- * The tileset the map of a world on the `topologyId` grid is drawn with (#97, #1063): the installed set for that grid
- *  that the player chose (`mapTilesetOption`), or, until they choose one, the one imported for it, and otherwise the
- *  one that ships with civ.one. So a player who has imported Civ1's art sees the square map drawn with it, as before.
- *  A rule set with art of its own (Civ2's) is played on that art's grid (`gameGrid`), which has no other set yet. A
- *  grid with none installed is drawn with the bundled pack for it, its sprites missing, rather than another grid's: a
- *  game is only started or loaded on a grid with a pack installed (`supportedTopologies`). Throws for a grid no pack is
- *  for.
+ * The tileset the map of a world on the `topologyId` grid is drawn with (#97, #1063): the art the game's rule set
+ *  names (`setRuleSetTileset`), or the installed set for that grid that the player chose (`mapTilesetOption`), or,
+ *  until they choose one, the one imported for it, and otherwise the one that ships with civ.one. So a player who has
+ *  imported Civ1's art sees the square map drawn with it, as before. A hosted set's sprites are there once its sheet
+ *  has loaded (`ensureTilesetLoaded`), which a game on its grid waits for. A grid with none installed is drawn with the
+ *  bundled pack for it, its sprites missing, rather than another grid's: a game is only started or loaded on a grid
+ *  with a pack installed (`supportedTopologies`). Throws for a grid no pack is for.
  */
 export const mapTileset = (
   topologyId: TopologyId | string = currentGrid
@@ -277,15 +310,10 @@ export const mapTileset = (
 
 /**
  * Keeps `id`, a set's id, as the player's choice of art for the `grid` grid's maps (`mapTilesetOption`), or forgets
- *  the choice with `''`, and has `mapTileset` settle on it next time it is asked.
+ *  the choice with `''`: `mapTileset` settles on it the next time it is asked.
  */
-export const chooseMapTileset = (
-  grid: TopologyId | string,
-  id: string
-): void => {
+export const chooseMapTileset = (grid: TopologyId | string, id: string): void =>
   gameOptions.set(mapTilesetOption(grid), id);
-  settledMaps.delete(grid);
-};
 
 // The grid of the game being played, for what draws its map's units outside the map (#97: the windows' units follow
 //  the map's pack). Square until a game says otherwise.
