@@ -570,3 +570,16 @@ The rule totals at turns 1, 10 and 50 rise from 1180 to 1184:
 - civ1-city-happiness 0.1.9 records the disorder of a city the human captures below a Republic (`Captured` 19 → 20), holds it until the city's next production (`CivilDisorder` 1 → 2) and then settles it (`ProcessYield` 9 → 10).
 
 The checksums, state counts, DTO hashes and random-call counts are unchanged: in these 50 turns the human captures no city, no build is dropped, no land unit is carried at sea (civ1-unit 0.1.46, #1031), and no city is founded on terrain that can't be irrigated (civ1-city 0.1.24, #1029). They are tested in those packages and, for the dropped build, in `tests/engine/obsoleteBuilds.ts`. `client-transcript.json` passes unchanged and is not re-recorded.
+
+## Accepted change: rule counts, the barbarians' activity (#1008)
+
+civ1-barbarians reads the barbarians' numbers through an `Activity` rule, and
+registers none itself. civ1-enhanced's `barbarian-activity` set, off to start
+with, registers the rule that answers it with the level chosen and one
+`BarbarianActivityLevel` rule for each of the five choices. So the rule totals
+at turns 1, 10 and 50 rise from 1184 to 1190 (`Activity` 0 → 1,
+`BarbarianActivityLevel` 0 → 5), and nothing else in the fixture changes.
+
+The checksums (`99a58e61 / e7ec61bb / 781cb858`), state counts, DTO hashes and
+random-call counts are unchanged. So are the 16 seeds (1–8, 41–48) at 150
+turns, with the set off and with it switched on at Active, v474.05's numbers.
