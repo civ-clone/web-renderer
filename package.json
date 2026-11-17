@@ -201,6 +201,7 @@
     "test:civ2-talks": "node tools/run-suite.js engine civ2Talks",
     "test:civ2-notices": "node tools/run-suite.js engine civ2Notices",
     "test:civ2-espionage": "node tools/run-suite.js engine civ2Espionage",
+    "test:civ2-endgame": "node tools/run-suite.js engine civ2Endgame",
     "test:civ2-enhanced-sets": "node tools/run-suite.js engine civ2EnhancedSets",
     "test:observer": "node tools/run-suite.js engine observer",
     "test:stop-at-ending": "node tools/run-suite.js engine stopAtEnding",

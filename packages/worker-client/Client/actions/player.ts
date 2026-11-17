@@ -75,7 +75,16 @@ export const handleLaunchSpaceship: ActionHandler<LaunchSpaceship> = async (
   action,
   playerAction
 ) => {
-  playerAction.value().launch();
+  const spaceship = playerAction.value();
+
+  // A ship launches only once its rules say it may (core-spaceship's `Launchable`): Civ2's needs a habitation module
+  //  and a chance above nothing, and `launch()` refuses without a word otherwise. A page that asked anyway, from a
+  //  window opened before the ship changed, is refused here rather than left believing it went (M2e).
+  if (spaceship.launched() !== false || !spaceship.launchable()) {
+    return false;
+  }
+
+  spaceship.launch();
 
   ctx.patches.player();
 

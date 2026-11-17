@@ -473,6 +473,8 @@ export interface Spaceship extends EntityInstance<'Spaceship'> {
   layout: SpaceshipLayout;
   player: Player;
   successful: boolean;
+  // Under rules whose parts carry no energy or life support yields (Civ2's, M2e), the ship's supplies as fractions.
+  supply?: { lifeSupport: number; energy: number; fuel: number };
   yields: Yield[];
 }
 

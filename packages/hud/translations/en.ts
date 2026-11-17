@@ -33,6 +33,7 @@ i18next.addResources('en', 'default', {
   'Actions.Spaceship.chance-of-success': 'Chance of success',
   'Actions.Spaceship.energy': 'Energy',
   'Actions.Spaceship.flight-time': 'Flight time',
+  'Actions.Spaceship.fuel': 'Fuel',
   'Actions.Spaceship.has-launched': 'Launched?',
   'Actions.Spaceship.inactive-part': '({{inactiveParts, number}} inactive)',
   'Actions.Spaceship.launch': 'Launch',

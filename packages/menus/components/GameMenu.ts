@@ -10,6 +10,7 @@ import {
   openWondersReport,
 } from '@civ-clone/ui-reports/components/reports';
 import Civilopedia from '@civ-clone/ui-reports/components/Civilopedia';
+import { openSpaceshipWindow } from '@civ-clone/ui-hud/components/Actions/Spaceship';
 import ConfirmationWindow from '@civ-clone/ui-component-window/ConfirmationWindow';
 import GameOptions from './GameOptions';
 import { Player } from '@civ-clone/ui-protocol/types';
@@ -238,6 +239,31 @@ export class GameMenu extends Element {
             openCivilizationScore(this.#transport);
           },
         },
+        // Our spaceship, once there is one (M2e): under Civ2's rules the Launch orb comes only once it can go.
+        ...(this.#getPlayer().spaceship === null ||
+        this.#getPlayer().spaceship === undefined
+          ? []
+          : [
+              {
+                label: t('GameMenu.spaceship'),
+                key: windowKey('spaceship'),
+                action: () => {
+                  const player = this.#getPlayer();
+
+                  if (!player.spaceship) {
+                    return;
+                  }
+
+                  openSpaceshipWindow(
+                    player.spaceship,
+                    this.#transport,
+                    [...player.actions, ...player.mandatoryActions].some(
+                      ({ _ }) => _ === 'LaunchSpaceship'
+                    )
+                  );
+                },
+              },
+            ]),
       ],
       reference: GameMenuItem[] = [
         {

@@ -54,6 +54,9 @@ const categories: [NoticeCategory, string[]][] = [
       // Civ2's Diplomats and Spies (M2d part 2).
       'Espionage',
       'GoodyHut.action-performed.Barbarians',
+      // Civ2's civil war (M2e).
+      'Player.civil-war',
+      'Player.civil-war-ours',
       'Player.defeated',
       'Unit.airlift-shot-down',
       'Unit.lost-at-sea',
@@ -76,6 +79,8 @@ const categories: [NoticeCategory, string[]][] = [
       'CityImprovement.obsolete',
       'Player.government-collapsed',
       'Wonder',
+      // Civ2's global warming (M2e).
+      'World',
     ],
   ],
   [

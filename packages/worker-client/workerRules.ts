@@ -73,15 +73,19 @@ export type WorkerRules = {
   conquestBonus: (
     player: Player,
     gameResults: GameResultRegistry,
-    playerWorlds: PlayerWorldRegistry
+    playerWorlds: PlayerWorldRegistry,
+    rules: RuleRegistry
   ) => number | null;
   /** The game's difficulty as a number, lowest 0. */
   difficultyLevel: (difficulties: GameDifficultyRegistry) => number;
-  /** The rating a final score gives at a difficulty level, and the famous leader it compares with (`null`: none). */
+  /**
+   * The rating a final score gives at a difficulty level, and the famous leader it compares with (`null`: none), or the
+   *  title it earns (a `RatingTitle.` key) under rules that rank by titles.
+   */
   rating: (
     score: number,
     level: number
-  ) => { rating: number; famousLeader: string | null };
+  ) => { rating: number; famousLeader: string | null; title?: string | null };
   /** Whether `unit` needs fuel, so a loss at the end of a turn was running out of it rather than being lost at sea. */
   needsFuel: (unit: Unit) => boolean;
   /** Every Wonder ever built, standing or lost, in the order the rule set's Wonders report lists them (#971, #992). */
@@ -94,6 +98,11 @@ export type WorkerRules = {
    *  watched game disables it, so that it stops at its ending as a played one does (#606).
    */
   carryOnUnattendedRule: string;
+  /**
+   * Which wording explains a score term (`null`: the conquest bonus), as a translation context, where the rule set's
+   *  numbers aren't the ones the shared wording gives (Civ2's, M2e). None by default.
+   */
+  scoreContext?: (term: string | null, rules: RuleRegistry) => string | null;
   /**
    * Anything the rule set adds to an item in a city's build list (M2c): what changing the build to it would leave as
    *  progress (`progressAfterChange`), for rules that take part of it. None by default.

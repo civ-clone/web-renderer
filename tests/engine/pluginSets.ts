@@ -76,6 +76,37 @@ import {
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as pendingEffectRegistryInstance } from '@civ-clone/core-pending-effect/PendingEffectRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
+import {
+  ACTIVITY_STATE,
+  activityLevel,
+} from '@civ-clone/civ2-barbarians/lib/activity';
+import {
+  globalWarmingState,
+  setGlobalWarmingState,
+} from '@civ-clone/base-global-warming/lib/state';
+import {
+  CIVILIZATION_USES,
+  recordUse,
+} from '@civ-clone/civ2-game-end/lib/comebacks';
+import {
+  Fuel,
+  Habitation,
+  LifeSupport,
+  Power,
+  Propulsion,
+  Structural,
+} from '@civ-clone/civ2-spaceship/Parts';
+import City from '@civ-clone/core-city/City';
+import Effect from '@civ-clone/core-rule/Effect';
+import Part from '@civ-clone/core-spaceship/Part';
+import Player from '@civ-clone/core-player/Player';
+import RebelCities from '@civ-clone/base-civil-war/Rules/RebelCities';
+import Tile from '@civ-clone/core-world/Tile';
+import { civilWar } from '@civ-clone/base-civil-war/lib/civilWar';
+import { instance as engineInstance } from '@civ-clone/core-engine/Engine';
+import { launchRecord } from '@civ-clone/civ2-spaceship/lib/ship';
+import { shipFor } from '@civ-clone/civ2-spaceship/lib/newSpaceship';
+import { instance as spaceshipRegistryInstance } from '@civ-clone/core-spaceship/SpaceshipRegistry';
 
 const {
   defaultSetProblems,
@@ -210,6 +241,125 @@ const civ2DiplomacyRecords = (): void => {
     new WarnedUnitsRecord(player, [unit.id()], rules) as IInteraction,
     new NuclearDeviceRecord(third, player, rules) as IInteraction
   );
+};
+
+// The New Game settings the civ2 game is set up with (M2e): the barbarians' activity drawn by the difficulty level, and
+//  no returning civilizations.
+const CIV2_RULE_SETS = [
+  { id: 'civ2-barbarians:activity', value: 'civ2-barbarians:activity/random' },
+  { id: 'civ2-game-end:comebacks', value: false },
+];
+
+// What a Civ2 endgame leaves in a save (M2e part 1), each as a game would come to have it: a computer player's ship
+//  built and launched, the barbarians' activity drawn, global warming under way, a civilization's comeback counted, and
+//  a civil war's rebels with a city of the loser's. Returns the rebels' civilization, to find them again after a load.
+const civ2Endgame = (): string | null => {
+  const computers = playerRegistryInstance
+      .entries()
+      .filter((candidate) => !isBarbarian(candidate)),
+    [, launcher, loser] = computers,
+    [launcherCity] = cityRegistryInstance.getByPlayer(launcher!),
+    spaceship = shipFor(launcher!),
+    // Enough structurals that one module of each kind and two of each component count (civ2-spaceship's `partLimit`).
+    parts: Part[] = [
+      ...Array.from({ length: 16 }, () => new Structural(launcherCity!)),
+      new Habitation(launcherCity!),
+      new LifeSupport(launcherCity!),
+      new Power(launcherCity!),
+      new Propulsion(launcherCity!),
+      new Propulsion(launcherCity!),
+      new Fuel(launcherCity!),
+      new Fuel(launcherCity!),
+    ];
+
+  parts.forEach((part) => spaceship.layout().getFreeSlot(part)?.fill(part));
+  spaceship.launch();
+
+  // Drawn as the barbarians' rules first ask for it, and kept.
+  activityLevel(defaultGame);
+
+  setGlobalWarmingState(
+    { level: 9, warmings: 1, turn: defaultGame.turn.value() },
+    pendingEffectRegistryInstance
+  );
+
+  recordUse(loser!.civilization().sourceClass() as never);
+
+  // A second city for the loser, a few squares from its first, which the rebels take.
+  const [capital] = cityRegistryInstance.getByPlayer(loser!),
+    site = capital!
+      .tile()
+      .getSurroundingArea(4)
+      .entries()
+      .find(
+        (tile: Tile) =>
+          tile.isLand() &&
+          tile.distanceFrom(capital!.tile()) >= 3 &&
+          cityRegistryInstance.getByTile(tile) === null
+      );
+
+  if (!site) {
+    return null;
+  }
+
+  const breakaway = new City(loser!, site, 'Breakaway', ruleRegistryInstance),
+    rebelCity = new RebelCities(
+      new Effect((player: Player): City[] =>
+        player === loser ? [breakaway] : []
+      )
+    );
+
+  ruleRegistryInstance.register(rebelCity);
+
+  const rebels = civilWar(defaultGame, loser!, capital!);
+
+  ruleRegistryInstance.unregister(rebelCity);
+
+  return rebels === null
+    ? null
+    : typeNameOf(rebels.civilization().sourceClass());
+};
+
+// What of it the game holds now, to compare before the save and after the load.
+const civ2EndgameState = (rebelCivilization: string | null) => {
+  const ship = spaceshipRegistryInstance
+      .entries()
+      .find((spaceship) => spaceship.launched() !== false),
+    rebels = playerRegistryInstance
+      .entries()
+      .find(
+        (player) =>
+          rebelCivilization !== null &&
+          player.civilization() !== null &&
+          typeNameOf(player.civilization().sourceClass()) === rebelCivilization
+      );
+
+  return {
+    ruleSets: defaultGame.ruleSets
+      .choices()
+      .filter(({ id }) => CIV2_RULE_SETS.some((set) => set.id === id)),
+    activity:
+      pendingEffectRegistryInstance.getByHandler(ACTIVITY_STATE)[0]?.data() ??
+      null,
+    warming: globalWarmingState(pendingEffectRegistryInstance),
+    comebacks:
+      pendingEffectRegistryInstance
+        .getByHandler(CIVILIZATION_USES)[0]
+        ?.data() ?? null,
+    ship:
+      ship === undefined
+        ? null
+        : {
+            layout: typeNameOf(ship.layout().sourceClass()),
+            parts: ship.activeParts().length,
+            launched: ship.launched(),
+            record: launchRecord(ship, pendingEffectRegistryInstance),
+          },
+    rebels:
+      rebels === undefined
+        ? null
+        : cityRegistryInstance.getByPlayer(rebels).map((city) => city.name()),
+  };
 };
 
 // The goods rules-civ2 keeps for each trade route (M2d part 2): each record's holder, partner and goods, by city name.
@@ -453,6 +603,7 @@ const play = (name: string, path: string): void => {
         height: 32,
         difficulty: 'Chieftain',
         seats: [{ kind: 'human' }, { kind: 'computer' }, { kind: 'computer' }],
+        ruleSets: CIV2_RULE_SETS,
       }).forEach(([option, value]) =>
         receivers.get('setOption')!({ name: option, value })
       );
@@ -478,6 +629,12 @@ const play = (name: string, path: string): void => {
       }
 
       protocol.routeGoods = routeGoodsRecords();
+
+      // And the endgame's state (M2e part 1).
+      const rebelCivilization = civ2Endgame();
+
+      protocol.rebelCivilization = rebelCivilization;
+      protocol.endgame = civ2EndgameState(rebelCivilization);
 
       const written = saved();
 
@@ -518,7 +675,18 @@ const play = (name: string, path: string): void => {
       loadFailure() === null ? saved() : null,
       null,
       null,
-      before === null ? null : { before, routeGoods: routeGoodsRecords() }
+      before === null
+        ? null
+        : {
+            before,
+            routeGoods: routeGoodsRecords(),
+            endgame: civ2EndgameState(
+              process.env.CIV2_REBELS === undefined ||
+                process.env.CIV2_REBELS === ''
+                ? null
+                : process.env.CIV2_REBELS
+            ),
+          }
     );
   })().catch((error: any): void => {
     process.stderr.write(`${error?.stack ?? error}\n`);
@@ -943,6 +1111,13 @@ if (scenario !== null) {
     ['@civ-clone/civ2-enhanced']
   );
   expect(
+    'civ1-default-spaceship-layout, the layout simple-ai-client’s Civ1 space race plays for, is in both Civ1 sets and in neither civ2 set (M2e)',
+    [civ1, enhanced, civ2, civ2Enhanced].map(({ plugins }) =>
+      plugins.includes('@civ-clone/civ1-default-spaceship-layout')
+    ),
+    [true, true, false, false]
+  );
+  expect(
     'and neither Civ1 set has a civ2 plugin',
     [civ1, enhanced].map(({ plugins }) =>
       plugins.filter((name) => name.startsWith('@civ-clone/civ2-'))
@@ -989,14 +1164,18 @@ if (scenario !== null) {
 
   const directory = mkdtempSync(join(tmpdir(), 'plugin-sets-')),
     path = join(directory, 'civ1.json'),
-    run = (name: string, file: string = path): Report => {
+    run = (
+      name: string,
+      file: string = path,
+      env: { [name: string]: string } = {}
+    ): Report => {
       try {
         const output = execFileSync(
           process.execPath,
           [process.argv[1], '--scenario', name, file],
           {
             encoding: 'utf8',
-            env: process.env,
+            env: { ...process.env, ...env },
             maxBuffer: 256 * 1024 * 1024,
             timeout: 2 * 60 * 1000,
           }
@@ -1164,7 +1343,10 @@ if (scenario !== null) {
     run('civ1-ai').protocol?.aiClients
   );
 
-  const civ2Loaded = run('load-civ2', civ2Path);
+  const civ2Loaded = run('load-civ2', civ2Path, {
+    // Which player is the rebels, to find again after the load.
+    CIV2_REBELS: protocol.rebelCivilization ?? '',
+  });
 
   expect(
     'loaded where civ1-enhanced is the default, the civ2 save loads as civ2, with no Civ1 rule, and saves as civ2 again',
@@ -1193,6 +1375,51 @@ if (scenario !== null) {
       (civ2Loaded.protocol as any)?.routeGoods,
     ],
     [1, (civ2Game.protocol as any)?.routeGoods]
+  );
+
+  const endgame = protocol.endgame,
+    loadedEndgame = (civ2Loaded.protocol as any)?.endgame;
+
+  expect(
+    'a civ2 game’s endgame is staged: a launched ship with every part counted, the barbarians’ level drawn, global warming, a comeback counted and a civil war’s rebels with a city (M2e part 1)',
+    [
+      endgame?.ship?.layout,
+      endgame?.ship?.parts,
+      endgame?.ship?.launched !== false && endgame?.ship?.record !== null,
+      endgame?.activity !== null,
+      endgame?.warming,
+      endgame?.comebacks !== null,
+      endgame?.rebels,
+    ],
+    [
+      'SpaceshipLayout',
+      23,
+      true,
+      true,
+      { level: 9, warmings: 1, turn: endgame?.warming?.turn },
+      true,
+      ['Breakaway'],
+    ]
+  );
+  // The loaded game plays on before it's read, and the warming level moves each turn toward what the pollution makes
+  //  it: the warmings so far show that the record was loaded rather than started afresh.
+  const settled = (state: any) =>
+    state && {
+      ...state,
+      warming: { warmings: state.warming?.warmings },
+    };
+
+  expect(
+    'and saved and loaded as it was: the New Game settings, the ship, the level drawn, the warmings, the comebacks and the rebels',
+    settled(loadedEndgame),
+    settled(endgame)
+  );
+  expect(
+    'and its save names the ship’s layout',
+    [civ2Game.types, civ2Loaded.types].map((types) =>
+      types.includes('SpaceshipLayout')
+    ),
+    [true, true]
   );
 
   finished = true;

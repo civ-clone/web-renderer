@@ -414,6 +414,35 @@ export const registerPatchEvents = (
     cityChanged(city);
   });
 
+  // A warming changes the land with no unit acting (base-global-warming, M2e): each square we know goes again, and so
+  //  do our cities, whose squares may yield less now.
+  on('world:global-warming', (_warmings: number, changed: Tile[]) => {
+    changed.forEach((tile: Tile) => ctx.patches.tile(tile));
+
+    if (changed.length > 0) {
+      ctx.patches.cities();
+    }
+  });
+
+  // A civil war (base-civil-war, M2e) hands cities and units to the rebels as they are, with no capture and no move:
+  //  each city goes again, with the squares around it where its units may stand, and a side that's ours goes in full.
+  on('player:civil-war', (loser: Player, rebels: Player, cities: City[]) => {
+    cities.forEach((city: City) => {
+      cityChanged(city, false, true);
+      city
+        .tile()
+        .getNeighbours()
+        .forEach((tile: Tile) => ctx.patches.tile(tile));
+    });
+
+    if ([loser, rebels].some((player) => ctx.view.owns(player))) {
+      ctx.patches.cities();
+      ctx.patches.wholePlayer(
+        filterToReferenceAllExcept(Player, PlayerAction, Civilization)
+      );
+    }
+  });
+
   // Both cities' trade changes (#411). The player is told of it in `Client/notifications/unit.ts`.
   on(
     'unit:trade-route-established',

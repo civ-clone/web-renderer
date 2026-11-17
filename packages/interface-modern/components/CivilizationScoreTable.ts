@@ -2,6 +2,10 @@ import {
   CivilizationScore as CivilizationScoreResult,
   CivilizationScoreTerm,
 } from '@civ-clone/ui-protocol/reports';
+import {
+  bonusDetail,
+  termDetail,
+} from '@civ-clone/ui-reports/components/CivilizationScoreReport';
 import CivilizationScore from '@civ-clone/ui-protocol/Requests/CivilizationScore';
 import ReportTable from '@civ-clone/ui-component-report-table/ReportTable';
 import Transport from '@civ-clone/ui-client/Transport';
@@ -21,15 +25,16 @@ export interface ScoreRow {
 export const scoreRows = ({
   terms,
   bonus,
+  bonusContext,
 }: CivilizationScoreResult): ScoreRow[] => [
   ...terms.map(
-    ({ term, value }: CivilizationScoreTerm): ScoreRow => ({
-      term,
-      label: t(`CivilizationScoreReport.term.${term}`, { defaultValue: term }),
-      detail: t(`CivilizationScoreReport.term.${term}.detail`, {
-        defaultValue: '',
+    (scoreTerm: CivilizationScoreTerm): ScoreRow => ({
+      term: scoreTerm.term,
+      label: t(`CivilizationScoreReport.term.${scoreTerm.term}`, {
+        defaultValue: scoreTerm.term,
       }),
-      value,
+      detail: termDetail(scoreTerm),
+      value: scoreTerm.value,
     })
   ),
   ...(bonus === null
@@ -38,7 +43,7 @@ export const scoreRows = ({
         {
           term: 'bonus',
           label: t('CivilizationScoreReport.bonus'),
-          detail: t('CivilizationScoreReport.bonus.detail'),
+          detail: bonusDetail({ bonusContext }),
           value: bonus,
         },
       ]),

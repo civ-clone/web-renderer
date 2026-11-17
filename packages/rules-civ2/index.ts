@@ -11,8 +11,10 @@
 //  stages (angry ones among them), what each square yields its city, the city's style and citizens' era, the
 //  specialists it may have, what a change of build keeps, and the gold Capitalization makes. And M2d part 2's Diplomats,
 //  Spies and Caravans: what a Spy may aim a theft or a sabotage at, what a mission does to a treaty, the victim's answer
-//  to an espionage incident, the goods each trade route carries, and their notices. Still as a game without them would answer: choosing
-//  an Auto city's next build, and scoring and conquest. It imports nothing of Civ1's (the civ2 set's isolation suite checks that none of it loads).
+//  to an espionage incident, the goods each trade route carries, and their notices. And M2e part 1's barbarians and
+//  endgame: the score's conquest bonus, rating and title (civ2-score), what each score term counts, a spaceship's
+//  supplies, the ship's layout in a save, and the notices of barbarians, global warming, a civil war and a launch. It
+//  imports nothing of Civ1's (the civ2 set's isolation suite checks that none of it loads).
 
 import { citizenSummary } from '@civ-clone/base-city-happiness/lib/calculateCitizenState';
 import {
@@ -84,6 +86,17 @@ import { limitedRates, maxRates } from './AdditionalData/tradeRates';
 import stagedHappiness from '@civ-clone/civ2-city-happiness/lib/stagedHappiness';
 import civilDisorderDeclared from './AdditionalData/civilDisorderDeclared';
 import { levelOf } from '@civ-clone/civ2-difficulty/level';
+import {
+  conquestBonusFor,
+  rating,
+  title,
+} from '@civ-clone/civ2-score/lib/rating';
+import SpaceshipLayout from '@civ-clone/civ2-spaceship/SpaceshipLayout';
+import endgameNotices from './endgameNotices';
+import spaceshipSupply from './AdditionalData/spaceship';
+
+// civ2-enhanced's pollution term, which charges each civilization for its own pollution rather than the world's.
+const OWN_POLLUTION_RULE = 'civ2-enhanced:player/score/pollution';
 import { wonderHistory } from '@civ-clone/civ2-wonder/lib/wonderHistory';
 
 const isAutoMode = (mode: unknown): mode is AutoMode =>
@@ -108,6 +121,8 @@ export const civ2Rules: WorkerRules = {
     SenateRecord,
     TreatyFlagsRecord,
     WarnedUnitsRecord,
+    // civ2-spaceship's layout, which no registry holds (M2e).
+    SpaceshipLayout,
   ] as unknown as SaveableClass[],
   civilDisorder: (city) => civilDisorder(city) !== null,
   // A city put on Auto chooses at once, from what its mode allows (civ2-city's three, M2c).
@@ -152,21 +167,44 @@ export const civ2Rules: WorkerRules = {
   incidentOffer: incidentOffer(),
   // What a trade route carries, kept as each Caravan or Freight arrives (`lib/routeGoods`).
   tradeRouteGoods: (holder, partner) => routeGoods(holder, partner),
-  // What it tells a person of its diplomacy, and of its Diplomats, Spies and Caravans (M2d part 2).
-  notifications: [...notifications(), ...espionageNotices()],
+  // What it tells a person of its diplomacy, and of its Diplomats, Spies and Caravans (M2d part 2), and of the
+  //  barbarians, the world and the endgame (M2e).
+  notifications: [
+    ...notifications(),
+    ...espionageNotices(),
+    ...endgameNotices(),
+  ],
   // A treaty's end is told by what ended it (`civ2:war-on`, and civ2-diplomacy's own events), not as each ends; a
   //  delivery, with the research it pays too; a nuclear detonation, which doesn't name a device's planter.
   replacesNotices: [
     'player:declaration-expired',
     'unit:trade-route-established',
     'unit:nuclear-detonation',
+    // Civ2's uprising sends whether anyone knows Industrialization where Civ1's sends guerrillas (M2e).
+    'barbarians:uprising',
   ],
   // How a rival's city is drawn, from its owner's advances, as one's own is (`style`).
   cityStyle: (city) => cityStyle(city),
-  // No score in M2a, so nothing for conquest either.
-  conquestBonus: (): null => null,
+  // civ2-score's conquest bonus, which reads whether eliminated civilizations come back (M2e).
+  conquestBonus: (player, gameResults, playerWorlds, rules) =>
+    conquestBonusFor(player, gameResults, playerWorlds, rules),
   difficultyLevel: (difficulties) => levelOf(difficulties),
-  rating: () => ({ rating: 0, famousLeader: null }),
+  // The rating, and the title it earns, one of 24 in our own words (`RatingTitle.civ2-score.*`).
+  rating: (score, level) => {
+    const value = rating(score, level);
+
+    return {
+      rating: value,
+      famousLeader: null,
+      title: `civ2-score.${title(value)}`,
+    };
+  },
+  // Civ2's numbers for each score term and the conquest bonus, and civ2-enhanced's own pollution where it's on.
+  scoreContext: (term, rules) =>
+    term === 'pollution' &&
+    (rules.getById(OWN_POLLUTION_RULE)?.enabled() ?? false)
+      ? 'civ2-own'
+      : 'civ2',
   // A unit that runs out of fuel says so itself (`unit:out-of-fuel`), so nothing lost at sea is a fuel loss.
   needsFuel: (): boolean => false,
   // Standing or lost, in RULES.TXT's order, for the Wonders of the World report.
@@ -204,7 +242,8 @@ export const register = (): void => {
     rechoose(),
     maxRates(),
     limitedRates(),
-    ...cities()
+    ...cities(),
+    spaceshipSupply()
   );
 
   ruleRegistryInstance.register(

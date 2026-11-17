@@ -24,3 +24,19 @@ i18next.addResources('en', 'ruleset', {
   'civ2-enhanced.fixed-research-costs.description':
     'An advance costs more the more advances it needs, whichever others you have learnt, so racing ahead no longer makes later advances cheaper. Learning every advance costs about the same in total. In the original, each advance costs more for every advance you already know.',
 });
+
+// civ2-enhanced's barbarian and score rule sets (M2e, #1008), off to start with.
+i18next.addResources('en', 'ruleset', {
+  'civ2-enhanced.barbarian-uprisings.name':
+    'Barbarian uprisings gather around the city they threaten, and you hear of one that fails',
+  'civ2-enhanced.barbarian-uprisings.description':
+    'In the original, an uprising’s site leans to the east, its size can come from a computer player’s city nearby, and one that finds nowhere to gather is dropped without a word.',
+  'civ2-enhanced.barbarian-cities.name':
+    'A barbarian city builds the fighters of its age',
+  'civ2-enhanced.barbarian-cities.description':
+    'In the original, a barbarian city starts on Legions, or Knights once anyone knows Explosives, however far the world has moved on.',
+  'civ2-enhanced.pollution-score.name':
+    'Each civilization’s score pays only for its own pollution',
+  'civ2-enhanced.pollution-score.description':
+    'In the original, every civilization loses the same points for all the pollution in the world, less half of what lies near computer players’ cities.',
+});

@@ -28,3 +28,19 @@ i18next.addResources('en', 'default', {
   'City.Build.Held.purchase.civ2-city-improvement.city.hold.capitalization':
     '{{- item}} never completes, so it can’t be bought.',
 });
+
+// Global warming under Civilization II's rules (M2e, #1008), in our own words: news for every civilization. A warming
+//  says how many of the squares we know it changed.
+i18next.addResources('en', 'notification', {
+  'World.global-warming-warning.title': 'The climate is changing',
+  'World.global-warming-warning.body':
+    'Our scientists warn that pollution is heating the world. Unless it is cleaned up, the seas will rise and the land will dry out.',
+  'World.global-warming.title': 'Global warming',
+  'World.global-warming.body_one':
+    'The world has grown warmer. Coasts have sunk into swamp and jungle and inland fields have dried out: one square we know has changed.',
+  'World.global-warming.body_other':
+    'The world has grown warmer. Coasts have sunk into swamp and jungle and inland fields have dried out: {{count, number}} squares we know have changed.',
+  'World.global-warming.unseen.title': 'Global warming',
+  'World.global-warming.unseen.body':
+    'The world has grown warmer, changing coasts and fields in lands we have yet to see.',
+});

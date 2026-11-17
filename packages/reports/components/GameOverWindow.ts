@@ -110,16 +110,28 @@ export class GameOverWindow extends Window {
           ? []
           : [
               s(
-                `<p class="rating">${t('GameOver.rating', {
-                  context: details.famousLeader === null ? 'none' : undefined,
-                  famousLeader:
-                    details.famousLeader === null
-                      ? ''
-                      : t(`FamousLeader.${details.famousLeader}`, {
-                          defaultValue: details.famousLeader,
+                `<p class="rating">${
+                  // Under rules that rank by titles (Civ2's, M2e), the title the rating earns.
+                  details.title !== undefined && details.title !== null
+                    ? t('GameOver.rating', {
+                        context: 'title',
+                        title: t(`RatingTitle.${details.title}`, {
+                          defaultValue: details.title,
                         }),
-                  rating: details.rating,
-                })}</p>`
+                        rating: details.rating,
+                      })
+                    : t('GameOver.rating', {
+                        context:
+                          details.famousLeader === null ? 'none' : undefined,
+                        famousLeader:
+                          details.famousLeader === null
+                            ? ''
+                            : t(`FamousLeader.${details.famousLeader}`, {
+                                defaultValue: details.famousLeader,
+                              }),
+                        rating: details.rating,
+                      })
+                }</p>`
               ),
             ]),
         ...(details.scoringComplete

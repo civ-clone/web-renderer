@@ -58,6 +58,8 @@ export const gameOverDetails = (
     score: destroyed ? null : score,
     rating: rated?.rating ?? null,
     famousLeader: rated?.famousLeader ?? null,
+    // Under rules that rank by titles (Civ2's, M2e); left out under Civ1's, whose ending says what it always did.
+    ...(rated?.title === undefined ? {} : { title: rated.title }),
     discovery: destroyed ? discovery : null,
     scoringComplete: gameResult.scoringComplete(),
     keepPlaying: !destroyed,
