@@ -6,9 +6,9 @@
 //  load puts it back, and that the civilopedia stops saying a unit goes obsolete in a game where it doesn't. And, with
 //  sets of its own in rules of its own (#954), that what is wrong with the sets goes to the page with each answer, and
 //  that a game is not started or loaded under sets with a problem that blocks. With the plugins again, the enhanced
-//  rules (`civ1-enhanced`, #954, #959, #960): where play departs from the original, each of the twelve a set that a game
-//  can switch back, as it starts (all but the three new variants on, which is play as it has been: the Hydro Plant on
-//  its own square, SDI Defense sparing its city, defectors staying veteran), switched, started, saved and loaded.
+//  rules (`civ1-enhanced`, #954, #959, #960): where play departs from the original, each of the thirteen a set that a game
+//  can switch back, as it starts (all but the four new variants on, which is play as it has been: the Hydro Plant on
+//  its own square, SDI Defense sparing its city, defectors staying veteran, fixed research costs), switched, started, saved and loaded.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import './lib/seed';
@@ -31,6 +31,7 @@ import {
   DEFECTORS_STAY_VETERAN,
   ENHANCED,
   EVEN_ADVANCE_STEALING,
+  FIXED_RESEARCH_COSTS,
   HYDRO_PLANT_SITE,
   OBSOLETE_BUILDS,
   POLLUTION_IN_EVERY_CITY,
@@ -54,6 +55,7 @@ import {
   REVALIDATE_BUILDS_RULE,
   SETTLERS_WAIT_RULE,
   STEAL_RULE,
+  TIERED_COST_RULE,
   UNITED_NATIONS_PACIFIED_RULE,
 } from '@civ-clone/civ1-enhanced/RuleIds';
 import {
@@ -72,6 +74,7 @@ import Build from '@civ-clone/core-city-build/Rules/Build';
 import { KEEP_BUILD_RULE as CIV1_KEEP_BUILD_RULE } from '@civ-clone/civ1-city/RuleIds';
 import CityBuild from '@civ-clone/core-city-build/CityBuild';
 import { Gunpowder } from '@civ-clone/civ1-science/Advances';
+import { COST_RULE as CIV1_COST_RULE } from '@civ-clone/civ1-science/RuleIds';
 import { OBSOLESCENCE } from '@civ-clone/civ1-unit/RuleSets';
 import PlayerResearch from '@civ-clone/core-science/PlayerResearch';
 import RuleRegistry from '@civ-clone/core-rule/RuleRegistry';
@@ -348,12 +351,14 @@ const check = async (): Promise<void> => {
         SETTLERS_WAIT_RULE,
         CIV1_CHIEFTAIN_SETTLERS_RULE,
       ],
+      [FIXED_RESEARCH_COSTS, TIERED_COST_RULE, CIV1_COST_RULE],
     ],
     // The new variants, each off to start with.
     startsOff = [
       HYDRO_PLANT_SITE,
       SDI_DEFENSE_SPARES_CITIES,
       DEFECTORS_STAY_VETERAN,
+      FIXED_RESEARCH_COSTS,
     ],
     // As the game has been played: every one on but the new variants.
     asPlayed = sets.map(([id]) => id).filter((id) => !startsOff.includes(id)),
@@ -386,12 +391,12 @@ const check = async (): Promise<void> => {
     asStarted = ruleSetsData(null);
 
   expect(
-    'the enhanced rules are a set the setup is told of, mixed: the three new variants off, the other nine on, as the game has been played; nothing is chosen, and nothing is wrong',
+    'the enhanced rules are a set the setup is told of, mixed: the four new variants off, the other nine on, as the game has been played; nothing is chosen, and nothing is wrong',
     [enhanced(asStarted.sets), asStarted.choices, asStarted.problems],
     [['set', 'mixed', true, drawn(asPlayed)], [], []]
   );
   expect(
-    "and so the originals of the three variants run, and each other enhanced rule in place of the original's",
+    "and so the originals of the four variants run, and each other enhanced rule in place of the original's",
     running(),
     inForce(asPlayed)
   );
@@ -452,14 +457,14 @@ const check = async (): Promise<void> => {
     allOff.seen,
     [
       ['set', 'off', true, drawn([])],
-      // The shortest list that says so: the three variants start off.
+      // The shortest list that says so: the four variants start off.
       asPlayed.map((id) => ({ id, value: false })),
       [],
       inForce([]),
     ]
   );
   expect(
-    'and ticked again as one: every one on, the three variants too',
+    'and ticked again as one: every one on, the four variants too',
     switched({ id: ENHANCED, value: true }, allOff.answer.choices).seen,
     [
       ['set', 'on', true, drawn(sets.map(([id]) => id))],

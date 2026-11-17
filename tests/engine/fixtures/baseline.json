@@ -114,7 +114,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1168,
+        "total": 1169,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -150,7 +150,7 @@
           "CitySabotaged": 3,
           "CivilDisorder": 1,
           "Complete": 16,
-          "Cost": 42,
+          "Cost": 43,
           "Created": 18,
           "Defeated": 14,
           "Destroyed": 21,
@@ -366,7 +366,7 @@
       "randomCalls": 8643,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1168,
+        "total": 1169,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -402,7 +402,7 @@
           "CitySabotaged": 3,
           "CivilDisorder": 1,
           "Complete": 16,
-          "Cost": 42,
+          "Cost": 43,
           "Created": 18,
           "Defeated": 14,
           "Destroyed": 21,
@@ -811,7 +811,7 @@
       "randomCalls": 8902,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1168,
+        "total": 1169,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -847,7 +847,7 @@
           "CitySabotaged": 3,
           "CivilDisorder": 1,
           "Complete": 16,
-          "Cost": 42,
+          "Cost": 43,
           "Created": 18,
           "Defeated": 14,
           "Destroyed": 21,

@@ -55,6 +55,10 @@ i18next.addResources('en', 'ruleset', {
     'Bribed and defecting units stay veteran',
   'civ1-enhanced.defectors-stay-veteran.description':
     'In the original, a unit that changes sides arrives as a new unit and is no longer a veteran.',
+  'civ1-enhanced.fixed-research-costs.name':
+    'Each advance has a fixed research cost',
+  'civ1-enhanced.fixed-research-costs.description':
+    'An advance costs more the more advances it needs, however many others you know, so racing to The Republic costs what learning steadily does. Learning every advance costs the same in total. In the original, each advance costs more for every advance you already know.',
 });
 
 // What a build this package's rule holds back says (#959), in the client's words for a held build (`City.Build.Held.*`
