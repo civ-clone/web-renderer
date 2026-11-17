@@ -219,6 +219,7 @@
     "test:request-ids": "node tools/run-suite.js engine requestIds",
     "test:unit-action-prompts": "node tools/run-suite.js ui unitActionPrompts",
     "test:trade-rates-window": "node tools/run-suite.js ui tradeRatesWindow",
+    "test:spaceship-window": "node tools/run-suite.js ui spaceshipWindow",
     "test:unit-actions": "node tools/run-suite.js ui unitActions",
     "test:unit-status": "node tools/run-suite.js ui unitStatus",
     "test:worker-failures": "node tools/run-suite.js ui workerFailures",
