@@ -21,6 +21,7 @@ import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
 import BarbarianClient from '@civ-clone/simple-ai-client/BarbarianClient';
 import EndTurnClient from './lib/EndTurnClient';
 import { Snapshot, checksum, snapshot } from './lib/checksum';
+import type { Counting } from './lib/counters';
 import World from '@civ-clone/core-world/World';
 import pluginSets from '../../src/js/pluginSets';
 import { pluginsFrom } from '@civ-clone/ui-worker-client/Plugins';
@@ -45,12 +46,18 @@ let stopped = false;
 const measured = {
   aiActionLimits: 0,
   aiActionsFailed: 0,
+  // What happened in the game (`lib/counters`), counted from once the set has loaded.
+  counting: null as Counting | null,
   errors: 0,
   errorExamples: [] as string[],
   // Found after the set has loaded, before the game starts.
   forbidden: [] as string[],
   // How the game ended, read from core-turn-based-game's `GameResultRegistry` once the set has loaded it.
-  gameResult: (): { reason: () => string; turn: () => number } | null => null,
+  gameResult: (): {
+    reason: () => string;
+    turn: () => number;
+    winner: () => Player | null;
+  } | null => null,
   lastTurn: 0,
   loaded: 0,
   rules: 0,
@@ -86,6 +93,30 @@ engine.emit = (event: string, ...args: any[]): void => {
   emit(event, ...args);
 };
 
+// The way a game ended, from its result's reason: the calendar's end and a player retiring are both a retirement.
+const routeOf = (reason: string): string =>
+  ((
+    { date: 'retirement', retired: 'retirement' } as {
+      [reason: string]: string;
+    }
+  )[reason] ?? reason);
+
+const winnerOf = (
+  winner: Player | null
+): { id: string; civilization: string } | null => {
+  if (winner === null) {
+    return null;
+  }
+
+  let civilization = 'unknown';
+
+  try {
+    civilization = winner.civilization().constructor.name;
+  } catch (e) {}
+
+  return { id: winner.id(), civilization };
+};
+
 const report = (endReason: string) => {
   const ended = Date.now(),
     gameResult = measured.gameResult(),
@@ -112,8 +143,10 @@ const report = (endReason: string) => {
     ending: gameResult
       ? {
           reason: gameResult.reason(),
+          route: routeOf(gameResult.reason()),
           turn: gameResult.turn(),
           year: yearOf(gameResult.turn()),
+          winner: winnerOf(gameResult.winner()),
         }
       : null,
     turn: measured.lastTurn,
@@ -129,6 +162,7 @@ const report = (endReason: string) => {
     errorExamples: measured.errorExamples,
     aiActionsFailed: measured.aiActionsFailed,
     aiActionLimits: measured.aiActionLimits,
+    counters: measured.counting?.report() ?? null,
     isolation: {
       forbidPrefixes: options.forbidPrefixes,
       rules: measured.rules,
@@ -399,6 +433,8 @@ const measure = async (): Promise<void> => {
     ]);
 
   measured.gameResult = () => gameResultRegistry.get();
+  // Before the game starts, so that its first turn is counted.
+  measured.counting = (await import('./lib/counters')).startCounting();
   measured.year = (turn: number) => year.value(turn);
   measured.loaded = Date.now();
 

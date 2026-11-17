@@ -41,9 +41,12 @@ One line per game, then `PASS` or `FAIL` and the wall time:
 seed 1     ok     date turn 591 (2040)          last turn 592  (2041 )  1.2     ms/turn  0   errors  1.0s
 ```
 
-- **The ending**: its reason (`date`, `conquest`, …), turn and year, or how the
+- **The ending**: its route (`retirement` for the calendar's end or a player
+  retiring, `conquest`, `spaceship`, `destroyed`), turn and year, or how the
   run stopped without one: `turns` (it reached `--turns`), `turn-limit` (it
-  reached the limit while playing until game over) or `isolation`.
+  reached the limit while playing until game over) or `isolation`. The JSON
+  keeps the result's own reason (`date`, `retired`, …) and its winner beside
+  the route.
 - **The last turn** started, and its year. The run stops as a turn starts, so
   the turns played are one fewer. A game that ends with nobody to keep playing
   carries on, so the last turn is the one after the ending.
@@ -56,6 +59,44 @@ seed 1     ok     date turn 591 (2040)          last turn 592  (2041 )  1.2     
 
 A game also fails if its process exits with an error (the last lines of its
 stderr are printed), produces no report or runs out of time.
+
+Under each game's line, and for all the games together at the end, are the
+**counts** of what happened in it (M2e), summed over its players:
+
+```
+           governments (player turns): Despotism 476; changes 0, revolutions 0
+           treaties: ceasefire 0, peace 1, alliance 0, war 1
+           units built 66: air 0, naval 1, missile 0, nuclear 0, trade 0, agent 0
+           space: Apollo 0, parts 0, launched 0, arrived 0
+           barbarians: raids at sea 0, uprisings 0, from huts 0, landings 0, cities taken 0, ransoms 0
+           civil wars 0, global warmings 0, meltdowns 0, respawns 0
+```
+
+The JSON's `run.counters` has them per player (`players`, barbarians and
+civilizations that came back included) and for the game (`game`).
+`tests/engine/lib/counters.ts` counts them from the engine's events and
+state, by mechanism, never by a rule set's name, so they mean the same under
+any set:
+
+| Count                                                                                                 | From                                                                                                                                                                                                    |
+| ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `governmentTurns`                                                                                     | Each player's government, by class, at every turn's start.                                                                                                                                              |
+| `governmentChanges`, `revolutions`, `governmentCollapses`                                             | `player:government:changed` after the player's first turn, those into Anarchy, and `player:government:collapsed`.                                                                                       |
+| `treaties`, `alliancesFormed`                                                                         | Each ceasefire, peace, alliance and war declaration as it is made (the `InteractionRegistry`'s `register`, watched), for each of its players and once for the game.                                     |
+| `unitsBuilt`, `unitsBuiltByKind`                                                                      | Units a city finished (`city:building-complete`), and of those: `air` and `naval` by type, `missile` (`SingleUse`), `nuclear` (`Detonates`), `trade` (`TradeMissions`), `agent` (`DiplomaticMissions`). |
+| `apolloBuilt`, `wondersBuilt`                                                                         | `wonder:built`; Apollo by its class, `ApolloProgram`.                                                                                                                                                   |
+| `spaceshipParts`, `spaceshipArrivals`                                                                 | `player:spaceship:part-built`, `player:spaceship:landed`.                                                                                                                                               |
+| `spaceshipsLaunched`, `spaceshipsArrived`                                                             | The player's spaceships at the end: launched, and landed successfully.                                                                                                                                  |
+| `barbarianRaidsAtSea`, `barbarianUprisings`, `barbarianLandings`, `barbarianRansoms`, `barbarianHuts` | The `barbarians:*` events, and huts whose action was `Barbarians`.                                                                                                                                      |
+| `citiesTakenByBarbarians`                                                                             | `city:captured` by a barbarian player.                                                                                                                                                                  |
+| `civilWars`, `globalWarmings`, `nuclearMeltdowns`, `respawns`                                         | `player:civil-war`, `world:global-warming`, `city:nuclear-meltdown`, `player:respawned`.                                                                                                                |
+
+Each event-driven count is one line of a table in `counters.ts`. Civil war
+(#125) and global warming (#365) are in no rule set yet, so nothing emits
+their events and they count 0; when the engine gains one, its event goes in
+its line. The counts only listen and read, so a counted game plays as one that
+isn't, and they are imported only once the set has loaded, so the conformance
+run never has them.
 
 ## How it works
 
@@ -79,5 +120,5 @@ report, so the fixture still matches it. The report's modules are imported
 only after the set has loaded, for the same reason.
 
 The self-test, `npm run test:soak` (part of `npm test`), plays Civ1 with
-end-turn players to turn 20 and to the game's end, and checks a forbidden
-prefix fails the game.
+end-turn players to turn 20 and to the game's end, checks a forbidden
+prefix fails the game, and that a game's counts are reported.
