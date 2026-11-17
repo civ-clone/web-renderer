@@ -355,7 +355,7 @@ const run = async (): Promise<void> => {
       shown(),
       {
         title: 'Mission under a treaty',
-        body: 'We have a treaty with the Babylonians. Our Diplomat will not come back from this mission, and the incident will cost us the treaty. Our Senate may bring the government down over it.',
+        body: 'We have a treaty with the Babylonians. Our Diplomat will not come back from this mission, and the incident that follows will most likely cost us the treaty. Our Senate may bring the government down over it.',
         options: [],
         buttons: ['Break treaty', 'Cancel action'],
       }

@@ -137,7 +137,7 @@ i18next.addResources('en', 'default', {
     'We have a treaty with the {{nation}}. The mission itself breaks nothing, but if our agent is lost, the incident could cost us the treaty.',
   'Diplomat.treaty-mission.go-ahead': 'Go ahead',
   'Diplomat.treaty-mission.certain':
-    'We have a treaty with the {{nation}}. Our Diplomat will not come back from this mission, and the incident will cost us the treaty.',
+    'We have a treaty with the {{nation}}. Our Diplomat will not come back from this mission, and the incident that follows will most likely cost us the treaty.',
   'Diplomat.treaty-mission.scandal':
     'Our Senate may bring the government down over it.',
   // Planting a nuclear device (Civ2, M2d part 2).
