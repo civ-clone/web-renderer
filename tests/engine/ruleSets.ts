@@ -6,10 +6,11 @@
 //  load puts it back, and that the civilopedia stops saying a unit goes obsolete in a game where it doesn't. And, with
 //  sets of its own in rules of its own (#954), that what is wrong with the sets goes to the page with each answer, and
 //  that a game is not started or loaded under sets with a problem that blocks. With the plugins again, the enhanced
-//  rules (`civ1-enhanced`, #954, #959, #960): where play departs from the original, each of the sixteen a set that a
-//  game can switch back, as it starts (all but the six new variants on, which is play as it has been: the Hydro Plant
+//  rules (`civ1-enhanced`, #954, #959, #960): where play departs from the original, each of the seventeen a set that a
+//  game can switch back, as it starts (all but the seven new variants on, which is play as it has been: the Hydro Plant
 //  on its own square, SDI Defense sparing its city, defectors staying veteran, fixed research costs, ages, research
-//  cost by age), switched, started, saved and loaded.
+//  cost by age, the barbarians' activity), switched, started, saved and loaded. The barbarians' activity (#1008) is a
+//  choice of level beneath its set, named and described, and a level drawn at random is saved and loaded with it.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import './lib/seed';
@@ -26,6 +27,8 @@ import RuleSetRegistry from '@civ-clone/core-rule/RuleSetRegistry';
 import { defaultGame, defaultSlots } from '@civ-clone/core-game/defaultGame';
 import {
   AGES,
+  BARBARIAN_ACTIVITY,
+  BARBARIAN_ACTIVITY_LEVEL,
   BARBARIAN_CITY_BUILDS,
   RESEARCH_COST_BY_AGE,
   BARBARIAN_LEADER_RANSOM,
@@ -49,6 +52,7 @@ import {
 } from '@civ-clone/civ1-city-improvement/RuleIds';
 import {
   AGE_BY_TIER_RULE,
+  BARBARIAN_ACTIVITY_RULE,
   RATE_MULTIPLIER_BY_AGE_RULE,
   CLEAR_CAPTURED_BUILD_RULE,
   EVERY_ADVANCE_COUNT_RULE,
@@ -99,6 +103,21 @@ import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
 import requirementsData from '@civ-clone/ui-worker-client/lib/requirements';
 import { save } from '@civ-clone/core-save-game/save';
 import setUpCity from '@civ-clone/civ1-city/tests/lib/setUpCity';
+import activities, {
+  DEFAULT_MEMBER,
+  MEMBERS,
+  memberId,
+} from '@civ-clone/civ1-enhanced/BarbarianActivities';
+import activityOf, {
+  CLASSIC_ACTIVITY,
+} from '@civ-clone/civ1-barbarians/lib/activity';
+import i18next from 'i18next';
+import {
+  ruleSetDescription,
+  ruleSetName,
+} from '@civ-clone/ui-menus/lib/ruleSetControls';
+import { DRAWN_ACTIVITY } from '@civ-clone/civ1-enhanced/lib/barbarianActivity';
+import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 
 const failures: string[] = [];
 let finished = false;
@@ -385,6 +404,8 @@ const check = async (): Promise<void> => {
         EVERY_ADVANCE_COUNT_RULE,
         CIV1_ADVANCE_COUNT_RULE,
       ],
+      // #1008: a rule added to Civ1's, answering civ1-barbarians' activity level with the level chosen beneath it.
+      [BARBARIAN_ACTIVITY, BARBARIAN_ACTIVITY_RULE, null],
     ],
     // The new variants, each off to start with.
     startsOff = [
@@ -394,6 +415,7 @@ const check = async (): Promise<void> => {
       FIXED_RESEARCH_COSTS,
       AGES,
       RESEARCH_COST_BY_AGE,
+      BARBARIAN_ACTIVITY,
     ],
     // As the game has been played: every one on but the new variants.
     asPlayed = sets.map(([id]) => id).filter((id) => !startsOff.includes(id)),
@@ -429,12 +451,12 @@ const check = async (): Promise<void> => {
     asStarted = ruleSetsData(null);
 
   expect(
-    'the enhanced rules are a set the setup is told of, mixed: the six new variants off, the other ten on, as the game has been played; nothing is chosen, and nothing is wrong',
+    'the enhanced rules are a set the setup is told of, mixed: the seven new variants off, the other ten on, as the game has been played; nothing is chosen, and nothing is wrong',
     [enhanced(asStarted.sets), asStarted.choices, asStarted.problems],
     [['set', 'mixed', true, drawn(asPlayed)], [], []]
   );
   expect(
-    "and so the originals of the six variants run, and each other enhanced rule in place of the original's",
+    "and so the originals of the seven variants run, and each other enhanced rule in place of the original's",
     running(),
     inForce(asPlayed)
   );
@@ -495,14 +517,14 @@ const check = async (): Promise<void> => {
     allOff.seen,
     [
       ['set', 'off', true, drawn([])],
-      // The shortest list that says so: the six variants start off.
+      // The shortest list that says so: the seven variants start off.
       asPlayed.map((id) => ({ id, value: false })),
       [],
       inForce([]),
     ]
   );
   expect(
-    'and ticked again as one: every one on, the six variants too',
+    'and ticked again as one: every one on, the seven variants too',
     switched({ id: ENHANCED, value: true }, allOff.answer.choices).seen,
     [
       ['set', 'on', true, drawn(sets.map(([id]) => id))],
@@ -708,6 +730,119 @@ const check = async (): Promise<void> => {
     ]
   );
 
+  ruleSets.reset();
+
+  // --- the barbarians' activity (#1008) ----------------------------------------------------------------------------
+  await i18next.init({ ...i18nOptions, lng: 'en' });
+  await import('../../translations/civ2-barbarians/en');
+  await import('../../translations/civ1-enhanced/en');
+  await import('../../translations/civ1-enhanced/en-GB');
+
+  const described = ruleSetsData(null).sets,
+    activitySet = find(described, BARBARIAN_ACTIVITY),
+    level = find(described, BARBARIAN_ACTIVITY_LEVEL);
+
+  expect(
+    "the barbarians' activity is a set the setup is told of, off, over a choice of four levels and a random one, Active to start with, each named as Civilization II's choice is and described",
+    [
+      [activitySet?.kind, activitySet?.state, activitySet?.switchable],
+      activitySet?.members.map(({ id, kind }) => `${id} ${kind}`),
+      [level?.kind, level?.chosen, level?.active],
+      level?.members.map(({ id }) => [
+        id,
+        ruleSetName(id),
+        ruleSetDescription(id) !== '',
+      ]),
+      [ruleSetName(BARBARIAN_ACTIVITY_LEVEL), ruleSetName(BARBARIAN_ACTIVITY)],
+      [
+        ruleSetDescription(BARBARIAN_ACTIVITY_LEVEL),
+        ruleSetDescription(BARBARIAN_ACTIVITY) !== '',
+      ],
+    ],
+    [
+      ['set', 'off', true],
+      [`${BARBARIAN_ACTIVITY_RULE} rule`, `${BARBARIAN_ACTIVITY_LEVEL} choice`],
+      ['choice', DEFAULT_MEMBER, true],
+      MEMBERS.map((id, index) => [
+        id,
+        ['Dormant', 'Sporadic', 'Active', 'Fierce', 'Random'][index],
+        true,
+      ]),
+      ['Barbarians', 'You choose how active the Barbarians are'],
+      [ruleSetDescription('civ2-barbarians:activity'), true],
+    ]
+  );
+
+  await i18next.changeLanguage('en-GB');
+
+  expect('(and the same in British English)', MEMBERS.map(ruleSetName), [
+    'Dormant',
+    'Sporadic',
+    'Active',
+    'Fierce',
+    'Random',
+  ]);
+
+  await i18next.changeLanguage('en');
+
+  // Switched on at random: the level is drawn when it is first asked for, kept with the game, and loaded with it.
+  const barbarianChoices = [
+    { id: BARBARIAN_ACTIVITY, value: true },
+    { id: BARBARIAN_ACTIVITY_LEVEL, value: memberId('random') },
+  ];
+
+  applyRuleSets(barbarianChoices);
+
+  const drawnActivity = activityOf(rules),
+    drawnLevel = defaultGame.pendingEffects
+      .getByHandler(DRAWN_ACTIVITY)
+      .map((record) => record.data()),
+    activityFile = save(defaultGame, { name: 'barbarians', createdAt: 0 });
+
+  // As a fresh worker is before it loads.
+  defaultGame.pendingEffects.unregister(
+    ...defaultGame.pendingEffects.getByHandler(DRAWN_ACTIVITY)
+  );
+  ruleSets.reset();
+
+  const resetActivity = activityOf(rules);
+
+  // Into the default game, as the worker loads a save (`packages/worker-client/loadGame.ts`): its rules read the game
+  //  they were registered with, and `gameForLoad` makes the state registries anew.
+  hydrate(activityFile, defaultGame);
+
+  const loadedCalls = defaultGame.rng.calls(),
+    loadedActivity = activityOf(rules);
+
+  expect(
+    "a game started with the barbarians' activity drawn at random saves the choice and the level drawn, and loads with both, drawing nothing more; as a game starts, the barbarians are the original's",
+    [
+      drawnLevel.length,
+      Object.values(activities).includes(drawnActivity),
+      activityFile.ruleSets,
+      resetActivity === CLASSIC_ACTIVITY,
+      ruleSets.choices(),
+      defaultGame.pendingEffects
+        .getByHandler(DRAWN_ACTIVITY)
+        .map((record) => record.data()),
+      loadedActivity === drawnActivity,
+      defaultGame.rng.calls() - loadedCalls,
+    ],
+    [
+      1,
+      true,
+      { choices: barbarianChoices },
+      true,
+      barbarianChoices,
+      drawnLevel,
+      true,
+      0,
+    ]
+  );
+
+  defaultGame.pendingEffects.unregister(
+    ...defaultGame.pendingEffects.getByHandler(DRAWN_ACTIVITY)
+  );
   ruleSets.reset();
 
   // --- what it does to a city --------------------------------------------------------------------------------------

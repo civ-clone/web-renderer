@@ -72,6 +72,36 @@ i18next.addResources('en', 'ruleset', {
     'Advances a civilization starts with count',
   'civ1-enhanced.starting-advances-count.description':
     'Every advance a civilization knows counts toward the cost of its next one, its power ranking and its chance of pollution, including those it starts the game with, or inherits when it comes back. In the original, only the advances gained once the game is under way count, so those a civilization starts with don’t make its research dearer.',
+  // #1008: the set, and the choice of level beneath it. The levels and the choice share their names with Civilization
+  //  II's (`translations/civ2-barbarians`), and describe what each does in this game.
+  'civ1-enhanced.barbarian-activity.name':
+    'You choose how active the Barbarians are',
+  'civ1-enhanced.barbarian-activity.description':
+    'The Barbarians come as often, as soon and in the numbers you choose below. In the original, they are always Active.',
+  'civ1-enhanced.barbarian-activity.level.name':
+    '$t(civ2-barbarians.activity.name)',
+  'civ1-enhanced.barbarian-activity.level.description':
+    '$t(civ2-barbarians.activity.description)',
+  'civ1-enhanced.barbarian-activity.level.dormant.name':
+    '$t(civ2-barbarians.activity.0.name)',
+  'civ1-enhanced.barbarian-activity.level.dormant.description':
+    'No raiders land and no uprisings break out: Barbarians come only out of goody huts.',
+  'civ1-enhanced.barbarian-activity.level.sporadic.name':
+    '$t(civ2-barbarians.activity.1.name)',
+  'civ1-enhanced.barbarian-activity.level.sporadic.description':
+    'Raiders come a little later, half as often and in smaller numbers, and uprisings are half as likely.',
+  'civ1-enhanced.barbarian-activity.level.active.name':
+    '$t(civ2-barbarians.activity.2.name)',
+  'civ1-enhanced.barbarian-activity.level.active.description':
+    'As in the original: raiders land every few turns once the Barbarians appear, and grow in numbers as the game goes on.',
+  'civ1-enhanced.barbarian-activity.level.fierce.name':
+    '$t(civ2-barbarians.activity.3.name)',
+  'civ1-enhanced.barbarian-activity.level.fierce.description':
+    'Raiders come a little sooner and in greater numbers, and uprisings are larger.',
+  'civ1-enhanced.barbarian-activity.level.random.name':
+    '$t(civ2-barbarians.activity.random.name)',
+  'civ1-enhanced.barbarian-activity.level.random.description':
+    '$t(civ2-barbarians.activity.random.description)',
 });
 
 // The eight ages (#1076), one for each research tier, named for what each tier holds: `.name` within a sentence, and

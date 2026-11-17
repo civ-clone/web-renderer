@@ -94,6 +94,16 @@
       padding: 0;
     }
 
+    // A choice beneath a set switched off (#1008): its name, alternatives and lines muted with its radio buttons, and
+    //  nothing in it to click.
+    fieldset:disabled {
+      color: var(--ui-fg-muted);
+
+      .rule-set-alternative > label {
+        cursor: default;
+      }
+    }
+
     legend,
     .rule-set-heading {
       font-weight: var(--type-strong-weight);

@@ -1346,6 +1346,72 @@ const run = async (): Promise<void> => {
     [2, 4]
   );
 
+  // A choice beneath a set switched off (#1008, civ1-enhanced's barbarian activity): greyed out, its pick kept, and
+  //  live again once the set is ticked. A choice deeper beneath it is greyed too.
+  const level = (id: string): RuleSetNode => ({
+      id,
+      kind: 'choice',
+      state: 'on',
+      active: true,
+      switchable: false,
+      chosen: `${id}/b`,
+      members: [rule(`${id}/a`, false), rule(`${id}/b`)],
+    }),
+    gated = (state: 'on' | 'off'): RuleSetNode => ({
+      id: 'test:gated',
+      kind: 'set',
+      state,
+      active: true,
+      switchable: true,
+      members: [
+        rule('test:gated/answer'),
+        level('test:gated/level'),
+        {
+          id: 'test:gated/deeper',
+          kind: 'set',
+          state: 'on',
+          active: true,
+          switchable: false,
+          members: [level('test:gated/deeper/level')],
+        },
+      ],
+    }),
+    greyed = (state: 'on' | 'off') => {
+      renderRuleSets(holder, [gated(state)], () => {});
+
+      const box = holder.querySelector<HTMLInputElement>(
+        'input[type="checkbox"]'
+      )!;
+
+      return [
+        box.disabled,
+        box.checked,
+        [...holder.querySelectorAll('fieldset')].map(
+          (fieldset) => (fieldset as HTMLFieldSetElement).disabled
+        ),
+        [...holder.querySelectorAll<HTMLInputElement>('input[type="radio"]')]
+          .filter((radio) => radio.checked)
+          .map((radio) => radio.value),
+      ];
+    };
+
+  expect(
+    'a choice beneath a set switched off is greyed out, deeper ones too, and keeps its pick; the set’s own box is not',
+    greyed('off'),
+    [
+      false,
+      false,
+      [true, true],
+      ['test:gated/level/b', 'test:gated/deeper/level/b'],
+    ]
+  );
+  expect('and with the set ticked, the choices are live', greyed('on'), [
+    false,
+    true,
+    [false, false],
+    ['test:gated/level/b', 'test:gated/deeper/level/b'],
+  ]);
+
   finished = true;
 
   if (failures.length > 0) {
