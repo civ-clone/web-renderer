@@ -23,6 +23,16 @@ i18next.addResources('en', 'ruleset', {
     'Each advance has a fixed research cost',
   'civ2-enhanced.fixed-research-costs.description':
     'An advance costs more the more advances it needs, whichever others you have learnt, so racing ahead no longer makes later advances cheaper. Learning every advance costs about the same in total. In the original, each advance costs more for every advance you already know.',
+  // #1076, #1077: the ages are Civilization II's four eras, named as civ1-enhanced's ages of the same name are
+  //  (`Age.*` in `translations/civ1-enhanced/en.ts`), so they need no words of their own.
+  'civ2-enhanced.ages.name':
+    'Civilizations move through four ages as they learn',
+  'civ2-enhanced.ages.description':
+    'A civilization enters a new age, from the Ancient Age through the Renaissance and the Industrial Age to the Modern Age, with the first advance it learns from a later era, and you are told when yours does. The original sorts advances into these four eras only to choose their pictures.',
+  'civ2-enhanced.research-cost-by-age.name':
+    'Research costs rise with each age',
+  'civ2-enhanced.research-cost-by-age.description':
+    'Research costs half as much in the Ancient Age, rising with each age to about a sixth more in the Modern Age, so learning every advance costs about the same in total. Rushing ahead makes research dearer from then on, even for the advances you skipped. In the original, your age makes no difference to what research costs.',
 });
 
 // civ2-enhanced's barbarian and score rule sets (M2e, #1008), off to start with.

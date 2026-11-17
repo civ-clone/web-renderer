@@ -10,4 +10,8 @@ i18next.addResources('en-GB', 'ruleset', {
     'Each civilisation’s score pays only for its own pollution',
   'civ2-enhanced.pollution-score.description':
     'In the original, every civilisation loses the same points for all the pollution in the world, except what lies around computer players’ cities.',
+  'civ2-enhanced.ages.name':
+    'Civilisations move through four ages as they learn',
+  'civ2-enhanced.ages.description':
+    'A civilisation enters a new age, from the Ancient Age through the Renaissance and the Industrial Age to the Modern Age, with the first advance it learns from a later era, and you are told when yours does. The original sorts advances into these four eras only to choose their pictures.',
 });
