@@ -1,6 +1,6 @@
-// The civ2-enhanced set (M2d, #1007): loaded, it registers civ2-enhanced's three rule sets beneath its own, each on to
-//  start with, and the game setup can switch each off and on again (`ruleSets` request), each named and described
-//  in our own words (`translations/civ2-enhanced`).
+// The civ2-enhanced set (M2d, #1007): loaded, it registers civ2-enhanced's rule sets beneath its own, the three fixes
+//  on to start with and the fixed research costs (#1072) off, and the game setup can switch each off and on again
+//  (`ruleSets` request), each named and described in our own words (`translations/civ2-enhanced`).
 
 // Must stay first: seeds `Math.random` before any engine module evaluates.
 import './lib/seed';
@@ -39,10 +39,13 @@ process.on('exit', (code: number): void => {
 });
 
 const ENHANCED = [
-  'civ2-enhanced:attitude-drift',
-  'civ2-enhanced:border-intruders',
-  'civ2-enhanced:treaty-breaking',
-];
+    'civ2-enhanced:attitude-drift',
+    'civ2-enhanced:border-intruders',
+    'civ2-enhanced:treaty-breaking',
+  ],
+  // Off to start with (#1072).
+  STARTS_OFF = ['civ2-enhanced:fixed-research-costs'],
+  ALL = [...ENHANCED, ...STARTS_OFF];
 
 const run = async (): Promise<void> => {
   await i18next.init({ ...i18nOptions, lng: 'en' });
@@ -56,15 +59,15 @@ const run = async (): Promise<void> => {
       list.flatMap((node) => [node, ...nodes(node.members ?? [])]),
     on = (answer: any): string[] =>
       nodes(answer.sets)
-        .filter(({ id, state }) => ENHANCED.includes(id) && state === 'on')
+        .filter(({ id, state }) => ALL.includes(id) && state === 'on')
         .map(({ id }) => id)
         .sort(),
     first = ruleSetsData(null);
 
   expect(
-    'civ2-enhanced’s three rule sets are offered, each on to start with',
+    'civ2-enhanced’s four rule sets are offered, the three fixes on to start with and the fixed research costs off',
     [
-      ENHANCED.every((id) =>
+      ALL.every((id) =>
         first.sets.some((set: any) => JSON.stringify(set).includes(id))
       ),
       on(first),
@@ -87,13 +90,27 @@ const run = async (): Promise<void> => {
     expect(`and on again`, on(ruleSetsData({ choices })).includes(id), true);
   }
 
+  for (const id of STARTS_OFF) {
+    const ticked = ruleSetsData({ choices, change: { id, value: true } });
+
+    expect(`${id} can be switched on`, on(ticked).includes(id), true);
+
+    choices = ruleSetsData({
+      choices: ticked.choices,
+      change: { id, value: false },
+    }).choices;
+
+    expect(`and off again`, on(ruleSetsData({ choices })).includes(id), false);
+  }
+
   expect(
     'each is named and described in our own words',
-    ['civ2-enhanced', ...ENHANCED].map((id) => [
+    ['civ2-enhanced', ...ALL].map((id) => [
       ruleSetName(id) !== id,
       ruleSetDescription(id) !== '',
     ]),
     [
+      [true, true],
       [true, true],
       [true, true],
       [true, true],
