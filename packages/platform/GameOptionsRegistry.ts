@@ -12,6 +12,8 @@ const storageKey = 'gameOptions';
  */
 export class GameOptionsRegistry extends EntityRegistry<GameOption> {
   #storage: () => OptionStorage | null;
+  // What's told of each option registered again, by key: by `defaults` or `set`.
+  #changeHandlers = new Set<(key: string) => void>();
 
   constructor(
     storage: () => OptionStorage | null = () => globalThis.localStorage ?? null
@@ -43,6 +45,12 @@ export class GameOptionsRegistry extends EntityRegistry<GameOption> {
     }
 
     this.register(new GameOption(key, value));
+    this.#changeHandlers.forEach((handler) => handler(key));
+  }
+
+  /** Calls `handler` with an option's key whenever it is given a value, by `defaults` or `set`. */
+  onChange(handler: (key: string) => void): void {
+    this.#changeHandlers.add(handler);
   }
 
   /** Registers each option, using the stored value where there is one of the same kind as the default. */

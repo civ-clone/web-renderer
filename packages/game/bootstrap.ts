@@ -7,6 +7,7 @@ import titleScreen from '@civ-clone/ui-menus/components/titleScreen';
 import {
   downloadFile,
   saveFile,
+  savedTopologyId,
   takePendingSave,
 } from '@civ-clone/ui-menus/lib/savedGame';
 import { keepSave } from '@civ-clone/ui-client/lib/browserSaves';
@@ -20,7 +21,11 @@ import parseBooleanParam from '@civ-clone/ui-client/lib/parseBooleanParam';
 import appElements from './app/elements';
 import initI18n from './app/i18n';
 import { setCursor, setTilesetSizes } from './app/assets';
-import installPacks from '@civ-clone/ui-assets/lib/installPacks';
+import installPacks, {
+  ensureMapArt,
+} from '@civ-clone/ui-assets/lib/installPacks';
+import prepareMapArt from '@civ-clone/ui-menus/lib/mapArt';
+import { provideStartPreparation } from '@civ-clone/ui-client/lib/startPreparation';
 import setOptionDefaults from './app/options';
 import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
 import {
@@ -108,8 +113,10 @@ export class Renderer {
     let gameStarted = false;
 
     // Every sprite of the tilesets there are, decoded before anything is drawn from them (#730), and the ones whose
-    //  sprites have all been imported installed, so their grids are offered (#97).
+    //  sprites have all been imported installed, so their grids are offered (#97). A hosted set's sheet is fetched now
+    //  only when the interface draws from it; a game's map's, as that game starts or loads (#1063).
     await installPacks();
+    provideStartPreparation(prepareMapArt);
     // Then the interface's art, settled from the sets installed (#1063): its sizes and cursor, and every icon after.
     setTilesetSizes(interfaceArt());
     await setCursor();
@@ -299,6 +306,10 @@ export class Renderer {
         // Evolution on the title menu, as the original's menu plays it, on until the game begins (#126).
         music.play(4);
       } else {
+        // The art the save's map is drawn with, fetched first if it has to be (#1063): without it, the start stops,
+        //  saying why.
+        await ensureMapArt(savedTopologyId(JSON.parse(pendingLoad.data)));
+
         mainMenu.remove();
 
         // Marks a DevTools timeline or `performance.getEntriesByType('mark')` can read, for where a load's time goes

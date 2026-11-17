@@ -15,6 +15,14 @@ const path = require('path');
 const { findings, sourcesIn } = require('./lib/lint');
 const { isUiPackage, scope, webRenderer } = require('./lib/paths');
 
+// Packages the renderer keeps out of every rule set (`civ-clone.excludes`): its own tooling and art, such as the asset
+//  extractors and the hosted pixel art, which may ship no TypeScript at all.
+const excluded = new Set(
+  require(path.join(webRenderer, 'package.json'))['civ-clone'].excludes.map(
+    (name) => `@civ-clone/${name}`
+  )
+);
+
 const failures = [];
 
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'rule-lint-'));
@@ -109,7 +117,7 @@ roots.forEach(([label, root]) => {
   const sources = sourcesIn(root);
 
   // A package published without its TypeScript would otherwise go unchecked, and the suite still pass.
-  if (sources.length === 0) {
+  if (sources.length === 0 && !excluded.has(label)) {
     failures.push(`${label}: no TypeScript was found to check`);
   }
 

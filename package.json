@@ -12,6 +12,7 @@
     "build": "npm run prebuild && npm run esbuild:bundle",
     "build:dev": "npm run prebuild && npm run esbuild:bundle:dev",
     "build:generate-plugins-ts": "node buildPluginList.js",
+    "build:generate-hosted-sets": "node tools/hosted-sets.js",
     "build:generate-translations-ts": "node buildTranslationList.js",
     "arena": "npm run build:generate-plugins-ts && node tools/arena.js",
     "soak": "npm run build:generate-plugins-ts && node tools/soak.js",
@@ -19,7 +20,7 @@
     "civ": "node tools/civ",
     "esbuild:bundle": "node esbuild.js",
     "esbuild:bundle:dev": "node esbuild.js dev",
-    "prebuild": "npm run build:generate-plugins-ts && npm run build:generate-translations-ts && npm run ts:compile && npm run prettier:format && npm run build:generate-version-text",
+    "prebuild": "npm run build:generate-plugins-ts && npm run build:generate-translations-ts && npm run build:generate-hosted-sets && npm run ts:compile && npm run prettier:format && npm run build:generate-version-text",
     "prettier:check": "prettier --config .prettierrc --check 'src/**/*.{ts,scss}' 'packages/*/**/*.{ts,scss}'",
     "prettier:format": "prettier --config .prettierrc 'src/**/*.{ts,scss}' 'packages/*/**/*.{ts,scss}' --write",
     "release:changelog": "node generate-changelog.mjs --release",
@@ -250,6 +251,7 @@
     "test:tilesets": "node tools/run-suite.js ui tilesets",
     "test:json-schema": "node tools/run-suite.js ui jsonSchema",
     "test:asset-store": "node tools/run-suite.js ui assetStore",
+    "test:hosted-sets": "node tools/run-suite.js ui hostedSets",
     "test:tileset-drawing": "node tools/run-suite.js ui tilesetDrawing",
     "test:overlap-draw:1of4": "node tools/run-suite.js ui overlapDraw --part 1/4",
     "test:overlap-draw:2of4": "node tools/run-suite.js ui overlapDraw --part 2/4",
@@ -270,6 +272,7 @@
   "civ-clone": {
     "excludes": [
       "civ1-asset-extractor",
+      "civ1-tileset-pixelart",
       "civ2-asset-extractor"
     ],
     "sets": {
@@ -505,6 +508,7 @@
     "@civ-clone/civ1-science": "github:civ-clone/civ1-science",
     "@civ-clone/civ1-score": "github:civ-clone/civ1-score",
     "@civ-clone/civ1-spaceship": "github:civ-clone/civ1-spaceship",
+    "@civ-clone/civ1-tileset-pixelart": "github:civ-clone/civ1-tileset-pixelart",
     "@civ-clone/civ1-trade-rate": "github:civ-clone/civ1-trade-rate",
     "@civ-clone/civ1-treasury": "github:civ-clone/civ1-treasury",
     "@civ-clone/civ1-unit": "github:civ-clone/civ1-unit",
@@ -607,6 +611,7 @@
     "@civ-clone/ui-rules-civ2": "workspace:*",
     "@civ-clone/ui-tileset-civ1": "workspace:*",
     "@civ-clone/ui-tileset-civ2": "workspace:*",
+    "@civ-clone/ui-tileset-pixelart": "workspace:*",
     "@civ-clone/ui-widgets": "workspace:*",
     "@civ-clone/ui-worker-client": "workspace:*",
     "@civ-clone/worker-transport": "^0.1.2",

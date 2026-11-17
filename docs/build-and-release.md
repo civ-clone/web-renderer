@@ -24,6 +24,13 @@ it copies the tileset descriptor's JSON Schema to `dist/tileset.schema.json`, wh
 pack authors' editors can be pointed at it (#869, `docs/asset-system.md`); the copy
 in the bundle has its titles and descriptions left out.
 
+Before bundling, it builds the hosted sets' sheets (#1063, `tools/lib/hostedSets.js`): each set that ships with
+civ.one, such as the pixel art, as one sprite sheet and an index of where each sprite is in it,
+`dist/sets/<id>.<hash>.png` and `.json`, named by a hash of their content so the browser keeps them until they
+change. The build fails if a set has no sprite for one its descriptor requires. The package that registers the set
+is told the names in a git-ignored `sheets.js` beside it. The page fetches a sheet only when it draws from it: the
+interface's art when that is the pixel art, or a map's as its game starts or loads (`docs/asset-system.md`).
+
 `build.json`'s version goes on the URLs as `?v=`: on the worker's, the music
 worklet's and the release notes' in the code (only `src/js/frontend.ts` reads
 it, and gives the packages the version and the worklet's URL through
@@ -59,6 +66,8 @@ Notable options:
 - `prebuild`:
   - generate plugin imports
   - generate translation imports
+  - build the hosted sets' sheets into `dist/sets` (`build:generate-hosted-sets`, which `esbuild.js`, the suites'
+    runner and `npm test` run too)
   - TypeScript compile check
   - Prettier format write
   - generate `build.json` version string

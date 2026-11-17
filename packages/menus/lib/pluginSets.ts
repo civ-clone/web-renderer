@@ -6,6 +6,8 @@ import {
   bundledTilesets,
   installedTilesets,
   interfaceTileset,
+  isHosted,
+  setRuleSetTileset,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import {
   GameSetupPreset,
@@ -33,17 +35,25 @@ export type GameChoices = {
   chosen: string | null;
 };
 
-/** The ids of the art packs the player has imported, which a set that needs one is offered only with. */
+/**
+ * The ids of the art packs the player has imported, which a set that needs one is offered only with: not those that
+ *  ship with civ.one (#1063), which are no game's own.
+ */
 export const importedTilesets = (): string[] =>
-  installedTilesets().map(({ id }) => id);
+  installedTilesets()
+    .filter((tileset) => !isHosted(tileset))
+    .map(({ id }) => id);
 
 /**
  * Whether there can be another game to offer: only once the player has imported art beyond the interface's, which every
- *  game has, as a game that needs art of its own needs it from another game (Civ2's). Until then nothing is asked of
- *  the worker, and nothing has been chosen there, so New Game, Earth and the setup go on exactly as they always have.
+ *  game has, as a game that needs art of its own needs it from another game (Civ2's). The art that ships with civ.one
+ *  (#1063) is no game's own. Until then nothing is asked of the worker, and nothing has been chosen there, so New Game,
+ *  Earth and the setup go on exactly as they always have.
  */
 export const mayOfferOtherGames = (): boolean =>
-  installedTilesets().some(({ id }) => id !== interfaceTileset().id);
+  installedTilesets().some(
+    (tileset) => tileset.id !== interfaceTileset().id && !isHosted(tileset)
+  );
 
 /** What New Game offers, from the worker's answer: the default, then the sets drawn with art of their own. */
 export const gameChoices = ({
@@ -89,8 +99,14 @@ export const gameGrid = (
 export const playGame = async (
   transport: Transport,
   id: string,
-  choices: Pick<GameChoices, 'default' | 'chosen'>
+  choices: Pick<GameChoices, 'default' | 'chosen'> &
+    Partial<Pick<GameChoices, 'games'>>
 ): Promise<void> => {
+  // Its map drawn with the art its rule set names, when it names some (#1063, decision 2 of docs/asset-library.md).
+  setRuleSetTileset(
+    choices.games?.find((game) => game.id === id)?.tileset ?? null
+  );
+
   if (
     choices.chosen === id ||
     (choices.chosen === null && id === choices.default)

@@ -675,7 +675,7 @@ const text = (element: Element | null): string =>
     civ2Metadata: PackMetadata = { anchors: {}, colours: flagColours };
 
   expect(
-    "Civ2's pack incomplete, or without the record of its sprites' anchors, isn't installed: only square",
+    "Civ2's pack incomplete, or without the record of its sprites' anchors, isn't installed: only square, Civ1's and the pixel art's",
     [
       installTilesets({
         civ2: { complete: false, metadata: civ2Metadata },
@@ -686,7 +686,12 @@ const text = (element: Element | null): string =>
       ),
       supportedTopologies(),
     ],
-    [['civ1'], ['square'], ['civ1'], ['square']]
+    [
+      ['civ1', 'civ1-pixelart'],
+      ['square'],
+      ['civ1', 'civ1-pixelart'],
+      ['square'],
+    ]
   );
   expect(
     "without it, an isometric world is the one that needs Civ2's art imported, and a square one needs nothing",
@@ -712,6 +717,7 @@ const text = (element: Element | null): string =>
       [
         ['civ1', 'square'],
         ['civ2', 'staggered-iso'],
+        ['civ1-pixelart', 'square'],
       ],
       ['square', 'staggered-iso'],
       true,
@@ -782,7 +788,7 @@ const text = (element: Element | null): string =>
     installTilesets({ 'no-record': { complete: true, metadata: null } }).map(
       ({ id }) => id
     ),
-    ['civ1', 'no-record']
+    ['civ1', 'civ1-pixelart', 'no-record']
   );
 
   installTilesets({});

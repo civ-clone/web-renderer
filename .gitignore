@@ -218,3 +218,6 @@ src/js/translations.ts.*.tmp
 .dist/*
 build.json
 src/js/translations.ts
+# The hosted sets' sheets' names, which `tools/lib/hostedSets.js` writes (#1063).
+packages/*/sheets.js
+packages/*/sheets.js.*.tmp

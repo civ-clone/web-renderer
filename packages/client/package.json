@@ -46,6 +46,7 @@
     "./lib/relations": "./lib/relations.ts",
     "./lib/releaseDays": "./lib/releaseDays.ts",
     "./lib/specialists": "./lib/specialists.ts",
+    "./lib/startPreparation": "./lib/startPreparation.ts",
     "./lib/talksMenu": "./lib/talksMenu.ts",
     "./lib/topologyFor": "./lib/topologyFor.ts",
     "./lib/unitActionKeys": "./lib/unitActionKeys.ts",

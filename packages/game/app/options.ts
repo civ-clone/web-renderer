@@ -2,6 +2,7 @@ import { defaultInterface } from '@civ-clone/ui-platform/lib/interfaceMode';
 import {
   bundledTilesets,
   defaultZoom,
+  mapTilesetOption,
   zoomOption,
   zoomOptionFromMapScale,
 } from '@civ-clone/ui-assets/lib/tilesets';
@@ -16,11 +17,20 @@ export const setOptionDefaults = (): void => {
     autoEndOfTurn: true,
     autoEndOfTurnExceptions: ['CivilDisorder'],
     unitEdgeMargin: 2,
-    // Each set's own zoom (#97, #1063): Civ1's `zoom.civ1`, Civ2's `zoom.civ2`, so a zoom chosen for either comes back.
+    // Each set's own zoom (#97, #1063): Civ1's `zoom.civ1`, Civ2's `zoom.civ2`, the pixel art's `zoom.civ1-pixelart`,
+    //  so a zoom chosen for any of them comes back.
     ...Object.fromEntries(
       bundledTilesets().map((tileset) => [
         zoomOption(tileset),
         defaultZoom(tileset),
+      ])
+    ),
+    // The art the player chose for each grid's maps (#1063), a set's id, or nothing until they choose: then the map is
+    //  drawn with the set imported for its grid, or the one that ships with civ.one (`mapTileset`).
+    ...Object.fromEntries(
+      [...new Set(bundledTilesets().map(({ grid }) => grid))].map((grid) => [
+        mapTilesetOption(grid),
+        '',
       ])
     ),
     lockVerticalEdges: false,

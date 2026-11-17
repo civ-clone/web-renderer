@@ -1,3 +1,4 @@
+import prepareStart from '@civ-clone/ui-client/lib/startPreparation';
 import {
   WorldSize,
   defaultWorldSize,
@@ -87,7 +88,7 @@ export const askGame = (
 const ask = (
   title: string,
   rows: ChoiceRow[],
-  chosen: string,
+  chosen: string | null,
   onChoose: (value: string) => void
 ): void => {
   openChoice(title, rows, onChoose, {
@@ -110,8 +111,8 @@ export const askMapGrid = (
   ask(
     t('NewGameWindow.map-grid'),
     grids.map((grid) => ({ label: t(`Grid.${grid}`) as string, value: grid })),
-    // Square, at least, can always be drawn.
-    grids[0]!,
+    // The first there is: square, whose art ships with civ.one, so there is one unless that art isn't registered.
+    grids[0] ?? null,
     (selection) => onChoose(selection as TopologyId)
   );
 
@@ -155,6 +156,10 @@ export const askDifficulty = (
     .catch(unlessRequestFailed);
 };
 
+// Whether a new game is on its way to starting, its options sent and its map's art perhaps being fetched (#1063): a
+//  second one chosen meanwhile is left out, rather than send its options under the first's start.
+let starting = false;
+
 /**
  * How many civilizations to play with, the last question before a new game starts. `worldOptions` (the world's size,
  *  or Earth) go to the engine with the answer.
@@ -182,27 +187,43 @@ export const askPlayerCount = (
     }),
     String(selected),
     async (selection) => {
-      try {
-        await transport.request(
-          new Request('setOptions', {
-            ...worldOptions,
-            players: parseInt(selection, 10),
-            // Every rule set as it starts (#158), whatever a game setup that was opened first, and not started, chose.
-            ruleSets: [],
-          })
-        );
-      } catch (error) {
-        // Not answered: the player has been told, and the main menu is still there, with no game started (#580).
-        unlessRequestFailed(error);
-
+      if (starting) {
         return;
       }
 
-      if (onFinished) {
-        await onFinished();
-      }
+      starting = true;
 
-      transport.send('start', null);
+      try {
+        try {
+          await transport.request(
+            new Request('setOptions', {
+              ...worldOptions,
+              players: parseInt(selection, 10),
+              // Every rule set as it starts (#158), whatever a game setup that was opened first, and not started,
+              //  chose.
+              ruleSets: [],
+            })
+          );
+        } catch (error) {
+          // Not answered: the player has been told, and the main menu is still there, with no game started (#580).
+          unlessRequestFailed(error);
+
+          return;
+        }
+
+        // The art its map is drawn with, which may have to be fetched (#1063): without it, the menus are still there.
+        if (!(await prepareStart(worldOptions.topologyId ?? 'square'))) {
+          return;
+        }
+
+        if (onFinished) {
+          await onFinished();
+        }
+
+        transport.send('start', null);
+      } finally {
+        starting = false;
+      }
     }
   );
 
