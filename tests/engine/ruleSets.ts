@@ -768,7 +768,7 @@ const check = async (): Promise<void> => {
         ['Dormant', 'Sporadic', 'Active', 'Fierce', 'Random'][index],
         true,
       ]),
-      ['Barbarians', 'Choose how active the Barbarians are'],
+      ['Barbarians', 'You choose how active the Barbarians are'],
       [ruleSetDescription('civ2-barbarians:activity'), true],
     ]
   );

@@ -75,9 +75,9 @@ i18next.addResources('en', 'ruleset', {
   // #1008: the set, and the choice of level beneath it. The levels and the choice share their names with Civilization
   //  II's (`translations/civ2-barbarians`), and describe what each does in this game.
   'civ1-enhanced.barbarian-activity.name':
-    'Choose how active the Barbarians are',
+    'You choose how active the Barbarians are',
   'civ1-enhanced.barbarian-activity.description':
-    'The Barbarians come as often, as soon and in the numbers you choose below. In the original, they are always as Active.',
+    'The Barbarians come as often, as soon and in the numbers you choose below. In the original, they are always Active.',
   'civ1-enhanced.barbarian-activity.level.name':
     '$t(civ2-barbarians.activity.name)',
   'civ1-enhanced.barbarian-activity.level.description':
