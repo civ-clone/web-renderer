@@ -44,6 +44,7 @@ import {
 import hasMet from './lib/hasMet';
 import { playerProgress, turnProgress } from './lib/progress';
 import registries from './Client/registries';
+import workerRules from './workerRules';
 
 export interface IGame {
   start(): void;
@@ -517,10 +518,9 @@ export class Game implements IGame {
 
   // A watched game stops at its ending, as a played one does, for the page to see it (#606): with every client a
   //  computer's the game would otherwise call its scoring complete and run on. A played game carries on as before.
+  //  The rule is the rule set's own, which it names.
   #stopAtEnding(observed: boolean): void {
-    const rule = defaultGame.rules.getById(
-      'civ1-game-end:game-over/carry-on-unattended'
-    );
+    const rule = defaultGame.rules.getById(workerRules().carryOnUnattendedRule);
 
     if (observed) {
       rule?.disable();

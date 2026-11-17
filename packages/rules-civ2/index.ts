@@ -172,6 +172,7 @@ export const civ2Rules: WorkerRules = {
   // Standing or lost, in RULES.TXT's order, for the Wonders of the World report.
   wonderHistory: (wonders, cityImprovements) =>
     wonderHistory(wonders, cityImprovements),
+  carryOnUnattendedRule: 'civ2-game-end:game-over/carry-on-unattended',
 };
 
 let registered = false;

@@ -90,6 +90,11 @@ export type WorkerRules = {
     cityImprovements: CityImprovementRegistry
   ) => WonderStatus[];
   /**
+   * The id of the rule set's `GameOver` rule that carries a game nobody plays on past its ending, its score final. A
+   *  watched game disables it, so that it stops at its ending as a played one does (#606).
+   */
+  carryOnUnattendedRule: string;
+  /**
    * Anything the rule set adds to an item in a city's build list (M2c): what changing the build to it would leave as
    *  progress (`progressAfterChange`), for rules that take part of it. None by default.
    */
