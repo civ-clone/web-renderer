@@ -4,6 +4,9 @@
 //  `applyDataPatches`. On our first turn:
 //  - a Bank under way is dropped when its city's Marketplace is sold through the page's sell action, and the page is
 //    sent at once the build with nothing chosen and why (`cleared`: `unavailable`, the Bank);
+//  - a Chariot under way is dropped when we gain Chivalry in the middle of our turn, as from a goody hut, with no action
+//    in the city, and the page is sent the build at once (#978); in a city on Auto, the page is sent what Auto chose
+//    instead;
 //  - a build kept from a captured city ("A city you capture stops building what it was" unticked, from the first turn)
 //    survives the advance we take with the city (we take Pottery, not the Bronze Working it would take to build it),
 //    another player's and its previous owner's discovery of the advance that makes it obsolete, and our own unrelated
@@ -13,8 +16,8 @@
 //  - our Hoover Dam is completed: a Power Plant under way on its continent is dropped and one on another continent is
 //    not, and the Can't build window's reasons for the two cities say the same;
 //  - we discover Gunpowder, and the captured city's kept Spearmen are dropped.
-//  The page holds these from the turn's hand-over, which sends our cities whole: nothing tells it of a build dropped
-//  in the middle of a turn by anything but an action or a capture, as the engine raises no event for it.
+//  The page holds these from the turn's hand-over, which sends our cities whole, though since #978 it would be told of
+//  them at once, as of the Chariots.
 // With `--unticked` (`test:obsolete-builds:unticked`), "A city stops building what it can no longer build" is also
 //  unticked from the first turn, and none of them is dropped. The Hoover Dam is completed only once a game, so each
 //  has a game of its own.
@@ -36,6 +39,7 @@ import {
 import {
   Banking,
   BronzeWorking,
+  Chivalry,
   Currency,
   Electronics,
   Gunpowder,
@@ -43,14 +47,20 @@ import {
   Pottery,
   Refining,
   Rocketry,
+  TheWheel,
   Writing,
 } from '@civ-clone/civ1-science/Advances';
 import {
   CAPTURED_CITY_BUILD,
   OBSOLETE_BUILDS,
 } from '@civ-clone/civ1-enhanced/RuleSets';
+import {
+  Chariot,
+  Nuclear,
+  Settlers,
+  Spearman,
+} from '@civ-clone/civ1-unit/Units';
 import { HooverDam, ManhattanProject } from '@civ-clone/civ1-wonder/Wonders';
-import { Nuclear, Settlers, Spearman } from '@civ-clone/civ1-unit/Units';
 import Advance from '@civ-clone/core-science/Advance';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import City from '@civ-clone/core-city/City';
@@ -306,7 +316,8 @@ const firstTurn = async (): Promise<void> => {
     Industrialization,
     Refining,
     Electronics,
-    Rocketry
+    Rocketry,
+    TheWheel
   );
 
   // A Bank under way, and its Marketplace sold.
@@ -330,6 +341,50 @@ const firstTurn = async (): Promise<void> => {
     }`,
     state(bankCity),
     keptOrDropped(Bank, drops)
+  );
+
+  // Chariots under way, one in a city on Auto, and Chivalry gained in the middle of our turn, as from a goody hut: no
+  //  action in either city sends it, so only the event does (#978).
+  const chariotCity = new City(humanPlayer!, site(capital!.tile()), 'Chariot'),
+    autoCity = new City(humanPlayer!, site(capital!.tile()), 'Auto'),
+    autoBuild = cityBuildRegistryInstance.getByCity(autoCity);
+
+  cityBuildRegistryInstance.getByCity(chariotCity).build(Chariot);
+  autoBuild.setAuto(true);
+  autoBuild.build(Chariot);
+  await flush();
+
+  expect(
+    'Chariots are under way, one in a city on Auto, and the page holds them',
+    [state(chariotCity), state(autoCity)],
+    [keptOrDropped(Chariot, false), keptOrDropped(Chariot, false)]
+  );
+
+  await discover(humanPlayer!, Chivalry);
+
+  expect(
+    `gaining Chivalry in the middle of our turn ${
+      drops ? 'drops the Chariots, and the page is told at once' : 'keeps them'
+    }`,
+    state(chariotCity),
+    keptOrDropped(Chariot, drops)
+  );
+
+  const autoChose = building(autoCity);
+
+  expect(
+    `${
+      drops
+        ? 'and the city on Auto chooses something else, which the page is told of'
+        : 'in the city on Auto too'
+    }`,
+    [autoChose !== null && autoChose !== Chariot.name, state(autoCity)],
+    drops
+      ? [
+          true,
+          { game: autoChose, page: { building: autoChose, cleared: null } },
+        ]
+      : [false, keptOrDropped(Chariot, false)]
   );
 
   // A Power Plant under way on the Hoover Dam's continent and one off it, and the dam paid for.
@@ -522,8 +577,8 @@ const report = (): void => {
 
   console.log(
     drops
-      ? `PASS ${name} (${checks} checks: a Bank is dropped when its Marketplace is sold, and the page is told; a Power Plant is dropped when its player completes the Hoover Dam on its continent, and kept off it; a build kept from a captured city survives other players' and our unrelated discoveries, and is dropped at our own Gunpowder; a Nuclear unit survives the loss of the Manhattan Project)`
-      : `PASS ${name} (${checks} checks: with "A city stops building what it can no longer build" unticked, the Bank, the Power Plant, the captured city's Spearmen and the Nuclear unit are all kept)`
+      ? `PASS ${name} (${checks} checks: a Bank is dropped when its Marketplace is sold, and the page is told; Chariots are dropped when we gain Chivalry in the middle of our turn, and the page is told, of Auto's choice too; a Power Plant is dropped when its player completes the Hoover Dam on its continent, and kept off it; a build kept from a captured city survives other players' and our unrelated discoveries, and is dropped at our own Gunpowder; a Nuclear unit survives the loss of the Manhattan Project)`
+      : `PASS ${name} (${checks} checks: with "A city stops building what it can no longer build" unticked, the Bank, the Chariots, the Power Plant, the captured city's Spearmen and the Nuclear unit are all kept)`
   );
 
   process.exit(0);
