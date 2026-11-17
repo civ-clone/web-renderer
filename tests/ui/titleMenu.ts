@@ -1,6 +1,7 @@
 // The main menu under the new interface (#749): Continue leads when the browser holds a save, named for its
 //  civilization and year when the save says them and by its name when it's older, with when it was kept beneath; the
-//  items for a game only once the assets are imported, and Art and sound always; each item's key, but not
+//  items for a game whenever there's art to draw it with, civ.one's own without an import (#1063), and why not when
+//  there's none; Art and sound always; each item's key, but not
 //  while a window is open or with a modifier, and none once the menu has gone; the version and release notes under
 //  them. New Game offers Customise… first, and Options opens with no game, with the Assets row.
 //
@@ -12,6 +13,7 @@ import './lib/interfaces';
 import './lib/grids';
 import './lib/artPacks';
 
+import MainMenu from '@civ-clone/ui-interface-classic/components/MainMenu';
 import TitleMenu, {
   continueDetail,
   continueLabel,
@@ -34,6 +36,12 @@ import GameOptions from '@civ-clone/ui-menus/components/GameOptions';
 import { IPortal } from '@civ-clone/ui-map/components/Portal';
 import { resetStore } from './lib/FakeStore';
 import { setBuild } from '@civ-clone/ui-client/lib/build';
+import interfaceArt, {
+  provideInterfaceArt,
+} from '@civ-clone/ui-assets/lib/interfaceArt';
+import { installTilesets, mapTileset } from '@civ-clone/ui-assets/lib/tilesets';
+import { missingArt } from '@civ-clone/ui-menus/lib/playable';
+import supportedTopologies from '@civ-clone/ui-map/lib/supportedTopologies';
 
 // The build the entry would name (#866).
 setBuild({ version: '0.0.0@test', musicWorkletUrl: 'dist/musicWorklet.js' });
@@ -324,32 +332,134 @@ const save = (
     );
   }
 
-  // No assets: only what works without them, and Art and sound, the library (#1063).
+  // Civilization's art not imported (#1063): civ.one's own pixel art draws the game, so everything is offered as ever,
+  //  Continue included.
   {
     hasAssets = false;
+    provideInterfaceArt(() => ['civ1', 'civ1-pixelart']);
+    installTilesets({ civ1: { complete: false, metadata: null } });
 
     await keepSave('kept', new Blob(['']), 'autosave', () => {});
 
-    const { element } = await openMenu();
+    const { menu, element } = await openMenu();
 
     expect(
-      'without the assets, no game items, Continue included, and Art and sound',
-      items(element),
-      ['hall-of-fame', 'options', 'library']
+      'without Civilization imported, every item, drawn with the pixel art',
+      [items(element), interfaceArt().id, mapTileset('square').id],
+      [
+        [
+          'continue',
+          'new-game',
+          'earth',
+          'load-game',
+          'hall-of-fame',
+          'options',
+          'library',
+        ],
+        'civ1-pixelart',
+        'civ1-pixelart',
+      ]
+    );
+    expect(
+      'with no reason given',
+      element.querySelector('.ui-title-menu-no-art'),
+      null
     );
 
     key('o');
     await settle();
 
     expect(
-      'Options says nothing is imported',
+      'Options says Civilization is not imported',
       document.querySelector('dialog.game-options .assets .status')
         ?.textContent,
-      'Not imported'
+      'Civilization assets not imported'
     );
 
     closeWindows();
+    menu.remove();
+  }
+
+  // Nothing to draw with (#1063): a first visit offline, the pixel art's sheet not loaded and nothing imported. Only
+  //  what works without art, Art and sound among it, and why.
+  {
+    installTilesets({
+      civ1: { complete: false, metadata: null },
+      'civ1-pixelart': { complete: false, metadata: null },
+    });
+
+    const { menu, element } = await openMenu();
+
+    expect(
+      'with no art at all, no game items, Continue included',
+      items(element),
+      ['hall-of-fame', 'options', 'library']
+    );
+    expect(
+      'and the menu says why',
+      element.querySelector('.ui-title-menu-no-art')?.textContent,
+      'There’s no art to draw the game with: civ.one’s own couldn’t be loaded. Check your connection and reload the page, or import Civilization’s art in Art and sound.'
+    );
+    expect(
+      'as an alert, before the items',
+      [
+        element.querySelector('.ui-title-menu-no-art')?.getAttribute('role'),
+        element.querySelector('.ui-title-menu-panel')?.firstElementChild
+          ?.className,
+      ],
+      ['alert', 'ui-title-menu-no-art']
+    );
+
+    menu.remove();
+
+    // The classic menu says the same, its game items hidden.
+    document.body.innerHTML = '';
+
+    const classic = document.createElement('div');
+
+    classic.id = 'mainmenu';
+    document.body.append(classic);
+    new MainMenu(classic, transport);
+    await settle();
+
+    expect(
+      'the classic menu hides the game items and says why',
+      [
+        Array.from(classic.querySelectorAll('nav button'))
+          .filter((button) => !(button as HTMLElement).hidden)
+          .map((button) => button.textContent),
+        (classic.querySelector('.no-art') as HTMLElement | null)?.hidden,
+        classic
+          .querySelector('.no-art')
+          ?.textContent?.startsWith('There’s no art to draw the game with'),
+      ],
+      [['Hall of Fame', 'Art and sound'], false, true]
+    );
+
+    // Civilization II's art alone: a map, but no interface art, which it has none of.
+    installTilesets({
+      civ1: { complete: false, metadata: null },
+      civ2: {
+        complete: true,
+        metadata: {
+          anchors: {},
+          colours: {
+            flag: [{ primary: [255, 0, 0], secondary: [128, 0, 0] }],
+          },
+        },
+      },
+      'civ1-pixelart': { complete: false, metadata: null },
+    });
+
+    expect(
+      "with Civilization II's art alone, the interface has no art",
+      [missingArt(), supportedTopologies()],
+      ['interface', ['staggered-iso']]
+    );
+
+    // As the page starts, with nothing installed yet but Civilization's.
     hasAssets = true;
+    installTilesets({});
     resetStore();
   }
 

@@ -58,7 +58,7 @@
 
   .provides,
   .source,
-  .reason {
+  .art {
     color: var(--ui-fg-muted);
   }
 
@@ -67,5 +67,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.5em;
+    // Clear of the window's scroll bar, as the head is.
+    padding-right: 0.5em;
   }
 }

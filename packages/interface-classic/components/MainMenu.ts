@@ -6,7 +6,6 @@ import ReleaseWindow, {
   fetchReleases,
 } from '@civ-clone/ui-menus/components/ReleaseWindow';
 import Transport from '@civ-clone/ui-client/Transport';
-import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { chooseSave } from '@civ-clone/ui-menus/components/LoadGameWindow';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import { mappedKeyFromEvent } from '@civ-clone/ui-platform/lib/mappedKey';
@@ -14,6 +13,7 @@ import build from '@civ-clone/ui-client/lib/build';
 import { t } from 'i18next';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 import { askEarth, askNewGame } from '@civ-clone/ui-menus/components/newGame';
+import { cantPlayReason } from '@civ-clone/ui-menus/lib/playable';
 
 export class MainMenu extends Element {
   #transport: Transport;
@@ -29,24 +29,27 @@ export class MainMenu extends Element {
   }
 
   async build() {
-    const hasAssets = await assetStore.hasAllAssets();
+    // A game is offered whenever there's art to draw it with (#1063): civ.one's own, or the player's import. Without
+    //  any, on a first visit offline with nothing imported, the menu says why in place of the game's items.
+    const reason = cantPlayReason(),
+      playable = reason === null,
+      why = s<HTMLParagraphElement>('<p class="no-art" role="alert"></p>');
 
-    if (!hasAssets) {
-      console.log('Missing assets:');
-      console.log(await assetStore.missingAssets());
-    }
+    why.textContent = reason ?? '';
+    why.hidden = playable;
 
     this.append(
       h(
         s(
           '<nav></nav>',
+          why,
           // New Game as it has always been, and beside it the game setup (#605), for seats, civilizations and the rest.
           s(
             `<div class="row"></div>`,
             h(
               s(
                 `<button class="btn-bare" autofocus${
-                  hasAssets ? '' : ' hidden'
+                  playable ? '' : ' hidden'
                 }>${t('MainMenu.new-game')}</button>`
               ),
               {
@@ -58,7 +61,7 @@ export class MainMenu extends Element {
             h(
               s(
                 `<button class="btn-bare secondary"${
-                  hasAssets ? '' : ' hidden'
+                  playable ? '' : ' hidden'
                 }>${t('MainMenu.customise')}</button>`
               ),
               {
@@ -72,7 +75,7 @@ export class MainMenu extends Element {
           ),
           h(
             s(
-              `<button class="btn-bare"${hasAssets ? '' : ' hidden'}>${t(
+              `<button class="btn-bare"${playable ? '' : ' hidden'}>${t(
                 'MainMenu.earth'
               )}</button>`
             ),
@@ -82,7 +85,7 @@ export class MainMenu extends Element {
           ),
           h(
             s(
-              `<button class="btn-bare"${hasAssets ? '' : ' hidden'}>${t(
+              `<button class="btn-bare"${playable ? '' : ' hidden'}>${t(
                 'MainMenu.customize-world'
               )}</button>`
             ),
@@ -96,7 +99,7 @@ export class MainMenu extends Element {
           ),
           h(
             s(
-              `<button class="btn-bare"${hasAssets ? '' : ' hidden'}>${t(
+              `<button class="btn-bare"${playable ? '' : ' hidden'}>${t(
                 'MainMenu.load-game'
               )}</button>`
             ),

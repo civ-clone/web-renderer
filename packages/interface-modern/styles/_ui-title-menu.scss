@@ -23,6 +23,13 @@
   width: 22rem;
 }
 
+// Why no game is offered (#1063): no art to draw one with.
+.ui-title-menu-no-art {
+  border-bottom: 1px solid var(--ui-line-soft);
+  margin: 0 1.25rem 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
 .ui-title-menu-items {
   list-style: none;
   margin: 0;

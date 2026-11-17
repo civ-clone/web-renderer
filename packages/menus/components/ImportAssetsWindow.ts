@@ -4,7 +4,6 @@ import {
   filesNeeded,
   importedFirst,
   isUnsupportedFile,
-  packImports,
 } from '@civ-clone/ui-assets/lib/packImports';
 import Window, { WindowOptions } from '@civ-clone/ui-component-window/Window';
 import { allowLeaving } from '@civ-clone/ui-component-window/leaveGuard';
@@ -27,10 +26,6 @@ const extensionsOf = (pack: PackImport): string =>
       })
     ),
   ].join(',');
-
-/** The set every other's import waits on (`importedFirst`): Civ1's. */
-const firstSet = (): PackImport | undefined =>
-  packImports().find(importedFirst);
 
 export class ImportAssetsWindow extends Window {
   // The set whose files this window imports.
@@ -173,12 +168,13 @@ export class ImportAssetsWindow extends Window {
       files = Array.from(
         (event.target as HTMLInputElement).files ?? []
       ) as File[],
-      filenames: string[] = files.map((file: File) => file.name),
-      first = firstSet();
+      filenames: string[] = files.map((file: File) => file.name);
 
-    // The set every other's waits on can't go ahead without each of the required files it still needs, as the library
-    //  names them (`filesNeeded`): every one at first, the ones holding what's missing once some is in, and none once
-    //  its sprites are all in, when its optional ones (SP299.PIC) can be added on their own.
+    // Civ1's set can't go ahead without each of the required files it still needs, as the library names them
+    //  (`filesNeeded`): every one at first, the ones holding what's missing once some is in, and none once its sprites
+    //  are all in, when its optional ones (SP299.PIC) can be added on their own. Another set's files can be added on
+    //  their own, whenever (#126, #97): its music, or another grid's map art, some of the files at a time. None waits
+    //  on Civ1's since #1063, as civ.one's own art draws the game without it.
     if (importedFirst(pack)) {
       const needed = await filesNeeded(pack).catch(() => pack.requiredFiles);
 
@@ -193,17 +189,6 @@ export class ImportAssetsWindow extends Window {
 
         return;
       }
-    }
-    // Another set's files can be added on their own once the first set's sprites are in (#126, #97): its music, or
-    //  another grid's map art, some of the files at a time. Until then, the first set's files are asked for.
-    else if (!(await assetStore.hasAllAssets().catch((): boolean => false))) {
-      this.#fail(
-        t('ImportAssetsWindow.missing-files', {
-          files: first?.requiredFiles ?? [],
-        })
-      );
-
-      return;
     }
 
     // Only the set's own files are read: another's, or one no set reads, is left out.
@@ -294,7 +279,9 @@ export class ImportAssetsWindow extends Window {
     // ...and all results stored in IDB, in a single transaction, each sprite as its PNG (#730).
     await assetStore.setAll(assets);
 
-    if (!(await assetStore.hasAllAssets())) {
+    // Civ1's import is all or nothing, so its sprites are all in once it's stored. Another set's may be finished in
+    //  parts, which its status says (`#showStatus`).
+    if (importedFirst(this.#pack) && !(await assetStore.hasAllAssets())) {
       console.error('Something went wrong...');
 
       this.#fail(

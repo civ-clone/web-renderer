@@ -798,7 +798,9 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
 
     offline = false;
 
-    // A store that opens but can't be read says nothing of Civ1's sprites: it stays installed, as it was before.
+    // A store that opens but can't be read says nothing of Civ1's sprites: it stays installed when they were read all
+    //  the same (`tests/ui/noImport.ts`), and here, where none were, the pixel art stands in rather than a game drawn
+    //  blank (#1063).
     const storedKeys = Store.prototype.keys,
       storedGet = Store.prototype.get,
       opens = Store.prototype.opens;
@@ -810,9 +812,12 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
     fetched.length = 0;
 
     expect(
-      "a store that opens but can't be read leaves Civ1's installed, and the pixel art declared and not fetched",
+      "a store that opens but can't be read, with none of Civ1's sprites read: the pixel art stands in, fetched as the page starts",
       [ids(await installPacks(new AssetStore(civ1))), fetched],
-      [['civ1', 'civ1-pixelart'], []]
+      [
+        ['civ1-pixelart'],
+        [sheets['civ1-pixelart']!.sheet, sheets['civ1-pixelart']!.index],
+      ]
     );
 
     // One the browser won't open at all (site data blocked, #850) has nothing imported: the pixel art stands in.

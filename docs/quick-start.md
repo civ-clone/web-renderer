@@ -8,16 +8,22 @@ describes how the code works once you are in.
 ## Just play
 
 Go to [civ.one](https://civ.one). The game runs entirely in your browser; there is
-no account and no install. The first time, choose **Art and sound** on the main
-menu, then **Import…** beside Civilization, and give it `TER257.PIC` and
-`SP257.PIC` from an original copy of Civilization (1991), and `SP299.PIC` as well
-for the improvement and Wonder icons: the graphics are read from those files and
-kept in your browser's storage. Nothing is uploaded anywhere. Once those are in,
-Art and sound imports each of the rest on its own, all optional: Civilization's
-music from `ASOUND.CVL`, and, to play on an isometric map, Civilization II's
-`TERRAIN1.GIF`, `TERRAIN2.GIF`, `UNITS.GIF` and `CITIES.GIF` (then choose the grid
-when starting a game), with `ICONS.GIF` and `PEOPLE.GIF` for its own yield icons
-and citizens.
+no account and no install, and nothing to import: civ.one comes with its own
+pixel art, for the map and the interface. Importing the original's art is an
+upgrade, all of it optional. With an original copy of Civilization (1991), choose
+**Art and sound** on the main menu, then **Import…** beside Civilization, and give
+it `TER257.PIC` and `SP257.PIC`, and `SP299.PIC` as well for the improvement and
+Wonder icons: the graphics are read from those files and kept in your browser's
+storage. Nothing is uploaded anywhere. Art and sound imports each of the rest on
+its own, in any order: Civilization's music from `ASOUND.CVL`, and, to play on an
+isometric map, Civilization II's `TERRAIN1.GIF`, `TERRAIN2.GIF`, `UNITS.GIF` and
+`CITIES.GIF` (then choose the grid when starting a game), with `ICONS.GIF` and
+`PEOPLE.GIF` for its own yield icons and citizens. Each map set there has **Use for
+square maps** (or its grid), to choose which art that map is drawn with.
+
+The pixel art is fetched the first time it's needed and kept by the browser's
+cache. On a first visit offline, with nothing imported, the menu says there's no
+art to draw the game with until you reload online.
 
 On Brave, put Shields down while importing and playing, or the images come out
 wrong (Brave "farbles" canvas reads as a fingerprinting defence).
@@ -84,9 +90,9 @@ docker compose up          # Apache on port 8080
 python3 -m http.server 8080
 ```
 
-Open http://127.0.0.1:8080, import the assets as above, and play. Use the same
-address every time: the imported assets are kept per origin, so
-`localhost:8080` and `127.0.0.1:8080` each want their own import. Saves are
+Open http://127.0.0.1:8080 and play, with civ.one's own pixel art, or import the
+original's art as above. Use the same address every time: imported art is kept
+per origin, so `localhost:8080` and `127.0.0.1:8080` each want their own import. Saves are
 files you download and load again, so nothing is lost between builds. If a
 rebuild seems not to have taken, hard-reload: the page caches its bundles.
 

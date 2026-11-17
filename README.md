@@ -9,15 +9,17 @@ draws, and the Web Worker that runs the engine behind them.
 
 ## Playing
 
-The game needs the graphics from an original copy of Civilization: on the main
-menu choose **Art and sound**, then **Import…** beside Civilization, and give it
-`TER257.PIC` and `SP257.PIC`, and `SP299.PIC` too for the improvement and Wonder
-icons. They are read in your browser and kept in its storage; nothing is
-uploaded. Once those are in, Art and sound imports the rest, each on its own:
-Civilization's music from `ASOUND.CVL`, and, to play on an isometric map,
-Civilization II's `TERRAIN1.GIF`, `TERRAIN2.GIF`, `UNITS.GIF` and `CITIES.GIF`,
-with `ICONS.GIF` and `PEOPLE.GIF` for its own yield icons and citizens (all
-optional). (On Brave, put Shields down for importing and playing, or the images
+Nothing needs importing to play: civ.one comes with its own pixel art, for the
+map and the interface. If you have an original copy of Civilization, its art is
+an upgrade: on the main menu choose **Art and sound**, then **Import…** beside
+Civilization, and give it `TER257.PIC` and `SP257.PIC`, and `SP299.PIC` too for
+the improvement and Wonder icons. Art and sound imports the rest, each on its
+own and in any order: Civilization's music from `ASOUND.CVL`, and, to play on an
+isometric map, Civilization II's `TERRAIN1.GIF`, `TERRAIN2.GIF`, `UNITS.GIF` and
+`CITIES.GIF`, with `ICONS.GIF` and `PEOPLE.GIF` for its own yield icons and
+citizens (all optional). Files are read in your browser and kept in its storage;
+nothing is uploaded. Art and sound is also where you choose the art each map is
+drawn with. (On Brave, put Shields down for importing and playing, or the images
 come out "farbled".)
 
 What's there, in brief: the whole of Civilization's rules as far as we know them

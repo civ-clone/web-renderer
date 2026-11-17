@@ -43,7 +43,7 @@ i18next.addResources('en', 'default', {
   'GameOptions.assets-checking': 'Checking…',
   'GameOptions.assets-imported':
     '{{tileset}} assets imported · {{count, number}} sprites',
-  'GameOptions.assets-missing': 'Not imported',
+  'GameOptions.assets-missing': '{{tileset}} assets not imported',
   'GameOptions.library': '$t(LibraryWindow.title)',
   'GameOptions.autosave': 'Autosave',
   'GameOptions.autosave-choice.10': 'Game start, then every 10 turns',
@@ -159,16 +159,26 @@ i18next.addResources('en', 'default', {
   'LibraryWindow.status.needs': 'Needs {{files, list}}',
   'LibraryWindow.status.optional': 'Optional: {{files, list}}',
   'LibraryWindow.status.none': 'Not imported',
+  'LibraryWindow.status.unloaded': 'Couldn’t be loaded',
   'LibraryWindow.import': 'Import…',
   'LibraryWindow.import-again': 'Import again',
   // The buttons' names for assistive technology, which say whose they are.
   'LibraryWindow.import-set': 'Import {{name}}',
   'LibraryWindow.import-set-again': 'Import {{name}} again',
   'LibraryWindow.use-theme': 'Use {{name}}',
-  // Why a set can't be imported yet: Civilization's art comes first.
-  'LibraryWindow.import-first': 'Import {{name}} first.',
   'LibraryWindow.in-use': 'In use',
   'LibraryWindow.use': 'Use',
+  // A map set's choice for its grid (#1063), and its name for assistive technology, which says whose it is.
+  'LibraryWindow.use-for-grid': 'Use for {{grid}} maps',
+  'LibraryWindow.use-set-for-grid': 'Use {{name}} for {{grid}} maps',
+  'LibraryWindow.in-use-for-grid': 'In use for {{grid}} maps',
+  // Whose interface art a theme draws with now (#1063): an imported set's by its game, one that ships with civ.one by
+  //  its name, unless it has words of its own here.
+  'LibraryWindow.theme-art.imported': 'Uses {{game}}’s art',
+  'LibraryWindow.theme-art.set': 'Uses {{name}}',
+  'LibraryWindow.theme-art.civ1-pixelart': 'Uses civ.one’s pixel art',
+  'LibraryWindow.theme-art.none':
+    'Has no art to draw with: civ.one’s own couldn’t be loaded',
   'LoadGame.could-not-delete': 'That save could not be deleted: {{- error}}',
   'LoadGame.delete': 'Delete',
   'LoadGame.delete-confirm': 'Delete “{{name}}”? This cannot be undone.',
@@ -203,6 +213,11 @@ i18next.addResources('en', 'default', {
   'ReleaseWindow.external-changes': 'External changes',
   'ReleaseWindow.failed': 'The release notes could not be loaded.',
   'ReleaseWindow.loading': 'Loading the release notes…',
+  // Why the menus offer no game (#1063): there's no art to draw one with, on a first visit offline with nothing imported.
+  'Menus.no-art.interface':
+    'There’s no art to draw the game with: civ.one’s own couldn’t be loaded. Check your connection and reload the page, or import Civilization’s art in Art and sound.',
+  'Menus.no-art.map':
+    'There’s no art to draw a map with: civ.one’s own couldn’t be loaded. Check your connection and reload the page, or import Civilization’s art in Art and sound.',
   'ReleaseWindow.title': 'Releases',
   'SavedGame.could-not-hand-over':
     'That save could not be handed to the reloading page, so the game has not been loaded: {{- error}}',

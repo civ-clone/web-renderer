@@ -19,16 +19,15 @@ export const setTilesetSizes = (
   style.setProperty('--tileset-citizen-step', `${citizen.step}px`);
 };
 
-// The torch cursor, from the interface's art (#1063), once every asset has been imported.
-export const setCursor = async (): Promise<void> => {
-  const hasAllAssets = await assetStore.hasAllAssets();
+// The torch cursor, from the interface's art (#1063): Civilization's when it's imported, and otherwise civ.one's own.
+//  The browser's own while that's missing, rather than a cursor that can't be seen.
+export const setCursor = async (
+  tileset: TilesetDescriptor = interfaceArt()
+): Promise<void> => {
+  const key = interfaceSpriteKey('cursor/torch', tileset);
 
-  if (hasAllAssets) {
-    const art = interfaceArt(),
-      cursor = await assetStore.shownAtURL(
-        interfaceSpriteKey('cursor/torch', art),
-        art.ui.cursor
-      );
+  if (await assetStore.has(key)) {
+    const cursor = await assetStore.shownAtURL(key, tileset.ui.cursor);
 
     document.body.style.cursor = `url('${cursor}'), default`;
   }

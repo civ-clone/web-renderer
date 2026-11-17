@@ -1,5 +1,5 @@
 // The library of art and sound (#1063) lists each set, says whether it's ready, and opens each set's own import window,
-//  which reads only that set's files: Civ1's first, then any other once Civ1's sprites are in.
+//  which reads only that set's files, each set whenever and in any order (#1063).
 //
 // The import window says which file it could not read, and lets the player choose files again, rather than
 //  sitting on "Building image assets..." for good. A file the extractor can't decode (not a Civilization sheet, or one
@@ -36,9 +36,19 @@ import {
   uiThemes,
 } from '@civ-clone/ui-widgets/lib/theme';
 import ImportAssetsWindow from '@civ-clone/ui-menus/components/ImportAssetsWindow';
-import LibraryWindow from '@civ-clone/ui-menus/components/LibraryWindow';
+import LibraryWindow, {
+  themeArtLine,
+} from '@civ-clone/ui-menus/components/LibraryWindow';
 import { registerSoundSet } from '@civ-clone/ui-assets/sounds/SoundDescriptor';
-import { bundledTilesets } from '@civ-clone/ui-assets/lib/tilesets';
+import {
+  bundledTilesets,
+  chooseMapTileset,
+  installTilesets,
+  mapTileset,
+  mapTilesetOption,
+} from '@civ-clone/ui-assets/lib/tilesets';
+import { instance as gameOptions } from '@civ-clone/ui-platform/GameOptionsRegistry';
+import { ensureTilesetLoaded } from '@civ-clone/ui-assets/lib/installPacks';
 import addFormatters from '@civ-clone/ui-game/app/i18nFormatters';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
@@ -995,14 +1005,12 @@ const run = async (): Promise<void> => {
     }
 
     expect(
-      "ASOUND.CVL before Civ1's sprites: Civ1's files are asked for, and nothing is written",
+      "ASOUND.CVL without Civ1's sprites (#1063): added all the same, as no set's import waits on Civ1's",
+      [await importWith([cvl()], false), written.map(({ name }) => name)],
       [
-        (await importWith([cvl()], false)).startsWith(
-          'Please provide all files to generate assets: SP257.PIC and TER257.PIC'
-        ),
-        written.length,
-      ],
-      [true, 0]
+        'Done! Please reload the page to utilize the fresh assets.',
+        ['./sources/ASOUND.CVL'],
+      ]
     );
 
     spritesCut = 0;
@@ -1356,14 +1364,14 @@ const run = async (): Promise<void> => {
     );
 
     expect(
-      "Civ2's sheets before Civ1's sprites: Civ1's files are asked for, and nothing is written",
+      "Civ2's sheets without Civ1's sprites (#1063): read all the same, as no set's import waits on Civ1's",
       [
         (await importWith([sheets['UNITS.GIF']!], false)).startsWith(
           'Please provide all files'
         ),
-        written.length,
+        writtenNames().includes(civ2Key('units/settlers')),
       ],
-      [true, 0]
+      [false, true]
     );
 
     warned.length = 0;
@@ -1900,9 +1908,12 @@ const run = async (): Promise<void> => {
   }
 
   // The library (#1063): the map's art by grid, the themes and the sound, each set saying what it gives, where it comes
-  //  from and whether it's ready, with its own import. Civ1's comes first: until its sprites are in, every other set's
-  //  import is disabled, saying why; and with the browser keeping nothing for this site (#850), every one is.
+  //  from and whether it's ready, with its own import, in any order; and with the browser keeping nothing for this site
+  //  (#850), every import is disabled. Each installed map set can be chosen for its grid.
   {
+    // As the page starts: Civ1's installed (the store below says what it holds), and the pixel art, which ships.
+    installTilesets({});
+
     // A set that comes with civ.one, with a licence, as later ones will: it is ready without an import.
     registerSoundSet({
       schema: 1,
@@ -2039,15 +2050,13 @@ const run = async (): Promise<void> => {
             .querySelector(`[data-set="${id}"]`) as HTMLElement,
           button = entry.querySelector(
             '.actions button'
-          ) as HTMLButtonElement | null,
-          reason = entry.querySelector('.reason') as HTMLElement | null;
+          ) as HTMLButtonElement | null;
 
         return {
           entry,
           status: entry.querySelector('.status')?.textContent ?? null,
           button: button?.textContent ?? null,
           disabled: button?.disabled ?? null,
-          reason: reason === null || reason.hidden ? null : reason.textContent,
         };
       },
       opened = async (): Promise<LibraryWindow> => {
@@ -2153,36 +2162,183 @@ const run = async (): Promise<void> => {
       [null, 'Comes with civ.one · License: Odd licence']
     );
     expect(
-      "nothing imported: each set says so, and only Civ1's can be imported, the others saying why",
+      "nothing imported: each set says so, and each can be imported, none waiting on Civ1's",
       ['civ1', 'civ2', 'civ1-adlib'].map((id) => {
-        const { status, button, disabled, reason } = entryOf(library, id);
+        const { status, button, disabled } = entryOf(library, id);
 
-        return [status, button, disabled, reason];
+        return [status, button, disabled];
       }),
       [
-        ['Not imported', 'Import…', false, null],
-        ['Not imported', 'Import…', true, 'Import Civilization first.'],
-        ['Not imported', 'Import…', true, 'Import Civilization first.'],
+        ['Not imported', 'Import…', false],
+        ['Not imported', 'Import…', false],
+        ['Not imported', 'Import…', false],
       ]
     );
 
     library.close();
 
-    // Each import is named for its set, and described by why it can't be used yet; each status is said as it changes.
+    // Each import is named for its set; each status is said as it changes.
     {
       const civ2 = entryOf(library, 'civ2').entry,
-        importButton = civ2.querySelector('.actions button') as HTMLElement,
-        reason = civ2.querySelector('.reason') as HTMLElement;
+        importButton = civ2.querySelector('.actions button') as HTMLElement;
 
       expect(
-        "each Import… is named for its set, and described by why it's disabled, and each status is a polite live region",
+        'each Import… is named for its set, and each status is a polite live region',
         [
           importButton.getAttribute('aria-label'),
-          importButton.getAttribute('aria-describedby') === reason.id &&
-            reason.id !== '',
           civ2.querySelector('.status')?.getAttribute('aria-live'),
         ],
-        ['Import Civilization II', true, 'polite']
+        ['Import Civilization II', 'polite']
+      );
+    }
+
+    // The map's art for each grid (#1063): each installed set has Use for its grid, the one drawn with marked.
+    {
+      library = await opened();
+
+      const uses = (grid = 'square') =>
+          ['civ1', 'civ1-pixelart', 'civ2'].map((id) => {
+            const { entry } = entryOf(library, id),
+              use = entry.querySelector(
+                '.actions button[aria-label$="maps"]'
+              ) as HTMLButtonElement | null,
+              inUse = entry.querySelector('.in-use') as HTMLElement | null;
+
+            return use === null
+              ? null
+              : [
+                  use.textContent,
+                  use.getAttribute('aria-label'),
+                  use.getAttribute('aria-disabled'),
+                  inUse === null || inUse.hidden ? null : inUse.textContent,
+                  mapTileset(grid).id === id,
+                ];
+          }),
+        pixelArtUse = entryOf(library, 'civ1-pixelart').entry.querySelector(
+          '.actions button'
+        ) as HTMLButtonElement;
+
+      expect(
+        "each installed map set has Use for its grid, named for it, Civilization's marked in use until another is chosen, and none for Civ2's, not installed",
+        [uses(), entryOf(library, 'civ1-pixelart').status],
+        [
+          [
+            [
+              'Use for square maps',
+              'Use Civilization for square maps',
+              'true',
+              'In use for square maps',
+              true,
+            ],
+            [
+              'Use for square maps',
+              'Use Pixel art for square maps',
+              'false',
+              null,
+              false,
+            ],
+            null,
+          ],
+          'Ready',
+        ]
+      );
+
+      pixelArtUse.click();
+
+      expect(
+        "Use keeps the set as the grid's art, draws its maps with it, and marks it in use",
+        [
+          gameOptions.get(mapTilesetOption('square'), ''),
+          uses().map((use) => use?.slice(2)),
+        ],
+        [
+          'civ1-pixelart',
+          [
+            ['false', null, false],
+            ['true', 'In use for square maps', true],
+            undefined,
+          ],
+        ]
+      );
+      expect(
+        // linkedom keeps no focus: the button kept, and not disabled, is what keeps it in a browser.
+        'and the button used stays, out of use but not disabled, so the focus stays on it',
+        [
+          entryOf(library, 'civ1-pixelart').entry.querySelector(
+            '.actions button'
+          ) === pixelArtUse,
+          pixelArtUse.disabled,
+        ],
+        [true, false]
+      );
+
+      pixelArtUse.click();
+
+      expect(
+        'Use on the set in use does nothing',
+        gameOptions.get(mapTilesetOption('square'), ''),
+        'civ1-pixelart'
+      );
+
+      chooseMapTileset('square', '');
+      library.close();
+
+      // The pixel art's sheet that couldn't be loaded: it says so, and can't be chosen.
+      installTilesets({ 'civ1-pixelart': { complete: false, metadata: null } });
+      library = await opened();
+
+      expect(
+        "a set that ships with civ.one whose sheet couldn't be loaded says so, with no Use",
+        [
+          entryOf(library, 'civ1-pixelart').status,
+          entryOf(library, 'civ1-pixelart').button,
+        ],
+        ['Couldn’t be loaded', null]
+      );
+
+      library.close();
+      installTilesets({});
+
+      // Installed as it's declared, its sheet fetched only once a game draws from it: Ready until a fetch fails, as a
+      //  game on its grid starts, and then said so, still to choose, as the next start tries again.
+      const pixelArt = bundledTilesets().find(
+          ({ id }) => id === 'civ1-pixelart'
+        )!,
+        sheet = (fails: boolean) =>
+          ({
+            loadHostedPack: async (): Promise<void> => {
+              if (fails) {
+                throw new Error('offline');
+              }
+            },
+          } as unknown as typeof assetStore),
+        pixelArtEntry = async (): Promise<(string | null)[]> => {
+          library = await opened();
+
+          const entry = entryOf(library, 'civ1-pixelart'),
+            shown = [entry.status, entry.button];
+
+          library.close();
+
+          return shown;
+        };
+
+      const notFetched = await pixelArtEntry();
+
+      await ensureTilesetLoaded(pixelArt, sheet(true)).catch(() => {});
+
+      const failed = await pixelArtEntry();
+
+      await ensureTilesetLoaded(pixelArt, sheet(false));
+
+      expect(
+        "a set that ships is ready before its sheet is fetched, couldn't be loaded once a fetch fails, and ready again once one loads",
+        [notFetched, failed, await pixelArtEntry()],
+        [
+          ['Ready', 'Use for square maps'],
+          ['Couldn’t be loaded', 'Use for square maps'],
+          ['Ready', 'Use for square maps'],
+        ]
       );
     }
 
@@ -2234,19 +2390,18 @@ const run = async (): Promise<void> => {
     expect(
       "Civ1's sprites in, without SP299.PIC, and some of Civ2's: Civ1's is ready, Civ2's needs the sheets still to import, and each can be imported, the music on its own",
       ['civ1', 'civ2', 'civ1-adlib'].map((id) => {
-        const { status, button, disabled, reason } = entryOf(library, id);
+        const { status, button, disabled } = entryOf(library, id);
 
-        return [status, button, disabled, reason];
+        return [status, button, disabled];
       }),
       [
-        ['Ready · Optional: SP299.PIC', 'Import again', false, null],
+        ['Ready · Optional: SP299.PIC', 'Import again', false],
         [
           'Needs TERRAIN2.GIF and UNITS.GIF · Optional: ICONS.GIF and PEOPLE.GIF',
           'Import…',
           false,
-          null,
         ],
-        ['Not imported', 'Import…', false, null],
+        ['Not imported', 'Import…', false],
       ]
     );
 
@@ -2340,23 +2495,11 @@ const run = async (): Promise<void> => {
         ),
         library.element().querySelector('.library')?.firstElementChild ===
           blocked,
-        ['civ1', 'civ2', 'civ1-adlib'].map((id) => {
-          const { disabled, reason } = entryOf(library, id);
-
-          return [disabled, reason];
-        }),
+        ['civ1', 'civ2', 'civ1-adlib'].map(
+          (id) => entryOf(library, id).disabled
+        ),
       ],
-      [
-        false,
-        'alert',
-        true,
-        true,
-        [
-          [true, null],
-          [true, null],
-          [true, null],
-        ],
-      ]
+      [false, 'alert', true, true, [true, true, true]]
     );
 
     library.close();
@@ -2403,6 +2546,44 @@ const run = async (): Promise<void> => {
           id === before,
         ])
       );
+
+      // Whose interface art each theme draws with now (#1063).
+      const artLines = (): (string | null | undefined)[] =>
+        Array.from(
+          library.element().querySelectorAll('[data-theme] .art'),
+          (element) => element.textContent
+        );
+
+      expect(
+        "each theme says whose art it draws with: Civilization's, imported",
+        artLines(),
+        uiThemes().map(() => 'Uses Civilization’s art')
+      );
+
+      library.close();
+      installTilesets({ civ1: { complete: false, metadata: null } });
+      library = await opened();
+
+      expect(
+        "or civ.one's pixel art, without Civilization's",
+        artLines(),
+        uiThemes().map(() => 'Uses civ.one’s pixel art')
+      );
+      expect(
+        'or none, with no art at all',
+        [
+          (installTilesets({
+            civ1: { complete: false, metadata: null },
+            'civ1-pixelart': { complete: false, metadata: null },
+          }),
+          themeArtLine(before)),
+        ],
+        ['Has no art to draw with: civ.one’s own couldn’t be loaded']
+      );
+
+      library.close();
+      installTilesets({});
+      library = await opened();
 
       const other = uiThemes().find(({ id }) => id !== before)!.id,
         use = library

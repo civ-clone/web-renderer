@@ -4,6 +4,7 @@ import { drawableGrids } from './projectionFor';
 import {
   bundledTilesets,
   installedTilesets,
+  isHosted,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import { topologyIds } from '@civ-clone/core-world/topologies';
 
@@ -30,7 +31,9 @@ export const isSupportedTopology = (topologyId: string = 'square'): boolean =>
 /**
  * The bundled tileset a world on `topologyId`'s grid would be drawn with once its sprites were imported (#97): one
  *  there is a projection for (`drawable`) that isn't installed, such as Civ2's for the isometric grid. Null when the
- *  grid is supported already, or no pack bundled here could draw it.
+ *  grid is supported already, as the square grid is by civ.one's own art (#1063) whether or not Civ1's is imported,
+ *  or no pack bundled here could draw it. Only a set that's imported is named: one that ships with civ.one has
+ *  nothing to import.
  */
 export const tilesetToImport = (
   topologyId: string = 'square',
@@ -40,7 +43,9 @@ export const tilesetToImport = (
 ): TilesetDescriptor | null =>
   (drawable as string[]).includes(topologyId) &&
   !tilesets.some(({ grid }) => grid === topologyId)
-    ? bundled.find(({ grid }) => grid === topologyId) ?? null
+    ? bundled.find(
+        (tileset) => tileset.grid === topologyId && !isHosted(tileset)
+      ) ?? null
     : null;
 
 export default supportedTopologies;

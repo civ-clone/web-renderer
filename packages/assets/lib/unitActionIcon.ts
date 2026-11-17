@@ -194,7 +194,8 @@ const drawCentred = (
   context: CanvasRenderingContext2D,
   image: CanvasImageSource,
   offset = 0,
-  scale = 1
+  scale = 1,
+  pictureSize = iconSize
 ): void => {
   if (!isDrawable(image)) {
     return;
@@ -202,7 +203,7 @@ const drawCentred = (
 
   const [left, top, width, height] = drawnArea(image),
     centre = (start: number, size: number): number =>
-      Math.round(((iconSize - size) / 2 - start) * scale) / scale;
+      Math.round(((pictureSize - size) / 2 - start) * scale) / scale;
 
   context.drawImage(
     image,
@@ -242,13 +243,24 @@ export const drawUnitActionIcon = (
   canvas.width = Math.round(iconSize * scale);
   canvas.height = Math.round(iconSize * scale);
 
-  // Drawn in the picture's own pixels; the sprites are enlarged pixel by pixel, and the marks written at full size.
-  context.setTransform(scale, 0, 0, scale, 0, 0);
-  context.imageSmoothingEnabled = false;
-
   // The interface's own art (#1063): a button's picture is the same whatever pack the map is drawn with.
   const tileset = interfaceArt(),
-    stacked = layers.filter((layer) => layer.type === 'unit').length > 1;
+    stacked = layers.filter((layer) => layer.type === 'unit').length > 1,
+    // The sprites' own tile, which may be larger than the picture (the pixel art's 32 px): fitted into it.
+    pictureSize = Math.max(iconSize, tileset.tile.width),
+    spriteScale = (scale * iconSize) / pictureSize,
+    // Drawn in the sprites' own pixels; the sprites are enlarged pixel by pixel, and the marks written at full size,
+    //  in the picture's.
+    drawSprites = (): void =>
+      context.setTransform(spriteScale, 0, 0, spriteScale, 0, 0),
+    mark = (text: string): void => {
+      context.setTransform(scale, 0, 0, scale, 0, 0);
+      drawMark(context, text);
+      drawSprites();
+    };
+
+  drawSprites();
+  context.imageSmoothingEnabled = false;
 
   layers.forEach((layer, index) => {
     if (layer.type === 'image') {
@@ -258,7 +270,8 @@ export const drawUnitActionIcon = (
         context,
         getPreloadedImage(interfaceSpriteName(layer.path, tileset), tileset),
         0,
-        scale
+        spriteScale,
+        pictureSize
       );
 
       return;
@@ -283,8 +296,8 @@ export const drawUnitActionIcon = (
         context.fillRect(
           inset,
           inset,
-          iconSize - inset * 2,
-          iconSize - inset * 2
+          pictureSize - inset * 2,
+          pictureSize - inset * 2
         );
       }
 
@@ -303,14 +316,15 @@ export const drawUnitActionIcon = (
       }
 
       if (layer.text !== null) {
-        drawMark(context, layer.text);
+        mark(layer.text);
       }
 
       return;
     }
 
-    // Cargo is a stack, each unit a little further along than the last.
-    const offset = stacked ? index * 2 : 0;
+    // Cargo is a stack, each unit a little further along than the last: two of the picture's pixels, in the sprites'
+    //  own, so a larger tile's stack is spread as Civ1's is.
+    const offset = stacked ? (index * 2 * pictureSize) / iconSize : 0;
 
     drawCentred(
       context,
@@ -323,11 +337,12 @@ export const drawUnitActionIcon = (
         tileset
       ),
       offset,
-      scale
+      spriteScale,
+      pictureSize
     );
 
     if (layer.status) {
-      drawMark(context, layer.status);
+      mark(layer.status);
     }
   });
 };

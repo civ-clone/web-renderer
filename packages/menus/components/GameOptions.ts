@@ -17,9 +17,10 @@ import Window from '@civ-clone/ui-component-window/Window';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { packImports } from '@civ-clone/ui-assets/lib/packImports';
 import { button } from '@civ-clone/ui-component-button/button';
-import currentTileset, {
+import {
   ZOOM_STEP,
   defaultZoom,
+  interfaceTileset,
   mapTileset,
   zoomFor,
   zoomOption,
@@ -42,8 +43,9 @@ import forgetVisitParam from '@civ-clone/ui-platform/lib/forgetVisitParam';
 import { t } from 'i18next';
 
 /**
- * The Assets row: "Civ1 assets imported · 289 sprites" or "Not imported", what each other set says of its import, such
- *  as whether its map art is complete once any is imported (#97), and the library of art and sound (#1063).
+ * The Assets row: "Civilization assets imported · 289 sprites" or "Civilization assets not imported" (an upgrade on
+ *  civ.one's own art since #1063), what each other set says of its import, such as whether its map art is complete
+ *  once any is imported (#97), and the library of art and sound (#1063).
  */
 export const assetsRow = (): HTMLElement => {
   const status = s(
@@ -59,15 +61,18 @@ export const assetsRow = (): HTMLElement => {
       })
     );
 
+  // Civilization's art, the pack registered as the interface's, whatever the theme draws with.
+  const civ1 = interfaceTileset();
+
   void assetStore
-    .importedCount()
+    .importedCount(civ1)
     .then(async (count): Promise<void> => {
-      const civ1 = (await assetStore.hasAllAssets())
+      const imported = (await assetStore.hasAllAssets(civ1))
           ? t('GameOptions.assets-imported', {
               count,
-              tileset: currentTileset().name,
+              tileset: civ1.name,
             })
-          : t('GameOptions.assets-missing'),
+          : t('GameOptions.assets-missing', { tileset: civ1.name }),
         // What each set has to say of its import (#97), as its import window says it as it opens: nothing from a set
         //  whose status can't be read.
         packs = await Promise.all(
@@ -77,7 +82,7 @@ export const assetsRow = (): HTMLElement => {
           )
         );
 
-      status.textContent = [civ1, ...packs.flat()].join(' · ');
+      status.textContent = [imported, ...packs.flat()].join(' · ');
     })
     // The store can't be read: there's nothing to say about it, rather than "Checking…" for good.
     .catch((): void => {

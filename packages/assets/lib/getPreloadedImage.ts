@@ -1,5 +1,5 @@
 import { TilesetDescriptor, spriteKey } from '../tilesets/TilesetDescriptor';
-import currentTileset from './tilesets';
+import { mapTileset } from './tilesets';
 import { s } from '@dom111/element';
 
 // The sprites of the packs in use, decoded, by their whole key (`spriteKey`): filled by `AssetStore.load` (#730),
@@ -26,13 +26,13 @@ export const setSprites = (loaded: Map<string, CanvasImageSource>): void => {
 };
 
 /**
- * The decoded sprite `path` (`units/settlers`, `city/food`) of `tileset`, found by its whole key, or a blank canvas when
- * there is none. Only the whole key matches: another pack's sprite of the same name is kept under another prefix, and
+ * The decoded sprite `path` (`units/settlers`, `city/food`) of `tileset`, the game's map's unless another is given
+ * (`mapTileset`, #1063), found by its whole key, or a blank canvas when there is none. Only the whole key matches: another pack's sprite of the same name is kept under another prefix, and
  * is never taken for this one (#56).
  */
 export const getPreloadedImage = (
   path: string,
-  tileset: TilesetDescriptor = currentTileset()
+  tileset: TilesetDescriptor = mapTileset()
 ): CanvasImageSource => {
   const key = spriteKey(tileset, path),
     image = sprites.get(key);
@@ -66,7 +66,7 @@ export const getPreloadedImage = (
  */
 export const hasPreloadedImage = (
   path: string,
-  tileset: TilesetDescriptor = currentTileset()
+  tileset: TilesetDescriptor = mapTileset()
 ): boolean => sprites.has(spriteKey(tileset, path));
 
 export default getPreloadedImage;

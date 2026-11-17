@@ -12,7 +12,7 @@ import HallOfFameWindow, {
 import LibraryWindow from '@civ-clone/ui-menus/components/LibraryWindow';
 import ResumeGameWindow from '@civ-clone/ui-menus/components/ResumeGameWindow';
 import Transport from '@civ-clone/ui-client/Transport';
-import { assetStore } from '@civ-clone/ui-assets/AssetStore';
+import { cantPlayReason } from '@civ-clone/ui-menus/lib/playable';
 import { chooseSave } from '@civ-clone/ui-menus/components/LoadGameWindow';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import { loadSaveFromFile } from '@civ-clone/ui-menus/lib/savedGame';
@@ -85,11 +85,12 @@ export class TitleMenu extends Element {
   }
 
   async build(): Promise<void> {
-    const [hasAssets, saves] = await Promise.all([
-        assetStore.hasAllAssets(),
-        listSaves().catch((): BrowserSave[] => []),
-      ]),
-      save = hasAssets ? newestSave(saves) : null,
+    // A game is offered whenever there's art to draw it with (#1063): civ.one's own, or the player's import. Without
+    //  any, on a first visit offline with nothing imported, the menu says why in place of the game's items.
+    const reason = cantPlayReason(),
+      playable = reason === null,
+      saves = await listSaves().catch((): BrowserSave[] => []),
+      save = playable ? newestSave(saves) : null,
       finished = (): void => this.remove();
 
     // Nothing to build, and above all no keys to listen for, in the game that's loading.
@@ -137,7 +138,7 @@ export class TitleMenu extends Element {
               },
             },
           ]),
-      ...(hasAssets
+      ...(playable
         ? [
             {
               name: 'new-game',
@@ -178,8 +179,8 @@ export class TitleMenu extends Element {
         // No game yet: the map's options are kept for the next (#749).
         action: (): void => void new GameOptions(null),
       },
-      // The library, where each set is imported (#1063): Civilization's art first, and then its music or Civilization
-      //  II's map art, whenever. Options' Assets row opens it too.
+      // The library, where each set is imported, whenever and in any order, and the art for each grid is chosen
+      //  (#1063). Options' Assets row opens it too.
       {
         name: 'library',
         label: t('TitleMenu.library'),
@@ -194,6 +195,7 @@ export class TitleMenu extends Element {
     this.append(
       s(
         '<div class="ui-title-menu-panel"></div>',
+        ...(reason === null ? [] : [this.#noArt(reason)]),
         s(
           `<ul class="ui-title-menu-items" aria-label="${t(
             'TitleMenu.label'
@@ -223,6 +225,17 @@ export class TitleMenu extends Element {
     document.addEventListener('keydown', this.#keydown);
 
     this.#buttons()[0]?.focus();
+  }
+
+  // Why no game is offered (#1063), as text: there's no art to draw one with.
+  #noArt(reason: string): HTMLParagraphElement {
+    const element = s<HTMLParagraphElement>(
+      '<p class="ui-title-menu-no-art" role="alert"></p>'
+    );
+
+    element.textContent = reason;
+
+    return element;
   }
 
   #button({ name, label, detail = null, hotkey, action }: TitleMenuItem) {

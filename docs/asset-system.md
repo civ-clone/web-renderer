@@ -6,7 +6,8 @@ Game rendering depends on an imported asset set derived from original Civilizati
 `SP299.PIC` is optional (#64): the city screen's improvement and Wonder icons (`city-improvements/*`, `wonders/*`), which
 the extractor lists under `optional` and the Civ1 tileset under `assets.optional`. Without it the import still goes
 ahead, and `components/lib/buildingIcon.ts` draws nothing where an icon is missing.
-Without imported assets, gameplay options are hidden and import is the primary onboarding flow.
+Since #1063 none of it is needed to play: civ.one's own pixel art (Hosted sets) draws the map and the interface, and an
+import is an upgrade.
 
 ## Main components
 
@@ -16,8 +17,13 @@ Without imported assets, gameplay options are hidden and import is the primary o
     copy of a game, or civ.one with its licence), and whether it is _Ready_, _Needs_ which files (required, then
     optional) or _Not imported_, from its import's `ready` and `filesWanted`. It names no set: it asks each registered
     set's import (`packages/assets/lib/packImports.ts`, #97). Each imported set has _Import…_ (_Import again_ once
-    ready), which opens its own import window. Until Civ1's sprites are in (`importedFirst`), every other set's import
-    is disabled, saying so; with site data blocked (#850), every one is.
+    ready), which opens its own import window, in any order; with site data blocked (#850), every one is disabled.
+    Each installed map set has _Use for square maps_ (or its grid), which keeps it as `tileset.<grid>`
+    (`chooseMapTileset`), the one `mapTileset` draws with marked in use, and each theme says whose interface art it
+    draws with now (`themeArtLine`). A hosted set says it couldn't be loaded once fetching its sheet has failed, at
+    start-up or as a game on its grid started (`loadFailed`), and is ready until then, as it's fetched only once it's
+    drawn from. Use leads to the chosen set's sheet being fetched before a game on that grid (`ensureMapArt` follows
+    `mapTileset`). It opens only before a game.
 - `packages/menus/components/ImportAssetsWindow.ts`
   - One set's import: its own instructions, a file picker offering its files' extensions, and only its files read
     (another's are left out with a console warning).
@@ -62,7 +68,7 @@ Without imported assets, gameplay options are hidden and import is the primary o
    a set's **Import…** there (#1063).
 2. For Civ1's set, the window checks that every file it needs (its `requiredFiles`: those in the extractor definitions,
    `extract-data.json`, but its optional ones) is among the selected files, matching names case-insensitively. Any
-   other set's import asks for Civ1's files until Civ1's sprites are in, and then takes some of its files at a time.
+   other set's import takes some of its files at a time, whether or not Civ1's are in (#1063).
 3. The set's import reads the files it `accepts`, side by side. A file it doesn't read is left out, with a console
    warning, and none of its files chosen is said so. For each of Civ1's files (`tileset-civ1/lib/civ1Import.ts`):
    - Picks the definitions for that file. A group of sprites (an asset path such as `city/people`) whose every sprite
@@ -74,15 +80,15 @@ Without imported assets, gameplay options are hidden and import is the primary o
 4. Each is turned into `{ name, blob }`, the PNG as a `Blob` (`assetFromURI`), and the set's records are persisted via
    `assetStore.setAll(records)`, in a single transaction, into IndexedDB database `civ-clone-assets` (object store
    `assets`).
-5. `assetStore.hasAllAssets()` validates required set. If anything is missing, the window lists
-   `assetStore.missingAssets()` and the file input is enabled again.
+5. For Civ1's set, `assetStore.hasAllAssets()` validates required set. If anything is missing, the window lists
+   `assetStore.missingAssets()` and the file input is enabled again. Another set says what it still needs through its
+   `status`.
 6. On success, page reloads to reinitialize UI with assets present (`allowLeaving()` first, so the leave guard does
    not ask).
 
 ### Civilization II's sheets (#97)
 
-Civ2's own import window takes its sheets, recognised by name whatever its case, once Civ1's sprites are in (as the
-music's takes `ASOUND.CVL`): its import (`civ2Import` in `packages/tileset-civ2/lib/civ2Import.ts`) lists the map's four
+Civ2's own import window takes its sheets, recognised by name whatever its case, as the music's takes `ASOUND.CVL`: its import (`civ2Import` in `packages/tileset-civ2/lib/civ2Import.ts`) lists the map's four
 (`civ2MapFiles`) as its `requiredFiles`, the ones it is ready with, but takes some of them at a time. The instructions
 name them, for the isometric map, and, in a sentence of their own (`TilesetCiv2.import-icons`), the
 sheets the extractor marks `optional` (`civ2OptionalFiles`: `ICONS.GIF`, Civ2's own yield icons for that map, #999). Once
@@ -110,8 +116,7 @@ name)`: `./assets/civ2/units/settlers.png`. `civ2Pack` (`tileset-civ2/lib/civ2Im
   can't be read is replaced by what this import cut. An import that cut nothing from the map's sheets (`ICONS.GIF`
   alone) leaves the record as it is: it has nothing to add to it.
 - `RULES.TXT` is taken and left alone: units keep the extractor's default names for now.
-- The import still ends on Civ1's check: it is done when Civ1's required sprites are all in. When Civ2's art is still
-  incomplete, the page is not reloaded, so the window's message can be read, and files can be chosen again; the
+- When Civ2's art is still incomplete, the page is not reloaded, so the window's message can be read, and files can be chosen again; the
   player reloads. The library says the set's status again once the window is closed.
 
 ## Installed packs (#97)
@@ -137,13 +142,15 @@ staggered isometric grid, which `tileset-civ2` registers (`registerTileset(tiles
   missing, if none is installed, which loading refuses before then): `Map.tileset()`, `Portal`'s projection and default
   tile size and scale, `MapView` and the minimap all take the world's `topologyId()`. `setMapGrid` (from `MapView`)
   makes it the default for the windows' units (`hud/Unit`, the unit card), which follow the map's pack, at no more than
-  its own default scale (`shownScale`), and for Options' zoom. Each pack keeps its own zoom (#1063, `zoomOption`:
+  its own default scale for a tile wider than the 16 px windows are laid out for (`shownScale`,
+  `REFERENCE_TILE_WIDTH`), and for Options' zoom. A sprite looked up (`getPreloadedImage`) or a unit drawn
+  (`renderUnit`) without a tileset is the map's (`mapTileset()`, #1063). Each pack keeps its own zoom (#1063, `zoomOption`:
   Civ1's `zoom.civ1`, Civ2's `zoom.civ2`), from the smallest of its `scales` to the largest in tenths, starting at its
   `defaultZoom` (or `defaultScale`). Between whole zooms the map is drawn at the whole scale above and shown smaller.
 - The interface's art comes from `interfaceArt()` (`packages/assets/lib/interfaceArt.ts`, #1063): the first set in the
-  theme's `art` list (`registerTheme`) that is installed and has interface art (`assets.ui`), and otherwise
-  `interfaceTileset()`, Civ1's, the pack registered with `interface: true`. Both themes list Civ1's, then the pixel
-  art's, which isn't registered yet, so it's Civ1's. The page tells it the theme's list as it starts
+  theme's `art` list (`registerTheme`) that is installed and has interface art (`assets.ui`), then the first installed
+  set that has some (for a theme with no list, or naming none there is), and otherwise `interfaceTileset()`, Civ1's,
+  the pack registered with `interface: true`. Both themes list Civ1's, then the pixel art's. The page tells it the theme's list as it starts
   (`provideInterfaceArt`, in `bootstrap.ts`). The screens ask for its sprites by civ.one's names
   (`interfaceNames.ts`, Civ1's so far), through `interfaceSpriteKey`, which a set maps to its own in `names.ui`.
   `readDescriptor` refuses a `names.ui` that maps a name that isn't the interface's or to a sprite the set doesn't
@@ -151,10 +158,12 @@ staggered isometric grid, which `tileset-civ2` registers (`registerTileset(tiles
   The page keeps the list it started with, and settles the set once the packs are installed (`installPacks`), so the
   sizes, the cursor and every icon come from it; it is settled again only when the list or the installed sets change. Choosing a theme in Options whose art differs reloads the page from the
   main menu, and during a game takes effect at the next load, with a hint saying so. `currentTileset()` is still Civ1's
-  tileset, for what means the always-installed pack. Until a package registers one, both throw, naming what to load;
+  tileset, which nothing draws with by that name: the asset store's own pack (`interfaceTileset`), and Options' Assets
+  row's. Until a package registers one, both throw, naming what to load;
   the asset store made as the page loads (`assetStore`) asks for its tileset only when it is first used.
 - A save on a grid whose bundled pack isn't installed is refused naming the pack to import (`SavedGame.needs-import`,
-  `tilesetToImport`).
+  `tilesetToImport`), one imported rather than one that ships. A square save loads with the pixel art when Civ1's
+  isn't imported; an isometric one still needs Civ2's.
 
 ### Civ2's descriptor
 
@@ -226,11 +235,14 @@ A set that ships with civ.one is served beside the game rather than imported. Th
   descriptor's own colours (only an imported set goes through `withImportedKeys`), unless its state says it isn't
   complete: `installPacks` says so of one whose sheet didn't load. Civ1's, the interface's pack, is installed unless
   its sprites are found missing; a store that opens but can't be read to say (`AssetStore.isComplete` is null)
-  leaves it installed, as before, and one the browser won't open (#850) has nothing imported, so the pixel art stands
-  in.
+  leaves it installed, as before, when its sprites were read all the same, and otherwise uninstalls it, so the pixel
+  art stands in rather than a game drawn blank; one the browser won't open (#850) has nothing imported, so the pixel
+  art stands in.
 - **The interface's art.** Both themes list Civ1's art, then the pixel art's (`interfaceArt`). A player who has
-  imported Civ1's sees what they saw before, and one who hasn't sees the pixel art's interface art. The menus still
-  wait for Civ1's import before a game can start.
+  imported Civ1's sees what they saw before, and one who hasn't sees the pixel art's interface art. The menus offer a
+  game whenever the interface's art is installed (`hasInstalledInterfaceArt`) and a grid has art
+  (`supportedTopologies`), and say why not otherwise (`packages/menus/lib/playable.ts`): a first visit offline with
+  nothing imported.
 - **The map's art per grid.** `mapTileset(grid)` draws a grid's maps with the art the game's rule set names, as New
   Game learns it (`setRuleSetTileset`, from `playGame`: Civ2's), then the installed set the player chose for the grid
   (the option `tileset.<grid>`, `chooseMapTileset`), or, unchosen, the one imported for it, or the one that ships;
@@ -426,8 +438,9 @@ of the tile's box. What the format itself refuses (a `corners` or
 
 ## Runtime usage patterns
 
-- Main menu checks `assetStore.hasAllAssets()` to gate gameplay options (new game, Earth, customise world, load game).
-- Renderer sets custom cursor using scaled imported asset (`cursor/torch`, enlarged to the tileset's `ui.cursor`).
+- The main menus offer the game's items (new game, Earth, customise world, load game, Continue) when there is art to
+  draw a game with (`canPlay`, #1063), and say why not in their place.
+- Renderer sets custom cursor using the interface art's `cursor/torch`, enlarged to its `ui.cursor`, once it's loaded.
 - Windows and reports (city screen, City Status, Happiness, Trade and Science reports) resolve images from
   `AssetStore` by canonical path, through `shownAtURL(path, width)`. The width is the tileset's
   `ui` size (#729): `ui.icon` for a yield's icon, `ui.citizen.width` for a citizen. `getShownAt` enlarges the sprite a

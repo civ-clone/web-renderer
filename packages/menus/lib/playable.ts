@@ -1,0 +1,35 @@
+import { hasInstalledInterfaceArt } from '@civ-clone/ui-assets/lib/interfaceArt';
+import supportedTopologies from '@civ-clone/ui-map/lib/supportedTopologies';
+import { t } from 'i18next';
+
+// Whether a game can be started or loaded here (#1063): not whether Civilization's art has been imported, as it is
+//  only an upgrade now, but whether there's art to draw the game with. civ.one's own pixel art is there for the
+//  interface and the square map unless its sheet couldn't be fetched, on a first visit offline with nothing imported.
+//
+// The interface's art, when it's a set that ships, has had its sheet fetched as the page started (`installPacks`), so
+//  installed means there to draw with. A map set that ships is installed as it's declared, and fetched as a game on
+//  its grid starts or loads (`ensureMapArt`): one that fails then stops that game, saying why, and the library says
+//  it couldn't be loaded (`loadFailed`).
+
+/** What there's no art for: the interface (`interfaceArt`), or a map on any grid (`supportedTopologies`). */
+export type MissingArt = 'interface' | 'map';
+
+/** What there's no art for, so that no game can be started or loaded, or null when one can. */
+export const missingArt = (): MissingArt | null =>
+  !hasInstalledInterfaceArt()
+    ? 'interface'
+    : supportedTopologies().length === 0
+    ? 'map'
+    : null;
+
+/** Whether a game can be started or loaded: New Game, Load Game and the rest are offered only then. */
+export const canPlay = (): boolean => missingArt() === null;
+
+/** Why no game can be started or loaded, for the menus to say in place of their items, or null when one can. */
+export const cantPlayReason = (): string | null => {
+  const missing = missingArt();
+
+  return missing === null ? null : t(`Menus.no-art.${missing}`);
+};
+
+export default canPlay;

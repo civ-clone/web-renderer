@@ -38,9 +38,8 @@ export interface FilesWanted {
 }
 
 /**
- * A set's import, as its package registers it (`registerPackImport`). The import window stores its records, and is
- *  done when the interface's set's sprites are all in (`assetStore.hasAllAssets`): until then, only that set's import
- *  can go ahead (`importedFirst`).
+ * A set's import, as its package registers it (`registerPackImport`). The import window stores its records. Each set's
+ *  import goes ahead on its own, in any order (#1063): civ.one's own art draws the game, so none waits on Civ1's.
  */
 export interface PackImport {
   /** The set's id, as its manifest's (its tileset descriptor's, or its sound set's). */
@@ -50,8 +49,8 @@ export interface PackImport {
   /** The game whose files it reads, by name, for the library to say it comes from the player's copy of it. */
   game(): string;
   /**
-   * The files it needs to be ready, each matched against the chosen files' names whatever their case. The interface's
-   *  set's import can't go ahead without all of them; another's takes some of them at a time.
+   * The files it needs to be ready, each matched against the chosen files' names whatever their case. Civ1's import
+   *  can't go ahead without all of them; another's takes some of them at a time.
    */
   requiredFiles: string[];
   /** The files it reads when they're chosen, that it is ready without: they only add to it. */
@@ -101,8 +100,8 @@ export const isUnsupportedFile = (error: unknown): error is UnsupportedFile =>
   error instanceof Error && typeof (error as UnsupportedFile).file === 'string';
 
 /**
- * Whether `pack` is the set every other's import waits on: the interface's (Civ1's), without whose sprites the game
- *  doesn't start. Its import is the one that can't go ahead without all its required files.
+ * Whether `pack` is the interface's pack (Civ1's), listed first: its import is the one that can't go ahead without all
+ *  its required files, and is done once its sprites are all in. Nothing else waits on it since #1063.
  */
 export const importedFirst = ({ id }: Pick<PackImport, 'id'>): boolean =>
   id === interfaceTileset().id;
@@ -118,7 +117,7 @@ export const registerPackImport = (pack: PackImport): void => {
   registered.push(pack);
 };
 
-/** Every set's import: the one imported first (`importedFirst`), then the rest, each as they were registered. */
+/** Every set's import: Civ1's first (`importedFirst`), then the rest, each as they were registered. */
 export const packImports = (): PackImport[] => [
   ...registered.filter(importedFirst),
   ...registered.filter((pack) => !importedFirst(pack)),
