@@ -22,8 +22,11 @@ const template = async (playerResearch: PlayerResearch, yields: Yield[]) => {
       currentTileset().ui.icon
     )
     .then((url) => `<img src="${url}">`);
+  const names = advanceNames(
+    playerResearch.complete.map((advance) => advance._)
+  );
 
-  return s(
+  const element = s(
     `<div><p><strong>${t('ScienceReport.researching', {
       researching: researchingName(playerResearch),
       context: playerResearch.researching ? 'researching' : 'notresearching',
@@ -34,12 +37,21 @@ const template = async (playerResearch: PlayerResearch, yields: Yield[]) => {
       context: playerResearch.researching ? 'researching' : 'notresearching',
     })}</p><p>${researchIcon} ${t('Progress.per-turn', {
       count: reduceKnownYield(yields, 'Research'),
-    })}</p><div class="discovered">${advanceNames(
-      playerResearch.complete.map((advance) => advance._)
-    )
+    })}</p><div class="discovered">${names
       .map((name) => `<div>${name}</div>`)
       .join('')}</div></div>`
   );
+
+  // Each column is as wide as the longest name, in characters, so the columns fit the names in whatever language and
+  //  font: as many as there's room for, up to four (#957).
+  element
+    .querySelector<HTMLElement>('.discovered')!
+    .style.setProperty(
+      '--name-width',
+      `${Math.max(1, ...names.map((name) => name.length))}ch`
+    );
+
+  return element;
 };
 
 export class ScienceReport extends Window {
