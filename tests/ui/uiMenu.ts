@@ -1014,7 +1014,7 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
         player: { civilization: { _: 'Roman' } },
         successful: null,
         yields: [],
-        supply: { lifeSupport: 1, energy: 1, fuel: 0.5 },
+        supply: { lifeSupport: 1, energy: 1, fuel: 0.5, mass: 20 },
       },
       player: any = {
         civilization: { _: 'Roman' },

@@ -1,5 +1,6 @@
 // The spaceship window (#177) with Civ2's ship (M2e): its six kinds of part by our names, the rule set's supplies where
-//  its parts carry no energy or life support yields (life support, energy and fuel, from `ui-rules-civ2`'s `supply`),
+//  its parts carry no energy or life support yields (life support, energy and fuel, from `ui-rules-civ2`'s `supply`, and
+//  the mass of every part built, which the ship flies with, rather than the counted parts' yields),
 //  the flight in whole years, and Launch only while the Launch action is offered. Civ1's ship, with no `supply`, keeps
 //  the two rows it works out from its yields.
 
@@ -70,7 +71,10 @@ const run = async (): Promise<void> => {
         )
       ),
     civ2 = openSpaceshipWindow(
-      ship({ supply: { lifeSupport: 1, energy: 0.5, fuel: 1 } } as never),
+      ship({
+        supply: { lifeSupport: 1, energy: 0.5, fuel: 1, mass: 81 },
+        yields: [{ _: 'Mass', value: 5 }],
+      } as never),
       transport,
       false
     ),
@@ -94,7 +98,7 @@ const run = async (): Promise<void> => {
         'Chance of success: 86%',
         'Flight time: 28 years',
         'Launched?: No',
-        'Mass: 0 kg',
+        'Mass: 81,000 kg',
         'Population: 0',
         'Energy: 50%',
         'Life Support: 100%',

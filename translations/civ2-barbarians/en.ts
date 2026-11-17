@@ -21,7 +21,7 @@ i18next.addResources('en', 'ruleset', {
     'Barbarians come sooner, more often and in greater numbers, and goody huts release them from the start.',
   'civ2-barbarians.activity.random.name': 'Random',
   'civ2-barbarians.activity.random.description':
-    'One of the four, drawn when the game first needs it and kept secret: the harder the difficulty level, the fiercer it is likely to be.',
+    'One of the four, drawn when the game first needs it: the harder the difficulty level, the fiercer it is likely to be.',
 });
 
 // What a person is told of the barbarians under Civilization II's rules (M2e): a ship sighted, an uprising near one of

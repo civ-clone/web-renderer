@@ -54,11 +54,15 @@ process.on('exit', (code: number): void => {
   }
 });
 
-// A square on a line: its distance from another is the gap between them, and its neighbours the squares either side.
+// A square on a line: its distance from another is the gap between them, its neighbours the squares either side, and
+//  the area round it the squares within a distance.
 type StubTile = {
   x: number;
   distanceFrom: (other: StubTile) => number;
   getNeighbours: () => StubTile[];
+  getSurroundingArea: (radius: number) => {
+    includes: (other: StubTile) => boolean;
+  };
 };
 
 const tiles = new Map<number, StubTile>(),
@@ -68,6 +72,9 @@ const tiles = new Map<number, StubTile>(),
         x,
         distanceFrom: (other: StubTile) => Math.abs(other.x - x),
         getNeighbours: () => [tile(x - 1), tile(x + 1)],
+        getSurroundingArea: (radius: number) => ({
+          includes: (other: StubTile) => Math.abs(other.x - x) <= radius,
+        }),
       });
     }
 
@@ -82,17 +89,27 @@ const tiles = new Map<number, StubTile>(),
   greeks = player('Greek'),
   stranger = player('Aztec'),
   rebels = player('Babylonian'),
+  // A city's own squares (`tiles()`), which it sees: those within 2 but the one 2 east, as a corner outside the radius.
   city = (name: string, owner: object, x: number) => ({
     name,
     player: () => owner,
     tile: () => tile(x),
+    tiles: () => ({
+      entries: () => [-2, -1, 0, 1].map((offset) => tile(x + offset)),
+    }),
     destroyed: () => false,
     originalPlayer: { civilization: { _: (owner as any).name } },
   }),
   rome = city('Rome', us, 0),
   athens = city('Athens', greeks, 20),
-  unit = (owner: object) => ({ player: () => owner }),
-  units = new Map<StubTile, object[]>(),
+  unit = (owner: object, x: number = 0, visibility: number = 1) => ({
+    player: () => owner,
+    tile: () => tile(x),
+    visibility: () => ({ value: () => visibility }),
+    destroyed: () => false,
+  }),
+  // Ours: a unit at -30 that sees 1 square, and one at 40 that sees 2 (as a Destroyer does); and a rival's, at 10.
+  allUnits = [unit(us, -30), unit(us, 40, 2), unit(greeks, 10, 2)],
   seen = new Set<StubTile>(),
   ctx = {
     player: () => us,
@@ -101,10 +118,10 @@ const tiles = new Map<number, StubTile>(),
     },
     hasMet: (other: unknown) => other !== stranger,
     hasSeen: (square: StubTile) => seen.has(square),
-    unitsOn: (square: StubTile) => units.get(square) ?? [],
   } as unknown as NotificationContext,
   table = endgameNotices({
     cityRegistry: { entries: () => [rome, athens] } as never,
+    unitRegistry: { entries: () => allUnits } as never,
   }),
   told = (event: string, ...args: any[]): Notification | null => {
     const handlers = table.filter(([name]) => name === event);
@@ -147,19 +164,24 @@ const run = async (): Promise<void> => {
   await import('../../translations/civ2-player/en-GB');
   await import('../../translations/civ2-spaceship/en-GB');
 
-  // A barbarian ship: told only where one of our cities (2 squares) or units (1) sees it.
-  units.set(tile(-30), [unit(us)]);
-
+  // A barbarian ship: told only where the engine says one of our cities (its own squares) or units (its Visibility)
+  //  sees it.
   expect(
-    'a barbarian ship is told where one of our cities or units can see it, and not elsewhere, even on a square we know',
+    'a barbarian ship is told where one of our cities or units sees it: a city’s own squares, a unit’s Visibility (2 for one that sees two spaces); not a city’s square-of-5 corner, nor beyond a unit’s sight, nor a square we only know',
     [
-      words(told('barbarians:raiders-at-sea', {}, unit({}), tile(2))),
+      words(told('barbarians:raiders-at-sea', {}, unit({}), tile(1))),
+      told('barbarians:raiders-at-sea', {}, unit({}), tile(2)),
       words(told('barbarians:raiders-at-sea', {}, unit({}), tile(-31))),
-      (seen.add(tile(10)), told('barbarians:raiders-at-sea', {}, {}, tile(10))),
-      told('barbarians:raiders-at-sea', {}, {}, tile(-33)),
+      told('barbarians:raiders-at-sea', {}, unit({}), tile(-32)),
+      words(told('barbarians:raiders-at-sea', {}, unit({}), tile(42))),
+      told('barbarians:raiders-at-sea', {}, unit({}), tile(43)),
+      (seen.add(tile(11)), told('barbarians:raiders-at-sea', {}, {}, tile(11))),
     ],
     [
       'Sails on the horizon: Our lookouts have sighted a barbarian ship close by. Raiders may land soon!',
+      null,
+      'Sails on the horizon: Our lookouts have sighted a barbarian ship close by. Raiders may land soon!',
+      null,
       'Sails on the horizon: Our lookouts have sighted a barbarian ship close by. Raiders may land soon!',
       null,
       null,
@@ -504,6 +526,37 @@ const run = async (): Promise<void> => {
       patched,
     ],
     [false, false, false, []]
+  );
+
+  // The window's supplies from civ2-spaceship's figures: fractions kept to 0 to 1, and the mass of every part built.
+  const { spaceshipSupply } = await import(
+      '@civ-clone/ui-rules-civ2/AdditionalData/spaceship'
+    ),
+    { Structural, Propulsion } = await import(
+      '@civ-clone/civ2-spaceship/Parts'
+    ),
+    { default: City } = await import('@civ-clone/core-city/City'),
+    built = newSpaceship(loser),
+    stand = new City(loser, { map: () => null } as never, 'Stand', {
+      process: () => [],
+    } as never);
+
+  [new Structural(stand), new Propulsion(stand)].forEach((part) =>
+    built.layout().getFreeSlot(part)?.fill(part)
+  );
+
+  const supply = spaceshipSupply().data(built) as any;
+
+  expect(
+    'the spaceship window’s supplies are fractions from 0 to 1, and its mass counts every part built (the propulsion beyond the limit too)',
+    [
+      [supply.lifeSupport, supply.energy, supply.fuel].every(
+        (value: number) => value >= 0 && value <= 1
+      ),
+      supply.mass,
+      built.activeParts().length,
+    ],
+    [true, 5, 1]
   );
 
   finished = true;

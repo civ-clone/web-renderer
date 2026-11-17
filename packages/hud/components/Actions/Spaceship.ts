@@ -104,10 +104,14 @@ export const openSpaceshipWindow = (
       ],
       [
         t('Actions.Spaceship.mass'),
-        localeProviderInstance.number(yields.Mass[0] * 1000, {
-          style: 'unit',
-          unit: 'kilogram',
-        }),
+        // Under Civ2's rules, the mass of every part built, which the ship flies with (M2e).
+        localeProviderInstance.number(
+          (spaceship.supply?.mass ?? yields.Mass[0]) * 1000,
+          {
+            style: 'unit',
+            unit: 'kilogram',
+          }
+        ),
       ],
       [
         t('Actions.Spaceship.population'),

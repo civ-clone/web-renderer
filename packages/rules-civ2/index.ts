@@ -94,10 +94,10 @@ import {
 import SpaceshipLayout from '@civ-clone/civ2-spaceship/SpaceshipLayout';
 import endgameNotices from './endgameNotices';
 import spaceshipSupply from './AdditionalData/spaceship';
+import { wonderHistory } from '@civ-clone/civ2-wonder/lib/wonderHistory';
 
 // civ2-enhanced's pollution term, which charges each civilization for its own pollution rather than the world's.
 const OWN_POLLUTION_RULE = 'civ2-enhanced:player/score/pollution';
-import { wonderHistory } from '@civ-clone/civ2-wonder/lib/wonderHistory';
 
 const isAutoMode = (mode: unknown): mode is AutoMode =>
   autoModes.includes(mode as AutoMode);
