@@ -1,6 +1,6 @@
 # A library of art and sound (#1063): design
 
-A proposal for Dom, to settle before it's built. It replaces Import Assets with one library of everything the game can
+The design, agreed in review before it's built. It replaces Import Assets with one library of everything the game can
 draw or play with, wherever that comes from, so that a player who owns no original game can play with art that ships
 with civ.one. [asset-system.md](asset-system.md) describes the system as it is today.
 
@@ -291,9 +291,9 @@ The library replaces Import Assets. It opens from the main menu and from Options
 - Sets installed from elsewhere (#964), and choosing which plugins a game loads (#668).
 - Per-civilization music (#801): a sound set, when it comes.
 
-## For Dom
+## What a player will see
 
-Each of the five decisions above is a proposal. Four of them change what a player sees:
+Four of the five decisions change what a player sees:
 
 - nothing needs importing to play, as the menus stop gating (3);
 - the art is chosen per grid, globally rather than per game, and may change during a game (2 and 3);
