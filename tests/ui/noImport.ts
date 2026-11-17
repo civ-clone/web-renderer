@@ -326,14 +326,19 @@ const run = async (): Promise<void> => {
     );
   }
 
-  // Open but unreadable for a passing reason: Civilization's stays installed, as before, and nothing is fetched.
+  // Open but unreadable for a passing reason: Civilization's stays installed, as before, when its sprites were read all
+  //  the same, and nothing is fetched; but when they weren't either, the pixel art stands in rather than a game drawn
+  //  blank, for a player who may never have imported anything.
   Store.prototype.opens = async () => true;
 
   {
     const { store, fetched } = civ1Store();
 
+    store.has = async (path: string): Promise<boolean> =>
+      path.startsWith('./assets/') && !path.startsWith('./assets/civ');
+
     expect(
-      "a store that opens but can't be read leaves Civilization's art installed, and a game can be played",
+      "a store that opens but can't be read, Civilization's sprites read all the same: its art stays installed, and a game can be played",
       [
         (await installPacks(store)).map(({ id }) => id),
         fetched,
@@ -341,6 +346,30 @@ const run = async (): Promise<void> => {
         missingArt(),
       ],
       [['civ1', 'civ1-pixelart'], [], 'civ1', null]
+    );
+  }
+
+  {
+    const { store, fetched } = civ1Store();
+
+    store.has = async (): Promise<boolean> => false;
+
+    expect(
+      "a store that opens but can't be read, no sprites read either: the pixel art stands in, fetched as the page starts, and a game can be played",
+      [
+        (await installPacks(store)).map(({ id }) => id),
+        fetched,
+        interfaceArt().id,
+        mapTileset('square').id,
+        missingArt(),
+      ],
+      [
+        ['civ1-pixelart'],
+        ['civ1-pixelart'],
+        'civ1-pixelart',
+        'civ1-pixelart',
+        null,
+      ]
     );
   }
 
@@ -390,6 +419,62 @@ const run = async (): Promise<void> => {
       ["Pixel art (civ1-pixelart) couldn't be loaded: offline", true, false]
     );
   }
+
+  // A theme that names no art there is (an unknown one, or one with no list) still draws with what's installed: the
+  //  pixel art with nothing imported.
+  installTilesets({ civ1: { complete: false, metadata: null } });
+  provideInterfaceArt(() => []);
+
+  expect(
+    'a theme with no art list, or naming none there is, draws with the installed set that has interface art: the pixel art, with nothing imported',
+    [interfaceArt().id, interfaceArt(['no-such-set']).id, missingArt()],
+    ['civ1-pixelart', 'civ1-pixelart', null]
+  );
+
+  installTilesets({});
+
+  expect(
+    "and with Civilization's imported, Civilization's",
+    [interfaceArt().id, interfaceArt(['civ2']).id],
+    ['civ1', 'civ1']
+  );
+
+  provideInterfaceArt(() => ['civ1', 'civ1-pixelart']);
+
+  // On the isometric grid, what defaults to the map's art is Civilization II's, once it's installed.
+  installTilesets({
+    civ2: {
+      complete: true,
+      metadata: {
+        anchors: {},
+        colours: { flag: [{ primary: [243, 0, 0], secondary: [167, 0, 0] }] },
+      },
+    },
+  });
+  setMapGrid('staggered-iso');
+
+  expect(
+    "on an isometric map, a sprite looked up, a unit drawn and its letter default to Civilization II's art, and the interface keeps Civilization's",
+    [
+      mapTileset().id,
+      lookups(() => getPreloadedImage('units/settlers')),
+      // Not loaded here as Civ2's, though it is as Civ1's and the pixel art's.
+      hasPreloadedImage('units/settlers'),
+      lookups(() => renderUnit(settlers)),
+      statusFont(),
+      interfaceArt().id,
+    ],
+    [
+      'civ2',
+      ['./assets/civ2/units/settlers.png'],
+      false,
+      ['./assets/civ2/units/settlers.png'],
+      'bold 10px sans-serif',
+      'civ1',
+    ]
+  );
+
+  setMapGrid('square');
 
   // Civilization's art imported: everything as it was.
   installTilesets({});

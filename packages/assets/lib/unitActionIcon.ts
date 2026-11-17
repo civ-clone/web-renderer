@@ -322,8 +322,9 @@ export const drawUnitActionIcon = (
       return;
     }
 
-    // Cargo is a stack, each unit a little further along than the last.
-    const offset = stacked ? index * 2 : 0;
+    // Cargo is a stack, each unit a little further along than the last: two of the picture's pixels, in the sprites'
+    //  own, so a larger tile's stack is spread as Civ1's is.
+    const offset = stacked ? (index * 2 * pictureSize) / iconSize : 0;
 
     drawCentred(
       context,

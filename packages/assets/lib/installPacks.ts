@@ -13,7 +13,7 @@ import {
   mapTileset,
 } from './tilesets';
 import { interfaceArt } from './interfaceArt';
-import { TilesetDescriptor } from '../tilesets/TilesetDescriptor';
+import { TilesetDescriptor, spriteKey } from '../tilesets/TilesetDescriptor';
 import { setSpriteAnchors } from './spriteAnchors';
 
 /**
@@ -75,6 +75,17 @@ export const ensureMapArt = (
   store: AssetStore = assetStore
 ): Promise<void> => ensureTilesetLoaded(mapTileset(topologyId), store);
 
+// Whether every sprite `pack` requires was read into `store` by its last `load`, whatever the store says it holds.
+const spritesLoaded = async (
+  store: AssetStore,
+  pack: AssetPack
+): Promise<boolean> =>
+  (
+    await Promise.all(
+      pack.assets.required.map((name) => store.has(spriteKey(pack, name)))
+    )
+  ).every(Boolean);
+
 // The hosted sets the page draws from as it starts, of those installed: the interface's art when it is one, as the
 //  theme's sets before it aren't there, and a set the player chose for a grid's maps. Not the ones a game's map might
 //  be drawn with: those are fetched as that game starts (`ensureMapArt`).
@@ -93,8 +104,8 @@ const drawnAtStart = (): TilesetDescriptor[] =>
  * Loads the sprites of every bundled pack the player imports into `store` beside the interface's (#97), and installs
  *  the ones whose sprites have all been imported (`installTilesets`), with their sprites' anchors from what their
  *  import said (`setSpriteAnchors`). The interface's (Civ1's) is installed unless its sprites are found missing, when
- *  the theme's art falls back to the pixel art (`interfaceArt`); a store that can't be read to say leaves it installed,
- *  as the game starts with it. A hosted set (#1063) is installed as it's declared, and its sheet fetched now only when
+ *  the theme's art falls back to the pixel art (`interfaceArt`); a store that can't be read to say leaves it installed
+ *  only when its sprites were read all the same. A hosted set (#1063) is installed as it's declared, and its sheet fetched now only when
  *  the page draws from it as it starts (the interface's art, or a grid's chosen art): one that fails then is left
  *  uninstalled, which is said. At start-up, before anything is drawn, and again whenever the sprites change. Resolves
  *  with the installed tilesets, and never rejects: a pack that can't be read is left uninstalled, and the game starts
@@ -126,13 +137,17 @@ export const installPacks = async (
               setSpriteAnchors(tileset.id, metadata.anchors ?? {});
             }
 
-            // A store that opens but can't be read says nothing of the interface's pack, which stays installed; a
-            //  blocked one has nothing imported (`isComplete`), and the pixel art stands in.
-            if (complete === null && tileset.id === interfaceTileset().id) {
-              return;
-            }
-
-            states[tileset.id] = { complete: complete === true, metadata };
+            // A store that opens but can't be read to say leaves the interface's pack installed when its sprites were
+            //  read all the same (`load`), so it draws as before; and uninstalled when they weren't, so the pixel art
+            //  stands in rather than a game drawn blank. A blocked one has nothing imported (`isComplete`), and the
+            //  pixel art stands in.
+            states[tileset.id] = {
+              complete:
+                complete === null && tileset.id === interfaceTileset().id
+                  ? await spritesLoaded(store, pack)
+                  : complete === true,
+              metadata,
+            };
           } catch (error) {
             console.error(
               `Could not install the ${tileset.name} tileset.`,

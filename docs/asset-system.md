@@ -148,9 +148,9 @@ staggered isometric grid, which `tileset-civ2` registers (`registerTileset(tiles
   Civ1's `zoom.civ1`, Civ2's `zoom.civ2`), from the smallest of its `scales` to the largest in tenths, starting at its
   `defaultZoom` (or `defaultScale`). Between whole zooms the map is drawn at the whole scale above and shown smaller.
 - The interface's art comes from `interfaceArt()` (`packages/assets/lib/interfaceArt.ts`, #1063): the first set in the
-  theme's `art` list (`registerTheme`) that is installed and has interface art (`assets.ui`), and otherwise
-  `interfaceTileset()`, Civ1's, the pack registered with `interface: true`. Both themes list Civ1's, then the pixel
-  art's, which isn't registered yet, so it's Civ1's. The page tells it the theme's list as it starts
+  theme's `art` list (`registerTheme`) that is installed and has interface art (`assets.ui`), then the first installed
+  set that has some (for a theme with no list, or naming none there is), and otherwise `interfaceTileset()`, Civ1's,
+  the pack registered with `interface: true`. Both themes list Civ1's, then the pixel art's. The page tells it the theme's list as it starts
   (`provideInterfaceArt`, in `bootstrap.ts`). The screens ask for its sprites by civ.one's names
   (`interfaceNames.ts`, Civ1's so far), through `interfaceSpriteKey`, which a set maps to its own in `names.ui`.
   `readDescriptor` refuses a `names.ui` that maps a name that isn't the interface's or to a sprite the set doesn't
@@ -235,8 +235,9 @@ A set that ships with civ.one is served beside the game rather than imported. Th
   descriptor's own colours (only an imported set goes through `withImportedKeys`), unless its state says it isn't
   complete: `installPacks` says so of one whose sheet didn't load. Civ1's, the interface's pack, is installed unless
   its sprites are found missing; a store that opens but can't be read to say (`AssetStore.isComplete` is null)
-  leaves it installed, as before, and one the browser won't open (#850) has nothing imported, so the pixel art stands
-  in.
+  leaves it installed, as before, when its sprites were read all the same, and otherwise uninstalls it, so the pixel
+  art stands in rather than a game drawn blank; one the browser won't open (#850) has nothing imported, so the pixel
+  art stands in.
 - **The interface's art.** Both themes list Civ1's art, then the pixel art's (`interfaceArt`). A player who has
   imported Civ1's sees what they saw before, and one who hasn't sees the pixel art's interface art. The menus offer a
   game whenever the interface's art is installed (`hasInstalledInterfaceArt`) and a grid has art
