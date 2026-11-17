@@ -175,6 +175,7 @@ i18next.addResources('en', 'default', {
   'IntelligenceReport.at-alliance': 'ALLIED with {{nation}}.',
   'IntelligenceReport.at-ceasefire': 'At CEASEFIRE with {{nation}}.',
   'IntelligenceReport.at-contact': 'No treaty with {{nation}}.',
+  'IntelligenceReport.age': 'Age: {{- age}}',
   'IntelligenceReport.reputation': 'Reputation: {{- reputation}}',
   // Opens talks with them, where the rules let you (Civ2's).
   'IntelligenceReport.talks': 'Send an emissary',

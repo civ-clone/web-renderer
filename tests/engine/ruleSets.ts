@@ -6,9 +6,9 @@
 //  load puts it back, and that the civilopedia stops saying a unit goes obsolete in a game where it doesn't. And, with
 //  sets of its own in rules of its own (#954), that what is wrong with the sets goes to the page with each answer, and
 //  that a game is not started or loaded under sets with a problem that blocks. With the plugins again, the enhanced
-//  rules (`civ1-enhanced`, #954, #959, #960): where play departs from the original, each of the thirteen a set that a game
-//  can switch back, as it starts (all but the four new variants on, which is play as it has been: the Hydro Plant on
-//  its own square, SDI Defense sparing its city, defectors staying veteran, fixed research costs), switched, started, saved and loaded.
+//  rules (`civ1-enhanced`, #954, #959, #960): where play departs from the original, each of the fourteen a set that a game
+//  can switch back, as it starts (all but the five new variants on, which is play as it has been: the Hydro Plant on
+//  its own square, SDI Defense sparing its city, defectors staying veteran, fixed research costs, ages), switched, started, saved and loaded.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import './lib/seed';
@@ -24,6 +24,7 @@ import RuleSet from '@civ-clone/core-rule/RuleSet';
 import RuleSetRegistry from '@civ-clone/core-rule/RuleSetRegistry';
 import { defaultGame, defaultSlots } from '@civ-clone/core-game/defaultGame';
 import {
+  AGES,
   BARBARIAN_CITY_BUILDS,
   BARBARIAN_LEADER_RANSOM,
   BARBARIAN_UPRISINGS,
@@ -44,6 +45,7 @@ import {
   POLLUTION_RULE as CIV1_POLLUTION_RULE,
 } from '@civ-clone/civ1-city-improvement/RuleIds';
 import {
+  AGE_BY_TIER_RULE,
   CLEAR_CAPTURED_BUILD_RULE,
   HALVE_CITIES_RULE,
   HYDRO_PLANT_SITE_RULE,
@@ -352,6 +354,8 @@ const check = async (): Promise<void> => {
         CIV1_CHIEFTAIN_SETTLERS_RULE,
       ],
       [FIXED_RESEARCH_COSTS, TIERED_COST_RULE, CIV1_COST_RULE],
+      // #1076: rules added to Civ1's, so nothing to replace; one of them stands for the rest.
+      [AGES, AGE_BY_TIER_RULE, null],
     ],
     // The new variants, each off to start with.
     startsOff = [
@@ -359,6 +363,7 @@ const check = async (): Promise<void> => {
       SDI_DEFENSE_SPARES_CITIES,
       DEFECTORS_STAY_VETERAN,
       FIXED_RESEARCH_COSTS,
+      AGES,
     ],
     // As the game has been played: every one on but the new variants.
     asPlayed = sets.map(([id]) => id).filter((id) => !startsOff.includes(id)),
@@ -391,12 +396,12 @@ const check = async (): Promise<void> => {
     asStarted = ruleSetsData(null);
 
   expect(
-    'the enhanced rules are a set the setup is told of, mixed: the four new variants off, the other nine on, as the game has been played; nothing is chosen, and nothing is wrong',
+    'the enhanced rules are a set the setup is told of, mixed: the five new variants off, the other nine on, as the game has been played; nothing is chosen, and nothing is wrong',
     [enhanced(asStarted.sets), asStarted.choices, asStarted.problems],
     [['set', 'mixed', true, drawn(asPlayed)], [], []]
   );
   expect(
-    "and so the originals of the four variants run, and each other enhanced rule in place of the original's",
+    "and so the originals of the five variants run, and each other enhanced rule in place of the original's",
     running(),
     inForce(asPlayed)
   );
@@ -457,14 +462,14 @@ const check = async (): Promise<void> => {
     allOff.seen,
     [
       ['set', 'off', true, drawn([])],
-      // The shortest list that says so: the four variants start off.
+      // The shortest list that says so: the five variants start off.
       asPlayed.map((id) => ({ id, value: false })),
       [],
       inForce([]),
     ]
   );
   expect(
-    'and ticked again as one: every one on, the four variants too',
+    'and ticked again as one: every one on, the five variants too',
     switched({ id: ENHANCED, value: true }, allOff.answer.choices).seen,
     [
       ['set', 'on', true, drawn(sets.map(([id]) => id))],

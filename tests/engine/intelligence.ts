@@ -207,6 +207,8 @@ expect('the details an embassy gives', rows[0].details, {
   ],
   advances: ['BronzeWorking', 'Monarchy'],
   reputation: null,
+  // No ages: civ1-enhanced's are off to start with (#1076).
+  age: null,
 });
 
 expect(

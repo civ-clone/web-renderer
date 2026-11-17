@@ -441,6 +441,7 @@
     "@civ-clone/base-player-action-end-turn": "^0.1.0",
     "@civ-clone/base-player-action-launch-spaceship": "^0.1.0",
     "@civ-clone/base-player-action-revolution": "^0.1.1",
+    "@civ-clone/base-science-age": "^0.1.0",
     "@civ-clone/base-strategy-victory": "^0.1.1",
     "@civ-clone/base-terrain-properties": "^0.1.0",
     "@civ-clone/base-trade-rate-research": "^0.1.1",

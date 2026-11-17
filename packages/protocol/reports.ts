@@ -55,6 +55,9 @@ export type IntelligenceDetails = {
   advances: string[];
   // Their reputation, 0 the best to 7 the worst, under rules that keep one (Civ2's), or `null`.
   reputation: number | null;
+  // The age they are in, by name, under rules with ages (#1076), or `null`. From their advances, which only an
+  //  embassy shows.
+  age?: string | null;
 };
 
 export type IntelligenceRow = {

@@ -30,6 +30,7 @@ const categories: [NoticeCategory, string[]][] = [
     [
       'Diplomat.advance-stolen',
       'GoodyHut.action-performed.Advance',
+      'Player.age-reached',
       'Player.research-complete',
       'Player.spaceship-landed',
       'Spaceship',

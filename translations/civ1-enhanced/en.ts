@@ -59,6 +59,31 @@ i18next.addResources('en', 'ruleset', {
     'Each advance has a fixed research cost',
   'civ1-enhanced.fixed-research-costs.description':
     'An advance costs more the more advances it needs, however many others you know, so racing to The Republic costs what learning steadily does. Learning every advance costs the same in total. In the original, each advance costs more for every advance you already know.',
+  'civ1-enhanced.ages.name':
+    'Civilizations move through eight ages as they learn',
+  'civ1-enhanced.ages.description':
+    'A civilization enters a new age, from the Ancient Age to the Space Age, with the first advance it learns from a later research tier, and you are told when yours does. The original has no ages.',
+});
+
+// The eight ages (#1076), one for each research tier, named for what each tier holds: `.name` within a sentence, and
+//  `.title` on its own.
+i18next.addResources('en', 'science', {
+  'Age.Ancient.name': 'the Ancient Age',
+  'Age.Ancient.title': 'Ancient Age',
+  'Age.Classical.name': 'the Classical Age',
+  'Age.Classical.title': 'Classical Age',
+  'Age.Medieval.name': 'the Medieval Age',
+  'Age.Medieval.title': 'Medieval Age',
+  'Age.Renaissance.name': 'the Renaissance',
+  'Age.Renaissance.title': 'Renaissance',
+  'Age.Industrial.name': 'the Industrial Age',
+  'Age.Industrial.title': 'Industrial Age',
+  'Age.Electric.name': 'the Electric Age',
+  'Age.Electric.title': 'Electric Age',
+  'Age.Modern.name': 'the Modern Age',
+  'Age.Modern.title': 'Modern Age',
+  'Age.Space.name': 'the Space Age',
+  'Age.Space.title': 'Space Age',
 });
 
 // What a build this package's rule holds back says (#959), in the client's words for a held build (`City.Build.Held.*`

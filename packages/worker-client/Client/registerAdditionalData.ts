@@ -3,6 +3,7 @@
 //  of evaluating that file; `register` does it once however often it is called.
 
 import actionResult from '../AdditionalData/actionResult';
+import age from '../AdditionalData/age';
 import { instance as additionalDataRegistryInstance } from '@civ-clone/core-data-object/AdditionalDataRegistry';
 import queueHeld from '../AdditionalData/queueHeld';
 import researchCosts from '../AdditionalData/researchCosts';
@@ -19,6 +20,7 @@ export const register = (): void => {
 
   additionalDataRegistryInstance.register(
     actionResult(),
+    age(),
     queueHeld(),
     researchCosts(),
     tradeRoutes()

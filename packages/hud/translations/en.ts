@@ -85,6 +85,7 @@ i18next.addResources('en', 'default', {
   'PlayerDetails.Government.body_settled': '{{government}}',
   'PlayerDetails.Government.revolution':
     '{{title}} ($t(Actions.Revolution.title))',
+  'PlayerDetails.Age.title': 'Age',
   'PlayerDetails.Government.title': 'Government',
   'PlayerDetails.header': '{{leader}} of the {{nation}}',
   'PlayerDetails.opens': '{{title}} ({{opens}}, {{key}})',

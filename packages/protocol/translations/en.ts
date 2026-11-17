@@ -220,6 +220,9 @@ i18next.addResources('en', 'notification', {
   'Player.research-complete.body':
     'You have discovered the secrets of $t({{advance._}}.name, { "defaultValue": "{{advance._}}", "ns": "science", "context": "numbered", "number": {{number}} })!',
   'Player.research-complete.title': 'Advance discovered!',
+  'Player.age-reached.body':
+    'We have entered $t(Age.{{age}}.name, { "defaultValue": "{{age}}", "ns": "science" })!',
+  'Player.age-reached.title': 'A new age!',
   'Player.spaceship-landed.body': 'Our spaceship has landed on Alpha Centauri!',
   'Player.spaceship-landed.title': 'Spaceship landed',
   'Spaceship.part-built.body':
