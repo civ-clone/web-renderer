@@ -114,7 +114,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1174,
+        "total": 1178,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -144,6 +144,7 @@
           "CanJoinCity": 1,
           "CanStow": 2,
           "Captured": 19,
+          "CatchUp": 2,
           "CelebrateLeader": 1,
           "ChanceOfSuccess": 1,
           "Changed": 2,
@@ -194,6 +195,7 @@
           "PollutionDivisor": 4,
           "ProcessYield": 9,
           "Rank": 4,
+          "RateMultiplier": 2,
           "Removed": 4,
           "Renamed": 1,
           "Requirements": 61,
@@ -368,7 +370,7 @@
       "randomCalls": 8643,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1174,
+        "total": 1178,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -398,6 +400,7 @@
           "CanJoinCity": 1,
           "CanStow": 2,
           "Captured": 19,
+          "CatchUp": 2,
           "CelebrateLeader": 1,
           "ChanceOfSuccess": 1,
           "Changed": 2,
@@ -448,6 +451,7 @@
           "PollutionDivisor": 4,
           "ProcessYield": 9,
           "Rank": 4,
+          "RateMultiplier": 2,
           "Removed": 4,
           "Renamed": 1,
           "Requirements": 61,
@@ -815,7 +819,7 @@
       "randomCalls": 8902,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1174,
+        "total": 1178,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -845,6 +849,7 @@
           "CanJoinCity": 1,
           "CanStow": 2,
           "Captured": 19,
+          "CatchUp": 2,
           "CelebrateLeader": 1,
           "ChanceOfSuccess": 1,
           "Changed": 2,
@@ -895,6 +900,7 @@
           "PollutionDivisor": 4,
           "ProcessYield": 9,
           "Rank": 4,
+          "RateMultiplier": 2,
           "Removed": 4,
           "Renamed": 1,
           "Requirements": 61,

@@ -63,6 +63,10 @@ i18next.addResources('en', 'ruleset', {
     'Civilizations move through eight ages as they learn',
   'civ1-enhanced.ages.description':
     'A civilization enters a new age, from the Ancient Age to the Space Age, with the first advance it learns from a later research tier, and you are told when yours does. The original has no ages.',
+  'civ1-enhanced.research-cost-by-age.name':
+    'Research costs rise with each age, not from 1 AD',
+  'civ1-enhanced.research-cost-by-age.description':
+    'Research costs half as much in the Ancient Age, rising with each age to three times in the Space Age, and a civilization’s costs rise once it is in the Renaissance if the leader is ahead of schedule. Rushing ahead makes research dearer from then on, even for the advances you skipped. In the original, research costs double from 1 AD, and rise for everyone from then on if the leader is ahead of schedule.',
 });
 
 // The eight ages (#1076), one for each research tier, named for what each tier holds: `.name` within a sentence, and

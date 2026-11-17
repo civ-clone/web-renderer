@@ -6,9 +6,10 @@
 //  load puts it back, and that the civilopedia stops saying a unit goes obsolete in a game where it doesn't. And, with
 //  sets of its own in rules of its own (#954), that what is wrong with the sets goes to the page with each answer, and
 //  that a game is not started or loaded under sets with a problem that blocks. With the plugins again, the enhanced
-//  rules (`civ1-enhanced`, #954, #959, #960): where play departs from the original, each of the fourteen a set that a game
-//  can switch back, as it starts (all but the five new variants on, which is play as it has been: the Hydro Plant on
-//  its own square, SDI Defense sparing its city, defectors staying veteran, fixed research costs, ages), switched, started, saved and loaded.
+//  rules (`civ1-enhanced`, #954, #959, #960): where play departs from the original, each of the fifteen a set that a
+//  game can switch back, as it starts (all but the six new variants on, which is play as it has been: the Hydro Plant
+//  on its own square, SDI Defense sparing its city, defectors staying veteran, fixed research costs, ages, research
+//  cost by age), switched, started, saved and loaded.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import './lib/seed';
@@ -26,6 +27,7 @@ import { defaultGame, defaultSlots } from '@civ-clone/core-game/defaultGame';
 import {
   AGES,
   BARBARIAN_CITY_BUILDS,
+  RESEARCH_COST_BY_AGE,
   BARBARIAN_LEADER_RANSOM,
   BARBARIAN_UPRISINGS,
   CAPTURED_CITY_BUILD,
@@ -46,6 +48,7 @@ import {
 } from '@civ-clone/civ1-city-improvement/RuleIds';
 import {
   AGE_BY_TIER_RULE,
+  RATE_MULTIPLIER_BY_AGE_RULE,
   CLEAR_CAPTURED_BUILD_RULE,
   HALVE_CITIES_RULE,
   HYDRO_PLANT_SITE_RULE,
@@ -76,7 +79,11 @@ import Build from '@civ-clone/core-city-build/Rules/Build';
 import { KEEP_BUILD_RULE as CIV1_KEEP_BUILD_RULE } from '@civ-clone/civ1-city/RuleIds';
 import CityBuild from '@civ-clone/core-city-build/CityBuild';
 import { Gunpowder } from '@civ-clone/civ1-science/Advances';
-import { COST_RULE as CIV1_COST_RULE } from '@civ-clone/civ1-science/RuleIds';
+import {
+  CATCH_UP_RULE as CIV1_CATCH_UP_RULE,
+  COST_RULE as CIV1_COST_RULE,
+  RATE_MULTIPLIER_RULE as CIV1_RATE_MULTIPLIER_RULE,
+} from '@civ-clone/civ1-science/RuleIds';
 import { OBSOLESCENCE } from '@civ-clone/civ1-unit/RuleSets';
 import PlayerResearch from '@civ-clone/core-science/PlayerResearch';
 import RuleRegistry from '@civ-clone/core-rule/RuleRegistry';
@@ -330,9 +337,16 @@ const check = async (): Promise<void> => {
   );
 
   // --- the enhanced rules (#954) -------------------------------------------------------------------------------------
-  // Each set beneath them, in the order the setup draws them, with its enhanced rule and the original it replaces (none
+  // Each set beneath them, in the order the setup draws them, with its enhanced rule and the originals it replaces (none
   //  for the obsolete build dropped, which is a rule added to the original's).
-  const sets: [string, string, string | null][] = [
+  const originalsOf = (originals: string | string[] | null): string[] =>
+    originals === null
+      ? []
+      : Array.isArray(originals)
+      ? originals
+      : [originals];
+
+  const sets: [string, string, string | string[] | null][] = [
       [HYDRO_PLANT_SITE, HYDRO_PLANT_SITE_RULE, CIV1_HYDRO_PLANT_SITE_RULE],
       [BARBARIAN_LEADER_RANSOM, RANSOM_RULE, CIV1_RANSOM_RULE],
       [OBSOLETE_BUILDS, REVALIDATE_BUILDS_RULE, null],
@@ -356,6 +370,12 @@ const check = async (): Promise<void> => {
       [FIXED_RESEARCH_COSTS, TIERED_COST_RULE, CIV1_COST_RULE],
       // #1076: rules added to Civ1's, so nothing to replace; one of them stands for the rest.
       [AGES, AGE_BY_TIER_RULE, null],
+      // #1077: two rules, each in place of one of civ1-science's; the multiplier stands for both of its own.
+      [
+        RESEARCH_COST_BY_AGE,
+        RATE_MULTIPLIER_BY_AGE_RULE,
+        [CIV1_RATE_MULTIPLIER_RULE, CIV1_CATCH_UP_RULE],
+      ],
     ],
     // The new variants, each off to start with.
     startsOff = [
@@ -364,21 +384,25 @@ const check = async (): Promise<void> => {
       DEFECTORS_STAY_VETERAN,
       FIXED_RESEARCH_COSTS,
       AGES,
+      RESEARCH_COST_BY_AGE,
     ],
     // As the game has been played: every one on but the new variants.
     asPlayed = sets.map(([id]) => id).filter((id) => !startsOff.includes(id)),
     // Which of the rules they switch run, enhanced and original.
     running = (): string[] =>
       sets
-        .flatMap(([, enhanced, original]) => [enhanced, original])
+        .flatMap(([, enhanced, originals]) => [
+          enhanced,
+          ...originalsOf(originals),
+        ])
         .filter(
           (id): id is string =>
             id !== null && (rules.getById(id)?.enabled() ?? false)
         ),
     // Which of them should run with `on` the sets in force: each one's enhanced rule, or else its original.
     inForce = (on: string[]): string[] =>
-      sets.flatMap(([id, enhanced, original]) =>
-        on.includes(id) ? [enhanced] : original === null ? [] : [original]
+      sets.flatMap(([id, enhanced, originals]) =>
+        on.includes(id) ? [enhanced] : originalsOf(originals)
       ),
     // How the setup should draw each set with `on` the sets in force.
     drawn = (on: string[]): string[] =>
@@ -396,19 +420,19 @@ const check = async (): Promise<void> => {
     asStarted = ruleSetsData(null);
 
   expect(
-    'the enhanced rules are a set the setup is told of, mixed: the five new variants off, the other nine on, as the game has been played; nothing is chosen, and nothing is wrong',
+    'the enhanced rules are a set the setup is told of, mixed: the six new variants off, the other nine on, as the game has been played; nothing is chosen, and nothing is wrong',
     [enhanced(asStarted.sets), asStarted.choices, asStarted.problems],
     [['set', 'mixed', true, drawn(asPlayed)], [], []]
   );
   expect(
-    "and so the originals of the five variants run, and each other enhanced rule in place of the original's",
+    "and so the originals of the six variants run, and each other enhanced rule in place of the original's",
     running(),
     inForce(asPlayed)
   );
   expect(
     'each that replaces an original rule says so',
     sets.map(([id]) => find(asStarted.sets, id)?.supersedes ?? []),
-    sets.map(([, , original]) => (original === null ? [] : [original]))
+    sets.map(([, , originals]) => originalsOf(originals))
   );
 
   const switched = (
@@ -462,14 +486,14 @@ const check = async (): Promise<void> => {
     allOff.seen,
     [
       ['set', 'off', true, drawn([])],
-      // The shortest list that says so: the five variants start off.
+      // The shortest list that says so: the six variants start off.
       asPlayed.map((id) => ({ id, value: false })),
       [],
       inForce([]),
     ]
   );
   expect(
-    'and ticked again as one: every one on, the five variants too',
+    'and ticked again as one: every one on, the six variants too',
     switched({ id: ENHANCED, value: true }, allOff.answer.choices).seen,
     [
       ['set', 'on', true, drawn(sets.map(([id]) => id))],
