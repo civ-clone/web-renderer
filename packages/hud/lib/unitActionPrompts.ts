@@ -501,6 +501,8 @@ export const openArrivalWindow = (
     return openChoice(
       t('Diplomat.arrives', {
         nation: civilization(unit.player, 'name'),
+        // A Diplomat, or a Spy (Civ2).
+        unit: t(`${unit._}.name`, { defaultValue: unit._, ns: 'unit' }),
         city: cityName(
           actionsOnTile.find((action) =>
             diplomat[0]![1].includes(nameOf(action))

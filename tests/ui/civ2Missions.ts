@@ -147,9 +147,10 @@ const run = async (): Promise<void> => {
   openArrivalWindow(spy(1000), atWar, perform);
 
   expect(
-    'a Spy at a rival city: Civ1’s missions, then poisoning and a nuclear device',
-    shown().options,
+    'a Spy at a rival city: arrives as a Spy, with Civ1’s missions, then poisoning and a nuclear device',
+    [shown().title, ...shown().options],
     [
+      'Roman Spy arrives in Babylon',
       'Establish Embassy',
       'Steal Technology',
       'Industrial Sabotage',

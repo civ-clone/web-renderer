@@ -116,7 +116,7 @@ i18next.addResources('en', 'default', {
   'PlayerDetails.Treasury.value': '{{value, number}}',
   'Progress.turns-left_one': '{{count, number}} turn left',
   'Progress.turns-left_other': '{{count, number}} turns left',
-  'Diplomat.arrives': '{{nation}} Diplomat arrives in {{- city}}',
+  'Diplomat.arrives': '{{nation}} {{unit}} arrives in {{- city}}',
   'Diplomat.peace-treaty': 'We have signed a peace treaty with the {{nation}}!',
   'Diplomat.break-treaty': 'Break treaty',
   'Diplomat.cancel-action': 'Cancel action',
