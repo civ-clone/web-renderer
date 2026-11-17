@@ -23,6 +23,8 @@
     "./components/Map/Yields": "./components/Map/Yields.ts",
     "./components/Map/cityLabels": "./components/Map/cityLabels.ts",
     "./components/Portal": "./components/Portal.ts",
+    "./components/StaggeredMinimap": "./components/StaggeredMinimap.ts",
+    "./components/StaggeredOverview": "./components/StaggeredOverview.ts",
     "./components/World": "./components/World.ts",
     "./lib/ActiveUnitTiles": "./lib/ActiveUnitTiles.ts",
     "./lib/cityMapLayout": "./lib/cityMapLayout.ts",

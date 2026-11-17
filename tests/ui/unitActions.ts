@@ -360,6 +360,52 @@ expect(
   ]
 );
 
+// Pointy-topped hexes have six neighbours and none straight up or down (#94).
+const hex = topologyFor({ topologyId: 'hex-odd-r', width: 10, height: 8 });
+
+expect(
+  'a hexagonal grid is named for the key tables',
+  topologyName(hex),
+  'hex-odd-r'
+);
+expect(
+  'on a hexagonal grid Home, PageUp, the left and right arrows, End and PageDown (numpad 7 9 4 6 1 3) move a unit each of the six ways',
+  directionKeys(hex),
+  {
+    PageUp: 'ne',
+    ArrowRight: 'e',
+    PageDown: 'se',
+    End: 'sw',
+    ArrowLeft: 'w',
+    Home: 'nw',
+  }
+);
+expect(
+  'on a hexagonal grid the up and down arrows (numpad 8 and 2) move nothing',
+  ['ArrowUp', 'ArrowDown'].filter((key) => key in directionKeys(hex)),
+  []
+);
+expect(
+  'a hexagonal grid has a key for each of its directions, and no other',
+  Object.values(directionKeys(hex)).sort(),
+  [...hex.directions()].sort()
+);
+expect(
+  'on an even and an odd row of a hexagonal grid, PageUp and End move up right and down left',
+  [
+    hex.neighbour(4, 4, directionKeys(hex).PageUp!),
+    hex.neighbour(4, 4, directionKeys(hex).End!),
+    hex.neighbour(4, 3, directionKeys(hex).PageUp!),
+    hex.neighbour(4, 3, directionKeys(hex).End!),
+  ],
+  [
+    [4, 3],
+    [3, 5],
+    [5, 2],
+    [4, 4],
+  ]
+);
+
 // The engine side.
 expect(
   'the engine says what each action leaves behind',

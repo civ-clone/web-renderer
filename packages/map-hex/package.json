@@ -1,0 +1,14 @@
+{
+  "name": "@civ-clone/ui-map-hex",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The hexagonal grid: its projection and its minimap. Loading it lets the map draw hex tilesets.",
+  "license": "MIT",
+  "dependencies": {
+    "@civ-clone/ui-assets": "workspace:*",
+    "@civ-clone/ui-map": "workspace:*"
+  },
+  "exports": {
+    ".": "./index.ts"
+  }
+}

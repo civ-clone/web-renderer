@@ -657,6 +657,7 @@ expect(
     'map',
     'map-square',
     'map-isometric',
+    'map-hex',
   ].flatMap((name) =>
     sourcesUnder(join(packagesRoot, name))
       .filter((path) => !sharedReach.has(path))

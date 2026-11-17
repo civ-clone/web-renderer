@@ -137,9 +137,10 @@ messages, which `frontend.ts` and `backend.ts` start, telling the page's end tha
 | `tileset-civ2`      | Civ2's art pack: its tileset, the staggered isometric map's, and importing it from the player's copy of Civilization II                                                                     | assets                                                                |
 | `component-*`       | One token-driven component each, with its styles: `button`, `controls`, `window`, `choice-window`, `selection-window`, `report-table`, `tooltip`, `popup-menu`, `progress-bar`, `stat-pill` | each other, `widgets`, platform                                       |
 | `widgets`           | The small helpers the components share (markup, filtering, contrast, dragging), the sliders and the sidebar section                                                                         | platform                                                              |
-| `map`               | Drawing the world on any grid, through a `Projection`                                                                                                                                       | protocol, platform, client, assets                                    |
+| `map`               | Drawing the world on any grid, through a `Projection`, and the overview and minimap the staggered grids share                                                                               | protocol, platform, client, assets                                    |
 | `map-square`        | The square grid: its projection and minimap                                                                                                                                                 | protocol, assets, map                                                 |
-| `map-isometric`     | The staggered isometric grid: its projection (diamond hit test, tall sprites' reach) and minimap; offered once Civ2's art is imported                                                       | protocol, assets, map                                                 |
+| `map-isometric`     | The staggered isometric grid: its projection (diamond hit test, tall sprites' reach) and minimap; offered once Civ2's art is imported                                                       | assets, map                                                           |
+| `map-hex`           | The hexagonal grid (pointy tops, odd rows shifted): its projection (hex hit test) and minimap; offered once a hex tileset is installed                                                      | assets, map                                                           |
 | `audio`             | Civ1's music and sounds: the AdLib driver, the OPL2 synth, the worklet, and which tune each moment gets                                                                                     | protocol, client                                                      |
 | `city`              | The city screen and its parts (the squares, the yields, the citizens), renaming a city and Find City, and the `choices` slot every pick-one list opens through                              | protocol, platform, client, assets, widgets, map                      |
 | `reports`           | The reports, the Civilopedia (and why a city can't build something), the Hall of Fame and the game's end                                                                                    | protocol, platform, client, assets, widgets, map, city                |
@@ -162,9 +163,11 @@ package is named after (`game/`, `map-square/`, `map-isometric/`), whose files a
 **The map and its grids.** In the code and the game's own text, a _square_ on its own is a map square, Civ1's word
 for a tile, on whatever grid. The grid is always named in full: the square grid. `map` draws every grid through a
 `Projection`, and anything true of the square grid alone lives in `map-square`, of the staggered isometric grid alone
-in `map-isometric` (#97). A hexagonal grid gets a package of its own beside them (`map-hex`, #94). `map` names no grid:
+in `map-isometric` (#97), and of the hexagonal grid alone in `map-hex` (#94). What the two staggered grids share, an
+overview of flat bricks in staggered rows and the minimap over it, is in `map` (`StaggeredOverview`, `StaggeredMinimap`),
+each grid saying only how big its bricks are and where they sit in its tiles. `map` names no grid:
 each grid registers its projection with `registerGrid` (`@civ-clone/ui-map/lib/projectionFor`), and the page loads the
-grids it draws, as `frontend.ts` loads `map-square` and `map-isometric`. The art packs are loaded the same way (#97):
+grids it draws, as `frontend.ts` loads `map-square`, `map-isometric` and `map-hex`. The art packs are loaded the same way (#97):
 `assets` and `menus` name no pack, and each pack's package registers its tileset (`registerTileset`) and its import
 (`registerPackImport`) as it is loaded, as `frontend.ts` loads `tileset-civ1` first, the interface's pack, which every
 part that draws takes its icons from through `interfaceTileset()`, then `tileset-civ2`, the isometric map's. Suites that draw anything, or ask the asset store

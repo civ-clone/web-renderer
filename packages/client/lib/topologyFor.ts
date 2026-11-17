@@ -1,3 +1,4 @@
+import HexOddRTopology from '@civ-clone/core-world/HexOddRTopology';
 import SquareTopology from '@civ-clone/core-world/SquareTopology';
 import StaggeredIsoTopology from '@civ-clone/core-world/StaggeredIsoTopology';
 import { ITopology } from '@civ-clone/core-world/Topology';
@@ -21,7 +22,7 @@ export type {
 } from '@civ-clone/ui-protocol/topology';
 
 /** The grids there are, for what the UI keeps per grid (the keys that move a unit). */
-export type TopologyName = 'square' | 'staggered-iso';
+export type TopologyName = 'square' | 'staggered-iso' | 'hex-odd-r';
 
 /** Which grid `topology` is, or `null` for one the UI has nothing for. */
 export const topologyName = (topology: Topology): TopologyName | null =>
@@ -29,6 +30,8 @@ export const topologyName = (topology: Topology): TopologyName | null =>
     ? 'square'
     : (topology as unknown) instanceof StaggeredIsoTopology
     ? 'staggered-iso'
+    : (topology as unknown) instanceof HexOddRTopology
+    ? 'hex-odd-r'
     : null;
 
 /**

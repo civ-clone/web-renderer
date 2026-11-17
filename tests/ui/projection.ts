@@ -8,6 +8,8 @@ import './lib/grids';
 import './lib/artPacks';
 import { Placement, tileBounds } from '@civ-clone/ui-map/lib/projection';
 import { Map as MapLayer } from '@civ-clone/ui-map/components/Map';
+import HexMinimap from '@civ-clone/ui-map-hex/Minimap';
+import HexOverview from '@civ-clone/ui-map-hex/Overview';
 import IsoMinimap from '@civ-clone/ui-map-isometric/Minimap';
 import IsoOverview from '@civ-clone/ui-map-isometric/Overview';
 import IsoProjection from '@civ-clone/ui-map-isometric/IsoProjection';
@@ -24,6 +26,7 @@ import projectionFor, {
   overviewFor,
   registerGrid,
 } from '@civ-clone/ui-map/lib/projectionFor';
+import { TopologyId } from '@civ-clone/ui-protocol/topology';
 import validateDescriptor from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 
 const failures: string[] = [];
@@ -452,10 +455,10 @@ expect(
   answers(projectionFor(civ1, world, { width: 32, height: 32 }))
 );
 
-// A tileset the map can't draw is refused, saying why, rather than drawn wrong: there is no hex projection yet, and
-//  the isometric one (#97) refuses Civ1's square steps.
+// A tileset the map can't draw is refused, saying why, rather than drawn wrong: the isometric projection (#97) refuses
+//  Civ1's square steps, and so does the hexagonal one (#94).
 expect(
-  'there is no projection for hex grids yet, and an isometric tileset needs isometric steps',
+  "an isometric or hexagonal tileset needs its own grid's steps",
   (['staggered-iso', 'hex-odd-r'] as const).map((grid) =>
     thrown(() =>
       projectionFor(tilesetWith({ id: grid, grid }), world, {
@@ -466,7 +469,7 @@ expect(
   ),
   [
     'Tileset "staggered-iso": a staggered isometric grid\'s tiles are as far apart as they are wide, in rows half a tile apart with odd rows half a tile across, not 16 × 16 tiles 16 × 16 apart with odd rows 0 across.',
-    'Tileset "hex-odd-r": no projection is loaded for the hex-odd-r grid (hex comes with #94).',
+    'Tileset "hex-odd-r": a hexagonal grid\'s tiles are as far apart as they are wide, in rows three quarters of a tile apart with odd rows half a tile across, not 16 × 16 tiles 16 × 16 apart with odd rows 0 across.',
   ]
 );
 
@@ -1022,30 +1025,40 @@ expect(
 );
 
 // A grid's own code makes it drawable (#825): the map asks whichever projection is registered for the tileset's grid.
-//  These stay last: the registry is the suite's own, and the checks above want hex unregistered.
-const hexStub = tilesetWith({ id: 'hex-stub', grid: 'hex-odd-r' }),
+//  Every grid the engine has is registered now, so these use one it hasn't, its descriptor's grid set after the
+//  descriptor is checked. These stay last: the registry is the suite's own, and the checks above want it untouched.
+const otherGrid = 'other-grid' as TopologyId,
+  hexStub = {
+    ...tilesetWith({ id: 'hex-stub' }),
+    grid: otherGrid,
+  } as ReturnType<typeof tilesetWith>,
   hexAsked: unknown[] = [],
   // Stand-ins: only which ones the registry hands back is checked.
   hexOverview = { layer: Overview, minimap: Minimap } as GridOverview,
   hexOverviewAgain = { layer: Overview, minimap: Minimap } as GridOverview;
 
-// The minimap comes from the grid too (#867): the square grid's own, and none for a grid nothing has registered.
+// The minimap comes from the grid too (#867): the square and hexagonal grids' own, and none for a grid nothing has
+//  registered.
 expect(
-  'the square grid brings its overview and minimap, and an unregistered grid is refused',
+  'the square and hexagonal grids bring their overview and minimap, and an unregistered grid is refused',
   [
     overviewFor(civ1).layer === Overview,
     overviewFor(civ1).minimap === Minimap,
+    overviewFor(tilesetWith({ grid: 'hex-odd-r' })).layer === HexOverview,
+    overviewFor(tilesetWith({ grid: 'hex-odd-r' })).minimap === HexMinimap,
     thrown(() => overviewFor(hexStub)),
   ],
   [
     true,
     true,
-    'Tileset "hex-stub": no projection is loaded for the hex-odd-r grid (hex comes with #94).',
+    true,
+    true,
+    'Tileset "hex-stub": no projection is loaded for the other-grid grid.',
   ]
 );
 
 registerGrid(
-  'hex-odd-r',
+  otherGrid,
   (tileset, world, tileSize, wrapVertical) => {
     hexAsked.push([tileset.id, tileSize, wrapVertical]);
 
@@ -1063,7 +1076,7 @@ expect(
     overviewFor(hexStub) === hexOverview,
   ],
   [
-    ['hex-odd-r', 'square', 'staggered-iso'],
+    ['hex-odd-r', 'other-grid', 'square', 'staggered-iso'],
     { width: 24, height: 24 },
     [['hex-stub', { width: 24, height: 12 }, false]],
     true,
@@ -1071,7 +1084,7 @@ expect(
 );
 
 registerGrid(
-  'hex-odd-r',
+  otherGrid,
   (tileset, world, tileSize, wrapVertical) => {
     hexAsked.push(['again', tileset.id, tileSize, wrapVertical]);
 
@@ -1089,7 +1102,7 @@ expect(
     overviewFor(hexStub) === hexOverviewAgain,
   ],
   [
-    ['hex-odd-r', 'square', 'staggered-iso'],
+    ['hex-odd-r', 'other-grid', 'square', 'staggered-iso'],
     { width: 32, height: 32 },
     [['again', 'hex-stub', { width: 16, height: 16 }, true]],
     true,

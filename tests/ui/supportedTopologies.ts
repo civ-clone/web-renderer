@@ -182,7 +182,7 @@ const text = (element: Element | null): string =>
       drawableGrids(),
       supportedTopologies(installedTilesets(), drawableGrids()),
     ],
-    [['square', 'staggered-iso'], ['square']]
+    [['square', 'staggered-iso', 'hex-odd-r'], ['square']]
   );
   expect(
     'an isometric tileset, once one is installed, is offered after square, as there is an isometric projection (#97)',
@@ -198,12 +198,20 @@ const text = (element: Element | null): string =>
     ['square', 'staggered-iso']
   );
   expect(
-    'a hex tileset is not offered before there is a hex projection (#94)',
+    'a hex tileset, once one is installed, is offered after square, as there is a hex projection (#94)',
     [supportedTopologies([civ1, hexStub]), supportedTopologies([hexStub])],
+    [['square', 'hex-odd-r'], ['hex-odd-r']]
+  );
+  expect(
+    'a hex tileset is not offered while there is no hex projection',
+    [
+      supportedTopologies([civ1, hexStub], ['square', 'staggered-iso']),
+      supportedTopologies([hexStub], ['square', 'staggered-iso']),
+    ],
     [['square'], []]
   );
 
-  // Once there is a hex projection.
+  // With only square's and hex's projections.
   const withHex: TopologyId[] = ['square', 'hex-odd-r'];
 
   expect(
@@ -271,7 +279,7 @@ const text = (element: Element | null): string =>
       hex.wrapsY(),
       topologyName(hex),
     ],
-    [true, 6, true, true, null]
+    [true, 6, true, true, 'hex-odd-r']
   );
   expect(
     "a 'staggered-iso' world builds an isometric topology, wrapping both ways",
