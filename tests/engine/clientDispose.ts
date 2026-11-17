@@ -243,10 +243,10 @@ const run = async (): Promise<void> => {
     'before dispose(): it listens on the engine and receives on the transport',
     [added, receivedOn],
     [
-      // 1 for a plugin that fails to load, 1 for battles, 2 for the talks, 1 for a halted GoTo, 34 for the patches (a
-      //  warming and a civil war among them, M2e), 2 for a Diplomat's reports, 1 for famine, 3 for the game's end, and
-      //  46 notifications.
-      91,
+      // 1 for a plugin that fails to load, 1 for battles, 2 for the talks, 1 for a halted GoTo, 35 for the patches (a
+      //  warming and a civil war among them, M2e, and a dropped build, #978), 2 for a Diplomat's reports, 1 for famine,
+      //  3 for the game's end, and 46 notifications.
+      92,
       [
         'action',
         'cheat',
