@@ -6,7 +6,7 @@ import {
   expandName,
 } from '../tilesets/TilesetDescriptor';
 import { onSpriteAnchorsChanged, resolveAnchor } from './spriteAnchors';
-import currentTileset, { nativeTileSize } from './tilesets';
+import { mapTileset, nativeTileSize } from './tilesets';
 import getPreloadedImage, {
   onPreloadedImagesChanged,
 } from './getPreloadedImage';
@@ -76,8 +76,8 @@ export const drawUnitStatus = (
   offsetX: number,
   offsetY: number,
   scale: number,
-  tileSize: Size = nativeTileSize(currentTileset()),
-  tileset: TilesetDescriptor = currentTileset()
+  tileSize: Size = nativeTileSize(mapTileset()),
+  tileset: TilesetDescriptor = mapTileset()
 ): void => {
   const status = unitStatus(unit);
 
@@ -112,8 +112,8 @@ export const drawUnitHitPoints = (
   offsetX: number,
   offsetY: number,
   scale: number,
-  tileSize: Size = nativeTileSize(currentTileset()),
-  tileset: TilesetDescriptor = currentTileset()
+  tileSize: Size = nativeTileSize(mapTileset()),
+  tileset: TilesetDescriptor = mapTileset()
 ): void => {
   const hitPoints = unit.hitPoints;
 
@@ -145,7 +145,8 @@ export const drawUnitHitPoints = (
 };
 
 /**
- * Renders `unit` with its civilization's colours and any fortified overlay, as `tileset` draws them: its colour keys
+ * Renders `unit` with its civilization's colours and any fortified overlay, as `tileset` draws them (the game's map's
+ * unless another is given, `mapTileset`, #1063): its colour keys
  * swapped for the player's (Civ1's), or its overlay (Civ2's shield) swapped so and drawn over it at its anchor, with
  * the overlay's `stack` sprite behind that when the unit is `stacked`, one of several on its square. The overlay and
  * the stack's sprite are drawn within the unit's sprite, cut off where they would go past it. A busy unit's letter is
@@ -155,7 +156,7 @@ export const drawUnitHitPoints = (
  */
 export const renderUnit = (
   unit: Pick<UnitData, '_' | 'player' | 'improvements'>,
-  tileset: TilesetDescriptor = currentTileset(),
+  tileset: TilesetDescriptor = mapTileset(),
   stacked: boolean = false
 ): CanvasImageSource => {
   const { units, names } = tileset,

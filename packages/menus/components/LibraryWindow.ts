@@ -1,48 +1,66 @@
 import {
   PackImport,
   filesNeeded,
-  importedFirst,
   packImportOf,
-  packImports,
 } from '@civ-clone/ui-assets/lib/packImports';
 import {
   SetLicence,
   SetSource,
 } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+import { TilesetDescriptor } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+import {
+  bundledTilesets,
+  chooseMapTileset,
+  installedTilesets,
+  isHosted,
+  mapTileset,
+} from '@civ-clone/ui-assets/lib/tilesets';
+import {
+  currentUiTheme,
+  uiThemeArt,
+  uiThemes,
+} from '@civ-clone/ui-widgets/lib/theme';
+import {
+  hasInstalledInterfaceArt,
+  interfaceArt,
+} from '@civ-clone/ui-assets/lib/interfaceArt';
 import Window, { WindowOptions } from '@civ-clone/ui-component-window/Window';
-import { currentUiTheme, uiThemes } from '@civ-clone/ui-widgets/lib/theme';
 import ImportAssetsWindow from './ImportAssetsWindow';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
-import { bundledTilesets } from '@civ-clone/ui-assets/lib/tilesets';
 import { button } from '@civ-clone/ui-component-button/button';
 import chooseUiTheme from '../lib/chooseUiTheme';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';
 import { soundSets } from '@civ-clone/ui-assets/sounds/SoundDescriptor';
-import { t } from 'i18next';
+import i18next, { t } from 'i18next';
 // Civilization's music, a set of its own: registered wherever the library can open.
 import '../lib/civ1Sound';
 
 // The library of art and sound (#1063): every set the game can draw or play with, by what it is for (the map's art by
 //  grid, the interface's themes, the sound), saying where each comes from, whether it's ready, and opening its import.
-//  It replaces Import assets: the imports are each set's own (`ImportAssetsWindow`), and Civ1's comes first.
+//  It replaces Import assets: the imports are each set's own (`ImportAssetsWindow`), in any order (#1063). It's
+//  opened only before a game (the main menus, and Options with no game), so a set chosen here is drawn from the next
+//  game on.
 
-/** A set as the library lists it: its manifest's head, what it gives the game, and its import if it has one. */
+/**
+ * A set as the library lists it: its manifest's head, what it gives the game, the grid it draws maps on if it does,
+ *  and its import if it has one.
+ */
 interface LibrarySet {
   id: string;
   name: string;
+  grid?: string;
   source?: SetSource;
   licence?: SetLicence;
   provides: string[];
   pack?: PackImport;
 }
 
-/** A set with an import, and the parts of its entry that change: its status, its button and why that's disabled. */
+/** A set with an import, and the parts of its entry that change: its status and its button. */
 interface Entry {
   pack: PackImport;
   status: HTMLElement;
   importButton: HTMLButtonElement;
-  reason: HTMLElement;
 }
 
 /** A theme's entry, and the parts of it that change with the theme in use. */
@@ -51,6 +69,45 @@ interface ThemeEntry {
   status: HTMLElement;
   use: HTMLButtonElement;
 }
+
+/** A map set's Use for its grid, and what marks it as the one in use. */
+interface MapUseEntry {
+  id: string;
+  grid: string;
+  inUse: HTMLElement;
+  use: HTMLButtonElement;
+}
+
+/**
+ * Whose interface art the theme `id` draws with now (#1063), as its entry says it: Civilization's, say, when it's
+ *  imported, or civ.one's pixel art when it isn't. A set that ships with civ.one may have words of its own
+ *  (`LibraryWindow.theme-art.<id>`); one imported is named by the game it comes from.
+ */
+export const themeArtLine = (id: string): string => {
+  const art = uiThemeArt(id);
+
+  if (!hasInstalledInterfaceArt(art)) {
+    return t('LibraryWindow.theme-art.none');
+  }
+
+  const tileset: TilesetDescriptor = interfaceArt(art),
+    pack = packImportOf(tileset.id);
+
+  if (!isHosted(tileset) && pack !== undefined) {
+    return t('LibraryWindow.theme-art.imported', {
+      game: pack.game(),
+      interpolation: { escapeValue: false },
+    });
+  }
+
+  return t(
+    [`LibraryWindow.theme-art.${tileset.id}`, 'LibraryWindow.theme-art.set'],
+    {
+      name: tileset.name,
+      interpolation: { escapeValue: false },
+    }
+  );
+};
 
 /** What the library says of a set's state: Ready, Needs …, or Not imported, and which of those it is. */
 export interface SetStatus {
@@ -103,6 +160,7 @@ const mapSets = (): [string, LibrarySet[]][] => {
       {
         id,
         name,
+        grid,
         source,
         licence,
         provides: [
@@ -138,9 +196,6 @@ const isHttps = (url: string): boolean => {
     return false;
   }
 };
-
-// Ids for what a button is described by, unique however many libraries are open.
-let described = 0;
 
 /** Where `set` comes from: the player's own copy of a game, or civ.one, and its licence when it has one. */
 const sourceOf = ({ source, licence, pack }: LibrarySet): HTMLElement => {
@@ -187,9 +242,51 @@ const sourceOf = ({ source, licence, pack }: LibrarySet): HTMLElement => {
   return element;
 };
 
+/**
+ * `set`'s Use for the `grid` grid's maps (#1063), named for the set, and what marks it as the one in use. Choosing it
+ *  keeps it as the art for that grid (`chooseMapTileset`) and calls `chosen`. The one in use is out of use but kept in
+ *  the tab order, so focus stays on it once it's chosen.
+ */
+const mapUse = (
+  { id, name }: LibrarySet,
+  grid: string,
+  chosen: () => void
+): MapUseEntry => {
+  // A grid's name is a common noun, lower case within a sentence: "Use for square maps".
+  const gridName = t(`Grid.${grid}`).toLocaleLowerCase(i18next.language),
+    inUse = s<HTMLElement>(
+      `<span class="status in-use" data-state="ready" aria-live="polite" hidden>${t(
+        'LibraryWindow.in-use-for-grid',
+        { grid: gridName }
+      )}</span>`
+    ),
+    use = h(button(t('LibraryWindow.use-for-grid', { grid: gridName })), {
+      click: (): void => {
+        if (use.getAttribute('aria-disabled') === 'true') {
+          return;
+        }
+
+        chooseMapTileset(grid, id);
+        chosen();
+      },
+    });
+
+  use.setAttribute(
+    'aria-label',
+    t('LibraryWindow.use-set-for-grid', {
+      name,
+      grid: gridName,
+      interpolation: { escapeValue: false },
+    })
+  );
+
+  return { id, grid, inUse, use };
+};
+
 export class LibraryWindow extends Window {
   #entries: Entry[];
   #themes: ThemeEntry[] = [];
+  #mapUses: MapUseEntry[];
   #storageBlocked: HTMLDivElement;
   // Over Options, which is modal before a game: the import it opens must be too, or it would open behind it.
   #modal: boolean;
@@ -200,6 +297,9 @@ export class LibraryWindow extends Window {
       ),
       themes = s<HTMLUListElement>('<ul class="library-sets"></ul>'),
       entries: Entry[] = [],
+      mapUses: MapUseEntry[] = [],
+      // Each installed map set's Use for its grid (#1063): only one there is to draw with can be chosen.
+      installed = installedTilesets().map(({ id }) => id),
       // The entry for `set`, its import's parts kept for `refresh` to fill in.
       entry = (set: LibrarySet): HTMLElement => {
         const name = s<HTMLElement>('<strong class="name"></strong>'),
@@ -220,29 +320,47 @@ export class LibraryWindow extends Window {
         element.dataset.set = set.id;
         name.textContent = set.name;
 
+        // A set that ships with civ.one is ready unless its sheet couldn't be loaded (#1063), offline on a first visit.
         if (set.source === 'hosted') {
-          status.textContent = t('LibraryWindow.status.ready');
-          status.dataset.state = 'ready';
+          // A sound set that ships is fetched as it's played: only a map set's sheet is loaded at start-up.
+          const loaded = set.grid === undefined || installed.includes(set.id);
+
+          status.textContent = t(
+            loaded
+              ? 'LibraryWindow.status.ready'
+              : 'LibraryWindow.status.unloaded'
+          );
+          status.dataset.state = loaded ? 'ready' : 'needs';
+        }
+
+        const actions = s<HTMLElement>('<div class="actions"></div>');
+
+        if (set.grid !== undefined && installed.includes(set.id)) {
+          const use = mapUse(set, set.grid, () => this.#markMapUses());
+
+          mapUses.push(use);
+          actions.append(use.use, use.inUse);
         }
 
         const pack = set.pack;
 
         if (pack === undefined) {
+          if (actions.childNodes.length > 0) {
+            element.append(actions);
+          }
+
           return element;
         }
 
         // Disabled until the store says whether it can be imported.
         const importButton = h(
-            button(t('LibraryWindow.import'), { disabled: true }),
-            {
-              click: () => this.#openImport(pack),
-            }
-          ),
-          reason = s<HTMLElement>('<span class="reason" hidden></span>');
+          button(t('LibraryWindow.import'), { disabled: true }),
+          {
+            click: () => this.#openImport(pack),
+          }
+        );
 
-        // Named for its set, and described by why it can't be used yet.
-        reason.id = `library-reason-${++described}`;
-        importButton.setAttribute('aria-describedby', reason.id);
+        // Named for its set.
         importButton.setAttribute(
           'aria-label',
           t('LibraryWindow.import-set', {
@@ -251,9 +369,10 @@ export class LibraryWindow extends Window {
           })
         );
 
-        entries.push({ pack, status, importButton, reason });
+        entries.push({ pack, status, importButton });
 
-        element.append(s('<div class="actions"></div>', importButton, reason));
+        actions.prepend(importButton);
+        element.append(actions);
 
         return element;
       };
@@ -286,6 +405,7 @@ export class LibraryWindow extends Window {
     );
 
     this.#entries = entries;
+    this.#mapUses = mapUses;
     this.#storageBlocked = storageBlocked;
     this.#modal = windowOptions.modal ?? false;
 
@@ -293,36 +413,33 @@ export class LibraryWindow extends Window {
 
     themes.append(...this.#themeEntries());
     this.#markThemes();
+    this.#markMapUses();
 
     // A store that can't be read leaves the imports as they were drawn.
     void this.refresh().catch((error) => console.error(error));
   }
 
   /**
-   * Says what each set with an import is (Ready, Needs …, Not imported), and which can be imported: none when the
-   *  browser keeps nothing for this site (#850), and only the first set (`importedFirst`) until its sprites are in.
-   *  As the window opens, and again once an import window it opened is closed.
+   * Says what each set with an import is (Ready, Needs …, Not imported), and whether they can be imported: not when
+   *  the browser keeps nothing for this site (#850). Each set is imported on its own, in any order (#1063): none waits
+   *  on Civ1's, as civ.one's own art draws the game without it. As the window opens, and again once an import window
+   *  it opened is closed.
    */
   async refresh(): Promise<void> {
-    const first = packImports().find(importedFirst),
-      [usable, firstReady, statuses] = await Promise.all([
-        assetStore.usable(),
-        first?.ready() ?? Promise.resolve(true),
-        Promise.all(
-          this.#entries.map(({ pack }) =>
-            setStatus(pack).catch((): null => null)
-          )
-        ),
-      ]);
+    const [usable, statuses] = await Promise.all([
+      assetStore.usable(),
+      Promise.all(
+        this.#entries.map(({ pack }) => setStatus(pack).catch((): null => null))
+      ),
+    ]);
 
     this.#storageBlocked.textContent = usable
       ? ''
       : t('ImportAssetsWindow.storage-blocked');
     this.#storageBlocked.toggleAttribute('hidden', usable);
 
-    this.#entries.forEach(({ pack, status, importButton, reason }, index) => {
-      const shown = statuses[index] ?? null,
-        waiting = !importedFirst(pack) && !firstReady;
+    this.#entries.forEach(({ pack, status, importButton }, index) => {
+      const shown = statuses[index] ?? null;
 
       status.textContent = shown?.text ?? '';
 
@@ -347,17 +464,8 @@ export class LibraryWindow extends Window {
           }
         )
       );
-      importButton.disabled = !usable || waiting;
-
-      // Why it can't be imported yet: the storage's reason is said once, above everything.
-      reason.textContent =
-        usable && waiting && first !== undefined
-          ? t('LibraryWindow.import-first', {
-              name: first.name,
-              interpolation: { escapeValue: false },
-            })
-          : '';
-      reason.toggleAttribute('hidden', reason.textContent === '');
+      // The storage's reason it can't be imported is said once, above everything.
+      importButton.disabled = !usable;
     });
   }
 
@@ -382,13 +490,17 @@ export class LibraryWindow extends Window {
             this.#markThemes();
           },
         }),
+        // Whose interface art it draws with now (#1063).
+        art = s<HTMLElement>('<div class="art"></div>'),
         element = s<HTMLLIElement>(
           '<li class="library-set"></li>',
           s('<div class="library-set-head"></div>', label, status),
+          art,
           s('<div class="actions"></div>', use)
         );
 
       element.dataset.theme = id;
+      art.textContent = themeArtLine(id);
       // The interfaces that bring them register them (#861), so what one says is never treated as markup.
       label.textContent = t(name);
       use.setAttribute(
@@ -415,6 +527,20 @@ export class LibraryWindow extends Window {
       status.hidden = !inUse;
       use.setAttribute('aria-disabled', String(inUse));
       use.title = inUse ? t('LibraryWindow.in-use') : '';
+    });
+  }
+
+  /**
+   * Marks the map set in use for each grid (#1063): the one the player chose, or, unchosen, the one drawn by default
+   *  (`mapTileset`), and puts its Use out of use, as the themes' are.
+   */
+  #markMapUses(): void {
+    this.#mapUses.forEach(({ id, grid, inUse, use }) => {
+      const used = mapTileset(grid).id === id;
+
+      inUse.hidden = !used;
+      use.setAttribute('aria-disabled', String(used));
+      use.title = used ? inUse.textContent ?? '' : '';
     });
   }
 

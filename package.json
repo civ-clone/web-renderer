@@ -252,6 +252,7 @@
     "test:json-schema": "node tools/run-suite.js ui jsonSchema",
     "test:asset-store": "node tools/run-suite.js ui assetStore",
     "test:hosted-sets": "node tools/run-suite.js ui hostedSets",
+    "test:no-import": "node tools/run-suite.js ui noImport",
     "test:tileset-drawing": "node tools/run-suite.js ui tilesetDrawing",
     "test:overlap-draw:1of4": "node tools/run-suite.js ui overlapDraw --part 1/4",
     "test:overlap-draw:2of4": "node tools/run-suite.js ui overlapDraw --part 2/4",

@@ -7,7 +7,7 @@ import {
   metadataKey,
 } from './lib/packs';
 import { TilesetDescriptor, spriteKey } from './tilesets/TilesetDescriptor';
-import currentTileset from './lib/tilesets';
+import { interfaceTileset } from './lib/tilesets';
 import { imageSize } from './lib/imageSize';
 import scaleImage from './lib/scaleImage';
 import { setSprites } from './lib/getPreloadedImage';
@@ -296,15 +296,16 @@ export class AssetStore extends Store<{
   // The packs loaded beside the store's own tileset.
   #others: AssetPack[] = [];
   #ready: Promise<void> = Promise.resolve();
-  // Undefined until it is first asked for, for the store made as the page loads (`assetStore`): the interface's
-  //  tileset, which its package registers once this module has been loaded (`registerTileset`).
+  // Undefined until it is first asked for, for the store made as the page loads (`assetStore`): Civ1's, the pack
+  //  registered as the interface's, which its package registers once this module has been loaded (`registerTileset`).
+  //  Only what the store loads first and counts by default: nothing waits on it to play since #1063.
   #tileset: TilesetDescriptor | undefined;
 
   /**
    * The store for `tileset`'s sprites: it is ready when every sprite the tileset requires has been imported, and keeps
    * each under the tileset's key for it (`spriteKey`). `packs` are loaded beside it (#97), such as the pack the map is
    * drawn with when that isn't the interface's: their sprites are drawn when they are there, and the store is ready
-   * without them. Without a `tileset`, the interface's (`currentTileset`), as it is when the store is first used.
+   * without them. Without a `tileset`, Civ1's (`interfaceTileset`), as it is when the store is first used.
    */
   constructor(tileset?: TilesetDescriptor, packs: AssetPack[] = []) {
     super('civ-clone-assets', 'assets', {
@@ -316,9 +317,9 @@ export class AssetStore extends Store<{
     packs.forEach((pack) => this.addPack(pack));
   }
 
-  /** The store's own tileset: the one it was made for, or the interface's. */
+  /** The store's own tileset: the one it was made for, or Civ1's. */
   #ownTileset(): TilesetDescriptor {
-    this.#tileset ??= currentTileset();
+    this.#tileset ??= interfaceTileset();
 
     return this.#tileset;
   }

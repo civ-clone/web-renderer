@@ -327,8 +327,9 @@ export const setMapGrid = (
 };
 
 /**
- * The tileset the square map is drawn with, and the interface's (`interfaceTileset`): Civ1's. What the map draws with
- *  follows the world's grid (`mapTileset`).
+ * Civ1's tileset, the pack registered as the interface's (`interfaceTileset`), whether or not it's imported. Nothing
+ *  draws with it by this name since #1063: the map draws with `mapTileset`, for the world's grid, and the interface
+ *  with `interfaceArt`, the theme's.
  */
 export const currentTileset = (): TilesetDescriptor => interfaceTileset();
 
@@ -394,13 +395,17 @@ export const zoomOptionFromMapScale = (key: string): string | null => {
   return id === undefined ? null : zoomOption({ id });
 };
 
+/** The tile, in px across, that windows are laid out for (#1063): their scales are a 16 px tile's. */
+export const REFERENCE_TILE_WIDTH = 16;
+
 /**
- * The scale a window shows `tileset`'s art at when asked for `scale`, which is Civ1's (#97): as asked for Civ1's 16 px
- *  tile, and no more than the pack's own default scale for a larger tile, so Civ2's 64 × 48 units and its city map are
- *  shown at their own size rather than twice it.
+ * The scale a window shows `tileset`'s art at when asked for `scale`, which is a 16 px tile's (#97,
+ *  `REFERENCE_TILE_WIDTH`): as asked for such a tile, and no more than the pack's own default scale for a larger tile,
+ *  so Civ2's 64 × 48 units, the pixel art's 32 px ones and their city maps are shown at their own size rather than
+ *  twice it.
  */
 export const shownScale = (scale: number, tileset: TilesetDescriptor): number =>
-  tileset.tile.width > interfaceTileset().tile.width
+  tileset.tile.width > REFERENCE_TILE_WIDTH
     ? Math.min(scale, tileset.defaultScale)
     : scale;
 

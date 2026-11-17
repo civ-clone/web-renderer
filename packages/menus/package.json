@@ -29,6 +29,7 @@
     "./components/newGame": "./components/newGame.ts",
     "./components/titleScreen": "./components/titleScreen.ts",
     "./lib/mapArt": "./lib/mapArt.ts",
+    "./lib/playable": "./lib/playable.ts",
     "./lib/pluginSets": "./lib/pluginSets.ts",
     "./lib/ruleSetControls": "./lib/ruleSetControls.ts",
     "./lib/savedGame": "./lib/savedGame.ts",
