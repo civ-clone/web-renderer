@@ -38,7 +38,6 @@ import sendBuildPreferences from '@civ-clone/ui-client/lib/buildPreferences';
 import { soundChanged } from '@civ-clone/ui-assets/lib/soundGain';
 import { interfaceArt } from '@civ-clone/ui-assets/lib/interfaceArt';
 import { TilesetDescriptor } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
-import { allowLeaving } from '@civ-clone/ui-component-window/leaveGuard';
 import forgetVisitParam from '@civ-clone/ui-platform/lib/forgetVisitParam';
 import { t } from 'i18next';
 
@@ -304,8 +303,8 @@ export const themeRows = (
           applyUiTheme(select.value);
           forgetVisitParam('theme');
 
+          // Only before a game, when nothing guards leaving the page.
           if (changesArt && !inGame) {
-            allowLeaving();
             reload();
 
             return;

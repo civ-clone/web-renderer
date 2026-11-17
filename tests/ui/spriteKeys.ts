@@ -369,13 +369,16 @@ const frontendSources = (): string[] => [
 
 // Outside the map, the yield icons, the citizens, the cursor and the action panels are asked for by the interface's
 //  names too (#728, #1063), so the theme's art is shown, whoever's it is. Every name they use is one of the interface's
-//  (`interfaceNames`): those the lists give, and those written out as `interfaceSpriteKey('city/bulb')`.
+//  (`interfaceNames`): those the lists give, and those written out as `interfaceSpriteKey('city/bulb')`, or as
+//  `spriteKey(currentTileset(), 'city/bulb')` by a call that slipped back to Civ1's.
 const tilesetSprites = interfaceNames.map(({ name }) => name),
   writtenOut = frontendSources().flatMap((file) =>
     [
       ...fs
         .readFileSync(file, 'utf8')
-        .matchAll(/interfaceSpriteKey\(\s*'([^']+)'/g),
+        .matchAll(
+          /(?:interfaceSpriteKey\(|spriteKey\(\s*currentTileset\(\),)\s*'([^']+)'/g
+        ),
     ].map(([, name]) => name)
   ),
   uiSprites = [

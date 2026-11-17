@@ -4,6 +4,7 @@ import {
   topologyIds,
 } from '@civ-clone/core-world/topologies';
 import firstFailure, { pathName } from '../lib/jsonSchema';
+import { interfaceNames, requiredInterfaceNames } from '../lib/interfaceNames';
 import schema from './tileset.schema.json';
 
 // What a tileset says about itself (#56, #92): the grid it is drawn for, its native tile size, the map scales it can be
@@ -907,6 +908,40 @@ export const readDescriptor = (json: unknown): TilesetDescriptor => {
     ) {
       refuse('yields.area must be within the tile.');
     }
+  }
+
+  // Its own names for the interface's sprites (#1063): each one of the interface's names, called by a sprite it lists.
+  const uiNames = descriptor.names.ui ?? {};
+
+  Object.entries(uiNames).forEach(([name, own]) => {
+    if (!interfaceNames.some((listed) => listed.name === name)) {
+      refuse(
+        `names.ui maps "${name}", which is not one of the interface's names.`
+      );
+    }
+
+    if (!seen.has(own)) {
+      refuse(
+        `names.ui calls "${name}" "${own}", which is not in assets.required or assets.optional.`
+      );
+    }
+  });
+
+  // A set with interface art has every sprite the interface can't do without, by its own name for it.
+  if (assets.ui.length > 0) {
+    requiredInterfaceNames.forEach((name) => {
+      const own = Object.prototype.hasOwnProperty.call(uiNames, name)
+        ? uiNames[name]!
+        : name;
+
+      if (!assets.required.includes(own)) {
+        refuse(
+          `assets.ui says it has interface art, but assets.required doesn't list the interface's "${name}"${
+            own === name ? '' : ` (its "${own}")`
+          }.`
+        );
+      }
+    });
   }
 
   // The pack's own citizens: each face it can be, a sprite it lists.

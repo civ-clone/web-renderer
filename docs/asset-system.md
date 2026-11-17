@@ -128,7 +128,10 @@ staggered isometric grid, which `tileset-civ2` registers (`registerTileset(tiles
   art's, which isn't registered yet, so it's Civ1's. The page tells it the theme's list as it starts
   (`provideInterfaceArt`, in `bootstrap.ts`). The screens ask for its sprites by civ.one's names
   (`interfaceNames.ts`, Civ1's so far), through `interfaceSpriteKey`, which a set maps to its own in `names.ui`.
-  The page keeps the list it started with. Choosing a theme in Options whose art differs reloads the page from the
+  `readDescriptor` refuses a `names.ui` that maps a name that isn't the interface's or to a sprite the set doesn't
+  list, and a set with interface art that doesn't require every required interface name, by its own name for it.
+  The page keeps the list it started with, and settles the set once the packs are installed (`installPacks`), so the
+  sizes, the cursor and every icon come from it; it is settled again only when the list or the installed sets change. Choosing a theme in Options whose art differs reloads the page from the
   main menu, and during a game takes effect at the next load, with a hint saying so. `currentTileset()` is still Civ1's
   tileset, for what means the always-installed pack. Until a package registers one, both throw, naming what to load;
   the asset store made as the page loads (`assetStore`) asks for its tileset only when it is first used.

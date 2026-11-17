@@ -1,5 +1,9 @@
 import { TilesetDescriptor, spriteKey } from '../tilesets/TilesetDescriptor';
-import { installedTilesets, interfaceTileset } from './tilesets';
+import {
+  installedTilesets,
+  interfaceTileset,
+  onTilesetsInstalled,
+} from './tilesets';
 
 // The interface's art (#1063): the icons, citizens, meters, cursors and textures every screen draws, and the map draws
 //  over its tiles. A theme names the tilesets it draws them with, in order (`UiTheme.art`), and the first one there is
@@ -18,11 +22,21 @@ export {
   requiredInterfaceNames,
 } from './interfaceNames';
 
-let preferred: () => readonly string[] = () => [];
+let preferred: () => readonly string[] = () => [],
+  // The set the page settled on, once asked for: resolved again only once the list or the installed sets change, so a
+  //  lookup on every draw (`Map#getInterfaceImage`) doesn't resolve it each time.
+  settled: TilesetDescriptor | null = null;
+
+const unsettle = (): void => {
+  settled = null;
+};
+
+onTilesetsInstalled(unsettle);
 
 /** Has `interfaceArt()` follow `art`, the tilesets the theme in use draws its interface art with, in order. */
 export const provideInterfaceArt = (art: () => readonly string[]): void => {
   preferred = art;
+  unsettle();
 };
 
 /** Whether `tileset` has interface art of its own: sprites under `assets.ui` prefixes, as Civ1's has and Civ2's hasn't. */
@@ -30,14 +44,8 @@ export const hasInterfaceArt = ({
   assets: { ui },
 }: Pick<TilesetDescriptor, 'assets'>): boolean => ui.length > 0;
 
-/**
- * The tileset the interface's art comes from: the first of `art` (the theme's list, as `provideInterfaceArt` was told it)
- *  that is installed and has interface art. When none is, Civ1's (`interfaceTileset`), as the game can't start without
- *  it.
- */
-export const interfaceArt = (
-  art: readonly string[] = preferred()
-): TilesetDescriptor => {
+// The first of `art` that is installed and has interface art, or Civ1's.
+const resolve = (art: readonly string[]): TilesetDescriptor => {
   const installed = installedTilesets();
 
   for (const id of art) {
@@ -50,6 +58,15 @@ export const interfaceArt = (
 
   return interfaceTileset();
 };
+
+/**
+ * The tileset the interface's art comes from: the first of `art` that is installed and has interface art, or Civ1's
+ *  (`interfaceTileset`) when none is, as the game can't start without it. Without `art`, the theme's list as
+ *  `provideInterfaceArt` was told it, resolved once and kept until that list or the installed sets change, so the
+ *  sizes, the cursor and every sprite come from the same set.
+ */
+export const interfaceArt = (art?: readonly string[]): TilesetDescriptor =>
+  art === undefined ? (settled ??= resolve(preferred())) : resolve(art);
 
 /** `tileset`'s own name for the interface's sprite `name`, which is `name` unless its `names.ui` says otherwise. */
 export const interfaceSpriteName = (

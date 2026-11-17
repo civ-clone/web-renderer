@@ -30,7 +30,10 @@ import {
   uiThemeArt,
   uiThemeFrom,
 } from '@civ-clone/ui-widgets/lib/theme';
-import { provideInterfaceArt } from '@civ-clone/ui-assets/lib/interfaceArt';
+import {
+  interfaceArt,
+  provideInterfaceArt,
+} from '@civ-clone/ui-assets/lib/interfaceArt';
 import {
   applyInterface,
   currentInterface,
@@ -104,10 +107,11 @@ export class Renderer {
     // not a reload; only Ctrl/Cmd+R stays a reload from that point on.
     let gameStarted = false;
 
-    setTilesetSizes();
     // Every sprite of the tilesets there are, decoded before anything is drawn from them (#730), and the ones whose
     //  sprites have all been imported installed, so their grids are offered (#97).
     await installPacks();
+    // Then the interface's art, settled from the sets installed (#1063): its sizes and cursor, and every icon after.
+    setTilesetSizes(interfaceArt());
     await setCursor();
     await initI18n();
     // Silent without an ASOUND.CVL; with one, waits for the player's first key or click (#126).
