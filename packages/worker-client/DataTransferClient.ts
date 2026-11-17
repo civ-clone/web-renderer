@@ -19,6 +19,8 @@ import ActionsState from './Client/ActionsState';
 import Automation from './Client/Automation';
 import { instance as engineInstance } from '@civ-clone/core-engine/Engine';
 import { instance as playerGovernmentRegistryInstance } from '@civ-clone/core-government/PlayerGovernmentRegistry';
+import { instance as additionalDataRegistryInstance } from '@civ-clone/core-data-object/AdditionalDataRegistry';
+import PlayerGovernment from '@civ-clone/core-government/PlayerGovernment';
 import { defaultTopCitiesLimit } from './lib/topCities';
 import {
   TopCitiesRow,
@@ -117,6 +119,18 @@ export class DataTransferClient extends Client implements IClient {
         unitsOn: (tile: Tile) => registries.units.getByTile(tile),
         government: (player: Player) =>
           playerGovernmentRegistryInstance.getByPlayer(player),
+        governmentChoiceDue: (player: Player): boolean => {
+          const playerGovernment =
+            playerGovernmentRegistryInstance.getByPlayer(player);
+
+          return additionalDataRegistryInstance
+            .getByType(PlayerGovernment)
+            .some(
+              (additionalData) =>
+                additionalData.key() === 'anarchyTurns' &&
+                additionalData.data(playerGovernment) === 0
+            );
+        },
         civilizationScore: () => this.civilizationScore(),
         handleAction: (...args: any[]) => this.handleAction(...args),
         ...registries,

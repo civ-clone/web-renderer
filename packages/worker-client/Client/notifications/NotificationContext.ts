@@ -16,8 +16,10 @@ export type NotificationContext = Pick<
   | 'hasSeen'
   // The units on a square: a goody hut is told to the player whose unit found it.
   | 'unitsOn'
-  // A player's government, which says how its collapse is told.
+  // A player's government.
   | 'government'
+  // Whether a player's new government can be chosen now, which says how its collapse is told (#1018).
+  | 'governmentChoiceDue'
   // The turn, which says whether a waiting build was already waiting the turn before (#970).
   | 'turn'
 > & {

@@ -142,6 +142,8 @@ type World = {
   seen: unknown[];
   unitsOn: Record<string, unknown[]>;
   government: unknown;
+  // Whether our new government can be chosen now (#1018).
+  choiceDue: boolean;
   // The cities abandoned in the engine call under way (#969).
   abandoned: unknown[];
 };
@@ -154,6 +156,7 @@ const contextOf = ({
     seen = [],
     unitsOn = {},
     government = Anarchy,
+    choiceDue = false,
     abandoned = [],
   }: Partial<World> = {}): NotificationContext =>
     ({
@@ -165,6 +168,7 @@ const contextOf = ({
       government: () => ({
         is: (Government: unknown) => Government === government,
       }),
+      governmentChoiceDue: () => choiceDue,
       cityNews: { abandoned: (city: unknown) => abandoned.includes(city) },
       turn: { value: () => turn },
     } as unknown as NotificationContext),
@@ -1186,9 +1190,9 @@ const contextOf = ({
     ['Player.government-collapsed', false, { city: 'Rome' }]
   );
   expect(
-    'our government collapses with the Pyramids',
+    'our government collapses with the Pyramids, into Anarchy with the choice due at once',
     player('player:government:collapsed', [us, ourCity], {
-      government: null,
+      choiceDue: true,
     }),
     ['Player.government-collapsed.pyramids', false, { city: 'Rome' }]
   );
