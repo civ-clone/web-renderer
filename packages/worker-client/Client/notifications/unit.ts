@@ -26,6 +26,10 @@ const stoppedNuclearAttacks = new WeakSet<Unit>(),
   //  the defender lost, however many of the rules shrink the city for it, by the attack or by the unit that won it.
   lastWin = new WeakMap<Unit, Action>(),
   toldShrinks = new WeakSet<Action>();
+/** Whether `unit`'s nuclear attack was stopped by a missile defence (`unit:nuclear-stopped`), for a rule set's own notice. */
+export const nuclearAttackStopped = (unit: Unit): boolean =>
+  stoppedNuclearAttacks.has(unit);
+
 // These are the module's, so every client in the worker shares them. That's sound as they stand: they record engine
 //  events, which are the same for every client, and only a client that owns the city reaches `toldShrinks`, so a
 //  second client's notice isn't lost to the first's. A client that could own a city another also owns (an observer of

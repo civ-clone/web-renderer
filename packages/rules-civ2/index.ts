@@ -155,10 +155,11 @@ export const civ2Rules: WorkerRules = {
   // What it tells a person of its diplomacy, and of its Diplomats, Spies and Caravans (M2d part 2).
   notifications: [...notifications(), ...espionageNotices()],
   // A treaty's end is told by what ended it (`civ2:war-on`, and civ2-diplomacy's own events), not as each ends; a
-  //  delivery, with the research it pays too.
+  //  delivery, with the research it pays too; a nuclear detonation, which doesn't name a device's planter.
   replacesNotices: [
     'player:declaration-expired',
     'unit:trade-route-established',
+    'unit:nuclear-detonation',
   ],
   // How a rival's city is drawn, from its owner's advances, as one's own is (`style`).
   cityStyle: (city) => cityStyle(city),

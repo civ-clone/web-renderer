@@ -15,6 +15,7 @@ import InvestigateCity from '@civ-clone/base-unit-action-investigate-city/Invest
 import Player from '@civ-clone/core-player/Player';
 import Unit from '@civ-clone/core-unit/Unit';
 import { isSpy } from '@civ-clone/civ2-unit/lib/espionage';
+import { nuclearAttackStopped } from '@civ-clone/ui-worker-client/Client/notifications/unit';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 
 // `key`, or its `.unmet` form when `player` hasn't been met.
@@ -75,10 +76,12 @@ export const espionageNotices = (): NotificationTable => [
         return isSpy(unit) &&
           !(mission instanceof EstablishEmbassy) &&
           !(mission instanceof InvestigateCity)
-          ? new Notification('Espionage.agent-lost', {
-              city,
-              unit: unitName(unit),
-            })
+          ? new Notification(
+              city === null
+                ? 'Espionage.agent-lost-at-unit'
+                : 'Espionage.agent-lost',
+              { city, unit: unitName(unit) }
+            )
           : null;
       }
 
@@ -91,7 +94,20 @@ export const espionageNotices = (): NotificationTable => [
     },
   ],
 
-  // Our own device set off; everyone else hears of a nuclear detonation as of any other (`unit:nuclear-detonation`).
+  // A nuclear detonation, in place of the shared notice, which names whose unit it was: a Spy's planted device goes off
+  //  unnamed, as whether its planter is found out is the rules' roll (`civ2-diplomacy:nuclear-device-discovered`). A
+  //  missile's is told as before, to everyone but its player, unless a missile defence stopped it.
+  [
+    'unit:nuclear-detonation',
+    (ctx: NotificationContext, unit: Unit) =>
+      ctx.view.owns(unit.player()) || nuclearAttackStopped(unit)
+        ? null
+        : isSpy(unit)
+        ? new Notification('Espionage.device-detonated', {})
+        : new Notification('Unit.nuclear-attack', { player: unit.player() }),
+  ],
+
+  // Our own device set off.
   [
     'civ2:device-planted',
     (ctx: NotificationContext, unit: Unit, city: City) =>

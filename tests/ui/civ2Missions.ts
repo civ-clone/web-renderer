@@ -445,6 +445,8 @@ const run = async (): Promise<void> => {
       'Espionage.agent-caught',
       'Espionage.agent-caught-at-unit',
       'Espionage.agent-lost',
+      'Espionage.agent-lost-at-unit',
+      'Espionage.device-detonated',
       'Espionage.foreign-agent-caught',
       'Espionage.foreign-agent-caught.unmet',
       'Espionage.device-planted',

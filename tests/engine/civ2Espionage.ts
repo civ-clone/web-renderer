@@ -31,8 +31,10 @@ import Action from '@civ-clone/core-unit/Action';
 import Added from '@civ-clone/core-player/Rules/Added';
 import { Barracks } from '@civ-clone/civ2-city-improvement/CityImprovements';
 import City from '@civ-clone/core-city/City';
+import Civilization from '@civ-clone/core-civilization/Civilization';
 import CityBuild from '@civ-clone/core-city-build/CityBuild';
 import CityGrowth from '@civ-clone/core-city-growth/CityGrowth';
+import CityImprovement from '@civ-clone/core-city-improvement/CityImprovement';
 import Client from '@civ-clone/core-client/Client';
 import FillGenerator from '@civ-clone/simple-world-generator/tests/lib/FillGenerator';
 import { Grassland } from '@civ-clone/civ2-world/Terrains';
@@ -52,7 +54,10 @@ import dependenciesOf from '@civ-clone/civ2-diplomacy/lib/dependenciesOf';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import espionageNotices from '@civ-clone/ui-rules-civ2/espionageNotices';
 import { espionageIncident } from '@civ-clone/civ2-diplomacy/lib/espionage';
+import { ChoiceMeta } from '@civ-clone/core-client/ChoiceMeta';
 import { handleActiveUnit } from '@civ-clone/ui-worker-client/Client/actions/unit';
+import { makeDataFilter } from '@civ-clone/ui-worker-client/Client/visibilityFilter';
+import { playerView } from '@civ-clone/ui-worker-client/Client/View';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import makeContact from '@civ-clone/base-diplomacy-interaction-contact/makeContact';
 import pluginSets from '../../src/js/pluginSets';
@@ -260,37 +265,106 @@ const run = async (): Promise<void> => {
     [true, ['Barracks', 'production']]
   );
 
-  // The choice through the client: a sabotage aimed at the Barracks takes them, or the Spy is caught first.
-  {
-    const saboteur = fullMoves(new Spy(rome, us, beside, defaultGame.rules)),
-      lost: unknown[][] = [],
-      listener = (...args: unknown[]) => lost.push(args);
-
-    engine.on('civ2:agent-lost', listener);
-
-    await handleActiveUnit(
-      {
-        view: {
-          world: () => [
-            { id: () => babylon.tile().id(), tile: () => babylon.tile() },
-          ],
-        },
-        actions: new ActionsState(),
-        patches: { unit: () => {}, city: () => {}, onTiles: () => {} },
-        talks: {
-          pending: Promise.resolve(),
-          talkToPlayersMet: async () => {},
-        },
-      } as any,
-      {
-        unitAction: 'SneakIndustrialSabotage',
-        target: babylon.tile().id(),
-        choice: 'Barracks',
-      } as any,
-      { value: () => saboteur } as any
+  // Our map: the whole world, as `civ2Units`' is.
+  defaultGame.playerWorlds
+    .getByPlayer(us)
+    .register(
+      ...world
+        .tiles()
+        .filter(
+          (tile: Tile) =>
+            defaultGame.playerWorlds.getByPlayer(us).getByTile(tile) === null
+        )
     );
 
-    engine.off('civ2:agent-lost', listener);
+  // As the client sends them, through its filter: the Spy's actions with their targets and consequence, the city's
+  //  the incident offer's civilization. (A city's own payload isn't sent here: this test's cities are made without their
+  //  squares, which a city's data reads; its routes' goods are its `tradeRoutes` AdditionalData, read below.)
+  const view = playerView(() => us, {
+      cities: defaultGame.cities,
+      interactions: defaultGame.interactions,
+      playerWorlds: defaultGame.playerWorlds,
+    } as any),
+    actionsState = new ActionsState(),
+    // Our player and every civilization as names: what they hold isn't what this is about, and a civilization's
+    //  title wants the whole game's players. Other players go as the client's stand-ins, as they always do.
+    filter = makeDataFilter(
+      () => view,
+      actionsState
+    )((object: any) =>
+      object instanceof Player
+        ? { _: 'Player' }
+        : object instanceof Civilization
+        ? { _: typeNameOf(object.sourceClass()) }
+        : object
+    ),
+    sentObjects = (object: any): any[] =>
+      Object.values((object.toPlainObject(filter) as any).objects);
+
+  {
+    // Homeless: this test's cities are made without their squares, which a city's own data reads.
+    const sender = fullMoves(new Spy(null, us, beside, defaultGame.rules));
+
+    actionsState.setUnitWithActions(sender, () => {});
+
+    const sent = sentObjects(sender),
+      theft = sent.find((object) => object._ === 'SneakStealTechnology'),
+      incite = sent.find((object) => object._ === 'InciteRevolt');
+
+    expect(
+      'the Spy goes to the page with its actions’ targets and what each does to the treaty',
+      [
+        theft?.targets?.includes('Writing'),
+        theft?.consequence,
+        incite?.consequence,
+      ],
+      [true, 'incident-if-lost', 'treaty-ends']
+    );
+  }
+
+  // The choice through the client: a sabotage aimed at the production takes it, never the Barracks (which a random
+  //  sabotage of this city, with nothing else to take, would), or the Spy is caught first. Spies are sent until one
+  //  gets through.
+  {
+    const lost: unknown[][] = [],
+      sabotaged: unknown[][] = [],
+      onLost = (...args: unknown[]) => lost.push(args),
+      onSabotaged = (...args: unknown[]) => sabotaged.push(args);
+
+    engine.on('civ2:agent-lost', onLost);
+    engine.on('city:sabotaged', onSabotaged);
+
+    for (let attempt = 0; attempt < 6 && sabotaged.length === 0; attempt++) {
+      // At peace again, should a lost Spy's incident have ended it.
+      makePeace(deps, us, them);
+
+      const saboteur = fullMoves(new Spy(rome, us, beside, defaultGame.rules));
+
+      await handleActiveUnit(
+        {
+          view: {
+            world: () => [
+              { id: () => babylon.tile().id(), tile: () => babylon.tile() },
+            ],
+          },
+          actions: new ActionsState(),
+          patches: { unit: () => {}, city: () => {}, onTiles: () => {} },
+          talks: {
+            pending: Promise.resolve(),
+            talkToPlayersMet: async () => {},
+          },
+        } as any,
+        {
+          unitAction: 'SneakIndustrialSabotage',
+          target: babylon.tile().id(),
+          choice: 'production',
+        } as any,
+        { value: () => saboteur } as any
+      );
+    }
+
+    engine.off('civ2:agent-lost', onLost);
+    engine.off('city:sabotaged', onSabotaged);
 
     const barracksStanding = defaultGame.cityImprovements
       .getByCity(babylon)
@@ -300,9 +374,15 @@ const run = async (): Promise<void> => {
       );
 
     expect(
-      'a sabotage aimed at the Barracks: they go, unless the Spy was caught first (told as caught)',
-      barracksStanding ? [lost.length === 1 && lost[0]![3] === true] : [true],
-      [true]
+      'a sabotage aimed at the production takes the production, not the Barracks; each Spy that didn’t get through was caught first',
+      [
+        sabotaged.length,
+        sabotaged.every(([, , target]) => !(target instanceof CityImprovement)),
+        barracksStanding,
+        lost.filter(([, , , caught]) => caught === true).length >=
+          lost.length - sabotaged.length,
+      ],
+      [1, true, true, true]
     );
   }
 
@@ -325,7 +405,7 @@ const run = async (): Promise<void> => {
       settle = () => new Promise((resolve) => setTimeout(resolve, 0)),
       incident = () => espionageIncident(deps, them, us, () => 0.5, { engine });
 
-    // The sabotage may have ended the peace (a lost agent's incident): at peace again.
+    // A sabotage may have ended the peace (a lost agent's incident): at peace again.
     makePeace(deps, us, them);
 
     expect(
@@ -376,6 +456,28 @@ const run = async (): Promise<void> => {
       [asked, treatyLevel(deps, us, them)],
       [[], TreatyLevel.Peace]
     );
+
+    // The offer as the prompt sends it: the other civilization by name.
+    {
+      const unfiltered = filter,
+        meta = new ChoiceMeta([false, true], 'diplomacy.incident-offer', {
+          player: them,
+        } as any),
+        { objects, hierarchy } = meta.toPlainObject(unfiltered) as any,
+        resolve = (value: any): any =>
+          value && value['#ref'] ? objects[value['#ref']] : value,
+        data = resolve(
+          resolve(hierarchy).data ?? objects[hierarchy['#ref']]?.data
+        ),
+        player = resolve(data?.player),
+        civilization = resolve(player?.civilization);
+
+      expect(
+        'the incident offer goes to the page naming the other civilization',
+        civilization?._,
+        'Babylonian'
+      );
+    }
 
     dispose();
   }
@@ -488,8 +590,11 @@ const run = async (): Promise<void> => {
         told('civ2:agent-lost', ourDiplomat, babylon, steal, false),
         told('civ2:agent-lost', theirSpy, rome, steal, true),
         told('civ2:agent-lost', theirSpy, rome, steal, false),
+        told('civ2:agent-lost', ourSpy, null, steal, false),
         told('civ2:device-planted', ourSpy, babylon),
         told('civ2:device-planted', theirSpy, rome),
+        told('unit:nuclear-detonation', theirSpy, rome.tile()),
+        told('unit:nuclear-detonation', ourSpy, babylon.tile()),
       ],
       [
         'Water poisoned: Our Spy has poisoned the water supply of Babylon.',
@@ -501,7 +606,10 @@ const run = async (): Promise<void> => {
         null,
         'Agent caught: Our guards have caught a Spy sent by the Babylonians in Rome.',
         null,
+        'Agent lost: Our Spy did not make it back from its mission.',
         'Nuclear device: The nuclear device our Spy planted has gone off in Babylon.',
+        null,
+        'Nuclear attack!: A nuclear device planted by a Spy has gone off. Who sent the Spy is not known.',
         null,
       ]
     );

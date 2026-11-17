@@ -69,6 +69,12 @@ import TreatyFlagsRecord from '@civ-clone/civ2-diplomacy/Records/TreatyFlagsReco
 import WarnedUnitsRecord from '@civ-clone/civ2-diplomacy/Records/WarnedUnitsRecord';
 import { instance as interactionRegistryInstance } from '@civ-clone/core-diplomacy/InteractionRegistry';
 import isBarbarian from '@civ-clone/base-civilization-barbarian/isBarbarian';
+import {
+  ROUTE_GOODS,
+  keepRouteGoods,
+} from '@civ-clone/ui-rules-civ2/lib/routeGoods';
+import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
+import { instance as pendingEffectRegistryInstance } from '@civ-clone/core-pending-effect/PendingEffectRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 
 const {
@@ -205,6 +211,17 @@ const civ2DiplomacyRecords = (): void => {
     new NuclearDeviceRecord(third, player, rules) as IInteraction
   );
 };
+
+// The goods rules-civ2 keeps for each trade route (M2d part 2): each record's holder, partner and goods, by city name.
+const routeGoodsRecords = (): string[][] =>
+  pendingEffectRegistryInstance.getByHandler(ROUTE_GOODS).map((effect) => [
+    (effect.target() as any).name(),
+    cityRegistryInstance
+      .entries()
+      .find((city) => city.id() === effect.data().partner)
+      ?.name() ?? 'missing',
+    effect.data().goods,
+  ]);
 
 const play = (name: string, path: string): void => {
   const receivers = new Map<string, (data: any, meta?: any) => void>(),
@@ -453,6 +470,15 @@ const play = (name: string, path: string): void => {
       // One of each of the diplomacy's records and proposals, as a game with talks would have them.
       civ2DiplomacyRecords();
 
+      // And a trade route's goods, as a delivery keeps them, between the first two cities.
+      const [holder, partner] = cityRegistryInstance.entries();
+
+      if (holder && partner) {
+        keepRouteGoods(holder, partner, 'Hides');
+      }
+
+      protocol.routeGoods = routeGoodsRecords();
+
       const written = saved();
 
       writeFileSync(path, JSON.stringify(written));
@@ -492,7 +518,7 @@ const play = (name: string, path: string): void => {
       loadFailure() === null ? saved() : null,
       null,
       null,
-      before === null ? null : { before }
+      before === null ? null : { before, routeGoods: routeGoodsRecords() }
     );
   })().catch((error: any): void => {
     process.stderr.write(`${error?.stack ?? error}\n`);
@@ -1158,6 +1184,15 @@ if (scenario !== null) {
       CIV2_DIPLOMACY_TYPES.filter((type) => !types.includes(type))
     ),
     [[], []]
+  );
+
+  expect(
+    'a civ2 game’s trade route goods are saved and loaded, holder and partner the same cities (M2d part 2)',
+    [
+      (civ2Game.protocol as any)?.routeGoods?.length,
+      (civ2Loaded.protocol as any)?.routeGoods,
+    ],
+    [1, (civ2Game.protocol as any)?.routeGoods]
   );
 
   finished = true;

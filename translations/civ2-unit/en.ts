@@ -103,6 +103,11 @@ i18next.addResources('en', 'notification', {
   'Espionage.agent-caught-at-unit.body': `Our ${unit} was caught before it could act.`,
   'Espionage.agent-lost.title': 'Agent lost',
   'Espionage.agent-lost.body': `Our ${unit} did not make it back from {{- city, cityName}}.`,
+  'Espionage.agent-lost-at-unit.title': 'Agent lost',
+  'Espionage.agent-lost-at-unit.body': `Our ${unit} did not make it back from its mission.`,
+  'Espionage.device-detonated.title': 'Nuclear attack!',
+  'Espionage.device-detonated.body':
+    'A nuclear device planted by a Spy has gone off. Who sent the Spy is not known.',
   'Espionage.foreign-agent-caught.title': 'Agent caught',
   'Espionage.foreign-agent-caught.body': `Our guards have caught a ${unit} sent by ${the(
     'player'
