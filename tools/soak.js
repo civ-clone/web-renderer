@@ -310,6 +310,83 @@ const problems = (game, options) => {
 
 const pad = (value, width) => String(value).padEnd(width);
 
+// A game's counters (`tests/engine/lib/counters.ts`), summed over its players: `null` for a report without them.
+const totals = (counters) => {
+  if (!counters) {
+    return null;
+  }
+
+  const sum = {
+    governmentTurns: {},
+    governmentChanges: 0,
+    revolutions: 0,
+    unitsBuilt: 0,
+    unitsBuiltByKind: {},
+    apolloBuilt: 0,
+    spaceshipParts: 0,
+    spaceshipsLaunched: 0,
+    spaceshipsArrived: 0,
+  };
+
+  counters.players.forEach((player) => {
+    Object.entries(player.governmentTurns).forEach(([government, turns]) => {
+      sum.governmentTurns[government] =
+        (sum.governmentTurns[government] ?? 0) + turns;
+    });
+    Object.entries(player.unitsBuiltByKind).forEach(([kind, count]) => {
+      sum.unitsBuiltByKind[kind] = (sum.unitsBuiltByKind[kind] ?? 0) + count;
+    });
+    [
+      'governmentChanges',
+      'revolutions',
+      'unitsBuilt',
+      'apolloBuilt',
+      'spaceshipParts',
+      'spaceshipsLaunched',
+      'spaceshipsArrived',
+    ].forEach((key) => {
+      sum[key] += player[key] ?? 0;
+    });
+  });
+
+  return { ...sum, game: counters.game };
+};
+
+// Adds `next`'s totals into `into`, for the soak's own.
+const addTotals = (into, next) => {
+  Object.entries(next).forEach(([key, value]) => {
+    if (typeof value === 'number') {
+      into[key] = (into[key] ?? 0) + value;
+    } else {
+      into[key] = addTotals(into[key] ?? {}, value);
+    }
+  });
+
+  return into;
+};
+
+// What the counters came to, on a few lines for the console.
+const describeTotals = (sum, indent) => {
+  const list = (counts) =>
+    Object.entries(counts)
+      .map(([key, value]) => `${key} ${value}`)
+      .join(', ') || 'none';
+  const game = sum.game;
+
+  return [
+    `governments (player turns): ${list(sum.governmentTurns)}; changes ${
+      sum.governmentChanges
+    }, revolutions ${sum.revolutions}`,
+    `treaties: ceasefire ${game.ceasefire}, peace ${game.peace}, alliance ${game.alliance}, war ${game.war}`,
+    `units built ${sum.unitsBuilt}: ${list(sum.unitsBuiltByKind)}`,
+    `space: Apollo ${sum.apolloBuilt}, parts ${sum.spaceshipParts}, launched ${sum.spaceshipsLaunched}, arrived ${sum.spaceshipsArrived}`,
+    `barbarians: raids at sea ${game.barbarianRaidsAtSea}, uprisings ${game.barbarianUprisings}, from huts ${game.barbarianHuts}, landings ${game.barbarianLandings}, cities taken ${game.citiesTakenByBarbarians}, ransoms ${game.barbarianRansoms}`,
+    `civil wars ${game.civilWars}, global warmings ${game.globalWarmings}, meltdowns ${game.nuclearMeltdowns}, respawns ${game.respawns}`,
+  ]
+    .map((text) => `${indent}${text}`)
+    .join('\n');
+};
+
 const line = (game, found) => {
   const run = game.run;
 
@@ -318,7 +395,7 @@ const line = (game, found) => {
   }
 
   const ending = run.ending
-    ? `${run.ending.reason} turn ${run.ending.turn} (${run.ending.year})`
+    ? `${run.ending.route} turn ${run.ending.turn} (${run.ending.year})`
     : run.endReason;
 
   return [
@@ -330,6 +407,9 @@ const line = (game, found) => {
     `${pad(run.errors, 3)} errors`,
     `${game.seconds.toFixed(1)}s`,
     found.length > 0 ? `\n           ${found.join('; ')}` : '',
+    run.counters
+      ? `\n${describeTotals(totals(run.counters), '           ')}`
+      : '',
   ].join('  ');
 };
 
@@ -402,7 +482,27 @@ const main = async () => {
   fs.rmSync(directory, { recursive: true, force: true });
 
   const failed = games.filter((game) => game.problems.length > 0),
-    seconds = (Date.now() - started) / 1000;
+    seconds = (Date.now() - started) / 1000,
+    counted = games
+      .map((game) => totals(game.run?.counters))
+      .filter((sum) => sum !== null),
+    endings = games
+      .map((game) => game.run?.ending?.route)
+      .filter((route) => route !== undefined)
+      .reduce((all, route) => ({ ...all, [route]: (all[route] ?? 0) + 1 }), {});
+
+  if (counted.length > 0) {
+    console.log(
+      `\nall ${counted.length} game(s): endings ${
+        Object.entries(endings)
+          .map(([route, count]) => `${route} ${count}`)
+          .join(', ') || 'none'
+      }\n${describeTotals(
+        counted.reduce((all, sum) => addTotals(all, sum), {}),
+        '  '
+      )}`
+    );
+  }
 
   if (options.json) {
     fs.writeFileSync(
@@ -432,4 +532,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { configFor, parseArguments };
+module.exports = { configFor, parseArguments, totals };

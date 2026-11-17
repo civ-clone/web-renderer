@@ -146,6 +146,10 @@ const usage = `usage: node tools/arena.js [options]
                          size: 80x50, 104x65 or 128x80
   --grid <id>            the grid the world is laid out on: ${GRIDS.join(', ')}
                          (default: square; the others need an even --height)
+  --set <id>             play this plugin set (src/js/pluginSets.ts), such as
+                         civ2, and count what happened in each game as the
+                         soak does (default: civ.one's default set, as
+                         src/js/plugins.ts loads it, with no counts)
   --civilizations <a,b,...>
                          seat 0 plays the first, seat 1 the second, ... by
                          class name (English, Japanese); other seats choose
@@ -178,6 +182,7 @@ const parseArguments = (argv) => {
     height: null,
     earth: false,
     grid: 'square',
+    set: null,
     civilizations: null,
     jobs: defaultJobs(),
     timeout: 600,
@@ -296,6 +301,11 @@ const parseArguments = (argv) => {
   // Earth's maps are square data (civ1-world refuses them on another grid).
   if (options.earth && options.grid !== 'square') {
     throw new Error(`--earth is only played on the square grid`);
+  }
+
+  // The Earth map is the default set's (civ1-earth-generator's).
+  if (options.earth && options.set !== null) {
+    throw new Error(`--earth is only played with the default set, not --set`);
   }
 
   if (options.grid !== 'square' && options.height % 2 === 1) {
@@ -504,7 +514,7 @@ const inspectVariant = (label, directory) => {
 // variant's rules there, in the same position. It doesn't import either
 // variant's `index`, whose `registerAIClient` has nothing to do in a headless
 // game.
-const generate = (root, variants) => {
+const generate = (root, variants, set) => {
   const variantsPath = path.join(root, 'variants.ts');
   const pluginPath = path.join(root, 'plugin-variants.ts');
   const roles = Object.keys(variants);
@@ -563,12 +573,37 @@ ${roles
 `
   );
 
-  return { pluginPath, variantsPath };
+  // Where `arena.ts` finds the set to play (`--set`): the plugin sets, with the installed AI's loader swapped for the
+  //  variants (see `bundle`), and the counts, or nothing, without `--set`, so that the default game bundles exactly
+  //  what it always has.
+  const pluginSetsPath = path.join(root, 'plugin-sets.ts');
+
+  fs.writeFileSync(
+    pluginSetsPath,
+    set === null
+      ? `export default null;\n`
+      : `import pluginSets from ${JSON.stringify(
+          path.join(webRenderer, 'src', 'js', 'pluginSets')
+        )};
+import { pluginsFrom } from '@civ-clone/ui-worker-client/Plugins';
+
+export default {
+  pluginSets,
+  pluginsFrom,
+  counters: () => import(${JSON.stringify(
+    path.join(webRenderer, 'tests', 'engine', 'lib', 'counters')
+  )}),
+};
+`
+  );
+
+  return { pluginPath, pluginSetsPath, variantsPath };
 };
 
-const bundle = async (root, { pluginPath, variantsPath }) => {
+const bundle = async (root, { pluginPath, pluginSetsPath, variantsPath }) => {
   const outfile = path.join(root, 'arena.js');
   const pluginsSource = path.join(webRenderer, 'src', 'js', 'plugins.ts');
+  const pluginSetsSource = path.join(webRenderer, 'src', 'js', 'pluginSets.ts');
   const installed = /\/@civ-clone\/simple-ai-client\//;
 
   const result = await require('esbuild').build(
@@ -593,6 +628,49 @@ const bundle = async (root, { pluginPath, variantsPath }) => {
             build.onResolve({ filter: /^arena:variants$/ }, () => ({
               path: variantsPath,
             }));
+
+            build.onResolve({ filter: /^arena:plugin-sets$/ }, () => ({
+              path: pluginSetsPath,
+            }));
+
+            // `--set`: the set's loader for the installed AI loads the variants instead, as `plugins.ts`'s import
+            //  does below.
+            build.onLoad(
+              { filter: /[\\/]src[\\/]js[\\/]pluginSets\.ts$/ },
+              (args) => {
+                if (path.resolve(args.path) !== pluginSetsSource) {
+                  return undefined;
+                }
+
+                const lines = fs
+                  .readFileSync(pluginSetsSource, 'utf8')
+                  .split('\n');
+                const loaders = lines
+                  .map((line, index) => [line, index])
+                  .filter(
+                    ([line]) => line.includes('import(') && installed.test(line)
+                  );
+
+                if (loaders.length !== 1) {
+                  throw new Error(
+                    'expected exactly one simple-ai-client loader in src/js/pluginSets.ts'
+                  );
+                }
+
+                const [line, index] = loaders[0];
+
+                lines[index] = line.replace(
+                  /import\([^)]*\)/,
+                  `import(${JSON.stringify(pluginPath)})`
+                );
+
+                return {
+                  contents: lines.join('\n'),
+                  loader: 'ts',
+                  resolveDir: path.dirname(pluginSetsSource),
+                };
+              }
+            );
 
             build.onLoad(
               { filter: /[\\/]src[\\/]js[\\/]plugins\.ts$/ },
@@ -748,6 +826,7 @@ const play = (outfile, game, options, checkpoints = []) =>
           earth: options.earth,
           grid: options.grid,
           seating: game.seating,
+          set: options.set,
           verbose: options.verbose,
         }),
       },
@@ -1056,6 +1135,68 @@ const printSummary = (summary) => {
   console.log(table(rows));
 };
 
+// `--set`'s counts (tests/engine/lib/counters.ts), summed over the games: each seat's by the AI that played it, and
+//  the game's own, barbarians and all.
+const printCounters = (games) => {
+  const played = games.filter((game) => !game.error),
+    totals = { baseline: {}, candidate: {} },
+    add = (into, key, value) => {
+      into[key] = (into[key] ?? 0) + value;
+    };
+
+  played.forEach((game) =>
+    game.seats.forEach(({ role, counters }) => {
+      if (!counters) {
+        return;
+      }
+
+      Object.entries(counters).forEach(([key, value]) => {
+        if (typeof value === 'number') {
+          add(totals[role], key, value);
+        } else if (value !== null && typeof value === 'object') {
+          Object.entries(value).forEach(([part, count]) =>
+            add(
+              totals[role],
+              `${key === 'governmentTurns' ? 'turns' : key}.${part}`,
+              count
+            )
+          );
+        }
+      });
+    })
+  );
+
+  const keys = [
+      ...new Set([
+        ...Object.keys(totals.baseline),
+        ...Object.keys(totals.candidate),
+      ]),
+    ],
+    game = {};
+
+  played.forEach((entry) =>
+    Object.entries(entry.counters?.game ?? {}).forEach(([key, value]) =>
+      add(game, key, value)
+    )
+  );
+
+  console.log(
+    table([
+      ['counted, over every seat', 'baseline', 'candidate'],
+      ...keys.map((key) => [
+        key,
+        totals.baseline[key] ?? 0,
+        totals.candidate[key] ?? 0,
+      ]),
+    ])
+  );
+  console.log(
+    `\nin the ${played.length} game(s): ${Object.entries(game)
+      .map(([key, value]) => `${key} ${value}`)
+      .join(', ')}`
+  );
+};
+
 // A conformance game with both copies of the baseline seated alternately: if
 // the arena harness or the second copy changed play at all, the fixture's
 // checksums move.
@@ -1075,6 +1216,7 @@ const conformanceCheck = async (outfile, options) => {
       // The fixture is a square game.
       grid: 'square',
       civilizations: null,
+      set: null,
     },
     checkpoints
   );
@@ -1163,7 +1305,10 @@ const main = async () => {
     console.log(`baseline:  ${variants.baseline.label}`);
     console.log(`candidate: ${variants.candidate.label}`);
 
-    const { outfile, inputs } = await bundle(root, generate(root, variants));
+    const { outfile, inputs } = await bundle(
+      root,
+      generate(root, variants, options.set)
+    );
     const bundled = checkBundle(root, inputs);
 
     console.log(
@@ -1183,11 +1328,19 @@ const main = async () => {
         earth: options.earth,
         grid: options.grid,
         civilizations: options.civilizations,
+        // Only with `--set`, so that the default game's report is what it always was.
+        ...(options.set === null ? {} : { set: options.set }),
       },
       bundle: bundled,
     };
 
-    if (options.selfCheck) {
+    if (options.selfCheck && options.set !== null) {
+      // The fixture is the default set's game.
+      console.log(
+        `\nself-check 1: skipped, as the conformance fixture is the default set's, not ${options.set}'s`
+      );
+      output.conformance = { pass: null, skipped: true };
+    } else if (options.selfCheck) {
       process.stdout.write(
         '\nself-check 1: both copies seated alternately reproduce the conformance fixture... '
       );
@@ -1224,6 +1377,8 @@ const main = async () => {
       } players, ${options.width}x${options.height}${
         options.earth ? ' Earth' : ''
       }${options.grid === 'square' ? '' : ` on the ${options.grid} grid`}${
+        options.set === null ? '' : `, the ${options.set} set`
+      }${
         options.civilizations
           ? ` (${options.civilizations.join(', ')} in seats 0–${
               options.civilizations.length - 1
@@ -1274,12 +1429,15 @@ const main = async () => {
         seats,
         errorsLogged,
         mathRandomCalls,
+        counters,
       }) => ({
         index,
         seed,
         seating,
         elapsed,
         ...(error ? { error } : { seats, errorsLogged, mathRandomCalls }),
+        // Only with `--set`.
+        ...(counters === undefined ? {} : { counters }),
       })
     );
     output.summary = summary;
@@ -1288,6 +1446,11 @@ const main = async () => {
     printGames(games);
     console.log('');
     printSummary(summary);
+
+    if (options.set !== null) {
+      console.log('');
+      printCounters(games);
+    }
     console.log(
       `\n${games.length - failed.length} games played, ${
         failed.length
@@ -1320,7 +1483,8 @@ const main = async () => {
         .slice(0, 20)
         .forEach((line) => console.log(`  ${line}`));
 
-      if (!identical.pass || !output.conformance.pass) {
+      // A skipped conformance game (`--set`) neither passes nor fails.
+      if (!identical.pass || output.conformance.pass === false) {
         exitCode = 1;
       }
 

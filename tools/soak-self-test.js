@@ -13,8 +13,9 @@ const soak = path.join(__dirname, 'soak.js'),
   directory = fs.mkdtempSync(path.join(os.tmpdir(), 'soak-self-test-')),
   failures = [];
 
+// By value, so that a list of counts compares as its contents.
 const expect = (description, actual, expected) => {
-  if (actual !== expected) {
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
     failures.push(
       `${description}: expected ${JSON.stringify(
         expected
@@ -82,6 +83,36 @@ fixed.games.forEach(({ seed, run: report, problems }) => {
   expect(`${label}: errors`, report?.errors, 0);
   expect(`${label}: rules loaded`, (report?.isolation.rules ?? 0) > 100, true);
   expect(`${label}: forbidden`, report?.isolation.forbidden.length, 0);
+
+  // The counts (`tests/engine/lib/counters.ts`): every player, each in its government for every turn started before
+  //  the last, as nobody does anything.
+  const players = report?.counters?.players ?? [];
+
+  expect(`${label}: players counted`, players.length, 4);
+  expect(
+    `${label}: turns counted under a government`,
+    players.map(({ governmentTurns }) =>
+      Object.values(governmentTurns).reduce((sum, turns) => sum + turns, 0)
+    ),
+    [19, 19, 19, 19]
+  );
+  expect(
+    `${label}: nothing changed, built or declared`,
+    players.map(
+      ({ governmentChanges, unitsBuilt, treaties }) =>
+        governmentChanges +
+        unitsBuilt +
+        Object.values(treaties).reduce((sum, count) => sum + count, 0)
+    ),
+    [0, 0, 0, 0]
+  );
+  expect(
+    `${label}: the game's counts`,
+    Object.values(report?.counters?.game ?? { missing: 1 }).every(
+      (count) => count === 0
+    ),
+    true
+  );
 });
 
 // With nobody to keep playing, a game that has ended carries on, and the run stops at the next turn.
@@ -101,6 +132,7 @@ ended.games.forEach(({ run: report, problems }) => {
   expect('ended: end reason', report?.endReason, 'game-over');
   // Nobody builds anything, so only the date can end it.
   expect('ended: ending', report?.ending?.reason, 'date');
+  expect('ended: route', report?.ending?.route, 'retirement');
   expect(
     'ended: the run stops the turn after the ending',
     report?.turn,
@@ -145,4 +177,6 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log('PASS soak self-test (fixed turns, until game over, isolation)');
+console.log(
+  'PASS soak self-test (fixed turns, until game over, isolation, counts)'
+);
