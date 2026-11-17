@@ -111,9 +111,17 @@ const heldNoteId = (city: CityData): string => `city-held-${city.id}`,
           ...city.tradeRoutes.map((route) => {
             // Already escaped by `Generic.city-name`, so not again (as `TopCitiesReport` does).
             const name = t('Generic.city-name', {
-              civilization: route.civilization,
-              name: route.name,
-            });
+                civilization: route.civilization,
+                name: route.name,
+              }),
+              // What the route carries, under rules that keep it (Civ2's, M2d part 2).
+              goods = route.goods
+                ? escape(
+                    t(`TradeRoute.goods.${route.goods}`, {
+                      defaultValue: route.goods,
+                    })
+                  )
+                : null;
 
             // One Trade icon a point, as the city's own yields are drawn (#683), with the words for a screen reader.
             return s(
@@ -121,10 +129,14 @@ const heldNoteId = (city: CityData): string => `city-held-${city.id}`,
                 'City.trade-route',
                 {
                   city: name,
+                  context: goods === null ? undefined : 'goods',
+                  goods,
                   trade: route.trade,
                   interpolation: { escapeValue: false },
                 }
-              )}</span><span class="name" aria-hidden="true">${name}</span></p>`,
+              )}</span><span class="name" aria-hidden="true">${name}${
+                goods === null ? '' : ` (${goods})`
+              }</span></p>`,
               ...yieldImages({ _: 'Trade', value: route.trade })
             );
           })

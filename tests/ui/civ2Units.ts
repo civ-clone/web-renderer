@@ -720,7 +720,7 @@ const run = async (): Promise<void> => {
     await Promise.resolve();
 
     expect(
-      'with Sabotage Unit its only mission (Civ2 has no bribe yet), the one row answers itself, as such a list does',
+      'with Sabotage Unit its only mission (a Democracy’s unit can’t be bribed), the one row answers itself, as such a list does',
       [opened !== null && 'autoChosen' in opened && opened.autoChosen(), sent],
       [true, ['SabotageUnit']]
     );

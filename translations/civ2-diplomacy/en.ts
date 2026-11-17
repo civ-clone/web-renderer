@@ -244,6 +244,54 @@ i18next.addResources('en', 'notification', {
   'Diplomacy.reputation-restored.title': 'The Eiffel Tower',
   'Diplomacy.reputation-restored.body':
     'The Eiffel Tower wins the world over: our past broken promises count for less.',
+  // What an espionage incident came to (M2d part 2), told to the side whose agent it was, then to the other.
+  'Diplomacy.incident.attitude.title': 'Incident',
+  'Diplomacy.incident.attitude.body': `Our agent’s work has angered ${the(
+    'player'
+  )}. They think less of us now.`,
+  'Diplomacy.incident.attitude.unmet.title': 'Incident',
+  'Diplomacy.incident.attitude.unmet.body': `Our agent’s work has angered ${unknown}.`,
+  'Diplomacy.incident.terror.title': 'Incident',
+  'Diplomacy.incident.terror.body': `${The(
+    'player'
+  )} call our agent’s work terror, and swear revenge.`,
+  'Diplomacy.incident.terror.unmet.title': 'Incident',
+  'Diplomacy.incident.terror.unmet.body': `${Unknown} calls our agent’s work terror, and swears revenge.`,
+  'Diplomacy.incident.wimp-out.title': 'Incident',
+  'Diplomacy.incident.wimp-out.body': `Our allies ${the(
+    'player'
+  )} resent our agent’s theft, though the alliance holds.`,
+  'Diplomacy.incident.wimp-out.unmet.title': 'Incident',
+  'Diplomacy.incident.wimp-out.unmet.body': `Our allies resent our agent’s theft, though the alliance holds.`,
+  'Diplomacy.incident-against-us.attitude.title': 'Incident',
+  'Diplomacy.incident-against-us.attitude.body': `Agents of ${the(
+    'player'
+  )} have been at work in our land.`,
+  'Diplomacy.incident-against-us.attitude.unmet.title': 'Incident',
+  'Diplomacy.incident-against-us.attitude.unmet.body':
+    'Foreign agents have been at work in our land.',
+  'Diplomacy.incident-against-us.terror.title': 'Incident',
+  'Diplomacy.incident-against-us.terror.body': `Agents of ${the(
+    'player'
+  )} have struck at us. We will not forget it.`,
+  'Diplomacy.incident-against-us.terror.unmet.title': 'Incident',
+  'Diplomacy.incident-against-us.terror.unmet.body':
+    'Foreign agents have struck at us. We will not forget it.',
+  'Diplomacy.incident-against-us.wimp-out.title': 'Incident',
+  'Diplomacy.incident-against-us.wimp-out.body': `Our allies ${the(
+    'player'
+  )} have been stealing from us.`,
+  'Diplomacy.incident-against-us.wimp-out.unmet.title': 'Incident',
+  'Diplomacy.incident-against-us.wimp-out.unmet.body':
+    'Our allies have been stealing from us.',
+  // A Senate's scandal (civ2-government), from an incident or a refused withdrawal.
+  'Diplomacy.senate-scandal.title': 'Scandal!',
+  'Diplomacy.senate-scandal.body': `Our dealings with ${the(
+    'player'
+  )} have caused a scandal. The Senate has brought the government down, and we have fallen into Anarchy.`,
+  'Diplomacy.senate-scandal.unmet.title': 'Scandal!',
+  'Diplomacy.senate-scandal.unmet.body':
+    'A scandal has brought the government down, and we have fallen into Anarchy.',
   'Diplomacy.reputations-halved.title': 'The Manhattan Project',
   'Diplomacy.reputations-halved.body':
     'In the shadow of the Manhattan Project, old grievances fade: every civilization’s broken promises count for less.',

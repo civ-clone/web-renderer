@@ -47,6 +47,7 @@ const babylonian = { civilization: { _: 'Babylonian' } },
   },
   roman = (gold: number) =>
     ({
+      _: 'Diplomat',
       id: 'Diplomat-1',
       player: {
         civilization: { _: 'Roman' },

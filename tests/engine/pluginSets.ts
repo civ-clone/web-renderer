@@ -58,6 +58,7 @@ import {
 } from '@civ-clone/library-diplomacy/Proposals';
 import BorderRecord from '@civ-clone/civ2-diplomacy/Records/BorderRecord';
 import CallForHelpRecord from '@civ-clone/civ2-diplomacy/Records/CallForHelpRecord';
+import NuclearDeviceRecord from '@civ-clone/civ2-diplomacy/Records/NuclearDeviceRecord';
 import { Gold } from '@civ-clone/library-city/Yields';
 import { IInteraction } from '@civ-clone/core-diplomacy/Interaction';
 import LastContactRecord from '@civ-clone/base-diplomacy/Records/LastContactRecord';
@@ -68,6 +69,12 @@ import TreatyFlagsRecord from '@civ-clone/civ2-diplomacy/Records/TreatyFlagsReco
 import WarnedUnitsRecord from '@civ-clone/civ2-diplomacy/Records/WarnedUnitsRecord';
 import { instance as interactionRegistryInstance } from '@civ-clone/core-diplomacy/InteractionRegistry';
 import isBarbarian from '@civ-clone/base-civilization-barbarian/isBarbarian';
+import {
+  ROUTE_GOODS,
+  keepRouteGoods,
+} from '@civ-clone/ui-rules-civ2/lib/routeGoods';
+import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
+import { instance as pendingEffectRegistryInstance } from '@civ-clone/core-pending-effect/PendingEffectRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 
 const {
@@ -99,7 +106,8 @@ type Report = {
 };
 
 // What a Civ2 game's diplomacy can hold that its save has to name (M2d, #1007): the ceasefire and alliance, base-
-//  diplomacy's records, civ2-diplomacy's, and every proposal of the talks a person opens, with each kind of gift.
+//  diplomacy's records, civ2-diplomacy's (with a nuclear device found out by a civilization not yet met, M2d part 2),
+//  and every proposal of the talks a person opens, with each kind of gift.
 const CIV2_DIPLOMACY_TYPES = [
   'AdvanceTaken',
   'Alliance',
@@ -114,6 +122,7 @@ const CIV2_DIPLOMACY_TYPES = [
   'Gold',
   'JoinWar',
   'LastContactRecord',
+  'NuclearDeviceRecord',
   'OfferCeasefire',
   'PatienceRecord',
   'ProposeAlliance',
@@ -179,12 +188,7 @@ const civ2DiplomacyRecords = (): void => {
       new SellAdvance(advance, new Gold(30), other, negotiation, rules),
       new ShareMaps(player, negotiation, rules),
       new Dialogue(other, 'civ2.war', negotiation, rules),
-      new AdvanceTaken(
-        other,
-        Writing as typeof Advance,
-        negotiation,
-        rules
-      ),
+      new AdvanceTaken(other, Writing as typeof Advance, negotiation, rules),
     ];
 
   // As the talks hold them, without running their rules.
@@ -203,9 +207,21 @@ const civ2DiplomacyRecords = (): void => {
     new SenateRecord(player, 42, true, rules) as IInteraction,
     new CallForHelpRecord(player, other, third, rules) as IInteraction,
     new BorderRecord(player, other, ['a'], rules) as IInteraction,
-    new WarnedUnitsRecord(player, [unit.id()], rules) as IInteraction
+    new WarnedUnitsRecord(player, [unit.id()], rules) as IInteraction,
+    new NuclearDeviceRecord(third, player, rules) as IInteraction
   );
 };
+
+// The goods rules-civ2 keeps for each trade route (M2d part 2): each record's holder, partner and goods, by city name.
+const routeGoodsRecords = (): string[][] =>
+  pendingEffectRegistryInstance.getByHandler(ROUTE_GOODS).map((effect) => [
+    (effect.target() as any).name(),
+    cityRegistryInstance
+      .entries()
+      .find((city) => city.id() === effect.data().partner)
+      ?.name() ?? 'missing',
+    effect.data().goods,
+  ]);
 
 const play = (name: string, path: string): void => {
   const receivers = new Map<string, (data: any, meta?: any) => void>(),
@@ -454,6 +470,15 @@ const play = (name: string, path: string): void => {
       // One of each of the diplomacy's records and proposals, as a game with talks would have them.
       civ2DiplomacyRecords();
 
+      // And a trade route's goods, as a delivery keeps them, between the first two cities.
+      const [holder, partner] = cityRegistryInstance.entries();
+
+      if (holder && partner) {
+        keepRouteGoods(holder, partner, 'Hides');
+      }
+
+      protocol.routeGoods = routeGoodsRecords();
+
       const written = saved();
 
       writeFileSync(path, JSON.stringify(written));
@@ -493,7 +518,7 @@ const play = (name: string, path: string): void => {
       loadFailure() === null ? saved() : null,
       null,
       null,
-      before === null ? null : { before }
+      before === null ? null : { before, routeGoods: routeGoodsRecords() }
     );
   })().catch((error: any): void => {
     process.stderr.write(`${error?.stack ?? error}\n`);
@@ -1154,11 +1179,20 @@ if (scenario !== null) {
     [null, null, 'civ2', 0, 'staggered-iso', [...civ2.plugins].sort()]
   );
   expect(
-    'a civ2 game’s ceasefire, alliance, diplomacy records and every proposal of the talks, with a gift of each kind, are saved, loaded and saved again (M2d)',
+    'a civ2 game’s ceasefire, alliance, diplomacy records and every proposal of the talks, with a gift of each kind, are saved, loaded and saved again (M2d, and M2d part 2’s nuclear device record)',
     [civ2Game.types, civ2Loaded.types].map((types) =>
       CIV2_DIPLOMACY_TYPES.filter((type) => !types.includes(type))
     ),
     [[], []]
+  );
+
+  expect(
+    'a civ2 game’s trade route goods are saved and loaded, holder and partner the same cities (M2d part 2)',
+    [
+      (civ2Game.protocol as any)?.routeGoods?.length,
+      (civ2Loaded.protocol as any)?.routeGoods,
+    ],
+    [1, (civ2Game.protocol as any)?.routeGoods]
   );
 
   finished = true;

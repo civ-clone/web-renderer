@@ -32,6 +32,9 @@ i18next.addResources('en', 'default', {
   'Diplomat.industrial-sabotage': 'Industrial Sabotage',
   'Diplomat.incite-revolt': 'Incite a Revolt',
   'Diplomat.meet-with-leader': 'Meet with Leader',
+  // A Spy's, under Civ2's rules (M2d part 2).
+  'Diplomat.poison-water': 'Poison the Water Supply',
+  'Diplomat.plant-nuclear-device': 'Plant a Nuclear Device',
   'TradeRoute.goods.Silk': 'Silk',
   'TradeRoute.goods.Silver': 'Silver',
   'TradeRoute.goods.Wine': 'Wine',

@@ -9,7 +9,9 @@
 //  fuel on the unit card, what a battle sounds like (with Civ1's sounds), the squares Paradrop and Airlift reach, what
 //  Pillage can take, and a notice for a unit promoted after a win. And M2c's cities: the citizens' moods in Civ2's
 //  stages (angry ones among them), what each square yields its city, the city's style and citizens' era, the
-//  specialists it may have, what a change of build keeps, and the gold Capitalization makes. Still as a game without them would answer: choosing
+//  specialists it may have, what a change of build keeps, and the gold Capitalization makes. And M2d part 2's Diplomats,
+//  Spies and Caravans: what a Spy may aim a theft or a sabotage at, what a mission does to a treaty, the victim's answer
+//  to an espionage incident, the goods each trade route carries, and their notices. Still as a game without them would answer: choosing
 //  an Auto city's next build, and scoring and conquest. It imports nothing of Civ1's (the civ2 set's isolation suite checks that none of it loads).
 
 import { citizenSummary } from '@civ-clone/base-city-happiness/lib/calculateCitizenState';
@@ -39,6 +41,7 @@ import {
 import AdvanceTaken from '@civ-clone/base-diplomacy/Dialogues/AdvanceTaken';
 import BorderRecord from '@civ-clone/civ2-diplomacy/Records/BorderRecord';
 import CallForHelpRecord from '@civ-clone/civ2-diplomacy/Records/CallForHelpRecord';
+import NuclearDeviceRecord from '@civ-clone/civ2-diplomacy/Records/NuclearDeviceRecord';
 import { SaveableClass } from '@civ-clone/core-data-object/ClassRegistry';
 import SenateRecord from '@civ-clone/civ2-diplomacy/Records/SenateRecord';
 import TreatyFlagsRecord from '@civ-clone/civ2-diplomacy/Records/TreatyFlagsRecord';
@@ -51,6 +54,15 @@ import { instance as additionalDataRegistryInstance } from '@civ-clone/core-data
 import { instance as engineInstance } from '@civ-clone/core-engine/Engine';
 import promoted from './Rules/promoted';
 import notifications from './notifications';
+import espionageEvents from './Rules/espionageEvents';
+import espionageNotices from './espionageNotices';
+import incidentOffer from './lib/incidentOffer';
+import {
+  forgetRouteGoodsListener,
+  routeGoods,
+  routeGoodsListener,
+} from './lib/routeGoods';
+import { missionConsequences, missionTargets } from './AdditionalData/missions';
 import reputationNotices from './Rules/reputationNotices';
 import warNotices from './Rules/warNotices';
 import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
@@ -86,11 +98,13 @@ export const civ2Rules: WorkerRules = {
     [ChooseGovernment, handleChooseGovernment],
   ],
   // What a computer player took in an exchange of knowledge, and civ2-diplomacy's own records: the treaty flags, the
-  //  Senate's roll, a call for help, the border incidents and the units warned.
+  //  Senate's roll, a call for help, the border incidents, the units warned and a nuclear device found out by a
+  //  civilization not yet met (M2d part 2).
   saveableClasses: [
     AdvanceTaken,
     BorderRecord,
     CallForHelpRecord,
+    NuclearDeviceRecord,
     SenateRecord,
     TreatyFlagsRecord,
     WarnedUnitsRecord,
@@ -134,10 +148,19 @@ export const civ2Rules: WorkerRules = {
     accept: (player, GovernmentType, rules) =>
       acceptRevolution(player, GovernmentType, rules),
   },
-  // What it tells a person of its diplomacy.
-  notifications: notifications(),
-  // A treaty's end is told by what ended it (`civ2:war-on`, and civ2-diplomacy's own events), not as each ends.
-  replacesNotices: ['player:declaration-expired'],
+  // An espionage incident under a treaty, which the victim may answer with war or the end of an alliance (M2d part 2).
+  incidentOffer: incidentOffer(),
+  // What a trade route carries, kept as each Caravan or Freight arrives (`lib/routeGoods`).
+  tradeRouteGoods: (holder, partner) => routeGoods(holder, partner),
+  // What it tells a person of its diplomacy, and of its Diplomats, Spies and Caravans (M2d part 2).
+  notifications: [...notifications(), ...espionageNotices()],
+  // A treaty's end is told by what ended it (`civ2:war-on`, and civ2-diplomacy's own events), not as each ends; a
+  //  delivery, with the research it pays too; a nuclear detonation, which doesn't name a device's planter.
+  replacesNotices: [
+    'player:declaration-expired',
+    'unit:trade-route-established',
+    'unit:nuclear-detonation',
+  ],
   // How a rival's city is drawn, from its owner's advances, as one's own is (`style`).
   cityStyle: (city) => cityStyle(city),
   // No score in M2a, so nothing for conquest either.
@@ -174,6 +197,8 @@ export const register = (): void => {
     unitFuel(),
     actionTargets(),
     pillageTargets(),
+    ...missionTargets(),
+    ...missionConsequences(),
     leaderTitleData(),
     rechoose(),
     maxRates(),
@@ -184,8 +209,13 @@ export const register = (): void => {
   ruleRegistryInstance.register(
     promoted(engineInstance),
     ...reputationNotices(engineInstance),
-    warNotices(engineInstance)
+    warNotices(engineInstance),
+    ...espionageEvents(engineInstance)
   );
+
+  // What each trade route carries, as Caravans and Freight arrive, and forgotten with a destroyed city.
+  engineInstance.on('unit:trade-route-established', routeGoodsListener());
+  engineInstance.on('city:destroyed', forgetRouteGoodsListener());
 };
 
 register();

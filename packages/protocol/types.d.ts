@@ -73,7 +73,13 @@ export interface City extends EntityInstance<'City'> {
   tiles: PlayerTile[];
   tilesWorked: PlayerTile[];
   // Only for your own cities (#57).
-  tradeRoutes?: { civilization: string; name: string; trade: number }[];
+  // `goods`, under rules that keep what a route carries (Civ2's, M2d part 2), by its `TradeRoute.goods.*` key.
+  tradeRoutes?: {
+    civilization: string;
+    goods?: string;
+    name: string;
+    trade: number;
+  }[];
   units: Unit[];
   yields: Yield[];
 }
@@ -298,8 +304,14 @@ export interface UnitAction<Types = string> extends EntityInstance<Types> {
   from: Tile;
   // The terrain the action leaves behind, for those that change it (#348).
   result?: string | null;
-  // What a Pillage can take from its square, by type name, when the rules let the player choose (Civ2).
+  // What a Pillage can take from its square, by type name, when the rules let the player choose (Civ2), and what a
+  //  Spy's theft or sabotage may aim at: an advance's or a building's type name, or `production` (Civ2, M2d part 2).
   targets?: string[];
+  // What a mission would do to a treaty, under rules that say (Civ2, M2d part 2): `incident-if-lost`, `treaty-ends` or
+  //  `treaty-kept`.
+  consequence?: string | null;
+  // Whether the treaty a mission may break could bring the government down with it (Civ2's Senate, M2d part 2).
+  scandal?: boolean;
   // Which of its `targets` the player chose, set by the page as the action is sent (M2b).
   choice?: string;
   to: Tile;

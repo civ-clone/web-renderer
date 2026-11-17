@@ -46,6 +46,20 @@ i18next.addResources('en', 'default', {
   'ChooseFromList.government.revolution-offer.choice.true':
     'Yes, start a revolution',
   'ChooseFromList.government.revolution-offer.title': 'Revolution?',
+  // Civ2's chance to answer an espionage incident under a treaty (M2d part 2): letting it pass first, as it changes
+  //  nothing.
+  'ChooseFromList.diplomacy.incident-offer.body':
+    'Agents of the $t(Generic.civilization-name.plural, { "civilization": "{{data.player.civilization._}}", "ns": "default" }) have been caught at work against us, for all our treaty. Shall we declare war on them?',
+  'ChooseFromList.diplomacy.incident-offer.choice.false': 'Let it pass',
+  'ChooseFromList.diplomacy.incident-offer.choice.true': 'Declare war',
+  'ChooseFromList.diplomacy.incident-offer.title': 'Incident',
+  'ChooseFromList.diplomacy.incident-offer-alliance.body':
+    'Agents of our allies, the $t(Generic.civilization-name.plural, { "civilization": "{{data.player.civilization._}}", "ns": "default" }), have been caught at work against us. Shall we end our alliance?',
+  'ChooseFromList.diplomacy.incident-offer-alliance.choice.false':
+    'Let it pass',
+  'ChooseFromList.diplomacy.incident-offer-alliance.choice.true':
+    'End the alliance',
+  'ChooseFromList.diplomacy.incident-offer-alliance.title': 'Incident',
   'ChooseFromList.choose-civilization.body': '',
   'ChooseFromList.choose-civilization.choice':
     '$t(Generic.civilization-name.name, { "civilization": "{{value._}}", "ns": "default" })',

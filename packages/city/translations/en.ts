@@ -27,6 +27,8 @@ i18next.addResources('en', 'default', {
     'Pollution {{count, number}}: this city may pollute the land around it',
   'City.trade-routes': 'Trade routes',
   'City.trade-route': '{{city}}: +{{trade, number}}',
+  // With what it carries, under rules that keep it (Civ2's, M2d part 2).
+  'City.trade-route_goods': '{{city}} ({{goods}}): +{{trade, number}}',
   'City.Specialist.change': 'Change {{- specialist}}',
   // A build that turns the city's shields into gold (Capitalization, M2c).
   'City.Build.gold-per-turn_one': '{{count, number}} gold per turn',

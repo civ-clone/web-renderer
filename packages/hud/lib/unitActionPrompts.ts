@@ -12,7 +12,8 @@ import { t } from 'i18next';
 
 // The windows a unit action can need before it's sent: a sneak attack's confirmation, an attack with part of a move
 //  left, a treaty partner's land (#287), a Caravan's "Will you?" (#57), a Diplomat's arrival, incite and bribe windows
-//  (#58). Shared by the arrow keys and the unit action menu.
+//  (#58), and a Spy's choice of what to steal or sabotage (Civ2, M2d part 2). Shared by the arrow keys and the unit
+//  action menu.
 
 type Perform = (action: UnitAction) => void;
 
@@ -29,6 +30,9 @@ const sneakActions = [
     'SneakNuclearAttack',
     'SneakStealTechnology',
     'SneakInciteRevolt',
+    // Civ2's sabotage and poisoning under a treaty, confirmed as a theft is (M2d part 2).
+    'SneakIndustrialSabotage',
+    'SneakPoisonWater',
     // Civ2's attack on a player met and not at war with, offered only as what an `Overruled` stands for (#1007).
     'UndeclaredAttack',
     'UndeclaredNuclearAttack',
@@ -41,6 +45,21 @@ const sneakActions = [
   //  which `SneakAttack` extends). A nuclear attack isn't weakened, so it doesn't ask.
   attackActions = ['Attack', 'SneakAttack'],
   inciteActions = ['InciteRevolt', 'SneakInciteRevolt', 'SubvertCity'],
+  // A Diplomat's missions that break a treaty, which ask with Civ1's words and buttons.
+  missionSneakActions = [
+    'SneakStealTechnology',
+    'SneakInciteRevolt',
+    'SneakIndustrialSabotage',
+    'SneakPoisonWater',
+  ],
+  // The missions whose `targets` a Spy chooses from (Civ2, M2d part 2), and what each target is: an advance, or a
+  //  building (or `production`). Performed with no choice, each takes one at random, as the engine does without one.
+  missionTargetKinds: { [action: string]: 'advance' | 'building' } = {
+    StealTechnology: 'advance',
+    SneakStealTechnology: 'advance',
+    IndustrialSabotage: 'building',
+    SneakIndustrialSabotage: 'building',
+  },
   // A Spy's arrival beside another player's unit (M2b): Civ2's missions against a unit, each standing for its action.
   unitMissionOptions: [string, string][] = [
     ['bribe-unit', 'BribeUnit'],
@@ -51,7 +70,10 @@ const sneakActions = [
     ['establish-embassy', ['EstablishEmbassy']],
     ['investigate-city', ['InvestigateCity']],
     ['steal-technology', ['StealTechnology', 'SneakStealTechnology']],
-    ['industrial-sabotage', ['IndustrialSabotage']],
+    ['industrial-sabotage', ['IndustrialSabotage', 'SneakIndustrialSabotage']],
+    // A Spy's, under Civ2's rules (M2d part 2).
+    ['poison-water', ['PoisonWater', 'SneakPoisonWater']],
+    ['plant-nuclear-device', ['PlantNuclearDevice']],
     ['incite-revolt', inciteActions],
     ['meet-with-leader', ['MeetWithLeader']],
   ];
@@ -97,8 +119,52 @@ export const goldOf = (player: Player): number =>
   player.treasuries?.find((treasury) => treasury.yield._ === 'Gold')?.value ??
   0;
 
+// What the rules say a mission does to a treaty (Civ2's `consequence`, M2d part 2), or `null` where they don't say.
+const consequenceOf = (action: UnitAction): string | null =>
+  asked(action).consequence ?? null;
+
+// The line added where the rules say the incident could bring the government down (Civ2's Senate scandal).
+const scandalLine = (action: UnitAction): string[] =>
+  asked(action).scandal === true ? [t('Diplomat.treaty-mission.scandal')] : [];
+
 const confirmSneak = (action: UnitAction, perform: Perform): void => {
   const { _: name, enemy } = asked(action) as EnemyAction;
+
+  // A mission the rules say breaks nothing unless its agent is lost, or one whose agent is always lost, so the incident
+  //  is certain (Civ2's), asked in those words, with the Senate's scandal where the rules say it could follow.
+  const consequence = consequenceOf(action);
+
+  if (
+    consequence === 'incident-if-lost' ||
+    consequence === 'incident-certain'
+  ) {
+    const certain = consequence === 'incident-certain',
+      confirmation: ConfirmationWindow = new ConfirmationWindow(
+        t('Diplomat.treaty-mission.title'),
+        [
+          t(
+            certain
+              ? 'Diplomat.treaty-mission.certain'
+              : 'Diplomat.treaty-mission.body',
+            { nation: civilization(enemy, 'plural') }
+          ),
+          ...scandalLine(action),
+        ].join(' '),
+        () => {
+          confirmation.close();
+
+          perform(action);
+        },
+        {
+          okLabel: certain
+            ? 'Diplomat.break-treaty'
+            : 'Diplomat.treaty-mission.go-ahead',
+          cancelLabel: 'Diplomat.cancel-action',
+        }
+      );
+
+    return;
+  }
 
   // Closed before the treaty is broken: breaking it can open the part-of-a-move question, and closing this window after
   //  that would take the focus back from it, so a second Enter dismissed it without attacking.
@@ -115,7 +181,7 @@ const confirmSneak = (action: UnitAction, perform: Perform): void => {
             ns: 'civilization',
           }),
         })
-      : ['SneakStealTechnology', 'SneakInciteRevolt'].includes(name)
+      : missionSneakActions.includes(name)
       ? t('Diplomat.peace-treaty', {
           nation: civilization(enemy, 'plural'),
         })
@@ -130,7 +196,7 @@ const confirmSneak = (action: UnitAction, perform: Perform): void => {
 
       breakTreaty(action, perform);
     },
-    ['SneakStealTechnology', 'SneakInciteRevolt'].includes(name)
+    missionSneakActions.includes(name)
       ? {
           okLabel: 'Diplomat.break-treaty',
           cancelLabel: 'Diplomat.cancel-action',
@@ -197,9 +263,16 @@ const inciteWindow = (
     // Asked with one or the other, as `cost` is.
     city = cityName((incite ?? subvert)!);
 
+  // What inciting at each price does to a treaty, where the rules say (Civ2's, M2d part 2).
+  const consequences = [incite, subvert]
+    .map((action) => (action ? consequenceOf(action) : null))
+    .filter((consequence): consequence is string => consequence !== null)
+    .map((consequence) => t(`Diplomat.incite.${consequence}`))
+    .concat(incite ? scandalLine(incite) : []);
+
   new ActionWindow(
     t('Diplomat.incite.title'),
-    t('Diplomat.incite.body', { city, cost }),
+    [t('Diplomat.incite.body', { city, cost }), ...consequences].join(' '),
     {
       actions: {
         primary: {
@@ -305,10 +378,48 @@ const confirmPartialMove =
 // Sends an action that offers a choice (its `targets`, such as what a Pillage takes, M2b) with the player's, asked when
 //  there's more than one. With one or none it is sent as it is, and the engine takes what there is, as it does for an
 //  action that offers no choice or one asked for in another's place (`Overruled`).
+// The row that leaves the target to chance: never a type name.
+const randomTarget = '(random)';
+
+// What a mission's target is called: an advance, a building, or what the city is building.
+const missionTargetLabel = (kind: 'advance' | 'building', target: string) =>
+  kind === 'advance'
+    ? t(`${target}.name`, { defaultValue: target, ns: 'science' })
+    : target === 'production'
+    ? t('Spy.target.production')
+    : t(`Improvement.${target}.name`, { defaultValue: target, ns: 'city' });
+
 const chooseTarget =
   (perform: Perform): Perform =>
   (chosen: UnitAction): void => {
-    const targets = chosen.targets ?? [];
+    const targets = chosen.targets ?? [],
+      kind = missionTargetKinds[chosen._];
+
+    // A Spy's theft or sabotage (Civ2): whatever there is to aim at, or one at random, which the engine takes without a
+    //  choice. Asked even with one target, as a chosen target and a random one are run differently (the original
+    //  asks first whether to choose at all).
+    if (kind && targets.length > 0) {
+      openChoice(
+        t('ChooseTarget.title', {
+          action: t(`Action.${chosen._}.name`, {
+            defaultValue: chosen._,
+            ns: 'unit',
+          }),
+        }),
+        [
+          { label: t('Spy.target.random'), value: randomTarget },
+          ...targets.map((target) => ({
+            label: missionTargetLabel(kind, target),
+            value: target,
+          })),
+        ],
+        (choice) =>
+          perform(choice === randomTarget ? chosen : { ...chosen, choice }),
+        { canClose: true }
+      );
+
+      return;
+    }
 
     if (targets.length < 2) {
       perform(chosen);
@@ -353,6 +464,30 @@ export const performWithPrompts = (
   // Read only for the windows that offer a price: the own-tile keys come through here too (#287).
   if (inciteActions.includes(name)) {
     inciteWindow(actionsOnTile, goldOf(unit.player), perform);
+
+    return;
+  }
+
+  // Planting a nuclear device asks first, saying what the rules say may follow (Civ2's discovery).
+  if (action._ === 'PlantNuclearDevice') {
+    const confirmation: ConfirmationWindow = new ConfirmationWindow(
+      t('Diplomat.plant-device.title'),
+      [
+        t('Diplomat.plant-device.body', { city: cityName(action) }),
+        ...(consequenceOf(action) === 'device-may-be-found'
+          ? [t('Diplomat.plant-device.may-be-found')]
+          : []),
+      ].join(' '),
+      () => {
+        confirmation.close();
+
+        perform(action);
+      },
+      {
+        okLabel: 'Diplomat.plant-device.go-ahead',
+        cancelLabel: 'Diplomat.cancel-action',
+      }
+    );
 
     return;
   }
@@ -410,6 +545,8 @@ export const openArrivalWindow = (
     return openChoice(
       t('Diplomat.arrives', {
         nation: civilization(unit.player, 'name'),
+        // A Diplomat, or a Spy (Civ2).
+        unit: t(`${unit._}.name`, { defaultValue: unit._, ns: 'unit' }),
         city: cityName(
           actionsOnTile.find((action) =>
             diplomat[0]![1].includes(nameOf(action))

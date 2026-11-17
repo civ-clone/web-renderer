@@ -116,7 +116,7 @@ i18next.addResources('en', 'default', {
   'PlayerDetails.Treasury.value': '{{value, number}}',
   'Progress.turns-left_one': '{{count, number}} turn left',
   'Progress.turns-left_other': '{{count, number}} turns left',
-  'Diplomat.arrives': '{{nation}} Diplomat arrives in {{- city}}',
+  'Diplomat.arrives': '{{nation}} {{unit}} arrives in {{- city}}',
   'Diplomat.peace-treaty': 'We have signed a peace treaty with the {{nation}}!',
   'Diplomat.break-treaty': 'Break treaty',
   'Diplomat.cancel-action': 'Cancel action',
@@ -126,6 +126,27 @@ i18next.addResources('en', 'default', {
   'Diplomat.incite.forget': 'Forget it',
   'Diplomat.incite.incite': 'Incite revolt',
   'Diplomat.incite.subvert': 'Subvert city for {{cost, number}} coins',
+  // What inciting at each price does to a treaty, under rules that say (Civ2's, M2d part 2).
+  'Diplomat.incite.treaty-ends':
+    'At this price the revolt will be traced to us: there will be an incident, and war.',
+  'Diplomat.incite.treaty-kept':
+    'Paying double keeps our treaty, though they will hold it against us.',
+  // A mission under a treaty that breaks nothing unless its agent is lost (Civ2's, M2d part 2).
+  'Diplomat.treaty-mission.title': 'Mission under a treaty',
+  'Diplomat.treaty-mission.body':
+    'We have a treaty with the {{nation}}. The mission itself breaks nothing, but if our agent is lost, the incident could cost us the treaty.',
+  'Diplomat.treaty-mission.go-ahead': 'Go ahead',
+  'Diplomat.treaty-mission.certain':
+    'We have a treaty with the {{nation}}. Our Diplomat will not come back from this mission, and the incident that follows will most likely cost us the treaty.',
+  'Diplomat.treaty-mission.scandal':
+    'Our Senate may bring the government down over it.',
+  // Planting a nuclear device (Civ2, M2d part 2).
+  'Diplomat.plant-device.title': 'Plant a nuclear device?',
+  'Diplomat.plant-device.body':
+    'Our Spy will set off a nuclear device in {{- city}}.',
+  'Diplomat.plant-device.may-be-found':
+    'If the world finds out who planted it, every civilization in contact with us will declare war on us.',
+  'Diplomat.plant-device.go-ahead': 'Set it off',
   'Diplomat.bribe.title': 'Bribe',
   'Diplomat.bribe.body':
     '{{nation}} {{unit}} will desert for {{cost, number}} coins. Our treasury currently contains {{gold, number}} coins.',
@@ -135,6 +156,9 @@ i18next.addResources('en', 'default', {
     '{{nation}} {{unit}} reaches the {{targetNation}} {{target}}',
   'Spy.bribe-unit': 'Bribe unit',
   'Spy.sabotage-unit': 'Sabotage unit',
+  // What a Spy's theft or sabotage is aimed at (Civ2, M2d part 2): one at random, or what the city is building.
+  'Spy.target.random': 'Whatever we can find (at random)',
+  'Spy.target.production': 'What the city is building',
   // An order that offers a choice, such as what to pillage (M2b).
   'ChooseTarget.title': '{{action}}: which one?',
   // Where a long-range order goes (M2b): a city for an airlift, a square on the map for a paradrop.

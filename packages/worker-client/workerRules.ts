@@ -139,6 +139,25 @@ export type WorkerRules = {
     ) => void;
   };
   /**
+   * A chance the rules give the victim of an incident to answer it (Civ2's: an espionage incident under a treaty offers
+   *  war, or the end of an alliance): the engine event that makes it, which of its arguments the offer is (`null` for
+   *  none), and the answers. None by default: Civ1's rules make no such offer.
+   */
+  incidentOffer?: {
+    event: string;
+    offer: (...args: any[]) => {
+      perpetrator: Player;
+      victim: Player;
+      alliance: boolean;
+    } | null;
+    // Whether the offer is still open: the rules may answer it themselves in the same move (a war that follows).
+    pending: (perpetrator: Player, victim: Player) => boolean;
+    accept: (perpetrator: Player, victim: Player) => void;
+    decline: (perpetrator: Player, victim: Player) => void;
+  };
+  /** The goods `holder`'s trade route to `partner` carries, by its key, or `null`. None by default. */
+  tradeRouteGoods?: (holder: City, partner: City) => string | null;
+  /**
    * Whether `player` may open talks with `other` (from the Foreign Advisor), under rules where a person can (Civ2's).
    *  Not by default: in Civ1 only the computer players open talks (#1071).
    */
