@@ -8,14 +8,16 @@ describes how the code works once you are in.
 ## Just play
 
 Go to [civ.one](https://civ.one). The game runs entirely in your browser; there is
-no account and no install. The first time, choose **Import assets** on the main
-menu and give it `TER257.PIC` and `SP257.PIC` from an original copy of
-Civilization (1991), and `SP299.PIC` as well for the improvement and Wonder
-icons: the graphics are read from those files and kept in your browser's
-storage. Nothing is uploaded anywhere. To play on an isometric map, import
-`TERRAIN1.GIF`, `TERRAIN2.GIF`, `UNITS.GIF` and `CITIES.GIF` from Civilization II
-as well (optional), then choose the grid when starting a game; `ICONS.GIF` too
-gives that map Civilization II's own yield icons (also optional).
+no account and no install. The first time, choose **Art and sound** on the main
+menu, then **Import…** beside Civilization, and give it `TER257.PIC` and
+`SP257.PIC` from an original copy of Civilization (1991), and `SP299.PIC` as well
+for the improvement and Wonder icons: the graphics are read from those files and
+kept in your browser's storage. Nothing is uploaded anywhere. Once those are in,
+Art and sound imports each of the rest on its own, all optional: Civilization's
+music from `ASOUND.CVL`, and, to play on an isometric map, Civilization II's
+`TERRAIN1.GIF`, `TERRAIN2.GIF`, `UNITS.GIF` and `CITIES.GIF` (then choose the grid
+when starting a game), with `ICONS.GIF` and `PEOPLE.GIF` for its own yield icons
+and citizens.
 
 On Brave, put Shields down while importing and playing, or the images come out
 wrong (Brave "farbles" canvas reads as a fingerprinting defence).
