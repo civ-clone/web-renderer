@@ -2,6 +2,8 @@
 import i18next from 'i18next';
 
 i18next.addResources('en', 'default', {
+  // The game its files come from, as the library says the set comes from the player's copy of it (#1063).
+  'TilesetCiv2.game': 'Civilization II',
   // Civilization II's sheets, for its isometric map, in its own import window (#1063).
   'TilesetCiv2.import':
     'Upload {{files, list}} from Civilization II to play on an isometric map (these will be stored locally). You can add them a few at a time.',

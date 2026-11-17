@@ -427,7 +427,7 @@ const civ2Assets = async (
 export const civ2Import: PackImport = {
   id: civ2Pack.id,
   name: civ2.name,
-  game: 'Civilization II',
+  game: (): string => t('TilesetCiv2.game'),
   // The map's sheets, which it is ready with, though an import can take some of them at a time; and the ones that add
   //  to the map.
   requiredFiles: civ2MapFiles(),

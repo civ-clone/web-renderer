@@ -8,6 +8,8 @@ import firstFailure, {
 } from '@civ-clone/ui-assets/lib/jsonSchema';
 import civ1Json from '@civ-clone/ui-tileset-civ1/civ1.json';
 import tilesetSchema from '@civ-clone/ui-assets/tilesets/tileset.schema.json';
+import { readSoundDescriptor } from '@civ-clone/ui-assets/sounds/SoundDescriptor';
+import soundSchema from '@civ-clone/ui-assets/sounds/sound.schema.json';
 
 const failures: string[] = [];
 let checks = 0,
@@ -538,6 +540,78 @@ expect(
   'and Civ1 names the schema, for editors, where it is beside its package (#97)',
   (civ1Json as { $schema?: string }).$schema,
   '../assets/tilesets/tileset.schema.json'
+);
+
+// A set's source and licence (#1063), in the tileset's schema: optional, and refused when they aren't what they say.
+expect(
+  "a tileset's source is hosted or imported, and its licence has a name and a url",
+  [
+    firstFailure(tilesetSchema, { ...civ1Json, source: 'hosted' }),
+    firstFailure(tilesetSchema, {
+      ...civ1Json,
+      licence: { name: 'MIT', url: 'https://example.com/' },
+    }),
+    firstFailure(tilesetSchema, { ...civ1Json, source: 'bundled' })?.message,
+    firstFailure(tilesetSchema, { ...civ1Json, licence: { name: 'MIT' } })
+      ?.message,
+  ],
+  [
+    null,
+    null,
+    'source must be "hosted" or "imported", not {value}.',
+    'licence must have a name and a url, and any attribution must be a non-empty string.',
+  ]
+);
+
+// A sound set's manifest (#1063) has a schema and a reader of its own: what it accepts, and how it refuses the rest.
+const sound = {
+  schema: 1,
+  kind: 'sound',
+  id: 'civ1-adlib',
+  name: 'Civilization’s music (AdLib)',
+  source: 'imported',
+  storage: { prefix: './sources/', ext: '' },
+};
+
+expect(
+  "the sound schema uses only what it knows, and the music's manifest passes",
+  [
+    thrown(() => firstFailure(soundSchema, sound)),
+    readSoundDescriptor(sound).id,
+    readSoundDescriptor({
+      ...sound,
+      source: 'hosted',
+      licence: {
+        name: 'CC BY 4.0',
+        url: 'https://example.com/',
+        attribution: 'By someone',
+      },
+    }).licence?.attribution,
+  ],
+  [null, 'civ1-adlib', 'By someone']
+);
+expect(
+  'the sound reader refuses a manifest that is not one, saying what is wrong',
+  [
+    { ...sound, schema: 2 },
+    { ...sound, kind: 'tileset' },
+    { ...sound, id: '' },
+    { ...sound, name: undefined },
+    { ...sound, source: 'bundled' },
+    { ...sound, licence: { url: 'https://example.com/' } },
+    { ...sound, storage: { prefix: './sources/' } },
+    'not a manifest',
+  ].map((json) => thrown(() => readSoundDescriptor(json))),
+  [
+    'Sound set: schema 2 cannot be read here, only schema 1.',
+    'Sound set: kind must be "sound", not "tileset".',
+    'Sound set: id must be a non-empty string.',
+    'Sound set: name must be a non-empty string.',
+    'Sound set: source must be "hosted" or "imported", not "bundled".',
+    'Sound set: licence must have a name and a url, and any attribution must be a non-empty string.',
+    'Sound set: storage must have a prefix and an ext.',
+    'Sound set: a manifest must be an object.',
+  ]
 );
 
 finished = true;

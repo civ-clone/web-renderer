@@ -61,9 +61,11 @@ const soundAsset = async (file: File): Promise<Asset> => {
 export const civ1SoundImport: PackImport = {
   id: civ1Sound.id,
   name: civ1Sound.name,
-  game: 'Civilization',
+  game: (): string => t('Civ1Sound.game'),
   requiredFiles: [soundFile],
   optionalFiles: [],
+  // Kept whole, as the file it is: nothing is left as it was.
+  replacesAll: true,
   accepts: isSoundFile,
   instructions: (): string => t('Civ1Sound.import', { file: soundFile }),
   import: async (files: File[]): Promise<PackImportResult> => ({

@@ -1,6 +1,6 @@
 // The main menu under the new interface (#749): Continue leads when the browser holds a save, named for its
 //  civilization and year when the save says them and by its name when it's older, with when it was kept beneath; the
-//  items for a game only once the assets are imported, and Art and sound only until then; each item's key, but not
+//  items for a game only once the assets are imported, and Art and sound always; each item's key, but not
 //  while a window is open or with a modifier, and none once the menu has gone; the version and release notes under
 //  them. New Game offers Customise… first, and Options opens with no game, with the Assets row.
 //
@@ -156,7 +156,8 @@ const save = (
   applyInterface('modern', null);
   resetStore();
 
-  // No save: the items for a game, and no Continue or Art and sound.
+  // No save: the items for a game, and no Continue. Art and sound is always there, for the music and other sets
+  //  (#1063).
   {
     const { menu, element } = await openMenu();
 
@@ -166,13 +167,14 @@ const save = (
       'load-game',
       'hall-of-fame',
       'options',
+      'library',
     ]);
     expect(
       'each item shows its key',
       Array.from(element.querySelectorAll('.ui-title-menu-item .key')).map(
         (key) => key.textContent
       ),
-      ['N', 'E', 'L', 'H', 'O']
+      ['N', 'E', 'L', 'H', 'O', 'A']
     );
     expect(
       'and has it as its shortcut',
@@ -396,7 +398,17 @@ const save = (
     expect(
       'a Continue whose save was deleted is gone, not loaded',
       [items(element), document.querySelectorAll('dialog').length],
-      [['new-game', 'earth', 'load-game', 'hall-of-fame', 'options'], 0]
+      [
+        [
+          'new-game',
+          'earth',
+          'load-game',
+          'hall-of-fame',
+          'options',
+          'library',
+        ],
+        0,
+      ]
     );
 
     resetStore();

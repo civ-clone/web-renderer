@@ -122,7 +122,7 @@ i18next.addResources('en', 'default', {
   'ImportAssetsWindow.missing-files': `Please provide all files to generate assets: {{files, list}}.`,
   // None of the files chosen is one the set reads (#1063).
   'ImportAssetsWindow.none-of-its-files':
-    'None of those is one of {{name}}’s files: choose {{files, list(type: disjunction)}}.',
+    'None of those files is for {{name}}: choose {{files, list(type: disjunction)}}.',
   'ImportAssetsWindow.none-chosen': 'No files chosen',
   'ImportAssetsWindow.missing-data':
     'Not all expected data was written. Might need to try again... Missing: {{files, list}}.',
@@ -136,6 +136,8 @@ i18next.addResources('en', 'default', {
   'ImportAssetsWindow.unsupported-file':
     "{{file}} doesn't look like a supported Civilization file, so no assets were extracted. Check it is the original file from Civilization for DOS and try again.",
   // Civilization's music as a set of its own (#126, #1063): what its import window says of ASOUND.CVL.
+  // The game its file comes from, as the library says the set comes from the player's copy of it.
+  'Civ1Sound.game': 'Civilization',
   'Civ1Sound.import':
     'Upload {{file}} from the original Civilization files for the music (it will be stored locally).',
   // The library of art and sound (#1063), which replaced Import assets.
@@ -158,6 +160,10 @@ i18next.addResources('en', 'default', {
   'LibraryWindow.status.none': 'Not imported',
   'LibraryWindow.import': 'Import…',
   'LibraryWindow.import-again': 'Import again',
+  // The buttons' names for assistive technology, which say whose they are.
+  'LibraryWindow.import-set': 'Import {{name}}',
+  'LibraryWindow.import-set-again': 'Import {{name}} again',
+  'LibraryWindow.use-theme': 'Use {{name}}',
   // Why a set can't be imported yet: Civilization's art comes first.
   'LibraryWindow.import-first': 'Import {{name}} first.',
   'LibraryWindow.in-use': 'In use',

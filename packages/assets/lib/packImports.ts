@@ -48,7 +48,7 @@ export interface PackImport {
   /** The set's name, as the player sees it: its manifest's. */
   name: string;
   /** The game whose files it reads, by name, for the library to say it comes from the player's copy of it. */
-  game: string;
+  game(): string;
   /**
    * The files it needs to be ready, each matched against the chosen files' names whatever their case. The interface's
    *  set's import can't go ahead without all of them; another's takes some of them at a time.
@@ -56,6 +56,11 @@ export interface PackImport {
   requiredFiles: string[];
   /** The files it reads when they're chosen, that it is ready without: they only add to it. */
   optionalFiles: string[];
+  /**
+   * Whether its import stores everything it reads again, whatever is stored, so the window offers no choice of
+   *  replacing what's there (`ImportOptions.replaceExisting`): the music's driver, kept whole.
+   */
+  replacesAll?: boolean;
   /** Whether `file` is one of the files it reads, by its name, whatever its case. */
   accepts(file: ChosenFile): boolean;
   /** Whether `file` is one of its own that it takes and leaves alone (Civ2's RULES.TXT), rather than one none reads. */
@@ -118,6 +123,23 @@ export const packImports = (): PackImport[] => [
   ...registered.filter(importedFirst),
   ...registered.filter((pack) => !importedFirst(pack)),
 ];
+
+/**
+ * The required files `pack`'s import still needs, as the library names them and the first set's window asks for them:
+ *  none once it's ready; those still wanted (`filesWanted`) when some of it is stored; and every one when none is, or
+ *  when what's missing is in no file it can name.
+ */
+export const filesNeeded = async (pack: PackImport): Promise<string[]> => {
+  const [ready, wanted] = await Promise.all([pack.ready(), pack.filesWanted()]);
+
+  if (ready) {
+    return [];
+  }
+
+  return wanted !== null && wanted.required.length > 0
+    ? wanted.required
+    : pack.requiredFiles;
+};
 
 /** The import of the set with `id`, if one is registered. */
 export const packImportOf = (id: string): PackImport | undefined =>

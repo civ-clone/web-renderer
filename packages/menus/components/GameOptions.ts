@@ -482,8 +482,8 @@ export class GameOptions extends Window {
           'newCitiesBuildDefender',
           t('GameOptions.new-cities-build-defender')
         ),
-        // Whether the tileset's sprites are imported, and the import, which the new main menu shows only while they
-        //  aren't (#749). Only before a game: the import reloads the page, which would lose the game in play.
+        // Whether the tileset's sprites are imported, and the library, which the main menus open too (#749, #1063).
+        //  Only before a game: an import reloads the page, which would lose the game in play.
         ...(hasFeature('assetsInOptions') && portal === null
           ? [assetsRow()]
           : [])

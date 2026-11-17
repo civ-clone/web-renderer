@@ -789,6 +789,21 @@ const run = async (): Promise<void> => {
       ]
     );
 
+    const replaceShown = (window: ImportAssetsWindow) =>
+      !(window.element().querySelector('.replace-existing') as HTMLElement)
+        .hidden;
+
+    expect(
+      "Replace existing assets is offered where an import can leave what's stored, not for the music, kept whole; and the progress is said as it changes",
+      [
+        replaceShown(window),
+        replaceShown(civ2),
+        replaceShown(sound),
+        progress(window).getAttribute('aria-live'),
+      ],
+      [true, true, false, 'polite']
+    );
+
     civ2.close();
     sound.close();
 
@@ -1005,7 +1020,7 @@ const run = async (): Promise<void> => {
         'Done! Please reload the page to utilize the fresh assets.',
         ['./sources/ASOUND.CVL'],
         0,
-        'None of those is one of Civilization’s music (AdLib)’s files: choose ASOUND.CVL.',
+        'None of those files is for Civilization’s music (AdLib): choose ASOUND.CVL.',
         0,
       ]
     );
@@ -1373,7 +1388,7 @@ const run = async (): Promise<void> => {
         written.length,
       ],
       [
-        'None of those is one of Civilization II’s files: choose TERRAIN1.GIF, TERRAIN2.GIF, UNITS.GIF, CITIES.GIF, ICONS.GIF, or PEOPLE.GIF.',
+        'None of those files is for Civilization II: choose TERRAIN1.GIF, TERRAIN2.GIF, UNITS.GIF, CITIES.GIF, ICONS.GIF, or PEOPLE.GIF.',
         0,
       ]
     );
@@ -1902,6 +1917,16 @@ const run = async (): Promise<void> => {
       },
       storage: { prefix: './sources/', ext: '' },
     });
+    // One whose licence isn't at an https: address: named, not linked.
+    registerSoundSet({
+      schema: 1,
+      kind: 'sound',
+      id: 'test-bells',
+      name: 'Test bells',
+      source: 'hosted',
+      licence: { name: 'Odd licence', url: 'javascript:alert(1)' },
+      storage: { prefix: './sources/', ext: '' },
+    });
 
     const civ1Keys = (file: string): string[] =>
         Object.entries(
@@ -1944,7 +1969,7 @@ const run = async (): Promise<void> => {
         sound = false,
         canStore = true,
       }: {
-        civ1?: 'none' | 'required' | 'all';
+        civ1?: 'none' | 'partial' | 'required' | 'all';
         civ2?: 'none' | 'some' | 'all';
         sound?: boolean;
         canStore?: boolean;
@@ -1953,7 +1978,11 @@ const run = async (): Promise<void> => {
             civ1 === 'none'
               ? []
               : [
-                  ...civ1Keys('SP257.PIC'),
+                  // Partly: all but a unit SP257.PIC holds, as after an extractor that gained one.
+                  ...civ1Keys('SP257.PIC').filter(
+                    (key) =>
+                      civ1 !== 'partial' || key !== './assets/units/warrior.png'
+                  ),
                   ...civ1Keys('TER257.PIC'),
                   ...(civ1 === 'all' ? civ1Keys('SP299.PIC') : []),
                 ],
@@ -1979,7 +2008,10 @@ const run = async (): Promise<void> => {
                 )
               : [],
           missing: { [id: string]: string[] } = {
-            civ1: civ1 === 'none' ? ['./assets/units/warrior.png'] : [],
+            civ1:
+              civ1 === 'none' || civ1 === 'partial'
+                ? ['./assets/units/warrior.png']
+                : [],
             civ2: civ2Missing,
           };
 
@@ -2058,7 +2090,7 @@ const run = async (): Promise<void> => {
         ['Map art', 'Themes', 'Sound'],
         ['Square', 'Isometric'],
         ['civ1', 'civ2'],
-        ['civ1-adlib', 'test-chimes'],
+        ['civ1-adlib', 'test-chimes', 'test-bells'],
       ]
     );
     expect(
@@ -2112,6 +2144,15 @@ const run = async (): Promise<void> => {
       ['Ready', 'https://example.com/licence', null]
     );
     expect(
+      "a licence that isn't at an https: address is named, not linked",
+      [
+        entryOf(library, 'test-bells').entry.querySelector('.source a'),
+        entryOf(library, 'test-bells').entry.querySelector('.source')
+          ?.textContent,
+      ],
+      [null, 'Comes with civ.one · License: Odd licence']
+    );
+    expect(
       "nothing imported: each set says so, and only Civ1's can be imported, the others saying why",
       ['civ1', 'civ2', 'civ1-adlib'].map((id) => {
         const { status, button, disabled, reason } = entryOf(library, id);
@@ -2124,6 +2165,66 @@ const run = async (): Promise<void> => {
         ['Not imported', 'Import…', true, 'Import Civilization first.'],
       ]
     );
+
+    library.close();
+
+    // Each import is named for its set, and described by why it can't be used yet; each status is said as it changes.
+    {
+      const civ2 = entryOf(library, 'civ2').entry,
+        importButton = civ2.querySelector('.actions button') as HTMLElement,
+        reason = civ2.querySelector('.reason') as HTMLElement;
+
+      expect(
+        "each Import… is named for its set, and described by why it's disabled, and each status is a polite live region",
+        [
+          importButton.getAttribute('aria-label'),
+          importButton.getAttribute('aria-describedby') === reason.id &&
+            reason.id !== '',
+          civ2.querySelector('.status')?.getAttribute('aria-live'),
+        ],
+        ['Import Civilization II', true, 'polite']
+      );
+    }
+
+    library.close();
+
+    // Civ1's partly imported: the library names the file holding what's missing, and its window takes that file alone.
+    holds({ civ1: 'partial' });
+    library = await opened();
+
+    expect(
+      "Civ1's partly imported: it needs the file holding what's missing",
+      [entryOf(library, 'civ1').status, entryOf(library, 'civ1').button],
+      ['Needs SP257.PIC · Optional: SP299.PIC', 'Import…']
+    );
+
+    {
+      const window = civ1Window(),
+        written: string[] = [],
+        { setAll } = store;
+
+      store.setAll = async (assets: { name: string }[]): Promise<void> => {
+        written.push(...assets.map(({ name }) => name));
+      };
+
+      await upload(window, [sheet('TER257.PIC')]);
+
+      const refused = progress(window).textContent;
+
+      await upload(window, [sheet('SP257.PIC')]);
+      store.setAll = setAll;
+      window.close();
+
+      expect(
+        'and its window asks for that file, and goes ahead with it alone',
+        [
+          refused,
+          written.includes('./assets/units/warrior.png'),
+          written.some((name) => name.startsWith('./assets/terrain/')),
+        ],
+        ['Please provide all files to generate assets: SP257.PIC.', true, false]
+      );
+    }
 
     library.close();
 
@@ -2281,17 +2382,20 @@ const run = async (): Promise<void> => {
           (element) => {
             const entry = element as HTMLElement;
 
+            const status = entry.querySelector('.status') as HTMLElement;
+
             return [
               entry.dataset.theme,
-              entry.querySelector('.status')?.textContent ?? null,
-              (entry.querySelector('.actions button') as HTMLButtonElement)
-                .disabled,
+              status.hidden ? null : status.textContent,
+              entry
+                .querySelector('.actions button')
+                ?.getAttribute('aria-disabled') === 'true',
             ];
           }
         );
 
       expect(
-        'the themes, the one in use marked and its Use disabled',
+        'the themes, the one in use marked and its Use out of use',
         themes(),
         uiThemes().map(({ id }) => [
           id,
@@ -2300,15 +2404,23 @@ const run = async (): Promise<void> => {
         ])
       );
 
-      const other = uiThemes().find(({ id }) => id !== before)!.id;
-
-      (
-        library
+      const other = uiThemes().find(({ id }) => id !== before)!.id,
+        use = library
           .element()
           .querySelector(
             `[data-theme="${other}"] .actions button`
-          ) as HTMLButtonElement
-      ).click();
+          ) as HTMLButtonElement;
+
+      expect(
+        'each Use is named for its theme, for assistive technology',
+        use.getAttribute('aria-label'),
+        `Use ${
+          library.element().querySelector(`[data-theme="${other}"] .name`)
+            ?.textContent
+        }`
+      );
+
+      use.click();
 
       expect(
         'Use applies the theme at once, and marks it in use',
@@ -2318,6 +2430,26 @@ const run = async (): Promise<void> => {
           themes().find(([id]) => id === before)?.[1],
         ],
         [other, 'In use', null]
+      );
+      expect(
+        // linkedom keeps no focus: the button kept, and not disabled, is what keeps it in a browser.
+        'and the button used stays, out of use but not disabled, so the focus stays on it',
+        [
+          library
+            .element()
+            .querySelector(`[data-theme="${other}"] .actions button`) === use,
+          use.disabled,
+          use.getAttribute('aria-disabled'),
+        ],
+        [true, false, 'true']
+      );
+
+      use.click();
+
+      expect(
+        'Use on the theme in use does nothing',
+        [currentUiTheme(), replaced.length],
+        [other, 1]
       );
       expect(
         "and takes the visit's ?theme= off the address, as Options does",

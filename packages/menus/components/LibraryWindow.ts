@@ -1,5 +1,6 @@
 import {
   PackImport,
+  filesNeeded,
   importedFirst,
   packImportOf,
   packImports,
@@ -44,15 +45,29 @@ interface Entry {
   reason: HTMLElement;
 }
 
+/** A theme's entry, and the parts of it that change with the theme in use. */
+interface ThemeEntry {
+  id: string;
+  status: HTMLElement;
+  use: HTMLButtonElement;
+}
+
 /** What the library says of a set's state: Ready, Needs …, or Not imported, and which of those it is. */
 export interface SetStatus {
   state: 'ready' | 'needs' | 'not-imported';
   text: string;
 }
 
-/** What `pack`'s set is, as its entry says it, from whether it's ready and the files it still wants. */
+/**
+ * What `pack`'s set is, as its entry says it, from whether it's ready and the files it still wants: the required ones
+ *  as its import window asks for them (`filesNeeded`).
+ */
 export const setStatus = async (pack: PackImport): Promise<SetStatus> => {
-  const [ready, wanted] = await Promise.all([pack.ready(), pack.filesWanted()]),
+  const [ready, wanted, needed] = await Promise.all([
+      pack.ready(),
+      pack.filesWanted(),
+      filesNeeded(pack),
+    ]),
     optional =
       wanted !== null && wanted.optional.length > 0
         ? [t('LibraryWindow.status.optional', { files: wanted.optional })]
@@ -72,11 +87,7 @@ export const setStatus = async (pack: PackImport): Promise<SetStatus> => {
   return {
     state: 'needs',
     text: [
-      t('LibraryWindow.status.needs', {
-        // Not ready with no file to name (a sprite no file of the set's gives): every one it needs.
-        files:
-          wanted.required.length > 0 ? wanted.required : pack.requiredFiles,
-      }),
+      t('LibraryWindow.status.needs', { files: needed }),
       ...optional,
     ].join(' · '),
   };
@@ -119,6 +130,18 @@ const soundLibrarySets = (): LibrarySet[] =>
     pack: packImportOf(id),
   }));
 
+/** Whether `url` is an https: address. */
+const isHttps = (url: string): boolean => {
+  try {
+    return new URL(url).protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
+// Ids for what a button is described by, unique however many libraries are open.
+let described = 0;
+
 /** Where `set` comes from: the player's own copy of a game, or civ.one, and its licence when it has one. */
 const sourceOf = ({ source, licence, pack }: LibrarySet): HTMLElement => {
   const element = s<HTMLDivElement>('<div class="source"></div>');
@@ -130,19 +153,26 @@ const sourceOf = ({ source, licence, pack }: LibrarySet): HTMLElement => {
   if (source === 'imported' && pack !== undefined) {
     element.append(
       t('LibraryWindow.imported', {
-        game: pack.game,
+        game: pack.game(),
         interpolation: { escapeValue: false },
       })
     );
   }
 
   if (licence !== undefined) {
-    // Set as text and as an attribute: a manifest's words aren't markup.
-    const link = s<HTMLAnchorElement>(
-      '<a target="_blank" rel="noopener noreferrer"></a>'
-    );
+    // Set as text and as an attribute: a manifest's words aren't markup. A link only to an https: page; any other
+    //  address (javascript:, say) is shown as the licence's name alone.
+    const linked = isHttps(licence.url),
+      link = linked
+        ? s<HTMLAnchorElement>(
+            '<a target="_blank" rel="noopener noreferrer"></a>'
+          )
+        : s<HTMLSpanElement>('<span class="licence-name"></span>');
 
-    link.href = licence.url;
+    if (linked) {
+      (link as HTMLAnchorElement).href = licence.url;
+    }
+
     link.textContent = licence.name;
 
     element.append(
@@ -159,7 +189,7 @@ const sourceOf = ({ source, licence, pack }: LibrarySet): HTMLElement => {
 
 export class LibraryWindow extends Window {
   #entries: Entry[];
-  #themes: HTMLUListElement;
+  #themes: ThemeEntry[] = [];
   #storageBlocked: HTMLDivElement;
   // Over Options, which is modal before a game: the import it opens must be too, or it would open behind it.
   #modal: boolean;
@@ -173,7 +203,10 @@ export class LibraryWindow extends Window {
       // The entry for `set`, its import's parts kept for `refresh` to fill in.
       entry = (set: LibrarySet): HTMLElement => {
         const name = s<HTMLElement>('<strong class="name"></strong>'),
-          status = s<HTMLElement>('<span class="status"></span>'),
+          // Said as it changes, once the store has answered and after an import.
+          status = s<HTMLElement>(
+            '<span class="status" aria-live="polite"></span>'
+          ),
           element = s<HTMLLIElement>(
             '<li class="library-set"></li>',
             s('<div class="library-set-head"></div>', name, status),
@@ -206,6 +239,17 @@ export class LibraryWindow extends Window {
             }
           ),
           reason = s<HTMLElement>('<span class="reason" hidden></span>');
+
+        // Named for its set, and described by why it can't be used yet.
+        reason.id = `library-reason-${++described}`;
+        importButton.setAttribute('aria-describedby', reason.id);
+        importButton.setAttribute(
+          'aria-label',
+          t('LibraryWindow.import-set', {
+            name: set.name,
+            interpolation: { escapeValue: false },
+          })
+        );
 
         entries.push({ pack, status, importButton, reason });
 
@@ -242,13 +286,13 @@ export class LibraryWindow extends Window {
     );
 
     this.#entries = entries;
-    this.#themes = themes;
     this.#storageBlocked = storageBlocked;
     this.#modal = windowOptions.modal ?? false;
 
     this.addClass('library-window');
 
-    this.#showThemes();
+    themes.append(...this.#themeEntries());
+    this.#markThemes();
 
     // A store that can't be read leaves the imports as they were drawn.
     void this.refresh().catch((error) => console.error(error));
@@ -288,10 +332,20 @@ export class LibraryWindow extends Window {
         status.dataset.state = shown.state;
       }
 
+      const again = shown?.state === 'ready';
+
       importButton.textContent = t(
-        shown?.state === 'ready'
-          ? 'LibraryWindow.import-again'
-          : 'LibraryWindow.import'
+        again ? 'LibraryWindow.import-again' : 'LibraryWindow.import'
+      );
+      importButton.setAttribute(
+        'aria-label',
+        t(
+          again ? 'LibraryWindow.import-set-again' : 'LibraryWindow.import-set',
+          {
+            name: pack.name,
+            interpolation: { escapeValue: false },
+          }
+        )
       );
       importButton.disabled = !usable || waiting;
 
@@ -307,53 +361,61 @@ export class LibraryWindow extends Window {
     });
   }
 
-  /** Each theme, the one in use marked, and Use for the others (#735), as Options' Theme sets it. */
-  #showThemes(): void {
+  /** An entry for each theme (#735): its name, whether it's in use, and Use, which chooses it as Options' Theme does. */
+  #themeEntries(): HTMLLIElement[] {
+    return uiThemes().map(({ id, name }) => {
+      const label = s<HTMLElement>('<strong class="name"></strong>'),
+        status = s<HTMLElement>(
+          `<span class="status" data-state="ready" aria-live="polite">${t(
+            'LibraryWindow.in-use'
+          )}</span>`
+        ),
+        use = h(button(t('LibraryWindow.use')), {
+          click: (): void => {
+            // The theme in use: out of use, but kept in the tab order, so focus stays where it was after choosing.
+            if (use.getAttribute('aria-disabled') === 'true') {
+              return;
+            }
+
+            // Only before a game, which the library is opened from: new interface art loads the page again.
+            chooseUiTheme(id);
+            this.#markThemes();
+          },
+        }),
+        element = s<HTMLLIElement>(
+          '<li class="library-set"></li>',
+          s('<div class="library-set-head"></div>', label, status),
+          s('<div class="actions"></div>', use)
+        );
+
+      element.dataset.theme = id;
+      // The interfaces that bring them register them (#861), so what one says is never treated as markup.
+      label.textContent = t(name);
+      use.setAttribute(
+        'aria-label',
+        t('LibraryWindow.use-theme', {
+          name: t(name),
+          interpolation: { escapeValue: false },
+        })
+      );
+
+      this.#themes.push({ id, status, use });
+
+      return element;
+    });
+  }
+
+  /** Marks the theme in use, and puts its Use out of use, leaving the buttons in place so focus stays on the one used. */
+  #markThemes(): void {
     const current = currentUiTheme();
 
-    this.#themes.replaceChildren(
-      ...uiThemes().map(({ id, name }) => {
-        const inUse = id === current,
-          label = s<HTMLElement>('<strong class="name"></strong>'),
-          element = s<HTMLLIElement>(
-            '<li class="library-set"></li>',
-            s(
-              '<div class="library-set-head"></div>',
-              label,
-              ...(inUse
-                ? [
-                    s(
-                      `<span class="status" data-state="ready">${t(
-                        'LibraryWindow.in-use'
-                      )}</span>`
-                    ),
-                  ]
-                : [])
-            ),
-            s(
-              '<div class="actions"></div>',
-              h(
-                button(t('LibraryWindow.use'), {
-                  disabled: inUse,
-                  title: inUse ? t('LibraryWindow.in-use') : null,
-                }),
-                {
-                  click: (): void => {
-                    chooseUiTheme(id);
-                    this.#showThemes();
-                  },
-                }
-              )
-            )
-          );
+    this.#themes.forEach(({ id, status, use }) => {
+      const inUse = id === current;
 
-        element.dataset.theme = id;
-        // The interfaces that bring them register them (#861), so what one says is never treated as markup.
-        label.textContent = t(name);
-
-        return element;
-      })
-    );
+      status.hidden = !inUse;
+      use.setAttribute('aria-disabled', String(inUse));
+      use.title = inUse ? t('LibraryWindow.in-use') : '';
+    });
   }
 
   /** `pack`'s own import, over this window if it's modal, and the statuses said again once it's closed. */

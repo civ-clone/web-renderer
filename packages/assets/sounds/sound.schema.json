@@ -62,5 +62,6 @@
       "x-message": "storage must have a prefix and an ext."
     }
   },
-  "required": ["schema", "kind", "id", "name", "source", "storage"]
+  "required": ["schema", "kind", "id", "name", "source", "storage"],
+  "x-message": { "type": "a manifest must be an object." }
 }

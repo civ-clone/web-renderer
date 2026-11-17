@@ -1,6 +1,7 @@
 import {
   ChosenFile,
   PackImport,
+  filesNeeded,
   importedFirst,
   isUnsupportedFile,
   packImports,
@@ -63,7 +64,7 @@ export class ImportAssetsWindow extends Window {
         '<input type="checkbox" checked>'
       ),
       progressInformation = s<HTMLParagraphElement>(
-        '<p class="loading" hidden></p>'
+        '<p class="loading" aria-live="polite" hidden></p>'
       ),
       packStatusElement = s<HTMLParagraphElement>(
         '<p class="pack-status" aria-live="polite" hidden></p>'
@@ -85,8 +86,11 @@ export class ImportAssetsWindow extends Window {
           // @ts-ignore
           navigator?.brave ? '' : ' hidden'
         }>${t('ImportAssetsWindow.brave')}</div></div>`,
+        // Only for a set whose import can leave what's stored as it is: not the music's driver, kept whole.
         s(
-          '<p></p>',
+          `<p class="replace-existing"${
+            pack.replacesAll ? ' hidden' : ''
+          }></p>`,
           s(
             '<label></label>',
             replaceExistingInput,
@@ -172,22 +176,20 @@ export class ImportAssetsWindow extends Window {
       filenames: string[] = files.map((file: File) => file.name),
       first = firstSet();
 
-    // The set every other's waits on can't go ahead without each of its required files, until its sprites are in:
-    //  then its optional ones (SP299.PIC) can be added on their own, as the library offers.
+    // The set every other's waits on can't go ahead without each of the required files it still needs, as the library
+    //  names them (`filesNeeded`): every one at first, the ones holding what's missing once some is in, and none once
+    //  its sprites are all in, when its optional ones (SP299.PIC) can be added on their own.
     if (importedFirst(pack)) {
-      const expectedMatches = pack.requiredFiles.map(
-        (key) => new RegExp(key, 'i')
-      );
+      const needed = await filesNeeded(pack).catch(() => pack.requiredFiles);
 
       if (
-        !expectedMatches.every((expectedMatch) =>
-          filenames.some((filename) => filename.match(expectedMatch))
-        ) &&
-        !(await assetStore.hasAllAssets().catch((): boolean => false))
+        !needed.every((file) =>
+          filenames.some(
+            (filename) => filename.toUpperCase() === file.toUpperCase()
+          )
+        )
       ) {
-        this.#fail(
-          t('ImportAssetsWindow.missing-files', { files: pack.requiredFiles })
-        );
+        this.#fail(t('ImportAssetsWindow.missing-files', { files: needed }));
 
         return;
       }

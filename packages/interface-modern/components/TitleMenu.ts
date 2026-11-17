@@ -23,8 +23,8 @@ import { t } from 'i18next';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 
 // The main menu under the new interface (#749, #735): a list down the left in the display face, against an accent
-//  rule, each item with its key after it. Continue leads when the browser holds a save; Art and sound is there only
-//  until the tileset's sprites are. `MainMenu` is the classic one.
+//  rule, each item with its key after it. Continue leads when the browser holds a save; Art and sound is always
+//  there. `MainMenu` is the classic one.
 
 export interface TitleMenuItem {
   // Which item it is, as `data-item`: `continue`, `new-game` and the rest.
@@ -178,18 +178,14 @@ export class TitleMenu extends Element {
         // No game yet: the map's options are kept for the next (#749).
         action: (): void => void new GameOptions(null),
       },
-      // Until there's a tileset that comes with the game (#152), the only way to the sprites: the library, where each
-      //  set is imported (#1063). Options' Assets row opens it too.
-      ...(hasAssets
-        ? []
-        : [
-            {
-              name: 'library',
-              label: t('TitleMenu.library'),
-              hotkey: t('TitleMenu.key.library'),
-              action: (): void => void new LibraryWindow(),
-            },
-          ]),
+      // The library, where each set is imported (#1063): Civilization's art first, and then its music or Civilization
+      //  II's map art, whenever. Options' Assets row opens it too.
+      {
+        name: 'library',
+        label: t('TitleMenu.library'),
+        hotkey: t('TitleMenu.key.library'),
+        action: (): void => void new LibraryWindow(),
+      },
     ];
 
     // Built again when Continue finds the saves changed.

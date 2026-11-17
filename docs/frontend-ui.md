@@ -195,7 +195,7 @@ isometric stand-in, `tests/ui/lib/staggered.ts`, and with `--iso` on the real `I
   turn, year), or its name for an older one. New Game passes `askNewGame` a
   `customise` callback, which puts Customize… (the game setup) first among the
   sizes; Options opens with no portal and shows the Assets row; Art and sound
-  (the library, #1063) is listed only while the required sprites are missing.
+  (the library, #1063) is always listed, as the classic menu lists it.
 - `newGame.ts`: New Game's questions, each through `openChoice`: the map grid
   (`askMapGrid`), world size (`askWorldSize`), difficulty (`askDifficulty`),
   then the number of civilizations (`askPlayerCount`). `askEarth` asks the same

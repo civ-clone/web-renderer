@@ -166,7 +166,7 @@ export const civ1Import: PackImport = {
   // The tileset's own id, so the import and the pack it fills can't drift apart.
   id: civ1.id,
   name: civ1.name,
-  game: 'Civilization',
+  game: (): string => t('TilesetCiv1.game'),
   requiredFiles,
   optionalFiles,
   accepts: isCiv1File,

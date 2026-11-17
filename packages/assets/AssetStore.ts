@@ -414,7 +414,7 @@ export class AssetStore extends Store<{
 
   /**
    * Whether the browser lets the store be opened at all. With site data blocked it doesn't (#850): nothing imported
-   * could be kept, which the Import Assets window says before any files are chosen.
+   * could be kept, which the library and each import window say before any files are chosen.
    */
   usable(): Promise<boolean> {
     return this.opens();
