@@ -4,7 +4,6 @@
 
 import Advance from '@civ-clone/core-science/Advance';
 import Age from '@civ-clone/base-science-age/Age';
-import { Anarchy } from '@civ-clone/library-government/Governments';
 import City from '@civ-clone/core-city/City';
 import Declaration from '@civ-clone/core-diplomacy/Declaration';
 import { NotificationContext, NotificationTable } from './NotificationContext';
@@ -93,16 +92,17 @@ export const playerNotifications: NotificationTable = [
     },
   ],
 
-  // With the Pyramids there's no Anarchy, and the new government is chosen straight away.
+  // The collapse falls into Anarchy, and with the Pyramids there's none to wait out: the new government can be chosen
+  //  straight away (#1018).
   [
     'player:government:collapsed',
     (ctx: NotificationContext, player: Player, city: City) =>
       !ctx.view.owns(player)
         ? null
         : new Notification(
-            ctx.government(player).is(Anarchy)
-              ? 'Player.government-collapsed'
-              : 'Player.government-collapsed.pyramids',
+            ctx.governmentChoiceDue(player)
+              ? 'Player.government-collapsed.pyramids'
+              : 'Player.government-collapsed',
             {
               city,
             }
