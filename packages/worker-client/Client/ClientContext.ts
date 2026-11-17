@@ -96,7 +96,7 @@ export interface ClientContext extends ClientRegistries {
   hasSeen(tile: Tile): boolean;
   // The units on a square: a goody hut is told to the player whose unit found it.
   unitsOn(tile: Tile): Unit[];
-  // A player's government, which says how its collapse is told.
+  // A player's government.
   government(player: Player): PlayerGovernment;
   // Whether a player's new government can be chosen now, as the rules' `anarchyTurns` says (`0`): after a collapse
   //  with the Pyramids, the collapse notice says so (#1018).

@@ -107,7 +107,8 @@ export const registerBattleEvents = (
   ctx: BattleEventsContext,
   soundOf: (unit: Unit) => string[] | null = attackSoundOf
 ): Disposer => {
-  // `unit:defeated` is emitted twice for each defeat (civ-clone/civ1-city#19): a battle is heard once.
+  // `unit:defeated` can be emitted twice for a defeat (civ2-city's `unit/defeated` rule emits it beside civ2-unit's;
+  //  civ1-city stopped in 0.1.22, civ-clone/web-renderer#1000): a battle is heard once.
   const heard = new WeakSet<Unit>(),
     listener = (loser: Unit, winner: Unit, action?: Action): void => {
       if (!action || heard.has(loser)) {
