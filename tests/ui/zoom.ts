@@ -241,7 +241,7 @@ const clicksLand = (topologyId: string, zoom: number): string[] => {
 };
 
 const run = async (): Promise<void> => {
-  applyInterface('classic');
+  applyInterface('classic', null);
 
   const civ1 = mapTileset('square'),
     civ2 = mapTileset('staggered-iso');
