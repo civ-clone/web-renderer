@@ -159,7 +159,9 @@ export const zoomRow = (portal?: IPortal | null): HTMLElement[] => {
     slider = s<HTMLInputElement>(
       `<input type="range" min="${min}" max="${max}" step="${ZOOM_STEP}" value="${current}">`
     ),
-    shown = s<HTMLOutputElement>('<output></output>'),
+    // Hidden from a screen reader, which hears the slider's own `aria-valuetext`: inside the label, it would be part of
+    //  the slider's name.
+    shown = s<HTMLOutputElement>('<output aria-hidden="true"></output>'),
     // How far along the track the thumb is, 0 to 1, for the theme to fill it to (#739), and the zoom it's at.
     show = (zoom: number): void => {
       slider.style.setProperty(
@@ -169,6 +171,8 @@ export const zoomRow = (portal?: IPortal | null): HTMLElement[] => {
       shown.textContent = t('GameOptions.zoom-value', {
         zoom: zoom.toFixed(1),
       });
+      // Read out as "1.4×" rather than "1.4".
+      slider.setAttribute('aria-valuetext', shown.textContent);
     };
 
   show(current);

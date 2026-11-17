@@ -99,7 +99,7 @@
     },
     "scales": {
       "title": "Map scales",
-      "description": "The map scales it can be shown at.",
+      "description": "The whole map scales it is drawn at: the map zooms from the smallest of them to the largest, in tenths, drawn at the whole scale at or above the zoom.",
       "type": "array",
       "minItems": 1,
       "items": { "type": "integer", "minimum": 1 },
