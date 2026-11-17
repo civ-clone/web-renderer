@@ -525,3 +525,25 @@ engine-state checksums (`a7518c6d / d3c8debf / a12b897c`), the random-call
 counts and the DTO hashes are unchanged, and the 16 seeds (1–8, 41–48) are
 identical at turns 150 and 300. `client-transcript.json` passes unchanged and is
 not re-recorded.
+
+## Accepted change: starting advances are saved, and how advances are counted is a rule (#973)
+
+core-science 0.1.10 keeps the advances each player started with
+(`PlayerResearch#startingAdvances()`, saved as the `_starting` field), and adds
+the `AdvanceCount` rule. civ1-science 0.1.12 registers v474.05's count of only
+the advances gained in play (`tech_count`), and civ1-enhanced 0.1.11's
+`starting-advances-count` set, on to start with, takes its place with every
+advance known, as before. So the rule totals at turns 1, 10 and 50 rise from
+1178 to 1180 (`AdvanceCount` 0 → 2), and the state gains one field for each
+`PlayerResearch` (9734 → 9738, 9822 → 9826, 10036 → 10041: four players, then
+five), which moves the checksums (`a7518c6d / d3c8debf / a12b897c` →
+`99a58e61 / e7ec61bb / 781cb858`) and state hashes.
+
+Play is unchanged. With `_starting` left out of `stateDigest`, all three
+checksums are main's, and nothing else differs: the DTO hashes, the random-call
+counts and the registries are as before. The conformance game plays with
+civ1-enhanced, so it counts every advance; v474.05's count (the set off) is
+tested in civ1-science, civ1-power, civ1-city-improvement and civ1-enhanced
+themselves, and `tests/engine/respawn.ts` checks that a civilization coming back
+starts with what it inherits (base-game-end 0.1.2, through civ1-game-end
+0.1.6). `client-transcript.json` passes unchanged and is not re-recorded.
