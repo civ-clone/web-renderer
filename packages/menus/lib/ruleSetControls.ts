@@ -7,6 +7,9 @@
 //  settle, with both sets' rows marked; a package's mistake, which the player can't settle, said as such with the
 //  rules' own words beneath; and a set that names a rule that isn't loaded, said quietly. While one that blocks
 //  stands, Start is held, and is described by it. A rule another set has replaced says so beside its name.
+//
+// A choice beneath a set that is switched off is greyed out (#1008). Switching a set off doesn't reach into a choice
+//  inside it, which keeps its pick for when the set is on again, so the choice says what the set does when it is on.
 
 import {
   RuleSetChoice,
@@ -171,7 +174,9 @@ const item = (
   node: RuleSetNode,
   path: string,
   change: (choice: RuleSetChoice) => void,
-  marked: Marked
+  marked: Marked,
+  // Whether a set this is beneath is switched off.
+  off: boolean
 ): HTMLLIElement => {
   const element = document.createElement('li'),
     here = under(path, node.id),
@@ -188,7 +193,14 @@ const item = (
         return [];
       }
 
-      const beneath = list(shown, of, at, change, marked);
+      const beneath = list(
+        shown,
+        of,
+        at,
+        change,
+        marked,
+        off || (of.kind === 'set' && of.state === 'off')
+      );
 
       beneath.setAttribute('aria-labelledby', label.id);
 
@@ -202,7 +214,7 @@ const item = (
     const group = document.createElement('fieldset'),
       about = described(node.id);
 
-    group.disabled = !node.active;
+    group.disabled = !node.active || off;
     describedBy(group, about, mark(element, null, node.id, marked));
 
     const legend = text('legend', 'rule-set-name', ruleSetName(node.id));
@@ -308,12 +320,13 @@ const list = (
   parent: RuleSetNode | null,
   path: string,
   change: (choice: RuleSetChoice) => void,
-  marked: Marked
+  marked: Marked,
+  off: boolean = false
 ): HTMLUListElement => {
   const element = document.createElement('ul');
 
   element.className = 'rule-sets';
-  element.append(...nodes.map((node) => item(node, path, change, marked)));
+  element.append(...nodes.map((node) => item(node, path, change, marked, off)));
 
   return element;
 };
