@@ -27,6 +27,7 @@ import {
 import Window, { WindowOptions } from '@civ-clone/ui-component-window/Window';
 import ImportAssetsWindow from './ImportAssetsWindow';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
+import { loadFailed } from '@civ-clone/ui-assets/lib/installPacks';
 import { button } from '@civ-clone/ui-component-button/button';
 import chooseUiTheme from '../lib/chooseUiTheme';
 import { h } from '@civ-clone/ui-widgets/lib/html';
@@ -320,10 +321,13 @@ export class LibraryWindow extends Window {
         element.dataset.set = set.id;
         name.textContent = set.name;
 
-        // A set that ships with civ.one is ready unless its sheet couldn't be loaded (#1063), offline on a first visit.
+        // A set that ships with civ.one is ready unless fetching its sheet failed (#1063), offline on a first visit: at
+        //  start-up, when it's left uninstalled, or as a game on its grid started. One not fetched yet, as its sheet is
+        //  only fetched once it's drawn from, is there until it's tried. Only a map set's sheet is fetched so far.
         if (set.source === 'hosted') {
-          // A sound set that ships is fetched as it's played: only a map set's sheet is loaded at start-up.
-          const loaded = set.grid === undefined || installed.includes(set.id);
+          const loaded =
+            set.grid === undefined ||
+            (installed.includes(set.id) && !loadFailed(set));
 
           status.textContent = t(
             loaded

@@ -20,8 +20,10 @@ import is an upgrade.
     ready), which opens its own import window, in any order; with site data blocked (#850), every one is disabled.
     Each installed map set has _Use for square maps_ (or its grid), which keeps it as `tileset.<grid>`
     (`chooseMapTileset`), the one `mapTileset` draws with marked in use, and each theme says whose interface art it
-    draws with now (`themeArtLine`). A hosted set whose sheet didn't load says it couldn't be loaded. It opens only
-    before a game.
+    draws with now (`themeArtLine`). A hosted set says it couldn't be loaded once fetching its sheet has failed, at
+    start-up or as a game on its grid started (`loadFailed`), and is ready until then, as it's fetched only once it's
+    drawn from. Use leads to the chosen set's sheet being fetched before a game on that grid (`ensureMapArt` follows
+    `mapTileset`). It opens only before a game.
 - `packages/menus/components/ImportAssetsWindow.ts`
   - One set's import: its own instructions, a file picker offering its files' extensions, and only its files read
     (another's are left out with a console warning).

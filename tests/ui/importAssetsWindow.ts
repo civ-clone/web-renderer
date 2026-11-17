@@ -48,6 +48,7 @@ import {
   mapTilesetOption,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import { instance as gameOptions } from '@civ-clone/ui-platform/GameOptionsRegistry';
+import { ensureTilesetLoaded } from '@civ-clone/ui-assets/lib/installPacks';
 import addFormatters from '@civ-clone/ui-game/app/i18nFormatters';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
@@ -2297,6 +2298,48 @@ const run = async (): Promise<void> => {
 
       library.close();
       installTilesets({});
+
+      // Installed as it's declared, its sheet fetched only once a game draws from it: Ready until a fetch fails, as a
+      //  game on its grid starts, and then said so, still to choose, as the next start tries again.
+      const pixelArt = bundledTilesets().find(
+          ({ id }) => id === 'civ1-pixelart'
+        )!,
+        sheet = (fails: boolean) =>
+          ({
+            loadHostedPack: async (): Promise<void> => {
+              if (fails) {
+                throw new Error('offline');
+              }
+            },
+          } as unknown as typeof assetStore),
+        pixelArtEntry = async (): Promise<(string | null)[]> => {
+          library = await opened();
+
+          const entry = entryOf(library, 'civ1-pixelart'),
+            shown = [entry.status, entry.button];
+
+          library.close();
+
+          return shown;
+        };
+
+      const notFetched = await pixelArtEntry();
+
+      await ensureTilesetLoaded(pixelArt, sheet(true)).catch(() => {});
+
+      const failed = await pixelArtEntry();
+
+      await ensureTilesetLoaded(pixelArt, sheet(false));
+
+      expect(
+        "a set that ships is ready before its sheet is fetched, couldn't be loaded once a fetch fails, and ready again once one loads",
+        [notFetched, failed, await pixelArtEntry()],
+        [
+          ['Ready', 'Use for square maps'],
+          ['Couldn’t be loaded', 'Use for square maps'],
+          ['Ready', 'Use for square maps'],
+        ]
+      );
     }
 
     library.close();

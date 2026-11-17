@@ -33,10 +33,20 @@ export const packFor = (tileset: TilesetDescriptor): AssetPack => {
   };
 };
 
+// The hosted sets whose sheet the last try couldn't load (`ensureTilesetLoaded`), by id: the library says so.
+const failedSets = new Set<string>();
+
+/**
+ * Whether the last try to load `tileset`'s sheet, a hosted set's, failed (`ensureTilesetLoaded`): at start-up, or as a
+ *  game on its grid started. False for one not tried yet, which counts as there until it is (#1063).
+ */
+export const loadFailed = ({ id }: Pick<TilesetDescriptor, 'id'>): boolean =>
+  failedSets.has(id);
+
 /**
  * Draws from `tileset`'s sprites once they are there: for a hosted set (#1063), its sheet fetched and cut up into
  *  `store` (`loadHostedPack`), once; for an imported one, at once, as `installPacks` loaded them. Rejects, saying which
- *  art couldn't be loaded and why, when the sheet can't be.
+ *  art couldn't be loaded and why, when the sheet can't be, which `loadFailed` says until a later try loads it.
  */
 export const ensureTilesetLoaded = async (
   tileset: TilesetDescriptor,
@@ -44,7 +54,10 @@ export const ensureTilesetLoaded = async (
 ): Promise<void> => {
   try {
     await store.loadHostedPack(packFor(tileset));
+    failedSets.delete(tileset.id);
   } catch (error) {
+    failedSets.add(tileset.id);
+
     throw new Error(
       `${tileset.name} (${tileset.id}) couldn't be loaded: ${
         (error as Error)?.message ?? error

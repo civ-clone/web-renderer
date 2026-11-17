@@ -2,8 +2,9 @@
 //  defaulted to Civ1's art follows the map's art for the game's grid (`mapTileset`): a sprite looked up, a unit drawn
 //  and its letter; the interface's art follows the theme (`interfaceArt`): the cursor and the action buttons, which fit
 //  the pixel art's 32 px sprites into their 16 px picture. Windows size art by a 16 px tile, whatever is imported. A
-//  square save loads without Civilization's art, and an isometric one still asks for Civilization II's. With Civ1's
-//  imported, everything is as it was.
+//  square save loads without Civilization's art, and an isometric one still asks for Civilization II's. With storage
+//  blocked the pixel art stands in; the art chosen for a grid is fetched before a game on it. With Civ1's imported,
+//  everything is as it was.
 
 // Must stay first: it gives the layers a canvas and a `document` to draw with.
 import { fakeCanvas } from './lib/fakeCanvas';
@@ -13,6 +14,7 @@ import './lib/grids';
 import {
   REFERENCE_TILE_WIDTH,
   bundledTilesets,
+  chooseMapTileset,
   installTilesets,
   mapTileset,
   setMapGrid,
@@ -33,7 +35,13 @@ import {
 import renderUnit, {
   drawUnitStatus,
 } from '@civ-clone/ui-assets/lib/renderUnit';
-import { assetStore } from '@civ-clone/ui-assets/AssetStore';
+import { AssetStore, assetStore } from '@civ-clone/ui-assets/AssetStore';
+import installPacks, {
+  ensureMapArt,
+  ensureTilesetLoaded,
+  loadFailed,
+} from '@civ-clone/ui-assets/lib/installPacks';
+import { Store } from '@civ-clone/ui-platform/Store';
 import { drawUnitActionIcon } from '@civ-clone/ui-assets/lib/unitActionIcon';
 import i18next from 'i18next';
 import { missingArt } from '@civ-clone/ui-menus/lib/playable';
@@ -278,6 +286,110 @@ const run = async (): Promise<void> => {
     ],
     [false, 'interface', false, 'civ1']
   );
+
+  // The browser's storage (#850), as the page starts (`installPacks`), the pixel art's sheet fetched with no network.
+  const civ1Store = (): { store: AssetStore; fetched: string[] } => {
+      const store = new AssetStore(civ1!),
+        fetched: string[] = [];
+
+      // As the store does: only a hosted set has a sheet to fetch.
+      store.loadHostedPack = async ({ id, hosted }): Promise<void> => {
+        if (hosted !== undefined) {
+          fetched.push(id);
+        }
+      };
+      // There's no IndexedDB here: what's imported is what `keys` says, and the sprites stay the suite's.
+      store.load = async (): Promise<void> => {};
+
+      return { store, fetched };
+    },
+    { keys, opens } = Store.prototype;
+
+  // Blocked: nothing is imported, so the pixel art stands in, and a game can be played.
+  Store.prototype.opens = async () => false;
+  Store.prototype.keys = async () => {
+    throw new Error('The user denied permission to access the database.');
+  };
+
+  {
+    const { store, fetched } = civ1Store();
+
+    expect(
+      "with storage blocked, Civilization's art isn't installed, the pixel art's sheet is fetched as the page starts, and a game can be played",
+      [
+        (await installPacks(store)).map(({ id }) => id),
+        fetched,
+        interfaceArt().id,
+        missingArt(),
+      ],
+      [['civ1-pixelart'], ['civ1-pixelart'], 'civ1-pixelart', null]
+    );
+  }
+
+  // Open but unreadable for a passing reason: Civilization's stays installed, as before, and nothing is fetched.
+  Store.prototype.opens = async () => true;
+
+  {
+    const { store, fetched } = civ1Store();
+
+    expect(
+      "a store that opens but can't be read leaves Civilization's art installed, and a game can be played",
+      [
+        (await installPacks(store)).map(({ id }) => id),
+        fetched,
+        interfaceArt().id,
+        missingArt(),
+      ],
+      [['civ1', 'civ1-pixelart'], [], 'civ1', null]
+    );
+  }
+
+  Store.prototype.keys = keys;
+  Store.prototype.opens = opens;
+
+  // The art chosen for a grid (the library's Use) is what's fetched before a game on that grid starts or loads.
+  installTilesets({});
+
+  {
+    const { store, fetched } = civ1Store();
+
+    await ensureMapArt('square', store);
+    chooseMapTileset('square', 'civ1-pixelart');
+    await ensureMapArt('square', store);
+    chooseMapTileset('square', '');
+
+    expect(
+      "the art chosen for square maps is fetched before a game on them starts: none for Civilization's, imported, then the pixel art's once it's chosen",
+      [fetched, mapTileset('square').id],
+      [['civ1-pixelart'], 'civ1']
+    );
+  }
+
+  // A sheet that couldn't be fetched as a game started is said so (`loadFailed`), until a later try loads it.
+  {
+    const store = new AssetStore(civ1!);
+
+    store.loadHostedPack = async (): Promise<void> => {
+      throw new Error('offline');
+    };
+
+    const failure = await ensureTilesetLoaded(pixelArt!, store).then(
+      () => null,
+      (error: Error) => error.message
+    );
+
+    store.loadHostedPack = async (): Promise<void> => {};
+
+    expect(
+      'a sheet that fails is said to have, and not once it loads',
+      [
+        failure,
+        loadFailed(pixelArt!),
+        (await ensureTilesetLoaded(pixelArt!, store), loadFailed(pixelArt!)),
+      ],
+      ["Pixel art (civ1-pixelart) couldn't be loaded: offline", true, false]
+    );
+  }
 
   // Civilization's art imported: everything as it was.
   installTilesets({});

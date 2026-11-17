@@ -5,6 +5,11 @@ import { t } from 'i18next';
 // Whether a game can be started or loaded here (#1063): not whether Civilization's art has been imported, as it is
 //  only an upgrade now, but whether there's art to draw the game with. civ.one's own pixel art is there for the
 //  interface and the square map unless its sheet couldn't be fetched, on a first visit offline with nothing imported.
+//
+// The interface's art, when it's a set that ships, has had its sheet fetched as the page started (`installPacks`), so
+//  installed means there to draw with. A map set that ships is installed as it's declared, and fetched as a game on
+//  its grid starts or loads (`ensureMapArt`): one that fails then stops that game, saying why, and the library says
+//  it couldn't be loaded (`loadFailed`).
 
 /** What there's no art for: the interface (`interfaceArt`), or a map on any grid (`supportedTopologies`). */
 export type MissingArt = 'interface' | 'map';
