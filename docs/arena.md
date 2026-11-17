@@ -112,6 +112,26 @@ npm run arena -- --self-check --games 4 --turns 100 --grid staggered-iso
 `npm run test:staggered-iso-game` plays one such game and checks that cities
 and moves follow the grid.
 
+## Sets
+
+`--set civ2` plays a plugin set from `src/js/pluginSets.ts` instead of the
+default, loaded as the worker loads it, with the installed AI's loader swapped
+for the two variants (M2e). Civ2's games want `--grid staggered-iso`:
+
+```sh
+npm run arena -- --set civ2 --grid staggered-iso --games 20 --turns 150
+```
+
+With a set, each game also reports the soak's counts (see
+[docs/soak.md](soak.md)): each seat's under `counters`, beside its metrics, and
+the whole game's at the game's own `counters`. The runner prints them summed
+by AI after the summary. The metrics are measured as they are for the default
+set, so the score and power rankings are Civ1's formulas over that set's game.
+`--earth` is the default set's map, so it can't be played with a set, and
+`--self-check` skips its conformance game, as the fixture is the default
+set's. Without `--set` nothing changes: the default set is loaded as
+`src/js/plugins.ts` loads it and the report has no counts.
+
 ## What is measured
 
 Per player, at the start of the last turn:
