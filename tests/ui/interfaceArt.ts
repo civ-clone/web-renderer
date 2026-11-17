@@ -1,7 +1,8 @@
 // The interface's art (#1063): a theme names the sets it draws its interface art with, in order, and the first that is
 //  registered, installed and has interface art (`assets.ui`) is used, or Civ1's when none is, as the game can't start
 //  without it. The interface asks for each sprite by civ.one's name, which began as Civ1's, and a set maps it to its own
-//  (`names.ui`). Choosing a theme whose art differs reloads the page; one drawing with the same art doesn't.
+//  (`names.ui`). Whether choosing a theme changes the page's art (`themeChangesArt`) decides whether it needs a new
+//  page.
 
 // Must stay first: `AssetStore` opens its database as it loads, and `Window` reads `document.body`.
 import './lib/dom';
@@ -27,6 +28,7 @@ import validateDescriptor, {
 } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import { registerTheme, uiThemeArt } from '@civ-clone/ui-widgets/lib/theme';
 import civ1Json from '@civ-clone/ui-tileset-civ1/civ1.json';
+import { citizenSpriteChoices } from '@civ-clone/ui-client/lib/citizens';
 import { themeChangesArt } from '@civ-clone/ui-menus/components/GameOptions';
 
 const failures: string[] = [];
@@ -164,11 +166,13 @@ expect('as the list changes', id(interfaceArt()), 'first');
 
 provideInterfaceArt(() => []);
 
-// The names: civ.one's, which begin as Civ1's interface art's, required and optional as Civ1's are.
+// The names: civ.one's, which begin as Civ1's interface art's, required and optional as Civ1's are, and add the angry
+//  citizens the city screen asks for (`citizenSpriteChoices`), which Civ1's art hasn't, as optional.
 {
   const { assets } = civ1Json,
     isUi = (name: string): boolean =>
-      assets.ui.some((prefix) => name.startsWith(prefix));
+      assets.ui.some((prefix) => name.startsWith(prefix)),
+    angry = ['city/people_angry_f', 'city/people_angry_m'];
 
   expect(
     "the required names are Civ1's required interface art",
@@ -176,16 +180,39 @@ provideInterfaceArt(() => []);
     assets.required.filter(isUi)
   );
   expect(
-    "the optional names are Civ1's optional interface art",
+    "the optional names are Civ1's optional interface art, then the angry citizens",
     optionalInterfaceNames,
-    assets.optional.filter(isUi)
+    [...assets.optional.filter(isUi), ...angry]
+  );
+  expect(
+    "which Civ1's descriptor doesn't list",
+    angry.filter((name) =>
+      [...assets.required, ...assets.optional].includes(name)
+    ),
+    []
+  );
+  expect(
+    'every citizen the city screen asks for is named',
+    ['Rome', 'Babylon', 'Thebes']
+      .flatMap((seed) =>
+        citizenSpriteChoices(
+          Array(4).fill(['happy', 'content', 'unhappy', 'angry']).flat(),
+          seed
+        )
+      )
+      .flat()
+      .filter((name) => !interfaceNames.some((listed) => listed.name === name)),
+    []
   );
   expect(
     'and each name is marked so',
     interfaceNames.map(({ name, required }) => [name, required]),
     [
       ...assets.required.filter(isUi).map((name) => [name, true]),
-      ...assets.optional.filter(isUi).map((name) => [name, false]),
+      ...[...assets.optional.filter(isUi), ...angry].map((name) => [
+        name,
+        false,
+      ]),
     ]
   );
 }
@@ -242,7 +269,7 @@ provideInterfaceArt(() => []);
   );
 }
 
-// Whether choosing a theme changes the art, and so reloads the page.
+// Whether choosing a theme changes the art, so needs a new page: against the page's art, Civ1's here.
 registerTheme({ id: 'first-theme', name: 'first', art: ['first', 'civ1'] });
 registerTheme({ id: 'civ1-only', name: 'civ1', art: ['civ1'] });
 registerTheme({ id: 'no-art', name: 'none' });
@@ -253,35 +280,39 @@ registerTheme({
 });
 
 expect(
-  "the two themes there are draw with the same art: Civ1's",
-  [
-    themeChangesArt('slate', 'civ1-classic'),
-    themeChangesArt('civ1-classic', 'slate'),
-  ],
+  "the two themes there are draw with the page's art: Civ1's",
+  [themeChangesArt('slate'), themeChangesArt('civ1-classic')],
   [false, false]
 );
 expect(
-  'nor do two lists that come to the same set',
+  'nor do lists that come to the same set',
   [
-    themeChangesArt('slate', 'civ1-only'),
-    themeChangesArt('slate', 'no-art'),
-    themeChangesArt('slate', 'missing'),
+    themeChangesArt('civ1-only'),
+    themeChangesArt('no-art'),
+    themeChangesArt('missing'),
   ],
   [false, false, false]
 );
 expect(
-  'one drawing with another set changes it, either way',
-  [
-    themeChangesArt('slate', 'first-theme'),
-    themeChangesArt('first-theme', 'civ1-classic'),
-  ],
-  [true, true]
+  'one drawing with another set changes it',
+  themeChangesArt('first-theme'),
+  true
 );
+
+// A page started with another theme's art.
+provideInterfaceArt(() => uiThemeArt('first-theme'));
+
 expect(
-  'and choosing the theme in use changes nothing',
-  themeChangesArt('first-theme', 'first-theme'),
-  false
+  'against its art, Civ1 changes it, and its own theme does not',
+  [
+    themeChangesArt('slate'),
+    themeChangesArt('civ1-classic'),
+    themeChangesArt('first-theme'),
+  ],
+  [true, true, false]
 );
+
+provideInterfaceArt(() => []);
 
 finished = true;
 

@@ -7,7 +7,8 @@ import { installedTilesets, interfaceTileset } from './tilesets';
 //  own (`names.ui`).
 //
 // Themes are registered by the interfaces, which this package can't import, so whoever applies the theme says which
-//  list is the current one (`provideInterfaceArt`), as the page does as it starts (`bootstrap.ts`).
+//  list is the current one (`provideInterfaceArt`), as the page does as it starts (`bootstrap.ts`). The page keeps the
+//  list it started with: a theme chosen with other art changes it at the next load (Options' `themeRows`).
 
 // The names it's asked for by, for what lists them.
 export type { InterfaceName } from './interfaceNames';

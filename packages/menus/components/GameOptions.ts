@@ -37,6 +37,7 @@ import { s } from '@dom111/element';
 import sendBuildPreferences from '@civ-clone/ui-client/lib/buildPreferences';
 import { soundChanged } from '@civ-clone/ui-assets/lib/soundGain';
 import { interfaceArt } from '@civ-clone/ui-assets/lib/interfaceArt';
+import { TilesetDescriptor } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import { allowLeaving } from '@civ-clone/ui-component-window/leaveGuard';
 import forgetVisitParam from '@civ-clone/ui-platform/lib/forgetVisitParam';
 import { t } from 'i18next';
@@ -254,20 +255,24 @@ export const interfaceRows = (
 };
 
 /**
- * Whether choosing the theme `to` over `from` changes the interface's art (#1063): whether the first set each draws
- *  with that is there (`interfaceArt`) differs, not their lists.
+ * Whether the theme `id` draws with other interface art than `art`, the page's (#1063): whether the first set it draws
+ *  with that is there (`interfaceArt`) is another, not whether its list is.
  */
-export const themeChangesArt = (from: string, to: string): boolean =>
-  interfaceArt(uiThemeArt(from)).id !== interfaceArt(uiThemeArt(to)).id;
+export const themeChangesArt = (
+  id: string,
+  art: TilesetDescriptor = interfaceArt()
+): boolean => interfaceArt(uiThemeArt(id)).id !== art.id;
 
 /**
  * Theme (#735), applied as it's chosen. Choosing also drops the visit's `?theme=`, which would outrank it next load. A
- *  theme drawing with other interface art loads a new page, as an import does (#1063): windows already open have
- *  drawn their icons.
+ *  theme drawing with other interface art than the page's needs a new page, as windows already open have drawn their
+ *  icons (#1063): from the main menu it loads at once, as after an import, and during a game its colours apply at once
+ *  and its art waits for the next load, with a hint saying so, as reloading would lose the game (as `interfaceRows`).
  */
-export const themeRow = (
+export const themeRows = (
+  inGame: boolean,
   reload: () => void = () => window.location.reload()
-): HTMLElement => {
+): HTMLElement[] => {
   const current = currentUiTheme(),
     // The interfaces that bring them register them (#861), so what one says is never treated as markup either.
     select = s<HTMLSelectElement>(
@@ -281,25 +286,37 @@ export const themeRow = (
 
         return option;
       })
+    ),
+    hint = s<HTMLParagraphElement>(
+      `<p class="hint"${themeChangesArt(current) ? '' : ' hidden'}>${t(
+        'GameOptions.theme-art-next-load'
+      )}</p>`
     );
 
-  return s(
-    `<label>${t('GameOptions.theme')}</label>`,
-    h(select, {
-      change: () => {
-        const changesArt = themeChangesArt(currentUiTheme(), select.value);
+  return [
+    s(
+      `<label>${t('GameOptions.theme')}</label>`,
+      h(select, {
+        change: () => {
+          const changesArt = themeChangesArt(select.value);
 
-        options.set('uiTheme', select.value);
-        applyUiTheme(select.value);
-        forgetVisitParam('theme');
+          options.set('uiTheme', select.value);
+          applyUiTheme(select.value);
+          forgetVisitParam('theme');
 
-        if (changesArt) {
-          allowLeaving();
-          reload();
-        }
-      },
-    })
-  );
+          if (changesArt && !inGame) {
+            allowLeaving();
+            reload();
+
+            return;
+          }
+
+          hint.hidden = !changesArt;
+        },
+      })
+    ),
+    hint,
+  ];
 };
 
 export class GameOptions extends Window {
@@ -452,7 +469,7 @@ export class GameOptions extends Window {
           })()
         ),
         ...interfaceRows(portal !== null),
-        themeRow(),
+        ...themeRows(portal !== null),
         s(
           `<label>${t('GameOptions.colour-scheme')}</label>`,
           (() => {

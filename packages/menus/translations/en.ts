@@ -69,6 +69,8 @@ i18next.addResources('en', 'default', {
   'GameOptions.sound-volume': 'Sound volume',
   'GameOptions.square-tooltips': 'Describe the map square under the mouse',
   'GameOptions.theme': 'Theme',
+  'GameOptions.theme-art-next-load':
+    "The theme's icons change the next time the page loads.",
   'GameOptions.unit-edge-margin':
     'Keep the active unit this many tiles from the edge',
   'GameOptions.unit-marker': 'Unit awaiting orders',

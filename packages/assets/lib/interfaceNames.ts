@@ -1,6 +1,7 @@
 // The names the interface asks for its art by (#1063): civ.one's own, whichever tileset's interface art a theme draws
 //  with (`interfaceArt`), which maps them to its own sprites where they differ (`names.ui`). They began as Civ1's, the
-//  sprites under its descriptor's `assets.ui` prefixes, and keep Civ1's split between required and optional.
+//  sprites under its descriptor's `assets.ui` prefixes, and keep Civ1's split between required and optional. Civ.one's
+//  own since are optional, as Civ1's art doesn't have them.
 
 /** One name the interface asks for, and whether a set needs it to draw the interface (`required`). */
 export interface InterfaceName {
@@ -42,8 +43,9 @@ export const requiredInterfaceNames: readonly string[] = [
 ];
 
 /**
- * What it may leave out: the women specialists, which fall back to the men, and the improvements' and Wonders'
- *  pictures, which the city screen goes without.
+ * What it may leave out: the women specialists, which fall back to the men, the angry citizens, which fall back to the
+ *  unhappy ones (`citizenSpriteChoices`), and the improvements' and Wonders' pictures, which the city screen goes
+ *  without.
  */
 export const optionalInterfaceNames: readonly string[] = [
   'city/people_tax_f',
@@ -91,6 +93,9 @@ export const optionalInterfaceNames: readonly string[] = [
   'wonders/apolloprogram',
   'wonders/setiprogram',
   'wonders/cureforcancer',
+  // Not Civ1's: it has no angry citizens.
+  'city/people_angry_f',
+  'city/people_angry_m',
 ];
 
 /** Every name the interface asks for, each marked required or optional. */

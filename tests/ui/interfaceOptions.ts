@@ -1,5 +1,6 @@
-// Interface and Theme in Options (#735). A theme applies as it's chosen, and loads a new page when it draws with other
-//  interface art (#1063). An interface loads a new page from the main menu; during a game it waits, with a hint, as reloading would lose the game. Both
+// Interface and Theme in Options (#735). A theme's colours apply as it's chosen. A theme drawing with other interface
+//  art (#1063), and an interface, load a new page from the main menu; during a game they wait, with a hint, as
+//  reloading would lose the game. Both
 //  show what's in use, and choosing drops the visit's `?interface=` or `?theme=`, which would otherwise outrank the
 //  choice at the next load, including through the leave guard. Options is modal before a game, so it can't reload one.
 
@@ -29,7 +30,7 @@ import {
 } from '@civ-clone/ui-platform/lib/interfaceMode';
 import {
   interfaceRows,
-  themeRow,
+  themeRows,
 } from '@civ-clone/ui-menus/components/GameOptions';
 import addFormatters from '@civ-clone/ui-game/app/i18nFormatters';
 import forgetVisitParam, {
@@ -130,7 +131,7 @@ Object.assign(globalThis, {
 
     let reloads = 0;
 
-    const row = themeRow(() => reloads++),
+    const [row, hint] = themeRows(false, () => reloads++),
       select = row.querySelector('select') as HTMLSelectElement;
 
     expect('it shows the theme in use', select.value, 'slate');
@@ -144,7 +145,11 @@ Object.assign(globalThis, {
     choose(select, 'civ1-classic');
 
     expect('choosing applies at once', currentUiTheme(root), 'civ1-classic');
-    expect("with no reload, as both draw with Civ1's art (#1063)", reloads, 0);
+    expect(
+      "with no reload or hint, as both draw with Civ1's art (#1063)",
+      [reloads, hint!.hidden],
+      [0, true]
+    );
     expect('and is kept', options.get('uiTheme'), 'civ1-classic');
     expect(
       'and the visit no longer outranks it, leaving the rest',
@@ -180,7 +185,7 @@ Object.assign(globalThis, {
       // What the page had been told when it reloaded.
       atReload: unknown[] = [];
 
-    const row = themeRow(() => {
+    const [row] = themeRows(false, () => {
         reloads++;
         atReload = [
           currentUiTheme(root),
@@ -199,10 +204,45 @@ Object.assign(globalThis, {
       atReload,
       ['other-art-theme', 'other-art-theme', 'https://civ.one/']
     );
+  }
+
+  // During a game, a theme with other art applies its colours, and its art waits for the next load, saying so.
+  {
+    applyUiTheme('slate', root);
+
+    let reloads = 0;
+
+    const [row, hint] = themeRows(true, () => reloads++),
+      select = row.querySelector('select') as HTMLSelectElement;
+
+    expect('in a game the hint starts hidden', hint.hidden, true);
+
+    visit('?theme=slate');
+    choose(select, 'other-art-theme');
+
+    expect(
+      'choosing a theme with other art applies its colours, and is kept',
+      [currentUiTheme(root), options.get('uiTheme'), page.location.href],
+      ['other-art-theme', 'other-art-theme', 'https://civ.one/']
+    );
+    expect('without a reload, which would lose the game', reloads, 0);
+    expect('and the hint says the art waits', hint.hidden, false);
 
     choose(select, 'civ1-classic');
 
-    expect('and choosing back reloads again', reloads, 2);
+    expect(
+      "choosing one with the page's art hides it again",
+      [currentUiTheme(root), hint.hidden, reloads],
+      ['civ1-classic', true, 0]
+    );
+
+    applyUiTheme('other-art-theme', root);
+
+    expect(
+      'and Options opened again after choosing other art says so at once',
+      themeRows(true)[1]!.hidden,
+      false
+    );
   }
 
   // Interface from the main menu: a new page at once.

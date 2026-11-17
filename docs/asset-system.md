@@ -128,7 +128,8 @@ staggered isometric grid, which `tileset-civ2` registers (`registerTileset(tiles
   art's, which isn't registered yet, so it's Civ1's. The page tells it the theme's list as it starts
   (`provideInterfaceArt`, in `bootstrap.ts`). The screens ask for its sprites by civ.one's names
   (`interfaceNames.ts`, Civ1's so far), through `interfaceSpriteKey`, which a set maps to its own in `names.ui`.
-  Choosing a theme in Options that changes `interfaceArt()` reloads the page. `currentTileset()` is still Civ1's
+  The page keeps the list it started with. Choosing a theme in Options whose art differs reloads the page from the
+  main menu, and during a game takes effect at the next load, with a hint saying so. `currentTileset()` is still Civ1's
   tileset, for what means the always-installed pack. Until a package registers one, both throw, naming what to load;
   the asset store made as the page loads (`assetStore`) asks for its tileset only when it is first used.
 - A save on a grid whose bundled pack isn't installed is refused naming the pack to import (`SavedGame.needs-import`,

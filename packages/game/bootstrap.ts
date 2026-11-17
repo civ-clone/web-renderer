@@ -87,8 +87,11 @@ export class Renderer {
         currentInterface().theme
       )
     );
-    // The interface's art is the theme's (#1063), whichever is in use.
-    provideInterfaceArt(() => uiThemeArt(currentUiTheme()));
+    // The interface's art is the theme's (#1063), as it is now: what's drawn with it stays drawn, so a theme chosen with
+    //  other art changes it at the next load.
+    const art = uiThemeArt(currentUiTheme());
+
+    provideInterfaceArt(() => art);
     applyColourScheme(options.get('colourScheme', 'system'));
     // The interface's glyphs, for every `glyph()` to refer to (#741).
     installGlyphs();
