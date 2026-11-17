@@ -1,8 +1,9 @@
-// The civilopedia's entries (#183): every advance, unit, city improvement, Wonder, government, spaceship part, tile
-//  improvement and terrain the game knows, each with the requirement entries (#37) that apply to it and those it is a
-//  target of, by the ids `getRequirements` sends. Worked out here, from the game's registries and rules, so the page
-//  knows no rules: which entries apply through a base class (`Naval`, `CityImprovement`) is the registry's own walk,
-//  and a unit's numbers and an item's cost come from the ruleset's rules. Definitions, the same for every player.
+// The civilopedia's entries (#183): every advance, age (#1076), unit, city improvement, Wonder, government, spaceship
+//  part, tile improvement and terrain the game knows, each with the requirement entries (#37) that apply to it and
+//  those it is a target of, by the ids `getRequirements` sends. Worked out here, from the game's registries and rules,
+//  so the page knows no rules: which entries apply through a base class (`Naval`, `CityImprovement`) is the registry's
+//  own walk, and a unit's numbers and an item's cost come from the ruleset's rules. Definitions, the same for every
+//  player.
 
 import {
   Attack,
@@ -11,6 +12,7 @@ import {
   Visibility,
 } from '@civ-clone/core-unit/Yields';
 import Advance from '@civ-clone/core-science/Advance';
+import Age from '@civ-clone/base-science-age/Age';
 import { BaseYield } from '@civ-clone/core-unit/Rules/Yield';
 import BuildItem from '@civ-clone/core-city-build/BuildItem';
 import CityBuild from '@civ-clone/core-city-build/CityBuild';
@@ -26,6 +28,7 @@ import Unit from '@civ-clone/core-unit/Unit';
 import Wonder from '@civ-clone/core-wonder/Wonder';
 import Yield from '@civ-clone/core-yield/Yield';
 import { defaultGame } from '@civ-clone/core-game/defaultGame';
+import { ageOf } from '@civ-clone/base-science-age/lib/ageOf';
 import { entriesInForce } from './requirements';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 import {
@@ -85,10 +88,55 @@ export const unitStats = (UnitType: Class, rules: RuleRegistry): UnitStats => ({
   visibility: baseYield(UnitType, Visibility, rules),
 });
 
+/**
+ * Under rules with ages (#1076), each advance's age, and the ages in order, from the ruleset's `AgeOf` rules: an advance
+ *  known alone puts a civilization in its own age, and two advances known together in the later of their two ages.
+ *  An advance that can be repeated belongs to none. With no ages, or with them switched off, there are none.
+ */
+export const advanceAges = (
+  advances: (typeof Advance)[],
+  rules: RuleRegistry
+): { ages: (typeof Age)[]; ageOf: Map<typeof Advance, typeof Age> } => {
+  const of = new Map<typeof Advance, typeof Age>();
+
+  advances
+    .filter((AdvanceType: typeof Advance): boolean => !AdvanceType.repeatable)
+    .forEach((AdvanceType: typeof Advance): void => {
+      const age = ageOf([AdvanceType], rules);
+
+      if (age !== null) {
+        of.set(AdvanceType, age);
+      }
+    });
+
+  // One advance of each age stands for it.
+  const advanceOf = new Map<typeof Age, typeof Advance>();
+
+  of.forEach((AgeType: typeof Age, AdvanceType: typeof Advance): void => {
+    if (!advanceOf.has(AgeType)) {
+      advanceOf.set(AgeType, AdvanceType);
+    }
+  });
+
+  const ages = [...advanceOf.keys()].sort((a: typeof Age, b: typeof Age) =>
+    a === b
+      ? 0
+      : ageOf([advanceOf.get(a)!, advanceOf.get(b)!], rules) === b
+      ? -1
+      : 1
+  );
+
+  return { ages, ageOf: of };
+};
+
 export const civilopediaData = (
   game: Game = defaultGame
 ): CivilopediaEntry[] => {
   const kept = new Set(entriesInForce(game.requirements, game.rules)),
+    advances = (game.advances.entries() as Class[]).filter(
+      (Item) => Item.prototype instanceof Advance
+    ) as (typeof Advance)[],
+    { ages, ageOf: agesOf } = advanceAges(advances, game.rules),
     entry = (
       Item: Class,
       kind: CivilopediaKind,
@@ -104,9 +152,23 @@ export const civilopediaData = (
     });
 
   return [
-    ...(game.advances.entries() as Class[])
-      .filter((Item) => Item.prototype instanceof Advance)
-      .map((Item) => entry(Item, 'advance')),
+    ...advances.map((AdvanceType) => {
+      const age = agesOf.get(AdvanceType);
+
+      return {
+        ...entry(AdvanceType, 'advance'),
+        ...(age === undefined ? {} : { age: typeNameOf(age) }),
+      };
+    }),
+    ...ages.map(
+      (AgeType: typeof Age, order: number): CivilopediaEntry => ({
+        ...entry(AgeType, 'age'),
+        advances: advances
+          .filter((AdvanceType) => agesOf.get(AdvanceType) === AgeType)
+          .map((AdvanceType) => typeNameOf(AdvanceType)),
+        order,
+      })
+    ),
     ...(game.availableCityBuildItems.entries() as Class[]).flatMap((Item) => {
       const kind = kindOf(Item);
 

@@ -2,6 +2,7 @@
 
 export type CivilopediaKind =
   | 'advance'
+  | 'age'
   | 'unit'
   | 'improvement'
   | 'wonder'
@@ -24,6 +25,12 @@ export interface CivilopediaEntry {
   cost: number | null;
   /** A unit's attack, defence, movement and visibility before anything modifies them. */
   stats: UnitStats | null;
+  /** An advance's age, by the age's key, under rules with ages (#1076). */
+  age?: string;
+  /** An age's advances, by their keys (#1076). */
+  advances?: string[];
+  /** An age's place among the ages, from 0 (#1076). */
+  order?: number;
 }
 
 export interface UnitStats {

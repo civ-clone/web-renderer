@@ -12,6 +12,7 @@ import './lib/interfaces';
 import Civilopedia, {
   CivilopediaData,
   entryHtml,
+  indexHtml,
 } from '@civ-clone/ui-reports/components/Civilopedia';
 import CityBuildUnavailableWindow, {
   reasons,
@@ -204,6 +205,42 @@ const run = async (): Promise<void> => {
   await import('../../translations/civ1-science/en');
   await import('../../translations/civ1-wonder/en');
   await import('../../translations/civ1-world/en');
+  await import('../../translations/civ1-enhanced/en');
+
+  // Ages (#1076): an advance names its age, an age lists its advances, and the index has the ages in the order a
+  //  civilization moves through them, the Industrial Age before the Electric, not by name.
+  const ages: CivilopediaData = {
+    entries: new Map(
+      [
+        entry('Railroad', 'advance', { age: 'Industrial' }),
+        entry('Electricity', 'advance', { age: 'Electric' }),
+        entry('Electric', 'age', { advances: ['Electricity'], order: 5 }),
+        entry('Industrial', 'age', { advances: ['Railroad'], order: 4 }),
+      ].map((item) => [item.key, item])
+    ),
+    requirements: new Map(),
+  };
+
+  expect(
+    "an advance's page names its age, and an age's page its advances, each a link",
+    [
+      text(entryHtml(ages.entries.get('Railroad')!, ages)),
+      links(entryHtml(ages.entries.get('Railroad')!, ages)),
+      text(entryHtml(ages.entries.get('Industrial')!, ages)),
+      links(entryHtml(ages.entries.get('Industrial')!, ages)),
+    ],
+    [
+      'RailroadCivilization AdvanceAgeIndustrial Age',
+      ['Industrial'],
+      'Industrial AgeAgeAdvances of this ageRailroad',
+      ['Railroad'],
+    ]
+  );
+  expect(
+    'the index lists the ages in order, after the advances',
+    text(indexHtml(ages)),
+    'Civilization AdvancesElectricityRailroadAgesIndustrial AgeElectric Age'
+  );
 
   const musketman = entryHtml(data.entries.get('Musketman')!, data);
 

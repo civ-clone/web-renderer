@@ -334,6 +334,66 @@ const check = async (): Promise<void> => {
 
   expect('once its player has Gunpowder, it can', musketmen(), undefined);
 
+  // Ages (#1076): none while civ1-enhanced's set is off, as it starts; switched on, its eight in the order a
+  //  civilization moves through them, each advance in one, Future Technology, which can be repeated, in none.
+  expect(
+    'no ages while they are off',
+    [
+      entries.filter((item) => item.kind === 'age').length,
+      entries.filter((item) => item.age !== undefined).length,
+    ],
+    [0, 0]
+  );
+
+  defaultGame.ruleSets.set('civ1-enhanced:ages', true);
+
+  const withAges = civilopediaData(),
+    ageEntries = withAges.filter((item) => item.kind === 'age'),
+    advanceEntries = withAges.filter((item) => item.kind === 'advance');
+
+  defaultGame.ruleSets.set('civ1-enhanced:ages', false);
+
+  expect(
+    'with ages on, the eight in order',
+    ageEntries.map(({ key, order }) => [key, order]),
+    [
+      ['Ancient', 0],
+      ['Classical', 1],
+      ['Medieval', 2],
+      ['Renaissance', 3],
+      ['Industrial', 4],
+      ['Electric', 5],
+      ['Modern', 6],
+      ['Space', 7],
+    ]
+  );
+  expect(
+    'each advance in one age, and listed by it, but Future Technology',
+    [
+      advanceEntries
+        .filter((item) => item.age === undefined)
+        .map((item) => item.key),
+      advanceEntries.every(
+        (item) =>
+          item.age === undefined ||
+          (ageEntries
+            .find((age) => age.key === item.age)
+            ?.advances?.includes(item.key) ??
+            false)
+      ),
+      ageEntries.reduce((total, age) => total + (age.advances ?? []).length, 0),
+    ],
+    [['FutureTechnology'], true, 67]
+  );
+  expect(
+    'The Republic is of the Medieval Age, Alphabet of the Ancient',
+    [
+      advanceEntries.find((item) => item.key === 'TheRepublic')?.age,
+      advanceEntries.find((item) => item.key === 'Alphabet')?.age,
+    ],
+    ['Medieval', 'Ancient']
+  );
+
   finished = true;
 
   if (failures.length > 0) {

@@ -20,6 +20,8 @@ export type EntriesByKey = Map<string, CivilopediaEntry>;
 // Each kind's name, from the namespace the rest of the game names it from.
 const names: { [kind in CivilopediaKind]: (name: string) => string } = {
   advance: (name) => advanceName(name),
+  // #1076
+  age: (name) => t(`Age.${name}.title`, { defaultValue: name, ns: 'science' }),
   unit: (name) => t(`${name}.name`, { defaultValue: name, ns: 'unit' }),
   improvement: (name) =>
     t(`Improvement.${name}.name`, { defaultValue: name, ns: 'city' }),
