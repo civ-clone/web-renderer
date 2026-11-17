@@ -50,6 +50,8 @@ export const registrationOrder: string[] = [
   'city:building-complete',
   'city:building-held',
   'player:research-complete',
+  // #1076
+  'player:age-reached',
   'wonder:obsolete',
   'city-improvement:obsolete',
   'goody-hut:action-performed',

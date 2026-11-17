@@ -2,6 +2,7 @@
 //  details for a civilization the player holds an embassy with, and for any other it has met only what the player
 //  knows without one: its leader, and the player's own dealings with it (#419).
 
+import { playerAge } from '@civ-clone/base-science-age/lib/ageOf';
 import {
   CityImprovementRegistry,
   instance as cityImprovementRegistryInstance,
@@ -273,6 +274,14 @@ const details = (
         subject,
         relationRegistries(dependencies)
       ) ?? null,
+    age: attempt(
+      () =>
+        playerAge(
+          playerResearchRegistry.getByPlayer(subject),
+          dependencies.ruleRegistry
+        )?.name ?? null,
+      null
+    ),
   };
 };
 

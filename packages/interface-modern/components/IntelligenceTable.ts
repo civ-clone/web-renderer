@@ -150,7 +150,18 @@ const embassyDetails = ({
   foreignAffairs,
   advances,
   reputation,
+  age,
 }: IntelligenceDetails): HTMLElement[] => [
+  // Under rules with ages (#1076).
+  ...(age === null || age === undefined
+    ? []
+    : [
+        line(
+          t('IntelligenceReport.age', {
+            age: t(`Age.${age}.title`, { defaultValue: age, ns: 'science' }),
+          })
+        ),
+      ]),
   ...(reputation === null
     ? []
     : [

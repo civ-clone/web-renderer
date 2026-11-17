@@ -3,6 +3,7 @@
 //  change goes out as patches, which the client queues itself, before these.
 
 import Advance from '@civ-clone/core-science/Advance';
+import Age from '@civ-clone/base-science-age/Age';
 import { Anarchy } from '@civ-clone/library-government/Governments';
 import City from '@civ-clone/core-city/City';
 import Declaration from '@civ-clone/core-diplomacy/Declaration';
@@ -30,6 +31,23 @@ export const playerNotifications: NotificationTable = [
               .filter(
                 (known: Advance) => known instanceof advance.sourceClass()
               ).length,
+          }),
+  ],
+
+  // Our civilization entering a new age, under rules with ages (#1076): after the advance that starts it.
+  [
+    'player:age-reached',
+    (
+      ctx: NotificationContext,
+      playerResearch: PlayerResearch,
+      age: typeof Age,
+      previous: typeof Age
+    ) =>
+      !ctx.view.owns(playerResearch.player())
+        ? null
+        : new Notification('Player.age-reached', {
+            age: age.name,
+            previous: previous.name,
           }),
   ],
 

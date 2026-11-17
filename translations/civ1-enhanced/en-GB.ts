@@ -13,4 +13,8 @@ i18next.addResources('en-GB', 'ruleset', {
     'SDI Defence spares its city from a nuclear attack',
   'civ1-enhanced.sdi-defense-spares-cities.description':
     'In the original, SDI Defence only saves the units inside, and the city is still halved.',
+  'civ1-enhanced.ages.name':
+    'Civilisations move through eight ages as they learn',
+  'civ1-enhanced.ages.description':
+    'A civilisation enters a new age, from the Ancient Age to the Space Age, with the first advance it learns from a later research tier, and you are told when yours does. The original has no ages.',
 });

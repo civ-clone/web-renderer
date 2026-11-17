@@ -22,6 +22,7 @@
     "@civ-clone/base-player-action-adjust-trade-rates": "^0.1.1",
     "@civ-clone/base-player-action-end-turn": "^0.1.0",
     "@civ-clone/base-player-action-launch-spaceship": "^0.1.0",
+    "@civ-clone/base-science-age": "^0.1.0",
     "@civ-clone/base-unit-action-establish-embassy": "^0.1.0",
     "@civ-clone/base-unit-action-steal-technology": "^0.1.0",
     "@civ-clone/core-ai-client": "^0.1.3",

@@ -238,6 +238,8 @@ export interface PlayerResearch extends EntityInstance {
   costs: { [advance: string]: number };
   progress: Yield;
   researching: Entity | null;
+  // The age the player is in, by name, under rules with ages (#1076); `null` or missing under rules without.
+  age?: string | null;
   // Why it's researching nothing (#726): the player discovered `advance`, or acquired it some other way. `null` while
   //  researching something, or when it isn't known, as in a new game or an older save.
   cleared?: {

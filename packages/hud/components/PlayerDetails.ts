@@ -84,7 +84,8 @@ export type PlayerDetailsReports = {
 
 /**
  * The empire block in the top bar (#698): the leader, the treasury and what it gains a turn, the research under way and
- *  how far along it is, the government, and the tax split, which opens the trade rates as `+` and `-` do (#662).
+ *  how far along it is, the age under rules with ages (#1076), the government, and the tax split, which opens the
+ *  trade rates as `+` and `-` do (#662).
  */
 export class PlayerDetails extends Element {
   #player: Player;
@@ -311,7 +312,23 @@ export class PlayerDetails extends Element {
             : null,
       });
 
-    this.append(heading, researching, gold, governmentStat);
+    this.append(heading, researching);
+
+    // The age the civilization is in, under rules with ages (#1076).
+    if (research.age) {
+      this.append(
+        statPill({
+          className: 'age',
+          label: text('PlayerDetails.Age.title'),
+          value: t(`Age.${research.age}.title`, {
+            defaultValue: research.age,
+            ns: 'science',
+          }),
+        })
+      );
+    }
+
+    this.append(gold, governmentStat);
 
     const tradeRates = this.#tradeRates(actions);
 

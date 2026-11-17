@@ -1120,6 +1120,21 @@ const contextOf = ({
     null
   );
 
+  // Under rules with ages (#1076): ours told, by name, and a rival's not.
+  class Classical {}
+  class Medieval {}
+
+  expect(
+    'our civilization entering a new age',
+    player('player:age-reached', [researchOf(us), Medieval, Classical]),
+    ['Player.age-reached', false, { age: 'Medieval', previous: 'Classical' }]
+  );
+  expect(
+    "a rival's new age",
+    player('player:age-reached', [researchOf(rival), Medieval, Classical]),
+    null
+  );
+
   expect('retirement draws near', player('game:retirement-warning', []), [
     'Game.retirement-warning',
     false,
@@ -1322,6 +1337,7 @@ const contextOf = ({
     'GoodyHut.action-performed.Gold',
     'GoodyHut.action-performed.Nomads',
     'GoodyHut.action-performed.Unit',
+    'Player.age-reached',
     'Player.declaration-broken',
     'Player.declaration-expired',
     'Player.defeated.by',
@@ -1456,6 +1472,7 @@ const contextOf = ({
       'city:building-complete',
       'city:building-held',
       'player:research-complete',
+      'player:age-reached',
       'wonder:obsolete',
       'city-improvement:obsolete',
       'goody-hut:action-performed',

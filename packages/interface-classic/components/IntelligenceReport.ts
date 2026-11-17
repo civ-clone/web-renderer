@@ -62,6 +62,7 @@ const renderDetails = ({
   foreignAffairs,
   advances,
   reputation,
+  age,
 }: IntelligenceDetails): HTMLElement[] => [
   line(
     capital === null
@@ -84,6 +85,16 @@ const renderDetails = ({
   // The Gold icon after the amount, rather than a `$` (#683).
   s(`<p>${t('IntelligenceReport.treasury', { gold })} </p>`, yieldIcon('Gold')),
   line(t('IntelligenceReport.military', { count: units })),
+  // Under rules with ages (#1076).
+  ...(age === null || age === undefined
+    ? []
+    : [
+        line(
+          t('IntelligenceReport.age', {
+            age: t(`Age.${age}.title`, { defaultValue: age, ns: 'science' }),
+          })
+        ),
+      ]),
   // Under rules that keep one (Civ2's).
   ...(reputation === null
     ? []
