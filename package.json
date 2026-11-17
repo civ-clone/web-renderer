@@ -202,6 +202,7 @@
     "test:civ2-enhanced-sets": "node tools/run-suite.js engine civ2EnhancedSets",
     "test:observer": "node tools/run-suite.js engine observer",
     "test:stop-at-ending": "node tools/run-suite.js engine stopAtEnding",
+    "test:counters": "node tools/run-suite.js engine counters",
     "test:save-seats": "node tools/run-suite.js engine saveSeats",
     "test:respawn": "node tools/run-suite.js engine respawn",
     "test:hall-of-fame": "node tools/run-suite.js ui hallOfFame",

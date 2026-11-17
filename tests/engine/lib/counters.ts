@@ -68,6 +68,10 @@ const TREATIES = ['ceasefire', 'peace', 'alliance', 'war'] as const;
 
 type Treaty = (typeof TREATIES)[number];
 
+// The order a declaration is matched in, by its class or a base of it: an `Alliance` extends `Peace`, so it comes first.
+//  A `ShamPeace` (a peace one side means to drop) is a declaration of its own, and isn't counted.
+const MATCH_ORDER: Treaty[] = ['alliance', 'ceasefire', 'peace', 'war'];
+
 const TREATY_CLASSES: { [treaty in Treaty]: string } = {
   ceasefire: 'Ceasefire',
   peace: 'Peace',
@@ -227,7 +231,8 @@ export const startCounting = (): Counting => {
 
   interactionRegistryInstance.register = (...interactions: any[]): void => {
     interactions.forEach((interaction): void => {
-      const treaty = TREATIES.find((candidate) =>
+      // Most specific first: an `Alliance` is a `Peace` too.
+      const treaty = MATCH_ORDER.find((candidate) =>
         isA(interaction, TREATY_CLASSES[candidate])
       );
 
