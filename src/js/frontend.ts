@@ -6,6 +6,8 @@ import './interfaces.ts';
 import '@civ-clone/ui-map-square';
 // Isometric is drawable, but offered only once an isometric tileset is installed, and none is yet (#97).
 import '@civ-clone/ui-map-isometric';
+// Hex is drawable too, and offered once a hex tileset is installed, which none is yet (#94).
+import '@civ-clone/ui-map-hex';
 import Renderer from '@civ-clone/ui-game/bootstrap';
 import ReplaceableTransport from '@civ-clone/ui-client/ReplaceableTransport';
 import WorkerTransport from '@civ-clone/worker-transport/WorkerTransport';

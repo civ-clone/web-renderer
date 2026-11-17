@@ -11,7 +11,7 @@ import './lib/artPacks';
 import IsoMinimap from '@civ-clone/ui-map-isometric/Minimap';
 import IsoProjection from '@civ-clone/ui-map-isometric/IsoProjection';
 import Overview, { overviewCell } from '@civ-clone/ui-map-isometric/Overview';
-import OverviewProjection from '@civ-clone/ui-map-isometric/OverviewProjection';
+import OverviewProjection from '@civ-clone/ui-map/lib/StaggeredOverviewProjection';
 import { Tile } from '@civ-clone/ui-protocol/types';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import { Projection } from '@civ-clone/ui-map/lib/projection';

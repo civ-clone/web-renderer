@@ -51,6 +51,9 @@ export const directionKeyTables: {
 } = {
   square: screenRelativeKeys,
   'staggered-iso': screenRelativeKeys,
+  // Pointy-topped hexes have no neighbour straight up or down, so the screen-relative keys the grid has are its six
+  //  (numpad 7 9 4 6 1 3), and the up and down arrows (numpad 8 and 2) move nothing (#94).
+  'hex-odd-r': screenRelativeKeys,
 };
 
 const directionKeysByTopology = new WeakMap<

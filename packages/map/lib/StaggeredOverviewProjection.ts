@@ -6,13 +6,13 @@ import {
   WorldDimensions,
   noReach,
   Reach,
-} from '@civ-clone/ui-map/lib/projection';
-import { Rect } from '@civ-clone/ui-map/lib/viewport';
+} from './projection';
+import { Rect } from './viewport';
 
 /**
- * The isometric overview's tiles: each one a flat `width` × `height` brick where the map's diamond is, in the same
- * staggered rows. `width` is a diamond's width and `height` its row step, so the overview has the map's shape at a few
- * pixels a tile:
+ * A staggered grid's overview tiles: each one a flat `width` × `height` brick where the map's tile is, in the same
+ * staggered rows, every odd one shifted half a brick across. `width` is a tile's width and `height` its row step, so
+ * the overview has the map's shape at a few pixels a tile:
  *
  * ```
  *  [][][][]       row 0 at y 0, row 1 at y height and x width/2, row 2 at y 2·height, …
@@ -20,13 +20,14 @@ import { Rect } from '@civ-clone/ui-map/lib/viewport';
  *  [][][][]
  * ```
  *
- * At the overview's sizes a diamond would be a smudge two or four pixels across (a 4 × 2 diamond is a 2 × 2 square,
- * its corners its neighbours'), so the overview draws the part of the diamond that matters, its middle, as a brick.
- * Bricks fill the plane exactly, one per tile, so they never overlap and each is drawn on its own, and a pixel's brick
- * is the tile under it, which is what the minimap needs of a click. Each brick is the middle band of its diamond's box,
- * so a brick's centre is its diamond's.
+ * The isometric grid's diamonds and the hexagonal grid's hexes both sit in such rows. At the overview's sizes a diamond
+ * or a hex would be a smudge a few pixels across (a 4 × 2 diamond is a 2 × 2 square, its corners its neighbours'), so
+ * the overview draws the part of the tile that matters, its middle, as a brick. Bricks fill the plane exactly, one per
+ * tile, so they never overlap and each is drawn on its own, and a pixel's brick is the tile under it, which is what the
+ * minimap needs of a click. Each brick is a band across the middle of its tile's box, so a brick's centre is its
+ * tile's.
  */
-export class OverviewProjection implements Projection {
+export class StaggeredOverviewProjection implements Projection {
   #footprint: Size;
   #height: number;
   #width: number;
@@ -116,4 +117,4 @@ export class OverviewProjection implements Projection {
   }
 }
 
-export default OverviewProjection;
+export default StaggeredOverviewProjection;

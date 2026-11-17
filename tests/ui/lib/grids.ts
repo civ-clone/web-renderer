@@ -2,3 +2,4 @@
 //  map, or asks which grids it can, before it does.
 import '@civ-clone/ui-map-square';
 import '@civ-clone/ui-map-isometric';
+import '@civ-clone/ui-map-hex';

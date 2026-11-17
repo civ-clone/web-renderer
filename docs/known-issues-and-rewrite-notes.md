@@ -70,10 +70,10 @@ From `README.md` known issues/TODO:
   - TODO for chunking patch transfer.
 - `packages/map-square/Minimap.ts`
   - TODO around rectangle rendering near map edges. Fixed and removed in 91fe1f6.
-- `packages/map-isometric/Minimap.ts`
+- `packages/map/components/StaggeredMinimap.ts` (the isometric and hexagonal minimaps)
   - TODO: works the map's viewport back from `Portal.boxOf`, as the portal has no method that says where its viewport is.
   - The viewport box is cut at the poles when the world doesn't wrap over them, as when they are locked. The portal
-    itself doesn't lock its view for such a world yet (an odd-height isometric world): a follow-up.
+    itself doesn't lock its view for such a world yet (an odd-height isometric or hexagonal world): a follow-up.
 - `packages/map/components/Map/*`
   - The unit and city layers don't apply `units.anchor` and `cities.anchor` yet: a tall sprite (an isometric tileset's
     64 × 48 units and cities on 64 × 32 tiles) is drawn at its box's top left. The isometric projection's `reach()`
