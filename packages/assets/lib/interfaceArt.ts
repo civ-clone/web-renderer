@@ -1,0 +1,72 @@
+import { TilesetDescriptor, spriteKey } from '../tilesets/TilesetDescriptor';
+import { installedTilesets, interfaceTileset } from './tilesets';
+
+// The interface's art (#1063): the icons, citizens, meters, cursors and textures every screen draws, and the map draws
+//  over its tiles. A theme names the tilesets it draws them with, in order (`UiTheme.art`), and the first one there is
+//  is used. The interface asks for each sprite by civ.one's name for it (`interfaceNames`), which a tileset maps to its
+//  own (`names.ui`).
+//
+// Themes are registered by the interfaces, which this package can't import, so whoever applies the theme says which
+//  list is the current one (`provideInterfaceArt`), as the page does as it starts (`bootstrap.ts`).
+
+// The names it's asked for by, for what lists them.
+export type { InterfaceName } from './interfaceNames';
+export {
+  interfaceNames,
+  optionalInterfaceNames,
+  requiredInterfaceNames,
+} from './interfaceNames';
+
+let preferred: () => readonly string[] = () => [];
+
+/** Has `interfaceArt()` follow `art`, the tilesets the theme in use draws its interface art with, in order. */
+export const provideInterfaceArt = (art: () => readonly string[]): void => {
+  preferred = art;
+};
+
+/** Whether `tileset` has interface art of its own: sprites under `assets.ui` prefixes, as Civ1's has and Civ2's hasn't. */
+export const hasInterfaceArt = ({
+  assets: { ui },
+}: Pick<TilesetDescriptor, 'assets'>): boolean => ui.length > 0;
+
+/**
+ * The tileset the interface's art comes from: the first of `art` (the theme's list, as `provideInterfaceArt` was told it)
+ *  that is installed and has interface art. When none is, Civ1's (`interfaceTileset`), as the game can't start without
+ *  it.
+ */
+export const interfaceArt = (
+  art: readonly string[] = preferred()
+): TilesetDescriptor => {
+  const installed = installedTilesets();
+
+  for (const id of art) {
+    const tileset = installed.find((tileset) => tileset.id === id);
+
+    if (tileset !== undefined && hasInterfaceArt(tileset)) {
+      return tileset;
+    }
+  }
+
+  return interfaceTileset();
+};
+
+/** `tileset`'s own name for the interface's sprite `name`, which is `name` unless its `names.ui` says otherwise. */
+export const interfaceSpriteName = (
+  name: string,
+  tileset: TilesetDescriptor = interfaceArt()
+): string => {
+  const names = tileset.names.ui;
+
+  return names !== undefined &&
+    Object.prototype.hasOwnProperty.call(names, name)
+    ? names[name]!
+    : name;
+};
+
+/** Where `tileset` keeps the interface's sprite `name` (`spriteKey`), by its own name for it (`interfaceSpriteName`). */
+export const interfaceSpriteKey = (
+  name: string,
+  tileset: TilesetDescriptor = interfaceArt()
+): string => spriteKey(tileset, interfaceSpriteName(name, tileset));
+
+export default interfaceArt;

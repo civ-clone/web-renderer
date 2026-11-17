@@ -7,8 +7,7 @@ import Window from '@civ-clone/ui-component-window/Window';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
-import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+import { interfaceSpriteKey } from '@civ-clone/ui-assets/lib/interfaceArt';
 
 // The key the button's tooltip shows. `-` opens the window too (#662).
 export const tradeRatesKey = '+';
@@ -139,7 +138,7 @@ export class AdjustTradeRates extends Action {
   override build(): void {
     // `Plus` is `tradeRatesKey` as `aria-keyshortcuts` writes it, where `+` joins keys.
     assetStore
-      .spriteURL(spriteKey(currentTileset(), 'city/trade'))
+      .spriteURL(interfaceSpriteKey('city/trade'))
       .then((url) =>
         this.append(
           s(

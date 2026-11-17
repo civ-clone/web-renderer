@@ -166,11 +166,13 @@ turnControls.provide(
 windowChrome.provide('framed', framedChrome);
 
 // The theme it comes with (#736), Slate and brass, whose tokens are in `styles/_slate.scss`: the default, which the
-//  stylesheet draws on `:root` with no `data-ui-theme`.
+//  stylesheet draws on `:root` with no `data-ui-theme`. It draws with Civ1's interface art, and the pixel art's where
+//  Civ1's isn't there (#1063).
 registerTheme({
   id: 'slate',
   name: 'GameOptions.theme-choice.slate',
   default: true,
+  art: ['civ1', 'civ1-pixelart'],
 });
 
 // It fills every slot, which the build checks; what it names as features is checked as it registers (#861).

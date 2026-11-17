@@ -28,13 +28,14 @@ import {
   cityName,
   viewCityText,
 } from '@civ-clone/ui-client/components/lib/city';
-import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
 import { getLabelForBuildableEntity } from '@civ-clone/ui-client/components/lib/cityBuild';
 import { glyph } from '@civ-clone/ui-platform/lib/glyphs';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import { instance as localeProvider } from '@civ-clone/ui-platform/LocaleProvider';
 import { s } from '@dom111/element';
-import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+import interfaceArt, {
+  interfaceSpriteKey,
+} from '@civ-clone/ui-assets/lib/interfaceArt';
 import { t } from 'i18next';
 import watchPlayer, {
   cityIds,
@@ -65,8 +66,8 @@ const reasonLabel = (
 
       assetStore
         .shownAtURL(
-          spriteKey(currentTileset(), groupIcons.Luxuries),
-          currentTileset().ui.icon
+          interfaceSpriteKey(groupIcons.Luxuries),
+          interfaceArt().ui.icon
         )
         .then((url) =>
           luxuries.append(

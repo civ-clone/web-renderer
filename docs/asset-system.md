@@ -122,9 +122,15 @@ staggered isometric grid, which `tileset-civ2` registers (`registerTileset(tiles
   its own default scale (`shownScale`), and for Options' zoom. Each pack keeps its own zoom (#1063, `zoomOption`:
   Civ1's `zoom.civ1`, Civ2's `zoom.civ2`), from the smallest of its `scales` to the largest in tenths, starting at its
   `defaultZoom` (or `defaultScale`). Between whole zooms the map is drawn at the whole scale above and shown smaller.
-- The interface's art keeps coming from `interfaceTileset()`, Civ1's, the pack registered with `interface: true`;
-  `currentTileset()` is the same Civ1 tileset. Until a package registers one, both throw, naming what to load; the
-  asset store made as the page loads (`assetStore`) asks for its tileset only when it is first used.
+- The interface's art comes from `interfaceArt()` (`packages/assets/lib/interfaceArt.ts`, #1063): the first set in the
+  theme's `art` list (`registerTheme`) that is installed and has interface art (`assets.ui`), and otherwise
+  `interfaceTileset()`, Civ1's, the pack registered with `interface: true`. Both themes list Civ1's, then the pixel
+  art's, which isn't registered yet, so it's Civ1's. The page tells it the theme's list as it starts
+  (`provideInterfaceArt`, in `bootstrap.ts`). The screens ask for its sprites by civ.one's names
+  (`interfaceNames.ts`, Civ1's so far), through `interfaceSpriteKey`, which a set maps to its own in `names.ui`.
+  Choosing a theme in Options that changes `interfaceArt()` reloads the page. `currentTileset()` is still Civ1's
+  tileset, for what means the always-installed pack. Until a package registers one, both throw, naming what to load;
+  the asset store made as the page loads (`assetStore`) asks for its tileset only when it is first used.
 - A save on a grid whose bundled pack isn't installed is refused naming the pack to import (`SavedGame.needs-import`,
   `tilesetToImport`).
 
@@ -344,7 +350,7 @@ a `styles` city's sprite at `cities.anchor` with no box, and its flag, recoloure
 rival's city is drawn without walls, as the page is not told its improvements, #688); `CityNames` writes the size from
 the sprite's `labels.size` anchor, left-aligned; and `Unworkable` fills the projection's `outline()`, a diamond on the
 isometric grid, rather than the tile's box. The interface's own art the map draws over its tiles (the yields, a city's
-unhappy citizen, the banners' icons, the action buttons' pictures) comes from `interfaceTileset()`, Civ1's, whatever the
+unhappy citizen, the banners' icons, the action buttons' pictures) comes from `interfaceArt()`, the theme's, whatever the
 map is drawn with, through `Map.getInterfaceImage`; except the yields of a pack that declares its own (`yields`, #999),
 which `Yields` takes from the map's pack, icon by icon, wherever that icon is imported (`hasPreloadedImage`), and from
 the interface's where not. It lays those out in a block centred in the pack's `area`, one row or two of

@@ -8,8 +8,9 @@ import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import FilterableWindow from '@civ-clone/ui-component-window/FilterableWindow';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
-import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
-import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+import interfaceArt, {
+  interfaceSpriteKey,
+} from '@civ-clone/ui-assets/lib/interfaceArt';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { getLabelForBuildableEntity } from '@civ-clone/ui-client/components/lib/cityBuild';
 import { escape, h } from '@civ-clone/ui-widgets/lib/html';
@@ -55,10 +56,7 @@ export class TradeReport extends FilterableWindow {
 
   override async update() {
     const goldIcon = await assetStore
-        .shownAtURL(
-          spriteKey(currentTileset(), groupIcons.Gold),
-          currentTileset().ui.icon
-        )
+        .shownAtURL(interfaceSpriteKey(groupIcons.Gold), interfaceArt().ui.icon)
         .then((url) => `<img src="${url}">`),
       cityList = s(`<table class="city-list"></table>`),
       improvementList = s(`<table class="improvement-list"></table>`),

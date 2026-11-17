@@ -22,8 +22,7 @@ import {
 import entryDetails from '../lib/choiceDetails';
 import { instance as localeProvider } from '@civ-clone/ui-platform/LocaleProvider';
 import { openChoice } from '../choiceList';
-import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
-import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+import { interfaceSpriteKey } from '@civ-clone/ui-assets/lib/interfaceArt';
 
 export class ChooseResearch extends Action {
   #player: Player | null;
@@ -149,7 +148,7 @@ export class ChooseResearch extends Action {
 
   override build(): void {
     assetStore
-      .spriteURL(spriteKey(currentTileset(), 'city/bulb'))
+      .spriteURL(interfaceSpriteKey('city/bulb'))
       .then((url) =>
         this.append(
           s(

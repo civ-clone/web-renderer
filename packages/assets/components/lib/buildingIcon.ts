@@ -1,7 +1,6 @@
 import { assetStore } from '../../AssetStore';
-import currentTileset from '../../lib/tilesets';
 import { s } from '@dom111/element';
-import { spriteKey } from '../../tilesets/TilesetDescriptor';
+import { interfaceSpriteKey } from '../../lib/interfaceArt';
 
 // The city screen's picture of an improvement or a Wonder (#64), cut from SP299.PIC. It's optional: where the player
 //  hasn't imported it, or the tileset has none, nothing is drawn, and the name beside it says it all.
@@ -16,7 +15,7 @@ export const buildingSprite = (_: string, wonder: boolean): string =>
 /** The icon for an improvement or a Wonder, drawn once its picture has loaded, if there is one. Decorative. */
 export const buildingIcon = (_: string, wonder: boolean): HTMLElement => {
   const icon = s('<span class="building-icon" aria-hidden="true"></span>'),
-    key = spriteKey(currentTileset(), buildingSprite(_, wonder)),
+    key = interfaceSpriteKey(buildingSprite(_, wonder)),
     cached = assetStore.cachedURL(key, BUILDING_ICON_WIDTH);
 
   // Shown before: drawn at once, so the row doesn't lay out without it first on every render.

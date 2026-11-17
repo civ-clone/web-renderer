@@ -13,8 +13,7 @@ import showCityAction from '../lib/showCityAction';
 import showCityOnMapAction from '../lib/showCityOnMap';
 import { t } from 'i18next';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
-import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
-import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+import { interfaceSpriteKey } from '@civ-clone/ui-assets/lib/interfaceArt';
 
 export class CityBuild extends Action {
   // Whether the picker is waiting for what the city can build (#484).
@@ -69,20 +68,18 @@ export class CityBuild extends Action {
   override build(): void {
     const cityBuild = this.value();
 
-    assetStore
-      .spriteURL(spriteKey(currentTileset(), 'city/production'))
-      .then((url) =>
-        this.append(
-          s(
-            `<button class="btn-bare large cityBuild" title="${t(
-              'Actions.CityBuildSelectionWindow.title',
-              {
-                city: cityBuild.city,
-              }
-            )}"><img src="${url}"></button>`
-          )
+    assetStore.spriteURL(interfaceSpriteKey('city/production')).then((url) =>
+      this.append(
+        s(
+          `<button class="btn-bare large cityBuild" title="${t(
+            'Actions.CityBuildSelectionWindow.title',
+            {
+              city: cityBuild.city,
+            }
+          )}"><img src="${url}"></button>`
         )
-      );
+      )
+    );
   }
 
   override value(): CityBuildObject {

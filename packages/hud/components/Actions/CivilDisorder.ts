@@ -8,8 +8,7 @@ import { s } from '@dom111/element';
 import showCityAction from '../lib/showCityAction';
 import showCityOnMapAction from '../lib/showCityOnMap';
 import { t } from 'i18next';
-import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
-import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+import { interfaceSpriteKey } from '@civ-clone/ui-assets/lib/interfaceArt';
 
 export class CivilDisorder extends Action {
   #portal: Portal;
@@ -43,7 +42,7 @@ export class CivilDisorder extends Action {
     const city = this.value() as City;
 
     assetStore
-      .spriteURL(spriteKey(currentTileset(), 'city/people_unhappy_m'))
+      .spriteURL(interfaceSpriteKey('city/people_unhappy_m'))
       .then((url) =>
         this.append(
           s(

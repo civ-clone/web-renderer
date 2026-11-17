@@ -26,8 +26,11 @@ import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry'
 import {
   applyColourScheme,
   applyUiTheme,
+  currentUiTheme,
+  uiThemeArt,
   uiThemeFrom,
 } from '@civ-clone/ui-widgets/lib/theme';
+import { provideInterfaceArt } from '@civ-clone/ui-assets/lib/interfaceArt';
 import {
   applyInterface,
   currentInterface,
@@ -84,6 +87,8 @@ export class Renderer {
         currentInterface().theme
       )
     );
+    // The interface's art is the theme's (#1063), whichever is in use.
+    provideInterfaceArt(() => uiThemeArt(currentUiTheme()));
     applyColourScheme(options.get('colourScheme', 'system'));
     // The interface's glyphs, for every `glyph()` to refer to (#741).
     installGlyphs();

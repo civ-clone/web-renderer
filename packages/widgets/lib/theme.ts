@@ -11,14 +11,25 @@ export interface UiTheme {
   // Whether it's the one the stylesheet draws on `:root` with no `data-ui-theme`: there's one, and it's what is used
   //  when nothing names another.
   default?: boolean;
+  // The tilesets whose interface art it draws with (#1063), by id, in order of preference: the first that is installed
+  //  and has interface art is used (`interfaceArt`), and Civ1's when none is.
+  art?: string[];
 }
 
 const themes = new Map<string, UiTheme>();
 
 /** Makes a theme available, replacing any with the same `id`. Options lists them in the order they're registered. */
 export const registerTheme = (theme: UiTheme): void => {
-  themes.set(theme.id, { ...theme });
+  themes.set(theme.id, {
+    ...theme,
+    ...(theme.art === undefined ? {} : { art: [...theme.art] }),
+  });
 };
+
+/** The tilesets the theme `id` draws its interface art with, in order (`UiTheme.art`): none for a theme that names none. */
+export const uiThemeArt = (id: string): string[] => [
+  ...(themes.get(id)?.art ?? []),
+];
 
 /** The themes to choose from. */
 export const uiThemes = (): UiTheme[] => [...themes.values()];

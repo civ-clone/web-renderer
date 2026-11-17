@@ -2,7 +2,7 @@ import { Tile, Unit, UnitAction } from '@civ-clone/ui-protocol/types';
 import getPreloadedImage from './getPreloadedImage';
 import { imageSize, isDrawable } from './imageSize';
 import { Colouring, TilesetDescriptor } from '../tilesets/TilesetDescriptor';
-import { interfaceTileset } from './tilesets';
+import { interfaceArt, interfaceSpriteName } from './interfaceArt';
 import replaceColours from './replaceColours';
 import renderUnit, { replacementColours } from './renderUnit';
 
@@ -49,7 +49,7 @@ export const unitActionIconLayers = (
   unit: Unit,
   tile: Tile | null,
   status: string,
-  tileset: TilesetDescriptor = interfaceTileset()
+  tileset: TilesetDescriptor = interfaceArt()
 ): IconLayer[] => {
   const fallback = [unitLayer(unit, status)];
 
@@ -246,20 +246,27 @@ export const drawUnitActionIcon = (
   context.setTransform(scale, 0, 0, scale, 0, 0);
   context.imageSmoothingEnabled = false;
 
-  // The interface's own art: a button's picture is the same whatever pack the map is drawn with.
-  const tileset = interfaceTileset(),
+  // The interface's own art (#1063): a button's picture is the same whatever pack the map is drawn with.
+  const tileset = interfaceArt(),
     stacked = layers.filter((layer) => layer.type === 'unit').length > 1;
 
   layers.forEach((layer, index) => {
     if (layer.type === 'image') {
-      drawCentred(context, getPreloadedImage(layer.path, tileset), 0, scale);
+      // An interface sprite (`city/trade`) by the art's own name for it; a map sprite (`terrain/land`) isn't in
+      //  `names.ui`, so keeps its name.
+      drawCentred(
+        context,
+        getPreloadedImage(interfaceSpriteName(layer.path, tileset), tileset),
+        0,
+        scale
+      );
 
       return;
     }
 
     if (layer.type === 'city') {
       // As the map does (`Cities`): the civilization's first colour behind the city, inset as the tileset says, and
-      //  the city's colour keys swapped for the ones the tileset names: the interface's tileset, Civ1's, which boxes its
+      //  the city's colour keys swapped for the ones the tileset names: the interface's art, Civ1's, which boxes its
       //  cities.
       const { sprite, colouring } = tileset.cities,
         // Civ1's box city, whose inset is always given.

@@ -4,6 +4,7 @@ import {
   applyColourScheme,
   applyUiTheme,
   currentUiTheme,
+  uiThemeArt,
   uiThemes,
 } from '@civ-clone/ui-widgets/lib/theme';
 import { IPortal } from '@civ-clone/ui-map/components/Portal';
@@ -35,6 +36,8 @@ import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry'
 import { s } from '@dom111/element';
 import sendBuildPreferences from '@civ-clone/ui-client/lib/buildPreferences';
 import { soundChanged } from '@civ-clone/ui-assets/lib/soundGain';
+import { interfaceArt } from '@civ-clone/ui-assets/lib/interfaceArt';
+import { allowLeaving } from '@civ-clone/ui-component-window/leaveGuard';
 import forgetVisitParam from '@civ-clone/ui-platform/lib/forgetVisitParam';
 import { t } from 'i18next';
 
@@ -250,8 +253,21 @@ export const interfaceRows = (
   ];
 };
 
-/** Theme (#735), applied as it's chosen. Choosing also drops the visit's `?theme=`, which would outrank it next load. */
-export const themeRow = (): HTMLElement => {
+/**
+ * Whether choosing the theme `to` over `from` changes the interface's art (#1063): whether the first set each draws
+ *  with that is there (`interfaceArt`) differs, not their lists.
+ */
+export const themeChangesArt = (from: string, to: string): boolean =>
+  interfaceArt(uiThemeArt(from)).id !== interfaceArt(uiThemeArt(to)).id;
+
+/**
+ * Theme (#735), applied as it's chosen. Choosing also drops the visit's `?theme=`, which would outrank it next load. A
+ *  theme drawing with other interface art loads a new page, as an import does (#1063): windows already open have
+ *  drawn their icons.
+ */
+export const themeRow = (
+  reload: () => void = () => window.location.reload()
+): HTMLElement => {
   const current = currentUiTheme(),
     // The interfaces that bring them register them (#861), so what one says is never treated as markup either.
     select = s<HTMLSelectElement>(
@@ -271,9 +287,16 @@ export const themeRow = (): HTMLElement => {
     `<label>${t('GameOptions.theme')}</label>`,
     h(select, {
       change: () => {
+        const changesArt = themeChangesArt(currentUiTheme(), select.value);
+
         options.set('uiTheme', select.value);
         applyUiTheme(select.value);
         forgetVisitParam('theme');
+
+        if (changesArt) {
+          allowLeaving();
+          reload();
+        }
       },
     })
   );

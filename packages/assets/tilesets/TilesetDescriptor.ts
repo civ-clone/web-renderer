@@ -361,6 +361,11 @@ export interface TilesetDescriptor {
     terrain: { [name: string]: string };
     special: { [terrainAndFeature: string]: string };
     unit: { [name: string]: string };
+    /**
+     * civ.one's interface names (`interfaceNames`) to this tileset's own sprite names, where they differ (#1063):
+     *  `{ "city/bulb": "icons/science" }`. A name left out is the tileset's own too (`interfaceSpriteName`).
+     */
+    ui?: { [interfaceName: string]: string };
   };
   families: TilesetFamilies;
   units: TilesetUnits;

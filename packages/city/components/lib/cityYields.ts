@@ -15,9 +15,10 @@ import {
   yieldGroup,
 } from '@civ-clone/ui-client/lib/yieldMap';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
-import currentTileset, {
-  installedTilesets,
-} from '@civ-clone/ui-assets/lib/tilesets';
+import interfaceArt, {
+  interfaceSpriteKey,
+} from '@civ-clone/ui-assets/lib/interfaceArt';
+import { installedTilesets } from '@civ-clone/ui-assets/lib/tilesets';
 import {
   TilesetDescriptor,
   expandName,
@@ -73,7 +74,7 @@ const peopleKeys = (face: string, era: string | undefined): string[] => {
   ];
 };
 
-// Draws the first of `keys` that has been imported: a pack's own face (M2c), then the interface tileset's `sprites`
+// Draws the first of `keys` that has been imported: a pack's own face (M2c), then the interface art's `sprites`
 //  (`city/people_tax_f`, `city/people_tax`). An angry citizen drawn with the interface's unhappy face, which is all it
 //  has, is marked so it can be told apart (`angry-fallback`).
 const renderCitizen = (
@@ -82,9 +83,7 @@ const renderCitizen = (
   packKeys: string[] = []
 ): HTMLElement => {
   const citizen = s('<span class="citizen"></span>'),
-    interfaceKeys = sprites.map((sprite) =>
-      spriteKey(currentTileset(), sprite)
-    );
+    interfaceKeys = sprites.map((sprite) => interfaceSpriteKey(sprite));
 
   if (title) {
     citizen.setAttribute('title', title);
@@ -101,7 +100,7 @@ const renderCitizen = (
         citizen.classList.add('angry-fallback');
       }
 
-      return assetStore.shownAtURL(path, currentTileset().ui.citizen.width);
+      return assetStore.shownAtURL(path, interfaceArt().ui.citizen.width);
     })
     .then((url) =>
       // Decorative: the population as a whole is summarised in words (#272).
@@ -357,7 +356,7 @@ export const yieldIcon = (group: string): HTMLElement => {
   }
 
   assetStore
-    .shownAtURL(spriteKey(currentTileset(), path), currentTileset().ui.icon)
+    .shownAtURL(interfaceSpriteKey(path), interfaceArt().ui.icon)
     .then((url) => icon.append(s(`<img src="${url}" alt="">`)))
     // A tileset without the picture: the amount beside it says it all.
     .catch(() => {});

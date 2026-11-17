@@ -11,8 +11,7 @@ import { s } from '@dom111/element';
 import showCityAction from '../lib/showCityAction';
 import showCityOnMapAction from '../lib/showCityOnMap';
 import { t } from 'i18next';
-import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
-import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+import { interfaceSpriteKey } from '@civ-clone/ui-assets/lib/interfaceArt';
 
 const cityNotices = [
   'City.abandoned',
@@ -89,7 +88,7 @@ export class Notice extends Action {
 
     // TODO: an icon per notice, e.g. the Wonder's own, once those are extracted (#64).
     assetStore
-      .spriteURL(spriteKey(currentTileset(), 'city/luxury'))
+      .spriteURL(interfaceSpriteKey('city/luxury'))
       .then((url) =>
         this.append(
           s(
