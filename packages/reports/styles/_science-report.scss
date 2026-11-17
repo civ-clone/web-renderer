@@ -1,6 +1,7 @@
 // As many columns as fit, up to four, each as wide as the longest name (`--name-width`, set by `ScienceReport`), with
 //  a gutter between them so that no name runs into the next (#957). The list asks for room for four, so the window
-//  widens to fit them where it can (to 90vw), and drops to fewer columns where it can't, as on a phone.
+//  widens to fit them where it can (to its maximum: 90vw, or 80vw in Classic), and drops to fewer columns where it
+//  can't, as on a phone.
 .science-report .discovered {
   --name-gutter: 1.5em;
 
@@ -12,7 +13,8 @@
   );
   margin: 1em 0.5em;
   max-width: calc(100% - 1em); // less the margins
-  width: calc(4 * var(--name-width, 10em) + 3 * var(--name-gutter));
+  // A pixel to spare, so rounding never leaves room for only three.
+  width: calc(4 * var(--name-width, 10em) + 3 * var(--name-gutter) + 1px);
 
   > div {
     white-space: nowrap;
