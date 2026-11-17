@@ -225,8 +225,9 @@ A set that ships with civ.one is served beside the game rather than imported. Th
 - **Installed by declaration.** `installTilesets` installs a hosted set before its sheet is fetched, with its
   descriptor's own colours (only an imported set goes through `withImportedKeys`), unless its state says it isn't
   complete: `installPacks` says so of one whose sheet didn't load. Civ1's, the interface's pack, is installed unless
-  its sprites are found missing; a store that can't be read to say (`AssetStore.isComplete` is null) leaves it
-  installed, as before.
+  its sprites are found missing; a store that opens but can't be read to say (`AssetStore.isComplete` is null)
+  leaves it installed, as before, and one the browser won't open (#850) has nothing imported, so the pixel art stands
+  in.
 - **The interface's art.** Both themes list Civ1's art, then the pixel art's (`interfaceArt`). A player who has
   imported Civ1's sees what they saw before, and one who hasn't sees the pixel art's interface art. The menus still
   wait for Civ1's import before a game can start.

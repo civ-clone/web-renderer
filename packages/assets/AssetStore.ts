@@ -700,9 +700,10 @@ export class AssetStore extends Store<{
   }
 
   /**
-   * Whether every sprite `pack` requires has been imported, or null when the store can't be read to say: unlike
-   *  `hasAllAssets`, which takes a store that can't be read for one with nothing in it. For a hosted set (#1063),
-   *  whether its sheet has loaded with every one.
+   * Whether every sprite `pack` requires has been imported, or null when the store opens but can't be read to say:
+   *  unlike `hasAllAssets`, which takes any store that can't be read for one with nothing in it. A store the browser
+   *  won't open at all (site data blocked, #850) has nothing imported, so nothing is complete. For a hosted set
+   *  (#1063), whether its sheet has loaded with every one.
    */
   async isComplete(
     pack: AssetPack = this.#ownTileset()
@@ -716,7 +717,8 @@ export class AssetStore extends Store<{
     try {
       stored = new Set(await this.keys());
     } catch {
-      return null;
+      // Blocked, there is nothing imported; open, a read that failed for a passing reason says nothing.
+      return (await this.opens()) ? null : false;
     }
 
     return requiredKeys(pack).every((key) => stored.has(key));

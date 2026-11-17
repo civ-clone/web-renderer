@@ -113,7 +113,8 @@ export const installPacks = async (
               setSpriteAnchors(tileset.id, metadata.anchors ?? {});
             }
 
-            // A store that can't be read says nothing of the interface's pack, which stays installed.
+            // A store that opens but can't be read says nothing of the interface's pack, which stays installed; a
+            //  blocked one has nothing imported (`isComplete`), and the pixel art stands in.
             if (complete === null && tileset.id === interfaceTileset().id) {
               return;
             }

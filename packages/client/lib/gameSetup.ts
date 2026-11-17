@@ -544,8 +544,9 @@ export class GameSetup {
       return false;
     }
 
-    // The art its map is drawn with, which may have to be fetched (#1063): without it, the setup stays open.
-    if (!(await prepareStart(this.topologyId))) {
+    // The art its map is drawn with, which may have to be fetched (#1063): without it, the setup stays open; closed
+    //  while it was fetched, nothing starts.
+    if (!(await prepareStart(this.topologyId)) || this.#cancelled) {
       this.#starting = false;
 
       return false;

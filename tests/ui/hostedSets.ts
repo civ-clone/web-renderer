@@ -8,6 +8,7 @@
 // Must stay first: it gives the store a `document`, and an `indexedDB` that never opens.
 import { document } from './lib/dom';
 import './lib/interfaces';
+import './lib/classicInterface';
 import './lib/artPacks';
 
 import {
@@ -59,6 +60,7 @@ import prepareStart, {
   provideStartPreparation,
 } from '@civ-clone/ui-client/lib/startPreparation';
 import prepareMapArt from '@civ-clone/ui-menus/lib/mapArt';
+import { askPlayerCount } from '@civ-clone/ui-menus/components/newGame';
 import { GameSetup } from '@civ-clone/ui-client/lib/gameSetup';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
@@ -229,6 +231,46 @@ let offline = false;
   return body === null
     ? new Response('', { status: 404 })
     : new Response(new Uint8Array(body));
+};
+
+// linkedom's `<select>` `value` is read-only, where a browser's selects the option: the choice windows set it.
+const selectPrototype = (globalThis as any).HTMLSelectElement.prototype,
+  selectValue = Object.getOwnPropertyDescriptor(selectPrototype, 'value')!;
+
+Object.defineProperty(selectPrototype, 'value', {
+  configurable: true,
+  get(this: HTMLSelectElement) {
+    return selectValue.get!.call(this);
+  },
+  set(this: HTMLSelectElement, value: string) {
+    Array.from(this.querySelectorAll('option')).forEach((option) =>
+      option.toggleAttribute('selected', option.getAttribute('value') === value)
+    );
+  },
+});
+
+const settle = async (): Promise<void> => {
+  for (let index = 0; index < 10; index++) {
+    await Promise.resolve();
+  }
+};
+
+// The newest choice window open, and choosing `value` in it as the keyboard does.
+const choose = (value: string): void => {
+  const dialogs = Array.from(
+      (document as unknown as Document).querySelectorAll('dialog[open]')
+    ),
+    select = dialogs[dialogs.length - 1]!.querySelector(
+      'select'
+    ) as HTMLSelectElement;
+
+  // linkedom's `value` is read-only: it follows the selected option.
+  Array.from(select.querySelectorAll('option')).forEach((option) =>
+    option.toggleAttribute('selected', option.getAttribute('value') === value)
+  );
+  select.dispatchEvent(
+    new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' })
+  );
 };
 
 const ids = (tilesets: TilesetDescriptor[]): string[] =>
@@ -517,8 +559,10 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
   {
     const get = Store.prototype.get,
       storedKeys = Store.prototype.keys,
+      opens = Store.prototype.opens,
       store = new AssetStore(civ1, [fixturePack]);
 
+    Store.prototype.opens = async () => false;
     Store.prototype.get = async () => {
       throw new Error('The user denied permission to access the database.');
     };
@@ -529,7 +573,7 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
     await store.loadHostedPack(fixturePack);
 
     expect(
-      "with storage blocked, a hosted set's sprites still load, and the rest are said not to, or not to be known",
+      "with storage blocked, a hosted set's sprites still load, and the rest are said not to be there",
       [
         fixtureSprite('a').width,
         await store.hasAllAssets(fixturePack),
@@ -537,11 +581,12 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
         await store.isComplete(),
         logged,
       ],
-      [2, true, false, null, ['Could not load the assets.']]
+      [2, true, false, false, ['Could not load the assets.']]
     );
 
     Store.prototype.get = get;
     Store.prototype.keys = storedKeys;
+    Store.prototype.opens = opens;
   }
 
   // A sheet that can't be loaded: said, and the set's sprites left out, the rest loaded as ever.
@@ -753,21 +798,52 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
 
     offline = false;
 
-    // A store that can't be read says nothing of Civ1's sprites: it stays installed, as it was before (#850).
-    const storedKeys = Store.prototype.keys;
+    // A store that opens but can't be read says nothing of Civ1's sprites: it stays installed, as it was before.
+    const storedKeys = Store.prototype.keys,
+      storedGet = Store.prototype.get,
+      opens = Store.prototype.opens;
 
+    Store.prototype.opens = async () => true;
     Store.prototype.keys = async () => {
+      throw new Error('The database connection is closing.');
+    };
+    fetched.length = 0;
+
+    expect(
+      "a store that opens but can't be read leaves Civ1's installed, and the pixel art declared and not fetched",
+      [ids(await installPacks(new AssetStore(civ1))), fetched],
+      [['civ1', 'civ1-pixelart'], []]
+    );
+
+    // One the browser won't open at all (site data blocked, #850) has nothing imported: the pixel art stands in.
+    Store.prototype.opens = async () => false;
+    Store.prototype.keys = Store.prototype.get = async () => {
       throw new Error('The user denied permission to access the database.');
     };
     fetched.length = 0;
 
     expect(
-      "a store that can't be read leaves Civ1's installed, and the pixel art declared and not fetched",
-      [ids(await installPacks(new AssetStore(civ1))), fetched],
-      [['civ1', 'civ1-pixelart'], []]
+      "with storage blocked, the pixel art is the interface's and the square map's art, its sheet fetched as the page starts",
+      [
+        ids(await installPacks(new AssetStore(civ1))),
+        interfaceArt().id,
+        mapTileset('square').id,
+        fetched,
+      ],
+      [
+        ['civ1-pixelart'],
+        'civ1-pixelart',
+        'civ1-pixelart',
+        [sheets['civ1-pixelart']!.sheet, sheets['civ1-pixelart']!.index],
+      ]
     );
 
     Store.prototype.keys = storedKeys;
+    Store.prototype.get = storedGet;
+    Store.prototype.opens = opens;
+    keys = civ1Keys;
+    await installPacks(new AssetStore(civ1));
+    keys = [];
 
     // The start of a game waits for its map's art, through the page's preparation, and stops, saying why, without it.
     provideStartPreparation(prepareMapArt);
@@ -838,6 +914,72 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
         "the game setup's Start waits for its map's art: without it nothing is sent, and the setup stays open; with it, the game starts",
         [refusedStart, started, sent, prepared],
         [false, true, ['start'], ['square', 'square']]
+      );
+
+      // Closed while its art is fetched: nothing starts.
+      let release: (ready: boolean) => void = () => {};
+
+      provideStartPreparation(
+        () =>
+          new Promise<boolean>((resolve) => {
+            release = resolve;
+          })
+      );
+      sent.length = 0;
+
+      const closing = setup.start(transport, {} as any, '');
+
+      await settle();
+      setup.cancelStart();
+      release(true);
+
+      expect(
+        'a setup closed while its art is fetched starts nothing',
+        [await closing, sent],
+        [false, []]
+      );
+
+      provideStartPreparation(prepareMapArt);
+    }
+
+    // New Game chosen again while the first is waiting for its art: the second is left out.
+    {
+      const sent: string[] = [];
+      let requests = 0,
+        release: (ready: boolean) => void = () => {};
+
+      const transport = {
+        request: async () => {
+          requests++;
+
+          return {};
+        },
+        send: (channel: string) => sent.push(channel),
+      } as any;
+
+      provideStartPreparation(
+        () =>
+          new Promise<boolean>((resolve) => {
+            release = resolve;
+          })
+      );
+
+      (document as unknown as Document)
+        .querySelectorAll('dialog[open]')
+        .forEach((dialog) => dialog.removeAttribute('open'));
+      askPlayerCount(transport, { topologyId: 'square' }, [2, 3], 2);
+      choose('2');
+      await settle();
+      askPlayerCount(transport, { topologyId: 'square' }, [2, 3], 3);
+      choose('3');
+      await settle();
+      release(true);
+      await settle();
+
+      expect(
+        'a second New Game while the first waits for its art sends nothing',
+        [requests, sent],
+        [1, ['start']]
       );
 
       provideStartPreparation(prepareMapArt);
