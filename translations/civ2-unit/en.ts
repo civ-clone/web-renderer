@@ -48,6 +48,11 @@ i18next.addResources('en', 'unit', {
   'Action.AlliedRepair.name': 'Repair in an ally’s city',
   'Action.UndeclaredAttack.name': 'Attack',
   'Action.UndeclaredNuclearAttack.name': 'Nuclear attack',
+  // M2d part 2 (#1007): a Spy's missions, and those under a treaty, which are confirmed first.
+  'Action.PlantNuclearDevice.name': 'Plant a nuclear device',
+  'Action.PoisonWater.name': 'Poison the water supply',
+  'Action.SneakIndustrialSabotage.name': 'Industrial sabotage',
+  'Action.SneakPoisonWater.name': 'Poison the water supply',
 
   'Action.Airlift.icon': 'AL',
   'Action.BuildAirbase.icon': 'E',
@@ -71,4 +76,50 @@ i18next.addResources('en', 'ruleset', {
   'civ2-unit.obsolescence.name': '$t(civ1-unit.obsolescence.name)',
   'civ2-unit.obsolescence.description':
     '$t(civ1-unit.obsolescence.description)',
+});
+
+// What a person is told of Diplomats and Spies under Civilization II's rules (M2d part 2, #1007), by `ui-rules-civ2`'s
+//  notices. A civilization not yet met is `.unmet`, and not named (#59).
+const the = (path: string): string =>
+    `the $t(Generic.civilization-name.plural, { "civilization": "{{${path}.civilization._}}", "ns": "default" })`,
+  The = (path: string): string =>
+    `The $t(Generic.civilization-name.plural, { "civilization": "{{${path}.civilization._}}", "ns": "default" })`,
+  unit = '$t({{unit._}}.name, { "defaultValue": "{{unit._}}", "ns": "unit" })';
+
+i18next.addResources('en', 'notification', {
+  'Espionage.water-poisoned-by-us.title': 'Water poisoned',
+  'Espionage.water-poisoned-by-us.body':
+    'Our Spy has poisoned the water supply of {{- city, cityName}}.',
+  'Espionage.water-poisoned.title': 'Water poisoned!',
+  'Espionage.water-poisoned.body': `${The(
+    'player'
+  )} have poisoned the water supply of {{- city, cityName}}, and its people sicken.`,
+  'Espionage.water-poisoned.unmet.title': 'Water poisoned!',
+  'Espionage.water-poisoned.unmet.body':
+    'Someone has poisoned the water supply of {{- city, cityName}}, and its people sicken.',
+  'Espionage.agent-caught.title': 'Agent caught',
+  'Espionage.agent-caught.body': `Our ${unit} was caught in {{- city, cityName}}.`,
+  'Espionage.agent-caught-at-unit.title': 'Agent caught',
+  'Espionage.agent-caught-at-unit.body': `Our ${unit} was caught before it could act.`,
+  'Espionage.agent-lost.title': 'Agent lost',
+  'Espionage.agent-lost.body': `Our ${unit} did not make it back from {{- city, cityName}}.`,
+  'Espionage.foreign-agent-caught.title': 'Agent caught',
+  'Espionage.foreign-agent-caught.body': `Our guards have caught a ${unit} sent by ${the(
+    'player'
+  )} in {{- city, cityName}}.`,
+  'Espionage.foreign-agent-caught.unmet.title': 'Agent caught',
+  'Espionage.foreign-agent-caught.unmet.body': `Our guards have caught a ${unit} in {{- city, cityName}}. Who sent it, we cannot say.`,
+  'Espionage.device-planted.title': 'Nuclear device',
+  'Espionage.device-planted.body':
+    'The nuclear device our Spy planted has gone off in {{- city, cityName}}.',
+  'Espionage.device-discovered-ours.title': 'Plot uncovered!',
+  'Espionage.device-discovered-ours.body':
+    'The world has learned that our Spy planted a nuclear device. Every civilization in contact with us has declared war on us.',
+  'Espionage.device-discovered.title': 'Plot uncovered!',
+  'Espionage.device-discovered.body': `${The(
+    'player'
+  )} were behind a nuclear device set off by a Spy. We are now at war with them.`,
+  'Espionage.device-discovered.unmet.title': 'Plot uncovered!',
+  'Espionage.device-discovered.unmet.body':
+    'A civilization we have not met was behind a nuclear device set off by a Spy.',
 });

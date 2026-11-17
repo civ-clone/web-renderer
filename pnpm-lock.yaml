@@ -79,6 +79,15 @@ importers:
       '@civ-clone/base-unit-action-explore':
         specifier: ^0.1.0
         version: 0.1.0
+      '@civ-clone/base-unit-action-incite-revolt':
+        specifier: ^0.1.1
+        version: 0.1.1
+      '@civ-clone/base-unit-action-industrial-sabotage':
+        specifier: ^0.1.1
+        version: 0.1.1
+      '@civ-clone/base-unit-action-investigate-city':
+        specifier: ^0.1.1
+        version: 0.1.1
       '@civ-clone/base-unit-action-nuclear-attack':
         specifier: ^0.1.0
         version: 0.1.0
@@ -88,9 +97,18 @@ importers:
       '@civ-clone/base-unit-action-pillage':
         specifier: ^0.1.7
         version: 0.1.7
+      '@civ-clone/base-unit-action-plant-nuclear-device':
+        specifier: ^0.1.0
+        version: 0.1.0
+      '@civ-clone/base-unit-action-poison-water':
+        specifier: ^0.1.0
+        version: 0.1.0
       '@civ-clone/base-unit-action-steal-technology':
         specifier: ^0.1.0
         version: 0.1.1
+      '@civ-clone/base-unit-agent':
+        specifier: ^0.1.2
+        version: 0.1.2
       '@civ-clone/base-unit-fuel':
         specifier: ^0.1.1
         version: 0.1.1

@@ -126,6 +126,16 @@ i18next.addResources('en', 'default', {
   'Diplomat.incite.forget': 'Forget it',
   'Diplomat.incite.incite': 'Incite revolt',
   'Diplomat.incite.subvert': 'Subvert city for {{cost, number}} coins',
+  // What inciting at each price does to a treaty, under rules that say (Civ2's, M2d part 2).
+  'Diplomat.incite.treaty-ends':
+    'At this price the revolt will be traced to us: there will be an incident, and war.',
+  'Diplomat.incite.treaty-kept':
+    'Paying double keeps our treaty, though they will hold it against us.',
+  // A mission under a treaty that breaks nothing unless its agent is lost (Civ2's, M2d part 2).
+  'Diplomat.treaty-mission.title': 'Mission under a treaty',
+  'Diplomat.treaty-mission.body':
+    'We have a treaty with the {{nation}}. The mission itself breaks nothing, but if our agent is lost, the incident could cost us the treaty.',
+  'Diplomat.treaty-mission.go-ahead': 'Go ahead',
   'Diplomat.bribe.title': 'Bribe',
   'Diplomat.bribe.body':
     '{{nation}} {{unit}} will desert for {{cost, number}} coins. Our treasury currently contains {{gold, number}} coins.',
@@ -135,6 +145,9 @@ i18next.addResources('en', 'default', {
     '{{nation}} {{unit}} reaches the {{targetNation}} {{target}}',
   'Spy.bribe-unit': 'Bribe unit',
   'Spy.sabotage-unit': 'Sabotage unit',
+  // What a Spy's theft or sabotage is aimed at (Civ2, M2d part 2): one at random, or what the city is building.
+  'Spy.target.random': 'Whatever we can find (at random)',
+  'Spy.target.production': 'What the city is building',
   // An order that offers a choice, such as what to pillage (M2b).
   'ChooseTarget.title': '{{action}}: which one?',
   // Where a long-range order goes (M2b): a city for an airlift, a square on the map for a paradrop.

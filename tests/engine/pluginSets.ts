@@ -58,6 +58,7 @@ import {
 } from '@civ-clone/library-diplomacy/Proposals';
 import BorderRecord from '@civ-clone/civ2-diplomacy/Records/BorderRecord';
 import CallForHelpRecord from '@civ-clone/civ2-diplomacy/Records/CallForHelpRecord';
+import NuclearDeviceRecord from '@civ-clone/civ2-diplomacy/Records/NuclearDeviceRecord';
 import { Gold } from '@civ-clone/library-city/Yields';
 import { IInteraction } from '@civ-clone/core-diplomacy/Interaction';
 import LastContactRecord from '@civ-clone/base-diplomacy/Records/LastContactRecord';
@@ -99,7 +100,8 @@ type Report = {
 };
 
 // What a Civ2 game's diplomacy can hold that its save has to name (M2d, #1007): the ceasefire and alliance, base-
-//  diplomacy's records, civ2-diplomacy's, and every proposal of the talks a person opens, with each kind of gift.
+//  diplomacy's records, civ2-diplomacy's (with a nuclear device found out by a civilization not yet met, M2d part 2),
+//  and every proposal of the talks a person opens, with each kind of gift.
 const CIV2_DIPLOMACY_TYPES = [
   'AdvanceTaken',
   'Alliance',
@@ -114,6 +116,7 @@ const CIV2_DIPLOMACY_TYPES = [
   'Gold',
   'JoinWar',
   'LastContactRecord',
+  'NuclearDeviceRecord',
   'OfferCeasefire',
   'PatienceRecord',
   'ProposeAlliance',
@@ -179,12 +182,7 @@ const civ2DiplomacyRecords = (): void => {
       new SellAdvance(advance, new Gold(30), other, negotiation, rules),
       new ShareMaps(player, negotiation, rules),
       new Dialogue(other, 'civ2.war', negotiation, rules),
-      new AdvanceTaken(
-        other,
-        Writing as typeof Advance,
-        negotiation,
-        rules
-      ),
+      new AdvanceTaken(other, Writing as typeof Advance, negotiation, rules),
     ];
 
   // As the talks hold them, without running their rules.
@@ -203,7 +201,8 @@ const civ2DiplomacyRecords = (): void => {
     new SenateRecord(player, 42, true, rules) as IInteraction,
     new CallForHelpRecord(player, other, third, rules) as IInteraction,
     new BorderRecord(player, other, ['a'], rules) as IInteraction,
-    new WarnedUnitsRecord(player, [unit.id()], rules) as IInteraction
+    new WarnedUnitsRecord(player, [unit.id()], rules) as IInteraction,
+    new NuclearDeviceRecord(third, player, rules) as IInteraction
   );
 };
 
@@ -1154,7 +1153,7 @@ if (scenario !== null) {
     [null, null, 'civ2', 0, 'staggered-iso', [...civ2.plugins].sort()]
   );
   expect(
-    'a civ2 game’s ceasefire, alliance, diplomacy records and every proposal of the talks, with a gift of each kind, are saved, loaded and saved again (M2d)',
+    'a civ2 game’s ceasefire, alliance, diplomacy records and every proposal of the talks, with a gift of each kind, are saved, loaded and saved again (M2d, and M2d part 2’s nuclear device record)',
     [civ2Game.types, civ2Loaded.types].map((types) =>
       CIV2_DIPLOMACY_TYPES.filter((type) => !types.includes(type))
     ),

@@ -67,6 +67,11 @@ const blockedUnitActions = new Set([
   // A Diplomat's, which break a peace treaty too (#58).
   'SneakInciteRevolt',
   'SneakStealTechnology',
+  // Civ2's, under a treaty too (M2d part 2), and a planted nuclear device, which destroys what is around it as a nuke
+  //  does.
+  'SneakIndustrialSabotage',
+  'SneakPoisonWater',
+  'PlantNuclearDevice',
   'Attack',
   'CaptureCity',
   // A nuke destroys everything around its target, the stress runner's own units too (#129).

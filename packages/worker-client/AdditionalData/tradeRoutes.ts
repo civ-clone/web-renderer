@@ -6,10 +6,13 @@ import AdditionalData from '@civ-clone/core-data-object/AdditionalData';
 import City from '@civ-clone/core-city/City';
 import TradeRoute from '@civ-clone/core-city/TradeRoute';
 import Yield from '@civ-clone/core-yield/Yield';
+import { currentWorkerRules } from '../workerRules';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 
 export type TradeRouteSummary = {
   civilization: string;
+  // What the route carries, by its key, under rules that keep it (Civ2's, M2d part 2): absent otherwise.
+  goods?: string;
   name: string;
   trade: number;
 };
@@ -33,13 +36,17 @@ export const tradeRoutes = (
       .yields()
       .flatMap((cityYield: Yield) => cityYield.values());
 
+    const goodsOf = currentWorkerRules()?.tradeRouteGoods;
+
     return routes.map((route: TradeRoute): TradeRouteSummary => {
-      const partner = route.to();
+      const partner = route.to(),
+        goods = goodsOf?.(city, partner) ?? null;
 
       return {
         civilization: typeNameOf(
           partner.originalPlayer().civilization().sourceClass()
         ),
+        ...(goods === null ? {} : { goods }),
         name: partner.name(),
         trade: values
           .filter(([, provider]) => provider === partner.id())

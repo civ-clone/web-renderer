@@ -21,6 +21,7 @@ const categories: [NoticeCategory, string[]][] = [
       'City.plundered-by-us',
       'City.improvement-unsupported',
       'GoodyHut.action-performed.Gold',
+      'Unit.trade-route-delivered',
       'Unit.trade-route-established',
     ],
   ],
@@ -49,6 +50,8 @@ const categories: [NoticeCategory, string[]][] = [
       'City.sdi-protected',
       'City.shrink-defender-lost',
       'Diplomat',
+      // Civ2's Diplomats and Spies (M2d part 2).
+      'Espionage',
       'GoodyHut.action-performed.Barbarians',
       'Player.defeated',
       'Unit.airlift-shot-down',
