@@ -62,6 +62,8 @@ export const loadCivilopedia = (
 // Civ1's order (advances, improvements, units, terrain), with what it showed elsewhere in between.
 const sections: CivilopediaKind[] = [
   'advance',
+  // Under rules with ages (#1076).
+  'age',
   'improvement',
   'wonder',
   'unit',
@@ -93,6 +95,12 @@ const inOrder = (requirements: RequirementData[]): RequirementData[] =>
 
 const byName = (a: CivilopediaEntry, b: CivilopediaEntry): number =>
   entryName(a).localeCompare(entryName(b));
+
+// Ages in the order a civilization moves through them (#1076); everything else by name.
+const inIndexOrder = (a: CivilopediaEntry, b: CivilopediaEntry): number =>
+  a.order !== undefined && b.order !== undefined
+    ? a.order - b.order
+    : byName(a, b);
 
 const section = (heading: string, lines: string[]): string =>
   lines.length === 0
@@ -135,6 +143,19 @@ export const entryHtml = (
 
   const lines = [
     facts.length === 0 ? '' : `<p class="entry-facts">${facts.join(' · ')}</p>`,
+    // An advance's age, and an age's advances, by name (#1076).
+    section(
+      t('Civilopedia.heading.age'),
+      entry.age === undefined ? [] : [classLink(entry.age, entries)]
+    ),
+    section(
+      t('Civilopedia.heading.advances'),
+      (entry.advances ?? [])
+        .map((key) => entries.get(key))
+        .filter((advance): advance is CivilopediaEntry => !!advance)
+        .sort(byName)
+        .map((advance) => classLink(advance.key, entries))
+    ),
     section(
       t('Civilopedia.heading.subject'),
       unique(
@@ -173,7 +194,7 @@ export const indexHtml = ({ entries }: CivilopediaData): string =>
     .map((kind) => {
       const inSection = Array.from(entries.values())
         .filter((entry) => entry.kind === kind)
-        .sort(byName);
+        .sort(inIndexOrder);
 
       return inSection.length === 0
         ? ''
