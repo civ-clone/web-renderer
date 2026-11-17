@@ -1,13 +1,14 @@
 import type { Asset } from '../AssetStore';
+import { interfaceTileset } from './tilesets';
 
-// How a pack's sprites are imported from the player's own copy of the game it comes from (#97): each pack's package
-//  registers what files it reads and how it reads them, and the Import Assets window asks every registered pack,
-//  rather than knowing any by name.
+// How a set's art or sound is imported from the player's own copy of the game it comes from (#97, #1063): each set's
+//  package registers what files it reads and how it reads them, and the library asks every registered set, rather
+//  than knowing any by name. Each set has an import window of its own, which reads only its files.
 
-/** A file chosen to import, as far as which pack reads it goes: its name. */
+/** A file chosen to import, as far as which set reads it goes: its name. */
 export type ChosenFile = Pick<File, 'name'>;
 
-/** How the import window asks a pack to read its files. */
+/** How the import window asks a set to read its files. */
 export interface ImportOptions {
   /** The keys the store holds already: without `replaceExisting`, what they hold needn't be cut again. */
   existingKeys: string[];
@@ -17,54 +18,72 @@ export interface ImportOptions {
   progress: (message: string) => void;
   /** Whether the import still wants the files' sprites: not once another file has stopped it. */
   wanted: () => boolean;
-  /**
-   * Whether one of the files that can't be read is left out, named in `skipped`, rather than stopping the import: it
-   *  is, beside the files of a pack the import needs (`requiredFiles`).
-   */
-  skipUnreadable: boolean;
 }
 
-/** What a pack's import gives back: the records to store, and the files it left out (`skipUnreadable`). */
+/** What a set's import gives back: the records to store. */
 export interface PackImportResult {
   assets: Asset[];
-  skipped: string[];
 }
 
-/** What a pack has to say of its import (`PackImport.status`): its lines, and whether it is still to be finished. */
+/** What a set has to say of its import (`PackImport.status`): its lines, and whether it is still to be finished. */
 export interface PackImportStatus {
   lines: string[];
   incomplete: boolean;
 }
 
+/** The files a set still wants (`PackImport.filesWanted`): the ones it needs to be ready, and the ones it can add. */
+export interface FilesWanted {
+  required: string[];
+  optional: string[];
+}
+
 /**
- * A pack's import, as its package registers it (`registerPackImport`). The window stores every pack's records in one
- *  go, with the music's, and is done when the interface's pack's sprites are all in (`assetStore.hasAllAssets`).
+ * A set's import, as its package registers it (`registerPackImport`). The import window stores its records, and is
+ *  done when the interface's set's sprites are all in (`assetStore.hasAllAssets`): until then, only that set's import
+ *  can go ahead (`importedFirst`).
  */
 export interface PackImport {
-  /** The pack's id, as its tileset descriptor's. */
+  /** The set's id, as its manifest's (its tileset descriptor's, or its sound set's). */
   id: string;
+  /** The set's name, as the player sees it: its manifest's. */
+  name: string;
+  /** The game whose files it reads, by name, for the library to say it comes from the player's copy of it. */
+  game(): string;
   /**
-   * The files a first import can't go ahead without, each matched against the chosen files' names whatever their
-   *  case: the interface's pack's. Another pack's are optional, and its files can be imported on their own once the
-   *  interface's sprites are all in.
+   * The files it needs to be ready, each matched against the chosen files' names whatever their case. The interface's
+   *  set's import can't go ahead without all of them; another's takes some of them at a time.
    */
   requiredFiles: string[];
+  /** The files it reads when they're chosen, that it is ready without: they only add to it. */
+  optionalFiles: string[];
+  /**
+   * Whether its import stores everything it reads again, whatever is stored, so the window offers no choice of
+   *  replacing what's there (`ImportOptions.replaceExisting`): the music's driver, kept whole.
+   */
+  replacesAll?: boolean;
   /** Whether `file` is one of the files it reads, by its name, whatever its case. */
   accepts(file: ChosenFile): boolean;
   /** Whether `file` is one of its own that it takes and leaves alone (Civ2's RULES.TXT), rather than one none reads. */
   ignores?(file: ChosenFile): boolean;
-  /** What the window's instructions say of its files. */
+  /** What its import window's instructions say of its files. */
   instructions(): string;
   /**
    * Reads `files`, each one it `accepts`, and cuts out the sprites wanted, as the records to store. Rejects with an
-   *  `UnsupportedFile` naming one that can't be read, unless it is left out (`skipUnreadable`).
+   *  `UnsupportedFile` naming one that can't be read.
    */
   import(files: File[], options: ImportOptions): Promise<PackImportResult>;
+  /** Whether every sprite or file it requires is stored. False for a store that can't be read. */
+  ready(): Promise<boolean>;
   /**
-   * What the window says of the pack's import as it opens, with nothing `skipped`, and after one that read any of its
-   *  files: nothing, for a pack with nothing to say. An incomplete one leaves the page for the player to reload.
+   * The files still to import, required and optional, or null when none of it is stored (or the store can't be read):
+   *  the library says it needs them.
    */
-  status?(skipped: string[]): Promise<PackImportStatus>;
+  filesWanted(): Promise<FilesWanted | null>;
+  /**
+   * What its import window says of the set as it opens, and after an import: nothing, for a set with nothing to say.
+   *  An incomplete one leaves the page for the player to reload.
+   */
+  status?(): Promise<PackImportStatus>;
 }
 
 /** The error a pack's import rejects with for a file it can't read: which file it was. */
@@ -81,13 +100,16 @@ export const unsupportedFile = (
 export const isUnsupportedFile = (error: unknown): error is UnsupportedFile =>
   error instanceof Error && typeof (error as UnsupportedFile).file === 'string';
 
-/** Whether the import needs `pack`'s files: whether it has `requiredFiles`. */
-export const isNeeded = ({ requiredFiles }: PackImport): boolean =>
-  requiredFiles.length > 0;
+/**
+ * Whether `pack` is the set every other's import waits on: the interface's (Civ1's), without whose sprites the game
+ *  doesn't start. Its import is the one that can't go ahead without all its required files.
+ */
+export const importedFirst = ({ id }: Pick<PackImport, 'id'>): boolean =>
+  id === interfaceTileset().id;
 
 const registered: PackImport[] = [];
 
-/** Lets the Import Assets window import `pack`'s files: its package calls this as it is loaded. Once per pack id. */
+/** Lets the library import `pack`'s files: its package calls this as it is loaded. Once per set id. */
 export const registerPackImport = (pack: PackImport): void => {
   if (registered.some(({ id }) => id === pack.id)) {
     throw new Error(`An import for "${pack.id}" is registered already.`);
@@ -96,12 +118,29 @@ export const registerPackImport = (pack: PackImport): void => {
   registered.push(pack);
 };
 
-/** Every pack's import: the ones the import needs (`isNeeded`) first, then the rest, each as they were registered. */
+/** Every set's import: the one imported first (`importedFirst`), then the rest, each as they were registered. */
 export const packImports = (): PackImport[] => [
-  ...registered.filter(isNeeded),
-  ...registered.filter((pack) => !isNeeded(pack)),
+  ...registered.filter(importedFirst),
+  ...registered.filter((pack) => !importedFirst(pack)),
 ];
 
-/** The pack whose import reads `file`, if any does. */
-export const packImportFor = (file: ChosenFile): PackImport | undefined =>
-  packImports().find((pack) => pack.accepts(file));
+/**
+ * The required files `pack`'s import still needs, as the library names them and the first set's window asks for them:
+ *  none once it's ready; those still wanted (`filesWanted`) when some of it is stored; and every one when none is, or
+ *  when what's missing is in no file it can name.
+ */
+export const filesNeeded = async (pack: PackImport): Promise<string[]> => {
+  const [ready, wanted] = await Promise.all([pack.ready(), pack.filesWanted()]);
+
+  if (ready) {
+    return [];
+  }
+
+  return wanted !== null && wanted.required.length > 0
+    ? wanted.required
+    : pack.requiredFiles;
+};
+
+/** The import of the set with `id`, if one is registered. */
+export const packImportOf = (id: string): PackImport | undefined =>
+  registered.find((pack) => pack.id === id);

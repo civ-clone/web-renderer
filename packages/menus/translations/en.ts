@@ -43,7 +43,7 @@ i18next.addResources('en', 'default', {
   'GameOptions.assets-imported':
     '{{tileset}} assets imported · {{count, number}} sprites',
   'GameOptions.assets-missing': 'Not imported',
-  'GameOptions.import-assets': '$t(ImportAssetsWindow.title)',
+  'GameOptions.library': '$t(LibraryWindow.title)',
   'GameOptions.autosave': 'Autosave',
   'GameOptions.autosave-choice.10': 'Game start, then every 10 turns',
   'GameOptions.autosave-choice.20': 'Game start, then every 20 turns',
@@ -120,8 +120,10 @@ i18next.addResources('en', 'default', {
   'ImportAssetsWindow.failed':
     'Importing the assets failed ({{error}}). Try again, and check that the browser lets this site store data.',
   'ImportAssetsWindow.missing-files': `Please provide all files to generate assets: {{files, list}}.`,
+  // None of the files chosen is one the set reads (#1063).
+  'ImportAssetsWindow.none-of-its-files':
+    'None of those files is for {{name}}: choose {{files, list(type: disjunction)}}.',
   'ImportAssetsWindow.none-chosen': 'No files chosen',
-  'ImportAssetsWindow.optional-sound': 'Add {{file}} for the music.',
   'ImportAssetsWindow.missing-data':
     'Not all expected data was written. Might need to try again... Missing: {{files, list}}.',
   'ImportAssetsWindow.progress-building': 'Building image assets...',
@@ -129,9 +131,43 @@ i18next.addResources('en', 'default', {
   'ImportAssetsWindow.replace-existing': 'Replace existing assets?',
   'ImportAssetsWindow.storage-blocked':
     "Your browser is blocking this site from storing data, so imported assets can't be kept. Allow site data (cookies and storage) for this site, then reload the page.",
-  'ImportAssetsWindow.title': 'Import assets',
+  // One set's import (#1063), by the set's name.
+  'ImportAssetsWindow.title': 'Import {{name}}',
   'ImportAssetsWindow.unsupported-file':
     "{{file}} doesn't look like a supported Civilization file, so no assets were extracted. Check it is the original file from Civilization for DOS and try again.",
+  // Civilization's music as a set of its own (#126, #1063): what its import window says of ASOUND.CVL.
+  // The game its file comes from, as the library says the set comes from the player's copy of it.
+  'Civ1Sound.game': 'Civilization',
+  'Civ1Sound.import':
+    'Upload {{file}} from the original Civilization files for the music (it will be stored locally).',
+  // The library of art and sound (#1063), which replaced Import assets.
+  'LibraryWindow.title': 'Art and sound',
+  'LibraryWindow.map': 'Map art',
+  'LibraryWindow.themes': 'Themes',
+  'LibraryWindow.sound': 'Sound',
+  // What a set gives the game.
+  'LibraryWindow.provides.map': '{{grid}} map art',
+  'LibraryWindow.provides.interface': 'Interface art',
+  'LibraryWindow.provides.music': 'Music',
+  // Where a set comes from.
+  'LibraryWindow.imported': 'From your copy of {{game}}',
+  'LibraryWindow.hosted': 'Comes with civ.one',
+  'LibraryWindow.licence': 'License:',
+  // A set's status: ready, the files it still needs (and the optional ones it can add), or nothing of it imported.
+  'LibraryWindow.status.ready': 'Ready',
+  'LibraryWindow.status.needs': 'Needs {{files, list}}',
+  'LibraryWindow.status.optional': 'Optional: {{files, list}}',
+  'LibraryWindow.status.none': 'Not imported',
+  'LibraryWindow.import': 'Import…',
+  'LibraryWindow.import-again': 'Import again',
+  // The buttons' names for assistive technology, which say whose they are.
+  'LibraryWindow.import-set': 'Import {{name}}',
+  'LibraryWindow.import-set-again': 'Import {{name}} again',
+  'LibraryWindow.use-theme': 'Use {{name}}',
+  // Why a set can't be imported yet: Civilization's art comes first.
+  'LibraryWindow.import-first': 'Import {{name}} first.',
+  'LibraryWindow.in-use': 'In use',
+  'LibraryWindow.use': 'Use',
   'LoadGame.could-not-delete': 'That save could not be deleted: {{- error}}',
   'LoadGame.delete': 'Delete',
   'LoadGame.delete-confirm': 'Delete “{{name}}”? This cannot be undone.',
@@ -175,7 +211,7 @@ i18next.addResources('en', 'default', {
     'That save is on a {{- grid}} map, which can’t be drawn here, so it has not been loaded.',
   // A save on a grid whose pack's art hasn't been imported (#97), named by its tileset.
   'SavedGame.needs-import':
-    'That save’s map is {{- grid}}, drawn with art from {{- tileset}}, which hasn’t been imported, so it has not been loaded. Import it in Import assets, then load the save again.',
+    'That save’s map is {{- grid}}, drawn with art from {{- tileset}}, which hasn’t been imported, so it has not been loaded. Import it in Art and sound, then load the save again.',
   'SavedGame.no-decompression':
     'this browser cannot read compressed saves — it has no `DecompressionStream`',
   'SavedGame.not-a-save': 'the file is not a civ-clone save',

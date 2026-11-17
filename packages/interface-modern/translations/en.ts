@@ -118,7 +118,7 @@ i18next.addResources('en', 'default', {
   'TitleMenu.load-game': 'Load game',
   'TitleMenu.hall-of-fame': 'Hall of fame',
   'TitleMenu.options': 'Options',
-  'TitleMenu.import-assets': 'Import assets',
+  'TitleMenu.library': '$t(LibraryWindow.title)',
   // Each item's key, a letter of its name.
   'TitleMenu.key.continue': 'C',
   'TitleMenu.key.new-game': 'N',
@@ -126,7 +126,7 @@ i18next.addResources('en', 'default', {
   'TitleMenu.key.load-game': 'L',
   'TitleMenu.key.hall-of-fame': 'H',
   'TitleMenu.key.options': 'O',
-  'TitleMenu.key.import-assets': 'I',
+  'TitleMenu.key.library': 'A',
   'TitleMenu.version': 'civ.one v{{version}}',
   'TitleMenu.release-notes': 'Release notes',
   'CityWindow.garrison_zero': 'No units in the city',

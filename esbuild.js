@@ -9,7 +9,7 @@
         'src/js/backend.ts',
         'src/js/frontend.ts',
         // Its own file, for `audioWorklet.addModule()` (#126): dist/musicWorklet.js.
-        'packages/audio/musicWorklet.ts'
+        'packages/audio/musicWorklet.ts',
       ],
       bundle: true,
       keepNames: true,
@@ -53,7 +53,7 @@
         '.png': 'dataurl',
         '.svg': 'dataurl',
         // The interface's faces (#737), as files beside the stylesheet.
-        '.woff2': 'file'
+        '.woff2': 'file',
       },
       entryNames: '[name]',
     },
@@ -64,13 +64,18 @@
         'changelog/releases.json',
         'dist/releases.json'
       ),
-    // Whole, with its titles and descriptions, for a pack author's editor to be pointed at (#869):
-    //  https://civ.one/dist/tileset.schema.json, the schema's `$id`.
-    copySchema = () =>
+    // Whole, with their titles and descriptions, for a pack author's editor to be pointed at (#869, #1063):
+    //  https://civ.one/dist/tileset.schema.json and https://civ.one/dist/sound.schema.json, each schema's `$id`.
+    copySchema = () => {
       require('fs').copyFileSync(
         'packages/assets/tilesets/tileset.schema.json',
         'dist/tileset.schema.json'
-      ),
+      );
+      require('fs').copyFileSync(
+        'packages/assets/sounds/sound.schema.json',
+        'dist/sound.schema.json'
+      );
+    },
     failed = (e) => {
       console.log(`\x1b[31mfailed.\x1b[0m`);
       console.log('');

@@ -403,7 +403,7 @@ const reset = () => {
   expect(
     "an isometric save without Civ2's art imported is refused, saying to import it (#97)",
     alerts.join(),
-    'That save’s map is Isometric, drawn with art from Civilization II, which hasn’t been imported, so it has not been loaded. Import it in Import assets, then load the save again.'
+    'That save’s map is Isometric, drawn with art from Civilization II, which hasn’t been imported, so it has not been loaded. Import it in Art and sound, then load the save again.'
   );
   expect('and is not handed over', storedRecords().size, 0);
 

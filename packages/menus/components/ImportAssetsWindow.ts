@@ -1,51 +1,46 @@
 import {
-  Asset,
-  SOUND_DRIVER,
-  assetStore,
-} from '@civ-clone/ui-assets/AssetStore';
-import {
   ChosenFile,
   PackImport,
-  PackImportResult,
-  isNeeded,
+  filesNeeded,
+  importedFirst,
   isUnsupportedFile,
-  packImportFor,
   packImports,
-  unsupportedFile,
 } from '@civ-clone/ui-assets/lib/packImports';
-import CvlImage from '@civ-clone/ui-audio/cvl/Image';
 import Window, { WindowOptions } from '@civ-clone/ui-component-window/Window';
 import { allowLeaving } from '@civ-clone/ui-component-window/leaveGuard';
+import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { button } from '@civ-clone/ui-component-button/button';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import { s, t as textNode } from '@dom111/element';
 import { t } from 'i18next';
 
-// Civilization's AdLib sound driver, kept as it is for the music (#126) rather than cut up.
-const soundFile = 'ASOUND.CVL',
-  isSoundFile = (file: ChosenFile): boolean =>
-    file.name.toUpperCase() === soundFile,
-  // The files a first import can't go ahead without: the ones the packs the import needs list (`isNeeded`).
-  requiredFiles = (): string[] =>
-    packImports().flatMap(({ requiredFiles }) => requiredFiles);
+// One set's import (#1063), opened from the library: that set's instructions, and only its files taken.
 
-/**
- * Whether the window takes `file`: the music's driver, or a file a registered pack reads (`packImportFor`) or takes and
- *  leaves alone.
- */
-export const takesFile = (file: ChosenFile): boolean =>
-  isSoundFile(file) ||
-  packImports().some(
-    (pack) => pack.accepts(file) || (pack.ignores?.(file) ?? false)
-  );
+/** The extensions of `pack`'s files, as the file input's `accept` takes them: `.PIC`, say. */
+const extensionsOf = (pack: PackImport): string =>
+  [
+    ...new Set(
+      [...pack.requiredFiles, ...pack.optionalFiles].flatMap((file) => {
+        const dot = file.lastIndexOf('.');
+
+        return dot === -1 ? [] : [file.slice(dot).toLowerCase()];
+      })
+    ),
+  ].join(',');
+
+/** The set every other's import waits on (`importedFirst`): Civ1's. */
+const firstSet = (): PackImport | undefined =>
+  packImports().find(importedFirst);
 
 export class ImportAssetsWindow extends Window {
+  // The set whose files this window imports.
+  #pack: PackImport;
   // The browser's own file input can't take the theme (#739): it stays, hidden, and this button opens it.
   #fileInput: HTMLInputElement;
   #chooseButton: HTMLButtonElement;
   #chosen: HTMLSpanElement;
   #progressInformation: HTMLParagraphElement;
-  // What the packs have to say of their imports (#97), such as whether a map pack's art is complete.
+  // What the set has to say of its import (#97), such as whether a map set's art is complete.
   #packStatus: HTMLParagraphElement;
   // Read when the files arrive, not copied on change: a copy started out of
   // step with the box as drawn (#341).
@@ -53,7 +48,7 @@ export class ImportAssetsWindow extends Window {
   // The browser keeps nothing for this site (#850): no files can be chosen, whatever else happens.
   #blocked = false;
 
-  constructor(windowOptions: WindowOptions = {}) {
+  constructor(pack: PackImport, windowOptions: WindowOptions = {}) {
     const fileInput = s<HTMLInputElement>(
         '<input type="file" multiple class="visually-hidden" tabindex="-1" aria-hidden="true">'
       ),
@@ -69,7 +64,7 @@ export class ImportAssetsWindow extends Window {
         '<input type="checkbox" checked>'
       ),
       progressInformation = s<HTMLParagraphElement>(
-        '<p class="loading" hidden></p>'
+        '<p class="loading" aria-live="polite" hidden></p>'
       ),
       packStatusElement = s<HTMLParagraphElement>(
         '<p class="pack-status" aria-live="polite" hidden></p>'
@@ -79,26 +74,23 @@ export class ImportAssetsWindow extends Window {
         '<div class="storage-blocked" role="alert" hidden></div>'
       );
 
+    // Only the set's own files are offered, by their extensions: the picker can still be told to show any file.
+    fileInput.accept = extensionsOf(pack);
+
     super(
-      t('ImportAssetsWindow.title'),
+      // The title is markup: the set's name is escaped.
+      t('ImportAssetsWindow.title', { name: pack.name }),
       s(
-        // What each pack reads, the music's driver after the files the import needs.
-        `<div class="import-assets"><p>${[
-          ...packImports()
-            .filter(isNeeded)
-            .map((pack) => pack.instructions()),
-          t('ImportAssetsWindow.optional-sound', {
-            file: soundFile,
-          }),
-          ...packImports()
-            .filter((pack) => !isNeeded(pack))
-            .map((pack) => pack.instructions()),
-        ].join(' ')}</p><div class="brave" ${
+        // What the set reads, its own instructions alone.
+        `<div class="import-assets"><p>${pack.instructions()}</p><div class="brave" ${
           // @ts-ignore
           navigator?.brave ? '' : ' hidden'
         }>${t('ImportAssetsWindow.brave')}</div></div>`,
+        // Only for a set whose import can leave what's stored as it is: not the music's driver, kept whole.
         s(
-          '<p></p>',
+          `<p class="replace-existing"${
+            pack.replacesAll ? ' hidden' : ''
+          }></p>`,
           s(
             '<label></label>',
             replaceExistingInput,
@@ -131,6 +123,7 @@ export class ImportAssetsWindow extends Window {
       windowOptions
     );
 
+    this.#pack = pack;
     this.#fileInput = fileInput;
     this.#chooseButton = chooseButton;
     this.#chosen = chosen;
@@ -138,12 +131,14 @@ export class ImportAssetsWindow extends Window {
     this.#progressInformation = progressInformation;
     this.#packStatus = packStatusElement;
 
+    this.addClass('import-set');
+
     // A browser that blocks this site's data would keep nothing that was imported (#850): said before any files are
     //  chosen, at the top of the window, and the choosing is put out of reach rather than left to fail.
     this.element().querySelector('.import-assets')?.prepend(storageBlocked);
 
     // A store that can't be read has nothing to say about it.
-    void this.#showStatus(packImports(), {}).catch(() => {});
+    void this.#showStatus().catch(() => {});
 
     assetStore.usable().then((usable): void => {
       if (usable) {
@@ -160,33 +155,73 @@ export class ImportAssetsWindow extends Window {
     });
   }
 
+  /** The set whose files this window imports. */
+  get pack(): PackImport {
+    return this.#pack;
+  }
+
+  /** Whether the window takes `file`: one its set reads, or takes and leaves alone. */
+  takes(file: ChosenFile): boolean {
+    return this.#pack.accepts(file) || (this.#pack.ignores?.(file) ?? false);
+  }
+
   async handleFileUpload(event: InputEvent) {
     this.#progressInformation.removeAttribute('hidden');
     this.#progressInformation.classList.remove('failed');
 
-    const files = Array.from(
+    const pack = this.#pack,
+      files = Array.from(
         (event.target as HTMLInputElement).files ?? []
       ) as File[],
       filenames: string[] = files.map((file: File) => file.name),
-      expectedFilenames = requiredFiles(),
-      expectedMatches = expectedFilenames.map((key) => new RegExp(key, 'i')),
-      // ASOUND.CVL alone is enough once the sprites are in (#126): the music can be added later. So are the files of a
-      //  pack the import doesn't need (#97), such as another grid's map art.
-      adding =
-        files.some(
-          (file) =>
-            isSoundFile(file) ||
-            packImports().some((pack) => !isNeeded(pack) && pack.accepts(file))
-        ) && (await assetStore.hasAllAssets().catch((): boolean => false));
+      first = firstSet();
 
-    if (
-      !adding &&
-      !expectedMatches.every((expectedMatch) =>
-        filenames.some((filename) => filename.match(expectedMatch))
-      )
-    ) {
+    // The set every other's waits on can't go ahead without each of the required files it still needs, as the library
+    //  names them (`filesNeeded`): every one at first, the ones holding what's missing once some is in, and none once
+    //  its sprites are all in, when its optional ones (SP299.PIC) can be added on their own.
+    if (importedFirst(pack)) {
+      const needed = await filesNeeded(pack).catch(() => pack.requiredFiles);
+
+      if (
+        !needed.every((file) =>
+          filenames.some(
+            (filename) => filename.toUpperCase() === file.toUpperCase()
+          )
+        )
+      ) {
+        this.#fail(t('ImportAssetsWindow.missing-files', { files: needed }));
+
+        return;
+      }
+    }
+    // Another set's files can be added on their own once the first set's sprites are in (#126, #97): its music, or
+    //  another grid's map art, some of the files at a time. Until then, the first set's files are asked for.
+    else if (!(await assetStore.hasAllAssets().catch((): boolean => false))) {
       this.#fail(
-        t('ImportAssetsWindow.missing-files', { files: expectedFilenames })
+        t('ImportAssetsWindow.missing-files', {
+          files: first?.requiredFiles ?? [],
+        })
+      );
+
+      return;
+    }
+
+    // Only the set's own files are read: another's, or one no set reads, is left out.
+    const own = files.filter((file) => pack.accepts(file));
+
+    files
+      .filter((file) => !this.takes(file))
+      .forEach((file) =>
+        console.warn(`No definitions found for ${file.name}, skipping.`)
+      );
+
+    if (own.length === 0) {
+      this.#fail(
+        t('ImportAssetsWindow.none-of-its-files', {
+          name: pack.name,
+          files: [...pack.requiredFiles, ...pack.optionalFiles],
+          interpolation: { escapeValue: false },
+        })
       );
 
       return;
@@ -199,7 +234,7 @@ export class ImportAssetsWindow extends Window {
     );
 
     try {
-      await this.#import(files);
+      await this.#import(own);
     } catch (error) {
       // A file the extractor can't read (not a Civilization sheet, or one
       //  cut differently from the originals) used to throw inside the
@@ -219,8 +254,8 @@ export class ImportAssetsWindow extends Window {
   }
 
   /**
-   * Extracts the sprites from `files`, stores them, and reloads the page to
-   * use them. Rejects with what went wrong, which `handleFileUpload` shows.
+   * Extracts the sprites from `files`, the set's own, stores them, and reloads the page to use them. Rejects with what
+   *  went wrong, which `handleFileUpload` shows.
    */
   async #import(files: File[]): Promise<void> {
     const existingKeys = await assetStore.keys(),
@@ -238,49 +273,16 @@ export class ImportAssetsWindow extends Window {
       },
       wanted = (): boolean => extracting;
 
-    // ASOUND.CVL, checked before anything is cut up: kept as the file it is.
-    const sound = await this.#sound(files.find(isSoundFile));
-
-    // Each pack's files, read by its own import (#97). A file no pack reads is left out; one a pack takes and leaves
-    //  alone (`ignores`) isn't read at all.
-    const byPack = new Map<PackImport, File[]>();
-
-    files
-      .filter((file) => !isSoundFile(file))
-      .forEach((file) => {
-        const pack = packImportFor(file);
-
-        if (pack !== undefined) {
-          byPack.set(pack, [...(byPack.get(pack) ?? []), file]);
-
-          return;
-        }
-
-        if (!takesFile(file)) {
-          console.warn(`No definitions found for ${file.name}, skipping.`);
-        }
-      });
-
-    // With the files of a pack the import needs (Civilization's own), another's that can't be read is left out,
-    //  rather than stopping theirs.
-    const chosen = packImports().filter((pack) => byPack.has(pack)),
-      skipUnreadable = chosen.some(isNeeded);
-
-    let results: PackImportResult[];
+    let assets;
 
     try {
-      // Every file, read and its sprites extracted, each pack's by its own import, side by side.
-      results = await Promise.all(
-        chosen.map((pack) =>
-          pack.import(byPack.get(pack)!, {
-            existingKeys,
-            replaceExisting,
-            progress,
-            wanted,
-            skipUnreadable,
-          })
-        )
-      );
+      // Every file, read and its sprites extracted, side by side.
+      ({ assets } = await this.#pack.import(files, {
+        existingKeys,
+        replaceExisting,
+        progress,
+        wanted,
+      }));
     } finally {
       extracting = false;
     }
@@ -290,10 +292,7 @@ export class ImportAssetsWindow extends Window {
     );
 
     // ...and all results stored in IDB, in a single transaction, each sprite as its PNG (#730).
-    await assetStore.setAll([
-      ...results.flatMap(({ assets }) => assets),
-      ...sound,
-    ]);
+    await assetStore.setAll(assets);
 
     if (!(await assetStore.hasAllAssets())) {
       console.error('Something went wrong...');
@@ -309,25 +308,13 @@ export class ImportAssetsWindow extends Window {
 
     this.#progressInformation.innerText = t('ImportAssetsWindow.done');
 
-    // A pack whose files were chosen and that has something to say (#97): a file of its that was left out, or its art
-    //  still incomplete, is said, and the page left for the player to reload once they've read it, rather than
-    //  reloaded from under them.
-    const telling = chosen.filter((pack) => pack.status !== undefined);
+    // A set with something to say of its import (#97): its art still incomplete is said, and the page left for the
+    //  player to reload once they've read it, rather than reloaded from under them.
+    if (await this.#showStatus()) {
+      allowLeaving();
+      this.#chooseAgain();
 
-    if (telling.length > 0) {
-      const incomplete = await this.#showStatus(
-        telling,
-        Object.fromEntries(
-          chosen.map((pack, index) => [pack.id, results[index]!.skipped])
-        )
-      );
-
-      if (incomplete) {
-        allowLeaving();
-        this.#chooseAgain();
-
-        return;
-      }
+      return;
     }
 
     // We need to reprocess everything and this is the lazy way...
@@ -337,57 +324,19 @@ export class ImportAssetsWindow extends Window {
   }
 
   /**
-   * Says what each of `packs` has to say of its import (#97), naming the files of its that were `skipped`, the ones
-   *  chosen that couldn't be read: whether its art is complete, say, or the files still to import. Says
-   *  nothing for a pack with nothing to say. Resolves with whether any is still to be finished.
+   * Says what the set has to say of its import (#97): whether its art is complete, say, or the files still to import.
+   *  Says nothing for a set with nothing to say. Resolves with whether it is still to be finished.
    */
-  async #showStatus(
-    packs: PackImport[],
-    skipped: { [id: string]: string[] }
-  ): Promise<boolean> {
-    const statuses = await Promise.all(
-        packs.map(
-          (pack) =>
-            pack.status?.(skipped[pack.id] ?? []) ??
-            Promise.resolve({ lines: [], incomplete: false })
-        )
-      ),
-      lines = statuses.flatMap(({ lines }) => lines);
+  async #showStatus(): Promise<boolean> {
+    const { lines, incomplete } = (await this.#pack.status?.()) ?? {
+      lines: [],
+      incomplete: false,
+    };
 
     this.#packStatus.textContent = lines.join(' ');
     this.#packStatus.toggleAttribute('hidden', lines.length === 0);
 
-    return statuses.some(({ incomplete }) => incomplete);
-  }
-
-  /**
-   * ASOUND.CVL as a record to store, once `cvl/Image` has read it as the AdLib driver (#126), or nothing if it wasn't
-   *  chosen. Rejects, naming the file, when it isn't the driver.
-   */
-  async #sound(file: File | undefined): Promise<Asset[]> {
-    if (file === undefined) {
-      return [];
-    }
-
-    let bytes: ArrayBuffer;
-
-    try {
-      bytes = await file.arrayBuffer();
-      new CvlImage(bytes);
-    } catch (cause) {
-      throw unsupportedFile(
-        file.name,
-        `${file.name} is not the AdLib sound driver`,
-        cause
-      );
-    }
-
-    return [
-      {
-        name: SOUND_DRIVER,
-        blob: new Blob([bytes], { type: 'application/octet-stream' }),
-      },
-    ];
+    return incomplete;
   }
 
   /** The names of the files chosen, as text beside the button (#739). */
@@ -409,7 +358,7 @@ export class ImportAssetsWindow extends Window {
     this.#chooseAgain();
   }
 
-  /** Lets the player choose files again: after a failed import, or one that left a pack's art incomplete. */
+  /** Lets the player choose files again: after a failed import, or one that left the set's art incomplete. */
   #chooseAgain(): void {
     // Chosen before the browser was found to keep nothing: there is no trying again.
     if (!this.#blocked) {

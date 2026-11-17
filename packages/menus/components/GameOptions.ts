@@ -2,15 +2,17 @@ import { AUTOSAVE_CHOICES } from '@civ-clone/ui-client/lib/browserSaves';
 import {
   COLOUR_SCHEMES,
   applyColourScheme,
-  applyUiTheme,
   currentUiTheme,
-  uiThemeArt,
   uiThemes,
 } from '@civ-clone/ui-widgets/lib/theme';
+import chooseUiTheme, {
+  THEME_CHOICE,
+  themeChangesArt,
+} from '../lib/chooseUiTheme';
 import { IPortal } from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { UNIT_MARKER_CHOICES } from '@civ-clone/ui-map/components/Map/UnitMarker';
-import ImportAssetsWindow from './ImportAssetsWindow';
+import LibraryWindow from './LibraryWindow';
 import Window from '@civ-clone/ui-component-window/Window';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { packImports } from '@civ-clone/ui-assets/lib/packImports';
@@ -36,14 +38,12 @@ import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry'
 import { s } from '@dom111/element';
 import sendBuildPreferences from '@civ-clone/ui-client/lib/buildPreferences';
 import { soundChanged } from '@civ-clone/ui-assets/lib/soundGain';
-import { interfaceArt } from '@civ-clone/ui-assets/lib/interfaceArt';
-import { TilesetDescriptor } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import forgetVisitParam from '@civ-clone/ui-platform/lib/forgetVisitParam';
 import { t } from 'i18next';
 
 /**
- * The Assets row: "Civ1 assets imported · 289 sprites" or "Not imported", what each other pack says of its import, such
- *  as whether its map art is complete once any is imported (#97), and Import assets.
+ * The Assets row: "Civ1 assets imported · 289 sprites" or "Not imported", what each other set says of its import, such
+ *  as whether its map art is complete once any is imported (#97), and the library of art and sound (#1063).
  */
 export const assetsRow = (): HTMLElement => {
   const status = s(
@@ -53,9 +53,9 @@ export const assetsRow = (): HTMLElement => {
       `<div class="assets"></div>`,
       s(`<span>${t('GameOptions.assets')}</span>`),
       status,
-      h(button(t('GameOptions.import-assets')), {
+      h(button(t('GameOptions.library')), {
         // Over Options, which is modal here: a window that isn't would open behind it.
-        click: () => new ImportAssetsWindow({ modal: true }),
+        click: () => new LibraryWindow({ modal: true }),
       })
     );
 
@@ -68,12 +68,12 @@ export const assetsRow = (): HTMLElement => {
               tileset: currentTileset().name,
             })
           : t('GameOptions.assets-missing'),
-        // What each pack has to say of its import (#97), as the Import assets window says it as it opens: nothing
-        //  from a pack whose status can't be read.
+        // What each set has to say of its import (#97), as its import window says it as it opens: nothing from a set
+        //  whose status can't be read.
         packs = await Promise.all(
           packImports().map(
             async (pack): Promise<string[]> =>
-              (await pack.status?.([]).catch((): null => null))?.lines ?? []
+              (await pack.status?.().catch((): null => null))?.lines ?? []
           )
         );
 
@@ -253,20 +253,13 @@ export const interfaceRows = (
   ];
 };
 
-/**
- * Whether the theme `id` draws with other interface art than `art`, the page's (#1063): whether the first set it draws
- *  with that is there (`interfaceArt`) is another, not whether its list is.
- */
-export const themeChangesArt = (
-  id: string,
-  art: TilesetDescriptor = interfaceArt()
-): boolean => interfaceArt(uiThemeArt(id)).id !== art.id;
+export { themeChangesArt };
 
 /**
- * Theme (#735), applied as it's chosen. Choosing also drops the visit's `?theme=`, which would outrank it next load. A
- *  theme drawing with other interface art than the page's needs a new page, as windows already open have drawn their
- *  icons (#1063): from the main menu it loads at once, as after an import, and during a game its colours apply at once
- *  and its art waits for the next load, with a hint saying so, as reloading would lose the game (as `interfaceRows`).
+ * Theme (#735), applied as it's chosen (`chooseUiTheme`), as the library's Use does. A theme drawing with other
+ *  interface art than the page's needs a new page (#1063): from the main menu it loads at once, as after an import,
+ *  and during a game its colours apply at once and its art waits for the next load, with a hint saying so, as
+ *  reloading would lose the game (as `interfaceRows`).
  */
 export const themeRows = (
   inGame: boolean,
@@ -275,7 +268,7 @@ export const themeRows = (
   const current = currentUiTheme(),
     // The interfaces that bring them register them (#861), so what one says is never treated as markup either.
     select = s<HTMLSelectElement>(
-      '<select></select>',
+      `<select class="${THEME_CHOICE}"></select>`,
       ...uiThemes().map(({ id, name }) => {
         const option = s<HTMLOptionElement>('<option></option>');
 
@@ -297,20 +290,7 @@ export const themeRows = (
       `<label>${t('GameOptions.theme')}</label>`,
       h(select, {
         change: () => {
-          const changesArt = themeChangesArt(select.value);
-
-          options.set('uiTheme', select.value);
-          applyUiTheme(select.value);
-          forgetVisitParam('theme');
-
-          // Only before a game, when nothing guards leaving the page.
-          if (changesArt && !inGame) {
-            reload();
-
-            return;
-          }
-
-          hint.hidden = !changesArt;
+          hint.hidden = !chooseUiTheme(select.value, { inGame, reload });
         },
       })
     ),
@@ -502,13 +482,13 @@ export class GameOptions extends Window {
           'newCitiesBuildDefender',
           t('GameOptions.new-cities-build-defender')
         ),
-        // Whether the tileset's sprites are imported, and the import, which the new main menu shows only while they
-        //  aren't (#749). Only before a game: the import reloads the page, which would lose the game in play.
+        // Whether the tileset's sprites are imported, and the library, which the main menus open too (#749, #1063).
+        //  Only before a game: an import reloads the page, which would lose the game in play.
         ...(hasFeature('assetsInOptions') && portal === null
           ? [assetsRow()]
           : [])
       ),
-      // From the main menu it must be closed before a game can start: its Interface and Import assets reload the page,
+      // From the main menu it must be closed before a game can start: its Interface and the library reload the page,
       //  which they only do with no game to lose.
       { modal: portal === null }
     );

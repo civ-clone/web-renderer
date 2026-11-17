@@ -46,7 +46,9 @@
     }
   }
 
-  &:disabled {
+  // Or out of use while keeping its focus, as the library's Use for the theme in use (#1063).
+  &:disabled,
+  &[aria-disabled='true'] {
     background-color: var(--ui-btn-bg);
     box-shadow: none;
     cursor: default;

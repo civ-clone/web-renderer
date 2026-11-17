@@ -369,13 +369,13 @@ Object.assign(globalThis, {
     (row.querySelector('button') as HTMLButtonElement).click();
 
     const opened = [
-      ...(document as unknown as Document).querySelectorAll('.import-assets'),
+      ...(document as unknown as Document).querySelectorAll('.library'),
     ]
       .pop()
       ?.closest('dialog');
 
     expect(
-      'Import assets opens over Options',
+      'Art and sound opens over Options',
       opened?.classList.contains('modal'),
       true
     );
@@ -383,7 +383,7 @@ Object.assign(globalThis, {
     opened?.remove();
   }
 
-  // The Assets row says whether Civilization II's map art is complete, once any is imported (#97), as Import assets
+  // The Assets row says whether Civilization II's map art is complete, once any is imported (#97), as its import
   //  does.
   {
     const store = assetStore as any,
