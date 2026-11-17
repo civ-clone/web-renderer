@@ -31,8 +31,13 @@ const { webRenderer } = require('./lib/paths');
 const { withEngineSources } = require('./lib/engineSources');
 
 const scripts = require(path.join(webRenderer, 'package.json')).scripts,
-  // Written before anything is bundled: every engine suite imports the plugin list, every ui suite the translations.
-  FIRST = ['build:generate-plugins-ts', 'build:generate-translations-ts'],
+  // Written before anything is bundled: every engine suite imports the plugin list, every ui suite the translations
+  //  and the hosted sets' sheets (#1063).
+  FIRST = [
+    'build:generate-plugins-ts',
+    'build:generate-translations-ts',
+    'build:generate-hosted-sets',
+  ],
   // Alongside the suites: they read the source and write nothing (`noEmit`).
   TYPE_CHECKS = ['ts:compile', 'ts:compile:tests', 'ts:compile:strict'],
   // Started first, as they take longest: left to their place in package.json they start late, and everything waits

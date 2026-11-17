@@ -702,7 +702,7 @@ const run = async (): Promise<void> => {
         ],
       ],
       [
-        ['civ1', 'civ2'],
+        ['civ1', 'civ2', 'civ1-pixelart'],
         ['civ1', 'civ1-adlib', 'civ2'],
       ]
     );
@@ -2089,7 +2089,7 @@ const run = async (): Promise<void> => {
         'Art and sound',
         ['Map art', 'Themes', 'Sound'],
         ['Square', 'Isometric'],
-        ['civ1', 'civ2'],
+        ['civ1', 'civ1-pixelart', 'civ2'],
         ['civ1-adlib', 'test-chimes', 'test-bells'],
       ]
     );

@@ -4,12 +4,33 @@ import {
 } from '../tilesets/TilesetDescriptor';
 
 /**
+ * Where a hosted set's sprites are served (#1063): one sheet of them all, and an index of where each one is in it
+ *  (`SheetIndex`), each named by a hash of what it holds, as paths the page fetches them by (`dist/sets/…`).
+ */
+export interface HostedSheet {
+  sheet: string;
+  index: string;
+}
+
+/** A hosted set's index: the sheet's size, and each sprite's rectangle in it, by the set's own name for the sprite. */
+export interface SheetIndex {
+  id: string;
+  width: number;
+  height: number;
+  sprites: {
+    [name: string]: { x: number; y: number; width: number; height: number };
+  };
+}
+
+/**
  * What the asset store needs to know of a pack of sprites (#97): its id, where its sprites are kept, and which of them
  *  it has, as its tileset descriptor says, and whether its import keeps a record of their anchors beside them
- *  (`PackMetadata`, under `metadataKey`), as some packs' imports do (#97).
+ *  (`PackMetadata`, under `metadataKey`), as some packs' imports do (#97). A hosted set's (#1063) come from its sheet
+ *  (`hosted`) rather than from what the player imported, and are kept under the same keys (`spriteKey`).
  */
 export type AssetPack = Pick<TilesetDescriptor, 'id' | 'storage' | 'assets'> & {
   metadata?: boolean;
+  hosted?: HostedSheet;
 };
 
 /** Where a pack keeps its sprites: see `spriteKey`. */

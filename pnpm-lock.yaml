@@ -178,6 +178,9 @@ importers:
       '@civ-clone/civ1-spaceship':
         specifier: github:civ-clone/civ1-spaceship
         version: https://codeload.github.com/civ-clone/civ1-spaceship/tar.gz/d924758fb3f74a47d13fbf21952c5ac2afa72a7a
+      '@civ-clone/civ1-tileset-pixelart':
+        specifier: github:civ-clone/civ1-tileset-pixelart
+        version: https://codeload.github.com/civ-clone/civ1-tileset-pixelart/tar.gz/1c56025a96d255d3feb9c0f59eabda278c572b78
       '@civ-clone/civ1-trade-rate':
         specifier: github:civ-clone/civ1-trade-rate
         version: https://codeload.github.com/civ-clone/civ1-trade-rate/tar.gz/42ba178d4af32e40f5a51a27c74845c1574d88ea
@@ -484,6 +487,9 @@ importers:
       '@civ-clone/ui-tileset-civ2':
         specifier: workspace:*
         version: link:packages/tileset-civ2
+      '@civ-clone/ui-tileset-pixelart':
+        specifier: workspace:*
+        version: link:packages/tileset-pixelart
       '@civ-clone/ui-widgets':
         specifier: workspace:*
         version: link:packages/widgets
@@ -1000,6 +1006,12 @@ importers:
         version: link:../assets
 
   packages/tileset-civ2:
+    dependencies:
+      '@civ-clone/ui-assets':
+        specifier: workspace:*
+        version: link:../assets
+
+  packages/tileset-pixelart:
     dependencies:
       '@civ-clone/ui-assets':
         specifier: workspace:*
@@ -2567,6 +2579,10 @@ packages:
   '@civ-clone/civ1-spaceship@https://codeload.github.com/civ-clone/civ1-spaceship/tar.gz/d924758fb3f74a47d13fbf21952c5ac2afa72a7a':
     resolution: {gitHosted: true, tarball: https://codeload.github.com/civ-clone/civ1-spaceship/tar.gz/d924758fb3f74a47d13fbf21952c5ac2afa72a7a}
     version: 0.1.7
+
+  '@civ-clone/civ1-tileset-pixelart@https://codeload.github.com/civ-clone/civ1-tileset-pixelart/tar.gz/1c56025a96d255d3feb9c0f59eabda278c572b78':
+    resolution: {gitHosted: true, tarball: https://codeload.github.com/civ-clone/civ1-tileset-pixelart/tar.gz/1c56025a96d255d3feb9c0f59eabda278c572b78}
+    version: 0.2.0
 
   '@civ-clone/civ1-trade-rate@https://codeload.github.com/civ-clone/civ1-trade-rate/tar.gz/42ba178d4af32e40f5a51a27c74845c1574d88ea':
     resolution: {gitHosted: true, tarball: https://codeload.github.com/civ-clone/civ1-trade-rate/tar.gz/42ba178d4af32e40f5a51a27c74845c1574d88ea}
@@ -6903,6 +6919,8 @@ snapshots:
     transitivePeerDependencies:
       - encoding
       - supports-color
+
+  '@civ-clone/civ1-tileset-pixelart@https://codeload.github.com/civ-clone/civ1-tileset-pixelart/tar.gz/1c56025a96d255d3feb9c0f59eabda278c572b78': {}
 
   '@civ-clone/civ1-trade-rate@https://codeload.github.com/civ-clone/civ1-trade-rate/tar.gz/42ba178d4af32e40f5a51a27c74845c1574d88ea':
     dependencies:

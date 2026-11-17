@@ -1,22 +1,28 @@
+import { HostedSheet, PackMetadata, isFlagRow } from './packs';
 import { Size, TilesetDescriptor } from '../tilesets/TilesetDescriptor';
-import { PackMetadata, isFlagRow } from './packs';
 import type { TopologyId } from '@civ-clone/core-world/topologies';
+import { instance as gameOptions } from '@civ-clone/ui-platform/GameOptionsRegistry';
 
 // The tilesets the map can be drawn with (#56), as their packages register them (#97): one the interface's (such as
-//  `@civ-clone/ui-tileset-civ1`), and others for other grids (#152), each drawn with the sprites the player imports from
-//  their own copy of the game it comes from. Each is bundled, but a pack is only installed once its sprites have been
-//  imported (`installTilesets`), so the grids a game can be on are the ones the player can see drawn. One pack per
-//  grid: the world's grid picks the pack, with no choosing.
+//  `@civ-clone/ui-tileset-civ1`), others for other grids (#152), each drawn with the sprites the player imports from
+//  their own copy of the game it comes from, and those that ship with civ.one (#1063), served as a sheet beside it
+//  (`source: "hosted"`). Each is bundled, but an imported pack is only installed once its sprites have been imported
+//  (`installTilesets`), so the grids a game can be on are the ones the player can see drawn. A hosted one is installed
+//  as it is declared, unless its sheet couldn't be loaded. The map of a grid is drawn with the set the player chose for
+//  it, or the one imported for it, or the one that ships (`mapTileset`).
 
 /** What a pack's package says of it as it registers it (`registerTileset`), besides its descriptor. */
 export interface TilesetOptions {
   /**
-   * Whether the interface's own art comes from it (`interfaceTileset`): then it is always installed, and the asset
+   * Whether the interface's own art comes from it (`interfaceTileset`), when the theme's art has none of its own
+   *  (`interfaceArt`): then it is installed unless its sprites are found missing (`installPacks`), and the asset
    *  store is ready, and the game can start, only once every sprite it requires has been imported. One pack is.
    */
   interface?: boolean;
   /** Whether its import keeps a record of its sprites beside them (`PackMetadata`), as some packs' do. */
   metadata?: boolean;
+  /** For a hosted set (`source: "hosted"`, #1063), where its sheet and its index are. */
+  hosted?: HostedSheet;
 }
 
 const registered: { tileset: TilesetDescriptor; options: TilesetOptions }[] =
@@ -24,7 +30,8 @@ const registered: { tileset: TilesetDescriptor; options: TilesetOptions }[] =
 
 /**
  * Bundles `tileset` (#97): its package calls this as it is loaded, before anything is drawn, as the page loads it
- *  (`src/js/frontend.ts`). Throws for a second pack with the same id, or a second interface pack.
+ *  (`src/js/frontend.ts`). Throws for a second pack with the same id, a second interface pack, or a hosted set without
+ *  its sheet (or a sheet for one that isn't hosted).
  */
 export const registerTileset = (
   tileset: TilesetDescriptor,
@@ -32,6 +39,14 @@ export const registerTileset = (
 ): TilesetDescriptor => {
   if (registered.some(({ tileset: { id } }) => id === tileset.id)) {
     throw new Error(`Tileset "${tileset.id}" is registered already.`);
+  }
+
+  if (isHosted(tileset) !== (options.hosted !== undefined)) {
+    throw new Error(
+      isHosted(tileset)
+        ? `Tileset "${tileset.id}" is hosted, and has no sheet to load: build the hosted sets (tools/hosted-sets.js).`
+        : `Tileset "${tileset.id}" has a sheet, and isn't hosted.`
+    );
   }
 
   if (
@@ -46,9 +61,21 @@ export const registerTileset = (
   }
 
   registered.push({ tileset, options });
+  settledMaps.clear();
 
   return tileset;
 };
+
+/** Whether `tileset` ships with civ.one, served as a sheet beside it (#1063), rather than imported from the player's own copy. */
+export const isHosted = ({
+  source,
+}: Pick<TilesetDescriptor, 'source'>): boolean => source === 'hosted';
+
+/** Where a hosted `tileset`'s sheet and index are (`TilesetOptions.hosted`), or null for one that's imported. */
+export const hostedSheet = ({
+  id,
+}: Pick<TilesetDescriptor, 'id'>): HostedSheet | null =>
+  registered.find(({ tileset }) => tileset.id === id)?.options.hosted ?? null;
 
 /** Whether `tileset`'s import keeps a record of its sprites beside them (`TilesetOptions.metadata`). */
 export const keepsMetadata = ({ id }: Pick<TilesetDescriptor, 'id'>): boolean =>
@@ -82,8 +109,7 @@ export const bundledTilesets = (): TilesetDescriptor[] => [
     .map(({ tileset }) => tileset),
 ];
 
-// The interface's is always installed: the game can't start without its sprites. Null until `installTilesets` has
-//  found which others are, at start-up.
+// The interface's alone until `installTilesets` has found which are, at start-up.
 let installed: TilesetDescriptor[] | null = null;
 
 // What's told when `installTilesets` changes which are installed: what keeps a set chosen from them (`interfaceArt`).
@@ -96,16 +122,17 @@ export const onTilesetsInstalled = (handler: () => void): void => {
 
 /**
  * The tilesets there are to draw the map with: the grids a game can be on are theirs (`supportedTopologies`). The
- *  interface's, and each other bundled pack whose sprites have been imported, as `installTilesets` found them at
- *  start-up, so this stays synchronous.
+ *  interface's, each other bundled pack whose sprites have been imported, and each hosted set whose sheet has loaded,
+ *  as `installTilesets` found them at start-up, so this stays synchronous.
  */
 export const installedTilesets = (): TilesetDescriptor[] => [
   ...(installed ?? [interfaceTileset()]),
 ];
 
 /**
- * What each bundled pack needs to be installed, by id: whether every sprite it requires has been imported, and what
- *  its import said about them (`PackMetadata`), for a pack that keeps a record of that.
+ * What each bundled pack needs to be installed, by id: whether every sprite it requires has been imported (or, for a
+ *  hosted set, is in its sheet, which has loaded), and what its import said about them (`PackMetadata`), for a pack
+ *  that keeps a record of that.
  */
 export interface PackState {
   complete: boolean;
@@ -154,23 +181,27 @@ export const withImportedKeys = (
 };
 
 /**
- * Installs the bundled packs whose `states` say they are complete (the interface's always is), each as its import
- *  says it is drawn (`withImportedKeys`). A pack that keeps a record of its sprites (`metadata`) is only complete with
- *  one: its units' shields and its cities' flags go where it says, and would be left out without it; and one whose
- *  record can't be drawn from (`withImportedKeys` refuses it) is left out too. Called once the asset store has
- *  loaded, at start-up and after an import.
+ * Installs the bundled packs whose `states` say they are complete, each imported one as its import says it is drawn
+ *  (`withImportedKeys`). A pack that keeps a record of its sprites (`metadata`) is only complete with one: its units'
+ *  shields and its cities' flags go where it says, and would be left out without it; and one whose record can't be
+ *  drawn from (`withImportedKeys` refuses it) is left out too. The interface's pack and each hosted set (#1063) are
+ *  installed unless their `states` say they aren't complete: a hosted set as it is declared, with its descriptor's own
+ *  colours (it has no import to have recorded others), unless its sheet couldn't be loaded. Called once the asset
+ *  store has loaded, at start-up and after an import.
  */
 export const installTilesets = (states: {
   [id: string]: PackState | undefined;
 }): TilesetDescriptor[] => {
   const interfaceId = interfaceTileset().id;
 
-  installed = bundledTilesets().flatMap((tileset) => {
-    if (tileset.id === interfaceId) {
-      return [tileset];
-    }
+  settledMaps.clear();
 
+  installed = bundledTilesets().flatMap((tileset) => {
     const state = states[tileset.id];
+
+    if (tileset.id === interfaceId || isHosted(tileset)) {
+      return state?.complete === false ? [] : [tileset];
+    }
 
     // A pack that keeps no record of its sprites (`metadata` not set as it registered) needs only its sprites.
     if (
@@ -195,23 +226,65 @@ export const installTilesets = (states: {
   return installedTilesets();
 };
 
+/** The option the art the player chose for the `grid` grid's maps is kept under (#1063): `tileset.<grid>`, a set's id. */
+export const mapTilesetOption = (grid: TopologyId | string): string =>
+  `tileset.${grid}`;
+
+// What `mapTileset` settled on for each grid, as the map's layers ask on every draw: settled again once the installed
+//  sets or the choice change.
+const settledMaps = new Map<string, TilesetDescriptor>();
+
+// The installed set for `topologyId` that the player chose, or the one imported for it, or the one that ships with
+//  civ.one; or, with none installed, the bundled one.
+const settleMapTileset = (
+  topologyId: string
+): TilesetDescriptor | undefined => {
+  const installed = installedTilesets().filter(
+      ({ grid }) => grid === topologyId
+    ),
+    chosen: unknown = gameOptions.get(mapTilesetOption(topologyId), '');
+
+  return (
+    installed.find(({ id }) => id === chosen) ??
+    installed.find((tileset) => !isHosted(tileset)) ??
+    installed[0] ??
+    bundledTilesets().find(({ grid }) => grid === topologyId)
+  );
+};
+
 /**
- * The tileset the map of a world on the `topologyId` grid is drawn with (#97): the installed pack for that grid. One
- *  that isn't installed is drawn with the bundled pack for it, its sprites missing, rather than another grid's: a game
- *  is only started or loaded on a grid with a pack installed (`supportedTopologies`). Throws for a grid no pack is for.
+ * The tileset the map of a world on the `topologyId` grid is drawn with (#97, #1063): the installed set for that grid
+ *  that the player chose (`mapTilesetOption`), or, until they choose one, the one imported for it, and otherwise the
+ *  one that ships with civ.one. So a player who has imported Civ1's art sees the square map drawn with it, as before.
+ *  A rule set with art of its own (Civ2's) is played on that art's grid (`gameGrid`), which has no other set yet. A
+ *  grid with none installed is drawn with the bundled pack for it, its sprites missing, rather than another grid's: a
+ *  game is only started or loaded on a grid with a pack installed (`supportedTopologies`). Throws for a grid no pack is
+ *  for.
  */
 export const mapTileset = (
   topologyId: TopologyId | string = currentGrid
 ): TilesetDescriptor => {
-  const tileset =
-    installedTilesets().find(({ grid }) => grid === topologyId) ??
-    bundledTilesets().find(({ grid }) => grid === topologyId);
+  const tileset = settledMaps.get(topologyId) ?? settleMapTileset(topologyId);
 
   if (tileset === undefined) {
     throw new Error(`No tileset is drawn on the ${topologyId} grid.`);
   }
 
+  settledMaps.set(topologyId, tileset);
+
   return tileset;
+};
+
+/**
+ * Keeps `id`, a set's id, as the player's choice of art for the `grid` grid's maps (`mapTilesetOption`), or forgets
+ *  the choice with `''`, and has `mapTileset` settle on it next time it is asked.
+ */
+export const chooseMapTileset = (
+  grid: TopologyId | string,
+  id: string
+): void => {
+  gameOptions.set(mapTilesetOption(grid), id);
+  settledMaps.delete(grid);
 };
 
 // The grid of the game being played, for what draws its map's units outside the map (#97: the windows' units follow

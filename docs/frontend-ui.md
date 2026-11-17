@@ -135,6 +135,7 @@ messages, which `frontend.ts` and `backend.ts` start, telling the page's end tha
 | `assets`            | Sprites, tilesets and sounds, and drawing a sprite; the registries the art packs register their tilesets and imports with                                                                   | protocol, platform                                                    |
 | `tileset-civ1`      | Civ1's art pack: its tileset, the square map's and the interface's, and importing it from the player's copy                                                                                 | assets                                                                |
 | `tileset-civ2`      | Civ2's art pack: its tileset, the staggered isometric map's, and importing it from the player's copy of Civilization II                                                                     | assets                                                                |
+| `tileset-pixelart`  | The pixel art that ships with civ.one: its square tileset, served as a sheet beside the game, the map's and the interface's where Civ1's isn't imported                                     | assets                                                                |
 | `component-*`       | One token-driven component each, with its styles: `button`, `controls`, `window`, `choice-window`, `selection-window`, `report-table`, `tooltip`, `popup-menu`, `progress-bar`, `stat-pill` | each other, `widgets`, platform                                       |
 | `widgets`           | The small helpers the components share (markup, filtering, contrast, dragging), the sliders and the sidebar section                                                                         | platform                                                              |
 | `map`               | Drawing the world on any grid, through a `Projection`, and the overview and minimap the staggered grids share                                                                               | protocol, platform, client, assets                                    |
@@ -170,7 +171,7 @@ each grid registers its projection with `registerGrid` (`@civ-clone/ui-map/lib/p
 grids it draws, as `frontend.ts` loads `map-square`, `map-isometric` and `map-hex`. The art packs are loaded the same way (#97):
 `assets` and `menus` name no pack, and each pack's package registers its tileset (`registerTileset`) and its import
 (`registerPackImport`) as it is loaded, as `frontend.ts` loads `tileset-civ1` first, the interface's pack, which every
-part that draws takes its icons from through `interfaceTileset()`, then `tileset-civ2`, the isometric map's. Suites that draw anything, or ask the asset store
+part that draws takes its icons from through `interfaceTileset()`, then `tileset-civ2`, the isometric map's, then `tileset-pixelart`, the art that ships with civ.one (#1063). Suites that draw anything, or ask the asset store
 anything, import `tests/ui/lib/artPacks.ts`. A grid is offered for a new game only once an
 installed tileset is drawn on it (`supportedTopologies`), so isometric is offered once Civ2's art has been imported
 (`installPacks`, see `asset-system.md`), and the map of a game is drawn with the pack for its world's grid

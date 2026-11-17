@@ -53,7 +53,17 @@ const bundleOptions = (kind) =>
       }
     : {};
 
+// The hosted sets' sheets and the module naming them (#1063), which a ui suite bundles: written before it is, so a suite
+//  loads a hosted set from disk, with no network.
+const buildSheets = (kind) => {
+  if (kind === 'ui') {
+    require('./hostedSets').buildHostedSets();
+  }
+};
+
 const bundle = async (kind, name, { esbuild = {}, entryPoint } = {}) => {
+  buildSheets(kind);
+
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), `${kebab(name)}-`)),
     outfile = path.join(directory, `${name}.js`);
 

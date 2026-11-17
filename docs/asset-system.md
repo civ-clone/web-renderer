@@ -35,8 +35,13 @@ Without imported assets, gameplay options are hidden and import is the primary o
     (`lib/civ2Import.ts`), which loading the package registers (`registerTileset`, with `metadata: true`, and
     `registerPackImport`). `src/js/frontend.ts` loads it after `tileset-civ1`. Its text is its own
     (`translations/en.ts`, `TilesetCiv2.*`).
+- `packages/tileset-pixelart` (`@civ-clone/ui-tileset-pixelart`, #1063)
+  - The pixel art that ships with civ.one (`civ-clone/civ1-tileset-pixelart`, MIT, a GitHub dependency excluded from
+    the plugins like the extractors): its square descriptor, registered with `source: "hosted"` and its licence, and
+    the sheet it is served as (see Hosted sets). `src/js/frontend.ts` loads it after `tileset-civ2`.
 - `packages/assets/AssetStore.ts`
-  - IndexedDB-backed storage of extracted assets, and the loader that decodes the tileset in use (#730).
+  - IndexedDB-backed storage of extracted assets, and the loader that decodes the tileset in use (#730), and the hosted
+    sets' sprites, cut from their sheets (#1063).
 - `packages/assets/lib/getPreloadedImage.ts`
   - The decoded sprites the map layers look up, by key, as `AssetStore.load` leaves them.
 - `@civ-clone/civ1-asset-extractor`
@@ -117,8 +122,9 @@ staggered isometric grid, which `tileset-civ2` registers (`registerTileset(tiles
 
 - At start-up `installPacks()` (`packages/assets/lib/installPacks.ts`) adds every bundled pack to the asset store
   (`packFor`: Civ2's with `metadata: true`, as it was registered), loads them, sets each pack's sprite anchors from its import's record
-  (`setSpriteAnchors`), and installs (`installTilesets`) Civ1's and each pack that has every required sprite and a
-  readable record whose flags' colours pass `isFlagRow`. A pack that fails any of that, or a store that fails, is
+  (`setSpriteAnchors`), and installs (`installTilesets`) Civ1's unless its sprites are missing, each hosted set whose
+  sheet loaded (#1063), and each pack that has every required sprite and a readable record whose flags' colours pass
+  `isFlagRow`. A pack that fails any of that, or a store that fails, is
   left uninstalled, and the game still starts with Civ1's. The import reloads the page, which runs it again.
 - `installedTilesets()` is then synchronous, so `supportedTopologies()` is `['square', 'staggered-iso']` with Civ2's art
   imported and `['square']` without. New Game's grid question and the setup forms' grid select appear only with more
@@ -189,6 +195,40 @@ staggered isometric grid, which `tileset-civ2` registers (`registerTileset(tiles
   needs no `ICONS.GIF`. Its `area` is the diamond's middle half across and five eighths down (32 × 20 of the 64 × 32
   tile): a square's usual two-by-two of icons sits inside the diamond, two rows of 10 px don't overlap, and five or
   more icons reach no more than a pixel or two past its slanted edges at the corners.
+
+## Hosted sets (#1063)
+
+A set that ships with civ.one is served beside the game rather than imported. The pixel art's square set
+(`civ1-pixelart`) is the first; [asset-library.md](asset-library.md) has the design.
+
+- **The build.** `tools/lib/hostedSets.js` finds the sets the workspace packages declare (`civ-clone.hostedSets` in
+  their `package.json`, each a descriptor whose sprites are the PNGs beside it), and packs each one's sprites, those its
+  descriptor lists, into one sheet and an index of each sprite's rectangle: `dist/sets/<id>.<hash>.png` and `.json`,
+  the hash of the sheet's pixels and the index. It fails when a sprite the descriptor requires has no PNG. It tells
+  the declaring package the names in `sheets.js` beside it (git-ignored, typed by the package's `sheets.d.ts`), which
+  it passes to `registerTileset` (`hosted`). `npm run build:generate-hosted-sets` runs it, and so do `esbuild.js`
+  before every build (`build`, `build:dev`, `watch`), the suites' runner for a ui suite (`tools/lib/suite.js`) and
+  `npm test`.
+- **Loading.** `installPacks` adds the hosted sets to the store like any other pack (`packFor`, with its `hosted`
+  sheet). `AssetStore.load` fetches each one's sheet and index (`fetchHosted`, given up on after 15 seconds), decodes
+  the sheet (`decodeSprite`) and cuts each sprite the descriptor lists out of it (`cutSprite`), under its usual key
+  (`spriteKey`), into the same lookup the imported sprites go into, beside the read from IndexedDB and whether or not
+  that can be read: nothing of a hosted set is read from or written to the browser's storage, so it loads with
+  storage blocked (#850). For now every hosted set's sheet is fetched at start-up, before anything is drawn. A sheet
+  that can't be fetched or read is logged and its sprites left out; the rest load as ever.
+- **Installed by declaration.** `installTilesets` installs a hosted set without a record of its import, with its
+  descriptor's own colours (only an imported set goes through `withImportedKeys`), unless its state says it isn't
+  complete: `installPacks` says so of one whose sheet didn't load (`missingAssets` of a hosted pack is what the last
+  load didn't cut from its sheet).
+- **The interface's art.** Both themes list Civ1's art, then the pixel art's (`interfaceArt`). Civ1's is installed
+  unless its sprites are found missing, so a player who has imported it sees what they saw before, and one who
+  hasn't sees the pixel art's interface art. The menus still wait for Civ1's import before a game can start.
+- **The map's art per grid.** `mapTileset(grid)` draws a grid's maps with the installed set the player chose for it
+  (the option `tileset.<grid>`, `chooseMapTileset`), or, unchosen, the one imported for it, or the one that ships;
+  settled once per grid until the installed sets or the choice change. A rule set with art of its own (Civ2's) is
+  played on that art's grid, which has no other set yet. Each hosted set has its zoom (`zoom.<id>`) like the others.
+- **What isn't a game's.** New Game asks the worker for other games only once the player has imported art beyond
+  Civ1's (`mayOfferOtherGames`, `importedTilesets`): the hosted sets are no game's own.
 
 ## Sprite overlays
 

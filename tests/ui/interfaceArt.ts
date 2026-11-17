@@ -124,7 +124,7 @@ expect(
 // What's skipped.
 expect(
   "a set that isn't registered is skipped",
-  id(interfaceArt(['civ1-pixelart', 'second'])),
+  id(interfaceArt(['unregistered', 'second'])),
   'second'
 );
 expect(
@@ -141,12 +141,12 @@ expect(
 // The fallback.
 expect(
   "with none of them there, Civ1's",
-  id(interfaceArt(['civ1-pixelart', notInstalled.id, 'no-ui'])),
+  id(interfaceArt(['unregistered', notInstalled.id, 'no-ui'])),
   'civ1'
 );
 expect("and with an empty list, Civ1's", id(interfaceArt([])), 'civ1');
 expect(
-  "the themes' own list is Civ1's, until the pixel art is registered",
+  "the themes' own list is Civ1's, then the pixel art's: Civ1's while it's installed",
   [
     uiThemeArt('slate'),
     uiThemeArt('civ1-classic'),
@@ -154,6 +154,40 @@ expect(
   ],
   [['civ1', 'civ1-pixelart'], ['civ1', 'civ1-pixelart'], 'civ1']
 );
+
+// Without Civ1's sprites (#1063), the pixel art, which ships with civ.one, has interface art and is installed as it's
+//  declared; and with neither, Civ1's as before, whose sprites the game can't start without.
+{
+  installTilesets({ civ1: { complete: false, metadata: null } });
+
+  expect(
+    "without Civ1's sprites, the themes draw with the pixel art",
+    [
+      id(interfaceArt(uiThemeArt('slate'))),
+      id(interfaceArt(uiThemeArt('civ1-classic'))),
+      interfaceSpriteKey('city/bulb', interfaceArt(uiThemeArt('slate'))),
+    ],
+    ['civ1-pixelart', 'civ1-pixelart', './assets/civ1-pixelart/city/bulb.png']
+  );
+
+  installTilesets({
+    civ1: { complete: false, metadata: null },
+    'civ1-pixelart': { complete: false, metadata: null },
+  });
+
+  expect(
+    "and without its sheet either, Civ1's",
+    id(interfaceArt(uiThemeArt('slate'))),
+    'civ1'
+  );
+
+  installTilesets({
+    first: { complete: true, metadata: null },
+    second: { complete: true, metadata: null },
+    'not-installed': { complete: false, metadata: null },
+    'no-ui': { complete: true, metadata: null },
+  });
+}
 
 // Following the theme in use.
 let theme: readonly string[] = ['second'];
@@ -421,7 +455,7 @@ registerTheme({ id: 'no-art', name: 'none' });
 registerTheme({
   id: 'missing',
   name: 'missing',
-  art: ['civ1-pixelart', notInstalled.id],
+  art: ['unregistered', notInstalled.id],
 });
 
 expect(

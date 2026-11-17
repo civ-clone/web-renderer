@@ -2,6 +2,7 @@
   const esbuild = require('esbuild'),
     { sassPlugin } = require('esbuild-sass-plugin'),
     { engineSources, tsconfig } = require('./tools/lib/engineSources'),
+    { buildHostedSets } = require('./tools/lib/hostedSets'),
     watching = process.argv.includes('watch'),
     buildOptions = {
       entryPoints: [
@@ -85,6 +86,14 @@
     };
 
   process.stdout.write(`Building... `);
+
+  // The hosted sets' sheets (#1063), and the module that names them, before anything is bundled: the build, the dev
+  //  build and `watch` alike. A set missing a sprite it requires stops the build.
+  try {
+    buildHostedSets();
+  } catch (e) {
+    failed(e);
+  }
 
   if (!watching) {
     esbuild

@@ -1,0 +1,23 @@
+{
+  "name": "@civ-clone/ui-tileset-pixelart",
+  "version": "0.1.0",
+  "private": true,
+  "description": "civ.one's own pixel art (civ-clone/civ1-tileset-pixelart): its square tileset, the square map's and the interface's when Civilization's isn't imported, served as a sheet beside the game. Loading it registers it.",
+  "license": "MIT",
+  "dependencies": {
+    "@civ-clone/ui-assets": "workspace:*"
+  },
+  "exports": {
+    ".": "./index.ts"
+  },
+  "peerDependencies": {
+    "@civ-clone/civ1-tileset-pixelart": "*"
+  },
+  "civ-clone": {
+    "hostedSets": [
+      {
+        "descriptor": "@civ-clone/civ1-tileset-pixelart/pack/tileset.json"
+      }
+    ]
+  }
+}
