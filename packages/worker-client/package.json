@@ -10,6 +10,7 @@
   "exports": {
     "./Client/actions/ActionContext": "./Client/actions/ActionContext.ts",
     "./Client/actions/city": "./Client/actions/city.ts",
+    "./Client/notifications/unit": "./Client/notifications/unit.ts",
     "./Game": "./Game.ts",
     "./Plugins": "./Plugins.ts",
     "./answer": "./answer.ts",
