@@ -7,6 +7,7 @@
 
 import Advance from '@civ-clone/core-science/Advance';
 import City from '@civ-clone/core-city/City';
+import CityBuild from '@civ-clone/core-city-build/CityBuild';
 import CityImprovement from '@civ-clone/core-city-improvement/CityImprovement';
 import Civilization from '@civ-clone/core-civilization/Civilization';
 import Engine from '@civ-clone/core-engine/Engine';
@@ -483,6 +484,17 @@ export const registerPatchEvents = (
         ctx.dataFilter(filterToReference(Tile, Unit, Player))
       )
     );
+  });
+
+  // A build dropped (#978), however it was: an advance gained in the middle of our turn (a goody hut, a Diplomat's
+  //  theft, a city captured) or a rival's Wonder can leave the city screen and lists showing it until the hand-over,
+  //  with nothing else sending it. So the build goes again (only ours, as a choice of ours does). A city on Auto has
+  //  chosen again by the time the patch is built, which sends that. Not during our automated turn, whose end sends the
+  //  whole player.
+  on('city:building-cancelled', (cityBuild: CityBuild) => {
+    if (!ctx.automation.automatedTurn()) {
+      ctx.patches.cityBuild(cityBuild);
+    }
   });
 
   // The advance is told of in `Client/notifications/player.ts`.
