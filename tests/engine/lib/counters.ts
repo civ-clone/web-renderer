@@ -255,35 +255,48 @@ export const startCounting = (): Counting => {
     };
 
   interactionRegistryInstance.register = (...interactions: any[]): void => {
-    interactions.forEach((interaction): void => {
-      // Most specific first: an `Alliance` is a `Peace` too.
-      const treaty = MATCH_ORDER.find((candidate) =>
-          isA(interaction, TREATY_CLASSES[candidate])
-        ),
-        players = attempt(() => interaction.players() as Player[], []);
+    // Only what the registry doesn't hold yet is new (it ignores what it already has), and the registry acts first, so
+    //  counting can never stop a declaration being made, nor count one the registry refused.
+    const fresh = interactions.filter(
+      (interaction) => !interactionRegistryInstance.includes(interaction)
+    );
 
-      if (treaty === undefined) {
-        return;
-      }
+    register(...interactions);
 
-      if (treaty === 'peace') {
-        if (pendingPeaces.size === 0) {
-          queueMicrotask(countPendingPeaces);
-        }
+    attempt(
+      () =>
+        fresh.forEach((interaction): void => {
+          // Most specific first: an `Alliance` is a `Peace` too.
+          const treaty = MATCH_ORDER.find((candidate) =>
+              isA(interaction, TREATY_CLASSES[candidate])
+            ),
+            players = attempt(() => interaction.players() as Player[], []);
 
-        pendingPeaces.set(pairOf(players), players);
+          if (
+            treaty === undefined ||
+            !interactionRegistryInstance.includes(interaction)
+          ) {
+            return;
+          }
 
-        return;
-      }
+          if (treaty === 'peace') {
+            if (pendingPeaces.size === 0) {
+              queueMicrotask(countPendingPeaces);
+            }
 
-      if (treaty === 'alliance') {
-        pendingPeaces.delete(pairOf(players));
-      }
+            pendingPeaces.set(pairOf(players), players);
 
-      countTreaty(treaty, players);
-    });
+            return;
+          }
 
-    return register(...interactions);
+          if (treaty === 'alliance') {
+            pendingPeaces.delete(pairOf(players));
+          }
+
+          countTreaty(treaty, players);
+        }),
+      undefined
+    );
   };
 
   engine.on(
