@@ -1339,7 +1339,7 @@ const main = async () => {
       console.log(
         `\nself-check 1: skipped, as the conformance fixture is the default set's, not ${options.set}'s`
       );
-      output.conformance = { pass: true, skipped: true };
+      output.conformance = { pass: null, skipped: true };
     } else if (options.selfCheck) {
       process.stdout.write(
         '\nself-check 1: both copies seated alternately reproduce the conformance fixture... '
@@ -1483,7 +1483,8 @@ const main = async () => {
         .slice(0, 20)
         .forEach((line) => console.log(`  ${line}`));
 
-      if (!identical.pass || !output.conformance.pass) {
+      // A skipped conformance game (`--set`) neither passes nor fails.
+      if (!identical.pass || output.conformance.pass === false) {
         exitCode = 1;
       }
 

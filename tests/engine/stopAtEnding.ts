@@ -8,6 +8,10 @@
 //  can't be unloaded.
 //
 //   --scenario <set>-<watched|played>   start a game of that set and print whether each rule is enabled once it starts
+//   --scenario civ2-save <file>         start a watched civ2 game, play to its second turn and save it to <file>
+//   --scenario civ2-load <file>         load <file> (`Game.load`), with the default set the page would start with, and
+//                                       print whether each rule is enabled once it is back: a save with no human in it
+//                                       is watched too
 //
 // Imports `src/js/pluginSets.ts`, never `src/js/plugins.ts`, which would run every plugin in the default set.
 
@@ -17,6 +21,9 @@ import './lib/spawnedClients';
 import Game from '@civ-clone/ui-worker-client/Game';
 import { defaultGame } from '@civ-clone/core-game/defaultGame';
 import { execFileSync } from 'child_process';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import pluginSets from '../../src/js/pluginSets';
 import { pluginsFrom } from '@civ-clone/ui-worker-client/Plugins';
@@ -33,20 +40,45 @@ type Report = {
   // Each rule set's rule once the game has started: whether it is enabled, or `null` where it isn't registered.
   rules: { [id: string]: boolean | null };
   workerErrors: unknown[];
+  // Why a load failed, if one did.
+  loadFailed: string | null;
 };
 
-const SCENARIOS: { [name: string]: { set: SetId; watched: boolean } } = {
+type Scenario = {
+  set: SetId;
+  watched: boolean;
+  // Play to the second turn and save the game to the file named after the scenario.
+  save?: boolean;
+  // Load the file named after the scenario instead of starting a game.
+  load?: boolean;
+};
+
+const SCENARIOS: { [name: string]: Scenario } = {
   'civ1-watched': { set: 'civ1', watched: true },
   'civ1-played': { set: 'civ1', watched: false },
   'civ2-watched': { set: 'civ2', watched: true },
   'civ2-played': { set: 'civ2', watched: false },
 };
 
+const SAVE_AND_LOAD: { [name: string]: Scenario } = {
+  'civ2-save': { set: 'civ2', watched: true, save: true },
+  'civ2-load': { set: 'civ2', watched: true, load: true },
+};
+
 const scenarioIndex = process.argv.indexOf('--scenario'),
-  scenario = scenarioIndex === -1 ? null : process.argv[scenarioIndex + 1];
+  scenario = scenarioIndex === -1 ? null : process.argv[scenarioIndex + 1],
+  file = scenarioIndex === -1 ? null : process.argv[scenarioIndex + 2] ?? null;
 
 const play = (name: string): void => {
-  const { set, watched } = SCENARIOS[name],
+  const {
+      set,
+      watched,
+      save = false,
+      load = false,
+    } = {
+      ...SCENARIOS,
+      ...SAVE_AND_LOAD,
+    }[name],
     receivers = new Map<string, (data: any, meta?: any) => void>(),
     sent: { channel: string; data: any }[] = [],
     replies: { data: any; id: number }[] = [],
@@ -103,6 +135,9 @@ const play = (name: string): void => {
           workerErrors: sent
             .filter(({ channel }) => channel === 'workerError')
             .map(({ data }) => data),
+          loadFailed:
+            sent.find(({ channel }) => channel === 'loadFailed')?.data
+              ?.message ?? null,
         } as Report) + '\n'
       );
       process.exit(0);
@@ -114,8 +149,49 @@ const play = (name: string): void => {
 
   new Game(transport, pluginsFrom(pluginSets));
 
+  if (load) {
+    // As the page loads a file: the set is the file's, and the rules are in once it says it has loaded.
+    receivers.get('load')!({ data: readFileSync(file!, 'utf8') });
+
+    const loaded = setInterval((): void => {
+      if (
+        sent.some(
+          ({ channel, data }) =>
+            channel === 'loadFailed' ||
+            (channel === 'notification' &&
+              typeof data === 'string' &&
+              data.startsWith('loaded'))
+        )
+      ) {
+        clearInterval(loaded);
+        report();
+      }
+    }, 10);
+
+    return;
+  }
+
+  let turns = 0;
+
+  engine.on('turn:start', (): void => {
+    turns++;
+
+    if (save && turns === 2) {
+      receivers.get('save')!({ name: 'stop at ending' });
+
+      const saved = [...sent]
+        .reverse()
+        .find(({ channel }) => channel === 'saveGame');
+
+      writeFileSync(file!, saved?.data?.data ?? '');
+      report();
+    }
+  });
+
   engine.on('game:start', (): void => {
-    report();
+    if (!save) {
+      report();
+    }
   });
 
   (async (): Promise<void> => {
@@ -203,6 +279,51 @@ if (scenario !== null) {
       null
     );
   });
+
+  // And a watched Civ2 game put back from its save (`Game.load`), which stops at its ending too.
+  const directory = mkdtempSync(join(tmpdir(), 'stop-at-ending-')),
+    path = join(directory, 'civ2.json'),
+    run = (name: string): Report =>
+      JSON.parse(
+        execFileSync(
+          process.execPath,
+          [process.argv[1], '--scenario', name, path],
+          {
+            encoding: 'utf8',
+            env: process.env,
+            maxBuffer: 64 * 1024 * 1024,
+            timeout: 2 * 60 * 1000,
+          }
+        )
+          .trim()
+          .split('\n')
+          .pop()!
+      );
+
+  try {
+    const saved = run('civ2-save');
+
+    expect(
+      'the watched civ2 game was saved without a worker error',
+      saved.workerErrors,
+      []
+    );
+
+    const loaded = run('civ2-load');
+
+    expect(
+      'the saved civ2 game loaded',
+      [loaded.loadFailed, loaded.workerErrors],
+      [null, []]
+    );
+    expect(
+      `a watched civ2 game loaded from its save disables ${RULES.civ2}, so it stops at its ending`,
+      loaded.rules[RULES.civ2],
+      false
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 
   if (failures.length > 0) {
     process.stderr.write(`FAIL stopAtEnding\n${failures.join('\n')}\n`);

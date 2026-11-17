@@ -50,7 +50,9 @@ const attempt = <T>(read: () => T, fallback: T): T => {
 };
 
 // The kinds of unit a city builds that are counted, each by its type or a trait its rule set gives it. A unit can be
-//  of more than one kind: a nuclear missile is a missile too, and both are air units.
+//  of more than one kind. `missile` is a unit spent by its own attack (`SingleUse`): Civ2's Cruise Missile and Nuclear
+//  Missile, which are air units too; Civ1's Nuclear isn't one, as it isn't spent that way. `nuclear` is any unit that
+//  detonates (`Detonates`), Civ1's Nuclear included.
 const UNIT_KINDS: [kind: string, is: (unit: Unit) => boolean][] = [
   ['air', (unit) => isA(unit, 'Air')],
   ['naval', (unit) => isA(unit, 'Naval')],
@@ -152,7 +154,6 @@ export const startCounting = (): Counting => {
     game: { [counter: string]: number } = {
       ...Object.fromEntries(GAME_EVENTS.map(([counter]) => [counter, 0])),
       ...Object.fromEntries(TREATIES.map((treaty) => [treaty, 0])),
-      alliancesFormed: 0,
       citiesTakenByBarbarians: 0,
     },
     countsOf = (player: Player | null | undefined): PlayerCounts | null => {
@@ -226,35 +227,60 @@ export const startCounting = (): Counting => {
 
   // Treaties as they are made: the registry is wrapped on this instance, and registers exactly as it would.
   const register = interactionRegistryInstance.register.bind(
-    interactionRegistryInstance
-  );
+      interactionRegistryInstance
+    ),
+    countTreaty = (treaty: Treaty, players: Player[]): void => {
+      game[treaty] += 1;
+
+      players.forEach((player: Player): void => {
+        const entry = countsOf(player);
+
+        if (entry) {
+          entry.treaties[treaty] += 1;
+        }
+      });
+    },
+    pairOf = (players: Player[]): string =>
+      players
+        .map((player) => player.id())
+        .sort()
+        .join(':'),
+    // An alliance is made with a peace first, where there's none (base-diplomacy's `makeAlliance`, civ2-diplomacy's
+    //  `makeTreatyPeace` then `makeAlliance`), so a peace is counted only once the call that made it is over, and not
+    //  at all when an alliance between the same players came with it: that is one treaty, the alliance.
+    pendingPeaces = new Map<string, Player[]>(),
+    countPendingPeaces = (): void => {
+      pendingPeaces.forEach((players) => countTreaty('peace', players));
+      pendingPeaces.clear();
+    };
 
   interactionRegistryInstance.register = (...interactions: any[]): void => {
     interactions.forEach((interaction): void => {
       // Most specific first: an `Alliance` is a `Peace` too.
       const treaty = MATCH_ORDER.find((candidate) =>
-        isA(interaction, TREATY_CLASSES[candidate])
-      );
+          isA(interaction, TREATY_CLASSES[candidate])
+        ),
+        players = attempt(() => interaction.players() as Player[], []);
 
       if (treaty === undefined) {
         return;
       }
 
-      game[treaty] += 1;
+      if (treaty === 'peace') {
+        if (pendingPeaces.size === 0) {
+          queueMicrotask(countPendingPeaces);
+        }
 
-      if (treaty === 'alliance') {
-        game.alliancesFormed += 1;
+        pendingPeaces.set(pairOf(players), players);
+
+        return;
       }
 
-      attempt(() => interaction.players() as Player[], []).forEach(
-        (player: Player): void => {
-          const entry = countsOf(player);
+      if (treaty === 'alliance') {
+        pendingPeaces.delete(pairOf(players));
+      }
 
-          if (entry) {
-            entry.treaties[treaty] += 1;
-          }
-        }
-      );
+      countTreaty(treaty, players);
     });
 
     return register(...interactions);
@@ -363,9 +389,14 @@ export const startCounting = (): Counting => {
   };
 
   return {
-    of: (player: Player): PlayerCounts | null =>
-      counts.has(player) ? settle(player, counts.get(player)!) : null,
+    of: (player: Player): PlayerCounts | null => {
+      countPendingPeaces();
+
+      return counts.has(player) ? settle(player, counts.get(player)!) : null;
+    },
     report: (): GameCounts => {
+      countPendingPeaces();
+
       // Every player still in the game, whether or not anything happened to them.
       playerRegistryInstance.entries().forEach((player) => countsOf(player));
 
