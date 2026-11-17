@@ -230,17 +230,58 @@ export const nativeTileSize = ({
 }: TilesetDescriptor): Size => ({ width, height });
 
 /**
- * The option the map scale is kept under for `tileset` (#97): Civ1's is `mapScale`, as it always has been, and
- *  another pack's its own, as its scales are its own (Civ2's 64 px tile at 1× is Civ1's at 4×).
+ * The option the map's zoom is kept under for `tileset` (#1063): `zoom.<id>`, each set's its own, as its tiles are its
+ *  own size (Civ2's 64 px tile at 1× is Civ1's at 4×).
  */
-export const mapScaleOption = ({ id }: TilesetDescriptor): string =>
-  id === interfaceTileset().id ? 'mapScale' : `mapScale.${id}`;
+export const zoomOption = ({ id }: Pick<TilesetDescriptor, 'id'>): string =>
+  `zoom.${id}`;
 
-/** `scale` if `tileset` can be shown at it, its default scale if not (a scale kept from before, or another pack's). */
-export const scaleFor = (tileset: TilesetDescriptor, scale: unknown): number =>
-  typeof scale === 'number' && tileset.scales.includes(scale)
-    ? scale
-    : tileset.defaultScale;
+/** The steps the zoom moves in: a tenth. */
+export const ZOOM_STEP = 0.1;
+
+/** `zoom` to the nearest step (`ZOOM_STEP`), so arithmetic's 2.0000000001 is 2. */
+export const snapZoom = (zoom: number): number => Math.round(zoom * 10) / 10;
+
+/** The zooms `tileset` can be shown at (#1063): from its smallest scale to its largest. */
+export const zoomRange = ({
+  scales,
+}: Pick<TilesetDescriptor, 'scales'>): { min: number; max: number } => ({
+  min: Math.min(...scales),
+  max: Math.max(...scales),
+});
+
+/** The zoom a player starts `tileset` on: its `defaultZoom`, or its `defaultScale` where it names none. */
+export const defaultZoom = (
+  tileset: Pick<TilesetDescriptor, 'defaultScale' | 'defaultZoom'>
+): number => tileset.defaultZoom ?? tileset.defaultScale;
+
+/**
+ * `zoom`, kept within what `tileset` can be shown at (`zoomRange`) and to a step, or its default zoom if it isn't a
+ *  number (a value kept from before that can't be read).
+ */
+export const zoomFor = (tileset: TilesetDescriptor, zoom: unknown): number => {
+  if (typeof zoom !== 'number' || !Number.isFinite(zoom)) {
+    return defaultZoom(tileset);
+  }
+
+  const { min, max } = zoomRange(tileset);
+
+  return snapZoom(Math.min(max, Math.max(min, zoom)));
+};
+
+/**
+ * The option each kept map scale (`mapScale` for Civ1's, `mapScale.<id>` for another set's) has become (#1063): the
+ *  set's zoom (`zoomOption`). Null for any other option.
+ */
+export const zoomOptionFromMapScale = (key: string): string | null => {
+  if (key === 'mapScale') {
+    return zoomOption({ id: 'civ1' });
+  }
+
+  const [, id] = key.match(/^mapScale\.(.+)$/) ?? [];
+
+  return id === undefined ? null : zoomOption({ id });
+};
 
 /**
  * The scale a window shows `tileset`'s art at when asked for `scale`, which is Civ1's (#97): as asked for Civ1's 16 px

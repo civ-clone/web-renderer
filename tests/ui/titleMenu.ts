@@ -406,6 +406,7 @@ const save = (
   {
     const options = new GameOptions({
       scale: () => 2,
+      zoom: () => 2,
       lockVerticalEdges: () => false,
     } as unknown as IPortal);
 

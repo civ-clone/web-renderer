@@ -119,8 +119,9 @@ staggered isometric grid, which `tileset-civ2` registers (`registerTileset(tiles
   missing, if none is installed, which loading refuses before then): `Map.tileset()`, `Portal`'s projection and default
   tile size and scale, `MapView` and the minimap all take the world's `topologyId()`. `setMapGrid` (from `MapView`)
   makes it the default for the windows' units (`hud/Unit`, the unit card), which follow the map's pack, at no more than
-  its own default scale (`shownScale`), and for Options' map scale. Each pack keeps its own scale option
-  (`mapScaleOption`: Civ1's `mapScale`, Civ2's `mapScale.civ2`).
+  its own default scale (`shownScale`), and for Options' zoom. Each pack keeps its own zoom (#1063, `zoomOption`:
+  Civ1's `zoom.civ1`, Civ2's `zoom.civ2`), from the smallest of its `scales` to the largest in tenths, starting at its
+  `defaultZoom` (or `defaultScale`). Between whole zooms the map is drawn at the whole scale above and shown smaller.
 - The interface's art keeps coming from `interfaceTileset()`, Civ1's, the pack registered with `interface: true`;
   `currentTileset()` is the same Civ1 tileset. Until a package registers one, both throw, naming what to load; the
   asset store made as the page loads (`assetStore`) asks for its tileset only when it is first used.

@@ -61,7 +61,6 @@ i18next.addResources('en', 'default', {
     'The interface changes the next time the page loads.',
   'GameOptions.keep-building-military-units': 'Keep building military units',
   'GameOptions.lock-vertical-edges': 'Stop the map at the poles',
-  'GameOptions.map-scale': 'Map scale',
   'GameOptions.new-cities-build-defender': 'New cities build a defender',
   // Civilization's music from the player's ASOUND.CVL (#126).
   'GameOptions.sound': 'Sound',
@@ -77,6 +76,9 @@ i18next.addResources('en', 'default', {
   'GameOptions.unit-marker-choice.both': 'Ring and blink',
   'GameOptions.unit-marker-choice.ring': 'Ring',
   'GameOptions.unit-marker-choice.theme': "The theme's way",
+  // The map's zoom (#1063), and what it's at: 1.4×.
+  'GameOptions.zoom': 'Zoom',
+  'GameOptions.zoom-value': '{{zoom}}×',
   'GameSetup.add-seat': 'Add a seat',
   'GameSetup.advanced': 'Advanced',
   'GameSetup.ai': 'AI',

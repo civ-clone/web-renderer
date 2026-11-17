@@ -61,6 +61,40 @@ export class GameOptionsRegistry extends EntityRegistry<GameOption> {
     });
   }
 
+  /**
+   * Moves each stored value whose key `renamed` gives a new key for to that key, and forgets the old one: an option
+   *  that has been renamed keeps what the player chose. A value already stored under the new key is kept instead. Run
+   *  before `defaults`, at every start: once the old keys are gone there's nothing more to move.
+   */
+  rename(renamed: (key: string) => string | null): void {
+    try {
+      const storage = this.#storage(),
+        stored = this.#stored();
+      let changed = false;
+
+      Object.keys(stored).forEach((key) => {
+        const to = renamed(key);
+
+        if (to === null || to === key) {
+          return;
+        }
+
+        if (!(to in stored)) {
+          stored[to] = stored[key];
+        }
+
+        delete stored[key];
+        changed = true;
+      });
+
+      if (changed) {
+        storage?.setItem(storageKey, JSON.stringify(stored));
+      }
+    } catch {
+      // Storage is blocked or full: the defaults apply, as they would anyway.
+    }
+  }
+
   get(key: string, defaultValue: any = null): any {
     const [option] = this.getBy('key', key);
 

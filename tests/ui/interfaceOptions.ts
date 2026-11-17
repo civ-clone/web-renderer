@@ -337,6 +337,7 @@ Object.assign(globalThis, {
     const beforeGame = new GameOptions(null),
       inGame = new GameOptions({
         scale: () => 2,
+        zoom: () => 2,
         lockVerticalEdges: () => false,
       } as unknown as IPortal);
 
