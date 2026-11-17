@@ -187,9 +187,10 @@ export class GamePortal extends Portal {
 
       this.clearTimeout();
 
-      const tile = this.tileAt(event.offsetX, event.offsetY),
+      const [x, y] = this.toCanvas(event.offsetX, event.offsetY),
+        tile = this.tileAt(x, y),
         // A city's banner hangs past its square, over its neighbours (#747).
-        bannerCity = this.cityAt(event.offsetX, event.offsetY);
+        bannerCity = this.cityAt(x, y);
 
       if (tile !== null) {
         this.emit('tile-clicked', tile.x, tile.y);
@@ -288,7 +289,7 @@ export class GamePortal extends Portal {
         return;
       }
 
-      const tile = this.tileAt(event.offsetX, event.offsetY);
+      const tile = this.tileAt(...this.toCanvas(event.offsetX, event.offsetY));
 
       // Nothing to offer: the press is left as it was, a tap or a drag.
       if (tile === null || this.#activeUnit === null) {
@@ -353,7 +354,7 @@ export class GamePortal extends Portal {
       // button held (#490).
       this.canvas().setPointerCapture(event.pointerId);
 
-      const tile = this.tileAt(event.offsetX, event.offsetY);
+      const tile = this.tileAt(...this.toCanvas(event.offsetX, event.offsetY));
 
       if (tile !== null) {
         showActionMenu(tile, event.x, event.y);
@@ -394,8 +395,11 @@ export class GamePortal extends Portal {
         this.clearTimeout();
       }
 
-      // The map follows the pointer, so the view moves the opposite way.
-      this.scrollBy(drag.lastX - event.clientX, drag.lastY - event.clientY);
+      // The map follows the pointer, so the view moves the opposite way: as far on the canvas as the pointer moved on
+      //  the page, which is further when the canvas is shown smaller (#1063).
+      this.scrollBy(
+        ...this.toCanvas(drag.lastX - event.clientX, drag.lastY - event.clientY)
+      );
 
       drag.lastX = event.clientX;
       drag.lastY = event.clientY;
@@ -487,7 +491,7 @@ export class GamePortal extends Portal {
         event.buttons === 0 &&
         this.#inertiaFrame === null &&
         !this.#waiting
-          ? this.#subjectAt(event.offsetX, event.offsetY)
+          ? this.#subjectAt(...this.toCanvas(event.offsetX, event.offsetY))
           : null,
       current = this.#hover;
 
@@ -542,7 +546,7 @@ export class GamePortal extends Portal {
   private showHover(hover: Hover): void {
     const now =
       document.elementFromPoint(hover.clientX, hover.clientY) === this.canvas()
-        ? this.#subjectAt(hover.offsetX, hover.offsetY)
+        ? this.#subjectAt(...this.toCanvas(hover.offsetX, hover.offsetY))
         : null;
 
     if (now === null || now.key !== hover.key) {
@@ -552,7 +556,9 @@ export class GamePortal extends Portal {
     }
 
     const canvas = this.canvas().getBoundingClientRect(),
-      { box, content } = now;
+      { content } = now,
+      // The canvas's px to the page's, as it may be shown smaller (#1063).
+      box = this.toPage(now.box);
 
     hover.tile = now.tile;
 
@@ -629,7 +635,9 @@ export class GamePortal extends Portal {
         return;
       }
 
-      this.scrollBy(-velocityX * elapsed, -velocityY * elapsed);
+      this.scrollBy(
+        ...this.toCanvas(-velocityX * elapsed, -velocityY * elapsed)
+      );
 
       const decay = Math.pow(INERTIA_FRICTION, elapsed / 16);
 

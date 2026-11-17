@@ -1282,8 +1282,8 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
   setOptionDefaults();
 
   expect(
-    "the map scale a player starts on is the tileset's",
-    options.get('mapScale'),
+    "the zoom a player starts on is the tileset's (#1063)",
+    options.get('zoom.civ1'),
     tileset.defaultScale
   );
 
@@ -1293,18 +1293,18 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
   const optionsWindow = new GameOptions({
     lockVerticalEdges: () => false,
     scale: () => 2,
+    zoom: () => 2,
   } as any);
 
   expect(
-    "the Options window offers the tileset's scales, 2× chosen",
-    // The scale's own list: the window has others, such as how often to autosave (#653).
-    Array.from(optionsWindow.element().querySelectorAll('option'))
-      .filter((option) => option.textContent?.endsWith('×'))
-      .map(
-        (option) =>
-          `${option.textContent}${option.hasAttribute('selected') ? '*' : ''}`
-      ),
-    ['1×', '2×*', '3×', '4×']
+    "the Options window's zoom runs over the tileset's scales in tenths, at 2 (#1063)",
+    ['min', 'max', 'step', 'value'].map((name) =>
+      optionsWindow
+        .element()
+        .querySelector('input[type="range"][step="0.1"]')
+        ?.getAttribute(name)
+    ),
+    ['1', '4', '0.1', '2']
   );
 
   optionsWindow.close();

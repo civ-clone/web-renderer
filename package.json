@@ -171,6 +171,7 @@
     "test:selection-window": "node tools/run-suite.js ui selectionWindow",
     "test:single-choice": "node tools/run-suite.js ui singleChoice",
     "test:game-options": "node tools/run-suite.js ui gameOptions",
+    "test:zoom": "node tools/run-suite.js ui zoom",
     "test:saved-game": "node tools/saved-game.js",
     "test:browser-saves": "node tools/saved-game.js browserSaves",
     "test:title-menu": "node tools/saved-game.js titleMenu",

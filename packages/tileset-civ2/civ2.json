@@ -26,6 +26,7 @@
   },
   "scales": [1, 2],
   "defaultScale": 1,
+  "defaultZoom": 1.4,
   "storage": {
     "prefix": "./assets/civ2/",
     "ext": ".png"

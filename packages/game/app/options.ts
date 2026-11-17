@@ -1,22 +1,26 @@
 import { defaultInterface } from '@civ-clone/ui-platform/lib/interfaceMode';
 import {
   bundledTilesets,
-  mapScaleOption,
+  defaultZoom,
+  zoomOption,
+  zoomOptionFromMapScale,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
 
 // Any the player has changed come back from browser storage (#343).
 export const setOptionDefaults = (): void => {
+  // The map scale a player chose is their zoom now (#1063): `mapScale` Civ1's, `mapScale.<id>` another set's.
+  options.rename(zoomOptionFromMapScale);
+
   options.defaults({
     autoEndOfTurn: true,
     autoEndOfTurnExceptions: ['CivilDisorder'],
     unitEdgeMargin: 2,
-    // Each pack's own map scale (#97): Civ1's `mapScale`, Civ2's `mapScale.civ2`, so a scale chosen for either comes
-    //  back.
+    // Each set's own zoom (#97, #1063): Civ1's `zoom.civ1`, Civ2's `zoom.civ2`, so a zoom chosen for either comes back.
     ...Object.fromEntries(
       bundledTilesets().map((tileset) => [
-        mapScaleOption(tileset),
-        tileset.defaultScale,
+        zoomOption(tileset),
+        defaultZoom(tileset),
       ])
     ),
     lockVerticalEdges: false,

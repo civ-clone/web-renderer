@@ -15,8 +15,12 @@ import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { packImports } from '@civ-clone/ui-assets/lib/packImports';
 import { button } from '@civ-clone/ui-component-button/button';
 import currentTileset, {
-  mapScaleOption,
+  ZOOM_STEP,
+  defaultZoom,
   mapTileset,
+  zoomFor,
+  zoomOption,
+  zoomRange,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import {
@@ -137,6 +141,54 @@ export const soundRows = (): HTMLElement[] => {
       })
     ),
     hint,
+  ];
+};
+
+/**
+ * The map's zoom (#1063): a slider in tenths from the smallest of the game's set's scales to its largest, each set's
+ *  kept apart (`zoomOption`), and what it's at.
+ */
+export const zoomRow = (portal?: IPortal | null): HTMLElement[] => {
+  const tileset = mapTileset(),
+    { min, max } = zoomRange(tileset),
+    option = zoomOption(tileset),
+    current = zoomFor(
+      tileset,
+      options.get(option, portal?.zoom() ?? defaultZoom(tileset))
+    ),
+    slider = s<HTMLInputElement>(
+      `<input type="range" min="${min}" max="${max}" step="${ZOOM_STEP}" value="${current}">`
+    ),
+    shown = s<HTMLOutputElement>('<output></output>'),
+    // How far along the track the thumb is, 0 to 1, for the theme to fill it to (#739), and the zoom it's at.
+    show = (zoom: number): void => {
+      slider.style.setProperty(
+        '--fill',
+        String(max > min ? (zoom - min) / (max - min) : 1)
+      );
+      shown.textContent = t('GameOptions.zoom-value', {
+        zoom: zoom.toFixed(1),
+      });
+    };
+
+  show(current);
+
+  return [
+    s(
+      `<label>${t('GameOptions.zoom')}</label>`,
+      h(slider, {
+        input: () => show(zoomFor(tileset, Number(slider.value))),
+        // Once it's let go, or each step on the keyboard: redrawn at every step of a drag, a large map would lag.
+        change: () => {
+          const zoom = zoomFor(tileset, Number(slider.value));
+
+          show(zoom);
+          options.set(option, zoom);
+          portal?.setZoom(zoom);
+        },
+      }),
+      shown
+    ),
   ];
 };
 
@@ -291,38 +343,7 @@ export class GameOptions extends Window {
             });
           })()
         ),
-        s(
-          `<label>${t('GameOptions.map-scale')}</label>`,
-          (() => {
-            // The scales the map's tileset can be shown at: the game's pack's (#97), each pack's kept apart.
-            const tileset = mapTileset(),
-              { scales } = tileset,
-              option = mapScaleOption(tileset),
-              current = options.get(
-                option,
-                portal?.scale() ?? tileset.defaultScale
-              ),
-              select = s<HTMLSelectElement>(
-                `<select>${scales
-                  .map(
-                    (scale) =>
-                      `<option value="${scale}"${
-                        scale === current ? ' selected' : ''
-                      }>${scale}×</option>`
-                  )
-                  .join('')}</select>`
-              );
-
-            return h(select, {
-              change: () => {
-                const scale = parseInt(select.value, 10);
-
-                options.set(option, scale);
-                portal?.setScale(scale);
-              },
-            });
-          })()
-        ),
+        ...zoomRow(portal),
         s(
           `<label>${t('GameOptions.lock-vertical-edges')}</label>`,
           (() => {

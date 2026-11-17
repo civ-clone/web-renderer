@@ -13,7 +13,11 @@ import Transport from '@civ-clone/ui-client/Transport';
 import World from './World';
 import { s } from '@dom111/element';
 import { IConstructor } from '@civ-clone/core-registry/Registry';
-import { mapTileset, nativeTileSize } from '@civ-clone/ui-assets/lib/tilesets';
+import {
+  mapTileset,
+  nativeTileSize,
+  snapZoom,
+} from '@civ-clone/ui-assets/lib/tilesets';
 import projectionFor from '../lib/projectionFor';
 import { City as CityData } from '@civ-clone/ui-protocol/types';
 
@@ -42,11 +46,13 @@ export interface IPortal {
   setCovered(covered: Rect[]): void;
   setLockVerticalEdges(lock: boolean): void;
   setScale(scale: number): void;
+  setZoom(zoom: number): void;
   tileSize(): Size;
   transport(): Transport;
   visibleBounds(): [number, number, number, number];
   visibleRange(): [Coordinate, Coordinate];
   world(): World;
+  zoom(): number;
 }
 
 export interface PortalSettings {
@@ -57,11 +63,22 @@ export interface PortalSettings {
   scale: number;
   // The tileset's native tile, across and down, before the scale.
   tileSize: Size;
+  // The zoom the map is shown at, which may be between whole scales (#1063): drawn at the whole scale above it
+  //  (`scaleOfZoom`), in place of `scale`. The scale where not given.
+  zoom?: number;
 }
 
 type PortalOptions = {
   [K in keyof PortalSettings]?: PortalSettings[K];
 };
+
+/**
+ * The whole scale the map is drawn at for `zoom` (#1063): the zoom itself when it is whole, otherwise the next whole
+ *  scale up, shown smaller. Sprites scaled one by one to a fraction can't meet exactly, and the hexagonal grid's
+ *  27 px row step is a whole number of pixels only at whole scales; drawn whole and shrunk as one, the tiles meet.
+ */
+export const scaleOfZoom = (zoom: number): number =>
+  Math.max(1, Math.ceil(snapZoom(zoom)));
 
 // The scale and tile size are the tileset's for the world's grid (`mapTileset`), unless they are given.
 const defaultPortalOptions = (world: World): PortalSettings => {
@@ -94,6 +111,8 @@ export class Portal
     ['focus-changed']: [number, number];
     // Composited: what floats over the map in place of a layer (the unit's ring, #753) is placed again.
     ['rendered']: [];
+    // The canvas has been sized again for a new zoom (#1063), before it's drawn: what's measured against it is again.
+    ['resized']: [];
     ['tile-clicked']: [number, number];
   }>
   implements IPortal
@@ -123,10 +142,14 @@ export class Portal
   // whenever the scale or the vertical wrap changes.
   #projection: Projection;
   #scale: number;
+  // The box, in the page's px, the canvas is shown in, as last fitted to (`fit`): null until it has been.
+  #shownIn: Size | null = null;
   #tileSize: Size;
   #transport: Transport;
   #viewport: Rect = { x: 0, y: 0, width: -1, height: -1 };
   #world: World;
+  // The zoom, which the canvas is shown at: its own pixels are at `#scale`, the whole scale at or above it (#1063).
+  #zoom: number;
 
   constructor(
     world: World,
@@ -150,7 +173,9 @@ export class Portal
     this.#lockVerticalEdges = settings.lockVerticalEdges;
     this.#playerId = settings.playerId;
     this.#tileSize = { ...settings.tileSize };
-    this.#scale = settings.scale;
+    this.#zoom = snapZoom(settings.zoom ?? settings.scale);
+    this.#scale =
+      settings.zoom === undefined ? settings.scale : scaleOfZoom(this.#zoom);
     this.#transport = transport;
     this.#projection = this.createProjection();
 
@@ -607,8 +632,80 @@ export class Portal
     this.#fullRender = true;
   }
 
+  /** The whole scale the map is drawn at: the canvas's pixels are at it. */
   scale(): number {
     return this.#scale;
+  }
+
+  /** The zoom the map is shown at (#1063): `scale()` itself, or less, the canvas shown smaller. */
+  zoom(): number {
+    return this.#zoom;
+  }
+
+  /**
+   * Sizes the canvas for the box, `width` × `height` in the page's px, that it's shown in (#1063): as big as the box at
+   *  a whole zoom, and bigger by the scale over the zoom between them, so it's shown smaller. Whether its size changed:
+   *  assigning it clears the canvas, so it's left alone when it would be the same.
+   */
+  fit(width: number, height: number): boolean {
+    this.#shownIn = { width, height };
+
+    return this.#refit();
+  }
+
+  #refit(): boolean {
+    const { width, height } = this.#shownIn!,
+      ratio = scaleOfZoom(this.#zoom) / this.#zoom,
+      canvasWidth = Math.round(width * ratio),
+      canvasHeight = Math.round(height * ratio);
+
+    if (
+      this.#canvas.width === canvasWidth &&
+      this.#canvas.height === canvasHeight
+    ) {
+      return false;
+    }
+
+    this.#canvas.width = canvasWidth;
+    this.#canvas.height = canvasHeight;
+
+    return true;
+  }
+
+  /**
+   * How many of the canvas's pixels there are to one of the page's, across and down: one at a whole zoom, more between
+   *  them (#1063). Measured where the page has laid the canvas out, as the canvas is stretched to its box; the scale
+   *  over the zoom where it hasn't.
+   */
+  canvasRatio(): { x: number; y: number } {
+    const canvas = this.#canvas,
+      ratio = scaleOfZoom(this.#zoom) / this.#zoom,
+      measured = (pixels: number, shown: number): number =>
+        pixels > 0 && shown > 0 ? pixels / shown : ratio;
+
+    return {
+      x: measured(canvas.width, canvas.clientWidth),
+      y: measured(canvas.height, canvas.clientHeight),
+    };
+  }
+
+  /** The canvas pixel at `x`, `y` in the page's px from its top left corner, as a pointer event's `offsetX` gives. */
+  toCanvas(x: number, y: number): [number, number] {
+    const ratio = this.canvasRatio();
+
+    return [x * ratio.x, y * ratio.y];
+  }
+
+  /** `rect`, in the canvas's pixels, in the page's px from the canvas's top left corner. */
+  toPage({ x, y, width, height }: Rect): Rect {
+    const ratio = this.canvasRatio();
+
+    return {
+      x: x / ratio.x,
+      y: y / ratio.y,
+      width: width / ratio.x,
+      height: height / ratio.y,
+    };
   }
 
   /**
@@ -665,10 +762,40 @@ export class Portal
   }
 
   /**
-   * Draw the map at `scale` from now on, keeping the same tile in the middle.
+   * Draw the map at `scale` from now on, keeping the same tile in the middle: zoomed to it, with nothing shown smaller.
    */
   setScale(scale: number): void {
+    this.setZoom(scale);
+  }
+
+  /**
+   * Show the map at `zoom` from now on, keeping the same tile in the middle (#1063): drawn at the whole scale at or
+   *  above it (`scaleOfZoom`), its canvas fitted to the box it's shown in again (`fit`) so the canvas is shown smaller
+   *  when the zoom is less than the scale.
+   */
+  setZoom(zoom: number): void {
+    const snapped = snapZoom(zoom),
+      scale = scaleOfZoom(snapped);
+
+    if (snapped === this.#zoom && scale === this.#scale) {
+      return;
+    }
+
+    this.#zoom = snapped;
+
+    const resized = this.#shownIn !== null && this.#refit();
+
+    if (resized) {
+      this.emit('resized');
+    }
+
     if (scale === this.#scale) {
+      // The same scale, on a canvas of another size: drawn again from the same middle.
+      if (resized) {
+        this.render();
+        this.emit('focus-changed', this.#center.x, this.#center.y);
+      }
+
       return;
     }
 

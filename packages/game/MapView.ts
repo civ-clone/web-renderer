@@ -22,11 +22,12 @@ import Units from '@civ-clone/ui-map/components/Map/Units';
 import World from '@civ-clone/ui-map/components/World';
 import Yields from '@civ-clone/ui-map/components/Map/Yields';
 import {
-  mapScaleOption,
+  defaultZoom,
   mapTileset,
   nativeTileSize,
-  scaleFor,
   setMapGrid,
+  zoomFor,
+  zoomOption,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import { GridMinimap, overviewFor } from '@civ-clone/ui-map/lib/projectionFor';
 
@@ -163,10 +164,11 @@ export class MapView {
           cityOpener,
           lockVerticalEdges: options.get('lockVerticalEdges', false),
           playerId,
-          // The pack's own scale option: Civ1's 3× is not one of Civ2's.
-          scale: scaleFor(
+          // The set's own zoom (#1063): Civ1's 3× is past Civ2's largest.
+          scale: tileset.defaultScale,
+          zoom: zoomFor(
             tileset,
-            options.get(mapScaleOption(tileset), tileset.defaultScale)
+            options.get(zoomOption(tileset), defaultZoom(tileset))
           ),
           tileSize: nativeTileSize(tileset),
         },
@@ -226,6 +228,8 @@ export class MapView {
       this.#placeMarker();
     });
     portal.on('activate-unit', (unit) => activateUnit(unit));
+    // A new zoom sized the canvas again (#1063): what floats over the map covers other pixels of it.
+    portal.on('resized', () => this.measureCovered());
 
     intervalHandler.on(() => this.#tick());
 
@@ -251,6 +255,10 @@ export class MapView {
     this.#scrollers.forEach((scroller) =>
       on(scroller, 'scroll', this.#measureHandler)
     );
+
+    // The canvas is sized for the zoom (#1063): the game has sized it to its box, and between whole zooms it's bigger
+    //  than that, as it's shown smaller. A resize sizes it from its box from then on.
+    portal.fit(mapPortal.width, mapPortal.height);
 
     this.measureCovered();
 
@@ -476,19 +484,15 @@ export class MapView {
       width = (mapPortal.parentElement as HTMLElement).offsetWidth,
       height = (mapPortal.parentElement as HTMLElement).offsetHeight;
 
-    // Assigning either of these clears the canvas even when the
-    // value has not changed, and the portal composites what changed
-    // rather than everything, so a resize that resizes nothing
-    // would wipe the map and put nothing back.
-    if (mapPortal.width === width && mapPortal.height === height) {
+    // Assigning the canvas's size clears it even when the value has not changed, and the portal composites what
+    //  changed rather than everything, so a resize that resizes nothing would wipe the map and put nothing back: the
+    //  portal sizes it only when it would change, for the zoom (#1063).
+    if (!this.portal.fit(width, height)) {
       // A section collapsing changes what is covered, but not the map.
       this.measureCovered();
 
       return;
     }
-
-    mapPortal.width = width;
-    mapPortal.height = height;
 
     this.measureCovered();
 

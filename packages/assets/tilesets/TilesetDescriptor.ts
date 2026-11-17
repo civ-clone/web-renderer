@@ -332,9 +332,14 @@ export interface TilesetDescriptor {
   /** One tile's footprint, in native px. */
   tile: Size;
   geometry: TilesetGeometry;
-  /** The map scales it can be shown at, and the one a player starts on. */
+  /**
+   * The map scales it can be shown at, and the one windows show its art at. The map zooms from the smallest of them to
+   *  the largest, in tenths (#1063).
+   */
   scales: number[];
   defaultScale: number;
+  /** The zoom a player starts on, from the smallest scale to the largest, in tenths: `defaultScale` where not given. */
+  defaultZoom?: number;
   /** Where its sprites are kept: see `spriteKey`. */
   storage: { prefix: string; ext: string };
   /**
@@ -456,6 +461,7 @@ export const readDescriptor = (json: unknown): TilesetDescriptor => {
       grid,
       scales,
       defaultScale,
+      defaultZoom,
       fallback,
       assets,
       families,
@@ -476,6 +482,17 @@ export const readDescriptor = (json: unknown): TilesetDescriptor => {
 
   if (!scales.includes(defaultScale)) {
     refuse(`defaultScale ${defaultScale} is not in scales.`);
+  }
+
+  if (
+    defaultZoom !== undefined &&
+    (defaultZoom < Math.min(...scales) ||
+      defaultZoom > Math.max(...scales) ||
+      Math.abs(defaultZoom * 10 - Math.round(defaultZoom * 10)) > 1e-9)
+  ) {
+    refuse(
+      `defaultZoom ${defaultZoom} is not a tenth from the smallest of scales to the largest.`
+    );
   }
 
   if (fallback === id) {
