@@ -562,3 +562,11 @@ pillaged, and no unit is lost twice, so the fixes for #1000 (civ1-unit 0.1.44,
 civ1-city 0.1.22, base-city-lifecycle 0.1.3), #1061, #1018 (civ1-government
 0.1.6) and #956 (civ1-score 0.1.2) don't show here. They are tested in those
 packages. `client-transcript.json` passes unchanged and is not re-recorded.
+
+## Accepted change: rule counts, a dropped build's event, a captured city's disorder, cargo at sea and a city's irrigation (#978, #1014, #1031, #1029)
+
+The rule totals at turns 1, 10 and 50 rise from 1180 to 1184:
+- civ1-city 0.1.23 registers `city/building-cancelled/emit`, which raises the new `city:building-cancelled` (core-city-build 0.1.24, base-city-lifecycle 0.1.4) (`BuildingCancelled` 1 → 2).
+- civ1-city-happiness 0.1.9 records the disorder of a city the human captures below a Republic (`Captured` 19 → 20), holds it until the city's next production (`CivilDisorder` 1 → 2) and then settles it (`ProcessYield` 9 → 10).
+
+The checksums, state counts, DTO hashes and random-call counts are unchanged: in these 50 turns the human captures no city, no build is dropped, no land unit is carried at sea (civ1-unit 0.1.46, #1031), and no city is founded on terrain that can't be irrigated (civ1-city 0.1.24, #1029). They are tested in those packages and, for the dropped build, in `tests/engine/obsoleteBuilds.ts`. `client-transcript.json` passes unchanged and is not re-recorded.
