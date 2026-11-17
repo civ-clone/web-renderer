@@ -19,4 +19,8 @@ i18next.addResources('en', 'ruleset', {
     'A computer player that breaks a treaty with you tells you so',
   'civ2-enhanced.treaty-breaking.description':
     'In the original, it breaks the treaty without a word.',
+  'civ2-enhanced.fixed-research-costs.name':
+    'Each advance has a fixed research cost',
+  'civ2-enhanced.fixed-research-costs.description':
+    'An advance costs more the more advances it needs, whichever others you have learnt, so racing ahead no longer makes later advances cheaper. Learning every advance costs about the same in total. In the original, each advance costs more for every advance you already know.',
 });
