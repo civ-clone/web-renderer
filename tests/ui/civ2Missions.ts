@@ -164,6 +164,30 @@ const run = async (): Promise<void> => {
   openArrivalWindow(spy(1000), atWar, perform);
   choose('plant-nuclear-device');
 
+  expect('planting a nuclear device asks first', shown(), {
+    title: 'Plant a nuclear device?',
+    body: 'Our Spy will set off a nuclear device in Babylon.',
+    options: [],
+    buttons: ['Set it off', 'Cancel action'],
+  });
+
+  press('Set it off');
+
+  performWithPrompts(
+    spy(1000),
+    action('PlantNuclearDevice', { consequence: 'device-may-be-found' }),
+    [],
+    perform
+  );
+
+  expect(
+    'and says what may follow, where the rules say',
+    shown().body,
+    'Our Spy will set off a nuclear device in Babylon. If the world finds out who planted it, every civilization in contact with us will declare war on us.'
+  );
+
+  press('Cancel action');
+
   expect('each sends its action', sent.splice(0), [
     ['PoisonWater', undefined],
     ['PlantNuclearDevice', undefined],
@@ -315,6 +339,52 @@ const run = async (): Promise<void> => {
 
   // Inciting: the price, and what each price does to the treaty.
 
+  // A Diplomat's: always lost, so the incident is certain, and under a Republic the Senate may fall.
+  {
+    const certain = action('SneakStealTechnology', {
+      enemy: babylonian,
+      targets: [],
+      consequence: 'incident-certain',
+      scandal: true,
+    });
+
+    performWithPrompts(spy(1000), certain, [certain], perform);
+
+    expect(
+      'a Diplomat’s mission under a treaty says the incident is certain, and that the Senate may fall',
+      shown(),
+      {
+        title: 'Mission under a treaty',
+        body: 'We have a treaty with the Babylonians. Our Diplomat will not come back from this mission, and the incident will cost us the treaty. Our Senate may bring the government down over it.',
+        options: [],
+        buttons: ['Break treaty', 'Cancel action'],
+      }
+    );
+
+    press('Break treaty');
+
+    expect('and Break treaty sends it', sent.splice(0), [
+      ['SneakStealTechnology', undefined],
+    ]);
+  }
+
+  performWithPrompts(
+    spy(1000),
+    { ...atPeace[3]!, scandal: true } as UnitAction,
+    atPeace.map((row, index) =>
+      index === 3 ? ({ ...row, scandal: true } as UnitAction) : row
+    ),
+    perform
+  );
+
+  expect(
+    'with a Senate, inciting at the plain price says the government may fall',
+    shown().body,
+    'Dissidents in Babylon will revolt for 400 coins. At this price the revolt will be traced to us: there will be an incident, and war. Paying double keeps our treaty, though they will hold it against us. Our Senate may bring the government down over it.'
+  );
+
+  press('Forget it');
+
   performWithPrompts(spy(1000), atPeace[3]!, atPeace, perform);
 
   expect(
@@ -392,15 +462,14 @@ const run = async (): Promise<void> => {
       rows = Array.from(routes.querySelectorAll('.trade-route')).map((row) => [
         text(row.querySelector('.visually-hidden')),
         text(row.querySelector('.name')),
-        text(row.querySelector('.goods')),
       ]);
 
     expect(
       'each route names its partner, and what it carries where that is sent (Civ1 sends none)',
       rows,
       [
-        ['Babylon (Leather): +3', 'Babylon', 'Leather'],
-        ['Antium: +1', 'Antium', ''],
+        ['Babylon (Leather): +3', 'Babylon (Leather)'],
+        ['Antium: +1', 'Antium'],
       ]
     );
   }
@@ -451,17 +520,9 @@ const run = async (): Promise<void> => {
       'Espionage.foreign-agent-caught.unmet',
       'Espionage.device-planted',
       'Espionage.device-discovered-ours',
-      'Espionage.device-discovered',
-      'Espionage.device-discovered.unmet',
       'Diplomacy.senate-scandal',
       'Diplomacy.senate-scandal.unmet',
-      ...[
-        'attitude',
-        'terror',
-        'war',
-        'alliance-cancelled',
-        'wimp-out',
-      ].flatMap((outcome) =>
+      ...['attitude', 'terror', 'wimp-out'].flatMap((outcome) =>
         ['incident', 'incident-against-us'].flatMap((side) => [
           `Diplomacy.${side}.${outcome}`,
           `Diplomacy.${side}.${outcome}.unmet`,

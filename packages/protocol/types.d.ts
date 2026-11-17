@@ -310,6 +310,8 @@ export interface UnitAction<Types = string> extends EntityInstance<Types> {
   // What a mission would do to a treaty, under rules that say (Civ2, M2d part 2): `incident-if-lost`, `treaty-ends` or
   //  `treaty-kept`.
   consequence?: string | null;
+  // Whether the treaty a mission may break could bring the government down with it (Civ2's Senate, M2d part 2).
+  scandal?: boolean;
   // Which of its `targets` the player chose, set by the page as the action is sent (M2b).
   choice?: string;
   to: Tile;

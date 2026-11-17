@@ -120,11 +120,4 @@ i18next.addResources('en', 'notification', {
   'Espionage.device-discovered-ours.title': 'Plot uncovered!',
   'Espionage.device-discovered-ours.body':
     'The world has learned that our Spy planted a nuclear device. Every civilization in contact with us has declared war on us.',
-  'Espionage.device-discovered.title': 'Plot uncovered!',
-  'Espionage.device-discovered.body': `${The(
-    'player'
-  )} were behind a nuclear device set off by a Spy. We are now at war with them.`,
-  'Espionage.device-discovered.unmet.title': 'Plot uncovered!',
-  'Espionage.device-discovered.unmet.body':
-    'A civilization we have not met was behind a nuclear device set off by a Spy.',
 });

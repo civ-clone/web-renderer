@@ -134,11 +134,9 @@ const heldNoteId = (city: CityData): string => `city-held-${city.id}`,
                   trade: route.trade,
                   interpolation: { escapeValue: false },
                 }
-              )}</span><span class="name" aria-hidden="true">${name}</span>${
-                goods === null
-                  ? ''
-                  : `<span class="goods" aria-hidden="true">${goods}</span>`
-              }</p>`,
+              )}</span><span class="name" aria-hidden="true">${name}${
+                goods === null ? '' : ` (${goods})`
+              }</span></p>`,
               ...yieldImages({ _: 'Trade', value: route.trade })
             );
           })

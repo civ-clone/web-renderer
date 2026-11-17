@@ -123,26 +123,45 @@ export const goldOf = (player: Player): number =>
 const consequenceOf = (action: UnitAction): string | null =>
   asked(action).consequence ?? null;
 
+// The line added where the rules say the incident could bring the government down (Civ2's Senate scandal).
+const scandalLine = (action: UnitAction): string[] =>
+  asked(action).scandal === true ? [t('Diplomat.treaty-mission.scandal')] : [];
+
 const confirmSneak = (action: UnitAction, perform: Perform): void => {
   const { _: name, enemy } = asked(action) as EnemyAction;
 
-  // A mission the rules say breaks nothing unless its agent is lost (Civ2's), asked in those words.
-  if (consequenceOf(action) === 'incident-if-lost') {
-    const confirmation: ConfirmationWindow = new ConfirmationWindow(
-      t('Diplomat.treaty-mission.title'),
-      t('Diplomat.treaty-mission.body', {
-        nation: civilization(enemy, 'plural'),
-      }),
-      () => {
-        confirmation.close();
+  // A mission the rules say breaks nothing unless its agent is lost, or one whose agent is always lost, so the incident
+  //  is certain (Civ2's), asked in those words, with the Senate's scandal where the rules say it could follow.
+  const consequence = consequenceOf(action);
 
-        perform(action);
-      },
-      {
-        okLabel: 'Diplomat.treaty-mission.go-ahead',
-        cancelLabel: 'Diplomat.cancel-action',
-      }
-    );
+  if (
+    consequence === 'incident-if-lost' ||
+    consequence === 'incident-certain'
+  ) {
+    const certain = consequence === 'incident-certain',
+      confirmation: ConfirmationWindow = new ConfirmationWindow(
+        t('Diplomat.treaty-mission.title'),
+        [
+          t(
+            certain
+              ? 'Diplomat.treaty-mission.certain'
+              : 'Diplomat.treaty-mission.body',
+            { nation: civilization(enemy, 'plural') }
+          ),
+          ...scandalLine(action),
+        ].join(' '),
+        () => {
+          confirmation.close();
+
+          perform(action);
+        },
+        {
+          okLabel: certain
+            ? 'Diplomat.break-treaty'
+            : 'Diplomat.treaty-mission.go-ahead',
+          cancelLabel: 'Diplomat.cancel-action',
+        }
+      );
 
     return;
   }
@@ -248,7 +267,8 @@ const inciteWindow = (
   const consequences = [incite, subvert]
     .map((action) => (action ? consequenceOf(action) : null))
     .filter((consequence): consequence is string => consequence !== null)
-    .map((consequence) => t(`Diplomat.incite.${consequence}`));
+    .map((consequence) => t(`Diplomat.incite.${consequence}`))
+    .concat(incite ? scandalLine(incite) : []);
 
   new ActionWindow(
     t('Diplomat.incite.title'),
@@ -444,6 +464,30 @@ export const performWithPrompts = (
   // Read only for the windows that offer a price: the own-tile keys come through here too (#287).
   if (inciteActions.includes(name)) {
     inciteWindow(actionsOnTile, goldOf(unit.player), perform);
+
+    return;
+  }
+
+  // Planting a nuclear device asks first, saying what the rules say may follow (Civ2's discovery).
+  if (action._ === 'PlantNuclearDevice') {
+    const confirmation: ConfirmationWindow = new ConfirmationWindow(
+      t('Diplomat.plant-device.title'),
+      [
+        t('Diplomat.plant-device.body', { city: cityName(action) }),
+        ...(consequenceOf(action) === 'device-may-be-found'
+          ? [t('Diplomat.plant-device.may-be-found')]
+          : []),
+      ].join(' '),
+      () => {
+        confirmation.close();
+
+        perform(action);
+      },
+      {
+        okLabel: 'Diplomat.plant-device.go-ahead',
+        cancelLabel: 'Diplomat.cancel-action',
+      }
+    );
 
     return;
   }

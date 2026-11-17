@@ -3,8 +3,11 @@
 //  pass first, as that changes nothing. While automation plays the player's turns, the offer is let pass, as no
 //  computer player is ever made one.
 //
-// Asked when the incident happens. The rules keep the offer until it is answered, so one still open when the game is
-//  saved isn't asked again after a load; a war or a treaty between the two answers it, as the rules say.
+// Asked once the move that made the incident is over, and only if the offer is still open then: a city incited at the
+//  plain price makes the offer and a war straight after, which answers it. The rules keep one offer for each pair, so
+//  a second incident while the first is being asked isn't asked again. The rules keep the offer until it is answered,
+//  so one still open when the game is saved isn't asked again after a load; a war or a treaty between the two answers
+//  it, as the rules say.
 
 import {
   ChoiceMeta,
@@ -48,6 +51,9 @@ export const registerIncidentOffers = (
     return () => {};
   }
 
+  // The pairs being asked, by their players' ids.
+  const asking = new Set<string>();
+
   const listener = (...args: unknown[]): void => {
     const offer = rules.offer(...args);
 
@@ -55,25 +61,43 @@ export const registerIncidentOffers = (
       return;
     }
 
-    const { perpetrator, victim, alliance } = offer;
+    const { perpetrator, victim, alliance } = offer,
+      pair = `${perpetrator.id()} ${victim.id()}`;
 
-    if (ctx.automation.enabled) {
-      rules.decline(perpetrator, victim);
-
+    if (asking.has(pair)) {
       return;
     }
 
-    ctx
-      .choose(
-        new ChoiceMeta(
-          [false, true],
-          alliance
-            ? 'diplomacy.incident-offer-alliance'
-            : 'diplomacy.incident-offer',
-          { player: perpetrator } as any
-        )
-      )
-      .then((accepted) => {
+    asking.add(pair);
+
+    // After the move that made it: whatever else the move does has been done by then.
+    Promise.resolve()
+      .then(async (): Promise<void> => {
+        if (!rules.pending(perpetrator, victim)) {
+          return;
+        }
+
+        if (ctx.automation.enabled) {
+          rules.decline(perpetrator, victim);
+
+          return;
+        }
+
+        const accepted = await ctx.choose(
+          new ChoiceMeta(
+            [false, true],
+            alliance
+              ? 'diplomacy.incident-offer-alliance'
+              : 'diplomacy.incident-offer',
+            { player: perpetrator } as any
+          )
+        );
+
+        // Answered by the rules while it was being asked (a war, a treaty): nothing left to answer.
+        if (!rules.pending(perpetrator, victim)) {
+          return;
+        }
+
         if (accepted === true) {
           rules.accept(perpetrator, victim);
         } else {
@@ -83,7 +107,8 @@ export const registerIncidentOffers = (
         ctx.patches.player();
         ctx.patches.flush();
       })
-      .catch((error) => console.error(error));
+      .catch((error) => console.error(error))
+      .finally(() => asking.delete(pair));
   };
 
   engine.on(rules.event, listener);

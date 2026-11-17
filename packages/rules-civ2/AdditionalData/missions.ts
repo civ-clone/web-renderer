@@ -13,7 +13,18 @@ import {
   SneakIndustrialSabotage,
   SneakPoisonWater,
 } from '@civ-clone/civ2-unit/lib/SneakMissions';
+import {
+  PlayerGovernmentRegistry,
+  instance as playerGovernmentRegistryInstance,
+} from '@civ-clone/core-government/PlayerGovernmentRegistry';
 import Action from '@civ-clone/core-unit/Action';
+import Fundamentalism from '@civ-clone/base-government-fundamentalism/Fundamentalism';
+import PlantNuclearDevice from '@civ-clone/base-unit-action-plant-nuclear-device/PlantNuclearDevice';
+import Player from '@civ-clone/core-player/Player';
+import { defaultGame } from '@civ-clone/core-game/defaultGame';
+import dependenciesOf from '@civ-clone/civ2-diplomacy/lib/dependenciesOf';
+import { isSpy } from '@civ-clone/civ2-unit/lib/espionage';
+import { senateGovernment } from '@civ-clone/civ2-diplomacy/lib/senate';
 import AdditionalData from '@civ-clone/core-data-object/AdditionalData';
 import InciteRevolt from '@civ-clone/base-unit-action-incite-revolt/InciteRevolt';
 import IndustrialSabotage from '@civ-clone/base-unit-action-industrial-sabotage/IndustrialSabotage';
@@ -25,16 +36,21 @@ import { targetName } from '@civ-clone/base-unit-agent/lib/mission';
 
 /**
  * What a treaty comes to if a person goes ahead with a mission, as the incite window and the treaty warning word it:
- *  - `incident-if-lost`: a theft, sabotage or poisoning under a treaty (civ2-unit's `Sneak` rows) breaks nothing
- *    itself, but an agent lost after it causes an incident (civ2-diplomacy's `AgentLost` rule);
+ *  - `incident-if-lost`: a Spy's theft, sabotage or poisoning under a treaty (civ2-unit's `Sneak` rows) breaks nothing
+ *    itself, but a Spy lost after it causes an incident (civ2-diplomacy's `AgentLost` rule);
+ *  - `incident-certain`: the same by a Diplomat, which is always used up, so the incident is certain;
  *  - `treaty-ends`: inciting at the plain price under a treaty brings an incident and a war (civ2-diplomacy's
  *    `incited`);
- *  - `treaty-kept`: inciting at the doubled price keeps the treaty, but the city's owner holds a vendetta.
+ *  - `treaty-kept`: inciting at the doubled price keeps the treaty, but the city's owner holds a vendetta;
+ *  - `device-may-be-found`: a planted nuclear device may be found out, and every civilization in contact with its
+ *    planter go to war with it (never a Fundamentalist's, `civ2-unit`'s `deviceDiscovered`).
  */
 export type MissionConsequence =
   | 'incident-if-lost'
+  | 'incident-certain'
   | 'treaty-ends'
-  | 'treaty-kept';
+  | 'treaty-kept'
+  | 'device-may-be-found';
 
 /**
  * What a Spy may choose to steal or sabotage (civ2-unit's `MissionTargets`), by name: an advance's or a building's type
@@ -60,14 +76,27 @@ export const missionTargets = (): AdditionalData[] => [
 /** `MissionConsequence` of `action`, or `null` when it changes no treaty. */
 export const consequenceOf = (
   action: Action,
-  interactionRegistry: InteractionRegistry = interactionRegistryInstance
+  interactionRegistry: InteractionRegistry = interactionRegistryInstance,
+  playerGovernmentRegistry: PlayerGovernmentRegistry = playerGovernmentRegistryInstance
 ): MissionConsequence | null => {
   if (
     action instanceof SneakStealTechnology ||
     action instanceof SneakIndustrialSabotage ||
     action instanceof SneakPoisonWater
   ) {
-    return 'incident-if-lost';
+    return isSpy(action.unit()) ? 'incident-if-lost' : 'incident-certain';
+  }
+
+  if (action instanceof PlantNuclearDevice) {
+    try {
+      return playerGovernmentRegistry
+        .getByPlayer(action.unit().player())
+        .is(Fundamentalism)
+        ? null
+        : 'device-may-be-found';
+    } catch (e) {
+      return 'device-may-be-found';
+    }
   }
 
   if (action instanceof SubvertCity) {
@@ -88,10 +117,25 @@ export const consequenceOf = (
   return null;
 };
 
+/**
+ * Whether the incident a mission may cause could bring `player`'s government down: under a Republic or Democracy, whose
+ *  Senate has its scandal (civ2-diplomacy's `senateScandal`) when a person's incident breaks a treaty.
+ */
+export const senateMayFall = (player: Player): boolean =>
+  senateGovernment(dependenciesOf(defaultGame), player) !== 'none';
+
+const missionTypes = [
+  StealTechnology,
+  IndustrialSabotage,
+  PoisonWater,
+  InciteRevolt,
+  PlantNuclearDevice,
+];
+
 export const missionConsequences = (
   interactionRegistry: InteractionRegistry = interactionRegistryInstance
-): AdditionalData[] =>
-  [StealTechnology, IndustrialSabotage, PoisonWater, InciteRevolt].map(
+): AdditionalData[] => [
+  ...missionTypes.map(
     (Type) =>
       new AdditionalData(
         Type,
@@ -99,4 +143,19 @@ export const missionConsequences = (
         (action: Action): MissionConsequence | null =>
           consequenceOf(action, interactionRegistry)
       )
-  );
+  ),
+  // `scandal`: whether the treaty the mission may break could bring the government down with it.
+  ...missionTypes.map(
+    (Type) =>
+      new AdditionalData(Type, 'scandal', (action: Action): boolean => {
+        const consequence = consequenceOf(action, interactionRegistry);
+
+        return (
+          (consequence === 'incident-if-lost' ||
+            consequence === 'incident-certain' ||
+            consequence === 'treaty-ends') &&
+          senateMayFall(action.unit().player())
+        );
+      })
+  ),
+];

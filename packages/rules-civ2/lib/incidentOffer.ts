@@ -9,6 +9,7 @@ import {
 import {
   incidentOfferAccepted,
   incidentOfferDeclined,
+  incidentOffered,
 } from '@civ-clone/civ2-diplomacy/lib/espionage';
 import { Game } from '@civ-clone/core-game/Game';
 import Player from '@civ-clone/core-player/Player';
@@ -34,6 +35,9 @@ export const incidentOffer = (
               perpetrator
             ) === TreatyLevel.Alliance,
         },
+  // A city incited at the plain price makes the offer and then a forced war, which answers it at once.
+  pending: (perpetrator: Player, victim: Player): boolean =>
+    incidentOffered(dependenciesOf(game), perpetrator, victim),
   accept: (perpetrator: Player, victim: Player): void => {
     incidentOfferAccepted(dependenciesOf(game), perpetrator, victim);
   },

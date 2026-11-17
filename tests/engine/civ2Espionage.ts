@@ -28,6 +28,14 @@ import {
 } from '@civ-clone/base-diplomacy/lib/declareWar';
 import i18next, { t } from 'i18next';
 import Action from '@civ-clone/core-unit/Action';
+import {
+  Fundamentalism,
+  Republic,
+} from '@civ-clone/civ2-government/Governments';
+import PlantNuclearDevice from '@civ-clone/base-unit-action-plant-nuclear-device/PlantNuclearDevice';
+import { consequenceOf } from '@civ-clone/ui-rules-civ2/AdditionalData/missions';
+import { incidentOfferDeclined } from '@civ-clone/civ2-diplomacy/lib/espionage';
+import { routeGoodsListener } from '@civ-clone/ui-rules-civ2/lib/routeGoods';
 import Added from '@civ-clone/core-player/Rules/Added';
 import { Barracks } from '@civ-clone/civ2-city-improvement/CityImprovements';
 import City from '@civ-clone/core-city/City';
@@ -254,6 +262,56 @@ const run = async (): Promise<void> => {
       undefined,
     ]
   );
+  {
+    const atPeaceDiplomat = Object.fromEntries(
+        missionsOf(diplomat).map((action) => [
+          named(action),
+          additional(action, 'consequence') ?? null,
+        ])
+      ),
+      scandal = () =>
+        additional(byName(spy, 'SneakStealTechnology'), 'scandal'),
+      playerGovernment = defaultGame.playerGovernments.getByPlayer(us),
+      before = playerGovernment.current()!,
+      device = new PlantNuclearDevice(
+        beside,
+        babylon.tile(),
+        spy,
+        babylon,
+        defaultGame.rules
+      ),
+      deviceConsequence = () => consequenceOf(device);
+
+    const underDespotism = [scandal(), deviceConsequence()];
+
+    playerGovernment.set(new Republic());
+
+    const underRepublic = [scandal(), deviceConsequence()];
+
+    playerGovernment.set(new Fundamentalism());
+
+    const underFundamentalism = [scandal(), deviceConsequence()];
+
+    playerGovernment.set(before);
+
+    expect(
+      'a Diplomat is always lost, so its Sneak rows make an incident certain',
+      [
+        atPeaceDiplomat.SneakStealTechnology,
+        atPeaceDiplomat.SneakIndustrialSabotage,
+      ],
+      ['incident-certain', 'incident-certain']
+    );
+    expect(
+      'a Senate may fall over it under the Republic, not Despotism; a planted device may be found out, but never a Fundamentalist’s',
+      [underDespotism, underRepublic, underFundamentalism],
+      [
+        [false, 'device-may-be-found'],
+        [true, 'device-may-be-found'],
+        [false, null],
+      ]
+    );
+  }
   expect(
     'the Sneak rows are offered the same targets',
     [
@@ -446,6 +504,27 @@ const run = async (): Promise<void> => {
       [['diplomacy.incident-offer-alliance'], TreatyLevel.Peace]
     );
 
+    // An offer the same move answers (a city incited at the plain price: the war follows at once) isn't asked; nor is
+    //  a second one for the pair while the first is.
+    makePeace(deps, us, them);
+    asked.length = 0;
+    incident();
+    incidentOfferDeclined(deps, them, us);
+    await settle();
+
+    const answeredAtOnce = [...asked];
+
+    answer.value = false;
+    incident();
+    incident();
+    await settle();
+
+    expect(
+      'an offer answered in the same move isn’t asked; two in a row are asked once',
+      [answeredAtOnce, asked],
+      [[], ['diplomacy.incident-offer']]
+    );
+
     automation.enabled = true;
     asked.length = 0;
     incident();
@@ -511,6 +590,23 @@ const run = async (): Promise<void> => {
         sent(babylon),
       ],
       ['string', true, true, [['Babylon', goods]], [['Rome', goods]]]
+    );
+
+    // A second delivery to the same partner keeps the goods that set the route up; a partner a city no longer has a
+    //  route to (one a full city replaced) is forgotten at its next delivery.
+    routeGoodsListener()(us, rome, babylon, 'Uranium');
+
+    const keptFirst = [routeGoods(rome, babylon), routeGoods(babylon, rome)];
+
+    defaultGame.tradeRoutes
+      .getByCity(rome)
+      .forEach((route) => defaultGame.tradeRoutes.unregister(route));
+    routeGoodsListener()(us, rome, babylon, 'Uranium');
+
+    expect(
+      'a repeat delivery keeps the first goods; a route that is gone keeps none',
+      [keptFirst, routeGoods(rome, babylon), routeGoods(babylon, rome)],
+      [[goods, goods], null, goods]
     );
 
     engine.emit('city:destroyed', babylon, them);
@@ -614,36 +710,34 @@ const run = async (): Promise<void> => {
       ]
     );
     expect(
-      'a device found out: told to its planter, and to those now at war with it',
+      'a device found out: told to its planter; the others are told of the war (`civ2:war-on`), once',
       [
         told('civ2-diplomacy:nuclear-device-discovered', us, [them]),
         told('civ2-diplomacy:nuclear-device-discovered', them, [us]),
-        told('civ2-diplomacy:nuclear-device-discovered', them, []),
       ],
       [
         'Plot uncovered!: The world has learned that our Spy planted a nuclear device. Every civilization in contact with us has declared war on us.',
-        'Plot uncovered!: The Babylonians were behind a nuclear device set off by a Spy. We are now at war with them.',
         null,
       ]
     );
     expect(
-      'each incident’s outcome, to whichever side is ours; none at war, and the offer is asked, not told',
+      'each incident’s outcome, to whichever side is ours; not a war or the end of an alliance, which tell themselves; none at war, and the offer is asked, not told',
       [
         ...['attitude', 'terror', 'war', 'alliance-cancelled', 'wimp-out'].map(
           (outcome) =>
             told('civ2-diplomacy:espionage-incident', us, them, outcome)
         ),
-        told('civ2-diplomacy:espionage-incident', them, us, 'war'),
+        told('civ2-diplomacy:espionage-incident', them, us, 'terror'),
         told('civ2-diplomacy:espionage-incident', us, them, 'none'),
         told('civ2-diplomacy:espionage-incident', them, us, 'offered'),
       ],
       [
         'Incident: Our agent’s work has angered the Babylonians. They think less of us now.',
         'Incident: The Babylonians call our agent’s work terror, and swear revenge.',
-        'Incident: Our agent’s work has caused an incident with the Babylonians, and we are now at war with them.',
-        'Incident: Our agent’s work has caused an incident, and the Babylonians have ended our alliance.',
+        null,
+        null,
         'Incident: Our allies the Babylonians resent our agent’s theft, though the alliance holds.',
-        'Incident: An incident over agents of the Babylonians has brought war between us.',
+        'Incident: Agents of the Babylonians have struck at us. We will not forget it.',
         null,
         null,
       ]

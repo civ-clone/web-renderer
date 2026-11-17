@@ -6,6 +6,8 @@ i18next.addResources('en-GB', 'default', {
     'Overthrow your government? Your civilisation will fall into Anarchy for a few turns before you can choose a new one, unless you have the Pyramids.',
   'Observer.civilizations': 'As these civilisations see it',
   'Senate.overruled': 'Overruled by the Senate. Action cancelled.',
+  'Diplomat.plant-device.may-be-found':
+    'If the world finds out who planted it, every civilisation in contact with us will declare war on us.',
   'SquareTooltip.defence': 'Defence',
   'Game.waiting': 'Waiting for the other civilisations…',
 });

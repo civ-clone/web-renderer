@@ -150,6 +150,8 @@ export type WorkerRules = {
       victim: Player;
       alliance: boolean;
     } | null;
+    // Whether the offer is still open: the rules may answer it themselves in the same move (a war that follows).
+    pending: (perpetrator: Player, victim: Player) => boolean;
     accept: (perpetrator: Player, victim: Player) => void;
     decline: (perpetrator: Player, victim: Player) => void;
   };

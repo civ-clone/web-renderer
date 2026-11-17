@@ -26,15 +26,10 @@ const unitName = (unit: Unit): { _: string } => ({
   _: typeNameOf(unit.sourceClass()),
 });
 
-// The incidents a perpetrator is told of, by civ2-diplomacy's outcome: `none` and `offered` (which is asked of the
-//  victim, `incidentOffer`) aren't.
-const incidentOutcomes = [
-  'attitude',
-  'terror',
-  'war',
-  'alliance-cancelled',
-  'wimp-out',
-];
+// The incidents told, by civ2-diplomacy's outcome. Not `none`; not `offered`, which is asked of the victim
+//  (`incidentOffer`); and not `war` or `alliance-cancelled`, which the war and the end of the alliance tell themselves
+//  (`civ2-diplomacy:war-declared`, `civ2:war-on`, `civ2-diplomacy:alliance-cancelled`), so each is told once.
+const incidentOutcomes = ['attitude', 'terror', 'wimp-out'];
 
 export const espionageNotices = (): NotificationTable => [
   // Water poisoned (civ2-unit): the city's owner and the poisoner are told.
@@ -117,17 +112,12 @@ export const espionageNotices = (): NotificationTable => [
   ],
 
   // A planted device found out (civ2-diplomacy): every civilization in contact with its planter goes to war with it.
+  //  Told to the planter; the others are told of the war itself (`civ2:war-on`), once.
   [
     'civ2-diplomacy:nuclear-device-discovered',
-    (ctx: NotificationContext, player: Player, enemies: Player[]) =>
+    (ctx: NotificationContext, player: Player) =>
       ctx.view.owns(player)
         ? new Notification('Espionage.device-discovered-ours', {})
-        : enemies.some((enemy) => ctx.view.owns(enemy))
-        ? new Notification(
-            naming(ctx, 'Espionage.device-discovered', player),
-            { player },
-            true
-          )
         : null,
   ],
 

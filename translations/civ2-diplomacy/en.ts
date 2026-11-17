@@ -257,18 +257,6 @@ i18next.addResources('en', 'notification', {
   )} call our agent’s work terror, and swear revenge.`,
   'Diplomacy.incident.terror.unmet.title': 'Incident',
   'Diplomacy.incident.terror.unmet.body': `${Unknown} calls our agent’s work terror, and swears revenge.`,
-  'Diplomacy.incident.war.title': 'Incident',
-  'Diplomacy.incident.war.body': `Our agent’s work has caused an incident with ${the(
-    'player'
-  )}, and we are now at war with them.`,
-  'Diplomacy.incident.war.unmet.title': 'Incident',
-  'Diplomacy.incident.war.unmet.body': `Our agent’s work has caused an incident, and we are now at war with ${unknown}.`,
-  'Diplomacy.incident.alliance-cancelled.title': 'Incident',
-  'Diplomacy.incident.alliance-cancelled.body': `Our agent’s work has caused an incident, and ${the(
-    'player'
-  )} have ended our alliance.`,
-  'Diplomacy.incident.alliance-cancelled.unmet.title': 'Incident',
-  'Diplomacy.incident.alliance-cancelled.unmet.body': `Our agent’s work has caused an incident, and ${unknown} has ended our alliance.`,
   'Diplomacy.incident.wimp-out.title': 'Incident',
   'Diplomacy.incident.wimp-out.body': `Our allies ${the(
     'player'
@@ -289,18 +277,6 @@ i18next.addResources('en', 'notification', {
   'Diplomacy.incident-against-us.terror.unmet.title': 'Incident',
   'Diplomacy.incident-against-us.terror.unmet.body':
     'Foreign agents have struck at us. We will not forget it.',
-  'Diplomacy.incident-against-us.war.title': 'Incident',
-  'Diplomacy.incident-against-us.war.body': `An incident over agents of ${the(
-    'player'
-  )} has brought war between us.`,
-  'Diplomacy.incident-against-us.war.unmet.title': 'Incident',
-  'Diplomacy.incident-against-us.war.unmet.body': `An incident over foreign agents has brought war with ${unknown}.`,
-  'Diplomacy.incident-against-us.alliance-cancelled.title': 'Incident',
-  'Diplomacy.incident-against-us.alliance-cancelled.body': `An incident over agents of ${the(
-    'player'
-  )} has ended our alliance.`,
-  'Diplomacy.incident-against-us.alliance-cancelled.unmet.title': 'Incident',
-  'Diplomacy.incident-against-us.alliance-cancelled.unmet.body': `An incident over foreign agents has ended our alliance with ${unknown}.`,
   'Diplomacy.incident-against-us.wimp-out.title': 'Incident',
   'Diplomacy.incident-against-us.wimp-out.body': `Our allies ${the(
     'player'
