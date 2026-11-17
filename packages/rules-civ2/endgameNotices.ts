@@ -138,12 +138,13 @@ export const endgameNotices = (
       rebels: Player,
       cities: City[]
     ) => {
+      // The rebels go in the notice only once met: a player sent is sent with its civilization, named or not.
+      const met = ctx.hasMet(rebels);
+
       if (ctx.view.owns(loser)) {
         return new Notification(
-          ctx.hasMet(rebels)
-            ? 'Player.civil-war-ours'
-            : 'Player.civil-war-ours.unmet',
-          { rebels, count: cities.length },
+          met ? 'Player.civil-war-ours' : 'Player.civil-war-ours.unmet',
+          met ? { rebels, count: cities.length } : { count: cities.length },
           true
         );
       }
@@ -153,8 +154,8 @@ export const endgameNotices = (
       }
 
       return new Notification(
-        ctx.hasMet(rebels) ? 'Player.civil-war' : 'Player.civil-war.unmet',
-        { loser, rebels },
+        met ? 'Player.civil-war' : 'Player.civil-war.unmet',
+        met ? { loser, rebels } : { loser },
         true
       );
     },

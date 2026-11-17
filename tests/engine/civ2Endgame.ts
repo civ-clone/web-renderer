@@ -222,6 +222,9 @@ const run = async (): Promise<void> => {
       words(told('player:civil-war', greeks, rebels, [athens])),
       words(told('player:civil-war', greeks, stranger, [athens])),
       told('player:civil-war', stranger, greeks, [athens]),
+      // Rebels not met aren't sent at all, as a player is sent with its civilization.
+      Object.keys(told('player:civil-war', us, stranger, [rome])!.data()),
+      Object.keys(told('player:civil-war', greeks, stranger, [athens])!.data()),
     ],
     [
       'Civil war!: Our capital has fallen and the empire is torn apart: 2 cities have broken away to join the Babylonians.',
@@ -229,6 +232,8 @@ const run = async (): Promise<void> => {
       'Civil war: With their capital lost, the Greeks have split in civil war, and the Babylonians rise from the ruins.',
       'Civil war: With their capital lost, the Greeks have split in civil war, and a new civilization rises from the ruins.',
       null,
+      ['count'],
+      ['loser'],
     ]
   );
 
