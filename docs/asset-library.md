@@ -262,8 +262,6 @@ The library replaces Import Assets. It opens from the main menu and from Options
    - Civ1's is the only interface art yet, so nothing looks different.
 3. **Hosted sets, and the square pixel art.**
    - The pieces: the build step, the sheet loader, and `tileset-pixelart` registering the square set.
-   - The square pack's `tileset.json` predates `assets.ui`, which the renderer now requires, so it's brought up to date
-     in its own repository first.
    - The menus stop gating on Civ1's import.
    - Choosing art per grid arrives here too, as #56's step e, and changing it in a running game if that's proven
      (decision 3).
