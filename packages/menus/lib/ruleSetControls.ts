@@ -10,6 +10,8 @@
 //
 // A choice beneath a set that is switched off is greyed out (#1008). Switching a set off doesn't reach into a choice
 //  inside it, which keeps its pick for when the set is on again, so the choice says what the set does when it is on.
+//  The registry doesn't say so itself (`describe()` has the choice active), so this is worked out here until it does
+//  (#1121).
 
 import {
   RuleSetChoice,
