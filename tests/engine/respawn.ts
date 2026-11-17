@@ -12,6 +12,16 @@ import DataTransferClient from '@civ-clone/ui-worker-client/DataTransferClient';
 import Defeated from '@civ-clone/core-player/Rules/Defeated';
 import Player from '@civ-clone/core-player/Player';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
+import {
+  Alphabet,
+  BronzeWorking,
+  CeremonialBurial,
+  CodeOfLaws,
+  HorsebackRiding,
+  Masonry,
+  Pottery,
+  TheWheel,
+} from '@civ-clone/civ1-science/Advances';
 import { Settlers } from '@civ-clone/civ1-unit/Units';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
@@ -49,10 +59,26 @@ engine.on('player:respawned', (player: Player, defeated: Player) =>
 );
 
 const run = async (): Promise<void> => {
-  const [victim] = playerRegistryInstance
+  const [victim, other] = playerRegistryInstance
       .entries()
       .filter((player) => player !== humanPlayer),
     before = playerRegistryInstance.length;
+
+  // Advances the human and another civilization both know, for the one coming back to inherit some of (#973).
+  [
+    Alphabet,
+    BronzeWorking,
+    CeremonialBurial,
+    CodeOfLaws,
+    HorsebackRiding,
+    Masonry,
+    Pottery,
+    TheWheel,
+  ].forEach((AdvanceType) =>
+    [humanPlayer!, other].forEach((knower) =>
+      playerResearchRegistryInstance.getByPlayer(knower).addAdvance(AdvanceType)
+    )
+  );
 
   ruleRegistryInstance.process(Defeated, victim, null);
 
@@ -102,6 +128,20 @@ const run = async (): Promise<void> => {
       `the new civilization knows ${unearned
         .map((advance) => advance.constructor.name)
         .join(', ')}, which the human doesn't`
+    );
+  }
+
+  // What it inherits it starts with, so none of it counts as gained in play, as v474.05's `tech_count` (#973).
+  const research = playerResearchRegistryInstance.getByPlayer(player);
+
+  if (
+    research.complete().length === 0 ||
+    research.startingAdvances().length !== research.complete().length
+  ) {
+    fail(
+      `the new civilization starts with ${
+        research.startingAdvances().length
+      } of the ${research.complete().length} advances it knows`
     );
   }
 

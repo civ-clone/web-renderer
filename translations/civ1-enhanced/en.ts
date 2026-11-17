@@ -67,6 +67,11 @@ i18next.addResources('en', 'ruleset', {
     'Research costs rise with each age, not from 1 AD',
   'civ1-enhanced.research-cost-by-age.description':
     'Research costs half as much in the Ancient Age, rising with each age to three times in the Space Age, and a civilization’s costs rise once it is in the Renaissance if the leader is ahead of schedule. Rushing ahead makes research dearer from then on, even for the advances you skipped. In the original, research costs double from 1 AD, and rise for everyone from then on if the leader is ahead of schedule.',
+  // #973
+  'civ1-enhanced.starting-advances-count.name':
+    'Advances you start with count toward research costs',
+  'civ1-enhanced.starting-advances-count.description':
+    'Every advance a civilization knows counts toward the cost of its next one, its power ranking and its chance of pollution, including those it starts the game with, or inherits when it comes back. In the original, only the advances gained once the game is under way count, so those a civilization starts with don’t make its research dearer.',
 });
 
 // The eight ages (#1076), one for each research tier, named for what each tier holds: `.name` within a sentence, and

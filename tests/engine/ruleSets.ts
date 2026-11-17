@@ -6,7 +6,7 @@
 //  load puts it back, and that the civilopedia stops saying a unit goes obsolete in a game where it doesn't. And, with
 //  sets of its own in rules of its own (#954), that what is wrong with the sets goes to the page with each answer, and
 //  that a game is not started or loaded under sets with a problem that blocks. With the plugins again, the enhanced
-//  rules (`civ1-enhanced`, #954, #959, #960): where play departs from the original, each of the fifteen a set that a
+//  rules (`civ1-enhanced`, #954, #959, #960): where play departs from the original, each of the sixteen a set that a
 //  game can switch back, as it starts (all but the six new variants on, which is play as it has been: the Hydro Plant
 //  on its own square, SDI Defense sparing its city, defectors staying veteran, fixed research costs, ages, research
 //  cost by age), switched, started, saved and loaded.
@@ -40,6 +40,7 @@ import {
   POLLUTION_IN_EVERY_CITY,
   SDI_DEFENSE_SPARES_CITIES,
   SETTLERS_WAIT_FOR_SIZE_TWO,
+  STARTING_ADVANCES_COUNT,
   UNITED_NATIONS_STOPS_COMPUTER_WARS,
 } from '@civ-clone/civ1-enhanced/RuleSets';
 import {
@@ -50,6 +51,7 @@ import {
   AGE_BY_TIER_RULE,
   RATE_MULTIPLIER_BY_AGE_RULE,
   CLEAR_CAPTURED_BUILD_RULE,
+  EVERY_ADVANCE_COUNT_RULE,
   HALVE_CITIES_RULE,
   HYDRO_PLANT_SITE_RULE,
   KEEP_VETERAN_RULE,
@@ -80,6 +82,7 @@ import { KEEP_BUILD_RULE as CIV1_KEEP_BUILD_RULE } from '@civ-clone/civ1-city/Ru
 import CityBuild from '@civ-clone/core-city-build/CityBuild';
 import { Gunpowder } from '@civ-clone/civ1-science/Advances';
 import {
+  ADVANCE_COUNT_RULE as CIV1_ADVANCE_COUNT_RULE,
   CATCH_UP_RULE as CIV1_CATCH_UP_RULE,
   COST_RULE as CIV1_COST_RULE,
   RATE_MULTIPLIER_RULE as CIV1_RATE_MULTIPLIER_RULE,
@@ -376,6 +379,12 @@ const check = async (): Promise<void> => {
         RATE_MULTIPLIER_BY_AGE_RULE,
         [CIV1_RATE_MULTIPLIER_RULE, CIV1_CATCH_UP_RULE],
       ],
+      // #973: today's count, on to start with, in place of v474.05's of only the advances gained in play.
+      [
+        STARTING_ADVANCES_COUNT,
+        EVERY_ADVANCE_COUNT_RULE,
+        CIV1_ADVANCE_COUNT_RULE,
+      ],
     ],
     // The new variants, each off to start with.
     startsOff = [
@@ -420,7 +429,7 @@ const check = async (): Promise<void> => {
     asStarted = ruleSetsData(null);
 
   expect(
-    'the enhanced rules are a set the setup is told of, mixed: the six new variants off, the other nine on, as the game has been played; nothing is chosen, and nothing is wrong',
+    'the enhanced rules are a set the setup is told of, mixed: the six new variants off, the other ten on, as the game has been played; nothing is chosen, and nothing is wrong',
     [enhanced(asStarted.sets), asStarted.choices, asStarted.problems],
     [['set', 'mixed', true, drawn(asPlayed)], [], []]
   );
@@ -635,6 +644,7 @@ const check = async (): Promise<void> => {
       { id: EVEN_ADVANCE_STEALING, value: false },
       { id: SDI_DEFENSE_SPARES_CITIES, value: true },
       { id: SETTLERS_WAIT_FOR_SIZE_TWO, value: false },
+      { id: STARTING_ADVANCES_COUNT, value: false },
     ],
     enhancedOn = [HYDRO_PLANT_SITE, OBSOLETE_BUILDS, SDI_DEFENSE_SPARES_CITIES];
 
@@ -681,7 +691,7 @@ const check = async (): Promise<void> => {
   );
 
   expect(
-    'a game started with the Hydro Plant on its own square, SDI Defense sparing its city, and the original ransom, captured build, pollution, Barbarian builds and uprisings, United Nations, stealing and Settlers saves them, and loads under them again',
+    'a game started with the Hydro Plant on its own square, SDI Defense sparing its city, and the original ransom, captured build, pollution, Barbarian builds and uprisings, United Nations, stealing, Settlers and count of advances saves them, and loads under them again',
     [
       startedRunning,
       enhancedFile.ruleSets,
