@@ -19,15 +19,29 @@ export const civilizationScore = (
   { gameResults, playerWorlds, rules }: CivilizationScoreDependencies
 ): CivilizationScore => {
   const gameResult = gameResults.get(),
-    bonus = workerRules().conquestBonus(player, gameResults, playerWorlds),
-    total = score(player, rules);
+    bonus = workerRules().conquestBonus(
+      player,
+      gameResults,
+      playerWorlds,
+      rules
+    ),
+    total = score(player, rules),
+    // The rule set's wording for a term, where its numbers aren't the shared wording's (M2e): none under Civ1's.
+    context = (term: string | null): { context?: string } => {
+      const context = workerRules().scoreContext?.(term, rules) ?? null;
+
+      return context === null ? {} : { context };
+    },
+    bonusContext = context(null).context;
 
   return {
     terms: scoreTerms(player, rules).map(({ term, value }) => ({
       term,
       value,
+      ...context(term),
     })),
     bonus,
+    ...(bonusContext === undefined ? {} : { bonusContext }),
     // v474.05 shows the conquest bonus as the score when it's the higher.
     total: bonus === null ? total : Math.max(total, bonus),
     scoringComplete: gameResult?.scoringComplete() ?? false,

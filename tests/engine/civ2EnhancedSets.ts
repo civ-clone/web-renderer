@@ -1,5 +1,5 @@
 // The civ2-enhanced set (M2d, #1007): loaded, it registers civ2-enhanced's rule sets beneath its own, the three fixes
-//  on to start with and the fixed research costs (#1072) off, and the game setup can switch each off and on again
+//  on to start with and the fixed research costs (#1072) and M2e’s barbarian and score corrections off, and the game setup can switch each off and on again
 //  (`ruleSets` request), each named and described in our own words (`translations/civ2-enhanced`).
 
 // Must stay first: seeds `Math.random` before any engine module evaluates.
@@ -43,8 +43,13 @@ const ENHANCED = [
     'civ2-enhanced:border-intruders',
     'civ2-enhanced:treaty-breaking',
   ],
-  // Off to start with (#1072).
-  STARTS_OFF = ['civ2-enhanced:fixed-research-costs'],
+  // Off to start with: the fixed research costs (#1072), and the barbarian and score corrections (M2e).
+  STARTS_OFF = [
+    'civ2-enhanced:fixed-research-costs',
+    'civ2-enhanced:barbarian-uprisings',
+    'civ2-enhanced:barbarian-cities',
+    'civ2-enhanced:pollution-score',
+  ],
   ALL = [...ENHANCED, ...STARTS_OFF];
 
 const run = async (): Promise<void> => {
@@ -65,7 +70,7 @@ const run = async (): Promise<void> => {
     first = ruleSetsData(null);
 
   expect(
-    'civ2-enhanced’s four rule sets are offered, the three fixes on to start with and the fixed research costs off',
+    'civ2-enhanced’s seven rule sets are offered, the three fixes on to start with and the rest off',
     [
       ALL.every((id) =>
         first.sets.some((set: any) => JSON.stringify(set).includes(id))
@@ -109,13 +114,7 @@ const run = async (): Promise<void> => {
       ruleSetName(id) !== id,
       ruleSetDescription(id) !== '',
     ]),
-    [
-      [true, true],
-      [true, true],
-      [true, true],
-      [true, true],
-      [true, true],
-    ]
+    ['civ2-enhanced', ...ALL].map(() => [true, true])
   );
 
   finished = true;

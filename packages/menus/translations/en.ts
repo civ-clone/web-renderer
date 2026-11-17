@@ -32,6 +32,7 @@ i18next.addResources('en', 'default', {
   'GameMenu.science-report': 'Science Report',
   'GameMenu.top-cities': 'Top Cities in the World',
   'GameMenu.civilization-score': 'Civilization Score',
+  'GameMenu.spaceship': 'Spaceship',
   'GameMenu.civilopedia': 'Civilopedia',
   'GameMenu.trade-report': 'Trade Report',
   'GameMenu.wonders-report': 'Wonders of the World',

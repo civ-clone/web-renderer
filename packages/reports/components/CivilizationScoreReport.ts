@@ -39,18 +39,36 @@ const buildRow = (
   return row;
 };
 
-const buildTerm = ({ term, value }: CivilizationScoreTerm) =>
+/** What a term counts, in its rule set's words where they differ (`context`, M2e). */
+export const termDetail = ({ term, context }: CivilizationScoreTerm): string =>
+  t(`CivilizationScoreReport.term.${term}.detail`, {
+    defaultValue: '',
+    ...(context === undefined ? {} : { context }),
+  });
+
+/** What the conquest bonus counts, as `termDetail`. */
+export const bonusDetail = ({
+  bonusContext,
+}: Pick<CivilizationScoreResult, 'bonusContext'>): string =>
+  t('CivilizationScoreReport.bonus.detail', {
+    ...(bonusContext === undefined ? {} : { context: bonusContext }),
+  });
+
+const buildTerm = (scoreTerm: CivilizationScoreTerm) =>
   buildRow(
-    `term ${term}`,
-    t(`CivilizationScoreReport.term.${term}`, { defaultValue: term }),
-    t(`CivilizationScoreReport.term.${term}.detail`, { defaultValue: '' }),
-    value
+    `term ${scoreTerm.term}`,
+    t(`CivilizationScoreReport.term.${scoreTerm.term}`, {
+      defaultValue: scoreTerm.term,
+    }),
+    termDetail(scoreTerm),
+    scoreTerm.value
   );
 
 // The score, term by term, then the conquest bonus when there is one (#176), then the total.
 export const scoreTable = ({
   terms,
   bonus,
+  bonusContext,
   total,
 }: CivilizationScoreResult): HTMLTableElement =>
   s<HTMLTableElement>(
@@ -62,7 +80,7 @@ export const scoreTable = ({
           buildRow(
             'term bonus',
             t('CivilizationScoreReport.bonus'),
-            t('CivilizationScoreReport.bonus.detail'),
+            bonusDetail({ bonusContext }),
             bonus
           ),
         ]),

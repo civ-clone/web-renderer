@@ -993,6 +993,124 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
     holder.remove();
   }
 
+  // Our spaceship (M2e): a row once there is one, after the Civilization Score, which opens the spaceship window with
+  //  Launch only while the Launch action is offered (under Civ2's rules, only once the ship can go).
+  {
+    applyInterface('modern', null);
+
+    const holder = document.createElement('div');
+
+    document.body.append(holder);
+
+    const sent: unknown[] = [],
+      spaceship = {
+        _: 'Spaceship',
+        id: 'spaceship-1',
+        activeParts: [],
+        inactiveParts: [],
+        chanceOfSuccess: 0.5,
+        flightTime: 12,
+        launched: false,
+        player: { civilization: { _: 'Roman' } },
+        successful: null,
+        yields: [],
+        supply: { lifeSupport: 1, energy: 1, fuel: 0.5, mass: 20 },
+      },
+      player: any = {
+        civilization: { _: 'Roman' },
+        spaceship: null,
+        actions: [],
+        mandatoryActions: [],
+      },
+      gameMenu = new GameMenu(
+        holder,
+        () => player,
+        () => 1,
+        () => -4000,
+        {} as any,
+        {
+          send: (channel: string, data: unknown) => sent.push([channel, data]),
+          request: () => new Promise(() => {}),
+        } as any
+      );
+
+    gameMenu.build();
+
+    const button = holder.querySelector('button') as HTMLButtonElement,
+      open = () => {
+        const event = new Event('click', { bubbles: true });
+
+        Object.assign(event, { detail: 1 });
+        button.dispatchEvent(event);
+
+        return rows(openMenu()!).map(
+          (row) => row.querySelector('.ui-menu-label')!.textContent
+        );
+      },
+      choose = (label: string) => {
+        const row = rows(openMenu()!).find(
+          (candidate) =>
+            candidate.querySelector('.ui-menu-label')!.textContent === label
+        )!;
+
+        underPointer = row;
+        pointer('pointermove');
+        pointer('pointerdown', row);
+        pointer('pointerup', row);
+      },
+      launchButton = () =>
+        document.querySelector(
+          'dialog.spaceship footer button'
+        ) as HTMLButtonElement | null;
+
+    expect(
+      'with no ship, no Spaceship row',
+      open().includes('Spaceship'),
+      false
+    );
+    openMenu()!.close();
+
+    player.spaceship = spaceship;
+
+    const labels = open();
+
+    expect(
+      'with one, a Spaceship row after the Civilization Score',
+      labels.slice(
+        labels.indexOf('Civilization Score'),
+        labels.indexOf('Civilization Score') + 2
+      ),
+      ['Civilization Score', 'Spaceship']
+    );
+
+    choose('Spaceship');
+
+    expect(
+      'chosen, it opens the spaceship window, with Launch held while the action isn’t offered, and pressing it sends nothing',
+      [
+        launchButton() !== null,
+        launchButton()?.disabled,
+        (launchButton()?.click(), sent),
+      ],
+      [true, true, []]
+    );
+    document.querySelector('dialog.spaceship')?.remove();
+
+    player.actions = [{ _: 'LaunchSpaceship', value: spaceship }];
+    open();
+    choose('Spaceship');
+    launchButton()?.click();
+
+    expect(
+      'with the action offered, Launch sends it',
+      [launchButton()?.disabled ?? 'closed', sent],
+      ['closed', [['action', { name: 'LaunchSpaceship', id: 'spaceship-1' }]]]
+    );
+    document.querySelector('dialog.spaceship')?.remove();
+
+    holder.remove();
+  }
+
   // The classic Game menu: a second press closes it, rather than opening it again (#710).
   {
     applyInterface('classic', null);

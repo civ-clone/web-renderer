@@ -24,6 +24,7 @@
     "./components/Actions/Action": "./components/Actions/Action.ts",
     "./components/Actions/AdjustTradeRates": "./components/Actions/AdjustTradeRates.ts",
     "./components/Actions/Notice": "./components/Actions/Notice.ts",
+    "./components/Actions/Spaceship": "./components/Actions/Spaceship.ts",
     "./components/CitiesList": "./components/CitiesList.ts",
     "./components/GameDetails": "./components/GameDetails.ts",
     "./components/Map/cityBannerTooltip": "./components/Map/cityBannerTooltip.ts",

@@ -1,5 +1,6 @@
 import Action from './Action';
 import { Spaceship as SpaceshipData } from '@civ-clone/ui-protocol/types';
+import Transport from '@civ-clone/ui-client/Transport';
 import Window from '@civ-clone/ui-component-window/Window';
 import civilizationAttribute from '@civ-clone/ui-client/lib/civilizationAttribute';
 import { h } from '@civ-clone/ui-widgets/lib/html';
@@ -12,183 +13,227 @@ type SpaceshipYieldMap = {
   [key in 'Energy' | 'LifeSupport' | 'Mass' | 'Population']: [number, number];
 } & { [key: string]: [number, number] | undefined };
 
-export class Spaceship extends Action {
-  override activate(): void {
-    const spaceship = this.value(),
-      yields = spaceship.yields.reduce(
-        (yieldMap: SpaceshipYieldMap, spaceshipYield) => {
-          if (!(spaceshipYield._ in yieldMap)) {
-            return yieldMap;
-          }
+/**
+ * The spaceship window (#177): its parts, what they count for, and Launch. It opens from the Launch orb, which is
+ *  offered while the ship may launch, and from the menu whenever there is a ship (M2e): under Civ2's rules the orb is
+ *  offered only once the ship can go, and not after it has gone, so the menu is the way to look at one being built or in
+ *  flight. `canLaunch`: whether the Launch action is offered now; the engine says so, so the button follows it.
+ */
+export const openSpaceshipWindow = (
+  spaceship: SpaceshipData,
+  transport: Transport,
+  canLaunch: boolean
+): Window => {
+  const yields = spaceship.yields.reduce(
+      (yieldMap: SpaceshipYieldMap, spaceshipYield) => {
+        if (!(spaceshipYield._ in yieldMap)) {
+          return yieldMap;
+        }
 
-          if (spaceshipYield.value < 0) {
-            yieldMap[spaceshipYield._]![1] += Math.abs(spaceshipYield.value);
-
-            return yieldMap;
-          }
-
-          yieldMap[spaceshipYield._]![0] += spaceshipYield.value;
+        if (spaceshipYield.value < 0) {
+          yieldMap[spaceshipYield._]![1] += Math.abs(spaceshipYield.value);
 
           return yieldMap;
-        },
-        {
-          Energy: [0, 0],
-          LifeSupport: [0, 0],
-          Mass: [0, 0],
-          Population: [0, 0],
-        } as SpaceshipYieldMap
-      ),
-      activeParts = spaceship.activeParts.reduce(
-        (partMap: { [key: string]: number }, part) => {
-          if (!(part._ in partMap)) {
-            return partMap;
-          }
-
-          partMap[part._]!++;
-
-          return partMap;
-        },
-        {
-          Structural: 0,
-          Fuel: 0,
-          Propulsion: 0,
-          Habitation: 0,
-          LifeSupport: 0,
-          Power: 0,
         }
-      ),
-      inactiveParts = spaceship.inactiveParts.reduce(
-        (partMap: { [key: string]: number }, part) => {
-          if (!(part._ in partMap)) {
-            return partMap;
-          }
 
-          partMap[part._]!++;
+        yieldMap[spaceshipYield._]![0] += spaceshipYield.value;
 
+        return yieldMap;
+      },
+      {
+        Energy: [0, 0],
+        LifeSupport: [0, 0],
+        Mass: [0, 0],
+        Population: [0, 0],
+      } as SpaceshipYieldMap
+    ),
+    activeParts = spaceship.activeParts.reduce(
+      (partMap: { [key: string]: number }, part) => {
+        if (!(part._ in partMap)) {
           return partMap;
-        },
-        {
-          Structural: 0,
-          Fuel: 0,
-          Propulsion: 0,
-          Habitation: 0,
-          LifeSupport: 0,
-          Power: 0,
         }
-      ),
-      values = [
-        [
-          t('Actions.Spaceship.chance-of-success'),
-          localeProviderInstance.percent(spaceship.chanceOfSuccess),
-        ],
-        [
-          t('Actions.Spaceship.flight-time'),
-          localeProviderInstance.number(spaceship.flightTime, {
-            style: 'unit',
-            unit: 'year',
-            unitDisplay: 'long',
-          }),
-        ],
-        [
-          t('Actions.Spaceship.has-launched'),
-          t(spaceship.launched ? 'Generic.yes' : 'Generic.no'),
-        ],
-        [
-          t('Actions.Spaceship.mass'),
-          localeProviderInstance.number(yields.Mass[0] * 1000, {
+
+        partMap[part._]!++;
+
+        return partMap;
+      },
+      {
+        Structural: 0,
+        Fuel: 0,
+        Propulsion: 0,
+        Habitation: 0,
+        LifeSupport: 0,
+        Power: 0,
+      }
+    ),
+    inactiveParts = spaceship.inactiveParts.reduce(
+      (partMap: { [key: string]: number }, part) => {
+        if (!(part._ in partMap)) {
+          return partMap;
+        }
+
+        partMap[part._]!++;
+
+        return partMap;
+      },
+      {
+        Structural: 0,
+        Fuel: 0,
+        Propulsion: 0,
+        Habitation: 0,
+        LifeSupport: 0,
+        Power: 0,
+      }
+    ),
+    values = [
+      [
+        t('Actions.Spaceship.chance-of-success'),
+        localeProviderInstance.percent(spaceship.chanceOfSuccess),
+      ],
+      [
+        t('Actions.Spaceship.flight-time'),
+        localeProviderInstance.number(spaceship.flightTime, {
+          style: 'unit',
+          unit: 'year',
+          unitDisplay: 'long',
+        }),
+      ],
+      [
+        t('Actions.Spaceship.has-launched'),
+        t(spaceship.launched ? 'Generic.yes' : 'Generic.no'),
+      ],
+      [
+        t('Actions.Spaceship.mass'),
+        // Under Civ2's rules, the mass of every part built, which the ship flies with (M2e).
+        localeProviderInstance.number(
+          (spaceship.supply?.mass ?? yields.Mass[0]) * 1000,
+          {
             style: 'unit',
             unit: 'kilogram',
-          }),
-        ],
-        [
-          t('Actions.Spaceship.population'),
-          localeProviderInstance.number(yields.Population[0]),
-        ],
-        [
-          t('Actions.Spaceship.energy'),
-          localeProviderInstance.percent(
-            yields.Energy[1] > 0 ? yields.Energy[0] / yields.Energy[1] : 0
-          ),
-        ],
-        [
-          t('Actions.Spaceship.life-support'),
-          localeProviderInstance.percent(
-            yields.LifeSupport[1] > 0
-              ? yields.LifeSupport[0] / yields.LifeSupport[1]
-              : 0
-          ),
-        ],
+          }
+        ),
       ],
-      launch = () => {
-        // TODO: could highlight the button? Red for < 50%, Yellow for < 80%, otherwise Green?
-        this.transport().send('action', {
-          name: 'LaunchSpaceship',
-          id: spaceship.id,
-        });
-
-        window.close();
-      },
-      window = new Window(
-        t('Actions.Spaceship.spaceship-name', {
-          player: spaceship.player,
-        }),
-        s(
-          '<div></div>',
-          s(
-            `<dl>${Object.entries(activeParts)
-              .map(
-                ([key, value]) =>
-                  `<dd>${t(`${key}.name`, {
-                    defaultValue: key,
-                    ns: 'spaceship',
-                  })}</dd><dt>${localeProviderInstance.number(value)}${
-                    inactiveParts[key] === 0
-                      ? ''
-                      : ` <span class="inactive">${t(
-                          'Actions.Spaceship.inactive-part',
-                          {
-                            inactiveParts: inactiveParts[key],
-                          }
-                        )}</span>`
-                  }</dt>`
-              )
-              .join('')}</dl>`
-          ),
-          s(
-            `<dl>${values
-              .map(([label, value]) => `<dd>${label}</dd><dt>${value}</dt>`)
-              .join('')}</dl>`
-          ),
-          s(
-            '<footer></footer>',
-            h(
-              s<HTMLButtonElement>(
-                `<button class="btn-primary"${
-                  spaceship.launched || spaceship.chanceOfSuccess === 0
-                    ? ' disabled'
-                    : ''
-                }>${t(
-                  spaceship.launched
-                    ? 'Actions.Spaceship.launched'
-                    : 'Actions.Spaceship.launch'
-                )}</button>`
+      [
+        t('Actions.Spaceship.population'),
+        localeProviderInstance.number(yields.Population[0]),
+      ],
+      // Under rules whose parts carry no energy or life support yields (Civ2's, M2e), the rule set's own figures for
+      //  them, and the fuel for the propulsion.
+      ...(spaceship.supply === undefined
+        ? [
+            [
+              t('Actions.Spaceship.energy'),
+              localeProviderInstance.percent(
+                yields.Energy[1] > 0 ? yields.Energy[0] / yields.Energy[1] : 0
               ),
-              {
-                keydown(event: KeyboardEvent) {
-                  if (['Enter', ' '].includes(event.key)) {
-                    launch();
-                  }
-                },
-                click() {
-                  launch();
-                },
-              }
+            ],
+            [
+              t('Actions.Spaceship.life-support'),
+              localeProviderInstance.percent(
+                yields.LifeSupport[1] > 0
+                  ? yields.LifeSupport[0] / yields.LifeSupport[1]
+                  : 0
+              ),
+            ],
+          ]
+        : [
+            [
+              t('Actions.Spaceship.energy'),
+              localeProviderInstance.percent(spaceship.supply.energy),
+            ],
+            [
+              t('Actions.Spaceship.life-support'),
+              localeProviderInstance.percent(spaceship.supply.lifeSupport),
+            ],
+            [
+              t('Actions.Spaceship.fuel'),
+              localeProviderInstance.percent(spaceship.supply.fuel),
+            ],
+          ]),
+    ],
+    launch = () => {
+      if (!canLaunch || spaceship.launched) {
+        return;
+      }
+
+      // TODO: could highlight the button? Red for < 50%, Yellow for < 80%, otherwise Green?
+      transport.send('action', {
+        name: 'LaunchSpaceship',
+        id: spaceship.id,
+      });
+
+      window.close();
+    },
+    window = new Window(
+      t('Actions.Spaceship.spaceship-name', {
+        player: spaceship.player,
+      }),
+      s(
+        '<div></div>',
+        s(
+          `<dl>${Object.entries(activeParts)
+            .map(
+              ([key, value]) =>
+                `<dd>${t(`${key}.name`, {
+                  defaultValue: key,
+                  ns: 'spaceship',
+                })}</dd><dt>${localeProviderInstance.number(value)}${
+                  inactiveParts[key] === 0
+                    ? ''
+                    : ` <span class="inactive">${t(
+                        'Actions.Spaceship.inactive-part',
+                        {
+                          inactiveParts: inactiveParts[key],
+                        }
+                      )}</span>`
+                }</dt>`
             )
+            .join('')}</dl>`
+        ),
+        s(
+          `<dl>${values
+            .map(([label, value]) => `<dd>${label}</dd><dt>${value}</dt>`)
+            .join('')}</dl>`
+        ),
+        s(
+          '<footer></footer>',
+          h(
+            s<HTMLButtonElement>(
+              `<button class="btn-primary"${
+                spaceship.launched ||
+                spaceship.chanceOfSuccess === 0 ||
+                !canLaunch
+                  ? ' disabled'
+                  : ''
+              }>${t(
+                spaceship.launched
+                  ? 'Actions.Spaceship.launched'
+                  : 'Actions.Spaceship.launch'
+              )}</button>`
+            ),
+            {
+              keydown(event: KeyboardEvent) {
+                if (['Enter', ' '].includes(event.key)) {
+                  launch();
+                }
+              },
+              click() {
+                launch();
+              },
+            }
           )
         )
-      );
+      )
+    );
 
-    window.addClass('spaceship');
+  window.addClass('spaceship');
+
+  return window;
+};
+
+export class Spaceship extends Action {
+  override activate(): void {
+    openSpaceshipWindow(this.value(), this.transport(), true);
   }
 
   override build(): void {

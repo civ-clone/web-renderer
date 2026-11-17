@@ -125,6 +125,9 @@ i18next.addResources('en', 'default', {
   'GameOver.rating':
     'Sire, your Civilization Rating of {{rating}}% exceeds even that of {{famousLeader}}!',
   'GameOver.rating_none': 'Sire, your Civilization Rating is {{rating}}%.',
+  // Under rules that rank by titles (Civ2's, M2e): `title` is one of the rule set's (`RatingTitle.*`).
+  'GameOver.rating_title':
+    'Sire, your Civilization Rating of {{rating}}% ranks you alongside {{title}}.',
   'GameOver.retired.body': '{{leader}} of the {{nation}} retires in {{year}}.',
   'GameOver.retired.title': 'Retired',
   'GameOver.score': 'Civilization Score: {{score, number}}',

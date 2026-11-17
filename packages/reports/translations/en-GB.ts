@@ -14,6 +14,8 @@ i18next.addResources('en-GB', 'default', {
   'GameOver.rating':
     'Sire, your Civilisation Rating of {{rating}}% exceeds even that of {{famousLeader}}!',
   'GameOver.rating_none': 'Sire, your Civilisation Rating is {{rating}}%.',
+  'GameOver.rating_title':
+    'Sire, your Civilisation Rating of {{rating}}% ranks you alongside {{title}}.',
   'GameOver.score': 'Civilisation Score: {{score, number}}',
   'GameOver.spaceship.body_unknown':
     'A civilisation we have never met has reached Alpha Centauri first. The stars will have to wait for the {{nation}}.',

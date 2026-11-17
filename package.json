@@ -201,6 +201,7 @@
     "test:civ2-talks": "node tools/run-suite.js engine civ2Talks",
     "test:civ2-notices": "node tools/run-suite.js engine civ2Notices",
     "test:civ2-espionage": "node tools/run-suite.js engine civ2Espionage",
+    "test:civ2-endgame": "node tools/run-suite.js engine civ2Endgame",
     "test:civ2-enhanced-sets": "node tools/run-suite.js engine civ2EnhancedSets",
     "test:observer": "node tools/run-suite.js engine observer",
     "test:stop-at-ending": "node tools/run-suite.js engine stopAtEnding",
@@ -218,6 +219,7 @@
     "test:request-ids": "node tools/run-suite.js engine requestIds",
     "test:unit-action-prompts": "node tools/run-suite.js ui unitActionPrompts",
     "test:trade-rates-window": "node tools/run-suite.js ui tradeRatesWindow",
+    "test:spaceship-window": "node tools/run-suite.js ui spaceshipWindow",
     "test:unit-actions": "node tools/run-suite.js ui unitActions",
     "test:unit-status": "node tools/run-suite.js ui unitStatus",
     "test:worker-failures": "node tools/run-suite.js ui workerFailures",
@@ -327,6 +329,7 @@
           "@civ-clone/base-unit-action-establish-embassy",
           "@civ-clone/base-unit-action-explore",
           "@civ-clone/base-unit-action-steal-technology",
+          "@civ-clone/civ2-barbarians",
           "@civ-clone/civ2-city",
           "@civ-clone/civ2-city-happiness",
           "@civ-clone/civ2-city-improvement",
@@ -340,6 +343,8 @@
           "@civ-clone/civ2-player",
           "@civ-clone/civ2-power",
           "@civ-clone/civ2-science",
+          "@civ-clone/civ2-score",
+          "@civ-clone/civ2-spaceship",
           "@civ-clone/civ2-trade-rate",
           "@civ-clone/civ2-treasury",
           "@civ-clone/civ2-unit",
@@ -363,6 +368,9 @@
     "conflicts": {
       "@civ-clone/civ2-enhanced": [
         "@civ-clone/civ1-enhanced"
+      ],
+      "@civ-clone/civ2-barbarians": [
+        "@civ-clone/civ1-barbarians"
       ],
       "@civ-clone/civ2-city": [
         "@civ-clone/civ1-city"
@@ -402,6 +410,12 @@
       ],
       "@civ-clone/civ2-science": [
         "@civ-clone/civ1-science"
+      ],
+      "@civ-clone/civ2-score": [
+        "@civ-clone/civ1-score"
+      ],
+      "@civ-clone/civ2-spaceship": [
+        "@civ-clone/civ1-spaceship"
       ],
       "@civ-clone/civ2-trade-rate": [
         "@civ-clone/civ1-trade-rate"
@@ -498,6 +512,7 @@
     "@civ-clone/civ1-world": "github:civ-clone/civ1-world",
     "@civ-clone/civ1-world-civilizations": "github:civ-clone/civ1-world-civilizations",
     "@civ-clone/civ2-asset-extractor": "github:civ-clone/civ2-asset-extractor",
+    "@civ-clone/civ2-barbarians": "github:civ-clone/civ2-barbarians",
     "@civ-clone/civ2-city": "github:civ-clone/civ2-city",
     "@civ-clone/civ2-city-happiness": "github:civ-clone/civ2-city-happiness",
     "@civ-clone/civ2-city-improvement": "github:civ-clone/civ2-city-improvement",
@@ -513,13 +528,15 @@
     "@civ-clone/civ2-power": "github:civ-clone/civ2-power",
     "@civ-clone/civ2-rules": "github:civ-clone/civ2-rules",
     "@civ-clone/civ2-science": "github:civ-clone/civ2-science",
+    "@civ-clone/civ2-score": "github:civ-clone/civ2-score",
+    "@civ-clone/civ2-spaceship": "github:civ-clone/civ2-spaceship",
     "@civ-clone/civ2-trade-rate": "github:civ-clone/civ2-trade-rate",
     "@civ-clone/civ2-treasury": "github:civ-clone/civ2-treasury",
     "@civ-clone/civ2-unit": "github:civ-clone/civ2-unit",
     "@civ-clone/civ2-wonder": "github:civ-clone/civ2-wonder",
     "@civ-clone/civ2-world": "github:civ-clone/civ2-world",
     "@civ-clone/core-ai-client": "^0.1.3",
-    "@civ-clone/core-city": "^0.1.25",
+    "@civ-clone/core-city": "^0.1.26",
     "@civ-clone/core-city-build": "^0.1.23",
     "@civ-clone/core-city-growth": "^0.1.6",
     "@civ-clone/core-city-happiness": "^0.1.2",
@@ -545,7 +562,7 @@
     "@civ-clone/core-save-game": "^0.1.24",
     "@civ-clone/core-science": "^0.1.9",
     "@civ-clone/core-score": "^0.1.0",
-    "@civ-clone/core-spaceship": "^0.1.10",
+    "@civ-clone/core-spaceship": "^0.1.11",
     "@civ-clone/core-terrain": "^0.1.4",
     "@civ-clone/core-tile-improvement": "^0.1.6",
     "@civ-clone/core-trade-rate": "^0.1.7",

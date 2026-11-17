@@ -17,6 +17,8 @@ export type CivilizationPowerRow = {
 export type CivilizationScoreTerm = {
   term: string;
   value: number;
+  // Which rule set's wording explains the term (a translation context, `civ2`), where its numbers aren't Civ1's.
+  context?: string;
 };
 
 export type CivilizationScore = {
@@ -24,6 +26,8 @@ export type CivilizationScore = {
   // The conquest bonus, when you conquered the world (#176). It replaces the terms' sum when it's higher, as the
   //  total shows.
   bonus: number | null;
+  // Which rule set's wording explains the conquest bonus, as each term's `context`.
+  bonusContext?: string;
   total: number;
   // Once you keep playing after the game has ended, the score is final: Civ1 shows "SCORING COMPLETED".
   scoringComplete: boolean;
@@ -180,6 +184,8 @@ export type GameOverDetails = {
   rating: number | null;
   // Which famous leader the rating exceeds (`FAMOUS_LEADERS`), or `null` for a rating of 0.
   famousLeader: string | null;
+  // Or the title the rating earns, under rules that rank by titles instead (Civ2's, a `RatingTitle.` key), or `null`.
+  title?: string | null;
   // Your latest discovery, which the archeologists name when your civilization is destroyed.
   discovery: string | null;
   scoringComplete: boolean;

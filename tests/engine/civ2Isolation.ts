@@ -10,11 +10,13 @@
 //  - no unit, improvement or Wonder that can be built beyond those listed here, and no terrain, feature, tile
 //    improvement, government, civilization or difficulty level other than those listed here.
 //
-// The lists are what the civ2 packages have now: a later stage that adds content updates them, in the same change.
+// The lists are what the civ2 packages have now: a later stage that adds content updates them, in the same change (M2e
+//  part 1 added civ2-spaceship's six parts).
 //
 // The controls load deliberately broken sets, civ2's plugins with civ1-world added (which a conflict would stop the
 //  plugin list from ever being written), and with Civ1's improvements, science, spaceship and units added: each has
-//  to fail, the second on Religion and on what can be built, so that every part of the probe is shown to fire.
+//  to fail, the second on Religion, so that every part of the probe is shown to fire. What can be built is shown on
+//  civ2's own list with an item added, as Civ1's content now adds none civ2 lacks (M2e part 1).
 //
 //   --scenario civ2                 load the civ2 set and print what it registered
 //   --scenario civ2-with-civ1       the same, with civ1-world added
@@ -234,10 +236,12 @@ const EXPECTED: Omit<Inventory, 'rules' | 'civ1Rules'> = {
     'Fighter',
     'Freight',
     'Frigate',
+    'Fuel',
     'Galleon',
     'Granary',
     'GreatLibrary',
     'GreatWall',
+    'Habitation',
     'HangingGardens',
     'Harbour',
     'Helicopter',
@@ -252,6 +256,7 @@ const EXPECTED: Omit<Inventory, 'rules' | 'civ1Rules'> = {
     'Knight',
     'LeonardosWorkshop',
     'Library',
+    'LifeSupport',
     'Lighthouse',
     'MagellansExpedition',
     'ManhattanProject',
@@ -274,7 +279,9 @@ const EXPECTED: Omit<Inventory, 'rules' | 'civ1Rules'> = {
     'Pikeman',
     'PoliceStation',
     'PortFacility',
+    'Power',
     'PowerPlant',
+    'Propulsion',
     'Pyramids',
     'RecyclingCenter',
     'ResearchLab',
@@ -293,6 +300,7 @@ const EXPECTED: Omit<Inventory, 'rules' | 'civ1Rules'> = {
     'StealthBomber',
     'StealthFighter',
     'StockExchange',
+    'Structural',
     'Submarine',
     'SunTzusWarAcademy',
     'Superhighways',
@@ -505,14 +513,22 @@ if (scenario !== null) {
   const content = run('civ2-with-civ1-content');
 
   expect(
-    'as is civ2 with Civ1’s improvements, science, spaceship and units added: Civ1 rules, Religion, and the spaceship parts civ2 has none of (Civ1’s units, improvements and Wonders are base classes civ2 builds too)',
+    'as is civ2 with Civ1’s improvements, science, spaceship and units added: Civ1 rules and Religion (Civ1’s units, improvements, Wonders and, since civ2-spaceship, spaceship parts are base classes civ2 builds too)',
     [
       problems(content).some((problem) => problem.startsWith('rule civ1-')),
       problems(content).includes('advance Religion'),
-      problems(content).includes('build item Structural'),
-      problems(content).includes('build item Habitation'),
     ],
-    [true, true, true, true]
+    [true, true]
+  );
+  // Civ1's content has no build item of its own left to show the build item check firing (M2e), so it's shown on one
+  //  added to what civ2 registers.
+  expect(
+    'and a build item civ2 doesn’t list is refused',
+    problems({
+      ...civ2,
+      buildItems: [...civ2.buildItems, 'Civ1OnlyItem'],
+    }).includes('build item Civ1OnlyItem'),
+    true
   );
 
   if (failures.length > 0) {
