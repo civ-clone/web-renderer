@@ -89,13 +89,13 @@ const tiles = new Map<number, StubTile>(),
   greeks = player('Greek'),
   stranger = player('Aztec'),
   rebels = player('Babylonian'),
-  // A city's own squares (`tiles()`), which it sees: those within 2 but the one 2 east, as a corner outside the radius.
+  // A city, its radius 2 squares either side (`tiles()`, which gives it no sight).
   city = (name: string, owner: object, x: number) => ({
     name,
     player: () => owner,
     tile: () => tile(x),
     tiles: () => ({
-      entries: () => [-2, -1, 0, 1].map((offset) => tile(x + offset)),
+      entries: () => [-2, -1, 0, 1, 2].map((offset) => tile(x + offset)),
     }),
     destroyed: () => false,
     originalPlayer: { civilization: { _: (owner as any).name } },
@@ -164,21 +164,26 @@ const run = async (): Promise<void> => {
   await import('../../translations/civ2-player/en-GB');
   await import('../../translations/civ2-spaceship/en-GB');
 
-  // A barbarian ship: told only where the engine says one of our cities (its own squares) or units (its Visibility)
-  //  sees it.
+  // A barbarian ship: told only on a square we have seen and see now: next to one of our cities (the engine gives a city
+  //  no sight of its own), or within one of our units' Visibility.
+  [1, 2, -31, -32, 42, 43, 11].forEach((x) => seen.add(tile(x)));
+
   expect(
-    'a barbarian ship is told where one of our cities or units sees it: a city’s own squares, a unit’s Visibility (2 for one that sees two spaces); not a city’s square-of-5 corner, nor beyond a unit’s sight, nor a square we only know',
+    'a barbarian ship is told on a seen square next to one of our cities or within a unit’s Visibility (2 for one that sees two spaces); not further into the city’s radius, nor an unexplored square of it, nor beyond a unit’s sight, nor a square we only know',
     [
       words(told('barbarians:raiders-at-sea', {}, unit({}), tile(1))),
       told('barbarians:raiders-at-sea', {}, unit({}), tile(2)),
+      // In Rome's radius, next to it, but never explored.
+      told('barbarians:raiders-at-sea', {}, unit({}), tile(-1)),
       words(told('barbarians:raiders-at-sea', {}, unit({}), tile(-31))),
       told('barbarians:raiders-at-sea', {}, unit({}), tile(-32)),
       words(told('barbarians:raiders-at-sea', {}, unit({}), tile(42))),
       told('barbarians:raiders-at-sea', {}, unit({}), tile(43)),
-      (seen.add(tile(11)), told('barbarians:raiders-at-sea', {}, {}, tile(11))),
+      told('barbarians:raiders-at-sea', {}, {}, tile(11)),
     ],
     [
       'Sails on the horizon: Our lookouts have sighted a barbarian ship close by. Raiders may land soon!',
+      null,
       null,
       'Sails on the horizon: Our lookouts have sighted a barbarian ship close by. Raiders may land soon!',
       null,

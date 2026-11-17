@@ -9,5 +9,5 @@ i18next.addResources('en-GB', 'ruleset', {
   'civ2-enhanced.pollution-score.name':
     'Each civilisation’s score pays only for its own pollution',
   'civ2-enhanced.pollution-score.description':
-    'In the original, every civilisation loses the same points for all the pollution in the world, less half of what lies near computer players’ cities.',
+    'In the original, every civilisation loses the same points for all the pollution in the world, except what lies around computer players’ cities.',
 });

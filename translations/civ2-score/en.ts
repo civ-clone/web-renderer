@@ -12,7 +12,7 @@ i18next.addResources('en', 'default', {
   'CivilizationScoreReport.term.spaceship.detail_civ2':
     'Once it lands first: its colonists (in tens of thousands) × its chance of success',
   'CivilizationScoreReport.term.pollution.detail_civ2':
-    '−10 for each polluted square in the world, less half for each computer player’s city near one',
+    '−10 for each polluted square in the world, but 10 back for each computer player’s city whose radius it lies in',
   'CivilizationScoreReport.term.pollution.detail_civ2-own':
     '−10 for each polluted square around your own cities',
   'CivilizationScoreReport.term.peace.detail_civ2':

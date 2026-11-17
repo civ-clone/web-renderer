@@ -51,30 +51,35 @@ const ourCitiesNear = (
         a.tile().distanceFrom(tile) - b.tile().distanceFrom(tile)
     );
 
-// Whether `tile` is in sight of one of our cities or units now, as the engine says each sees (a square only explored
-//  once isn't): a city its own squares (`tiles()`, its radius), and a unit the squares within its Visibility, as its
-//  moves reveal them (`Unit.applyVisibility`; 2 for a unit that sees two spaces), as the battle sounds hear (#126).
+// Whether `tile` is in sight of one of our cities or units now, and a square we have seen (a square only explored
+//  once, or never, isn't): within the Visibility of one of our units, as its moves reveal it (`Unit.applyVisibility`;
+//  2 for a unit that sees two spaces), or next to one of our cities. The engine gives a city no sight of its own, so a
+//  city counts only the squares around it, as rules-civ2's targets judge it (`AdditionalData/actionTargets`).
 const inSight = (
   ctx: NotificationContext,
   tile: Tile,
   { cityRegistry, unitRegistry }: EndgameNoticesDependencies
 ): boolean =>
-  cityRegistry
+  ctx.hasSeen(tile) &&
+  (cityRegistry
     .entries()
     .some(
       (city: City) =>
         ctx.view.owns(city.player()) &&
         !city.destroyed() &&
-        city.tiles().entries().includes(tile)
+        city.tile().getSurroundingArea(1).includes(tile)
     ) ||
-  unitRegistry
-    .entries()
-    .some(
-      (unit: Unit) =>
-        ctx.view.owns(unit.player()) &&
-        !unit.destroyed() &&
-        unit.tile().getSurroundingArea(unit.visibility().value()).includes(tile)
-    );
+    unitRegistry
+      .entries()
+      .some(
+        (unit: Unit) =>
+          ctx.view.owns(unit.player()) &&
+          !unit.destroyed() &&
+          unit
+            .tile()
+            .getSurroundingArea(unit.visibility().value())
+            .includes(tile)
+      ));
 
 export const endgameNotices = (
   dependencies: EndgameNoticesDependencies = {
