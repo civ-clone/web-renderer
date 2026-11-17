@@ -547,3 +547,18 @@ tested in civ1-science, civ1-power, civ1-city-improvement and civ1-enhanced
 themselves, and `tests/engine/respawn.ts` checks that a civilization coming back
 starts with what it inherits (base-game-end 0.1.2, through civ1-game-end
 0.1.6). `client-transcript.json` passes unchanged and is not re-recorded.
+
+## Accepted change: rule counts, a defeat announced once and a Civ1 pillage target (#1000, #1061)
+
+civ1-city 0.1.22 drops its own `unit/defeated/emit`, because civ1-unit's
+`unit/defeated/emit-and-destroy` already raises `unit:defeated` (`Defeated`
+14 → 13). civ1-unit 0.1.45 registers `civ1-unit:unit/pillage-target`, v474.05's
+pillage order (`PillageTarget` 0 → 1). The rule totals at turns 1, 10 and 50
+stay at 1180.
+
+The checksums, state counts, DTO hashes and random-call counts are unchanged:
+in these 50 turns no defender is beaten in a city of size 1, nothing is
+pillaged, and no unit is lost twice, so the fixes for #1000 (civ1-unit 0.1.44,
+civ1-city 0.1.22, base-city-lifecycle 0.1.3), #1061, #1018 (civ1-government
+0.1.6) and #956 (civ1-score 0.1.2) don't show here. They are tested in those
+packages. `client-transcript.json` passes unchanged and is not re-recorded.
