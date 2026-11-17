@@ -18,7 +18,8 @@ So write each message for a player when you commit, not at release time. Once co
 
 ## Working practice
 
-- **Work in a worktree,** never in the shared checkout, as several sessions work in this repository at once.
+- **Work in a worktree,** never in the shared checkout, as several sessions work in this repository at once. To run
+  `npm run release:changelog` on an up-to-date `main`, use a worktree on a detached `origin/main`.
 - **Every change goes through a PR,** reviewed before it merges:
   - Copilot reviews each PR automatically. Also have a fresh agent, with none of your context, review the work.
   - High-severity findings, or anything particularly high-impact, need fixing and then another fresh review.

@@ -28,10 +28,12 @@ with civ.one. [asset-system.md](asset-system.md) describes the system as it is t
 
 ## Terms
 
-- **Set:** one library entry, with one source and one id. Today's packs (Civ1's, Civ2's) are sets.
+- **Set:** one library entry, with one source and one id. Today's packs (Civ1's, Civ2's) are sets. A set has a
+  descriptor for each grid it draws, each with its own id (the pixel art's square `civ1-pixelart` and hexagonal
+  `hex-pixelart`), and what is kept per tile size (a zoom, a sprite sheet) is kept per descriptor.
 - **What a set provides:**
   - map art for a grid: a tileset, with its descriptor (a set can have one for each grid, as the pixel art has square
-    and hexagonal);
+    and hexagonal, once its hexagonal pack is merged);
   - interface art: the sprites under its descriptor's `assets.ui` prefixes, as Civ1's provides today;
   - sound: music and the driver it needs.
 - **Source:**
@@ -53,7 +55,7 @@ with civ.one. [asset-system.md](asset-system.md) describes the system as it is t
    - A rule set can name a theme, as `civ2` names its tileset. It's used until the player chooses one.
    - Why: every screen asks for Civ1's art by Civ1's names today, so the interface only works with Civ1's import. Names
      of civ.one's own, and a theme that says whose art fills them, make it work with any set that has interface art.
-   - Civ2 has none yet. Its descriptor's `assets.ui` is empty, and it falls back to Civ1's (`fallback`). A Civ2 theme
+   - Civ2 has none yet. Its descriptor's `assets.ui` is empty, and its windows draw Civ1's (`interfaceTileset()`). A Civ2 theme
      waits on importing Civ2's icons (#152). Until then the `civ2` rule set can name Slate and brass, or nothing.
 2. **Per game or global: global, one choice per grid.**
    - The player picks the art for square maps, the art for isometric maps and so on, in the library. It's kept as an
@@ -93,7 +95,7 @@ with civ.one. [asset-system.md](asset-system.md) describes the system as it is t
 
 ## The manifest
 
-A tileset's manifest is its descriptor (#92), with two new fields:
+A tileset's manifest is its descriptor (#92), with two new fields for the library:
 
 ```json
 {
@@ -107,21 +109,22 @@ A tileset's manifest is its descriptor (#92), with two new fields:
     "name": "MIT",
     "url": "https://github.com/civ-clone/civ1-tileset-pixelart/blob/main/LICENSE"
   },
-  "…": "the rest of the descriptor, unchanged"
+  "…": "the rest of the descriptor"
 }
 ```
 
 - **`source`:** `hosted` or `imported`. For an imported set, its import (`registerPackImport`) still says which files it
   reads, in code: reading a PIC or a GIF is code. The library asks the import for its list, so the manifest doesn't
-  repeat it.
+  repeat it. `PackImport` has `requiredFiles` now, and gains `optionalFiles` for the files it reads when they're
+  there.
 - **`licence`:** a name, a link, and `attribution` when the licence asks for it (CC BY). It is shown on the set's entry,
   and for a CC BY set wherever it is chosen (#98). An imported set has no licence of ours to show. It says the art comes
   from the player's own copy.
 - **Interface art** stays where Civ1's is now: `assets.ui` lists its prefixes and `ui` its sizes (icon, citizen,
-  cursor). A set whose sprites have other names maps civ.one's interface names to them in `names`, as the descriptor
-  already maps terrain names.
-- **`fallback`:** unchanged for map art: a set without a sprite draws its fallback's. For interface art the theme's
-  list replaces it.
+  cursor). A set whose sprites have other names maps civ.one's interface names to them in a new `names.ui`, beside the
+  terrain, special and unit names `names` holds now.
+- **`fallback`:** declared but not used yet (nothing looks sprites up there, `TilesetDescriptor.ts`). For interface
+  art the theme's list does its job, and it stays unused for map art.
 
 A theme gains one field where an interface registers it:
 
@@ -133,7 +136,8 @@ registerTheme({
 });
 ```
 
-A sound set's manifest has the same head as a tileset's and no descriptor body:
+A sound set's manifest has the same head as a tileset's and no descriptor body. The descriptor's schema fixes `kind`
+to `tileset`, so a sound set's manifest has a schema and a reader of its own:
 
 ```json
 {
@@ -152,7 +156,8 @@ it has today. The import window's own handling of the file goes, and the music r
 ## Hosted sets
 
 - **Where they come from:** a set's repository is a dependency, as the asset extractors are, for example
-  `civ1-tileset-pixelart`, which holds the square pack and the hexagonal one. Its package in the renderer
+  `civ1-tileset-pixelart`, which holds the square pack, and the hexagonal one on its `feat/hex-pack` branch until
+  slice 4 merges it. Its package in the renderer
   (`tileset-pixelart`) registers its descriptors with `source: "hosted"`.
 - **The build:** a step packs each hosted set's PNGs into one sheet and an index (`dist/sets/<id>.<hash>.png` and
   `.json`), and records the names in the descriptor it registers.
@@ -161,7 +166,8 @@ it has today. The import window's own handling of the file goes, and the music r
     imported set's sprites come from IndexedDB.
   - The sprite lookups (`getPreloadedImage`) don't change.
   - A sheet that fails to load (offline on a first visit) is said so on its entry. The theme moves on to the next art
-    in its list, and the grid falls back as decision 3 says.
+    in its list, and the grid falls back as decision 3 says, once changing art in a game is proven;
+    until then the start stops with a message.
 - **Its own colours:**
   - `installTilesets` passes every pack but the interface's through `withImportedKeys`. For a set whose cities have an
     overlay (Civ2's flag), that takes the overlay's colour keys from what its import recorded, and leaves the set
@@ -178,17 +184,19 @@ it has today. The import window's own handling of the file goes, and the music r
   - **for interface art:** the screens ask for `spriteKey(currentTileset(), 'city/bulb')` and size it by
     `currentTileset().ui`, in about twenty places, and the map draws the interface's art over tiles through
     `Map#getInterfaceImage`;
-  - **as the pack that's always installed:** `installPacks`, `installedTilesets` and `pluginSets` leave it out of what
-    needs installing or choosing;
+  - **as the pack that's always installed:** `installPacks`, `installTilesets` and `pluginSets` leave it out of what
+    needs installing or choosing, and `installedTilesets` always includes it;
   - **as a reference size:** `shownScale` sizes windows' art by its 16 px tile, and `mapScaleOption` keeps its scale as
     plain `mapScale`.
 - **With the library:**
   - **interface art** comes from the theme's art, `interfaceArt()`, the first ready set in the theme's list. The names
     asked for don't change: they start as Civ1's, and become civ.one's by being listed in the renderer as the
     interface's own, each required or optional;
-  - **no pack is always installed:** hosted sets are installed by declaration, and imported ones when they're ready;
-  - **the reference size** is a constant, 16 px, which is what windows are laid out for, and the zoom has no special
-    case.
+  - **no pack is always installed,** from slice 3: hosted sets are installed by declaration, and imported ones when
+    they're ready. Until then (slice 2) a list's sets that aren't registered are skipped, and when none is ready Civ1's
+    is used, as today, since the game can't start without it;
+  - **the reference size** is a constant, 16 px, which is what windows are laid out for. The zoom's option has no
+    special case for Civ1 once Zoom has moved it.
   - Map art that defaults to `currentTileset()` (`renderUnit`, `getPreloadedImage`) is given the map's set by its
     caller instead.
 - **What's missing:** a set with interface art can leave optional names out. The pixel art has every required name.
@@ -206,8 +214,10 @@ it has today. The import window's own handling of the file goes, and the music r
 
 - **A slider instead of a list:** in steps of 0.1, from the set's smallest zoom to its largest, in Options and on the
   map (with keys and the mouse wheel later).
-- **Kept per set,** as the map scale is now (`zoom.<id>`), because each set's tiles are their own size. Each set names
-  its default: Civ1's 2, the pixel art's 1, and Civ2's about 1.4, to settle by eye.
+- **Kept per descriptor,** as the map scale is now (`zoom.<id>`), because each one's tiles are their own size.
+- **Defaults:** a descriptor gains an optional `defaultZoom`, any step of 0.1 between its smallest and largest scale,
+  falling back to `defaultScale`. Civ1's is 2, the pixel art's 1, and Civ2's about 1.4, to settle by eye.
+  `defaultScale` stays a whole number in `scales`, as windows use it (below).
 - **Drawing between whole numbers:**
   - At a whole number the map draws as now, each sprite scaled by it, with no smoothing.
   - Between them, sprites scaled one by one can't meet exactly. A tile's place on the canvas rounds differently from
@@ -223,7 +233,8 @@ it has today. The import window's own handling of the file goes, and the music r
     clicks) converts between the page's pixels and the canvas's. `MapView` already converts the floating interface's
     boxes.
   - Whether the portal's layers take a CSS size cleanly is to be proven when it's built.
-- **Windows** keep whole scales (`shownScale`), as their art is drawn at the size of a 16 px tile.
+- **Windows** keep whole scales: `shownScale` caps them at `defaultScale`, not the zoom, as their art is drawn at the
+  size of a 16 px tile.
 
 ## The screen
 
@@ -241,10 +252,11 @@ The library replaces Import Assets. It opens from the main menu and from Options
   - for an imported set, the space it uses in the browser.
 - **Each set's actions:**
   - _Import…_ or _Import again_, for an imported set. This opens that set's own file picker and instructions, so
-    there's no joined paragraph, and Civ1's import is no longer required first.
-  - _Remove_, for an imported set. This deletes its keys, which takes its map art and its interface art together.
+    there's no joined paragraph. Civ1's import stays required first until slice 3, when the menus stop gating.
+  - _Remove_, for an imported set. This deletes the keys its descriptors list, which takes its map art and its interface art together. Not
+    everything under its prefix: Civ1's `./assets/` holds Civ2's `./assets/civ2/` too.
   - _Use for square maps_ (and so on). This sets the option, and the one in use is marked.
-- **Each theme shows** its name, the interface it comes with, and whose art it's drawing with now ("Civ1's", or "the
+- **Each theme shows** its name, the interface it comes with, and, from slice 2, whose art it's drawing with now ("Civ1's", or "the
   pixel art's, until Civ1 is imported"), with _Use_. Options keeps its theme picker, which sets the same option.
 - **After an import** the page reloads, as it does today.
 - **No assets imported:** the screen is still the first thing offered there, and it shows the hosted sets as ready.
@@ -255,7 +267,8 @@ The library replaces Import Assets. It opens from the main menu and from Options
    - Sets: Civ1's and Civ2's art, and the sound. Themes: the two there are.
    - Changes: the new manifest fields; the window replacing Import Assets, with per-set imports; the sound import
      moving into a set.
-   - Gating and loading are unchanged, so nothing changes for a player but the screen.
+   - Gating and loading are unchanged, Civ1's import is still required first, and nothing changes for a player but
+     the screen.
 2. **Themes pick the interface's art.**
    - Themes gain their art lists, and `interfaceArt()` replaces `interfaceTileset()` and `currentTileset()` in the
      three ways above.
@@ -274,7 +287,8 @@ The library replaces Import Assets. It opens from the main menu and from Options
 5. **Remove, and the space used.**
    - Then #964's installed sets join the list as a third source.
 
-**Zoom** stands apart from these and can come first: it needs only the per-set option and the drawing above.
+**Zoom** stands apart from these and can come first: the option and its one-off migration from `mapScale`, the
+`defaultZoom` field, and the drawing above.
 
 ## Where this departs from #1063
 
