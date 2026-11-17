@@ -137,10 +137,12 @@ turnControls.provide('orbs', (actionArea, { portal, transport }) => {
 
 windowChrome.provide('plain', plainChrome);
 
-// The theme it comes with (#736), Civ1 classic, whose tokens are in `styles/_civ1-classic.scss`.
+// The theme it comes with (#736), Civ1 classic, whose tokens are in `styles/_civ1-classic.scss`. It draws with Civ1's
+//  interface art, and the pixel art's where Civ1's isn't there (#1063).
 registerTheme({
   id: 'civ1-classic',
   name: 'GameOptions.theme-choice.civ1-classic',
+  art: ['civ1', 'civ1-pixelart'],
 });
 
 // It fills every slot, which the build checks; what it names as features is checked as it registers (#861).

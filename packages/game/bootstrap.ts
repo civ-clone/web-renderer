@@ -26,8 +26,14 @@ import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry'
 import {
   applyColourScheme,
   applyUiTheme,
+  currentUiTheme,
+  uiThemeArt,
   uiThemeFrom,
 } from '@civ-clone/ui-widgets/lib/theme';
+import {
+  interfaceArt,
+  provideInterfaceArt,
+} from '@civ-clone/ui-assets/lib/interfaceArt';
 import {
   applyInterface,
   currentInterface,
@@ -84,6 +90,11 @@ export class Renderer {
         currentInterface().theme
       )
     );
+    // The interface's art is the theme's (#1063), as it is now: what's drawn with it stays drawn, so a theme chosen with
+    //  other art changes it at the next load.
+    const art = uiThemeArt(currentUiTheme());
+
+    provideInterfaceArt(() => art);
     applyColourScheme(options.get('colourScheme', 'system'));
     // The interface's glyphs, for every `glyph()` to refer to (#741).
     installGlyphs();
@@ -96,10 +107,11 @@ export class Renderer {
     // not a reload; only Ctrl/Cmd+R stays a reload from that point on.
     let gameStarted = false;
 
-    setTilesetSizes();
     // Every sprite of the tilesets there are, decoded before anything is drawn from them (#730), and the ones whose
     //  sprites have all been imported installed, so their grids are offered (#97).
     await installPacks();
+    // Then the interface's art, settled from the sets installed (#1063): its sizes and cursor, and every icon after.
+    setTilesetSizes(interfaceArt());
     await setCursor();
     await initI18n();
     // Silent without an ASOUND.CVL; with one, waits for the player's first key or click (#126).

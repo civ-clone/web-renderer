@@ -14,8 +14,9 @@ import Transport from '@civ-clone/ui-client/Transport';
 import Unit from '@civ-clone/ui-hud/components/Unit';
 import FilterableWindow from '@civ-clone/ui-component-window/FilterableWindow';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
-import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
-import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+import interfaceArt, {
+  interfaceSpriteKey,
+} from '@civ-clone/ui-assets/lib/interfaceArt';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { getLabelForBuildableEntity } from '@civ-clone/ui-client/components/lib/cityBuild';
 import { escape, h } from '@civ-clone/ui-widgets/lib/html';
@@ -48,8 +49,8 @@ const buildCityRow = async (
 
       assetStore
         .shownAtURL(
-          spriteKey(currentTileset(), groupIcons.Luxuries),
-          currentTileset().ui.icon
+          interfaceSpriteKey(groupIcons.Luxuries),
+          interfaceArt().ui.icon
         )
         .then((url) =>
           luxuriesElement.append(

@@ -1,8 +1,7 @@
 import { assetStore } from '../../AssetStore';
-import currentTileset from '../../lib/tilesets';
 import { groupIcons } from '../../lib/groupIcons';
 import { s } from '@dom111/element';
-import { spriteKey } from '../../tilesets/TilesetDescriptor';
+import interfaceArt, { interfaceSpriteKey } from '../../lib/interfaceArt';
 
 // Near enough to white, for a sprite that's been scaled or imported from another tileset.
 const WHITE = 200;
@@ -106,10 +105,7 @@ const corruptionURL = (path: string, width: number): Promise<string> => {
 export const corruptionIcon = (): HTMLElement => {
   const icon = s('<span class="yield-icon corruption-icon"></span>');
 
-  corruptionURL(
-    spriteKey(currentTileset(), groupIcons.Trade),
-    currentTileset().ui.icon
-  )
+  corruptionURL(interfaceSpriteKey(groupIcons.Trade), interfaceArt().ui.icon)
     .then((url) => icon.append(s(`<img src="${url}" alt="">`)))
     // A tileset without the picture: the tooltip and the figures still say it.
     .catch(() => {});

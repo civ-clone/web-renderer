@@ -7,8 +7,9 @@ import { groupIcons } from '@civ-clone/ui-assets/lib/groupIcons';
 import { reduceKnownYield } from '@civ-clone/ui-client/lib/yieldMap';
 import Window from '@civ-clone/ui-component-window/Window';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
-import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
-import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+import interfaceArt, {
+  interfaceSpriteKey,
+} from '@civ-clone/ui-assets/lib/interfaceArt';
 import { combinedYields } from '@civ-clone/ui-client/lib/playerYields';
 import { turnsLeft } from '@civ-clone/ui-city/components/lib/cityYields';
 import { s } from '@dom111/element';
@@ -17,10 +18,7 @@ import watchPlayer, { researchIds } from './lib/watchPlayer';
 
 const template = async (playerResearch: PlayerResearch, yields: Yield[]) => {
   const researchIcon = await assetStore
-    .shownAtURL(
-      spriteKey(currentTileset(), groupIcons.Research),
-      currentTileset().ui.icon
-    )
+    .shownAtURL(interfaceSpriteKey(groupIcons.Research), interfaceArt().ui.icon)
     .then((url) => `<img src="${url}">`);
   const names = advanceNames(
     playerResearch.complete.map((advance) => advance._)

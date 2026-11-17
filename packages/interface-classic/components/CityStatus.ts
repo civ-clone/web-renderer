@@ -9,8 +9,9 @@ import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import FilterableWindow from '@civ-clone/ui-component-window/FilterableWindow';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
-import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
-import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+import interfaceArt, {
+  interfaceSpriteKey,
+} from '@civ-clone/ui-assets/lib/interfaceArt';
 import { escape, h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
@@ -57,8 +58,8 @@ const buildCityRow = async (city: CityData): Promise<HTMLElement[]> => {
       ).map((yieldName) =>
         assetStore
           .shownAtURL(
-            spriteKey(currentTileset(), groupIcons[yieldName]),
-            currentTileset().ui.icon
+            interfaceSpriteKey(groupIcons[yieldName]),
+            interfaceArt().ui.icon
           )
           .then((url) => `<img src="${url}">`)
       )

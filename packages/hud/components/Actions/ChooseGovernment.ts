@@ -5,8 +5,7 @@ import { openChoice } from '../choiceList';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
-import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+import { interfaceSpriteKey } from '@civ-clone/ui-assets/lib/interfaceArt';
 
 export class ChooseGovernment extends Action {
   override activate(): void {
@@ -52,7 +51,7 @@ export class ChooseGovernment extends Action {
 
   override build(): void {
     assetStore
-      .spriteURL(spriteKey(currentTileset(), 'city/people_content_m'))
+      .spriteURL(interfaceSpriteKey('city/people_content_m'))
       .then((url) =>
         this.append(
           s(

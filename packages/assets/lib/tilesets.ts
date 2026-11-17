@@ -86,6 +86,14 @@ export const bundledTilesets = (): TilesetDescriptor[] => [
 //  found which others are, at start-up.
 let installed: TilesetDescriptor[] | null = null;
 
+// What's told when `installTilesets` changes which are installed: what keeps a set chosen from them (`interfaceArt`).
+const installedHandlers = new Set<() => void>();
+
+/** Calls `handler` whenever `installTilesets` installs the bundled packs again. */
+export const onTilesetsInstalled = (handler: () => void): void => {
+  installedHandlers.add(handler);
+};
+
 /**
  * The tilesets there are to draw the map with: the grids a game can be on are theirs (`supportedTopologies`). The
  *  interface's, and each other bundled pack whose sprites have been imported, as `installTilesets` found them at
@@ -181,6 +189,8 @@ export const installTilesets = (states: {
       return [];
     }
   });
+
+  installedHandlers.forEach((handler) => handler());
 
   return installedTilesets();
 };

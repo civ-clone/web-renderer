@@ -5,8 +5,7 @@ import Transport from '@civ-clone/ui-client/Transport';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
-import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+import { interfaceSpriteKey } from '@civ-clone/ui-assets/lib/interfaceArt';
 
 /**
  * Asks before starting a revolution, and sends it once confirmed: for the button and the top bar's government alike
@@ -47,7 +46,7 @@ export class Revolution extends Action {
 
   override build(): void {
     assetStore
-      .spriteURL(spriteKey(currentTileset(), 'city/sad'))
+      .spriteURL(interfaceSpriteKey('city/sad'))
       .then((url) =>
         this.append(
           s(

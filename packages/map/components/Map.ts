@@ -11,9 +11,10 @@ import { getPreloadedImage } from '@civ-clone/ui-assets/lib/getPreloadedImage';
 import World from './World';
 import { TilesetDescriptor } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import {
-  interfaceTileset,
-  mapTileset,
-} from '@civ-clone/ui-assets/lib/tilesets';
+  interfaceArt,
+  interfaceSpriteName,
+} from '@civ-clone/ui-assets/lib/interfaceArt';
+import { mapTileset } from '@civ-clone/ui-assets/lib/tilesets';
 import { imageSize } from '@civ-clone/ui-assets/lib/imageSize';
 import projectionFor from '../lib/projectionFor';
 import replaceColours from '@civ-clone/ui-assets/lib/replaceColours';
@@ -326,17 +327,19 @@ export class Map implements IMap {
   }
 
   /**
-   * The interface's sprite `path` (`city/food`, a citizen), from the interface's tileset rather than the map's: a
-   *  layer drawing the interface's art over the map (a city's unhappy citizen, the yields of a pack without icons of
-   *  its own) draws the same art whatever pack the map is drawn with (#97).
+   * The interface's sprite `path` (`city/food`, a citizen), from the interface's art rather than the map's: a layer
+   *  drawing the interface's art over the map (a city's unhappy citizen, the yields of a pack without icons of its
+   *  own) draws the same art whatever pack the map is drawn with (#97), by the theme's art's own name for it (#1063).
    */
   protected getInterfaceImage(path: string): CanvasImageSource {
-    return getPreloadedImage(path, this.interfaceTileset());
+    const art = this.interfaceArt();
+
+    return getPreloadedImage(interfaceSpriteName(path, art), art);
   }
 
-  /** The tileset the interface's own art comes from (`interfaceTileset`). */
-  protected interfaceTileset(): TilesetDescriptor {
-    return interfaceTileset();
+  /** The tileset the interface's own art comes from (`interfaceArt`). */
+  protected interfaceArt(): TilesetDescriptor {
+    return interfaceArt();
   }
 
   protected markDirty(
