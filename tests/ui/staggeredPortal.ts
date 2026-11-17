@@ -11,8 +11,9 @@
 //  - A layer places every tile whose box reaches the canvas, and no other, across both seams.
 //
 // The grid is a stand-in (`lib/staggered.ts`), with diamonds twice as wide as they are tall, as Civ2's are; with
-//  `--iso` it is the isometric grid's own projection (`map-isometric`'s `IsoProjection`) instead, which `npm test` runs
-//  as well.
+//  `--iso` it is the isometric grid's own projection (`map-isometric`'s `IsoProjection`) instead, and with `--hex` the
+//  hexagonal grid's (`map-hex`'s `HexProjection`, 32 × 36 hexes in rows 27 px apart, so a canvas holds fewer rows of
+//  them), which `npm test` runs as well.
 
 // Must stay first: it gives the layers a canvas and a `document` to draw with.
 import { fakeCanvas } from './lib/fakeCanvas';
@@ -22,14 +23,23 @@ import './lib/artPacks';
 import Map from '@civ-clone/ui-map/components/Map';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import { Projection } from '@civ-clone/ui-map/lib/projection';
+import HexProjection from '@civ-clone/ui-map-hex/HexProjection';
 import IsoProjection from '@civ-clone/ui-map-isometric/IsoProjection';
 import Staggered from './lib/staggered';
 import { Tile } from '@civ-clone/ui-protocol/types';
 import World from '@civ-clone/ui-map/components/World';
 
-// The stand-in, or with `--iso` the real thing.
-const Grid = process.argv.includes('--iso') ? IsoProjection : Staggered,
-  suite = process.argv.includes('--iso')
+// The stand-in, or with `--iso` or `--hex` the real thing.
+const hex = process.argv.includes('--hex'),
+  iso = process.argv.includes('--iso'),
+  Grid: typeof Staggered | typeof IsoProjection | typeof HexProjection = hex
+    ? HexProjection
+    : iso
+    ? IsoProjection
+    : Staggered,
+  suite = hex
+    ? 'staggeredPortal --hex'
+    : iso
     ? 'staggeredPortal --iso'
     : 'staggeredPortal';
 
@@ -104,11 +114,16 @@ class StaggeredPortal extends Portal {
   }
 }
 
-const tile = { width: 32, height: 16 },
+// Diamonds twice as wide as they are tall; hexes `2/√3` as tall as wide, as near as whole sizes (even width, height a
+//  multiple of four) get, whose rows are three quarters of their height apart.
+const tile = hex ? { width: 32, height: 36 } : { width: 32, height: 16 },
+  // An odd size, whose shifted rows are half a pixel along; a hex's can't be, so it gets another even size.
+  oddTile = hex ? { width: 34, height: 20 } : { width: 33, height: 17 },
   worldWidth = 12,
   worldHeight = 16,
   canvasWidth = 160,
-  canvasHeight = 80,
+  // 80 px is ten of the stand-in's and iso's rows; 216 is eight of the hex's (and 6 boxes), as many as they make room for.
+  canvasHeight = hex ? 216 : 80,
   tiles: Tile[] = [];
 
 for (let y = 0; y < worldHeight; y++) {
@@ -159,7 +174,7 @@ const world = new World({
 {
   const projection = new Grid(tile, world, true),
     // An odd-sized tile too, whose middle is a half pixel off its diamond's, as the portal takes it (`Math.trunc`).
-    odd = new Grid({ width: 33, height: 17 }, world, true),
+    odd = new Grid(oddTile, world, true),
     wrong: string[] = [];
 
   [projection, odd].forEach((grid) => {
@@ -182,46 +197,96 @@ const world = new World({
 
   expect("the stand-in's tile middles are their own", wrong, []);
 
-  // Every pixel of a block two rows down and two tiles across is in the diamond it is said to be on.
+  // Every pixel of a block two rows down and two tiles across is in the tile it is said to be on.
   const outside: string[] = [],
     [, blockTop] = projection.tileToPixel(0, 2),
-    [, blockBottom] = projection.tileToPixel(0, 4);
+    [, blockBottom] = projection.tileToPixel(0, 4),
+    // Whether a point is in a tile's shape: for a diamond, within 1 half diagonal of its middle; for a hex, within its
+    //  sides and its zigzag, which climbs a quarter of the box over half its width.
+    within = (atX: number, atY: number, left: number, top: number) => {
+      const acrossBy = Math.abs(atX - (left + tile.width / 2)),
+        downBy = Math.abs(atY - (top + tile.height / 2));
+
+      return hex
+        ? acrossBy <= tile.width / 2 &&
+            downBy <=
+              tile.height / 2 -
+                ((tile.height / 4) * acrossBy) / (tile.width / 2)
+        : acrossBy / (tile.width / 2) + downBy / (tile.height / 2) <= 1;
+    };
 
   for (let py = blockTop; py < blockBottom; py++) {
     for (let px = 0; px < tile.width * 2; px++) {
       const [x, y] = projection.pixelToTile(px, py),
-        [left, top] = projection.tileToPixel(x, y),
-        // How far a point is from the diamond's middle, in half diagonals: within 1 is in it.
-        distance = (atX: number, atY: number) =>
-          Math.abs(atX - (left + tile.width / 2)) / (tile.width / 2) +
-          Math.abs(atY - (top + tile.height / 2)) / (tile.height / 2);
+        [left, top] = projection.tileToPixel(x, y);
 
-      // The pixel's corner (the stand-in's test) or its middle (`IsoProjection`'s, which `--iso` runs) is in it.
-      if (distance(px, py) > 1 && distance(px + 0.5, py + 0.5) > 1) {
+      // The pixel's corner (the stand-in's test) or its middle (`IsoProjection`'s and `HexProjection`'s, which `--iso`
+      //  and `--hex` run) is in it.
+      if (
+        !within(px, py, left, top) &&
+        !within(px + 0.5, py + 0.5, left, top)
+      ) {
         outside.push(`${px},${py} -> ${x},${y}`);
       }
     }
   }
 
   expect(
-    'every pixel of a two-row block is in the diamond it is on',
+    `every pixel of a two-row block is in the ${
+      hex ? 'hex' : 'diamond'
+    } it is on`,
     outside,
     []
   );
+
+  if (!hex) {
+    expect(
+      "the stand-in's corners belong to the neighbours",
+      [
+        projection.pixelToTile(1, 1),
+        projection.pixelToTile(31, 1),
+        projection.pixelToTile(1, 15),
+        projection.pixelToTile(31, 15),
+      ],
+      [
+        [-1, -1],
+        [0, -1],
+        [-1, 1],
+        [0, 1],
+      ]
+    );
+  } else {
+    // A hex's top corners belong to the rows' neighbours up and to either side, its sides' middles to itself.
+    expect(
+      "a hex's zigzag corners belong to the neighbours above and below, its sides to itself",
+      [
+        projection.pixelToTile(1, 1),
+        projection.pixelToTile(30, 1),
+        projection.pixelToTile(1, 35),
+        projection.pixelToTile(30, 35),
+        projection.pixelToTile(1, 18),
+        projection.pixelToTile(30, 18),
+      ],
+      [
+        [-1, -1],
+        [0, -1],
+        [-1, 1],
+        [0, 1],
+        [0, 0],
+        [0, 0],
+      ]
+    );
+  }
+}
+
+// The step the portal counts in, and the box it centres on.
+if (hex) {
+  const projection = new Grid(tile, world, true);
+
   expect(
-    "the stand-in's corners belong to the neighbours",
-    [
-      projection.pixelToTile(1, 1),
-      projection.pixelToTile(31, 1),
-      projection.pixelToTile(1, 15),
-      projection.pixelToTile(31, 15),
-    ],
-    [
-      [-1, -1],
-      [0, -1],
-      [-1, 1],
-      [0, 1],
-    ]
+    "a hex's step is a column across and three quarters of its height down, its footprint the box",
+    [projection.tileStep(), projection.footprint()],
+    [{ x: 32, y: 27 }, tile]
   );
 }
 
@@ -385,11 +450,15 @@ const pixels = (count: number, step: [number, number]): [number, number][] =>
     ['in one drag down a row', [4, 6], [[0, 9]]],
   ] as [string, [number, number], [number, number][]][]
 ).forEach(([description, start, moves]) => {
-  const { lost, moved } = drag(start, moves, false, { width: 33, height: 17 });
+  const { lost, moved } = drag(start, moves, false, oddTile);
 
-  expect(`33×17, ${description}: whole pixels, centred all the way`, lost, []);
   expect(
-    `33×17, ${description}: the map moves by exactly the drag`,
+    `${oddTile.width}×${oddTile.height}, ${description}: whole pixels, centred all the way`,
+    lost,
+    []
+  );
+  expect(
+    `${oddTile.width}×${oddTile.height}, ${description}: the map moves by exactly the drag`,
     moved,
     [0, 0]
   );
@@ -413,7 +482,7 @@ const pixels = (count: number, step: [number, number]): [number, number][] =>
     ],
   ] as [string, [number, number], [number, number][]][]
 ).forEach(([description, start, moves]) => {
-  [tile, { width: 33, height: 17 }].forEach((size) => {
+  [tile, oddTile].forEach((size) => {
     const { lost, moved } = drag(start, moves, false, size);
 
     expect(
@@ -481,22 +550,27 @@ const pixels = (count: number, step: [number, number]): [number, number][] =>
   );
 }
 
-// Counted in columns and rows: 160 px is 5 columns, so 2 either side, and 80 px is 10 rows, so 5 above and below.
+// Counted in columns and rows: 160 px is 5 columns, so 2 either side, and the canvas is as many rows as it is steps
+//  tall (80 px is 10 rows for the diamonds, 216 is 8 for the hexes), so 5 (4) above and below.
 {
-  const { portal } = makePortal();
+  const { portal } = makePortal(),
+    // Rows counted in, from the centre: those closer than half the canvas's rows, less one for the centre's own.
+    rowReach = hex ? 4 : 5,
+    rows = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    range = hex ? [3, 11] : [2, 12];
 
   portal.setCenter(5, 7);
 
   expect(
     'in view: the rows above and below, and the shifted rows half a column along',
     [
-      [3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((y) => portal.isVisible(5, y)),
+      rows.map((y) => portal.isVisible(5, y)),
       [2, 3, 4, 5, 6, 7].map((x) => portal.isVisible(x, 7)),
       [2, 3, 4, 5, 6, 7].map((x) => portal.isVisible(x, 6)),
       [3, 4, 5, 6].map((x) => portal.isVisible(x, 6, 1)),
     ],
     [
-      [true, true, true, true, true, true, true, true, true, false],
+      rows.map((y) => Math.abs(y - 7) < rowReach),
       [false, false, true, true, true, false],
       [false, false, true, true, true, true],
       [false, false, true, true],
@@ -507,12 +581,12 @@ const pixels = (count: number, step: [number, number]): [number, number][] =>
     [portal.rawVisibleRange(), portal.visibleRange()],
     [
       [
-        { x: 3, y: 2 },
-        { x: 7, y: 12 },
+        { x: 3, y: range[0] },
+        { x: 7, y: range[1] },
       ],
       [
-        { x: 3, y: 2 },
-        { x: 7, y: 12 },
+        { x: 3, y: range[0] },
+        { x: 7, y: range[1] },
       ],
     ]
   );
@@ -520,8 +594,8 @@ const pixels = (count: number, step: [number, number]): [number, number][] =>
   portal.setCenter(0, 1);
 
   expect('the range in view wraps across both seams', portal.visibleRange(), [
-    { x: 10, y: 12 },
-    { x: 2, y: 6 },
+    { x: 10, y: hex ? 13 : 12 },
+    { x: 2, y: hex ? 5 : 6 },
   ]);
 
   portal.setCovered([{ x: 0, y: 0, width: 40, height: canvasHeight }]);

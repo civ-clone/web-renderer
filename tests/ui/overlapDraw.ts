@@ -17,12 +17,14 @@
 //  tiles overlap are. On the square grid too, every layer has to leave exactly what a full redraw would.
 //
 // Where a projection's tiles overlap their neighbours, a tile can't be cleared and drawn again on its own: its box,
-//  out to the layer's reach, is cleared once and everything reaching it is drawn again, back to front. Three test
+//  out to the layer's reach, is cleared once and everything reaching it is drawn again, back to front. Four test
 //  projections go that way, and on each of them the three properties above hold exactly, for every layer:
 //
 //  - "square, through the overlap path": the square grid, drawn as if it overlapped, for every layer;
 //  - "isometric": the staggered isometric grid's own projection (#97), rows half a tile apart, every other one shifted
 //    half a tile across, with diamond sprites so the tiles behind show through the corners of the ones in front;
+//  - "hex": the hexagonal grid's own projection (#94), pointy-topped hexes in rows three quarters of a hex apart, every
+//    other one shifted half a hex across, with hexagonal sprites so the tiles behind show through the zigzags;
 //  - "tall": the square grid, with sprites half a tile taller than the box, reaching into the row above, as mountains
 //    and cities do in many tilesets. Units half a tile taller than the box, drawn up by the tileset's anchor, are
 //    checked on "isometric", whose projection reaches nowhere itself, so their layer's own reach has to cover them.
@@ -62,6 +64,7 @@ import {
   Reach,
   WorldDimensions,
 } from '@civ-clone/ui-map/lib/projection';
+import HexProjection from '@civ-clone/ui-map-hex/HexProjection';
 import IsoProjection from '@civ-clone/ui-map-isometric/IsoProjection';
 import SquareProjection from '@civ-clone/ui-map-square/SquareProjection';
 import { Rect, mergeRects, rectArea } from '@civ-clone/ui-map/lib/viewport';
@@ -689,7 +692,7 @@ const layerSpecs: LayerSpec[] = [
   {
     name: 'TallUnits',
     Type: TallUnits,
-    projections: ['isometric'],
+    projections: ['isometric', 'hex'],
     mutations: [
       {
         name: 'a stack',
@@ -849,6 +852,18 @@ class IsometricByColumn extends IsoProjection {
   }
 }
 
+// The hexagonal grid's own projection (#94) at the layers' 16px tile: hexes 16 across and 16 down, in rows 12 apart,
+//  every other one shifted half a hex across.
+const hexagonal = (layer: any): HexProjection =>
+  new HexProjection(layer.tileSize(), layer.world(), layer.wraps());
+
+// The hexagonal grid, drawn column by column.
+class HexByColumn extends HexProjection {
+  compareDrawOrder(a: Placement, b: Placement): number {
+    return a.px - b.px || a.py - b.py || a.x - b.x || a.y - b.y;
+  }
+}
+
 // Every sprite has a scattering of see-through pixels, as real ones do, so what is under it shows.
 const scatteredMask = (path: string, x: number, y: number): number =>
     mix(stringHash(path), x, y) % 5 === 0 ? 0 : 1,
@@ -864,7 +879,24 @@ const scatteredMask = (path: string, x: number, y: number): number =>
       Math.abs(y + 0.5 - height / 2) / (height / 2) >
     1
       ? 0
+      : scatteredMask(path, x, y),
+  // And, on the hexagonal grid, is a hexagon: its sides straight down the middle half, its top and bottom points a
+  //  quarter of the box from the corners, and its zigzags bleeding two pixels over the neighbours' as drawn art does,
+  //  which is what puts one hex in front of another (tiles that only touch have no order).
+  hexMask = (
+    path: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number
+  ): number => {
+    const across = Math.abs(x + 0.5 - width / 2),
+      down = Math.abs(y + 0.5 - height / 2);
+
+    return down > height / 2 - ((height / 4) * across) / (width / 2) + 2
+      ? 0
       : scatteredMask(path, x, y);
+  };
 
 // How a layer is drawn: the projection it is given (none: the layer's own square one), and the sprites' see-through
 //  pixels.
@@ -896,6 +928,11 @@ const projectionSpecs: ProjectionSpec[] = [
     mask: diamondMask,
   },
   {
+    name: 'hex',
+    make: hexagonal,
+    mask: hexMask,
+  },
+  {
     name: 'tall',
     make: (layer) =>
       new Tall(layer.tileSize().width, layer.world(), layer.wraps()),
@@ -908,6 +945,13 @@ const brokenOrder: ProjectionSpec = {
   make: (layer) =>
     new IsometricByColumn(layer.tileSize(), layer.world(), layer.wraps()),
   mask: diamondMask,
+};
+
+const brokenHexOrder: ProjectionSpec = {
+  name: 'hex, drawn column by column',
+  make: (layer) =>
+    new HexByColumn(layer.tileSize(), layer.world(), layer.wraps()),
+  mask: hexMask,
 };
 
 let mask: ProjectionSpec['mask'] | null = null;
@@ -1591,6 +1635,7 @@ const plain = layerSpecs.find(({ name }) => name === 'Plain')!,
   units = layerSpecs.find(({ name }) => name === 'Units')!,
   square = projectionSpecs.find(({ name }) => name === 'square')!,
   iso = projectionSpecs.find(({ name }) => name === 'isometric')!,
+  hexes = projectionSpecs.find(({ name }) => name === 'hex')!,
   tall = projectionSpecs.find(({ name }) => name === 'tall')!;
 
 // The mistakes made on purpose aren't any one projection's: checked once, with the first part.
@@ -1604,6 +1649,18 @@ if (part === null || part.k === 1) {
   caught(
     "clearing each isometric tile's box before drawing it",
     iso,
+    { ...plain, name: 'ClearsEachTile', Type: ClearsEachTile },
+    'a full render draws back to front'
+  );
+  caught(
+    'drawing hexes column by column',
+    brokenHexOrder,
+    plain,
+    'a full render draws back to front'
+  );
+  caught(
+    "clearing each hex's box before drawing it",
+    hexes,
     { ...plain, name: 'ClearsEachTile', Type: ClearsEachTile },
     'a full render draws back to front'
   );
