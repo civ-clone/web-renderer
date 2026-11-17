@@ -292,7 +292,7 @@ const settleMapTileset = (
  *  imported Civ1's art sees the square map drawn with it, as before. A hosted set's sprites are there once its sheet
  *  has loaded (`ensureTilesetLoaded`), which a game on its grid waits for. A grid with none installed is drawn with the
  *  bundled pack for it, its sprites missing, rather than another grid's: a game is only started or loaded on a grid
- *  with a pack installed (`supportedTopologies`). Throws for a grid no pack is for.
+ *  with a pack installed (`drawnTopologies`). Throws for a grid no pack is for.
  */
 export const mapTileset = (
   topologyId: TopologyId | string = currentGrid

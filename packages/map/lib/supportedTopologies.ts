@@ -9,12 +9,12 @@ import {
 import { topologyIds } from '@civ-clone/core-world/topologies';
 
 /**
- * The grids a game can be played on here: the ones a new game offers (#89), and the only ones a save can be loaded on.
- * They are the grids the installed `tilesets` are drawn for (#92) that there is a projection for (`drawable`): Civ1's
- * square, and Civ2's isometric once its sprites have been imported (#97). In the engine's order, which puts square first, as the grid New Game picks before the player
- * chooses another.
+ * The grids a game can be drawn on here, so the only ones a save can be loaded on: the grids the installed `tilesets`
+ *  are drawn for (#92) that there is a projection for (`drawable`). Civ1's square, Civ2's isometric once its sprites
+ *  have been imported (#97), and hex, whose pixel art ships with civ.one (#1063). In the engine's order, which puts
+ *  square first.
  */
-export const supportedTopologies = (
+export const drawnTopologies = (
   tilesets: TilesetDescriptor[] = installedTilesets(),
   drawable: TopologyId[] = drawableGrids()
 ): TopologyId[] =>
@@ -24,9 +24,39 @@ export const supportedTopologies = (
       tilesets.some((tileset) => tileset.grid === grid)
   );
 
-/** Whether a world on `topologyId`'s grid can be drawn: a world that does not say is square. */
+// The grids a new game doesn't offer yet, though a save on one loads where it can be drawn: hex, until its overlays
+//  and its city screen are done (Track A of docs/civ5-plan.md). A page loaded with `?hex=1` offers them.
+const unfinishedGrids: readonly TopologyId[] = ['hex-odd-r'];
+
+let offeringUnfinished = false;
+
+/** Has new games offer the grids that aren't finished yet (hex), as a page loaded with `?hex=1` does, or not. */
+export const offerUnfinishedGrids = (offer: boolean): void => {
+  offeringUnfinished = offer;
+};
+
+/** The grids a new game leaves out, though they can be drawn: the unfinished ones, unless they're offered. */
+export const hiddenGrids = (): TopologyId[] =>
+  offeringUnfinished ? [] : [...unfinishedGrids];
+
+/**
+ * The grids a new game offers (#89): those it can be drawn on (`drawnTopologies`) but the ones it leaves out
+ *  (`hidden`, hex until it's finished). In the engine's order, which puts square first, as the grid New Game picks
+ *  before the player chooses another.
+ */
+export const supportedTopologies = (
+  tilesets: TilesetDescriptor[] = installedTilesets(),
+  drawable: TopologyId[] = drawableGrids(),
+  hidden: TopologyId[] = hiddenGrids()
+): TopologyId[] =>
+  drawnTopologies(tilesets, drawable).filter((grid) => !hidden.includes(grid));
+
+/**
+ * Whether a world on `topologyId`'s grid can be drawn, and so loaded: a world that does not say is square. A grid new
+ *  games don't offer yet still loads (`drawnTopologies`).
+ */
 export const isSupportedTopology = (topologyId: string = 'square'): boolean =>
-  (supportedTopologies() as string[]).includes(topologyId);
+  (drawnTopologies() as string[]).includes(topologyId);
 
 /**
  * The bundled tileset a world on `topologyId`'s grid would be drawn with once its sprites were imported (#97): one

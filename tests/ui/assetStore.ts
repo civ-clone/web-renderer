@@ -457,10 +457,11 @@ onPreloadedImagesChanged(() => changed++);
           [tileset.id, false],
           ['civ2', true],
           ['civ1-pixelart', false],
+          ['hex-pixelart', false],
         ],
         { anchors, colours },
         anchors,
-        [tileset.id, 'civ1-pixelart'],
+        [tileset.id, 'civ1-pixelart', 'hex-pixelart'],
       ]
     );
 
@@ -478,8 +479,8 @@ onPreloadedImagesChanged(() => changed++);
         (whole[1]?.cities.colouring as { keys: string[] }).keys,
       ],
       [
-        [tileset.id, 'civ2', 'civ1-pixelart'],
-        [tileset.id, 'civ2', 'civ1-pixelart'],
+        [tileset.id, 'civ2', 'civ1-pixelart', 'hex-pixelart'],
+        [tileset.id, 'civ2', 'civ1-pixelart', 'hex-pixelart'],
         ['#f30000', '#a70000'],
       ]
     );
@@ -489,7 +490,7 @@ onPreloadedImagesChanged(() => changed++);
     expect(
       "Civ2's pack: without its import's record of anchors, it isn't installed",
       (await installPacks(packs)).map(({ id }) => id),
-      [tileset.id, 'civ1-pixelart']
+      [tileset.id, 'civ1-pixelart', 'hex-pixelart']
     );
 
     // An import whose record can't be drawn from, or a store that fails: the pack isn't installed, and the game still
@@ -520,7 +521,11 @@ onPreloadedImagesChanged(() => changed++);
     expect(
       "Civ2's pack: a flag whose colours can't be read, or a store that fails, leaves it uninstalled, said, and Civ1's still installed",
       [corrupt, failed, logged.length > errors],
-      [[tileset.id, 'civ1-pixelart'], [tileset.id, 'civ1-pixelart'], true]
+      [
+        [tileset.id, 'civ1-pixelart', 'hex-pixelart'],
+        [tileset.id, 'civ1-pixelart', 'hex-pixelart'],
+        true,
+      ]
     );
 
     records.delete(metadataKey(civ2));

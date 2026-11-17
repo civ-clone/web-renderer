@@ -22,7 +22,10 @@ import worldSizes, {
   worldSizesFor,
 } from '@civ-clone/ui-client/lib/worldSizes';
 import supportedTopologies, {
+  drawnTopologies,
+  hiddenGrids,
   isSupportedTopology,
+  offerUnfinishedGrids,
   tilesetToImport,
 } from '@civ-clone/ui-map/lib/supportedTopologies';
 import GameSetupWindow from '@civ-clone/ui-interface-classic/components/GameSetupWindow';
@@ -184,6 +187,16 @@ const text = (element: Element | null): string =>
     ],
     [['square', 'staggered-iso', 'hex-odd-r'], ['square']]
   );
+  // Hex isn't offered for new games without `?hex=1` (#1063), whatever is installed: the grids below are as a page
+  //  loaded with it offers them, until the checks of the switch itself.
+  expect(
+    'hex is hidden from new games to start with, as on a page loaded without ?hex=1',
+    [hiddenGrids(), supportedTopologies([civ1, hexStub], drawableGrids())],
+    [['hex-odd-r'], ['square']]
+  );
+
+  offerUnfinishedGrids(true);
+
   expect(
     'an isometric tileset, once one is installed, is offered after square, as there is an isometric projection (#97)',
     supportedTopologies([
@@ -467,6 +480,45 @@ const text = (element: Element | null): string =>
 
   closeAll();
 
+  // The switch: without `?hex=1`, hex is drawn, so a save on it loads, but a new game doesn't offer it.
+  offerUnfinishedGrids(false);
+
+  expect(
+    'without ?hex=1, a hex tileset installed still leaves New Game square alone, though hex can be drawn',
+    [
+      hiddenGrids(),
+      supportedTopologies([civ1, hexStub], withHex),
+      drawnTopologies([civ1, hexStub], withHex),
+    ],
+    [['hex-odd-r'], ['square'], ['square', 'hex-odd-r']]
+  );
+
+  askMapGrid(
+    (grid) => chosen.push(grid),
+    supportedTopologies([civ1, hexStub], withHex)
+  );
+
+  await settle();
+
+  expect(
+    'so the question answers itself, square, and nothing is shown',
+    [openDialogs().length, chosen.slice(-1)],
+    [0, ['square']]
+  );
+
+  offerUnfinishedGrids(true);
+
+  expect(
+    'with it, hex is offered after square, and hidden again once the switch is off',
+    [
+      hiddenGrids(),
+      supportedTopologies([civ1, hexStub], withHex),
+      (offerUnfinishedGrids(false),
+      supportedTopologies([civ1, hexStub], withHex)),
+    ],
+    [[], ['square', 'hex-odd-r'], ['square']]
+  );
+
   // New Game: no grid question, the sizes as always, and the grid sent.
   askNewGame(transport, () => {});
 
@@ -675,7 +727,7 @@ const text = (element: Element | null): string =>
     civ2Metadata: PackMetadata = { anchors: {}, colours: flagColours };
 
   expect(
-    "Civ2's pack incomplete, or without the record of its sprites' anchors, isn't installed: only square, Civ1's and the pixel art's",
+    "Civ2's pack incomplete, or without the record of its sprites' anchors, isn't installed: only square, Civ1's and the pixel art's, and hex, hidden",
     [
       installTilesets({
         civ2: { complete: false, metadata: civ2Metadata },
@@ -687,11 +739,21 @@ const text = (element: Element | null): string =>
       supportedTopologies(),
     ],
     [
-      ['civ1', 'civ1-pixelart'],
+      ['civ1', 'civ1-pixelart', 'hex-pixelart'],
       ['square'],
-      ['civ1', 'civ1-pixelart'],
+      ['civ1', 'civ1-pixelart', 'hex-pixelart'],
       ['square'],
     ]
+  );
+  expect(
+    'the hexagonal pixel art installed as it ships: a save on hex loads, and hex is drawn with it, though not offered',
+    [
+      isSupportedTopology('hex-odd-r'),
+      drawnTopologies(),
+      supportedTopologies(),
+      mapTileset('hex-odd-r').id,
+    ],
+    [true, ['square', 'hex-odd-r'], ['square'], 'hex-pixelart']
   );
   expect(
     "without it, an isometric world is the one that needs Civ2's art imported, and a square one needs nothing",
@@ -718,6 +780,7 @@ const text = (element: Element | null): string =>
         ['civ1', 'square'],
         ['civ2', 'staggered-iso'],
         ['civ1-pixelart', 'square'],
+        ['hex-pixelart', 'hex-odd-r'],
       ],
       ['square', 'staggered-iso'],
       true,
@@ -776,6 +839,41 @@ const text = (element: Element | null): string =>
   isoSetup.close();
   closeAll();
 
+  // With `?hex=1`: New Game and Game setup offer hex too, drawn with the hexagonal pixel art.
+  offerUnfinishedGrids(true);
+
+  askMapGrid((grid) => chosen.push(grid));
+
+  await settle();
+
+  expect('with ?hex=1, New Game offers hex as well', shown(), {
+    title: 'Which map grid?',
+    options: ['Square', 'Isometric', 'Hex'],
+  });
+
+  closeAll();
+
+  const hexSetup = await GameSetupWindow.ask(setupTransport, () => {}, {
+    advanced: true,
+  });
+
+  expect(
+    'and so does Game setup',
+    Array.from(
+      hexSetup
+        .element()
+        .querySelectorAll(
+          'select[name=topologyId] option'
+        ) as NodeListOf<HTMLOptionElement>,
+      (option) => option.getAttribute('value')
+    ),
+    ['square', 'staggered-iso', 'hex-odd-r']
+  );
+
+  hexSetup.close();
+  closeAll();
+  offerUnfinishedGrids(false);
+
   // A bundled pack that keeps no record of its sprites is installed on its sprites alone.
   registerTileset({
     ...validateDescriptor(civ1Json),
@@ -788,7 +886,7 @@ const text = (element: Element | null): string =>
     installTilesets({ 'no-record': { complete: true, metadata: null } }).map(
       ({ id }) => id
     ),
-    ['civ1', 'civ1-pixelart', 'no-record']
+    ['civ1', 'civ1-pixelart', 'hex-pixelart', 'no-record']
   );
 
   installTilesets({});

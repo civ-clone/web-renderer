@@ -13,6 +13,7 @@
 
 import './lib/grids';
 import './lib/artPacks';
+import { installTilesets } from '@civ-clone/ui-assets/lib/tilesets';
 import { failStore, resetStore, storedRecords } from './lib/FakeStore';
 import {
   fileName,
@@ -368,31 +369,18 @@ const reset = () => {
   thrown = null;
 
   await loadSaveFromFile(
-    new File([onGrid('hex-odd-r')], 'hex.civ-clone.json')
+    new File([onGrid('triangles')], 'triangles.civ-clone.json')
   ).catch((error: Error) => (thrown = error));
 
   expect(
-    'a save on a grid that cannot be drawn is refused, naming the grid',
+    'a save on a grid that cannot be drawn is refused, naming the grid, one nobody has heard of as it is',
     alerts.join(),
-    t('SavedGame.needs-grid', { grid: 'Hex' })
+    t('SavedGame.needs-grid', { grid: 'triangles' })
   );
   expect('and nothing is handed over', storedRecords().size, 0);
   expect('and no marker is left', session.size, 0);
   expect('and the page stays on the menu', reloads, 0);
   expect('and it rejects', thrown !== null, true);
-
-  reset();
-
-  await loadSaveFromFile(
-    new File([onGrid('triangles')], 'triangles.civ-clone.json')
-  ).catch(() => {});
-
-  expect(
-    'a grid nobody has heard of is named as it is',
-    alerts.join(),
-    t('SavedGame.needs-grid', { grid: 'triangles' })
-  );
-  expect('and is not handed over either', storedRecords().size, 0);
 
   reset();
 
@@ -407,7 +395,11 @@ const reset = () => {
   );
   expect('and is not handed over', storedRecords().size, 0);
 
-  for (const topologyId of ['square', undefined]) {
+  // The sets installed as the page installs them: the pixel art's hexagonal one with them, as it ships (#1063), so a save
+  //  on hex loads, though a new game doesn't offer hex without `?hex=1`.
+  installTilesets({});
+
+  for (const topologyId of ['square', undefined, 'hex-odd-r']) {
     reset();
 
     await loadSaveFromFile(

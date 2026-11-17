@@ -570,17 +570,18 @@ const run = async (): Promise<void> => {
   // A world on a grid that can't be drawn here (#89): said, and back to the menu, with no game started.
   const alerts: string[] = [];
   let reloads = 0,
-    hexStarted = false;
+    undrawnStarted = false;
 
   Object.assign(window, {
     alert: (message: string) => alerts.push(message),
     location: { reload: () => reloads++ },
   });
 
-  const hexMap = makeMap(1),
+  const undrawnMap = makeMap(1),
     receiversBefore = receivers.length;
 
-  Object.assign(hexMap.objects['World-1'], { topologyId: 'hex-odd-r' });
+  // A grid nothing here draws: hex can be now, with the pixel art's hexagonal set (#1063).
+  Object.assign(undrawnMap.objects['World-1'], { topologyId: 'triangles' });
 
   new GameSession({
     elements,
@@ -593,10 +594,10 @@ const run = async (): Promise<void> => {
     pendingSave: 'a save',
     cheatsEnabled: false,
     setGameStarted: (): void => {
-      hexStarted = true;
+      undrawnStarted = true;
     },
     transportDisposers: [],
-  }).start(hexMap);
+  }).start(undrawnMap);
 
   expect(
     'a world on a grid that cannot be drawn is said, and the page goes back to the menu',
@@ -605,7 +606,7 @@ const run = async (): Promise<void> => {
   );
   expect(
     'with no game started and nothing registered',
-    [hexStarted, receivers.length - receiversBefore],
+    [undrawnStarted, receivers.length - receiversBefore],
     [false, 0]
   );
 

@@ -10,7 +10,8 @@ import Overview from './Overview';
 import { TilesetDescriptor } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 
 // The staggered isometric grid, made drawable (#97): the page loads this for the map to draw isometric tilesets. It is
-//  offered once one is installed too (`supportedTopologies`): Civ2's, once its art has been imported.
+//  offered, and a save on it loads, once one is installed too (`supportedTopologies`, `drawnTopologies`): Civ2's,
+//  once its art has been imported.
 
 /** The projection an isometric `tileset` is drawn with, or a refusal for geometry `IsoProjection` cannot draw. */
 export const isoProjection = (

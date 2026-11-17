@@ -65,7 +65,10 @@ import { GameSetup } from '@civ-clone/ui-client/lib/gameSetup';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import { join } from 'path';
-import pixelArt from '@civ-clone/ui-tileset-pixelart';
+import pixelArt, {
+  hexPixelArtTileset as hexPixelArt,
+} from '@civ-clone/ui-tileset-pixelart';
+import hexPixelArtJson from '@civ-clone/civ1-tileset-pixelart/pack-hex/tileset.json';
 import pixelArtJson from '@civ-clone/civ1-tileset-pixelart/pack/tileset.json';
 import setOptionDefaults from '@civ-clone/ui-game/app/options';
 import { sheets } from '@civ-clone/ui-tileset-pixelart/sheets';
@@ -415,6 +418,57 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
     );
   }
 
+  // The hexagonal pixel art as it is built (slice 4 of docs/asset-library.md): all 865 of its sprites, as its PNGs
+  //  have them.
+  {
+    const { sheet, index } = sheets['hex-pixelart']!,
+      built = readPng(readFileSync(sheet)),
+      json = JSON.parse(readFileSync(index, 'utf8')) as Sheet['index'],
+      listed = [
+        ...hexPixelArtJson.assets.required,
+        ...hexPixelArtJson.assets.optional,
+      ],
+      pack = join(
+        process.cwd(),
+        'node_modules/@civ-clone/civ1-tileset-pixelart/pack-hex'
+      );
+
+    expect(
+      'the hexagonal pixel art is built into dist/sets beside the square, named by its hash, and its package told where',
+      [
+        /^dist\/sets\/hex-pixelart\.[0-9a-f]{12}\.png$/.test(sheet),
+        index === sheet.replace(/\.png$/, '.json'),
+        Object.keys(sheets).sort(),
+      ],
+      [true, true, ['civ1-pixelart', 'hex-pixelart']]
+    );
+    expect(
+      'its index lists every sprite its descriptor does, every one it requires among them',
+      [
+        Object.keys(json.sprites).sort(),
+        hexPixelArtJson.assets.required.filter(
+          (name) => json.sprites[name] === undefined
+        ),
+        listed.length,
+      ],
+      [[...listed].sort(), [], 865]
+    );
+    expect(
+      'and each is in the sheet as its own PNG has it, a hex tile 32 × 36',
+      [
+        listed.filter((name) => {
+          const { x, y, width, height } = json.sprites[name]!;
+
+          return !crop(built, x, y, width, height).data.equals(
+            readPng(readFileSync(join(pack, `${name}.png`))).data
+          );
+        }),
+        json.sprites['terrain/ocean'],
+      ],
+      [[], { ...json.sprites['terrain/ocean']!, width: 32, height: 36 }]
+    );
+  }
+
   // The pixel art's descriptor: hosted, MIT, and with every name the interface asks for.
   expect(
     'the pixel art is registered hosted, with its licence, from its own descriptor',
@@ -446,6 +500,67 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
         )
     ),
     []
+  );
+  expect(
+    'the hexagonal pixel art is registered hosted too, with its licence, from its own descriptor, on the hex grid',
+    [
+      hexPixelArt.id,
+      hexPixelArt.grid,
+      hexPixelArt.source,
+      hexPixelArt.licence,
+      hexPixelArt.storage.prefix,
+      hexPixelArt.tile,
+      hexPixelArt.geometry.rowStep,
+      hexPixelArt.geometry.oddRowShift,
+    ],
+    [
+      'hex-pixelart',
+      'hex-odd-r',
+      'hosted',
+      {
+        name: 'MIT',
+        url: 'https://github.com/civ-clone/civ1-tileset-pixelart/blob/main/LICENSE',
+      },
+      './assets/hex-pixelart/',
+      { width: 32, height: 36 },
+      27,
+      16,
+    ]
+  );
+  expect(
+    'it passes the validator as it ships, and has every sprite the interface needs, by its own name for it',
+    [
+      thrown(() =>
+        validateDescriptor({ ...hexPixelArtJson, source: 'hosted' })
+      ),
+      requiredInterfaceNames.filter(
+        (name) =>
+          !hexPixelArt.assets.required.some(
+            (sprite) =>
+              spriteKey(hexPixelArt, sprite) ===
+              interfaceSpriteKey(name, hexPixelArt)
+          )
+      ),
+    ],
+    [null, []]
+  );
+  expect(
+    'its cities are drawn in styles, with the rim an overlay in its own key colours',
+    [
+      hexPixelArt.cities.mode,
+      hexPixelArt.cities.colouring,
+      spriteKey(hexPixelArt, 'map/city_rim'),
+    ],
+    [
+      'styles',
+      {
+        mode: 'overlay',
+        sprite: 'map/city_rim',
+        keys: ['#60E064', '#2C7800'],
+        anchor: { x: 0, y: 0 },
+      },
+      './assets/hex-pixelart/map/city_rim.png',
+    ]
   );
   expect(
     'a hosted set is registered with its sheet, and only a hosted one',
@@ -721,7 +836,7 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
         interfaceArt().id,
         store.hostedLoaded(pixelArt),
       ],
-      [['civ1', 'civ1-pixelart'], [], 'civ1', 'civ1', false]
+      [['civ1', 'civ1-pixelart', 'hex-pixelart'], [], 'civ1', 'civ1', false]
     );
     expect(
       "nothing is asked of the worker for a game of another kind: the pixel art is no game's own",
@@ -751,11 +866,43 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
     );
 
     fetched.length = 0;
+    await ensureMapArt('hex-odd-r', store);
+
+    const hexSprite = (name: string): number[] => {
+      const { width, height } = getPreloadedImage(
+        name,
+        hexPixelArt
+      ) as unknown as Pixels;
+
+      return [width, height];
+    };
+
+    expect(
+      'a game on the hex grid is drawn with the hexagonal pixel art, its sheet fetched first, and its sprites there by their keys',
+      [
+        mapTileset('hex-odd-r').id,
+        fetched,
+        store.hostedLoaded(hexPixelArt),
+        hexSprite('terrain/grassland_ne-e-se-sw-w-nw'),
+        hexSprite('terrain/coast_nw_101'),
+        hexSprite('map/city_rim'),
+      ],
+      [
+        'hex-pixelart',
+        [sheets['hex-pixelart']!.sheet, sheets['hex-pixelart']!.index],
+        true,
+        [32, 36],
+        [32, 36],
+        [32, 36],
+      ]
+    );
+
+    fetched.length = 0;
 
     expect(
       'and a chosen hosted set is fetched as the page starts',
       [ids(await installPacks(new AssetStore(civ1))), fetched.length],
-      [['civ1', 'civ1-pixelart'], 2]
+      [['civ1', 'civ1-pixelart', 'hex-pixelart'], 2]
     );
 
     chooseMapTileset('square', '');
@@ -771,7 +918,13 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
         interfaceArt(uiThemeArt('civ1-classic')).id,
         fetched.length,
       ],
-      [['civ1-pixelart'], 'civ1-pixelart', 'civ1-pixelart', 'civ1-pixelart', 2]
+      [
+        ['civ1-pixelart', 'hex-pixelart'],
+        'civ1-pixelart',
+        'civ1-pixelart',
+        'civ1-pixelart',
+        2,
+      ]
     );
 
     keys = civ1Keys;
@@ -781,11 +934,12 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
     expect(
       "offline with Civ1's art: nothing is fetched, so nothing fails, and the pixel art is still declared",
       [ids(await installPacks(new AssetStore(civ1))), logged],
-      [['civ1', 'civ1-pixelart'], []]
+      [['civ1', 'civ1-pixelart', 'hex-pixelart'], []]
     );
 
     keys = [];
 
+    // The hexagonal set's sheet isn't fetched until a hex game wants it, so nothing has failed for it yet.
     expect(
       "offline with nothing imported: the pixel art's sheet can't be fetched, which is said, and it isn't installed",
       [
@@ -793,7 +947,7 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
         logged.includes("Could not load the civ1-pixelart set's sheet."),
         interfaceArt().id,
       ],
-      [[], true, 'civ1']
+      [['hex-pixelart'], true, 'civ1']
     );
 
     offline = false;
@@ -815,7 +969,7 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
       "a store that opens but can't be read, with none of Civ1's sprites read: the pixel art stands in, fetched as the page starts",
       [ids(await installPacks(new AssetStore(civ1))), fetched],
       [
-        ['civ1-pixelart'],
+        ['civ1-pixelart', 'hex-pixelart'],
         [sheets['civ1-pixelart']!.sheet, sheets['civ1-pixelart']!.index],
       ]
     );
@@ -836,7 +990,7 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
         fetched,
       ],
       [
-        ['civ1-pixelart'],
+        ['civ1-pixelart', 'hex-pixelart'],
         'civ1-pixelart',
         'civ1-pixelart',
         [sheets['civ1-pixelart']!.sheet, sheets['civ1-pixelart']!.index],
@@ -1019,6 +1173,7 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
       installed = installTilesets({
         civ2: { complete: true, metadata: civ2Metadata },
         'hosted-iso': { complete: true, metadata: null },
+        'hex-pixelart': { complete: true, metadata: null },
       });
 
     expect(
@@ -1036,9 +1191,9 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
         ),
       ],
       [
-        ['civ1', 'civ1-pixelart', 'hosted-iso'],
-        ['civ1', 'civ1-pixelart', 'hosted-iso'],
-        ['civ1'],
+        ['civ1', 'civ1-pixelart', 'hex-pixelart', 'hosted-iso'],
+        ['civ1', 'civ1-pixelart', 'hex-pixelart', 'hosted-iso'],
+        ['civ1', 'hex-pixelart'],
       ]
     );
     expect(
@@ -1048,6 +1203,14 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
         keysOf(installed.find(({ id }) => id === 'civ2')!),
       ],
       [keysOf(hostedIso), ['#fa0102', '#a00304']]
+    );
+    expect(
+      "the hexagonal pixel art's city rim keeps its own keys, and nothing of its is read from storage",
+      [
+        keysOf(installed.find(({ id }) => id === 'hex-pixelart')!),
+        asked.includes(metadataKey(hexPixelArt)),
+      ],
+      [['#60E064', '#2C7800'], false]
     );
     expect(
       'no record of anchors and colours is read for it',

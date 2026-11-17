@@ -33,7 +33,7 @@ with civ.one. [asset-system.md](asset-system.md) describes the system as it is t
   `hex-pixelart`), and what is kept per tile size (a zoom, a sprite sheet) is kept per descriptor.
 - **What a set provides:**
   - map art for a grid: a tileset, with its descriptor (a set can have one for each grid, as the pixel art has square
-    and hexagonal, once its hexagonal pack is merged);
+    and hexagonal);
   - interface art: the sprites under its descriptor's `assets.ui` prefixes, as Civ1's provides today;
   - sound: music and the driver it needs.
 - **Source:**
@@ -156,9 +156,8 @@ it has today. The import window's own handling of the file goes, and the music r
 ## Hosted sets
 
 - **Where they come from:** a set's repository is a dependency, as the asset extractors are, for example
-  `civ1-tileset-pixelart`, which holds the square pack, and the hexagonal one on its `feat/hex-pack` branch until
-  slice 4 merges it. Its package in the renderer
-  (`tileset-pixelart`) registers its descriptors with `source: "hosted"`.
+  `civ1-tileset-pixelart`, which holds the square pack (`pack`) and the hexagonal one (`pack-hex`). Its package in the
+  renderer (`tileset-pixelart`) registers both descriptors with `source: "hosted"`, and declares each for the build.
 - **The build:** a step packs each hosted set's PNGs into one sheet and an index (`dist/sets/<id>.<hash>.png` and
   `.json`), and records the names in the descriptor it registers.
 - **Loading:**
@@ -280,10 +279,9 @@ The library replaces Import Assets. It opens from the main menu and from Options
      (decision 3).
 4. **The hexagonal pixel art.**
    - Its descriptor is registered from the same package, keeping its own city rim colours (Hosted sets).
-   - Hex is then offered for new games (#94).
-   - Two things aren't proven yet:
-     - the renderer has only drawn hex with stand-in square sprites, so this is the pack's first real test;
-     - the civ5 plan's Track A still has hex overlays and the hex city screen to do.
+   - Hex is offered for new games (#94) only on a page loaded with `?hex=1` for now (`offerUnfinishedGrids`), as the
+     civ5 plan's Track A still has hex overlays and the hex city screen to do. A save on hex loads either way.
+   - This was the pack's first real test: the renderer had only drawn hex with stand-in square sprites.
 5. **Remove, and the space used.**
    - Then #964's installed sets join the list as a third source.
 
