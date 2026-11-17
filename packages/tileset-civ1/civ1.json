@@ -4,6 +4,7 @@
   "kind": "tileset",
   "id": "civ1",
   "name": "Civilization",
+  "source": "imported",
   "grid": "square",
   "tile": {
     "width": 16,

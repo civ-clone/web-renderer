@@ -474,7 +474,7 @@ const KEY_CODES = {
 };
 
 // The title menu is up: both interfaces' offer this, with or without anything imported.
-const TITLE_MENU = `return /Import assets/i.test(document.body.innerText);`;
+const TITLE_MENU = `return /Art and sound/i.test(document.body.innerText);`;
 
 const openWindows = `return [...document.querySelectorAll('dialog.window[open]')].map((dialog) => dialog.className);`;
 

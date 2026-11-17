@@ -1,4 +1,4 @@
-// The Civ1 tileset package's own text (#97): what the Import Assets window says of Civilization's files.
+// The Civ1 tileset package's own text (#97): what its import window says of Civilization's files.
 import i18next from 'i18next';
 
 i18next.addResources('en', 'default', {

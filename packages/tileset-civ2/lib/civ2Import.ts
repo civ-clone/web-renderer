@@ -15,6 +15,7 @@ import {
 } from '@civ-clone/ui-assets/lib/packs';
 import { Asset, assetStore } from '@civ-clone/ui-assets/AssetStore';
 import {
+  FilesWanted,
   ImportOptions,
   PackImport,
   PackImportResult,
@@ -279,12 +280,27 @@ export const civ2FilesToImport = (
   });
 };
 
+/** Civ2's pack, as the asset store reads it, once the tileset is registered. */
+const civ2AssetPack = () =>
+  packFor(bundledTilesets().find(({ id }) => id === civ2Pack.id)!);
+
+/** The sheets that add to the map (`civ2OptionalFiles`) with a sprite of theirs that isn't stored. */
+const civ2OptionalToImport = async (): Promise<string[]> => {
+  const stored = new Set(await assetStore.keys());
+
+  return civ2OptionalFiles().filter((file) =>
+    definitions[file]!.grids.some(({ path, names }) =>
+      names.some((name) => name !== null && !stored.has(civ2Key(path + name)))
+    )
+  );
+};
+
 /**
  * Whether Civilization II's map art is all imported (#97), and the sheets to import if not: null when none of it has
  *  been, which is nothing to say, as it's optional.
  */
 export const civ2Status = async (): Promise<string[] | null> => {
-  const pack = packFor(bundledTilesets().find(({ id }) => id === civ2Pack.id)!),
+  const pack = civ2AssetPack(),
     [imported, missing, metadata] = await Promise.all([
       assetStore.importedCount(pack),
       assetStore.missingAssets(pack),
@@ -304,7 +320,7 @@ export const civ2Status = async (): Promise<string[] | null> => {
   );
 };
 
-/** What `civ2Status` found, as the Import assets window and Options say it: complete, or the sheets to import. */
+/** What `civ2Status` found, as its import window and Options say it: complete, or the sheets to import. */
 export const civ2StatusText = (toImport: string[]): string =>
   toImport.length === 0
     ? t('TilesetCiv2.complete')
@@ -405,18 +421,22 @@ const civ2Assets = async (
 };
 
 /**
- * Civ2's import (#97): its sheets, optional, as Civilization's own files are all a game needs, and importable on their
- *  own once those are in: the map's four, and ICONS.GIF, whose yield icons the map takes when they're there (#999).
- *  RULES.TXT is taken and left alone.
+ * Civ2's import (#97): its sheets, importable once Civilization's own are in, some at a time: the map's four, which it
+ *  is ready with, and ICONS.GIF and PEOPLE.GIF, which add to it (#999). RULES.TXT is taken and left alone.
  */
 export const civ2Import: PackImport = {
   id: civ2Pack.id,
-  requiredFiles: [],
+  name: civ2.name,
+  game: 'Civilization II',
+  // The map's sheets, which it is ready with, though an import can take some of them at a time; and the ones that add
+  //  to the map.
+  requiredFiles: civ2MapFiles(),
+  optionalFiles: civ2OptionalFiles(),
   accepts: isCiv2File,
   ignores: isCiv2Rules,
   instructions: (): string =>
     [
-      t('TilesetCiv2.import-optional', { files: civ2MapFiles() }),
+      t('TilesetCiv2.import', { files: civ2MapFiles() }),
       ...(civ2OptionalFiles().length > 0
         ? [t('TilesetCiv2.import-icons', { files: civ2OptionalFiles() })]
         : []),
@@ -435,38 +455,43 @@ export const civ2Import: PackImport = {
 
           return 'unreadable' as const;
         }),
-      // Civilization II's sheets that couldn't be read, left out beside Civilization's own files.
-      skipped: string[] = [],
       results = await Promise.all(
-        files.map((file) =>
-          extractFile(file, options, stored).catch((error): Civ2Result => {
-            if (!options.skipUnreadable) {
-              throw error;
-            }
-
-            console.warn(`Could not read ${file.name}, skipping.`, error);
-
-            skipped.push(file.name);
-
-            return { sprites: [] };
-          })
-        )
+        files.map((file) => extractFile(file, options, stored))
       );
 
-    return { assets: await civ2Assets(results, stored), skipped };
+    return { assets: await civ2Assets(results, stored) };
   },
-  // Whether Civilization II's map art is complete, naming the sheets still to import and any of `skipped`, the ones
-  //  chosen that couldn't be read. Nothing when none of it has been imported or skipped.
-  status: async (skipped: string[]): Promise<PackImportStatus> => {
+  // Ready as the installer would install it: every sprite it requires, and a record of their anchors and flags'
+  //  colours the map can draw from.
+  ready: async (): Promise<boolean> => {
+    try {
+      return (
+        (await assetStore.hasAllAssets(civ2AssetPack())) &&
+        (await civ2Status())?.length === 0
+      );
+    } catch {
+      return false;
+    }
+  },
+  filesWanted: async (): Promise<FilesWanted | null> => {
+    try {
+      const required = await civ2Status();
+
+      return required === null
+        ? null
+        : { required, optional: await civ2OptionalToImport() };
+    } catch {
+      return null;
+    }
+  },
+  // Whether Civilization II's map art is complete, naming the sheets still to import. Nothing when none of it has been
+  //  imported.
+  status: async (): Promise<PackImportStatus> => {
     const toImport = await civ2Status();
 
     return {
-      lines: [
-        ...skipped.map((file) => t('TilesetCiv2.skipped', { file })),
-        ...(toImport === null ? [] : [civ2StatusText(toImport)]),
-      ],
-      incomplete:
-        skipped.length > 0 || (toImport !== null && toImport.length > 0),
+      lines: toImport === null ? [] : [civ2StatusText(toImport)],
+      incomplete: toImport !== null && toImport.length > 0,
     };
   },
 };

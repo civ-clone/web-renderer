@@ -1,5 +1,6 @@
 import {
   ChosenFile,
+  FilesWanted,
   ImportOptions,
   PackImport,
   PackImportResult,
@@ -11,8 +12,10 @@ import {
   ImageMap,
   extractSprites,
 } from '@civ-clone/civ1-asset-extractor/extractSprites';
-import { assetFromURI } from '@civ-clone/ui-assets/AssetStore';
+import { assetFromURI, assetStore } from '@civ-clone/ui-assets/AssetStore';
+import { bundledTilesets } from '@civ-clone/ui-assets/lib/tilesets';
 import civ1 from '../civ1.json';
+import { packFor } from '@civ-clone/ui-assets/lib/installPacks';
 import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';
 import { t } from 'i18next';
 
@@ -21,6 +24,50 @@ const optionalFiles = (extractData as ExtractData).optional ?? [],
   requiredFiles = Object.keys(extractData.files).filter(
     (file) => !optionalFiles.includes(file)
   );
+
+/** The keys of the sprites the extractor cuts from `file`, as the import keeps them (`./assets/<path><name>.png`). */
+const keysOf = (file: string): string[] => {
+  const definitions = (extractData as ExtractData).files[file] ?? {};
+
+  return Object.keys(definitions).flatMap((path) =>
+    definitions[path]!.flatMap((definition) =>
+      definition.contents.map(({ name }) => `./assets/${path}${name}.png`)
+    )
+  );
+};
+
+/** Civ1's pack, as the asset store reads it, once the tileset is registered. */
+const civ1Pack = () =>
+  packFor(bundledTilesets().find(({ id }) => id === civ1.id)!);
+
+/**
+ * The files still to import for Civ1's art (#1063): each required one holding a sprite the tileset requires that isn't
+ *  stored, and each optional one holding a sprite that isn't. Null when none of it is stored, or the store can't be
+ *  read.
+ */
+const filesWanted = async (): Promise<FilesWanted | null> => {
+  const pack = civ1Pack(),
+    [imported, missing, keys] = await Promise.all([
+      assetStore.importedCount(pack),
+      assetStore.missingAssets(pack),
+      assetStore.keys().catch((): string[] => []),
+    ]);
+
+  if (imported === 0) {
+    return null;
+  }
+
+  const stored = new Set(keys);
+
+  return {
+    required: requiredFiles.filter((file) =>
+      keysOf(file).some((key) => missing.includes(key))
+    ),
+    optional: optionalFiles.filter((file) =>
+      keysOf(file).some((key) => !stored.has(key))
+    ),
+  };
+};
 
 /** Whether `file` is one of Civilization's own files, the ones its extractor cuts up, whatever the case of its name. */
 export const isCiv1File = ({ name }: ChosenFile): boolean =>
@@ -118,7 +165,10 @@ const extract = (
 export const civ1Import: PackImport = {
   // The tileset's own id, so the import and the pack it fills can't drift apart.
   id: civ1.id,
+  name: civ1.name,
+  game: 'Civilization',
   requiredFiles,
+  optionalFiles,
   accepts: isCiv1File,
   instructions: (): string =>
     `${t('TilesetCiv1.import', { files: requiredFiles })}${
@@ -138,9 +188,12 @@ export const civ1Import: PackImport = {
       assets: await Promise.all(
         results.map(({ name, uri }) => assetFromURI(name, uri))
       ),
-      skipped: [],
     };
   },
+  ready: (): Promise<boolean> =>
+    assetStore.hasAllAssets(civ1Pack()).catch((): boolean => false),
+  filesWanted: (): Promise<FilesWanted | null> =>
+    filesWanted().catch((): null => null),
 };
 
 export default civ1Import;

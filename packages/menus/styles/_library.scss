@@ -1,0 +1,71 @@
+// The library of art and sound (#1063): its sections, and each set's entry in them.
+.library {
+  max-width: 36em;
+
+  .storage-blocked {
+    color: var(--ui-negative);
+    margin-bottom: 1em;
+  }
+
+  h4 {
+    margin: 1em 0 0.25em;
+  }
+
+  h5 {
+    color: var(--ui-fg-muted);
+    margin: 0.5em 0 0.25em;
+  }
+
+  .library-section:first-of-type h4 {
+    margin-top: 0;
+  }
+}
+
+.library-sets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.library-set {
+  border-top: 1px solid var(--ui-line-soft);
+  padding: 0.5em 0;
+
+  > div + div {
+    margin-top: 0.25em;
+  }
+
+  .library-set-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5em;
+    justify-content: space-between;
+    // Clear of the window's scroll bar, which some chromes draw over the body's edge.
+    padding-right: 0.5em;
+  }
+
+  .status[data-state='ready'] {
+    color: var(--ui-positive);
+  }
+
+  .status[data-state='needs'] {
+    color: var(--ui-warn);
+  }
+
+  .provides span + span::before {
+    content: ' · ';
+  }
+
+  .provides,
+  .source,
+  .reason {
+    color: var(--ui-fg-muted);
+  }
+
+  .actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5em;
+  }
+}

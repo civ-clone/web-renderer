@@ -27,6 +27,7 @@
     "./lib/spriteAnchors": "./lib/spriteAnchors.ts",
     "./lib/tilesets": "./lib/tilesets.ts",
     "./lib/unitActionIcon": "./lib/unitActionIcon.ts",
+    "./sounds/SoundDescriptor": "./sounds/SoundDescriptor.ts",
     "./tilesets/TilesetDescriptor": "./tilesets/TilesetDescriptor.ts"
   },
   "peerDependencies": {

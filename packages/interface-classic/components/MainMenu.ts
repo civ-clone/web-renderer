@@ -1,7 +1,7 @@
 import { Element, s } from '@dom111/element';
 import GameSetupWindow from './GameSetupWindow';
 import HallOfFameWindow from '@civ-clone/ui-reports/components/HallOfFameWindow';
-import ImportAssetsWindow from '@civ-clone/ui-menus/components/ImportAssetsWindow';
+import LibraryWindow from '@civ-clone/ui-menus/components/LibraryWindow';
 import ReleaseWindow, {
   fetchReleases,
 } from '@civ-clone/ui-menus/components/ReleaseWindow';
@@ -113,14 +113,10 @@ export class MainMenu extends Element {
               click: () => new HallOfFameWindow(),
             }
           ),
-          h(
-            s(
-              `<button class="btn-bare">${t('MainMenu.import-assets')}</button>`
-            ),
-            {
-              click: () => new ImportAssetsWindow(),
-            }
-          )
+          h(s(`<button class="btn-bare">${t('MainMenu.library')}</button>`), {
+            // The library of art and sound (#1063), where each set is imported.
+            click: () => new LibraryWindow(),
+          })
         ),
         {
           keydown(event: KeyboardEvent) {

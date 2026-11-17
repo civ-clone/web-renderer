@@ -4,6 +4,7 @@
   "kind": "tileset",
   "id": "civ2",
   "name": "Civilization II",
+  "source": "imported",
   "grid": "staggered-iso",
   "tile": {
     "width": 64,

@@ -36,7 +36,7 @@ i18next.addResources('en', 'default', {
   'MainMenu.customise': 'Customize…',
   'MainMenu.earth': 'Earth',
   'MainMenu.hall-of-fame': '$t(HallOfFame.title)',
-  'MainMenu.import-assets': '$t(ImportAssetsWindow.title)',
+  'MainMenu.library': '$t(LibraryWindow.title)',
   'MainMenu.load-game': 'Load a Saved Game',
   'MainMenu.new-game': 'Start a New Game',
   'MainMenu.quit': 'Quit',

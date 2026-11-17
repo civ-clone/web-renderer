@@ -323,11 +323,28 @@ export const defaultUi: TilesetUi = {
   cursor: 26,
 };
 
+/**
+ * Where a set comes from, as the library says (#1063): `hosted`, built into the site and fetched; `imported`, read from
+ * the player's own copy of the game it comes from.
+ */
+export type SetSource = 'hosted' | 'imported';
+
+/** A set's licence, shown on its entry in the library (#1063): a name, a link, and the attribution it asks for. */
+export interface SetLicence {
+  name: string;
+  url: string;
+  attribution?: string;
+}
+
 export interface TilesetDescriptor {
   schema: typeof TILESET_SCHEMA;
   kind: 'tileset';
   id: string;
   name: string;
+  /** Where it comes from (#1063). */
+  source?: SetSource;
+  /** Its licence, for a set that has one of ours to show: an imported set's art is the player's own copy. */
+  licence?: SetLicence;
   /** The grid it is drawn for, as the engine names it: a game on any other grid cannot use it. */
   grid: TopologyId;
   /** One tile's footprint, in native px. */

@@ -1,6 +1,6 @@
 // The main menu under the new interface (#749): Continue leads when the browser holds a save, named for its
 //  civilization and year when the save says them and by its name when it's older, with when it was kept beneath; the
-//  items for a game only once the assets are imported, and Import assets only until then; each item's key, but not
+//  items for a game only once the assets are imported, and Art and sound only until then; each item's key, but not
 //  while a window is open or with a modifier, and none once the menu has gone; the version and release notes under
 //  them. New Game offers Customise… first, and Options opens with no game, with the Assets row.
 //
@@ -156,7 +156,7 @@ const save = (
   applyInterface('modern', null);
   resetStore();
 
-  // No save: the items for a game, and no Continue or Import assets.
+  // No save: the items for a game, and no Continue or Art and sound.
   {
     const { menu, element } = await openMenu();
 
@@ -239,9 +239,9 @@ const save = (
       'Civilization assets imported · 289 sprites'
     );
     expect(
-      'and has Import assets',
+      'and has Art and sound',
       options?.querySelector('.assets button')?.textContent,
-      'Import assets'
+      'Art and sound'
     );
 
     // A window open over the menu has the keys: H would open the Hall of Fame at once.
@@ -322,7 +322,7 @@ const save = (
     );
   }
 
-  // No assets: only what works without them, and Import assets.
+  // No assets: only what works without them, and Art and sound, the library (#1063).
   {
     hasAssets = false;
 
@@ -331,9 +331,9 @@ const save = (
     const { element } = await openMenu();
 
     expect(
-      'without the assets, no game items, Continue included, and Import assets',
+      'without the assets, no game items, Continue included, and Art and sound',
       items(element),
-      ['hall-of-fame', 'options', 'import-assets']
+      ['hall-of-fame', 'options', 'library']
     );
 
     key('o');

@@ -1,4 +1,7 @@
-// The Import Assets window says which file it could not read, and lets the player choose files again, rather than
+// The library of art and sound (#1063) lists each set, says whether it's ready, and opens each set's own import window,
+//  which reads only that set's files: Civ1's first, then any other once Civ1's sprites are in.
+//
+// The import window says which file it could not read, and lets the player choose files again, rather than
 //  sitting on "Building image assets..." for good. A file the extractor can't decode (not a Civilization sheet, or one
 //  cut differently from the originals) threw inside the FileReader's `load` listener, where nothing caught it: that
 //  file's promise never settled, so neither did the import.
@@ -22,13 +25,19 @@ import './lib/dom';
 import './lib/interfaces';
 import './lib/artPacks';
 
-import ImportAssetsWindow, {
-  takesFile,
-} from '@civ-clone/ui-menus/components/ImportAssetsWindow';
 import {
-  packImportFor,
+  PackImport,
+  packImportOf,
   packImports,
 } from '@civ-clone/ui-assets/lib/packImports';
+import {
+  applyUiTheme,
+  currentUiTheme,
+  uiThemes,
+} from '@civ-clone/ui-widgets/lib/theme';
+import ImportAssetsWindow from '@civ-clone/ui-menus/components/ImportAssetsWindow';
+import LibraryWindow from '@civ-clone/ui-menus/components/LibraryWindow';
+import { registerSoundSet } from '@civ-clone/ui-assets/sounds/SoundDescriptor';
 import { bundledTilesets } from '@civ-clone/ui-assets/lib/tilesets';
 import addFormatters from '@civ-clone/ui-game/app/i18nFormatters';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
@@ -296,6 +305,13 @@ const logged: unknown[][] = [],
 
 console.error = (...args: unknown[]) => logged.push(args);
 
+// Each set's own import window: Civ1's, Civ2's and the music's.
+const pack = (id: string): PackImport => packImportOf(id)!,
+  civ1Window = (): ImportAssetsWindow => new ImportAssetsWindow(pack('civ1')),
+  civ2Window = (): ImportAssetsWindow => new ImportAssetsWindow(pack('civ2')),
+  soundWindow = (): ImportAssetsWindow =>
+    new ImportAssetsWindow(pack('civ1-adlib'));
+
 const notASheet = (name: string): File =>
     new File(
       [new Uint8Array([0x4d, 0x30, 0x02, 0x03, 0x00, 0xff, 0x00])],
@@ -328,7 +344,7 @@ const run = async (): Promise<void> => {
   // The browser's file input can't take the theme (#739): it's hidden, a button of the system opens it, and the
   //  names of the files chosen show beside the button.
   {
-    const window = new ImportAssetsWindow(),
+    const window = civ1Window(),
       input = fileInput(window),
       choose = window
         .element()
@@ -342,9 +358,18 @@ const run = async (): Promise<void> => {
     };
 
     expect(
-      'the file input is hidden, and out of the tab order',
-      [input.classList.contains('visually-hidden'), input.tabIndex],
-      [true, -1]
+      "the file input is hidden, and out of the tab order, and offers the set's own files",
+      [
+        input.classList.contains('visually-hidden'),
+        input.tabIndex,
+        input.accept,
+      ],
+      [true, -1, '.pic']
+    );
+    expect(
+      "the window is the set's own",
+      window.element().querySelector('h3')?.textContent,
+      'Import Civilization'
     );
     expect(
       'a secondary button chooses the files',
@@ -394,7 +419,7 @@ const run = async (): Promise<void> => {
   {
     readDelays['SP257.PIC'] = 50;
 
-    const window = new ImportAssetsWindow(),
+    const window = civ1Window(),
       files = [notASheet('TER257.PIC'), sheet('SP257.PIC')];
 
     // As the picker would have left it.
@@ -484,7 +509,7 @@ const run = async (): Promise<void> => {
       }
     );
 
-    const window = new ImportAssetsWindow(),
+    const window = civ1Window(),
       files = [sheet('TER257.PIC'), sheet('SP257.PIC')],
       settled = await settles(upload(window, files), 5000);
 
@@ -523,7 +548,7 @@ const run = async (): Promise<void> => {
       throw new Error('The database is blocked.');
     };
 
-    const window = new ImportAssetsWindow(),
+    const window = civ1Window(),
       files = [sheet('TER257.PIC'), sheet('SP257.PIC')],
       settled = await settles(upload(window, files), 5000);
 
@@ -552,7 +577,7 @@ const run = async (): Promise<void> => {
     logged.length = 0;
     spritesCut = 0;
 
-    const window = new ImportAssetsWindow(),
+    const window = civ1Window(),
       files = [sheet('TER257.PIC'), sheet('SP257.PIC')],
       settled = await settles(upload(window, files), 5000);
 
@@ -580,7 +605,7 @@ const run = async (): Promise<void> => {
 
   // Not every expected file: the import doesn't start, and says which files it needs.
   {
-    const window = new ImportAssetsWindow(),
+    const window = civ1Window(),
       settled = await settles(upload(window, [notASheet('SP257.PIC')]), 5000);
 
     expect('a file missing: the import finishes', settled, 'resolved');
@@ -609,7 +634,7 @@ const run = async (): Promise<void> => {
 
     assetStore.usable = async () => false;
 
-    const blocked = new ImportAssetsWindow();
+    const blocked = civ1Window();
 
     await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -633,7 +658,7 @@ const run = async (): Promise<void> => {
 
     assetStore.usable = async () => true;
 
-    const open = new ImportAssetsWindow();
+    const open = civ1Window();
 
     await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -653,58 +678,119 @@ const run = async (): Promise<void> => {
     assetStore.usable = usable;
   }
 
-  // The window names no pack (#97): it takes the files the registered packs' imports read, Civ1's and Civ2's (their
-  //  packages, `tileset-civ1` and `tileset-civ2`), and the music's, and no other. Each pack is registered beside its
-  //  tileset.
+  // No window names a set (#97, #1063): each set's package registers its import, Civ1's and Civ2's (`tileset-civ1` and
+  //  `tileset-civ2`) beside their tilesets, and the music's beside the library. Each set's window takes its files, and
+  //  no other's.
   {
     const civ1Files = Object.keys(extractData.files),
-      civ2Files = Object.keys(civ2ExtractData.files);
+      civ2Files = Object.keys(civ2ExtractData.files),
+      takes = (window: ImportAssetsWindow, names: string[]): boolean[] =>
+        names.map((name) => window.takes({ name })),
+      [civ1, civ2, sound] = [civ1Window(), civ2Window(), soundWindow()];
 
+    // The others' as their packages were loaded: here the interfaces, which load the library, come before Civ2's.
     expect(
-      "the registry finds Civ1's and Civ2's tilesets and imports, the interface's (Civ1's) first",
+      "the registry finds Civ1's and Civ2's tilesets, and the imports, the interface's (Civ1's) first",
       [
         bundledTilesets().map(({ id }) => id),
-        packImports().map(({ id }) => id),
+        [
+          packImports()[0]!.id,
+          ...packImports()
+            .slice(1)
+            .map(({ id }) => id)
+            .sort(),
+        ],
       ],
       [
         ['civ1', 'civ2'],
-        ['civ1', 'civ2'],
+        ['civ1', 'civ1-adlib', 'civ2'],
       ]
     );
     expect(
-      "each of Civ1's and Civ2's files goes to its own pack's import, whatever the case of its name",
+      "each set's required and optional files",
+      ['civ1', 'civ2', 'civ1-adlib'].map((id) => [
+        pack(id).requiredFiles,
+        pack(id).optionalFiles,
+      ]),
       [
-        ...civ1Files.map((name) => packImportFor({ name })?.id),
-        ...civ2Files.map(
-          (name) => packImportFor({ name: name.toLowerCase() })?.id
-        ),
-      ],
-      [...civ1Files.map(() => 'civ1'), ...civ2Files.map(() => 'civ2')]
+        [['SP257.PIC', 'TER257.PIC'], ['SP299.PIC']],
+        [
+          ['TERRAIN1.GIF', 'TERRAIN2.GIF', 'UNITS.GIF', 'CITIES.GIF'],
+          ['ICONS.GIF', 'PEOPLE.GIF'],
+        ],
+        [['ASOUND.CVL'], []],
+      ]
     );
     expect(
-      "the window takes the union of the packs' files, RULES.TXT, which Civ2's leaves alone, and ASOUND.CVL, and nothing else",
+      "Civ1's window takes Civilization's files, whatever the case of their names, and not Civ2's or the music's",
       [
-        [...civ1Files, ...civ2Files, 'RULES.TXT', 'asound.cvl'].every((name) =>
-          takesFile({ name })
+        takes(
+          civ1,
+          civ1Files.map((name) => name.toLowerCase())
         ),
-        packImportFor({ name: 'RULES.TXT' }),
-        takesFile({ name: 'README.TXT' }),
-        takesFile({ name: 'TER257.PIC.bak' }),
+        takes(civ1, [...civ2Files, 'RULES.TXT', 'ASOUND.CVL', 'README.TXT']),
       ],
-      [true, undefined, false, false]
+      [civ1Files.map(() => true), [...civ2Files, 1, 2, 3].map(() => false)]
     );
+    expect(
+      "Civ2's window takes its sheets, and RULES.TXT, which it leaves alone, and not Civ1's",
+      [
+        takes(civ2, [
+          ...civ2Files.map((name) => name.toLowerCase()),
+          'RULES.TXT',
+        ]),
+        takes(civ2, [...civ1Files, 'ASOUND.CVL', 'TER257.PIC.bak']),
+        pack('civ2').accepts({ name: 'RULES.TXT' }),
+      ],
+      [
+        [...civ2Files, 1].map(() => true),
+        [...civ1Files, 1, 2].map(() => false),
+        false,
+      ]
+    );
+    expect(
+      "the music's window takes ASOUND.CVL alone, and offers only it",
+      [
+        takes(sound, ['asound.cvl', ...civ1Files, ...civ2Files]),
+        fileInput(sound).accept,
+        fileInput(civ2).accept,
+      ],
+      [
+        [true, ...civ1Files.map(() => false), ...civ2Files.map(() => false)],
+        '.cvl',
+        '.gif',
+      ]
+    );
+
+    [civ1, civ2, sound].forEach((window) => window.close());
   }
 
   // SP299.PIC, the improvement and Wonder icons, is optional (#64): the instructions say so, an import goes ahead
   //  without it, and the files asked for when one is missing are the required ones.
   {
-    const window = new ImportAssetsWindow();
+    const window = civ1Window(),
+      instructions = (window: ImportAssetsWindow) =>
+        window.element().querySelector('.import-assets p')?.textContent;
 
     expect(
-      'the instructions ask for the required files, and the icons as well',
-      window.element().querySelector('.import-assets p')?.textContent,
-      'Upload SP257.PIC and TER257.PIC from the original Civilization files to extract assets (these will be stored locally). This only takes a moment. Add SP299.PIC as well for the improvement and Wonder icons. Add ASOUND.CVL for the music. To play on an isometric map, add TERRAIN1.GIF, TERRAIN2.GIF, UNITS.GIF, and CITIES.GIF from Civilization II as well (optional). Add ICONS.GIF and PEOPLE.GIF too for Civilization II’s own food, shield and trade icons on that map, and its citizens in the city screen (optional).'
+      "the instructions are the set's own: Civ1's ask for the required files, and the icons as well",
+      instructions(window),
+      'Upload SP257.PIC and TER257.PIC from the original Civilization files to extract assets (these will be stored locally). This only takes a moment. Add SP299.PIC as well for the improvement and Wonder icons.'
     );
+
+    const [civ2, sound] = [civ2Window(), soundWindow()];
+
+    expect(
+      "and Civ2's and the music's, theirs",
+      [instructions(civ2), instructions(sound)],
+      [
+        'Upload TERRAIN1.GIF, TERRAIN2.GIF, UNITS.GIF, and CITIES.GIF from Civilization II to play on an isometric map (these will be stored locally). You can add them a few at a time. Add ICONS.GIF and PEOPLE.GIF too for Civilization II’s own food, shield and trade icons on that map, and its citizens in the city screen (optional).',
+        'Upload ASOUND.CVL from the original Civilization files for the music (it will be stored locally).',
+      ]
+    );
+
+    civ2.close();
+    sound.close();
 
     await upload(window, [sheet('SP257.PIC')]);
 
@@ -723,8 +809,30 @@ const run = async (): Promise<void> => {
 
     await upload(window, [sheet('SP257.PIC'), sheet('TER257.PIC')]);
 
-    store.setAll = setAll;
+    const required = [...written],
+      { hasAllAssets } = store;
 
+    // A finished import reloads the page to use what it wrote.
+    (globalThis as any).location = { reload: () => {} };
+    written.length = 0;
+    store.hasAllAssets = async (): Promise<boolean> => true;
+    await upload(window, [sheet('SP299.PIC')]);
+    store.hasAllAssets = hasAllAssets;
+    store.setAll = setAll;
+    delete (globalThis as any).location;
+
+    const iconsAlone = [...written];
+
+    written.splice(0, written.length, ...required);
+
+    expect(
+      "SP299.PIC alone, once Civ1's sprites are in: its icons are added, as the library offers",
+      [
+        iconsAlone.some((name) => name.includes('/wonders/')),
+        iconsAlone.includes('./assets/units/warrior.png'),
+      ],
+      [true, false]
+    );
     expect(
       "without SP299.PIC, the import goes ahead: the required files' sprites are written, and no icons",
       [
@@ -741,7 +849,7 @@ const run = async (): Promise<void> => {
   // Replace existing assets left unticked: a group of sprites already imported isn't cut again. It never was skipped,
   //  as the paths it checked had the definition's index in them (#64).
   {
-    const window = new ImportAssetsWindow(),
+    const window = civ1Window(),
       written: string[] = [],
       { keys, setAll } = store,
       units = (extractData as any).files['SP257.PIC']['units/'].flatMap(
@@ -778,8 +886,9 @@ const run = async (): Promise<void> => {
     window.close();
   }
 
-  // ASOUND.CVL (#126): kept as the file it is, once cvl/Image has read it as the AdLib driver. A made-up driver here: an
-  //  MZ header, the ID string, and a data segment long enough with the AdLib's operator table in it.
+  // ASOUND.CVL (#126), a set of its own (#1063): kept as the file it is, once cvl/Image has read it as the AdLib driver,
+  //  under the key the music reads. A made-up driver here: an MZ header, the ID string, and a data segment long enough
+  //  with the AdLib's operator table in it.
   {
     const cvl = ({
         id = 'RLND Cvlzatn12-03-91',
@@ -811,9 +920,11 @@ const run = async (): Promise<void> => {
       },
       written: { name: string; blob?: Blob }[] = [],
       { setAll, hasAllAssets } = store,
-      importWith = async (files: File[], hasAssets = false) => {
-        const window = new ImportAssetsWindow();
-
+      importWith = async (
+        files: File[],
+        hasAssets = true,
+        window: ImportAssetsWindow = soundWindow()
+      ) => {
         written.length = 0;
         store.hasAllAssets = async (): Promise<boolean> => hasAssets;
         await upload(window, files);
@@ -834,18 +945,20 @@ const run = async (): Promise<void> => {
       },
     };
 
-    await importWith([sheet('SP257.PIC'), sheet('TER257.PIC'), cvl()]);
-
-    const kept = written.find(({ name }) => name === './sources/ASOUND.CVL');
-
     expect(
-      'a valid ASOUND.CVL is kept with the sprites, as its own bytes',
+      'ASOUND.CVL alone, with the sprites already in: it is added, as its own bytes, and the page reloaded',
       [
-        kept?.blob?.size,
-        written.includes(kept!),
-        written.some(({ name }) => name === './assets/units/warrior.png'),
+        await importWith([cvl()]),
+        written.map(({ name }) => name),
+        written[0]?.blob?.size,
+        reloads,
       ],
-      [cvl().size, true, true]
+      [
+        'Done! Please reload the page to utilize the fresh assets.',
+        ['./sources/ASOUND.CVL'],
+        cvl().size,
+        1,
+      ]
     );
 
     for (const [description, file] of [
@@ -857,45 +970,66 @@ const run = async (): Promise<void> => {
         new File([new Uint8Array([0x4d, 0x5a, 0, 0])], 'ASOUND.CVL'),
       ],
     ] as const) {
-      spritesCut = 0;
-
-      const message = await importWith([
-        sheet('SP257.PIC'),
-        sheet('TER257.PIC'),
-        file,
-      ]);
+      const message = await importWith([file]);
 
       expect(
-        `junk as ASOUND.CVL (${description}): refused by name, nothing written or cut up`,
-        [message.startsWith('ASOUND.CVL '), written.length, spritesCut],
-        [true, 0, 0]
+        `junk as ASOUND.CVL (${description}): refused by name, nothing written`,
+        [message.startsWith('ASOUND.CVL '), written.length],
+        [true, 0]
       );
     }
 
     expect(
-      'ASOUND.CVL alone, with the sprites already in: it is added',
-      [await importWith([cvl()], true), written.map(({ name }) => name)],
+      "ASOUND.CVL before Civ1's sprites: Civ1's files are asked for, and nothing is written",
       [
-        'Done! Please reload the page to utilize the fresh assets.',
-        ['./sources/ASOUND.CVL'],
-      ]
-    );
-
-    expect(
-      'ASOUND.CVL alone, before the sprites: the files needed are asked for',
-      [
-        (await importWith([cvl()])).startsWith('Please provide all files'),
+        (await importWith([cvl()], false)).startsWith(
+          'Please provide all files to generate assets: SP257.PIC and TER257.PIC'
+        ),
         written.length,
       ],
       [true, 0]
     );
 
+    spritesCut = 0;
+
+    expect(
+      "the music's window reads ASOUND.CVL alone: Civ1's files chosen with it are left out, and none of the set's files is said so",
+      [
+        await importWith([sheet('SP257.PIC'), cvl()]),
+        written.map(({ name }) => name),
+        spritesCut,
+        await importWith([sheet('SP257.PIC')]),
+        written.length,
+      ],
+      [
+        'Done! Please reload the page to utilize the fresh assets.',
+        ['./sources/ASOUND.CVL'],
+        0,
+        'None of those is one of Civilization’s music (AdLib)’s files: choose ASOUND.CVL.',
+        0,
+      ]
+    );
+
+    await importWith(
+      [sheet('SP257.PIC'), sheet('TER257.PIC'), cvl()],
+      false,
+      civ1Window()
+    );
+
+    expect(
+      "and Civ1's leaves ASOUND.CVL out: its sprites are written, and no sound",
+      [
+        written.some(({ name }) => name === './assets/units/warrior.png'),
+        written.some(({ name }) => name === './sources/ASOUND.CVL'),
+      ],
+      [true, false]
+    );
+
     // The player's own copy, where there is one: CVL=/path/to/ASOUND.CVL.
     if (process.env.CVL) {
-      await importWith(
-        [new File([readFileSync(process.env.CVL)], 'ASOUND.CVL')],
-        true
-      );
+      await importWith([
+        new File([readFileSync(process.env.CVL)], 'ASOUND.CVL'),
+      ]);
 
       expect(
         'the real ASOUND.CVL is accepted',
@@ -1064,7 +1198,7 @@ const run = async (): Promise<void> => {
         hasAssets = true,
         replace = true
       ): Promise<string> => {
-        const window = new ImportAssetsWindow();
+        const window = civ2Window();
 
         written.length = 0;
         spritesCut = 0;
@@ -1217,20 +1351,31 @@ const run = async (): Promise<void> => {
       [true, 0]
     );
 
-    await importWith([
-      sheet('SP257.PIC'),
-      sheet('TER257.PIC'),
-      sheets['UNITS.GIF']!,
-    ]);
+    warned.length = 0;
+
+    await importWith([sheet('SP257.PIC'), sheets['UNITS.GIF']!]);
 
     expect(
-      "Civ2's sheets with Civ1's files: both are written, together",
+      "Civ2's window reads its own sheets alone: Civ1's files chosen with them are left out, with a warning",
       [
         writtenNames().includes('./assets/units/warrior.png'),
         writtenNames().includes(civ2Key('units/settlers')),
         writtenNames().includes(metadataKey(civ2Pack)),
+        spritesCut,
+        warned.map(([message]) => message),
       ],
-      [true, true, true]
+      [false, true, true, 0, ['No definitions found for SP257.PIC, skipping.']]
+    );
+    expect(
+      'and none of its files chosen: it says so, and writes nothing',
+      [
+        await importWith([sheet('SP257.PIC'), sheet('TER257.PIC')]),
+        written.length,
+      ],
+      [
+        'None of those is one of Civilization II’s files: choose TERRAIN1.GIF, TERRAIN2.GIF, UNITS.GIF, CITIES.GIF, ICONS.GIF, or PEOPLE.GIF.',
+        0,
+      ]
     );
 
     // An import of some of the sheets keeps what an earlier one said about the others.
@@ -1521,32 +1666,8 @@ const run = async (): Promise<void> => {
       [true, 0]
     );
 
-    warned.length = 0;
-
-    const mixed = await importWith([
-      sheet('SP257.PIC'),
-      sheet('TER257.PIC'),
-      truncated(),
-    ]);
-
-    expect(
-      "Civ2: a bad sheet among Civ1's files is left out, with a warning, and Civ1's are imported",
-      [
-        mixed,
-        writtenNames().includes('./assets/units/warrior.png'),
-        writtenNames().some((name) => name.startsWith(civ2Pack.storage.prefix)),
-        warned.map(([message]) => message),
-      ],
-      [
-        'Done! Please reload the page to utilize the fresh assets.',
-        true,
-        false,
-        ['Could not read UNITS.GIF, skipping.'],
-      ]
-    );
-
     // What the window says of Civ2's art (#97): nothing until some is imported, then whether it's complete, naming the
-    //  sheets still to import and any that were left out, and the page left to reload when something is wrong.
+    //  sheets still to import, and the page left to reload when it isn't.
     const { importedCount, missingAssets, readMetadata } = store,
       civ2Required = civ2Json.assets.required,
       fullMetadata = {
@@ -1576,7 +1697,7 @@ const run = async (): Promise<void> => {
       },
       settle = () => new Promise((resolve) => setTimeout(resolve, 10)),
       opened = async (): Promise<string | null> => {
-        const window = new ImportAssetsWindow();
+        const window = civ2Window();
 
         await settle();
         window.close();
@@ -1698,23 +1819,23 @@ const run = async (): Promise<void> => {
       'Civilization II’s map art is not complete yet: add UNITS.GIF and CITIES.GIF to play on the isometric map.'
     );
 
-    civ2State(0, civ2Required, null);
+    civ2State(
+      civ2Required.length - 2,
+      ['units/settlers', 'terrain/coast/n-011'],
+      fullMetadata
+    );
     civ2Reloads = 0;
 
     {
-      const window = new ImportAssetsWindow();
+      const window = civ2Window();
 
       written.length = 0;
       store.hasAllAssets = async (): Promise<boolean> => true;
-      await upload(window, [
-        sheet('SP257.PIC'),
-        sheet('TER257.PIC'),
-        truncated(),
-      ]);
+      await upload(window, [sheets['TERRAIN1.GIF']!]);
       window.close();
 
       expect(
-        "Civ2 status: a sheet left out of an import is named in the window, and the page isn't reloaded from under it, so files can be chosen again",
+        "Civ2 status: an import that leaves its art incomplete names the sheets still to import, and the page isn't reloaded from under it, so files can be chosen again",
         [
           progress(window).innerText,
           statusOf(window),
@@ -1728,7 +1849,7 @@ const run = async (): Promise<void> => {
         ],
         [
           'Done! Please reload the page to utilize the fresh assets.',
-          'UNITS.GIF couldn’t be read as Civilization II’s, so it was skipped.',
+          'Civilization II’s map art is not complete yet: add TERRAIN2.GIF and UNITS.GIF to play on the isometric map.',
           0,
           false,
           false,
@@ -1739,7 +1860,7 @@ const run = async (): Promise<void> => {
     civ2State(civ2Required.length, [], fullMetadata);
 
     {
-      const window = new ImportAssetsWindow();
+      const window = civ2Window();
 
       await upload(window, [sheets['UNITS.GIF']!]);
       window.close();
@@ -1761,6 +1882,458 @@ const run = async (): Promise<void> => {
     store.hasAllAssets = hasAllAssets;
     console.warn = consoleWarn;
     delete (globalThis as any).location;
+  }
+
+  // The library (#1063): the map's art by grid, the themes and the sound, each set saying what it gives, where it comes
+  //  from and whether it's ready, with its own import. Civ1's comes first: until its sprites are in, every other set's
+  //  import is disabled, saying why; and with the browser keeping nothing for this site (#850), every one is.
+  {
+    // A set that comes with civ.one, with a licence, as later ones will: it is ready without an import.
+    registerSoundSet({
+      schema: 1,
+      kind: 'sound',
+      id: 'test-chimes',
+      name: 'Test chimes',
+      source: 'hosted',
+      licence: {
+        name: 'CC BY 4.0',
+        url: 'https://example.com/licence',
+        attribution: 'By A. Composer',
+      },
+      storage: { prefix: './sources/', ext: '' },
+    });
+
+    const civ1Keys = (file: string): string[] =>
+        Object.entries(
+          (extractData as any).files[file] as {
+            [path: string]: { contents: { name: string }[] }[];
+          }
+        ).flatMap(([path, definitions]) =>
+          definitions.flatMap(({ contents }) =>
+            contents.map(({ name }) => `./assets/${path}${name}.png`)
+          )
+        ),
+      civ2Sprites = Object.values(
+        (civ2ExtractData as any).files as {
+          [file: string]: { grids: { path: string; names: string[] }[] };
+        }
+      ).flatMap(({ grids }) =>
+        grids.flatMap(({ path, names }) =>
+          names.flatMap((name) =>
+            name === null ? [] : [`./assets/civ2/${path}${name}.png`]
+          )
+        )
+      ),
+      civ2Metadata = {
+        anchors: Object.fromEntries(
+          civ2Sprites
+            .map((key) => key.slice('./assets/civ2/'.length, -'.png'.length))
+            .filter((name) => /^(units|city)\//.test(name))
+            .map((name) => [name, { shield: { x: 1, y: 1 } }])
+        ),
+        colours: {
+          flag: [{ primary: [243, 0, 0], secondary: [167, 0, 0] }],
+          'flag-2': [{ primary: [167, 0, 0], secondary: [243, 0, 0] }],
+        },
+      },
+      { importedCount, usable } = store,
+      // What the store holds: Civ1's sprites (with SP299.PIC's or not), Civ2's (all, some, or none) and the music.
+      holds = ({
+        civ1 = 'none',
+        civ2 = 'none',
+        sound = false,
+        canStore = true,
+      }: {
+        civ1?: 'none' | 'required' | 'all';
+        civ2?: 'none' | 'some' | 'all';
+        sound?: boolean;
+        canStore?: boolean;
+      }): void => {
+        const civ1Stored =
+            civ1 === 'none'
+              ? []
+              : [
+                  ...civ1Keys('SP257.PIC'),
+                  ...civ1Keys('TER257.PIC'),
+                  ...(civ1 === 'all' ? civ1Keys('SP299.PIC') : []),
+                ],
+          // Some of Civ2's: all but a unit and a coast quarter, and none of the icons or citizens.
+          civ2Missing =
+            civ2 === 'all'
+              ? []
+              : civ2 === 'some'
+              ? ['units/settlers', 'terrain/coast/n-011'].map(
+                  (name) => `./assets/civ2/${name}.png`
+                )
+              : civ2Json.assets.required.map(
+                  (name: string) => `./assets/civ2/${name}.png`
+                ),
+          civ2Stored =
+            civ2 === 'all'
+              ? civ2Sprites
+              : civ2 === 'some'
+              ? civ2Sprites.filter(
+                  (key) =>
+                    !civ2Missing.includes(key) &&
+                    !/\/(icons|people)\//.test(key)
+                )
+              : [],
+          missing: { [id: string]: string[] } = {
+            civ1: civ1 === 'none' ? ['./assets/units/warrior.png'] : [],
+            civ2: civ2Missing,
+          };
+
+        store.keys = async (): Promise<string[]> => [
+          ...civ1Stored,
+          ...civ2Stored,
+          ...(sound ? ['./sources/ASOUND.CVL'] : []),
+        ];
+        store.importedCount = async (pack?: { id: string }) =>
+          (pack?.id ?? 'civ1') === 'civ1'
+            ? civ1Stored.length
+            : civ2Stored.length;
+        store.missingAssets = async (pack?: { id: string }) =>
+          missing[pack?.id ?? 'civ1'] ?? [];
+        store.hasAllAssets = async (pack?: { id: string }) =>
+          (missing[pack?.id ?? 'civ1'] ?? []).length === 0;
+        store.readMetadata = async () =>
+          civ2 === 'none' ? null : civ2Metadata;
+        assetStore.usable = async () => canStore;
+      },
+      settle = () => new Promise((resolve) => setTimeout(resolve, 10)),
+      entryOf = (library: LibraryWindow, id: string) => {
+        const entry = library
+            .element()
+            .querySelector(`[data-set="${id}"]`) as HTMLElement,
+          button = entry.querySelector(
+            '.actions button'
+          ) as HTMLButtonElement | null,
+          reason = entry.querySelector('.reason') as HTMLElement | null;
+
+        return {
+          entry,
+          status: entry.querySelector('.status')?.textContent ?? null,
+          button: button?.textContent ?? null,
+          disabled: button?.disabled ?? null,
+          reason: reason === null || reason.hidden ? null : reason.textContent,
+        };
+      },
+      opened = async (): Promise<LibraryWindow> => {
+        const library = new LibraryWindow();
+
+        await settle();
+
+        return library;
+      };
+
+    holds({});
+
+    let library = await opened();
+
+    const texts = (selector: string): string[] =>
+      Array.from(
+        library.element().querySelectorAll(selector),
+        (element) => element.textContent ?? ''
+      );
+
+    expect(
+      'the library is Art and sound: map art by grid, themes and sound',
+      [
+        library.element().querySelector('h3')?.textContent,
+        texts('.library-section h4'),
+        texts('[data-section="map"] h5'),
+        Array.from(
+          library.element().querySelectorAll('[data-section="map"] [data-set]'),
+          (entry) => (entry as HTMLElement).dataset.set
+        ),
+        Array.from(
+          library
+            .element()
+            .querySelectorAll('[data-section="sound"] [data-set]'),
+          (entry) => (entry as HTMLElement).dataset.set
+        ),
+      ],
+      [
+        'Art and sound',
+        ['Map art', 'Themes', 'Sound'],
+        ['Square', 'Isometric'],
+        ['civ1', 'civ2'],
+        ['civ1-adlib', 'test-chimes'],
+      ]
+    );
+    expect(
+      'each set says its name, what it gives, and where it comes from',
+      ['civ1', 'civ2', 'civ1-adlib', 'test-chimes'].map((id) => {
+        const { entry } = entryOf(library, id);
+
+        return [
+          entry.querySelector('.name')?.textContent,
+          Array.from(
+            entry.querySelectorAll('.provides span'),
+            (span) => span.textContent
+          ),
+          entry.querySelector('.source')?.textContent,
+        ];
+      }),
+      [
+        [
+          'Civilization',
+          ['Square map art', 'Interface art'],
+          'From your copy of Civilization',
+        ],
+        [
+          'Civilization II',
+          ['Isometric map art'],
+          'From your copy of Civilization II',
+        ],
+        [
+          'Civilization’s music (AdLib)',
+          ['Music'],
+          'From your copy of Civilization',
+        ],
+        [
+          'Test chimes',
+          ['Music'],
+          'Comes with civ.one · License: CC BY 4.0 · By A. Composer',
+        ],
+      ]
+    );
+    expect(
+      'a set that comes with civ.one is ready, links its licence, and has nothing to import',
+      [
+        entryOf(library, 'test-chimes').status,
+        (
+          entryOf(library, 'test-chimes').entry.querySelector(
+            '.source a'
+          ) as HTMLAnchorElement
+        ).href,
+        entryOf(library, 'test-chimes').button,
+      ],
+      ['Ready', 'https://example.com/licence', null]
+    );
+    expect(
+      "nothing imported: each set says so, and only Civ1's can be imported, the others saying why",
+      ['civ1', 'civ2', 'civ1-adlib'].map((id) => {
+        const { status, button, disabled, reason } = entryOf(library, id);
+
+        return [status, button, disabled, reason];
+      }),
+      [
+        ['Not imported', 'Import…', false, null],
+        ['Not imported', 'Import…', true, 'Import Civilization first.'],
+        ['Not imported', 'Import…', true, 'Import Civilization first.'],
+      ]
+    );
+
+    library.close();
+
+    holds({ civ1: 'required', civ2: 'some' });
+    library = await opened();
+
+    expect(
+      "Civ1's sprites in, without SP299.PIC, and some of Civ2's: Civ1's is ready, Civ2's needs the sheets still to import, and each can be imported, the music on its own",
+      ['civ1', 'civ2', 'civ1-adlib'].map((id) => {
+        const { status, button, disabled, reason } = entryOf(library, id);
+
+        return [status, button, disabled, reason];
+      }),
+      [
+        ['Ready · Optional: SP299.PIC', 'Import again', false, null],
+        [
+          'Needs TERRAIN2.GIF and UNITS.GIF · Optional: ICONS.GIF and PEOPLE.GIF',
+          'Import…',
+          false,
+          null,
+        ],
+        ['Not imported', 'Import…', false, null],
+      ]
+    );
+
+    // Import… opens the set's own import, and the library says again what each set is once it's closed.
+    (
+      entryOf(library, 'civ1-adlib').entry.querySelector(
+        '.actions button'
+      ) as HTMLButtonElement
+    ).click();
+
+    const importing = Array.from(
+      document.querySelectorAll('dialog.import-set')
+    ).pop() as HTMLElement;
+
+    expect(
+      "Import… opens the set's own import window, with its instructions alone",
+      [
+        importing?.querySelector('h3')?.textContent,
+        importing?.querySelector('.import-assets p')?.textContent,
+      ],
+      [
+        'Import Civilization’s music (AdLib)',
+        'Upload ASOUND.CVL from the original Civilization files for the music (it will be stored locally).',
+      ]
+    );
+
+    holds({ civ1: 'all', civ2: 'all', sound: true });
+    (importing.querySelector('button.close') as HTMLButtonElement).click();
+    await settle();
+
+    expect(
+      'once it is closed, the library says again what each set is: everything in, everything ready',
+      ['civ1', 'civ2', 'civ1-adlib'].map((id) => {
+        const { status, button, disabled } = entryOf(library, id);
+
+        return [status, button, disabled];
+      }),
+      [
+        ['Ready', 'Import again', false],
+        ['Ready', 'Import again', false],
+        ['Ready', 'Import again', false],
+      ]
+    );
+
+    library.close();
+
+    // Over Options, which is modal before a game, the library is modal, and so is the import it opens.
+    {
+      const modal = new LibraryWindow({ modal: true });
+
+      await settle();
+
+      (
+        entryOf(modal, 'civ2').entry.querySelector(
+          '.actions button'
+        ) as HTMLButtonElement
+      ).click();
+
+      const civ2Import = Array.from(
+        document.querySelectorAll('dialog.import-set')
+      ).pop() as HTMLElement;
+
+      expect(
+        'a modal library opens a modal import, for its set',
+        [
+          modal.element().classList.contains('modal'),
+          civ2Import.classList.contains('modal'),
+          civ2Import.querySelector('h3')?.textContent,
+        ],
+        [true, true, 'Import Civilization II']
+      );
+
+      civ2Import.remove();
+      modal.close();
+    }
+
+    holds({ civ1: 'all', canStore: false });
+    library = await opened();
+
+    const blocked = library
+      .element()
+      .querySelector('.storage-blocked') as HTMLElement;
+
+    expect(
+      "storage blocked (#850): the library says so first, as an alert, and no set's import can be opened",
+      [
+        blocked.hidden,
+        blocked.getAttribute('role'),
+        blocked.textContent?.startsWith(
+          'Your browser is blocking this site from storing data'
+        ),
+        library.element().querySelector('.library')?.firstElementChild ===
+          blocked,
+        ['civ1', 'civ2', 'civ1-adlib'].map((id) => {
+          const { disabled, reason } = entryOf(library, id);
+
+          return [disabled, reason];
+        }),
+      ],
+      [
+        false,
+        'alert',
+        true,
+        true,
+        [
+          [true, null],
+          [true, null],
+          [true, null],
+        ],
+      ]
+    );
+
+    library.close();
+
+    // The themes (#735): each by name, the one in use marked, and Use for the others, as Options' Theme sets it.
+    {
+      const before = currentUiTheme(),
+        replaced: string[] = [];
+
+      // The visit's address, whose `?theme=` choosing one takes off (#735).
+      (globalThis as any).location = { href: 'https://civ.one/?theme=x' };
+      (globalThis as any).history = {
+        state: null,
+        replaceState: (_state: unknown, _title: string, url: URL) =>
+          replaced.push(String(url)),
+      };
+
+      library = await opened();
+
+      const themes = () =>
+        Array.from(
+          library.element().querySelectorAll('[data-theme]'),
+          (element) => {
+            const entry = element as HTMLElement;
+
+            return [
+              entry.dataset.theme,
+              entry.querySelector('.status')?.textContent ?? null,
+              (entry.querySelector('.actions button') as HTMLButtonElement)
+                .disabled,
+            ];
+          }
+        );
+
+      expect(
+        'the themes, the one in use marked and its Use disabled',
+        themes(),
+        uiThemes().map(({ id }) => [
+          id,
+          id === before ? 'In use' : null,
+          id === before,
+        ])
+      );
+
+      const other = uiThemes().find(({ id }) => id !== before)!.id;
+
+      (
+        library
+          .element()
+          .querySelector(
+            `[data-theme="${other}"] .actions button`
+          ) as HTMLButtonElement
+      ).click();
+
+      expect(
+        'Use applies the theme at once, and marks it in use',
+        [
+          currentUiTheme(),
+          themes().find(([id]) => id === other)?.[1],
+          themes().find(([id]) => id === before)?.[1],
+        ],
+        [other, 'In use', null]
+      );
+      expect(
+        "and takes the visit's ?theme= off the address, as Options does",
+        replaced,
+        ['https://civ.one/']
+      );
+
+      applyUiTheme(before);
+      library.close();
+      delete (globalThis as any).location;
+      delete (globalThis as any).history;
+    }
+
+    storeWorks();
+    store.importedCount = importedCount;
+    assetStore.usable = usable;
   }
 
   console.error = consoleError;

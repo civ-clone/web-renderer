@@ -190,12 +190,12 @@ isometric stand-in, `tests/ui/lib/staggered.ts`, and with `--iso` on the real `I
   import, and the release notes (`ReleaseWindow`, from the version link). The
   game options are hidden until assets are imported.
 - `TitleMenu` (#749), the modern interface's main menu: a list with each item's
-  key (C, N, E, L, H, O, I). Continue loads the newest save in the browser,
+  key (C, N, E, L, H, O, A). Continue loads the newest save in the browser,
   named from the `details` a save has kept since (`SaveDetails`: civilization,
   turn, year), or its name for an older one. New Game passes `askNewGame` a
   `customise` callback, which puts Customize… (the game setup) first among the
-  sizes; Options opens with no portal and shows the Assets row; Import assets is
-  listed only while the required sprites are missing.
+  sizes; Options opens with no portal and shows the Assets row; Art and sound
+  (the library, #1063) is listed only while the required sprites are missing.
 - `newGame.ts`: New Game's questions, each through `openChoice`: the map grid
   (`askMapGrid`), world size (`askWorldSize`), difficulty (`askDifficulty`),
   then the number of civilizations (`askPlayerCount`). `askEarth` asks the same
@@ -203,7 +203,7 @@ isometric stand-in, `tests/ui/lib/staggered.ts`, and with `--iso` on the real `I
 - `GameSetupWindow`: the game setup, opened by Customise world. It asks for the
   map, the difficulty, the Advanced world options (exact size and land) and the
   seat table.
-- `ImportAssetsWindow`: see [`asset-system.md`](asset-system.md).
+- `LibraryWindow` and `ImportAssetsWindow`: see [`asset-system.md`](asset-system.md).
 
 ### Saving and loading
 

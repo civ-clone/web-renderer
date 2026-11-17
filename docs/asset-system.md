@@ -10,11 +10,22 @@ Without imported assets, gameplay options are hidden and import is the primary o
 
 ## Main components
 
+- `packages/menus/components/LibraryWindow.ts` (#1063)
+  - _Art and sound_, the library: the map's art by grid (`bundledTilesets()`), the themes (`uiThemes()`, with _Use_,
+    as Options' Theme), and the sound (`soundSets()`). Each set says what it gives, where it comes from (the player's
+    copy of a game, or civ.one with its licence), and whether it is _Ready_, _Needs_ which files (required, then
+    optional) or _Not imported_, from its import's `ready` and `filesWanted`. It names no set: it asks each registered
+    set's import (`packages/assets/lib/packImports.ts`, #97). Each imported set has _Import…_ (_Import again_ once
+    ready), which opens its own import window. Until Civ1's sprites are in (`importedFirst`), every other set's import
+    is disabled, saying so; with site data blocked (#850), every one is.
 - `packages/menus/components/ImportAssetsWindow.ts`
-  - UI flow for selecting source files and triggering extraction. It names no pack: it asks each registered pack's
-    import (`packages/assets/lib/packImports.ts`, #97) which files it reads, which the import needs, what to say of
-    them, and to read them. The music's `ASOUND.CVL` is the window's own (the `audio` package decodes it): it is no
-    pack's art.
+  - One set's import: its own instructions, a file picker offering its files' extensions, and only its files read
+    (another's are left out with a console warning).
+- `packages/menus/lib/civ1Sound.ts` (#126, #1063)
+  - Civilization's music as a set: its manifest (`civ1-adlib.json`, a sound set's, read by
+    `packages/assets/sounds/SoundDescriptor.ts` against `sound.schema.json`) and its import, which checks `ASOUND.CVL`
+    with the `audio` package's `CvlImage` and keeps it under `SOUND_DRIVER`, as before. Registered beside the library,
+    which loads it, as the menus package has both the store and the audio package to hand.
 - `packages/tileset-civ1` (`@civ-clone/ui-tileset-civ1`, #97)
   - Civ1's art pack: its descriptor (`civ1.json`) and its import (`lib/civ1Import.ts`), which loading the package
     registers (`registerTileset`, as the interface's, and `registerPackImport`). `src/js/frontend.ts` loads it before
@@ -42,19 +53,21 @@ Without imported assets, gameplay options are hidden and import is the primary o
 
 ## Asset import flow
 
-1. User opens **Import Assets** from main menu, or under the modern interface from Options' Assets row (#749).
-2. UI checks that every file the import needs (a pack's `requiredFiles`: Civ1's, those in the extractor definitions,
-   `extract-data.json`, but its optional ones) is among the selected files, matching names case-insensitively.
-3. Each file goes to the pack whose import `accepts` it, and each pack's import reads its own files, side by side. A
-   file no pack reads is left out, with a console warning. For each of Civ1's files (`tileset-civ1/lib/civ1Import.ts`):
+1. User opens **Art and sound** from the main menu, or under the modern interface from Options' Assets row (#749), and
+   a set's **Import…** there (#1063).
+2. For Civ1's set, the window checks that every file it needs (its `requiredFiles`: those in the extractor definitions,
+   `extract-data.json`, but its optional ones) is among the selected files, matching names case-insensitively. Any
+   other set's import asks for Civ1's files until Civ1's sprites are in, and then takes some of its files at a time.
+3. The set's import reads the files it `accepts`, side by side. A file it doesn't read is left out, with a console
+   warning, and none of its files chosen is said so. For each of Civ1's files (`tileset-civ1/lib/civ1Import.ts`):
    - Picks the definitions for that file. A group of sprites (an asset path such as `city/people`) whose every sprite
      is already stored is skipped, unless "replace existing" is set. So a re-import picks up sprites added to the
      extractor since the last one without re-extracting the rest.
    - Reads binary string via `FileReader`.
    - Runs `extractSprites(...)` with matching definitions.
    - Receives records `{ name, uri }`: `name` is the asset path (`./assets/<path><name>.png`), `uri` a PNG data URL.
-4. Each is turned into `{ name, blob }`, the PNG as a `Blob` (`assetFromURI`), and every pack's records, then the
-   music's, are persisted via `assetStore.setAll(records)`, in a single transaction, into IndexedDB database `civ-clone-assets` (object store
+4. Each is turned into `{ name, blob }`, the PNG as a `Blob` (`assetFromURI`), and the set's records are persisted via
+   `assetStore.setAll(records)`, in a single transaction, into IndexedDB database `civ-clone-assets` (object store
    `assets`).
 5. `assetStore.hasAllAssets()` validates required set. If anything is missing, the window lists
    `assetStore.missingAssets()` and the file input is enabled again.
@@ -63,10 +76,10 @@ Without imported assets, gameplay options are hidden and import is the primary o
 
 ### Civilization II's sheets (#97)
 
-The same window takes Civ2's sheets, recognised by name whatever its case, alongside Civ1's files or, once Civ1's
-sprites are in, on their own (as `ASOUND.CVL` is): its import (`civ2Import` in
-`packages/tileset-civ2/lib/civ2Import.ts`) has no `requiredFiles`. The instructions name the map's four
-(`civ2MapFiles`) as optional, for the isometric map, and, in a sentence of their own (`TilesetCiv2.import-icons`), the
+Civ2's own import window takes its sheets, recognised by name whatever its case, once Civ1's sprites are in (as the
+music's takes `ASOUND.CVL`): its import (`civ2Import` in `packages/tileset-civ2/lib/civ2Import.ts`) lists the map's four
+(`civ2MapFiles`) as its `requiredFiles`, the ones it is ready with, but takes some of them at a time. The instructions
+name them, for the isometric map, and, in a sentence of their own (`TilesetCiv2.import-icons`), the
 sheets the extractor marks `optional` (`civ2OptionalFiles`: `ICONS.GIF`, Civ2's own yield icons for that map, #999). Once
 any are imported, the window says whether Civ2's art is complete or which sheets are still to import
 (`civ2FilesToImport`: those of the map's holding a sprite `civ2.json` requires that isn't stored, or whose anchors or
@@ -82,8 +95,7 @@ out.
   markers and the stored record lacks the anchors of any of its sprites (or can't be read at all), and a sheet with
   nothing left isn't read. The flags' colours are read again only when the record lacks them, after checking that
   the sheet has 256 colours and every flag inside it, and refused unless every flag's colours come out.
-- A sheet that can't be read stops the import, naming it, when only Civ2's sheets were chosen. Among Civ1's files it
-  is left out with a console warning, Civ1's are imported, and the window names the sheet it left out.
+- A sheet that can't be read stops the import, naming it.
 - Each sprite's RGBA is put on a canvas and stored as its PNG (`toBlob`) under Civ2's pack's key, `spriteKey(civ2Pack,
 name)`: `./assets/civ2/units/settlers.png`. `civ2Pack` (`tileset-civ2/lib/civ2Import.ts`) is the pack's id, `civ2`,
   and its storage, as its descriptor gives them.
@@ -93,9 +105,9 @@ name)`: `./assets/civ2/units/settlers.png`. `civ2Pack` (`tileset-civ2/lib/civ2Im
   can't be read is replaced by what this import cut. An import that cut nothing from the map's sheets (`ICONS.GIF`
   alone) leaves the record as it is: it has nothing to add to it.
 - `RULES.TXT` is taken and left alone: units keep the extractor's default names for now.
-- The import still ends on Civ1's check: it is done when Civ1's required sprites are all in. When Civ2's sheets were
-  among the files and one was left out or Civ2's art is still incomplete, the page is not reloaded, so the window's
-  message can be read, and files can be chosen again; the player reloads.
+- The import still ends on Civ1's check: it is done when Civ1's required sprites are all in. When Civ2's art is still
+  incomplete, the page is not reloaded, so the window's message can be read, and files can be chosen again; the
+  player reloads. The library says the set's status again once the window is closed.
 
 ## Installed packs (#97)
 

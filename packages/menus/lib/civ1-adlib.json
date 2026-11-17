@@ -1,0 +1,9 @@
+{
+  "$schema": "../../assets/sounds/sound.schema.json",
+  "schema": 1,
+  "kind": "sound",
+  "id": "civ1-adlib",
+  "name": "Civilization’s music (AdLib)",
+  "source": "imported",
+  "storage": { "prefix": "./sources/", "ext": "" }
+}
