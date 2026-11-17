@@ -32,6 +32,7 @@ import {
 import {
   PackState,
   chooseMapTileset,
+  offerUnfinishedGrids,
   installTilesets,
   interfaceTileset,
   mapTileset,
@@ -938,19 +939,36 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
     );
 
     keys = [];
+    fetched.length = 0;
 
-    // The hexagonal set has interface art too, so it's tried next for the interface, and can't be fetched either.
+    // The hexagonal pixel art has interface art too, but its grid isn't offered without `?hex=1`, so it isn't fallen
+    //  back on for the interface, and its sheet isn't fetched for nothing (#1063).
     expect(
-      "offline with nothing imported: neither pixel art's sheet can be fetched, which is said, and neither is installed",
+      "offline with nothing imported: the pixel art's sheet can't be fetched, which is said, and it isn't installed, nor the hexagonal one's tried",
       [
         ids(await installPacks(new AssetStore(civ1))),
         logged.includes("Could not load the civ1-pixelart set's sheet."),
+        fetched.filter((url) => url.includes('hex-pixelart')),
+        interfaceArt().id,
+      ],
+      [['hex-pixelart'], true, [], 'civ1']
+    );
+
+    // With `?hex=1` it's offered, and so it's fallen back on, and tried, and can't be fetched either.
+    offerUnfinishedGrids(true);
+    logged.length = 0;
+
+    expect(
+      'with ?hex=1, the hexagonal one is tried next for the interface, and fails too, which is said',
+      [
+        ids(await installPacks(new AssetStore(civ1))),
         logged.includes("Could not load the hex-pixelart set's sheet."),
         interfaceArt().id,
       ],
-      [[], true, true, 'civ1']
+      [[], true, 'civ1']
     );
 
+    offerUnfinishedGrids(false);
     offline = false;
 
     // A store that opens but can't be read says nothing of Civ1's sprites: it stays installed when they were read all

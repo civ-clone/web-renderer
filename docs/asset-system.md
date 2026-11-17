@@ -213,9 +213,11 @@ A set that ships with civ.one is served beside the game rather than imported. Th
 has the design.
 
 - **Hex, behind a switch.** The hexagonal set is installed as it ships, so a save on hex loads and is drawn with it
-  (`drawnTopologies`, `isSupportedTopology`). A new game offers the grid only on a page loaded with `?hex=1`
-  (`offerUnfinishedGrids`, from `bootstrap.ts`; `hiddenGrids`, which `supportedTopologies` leaves out), until hex has
-  its overlays and its city screen (Track A of the civ5 plan).
+  (`drawnTopologies`, `isSupportedTopology`, and the menus' `canLoad`). A new game offers the grid only on a page
+  loaded with `?hex=1` (`offersUnfinishedGrids` reads it in `bootstrap.ts`, which calls `offerUnfinishedGrids`), until
+  hex has its overlays and its city screen (Track A of the civ5 plan). Until then its grid is hidden (`hiddenGrids`,
+  in `assets/lib/tilesets.ts`): `supportedTopologies` leaves it out, the library doesn't list its sets, and the
+  interface's art doesn't fall back on them, so its sheet isn't fetched at start-up for nothing.
 
 - **The build.** `tools/lib/hostedSets.js` finds the sets the workspace packages declare (`civ-clone.hostedSets` in
   their `package.json`, each a descriptor whose sprites are the PNGs beside it), and packs each one's sprites, those its

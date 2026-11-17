@@ -44,7 +44,8 @@ import {
   currentInterface,
 } from '@civ-clone/ui-platform/lib/interfaceMode';
 import { installGlyphs } from '@civ-clone/ui-platform/lib/glyphs';
-import { offerUnfinishedGrids } from '@civ-clone/ui-map/lib/supportedTopologies';
+import { offerUnfinishedGrids } from '@civ-clone/ui-assets/lib/tilesets';
+import offersUnfinishedGrids from './app/unfinishedGrids';
 import ReloadGuard from './app/ReloadGuard';
 import NotificationBar from './app/NotificationBar';
 import ChoiceHandler from './app/ChoiceHandler';
@@ -110,7 +111,7 @@ export class Renderer {
     );
     // Hex isn't offered for new games until its overlays and city screen are done, except on a page loaded with
     //  `?hex=1` (#1063). A save on it loads either way.
-    offerUnfinishedGrids(parseBooleanParam(queryParams.get('hex'), false));
+    offerUnfinishedGrids(offersUnfinishedGrids(window.location.search));
 
     // Once a game is running, F5 is a leader-screen shortcut (TradeReport),
     // not a reload; only Ctrl/Cmd+R stays a reload from that point on.

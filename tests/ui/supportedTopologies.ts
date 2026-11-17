@@ -36,6 +36,7 @@ import {
   askNewGame,
 } from '@civ-clone/ui-menus/components/newGame';
 import Request from '@civ-clone/core-data-client/Request';
+import offersUnfinishedGrids from '@civ-clone/ui-game/app/unfinishedGrids';
 import SquareTopology from '@civ-clone/core-world/SquareTopology';
 import StaggeredIsoTopology from '@civ-clone/core-world/StaggeredIsoTopology';
 import Transport from '@civ-clone/ui-client/Transport';
@@ -482,6 +483,28 @@ const text = (element: Element | null): string =>
 
   // The switch: without `?hex=1`, hex is drawn, so a save on it loads, but a new game doesn't offer it.
   offerUnfinishedGrids(false);
+
+  expect(
+    "the page's query turns it on with ?hex=1 (or true, yes, on), among others, and not otherwise",
+    [
+      '?hex=1',
+      '?interface=classic&hex=true',
+      '?hex=ON',
+      '',
+      '?hex=0',
+      '?hex=maybe',
+      '?debug=1',
+    ].map(offersUnfinishedGrids),
+    [true, true, true, false, false, false, false]
+  );
+  expect(
+    'and as bootstrap applies it, hidden grids are offered, and hidden again without it',
+    [
+      (offerUnfinishedGrids(offersUnfinishedGrids('?hex=1')), hiddenGrids()),
+      (offerUnfinishedGrids(offersUnfinishedGrids('')), hiddenGrids()),
+    ],
+    [[], ['hex-odd-r']]
+  );
 
   expect(
     'without ?hex=1, a hex tileset installed still leaves New Game square alone, though hex can be drawn',

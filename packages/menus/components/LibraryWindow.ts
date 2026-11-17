@@ -11,6 +11,7 @@ import { TilesetDescriptor } from '@civ-clone/ui-assets/tilesets/TilesetDescript
 import {
   bundledTilesets,
   chooseMapTileset,
+  hiddenGrids,
   installedTilesets,
   isHosted,
   mapTileset,
@@ -29,7 +30,6 @@ import ImportAssetsWindow from './ImportAssetsWindow';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { loadFailed } from '@civ-clone/ui-assets/lib/installPacks';
 import { button } from '@civ-clone/ui-component-button/button';
-import { hiddenGrids } from '@civ-clone/ui-map/lib/supportedTopologies';
 import chooseUiTheme from '../lib/chooseUiTheme';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';

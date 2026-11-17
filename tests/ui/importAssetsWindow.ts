@@ -2606,14 +2606,12 @@ const run = async (): Promise<void> => {
         artLines(),
         uiThemes().map(() => 'Uses civ.one’s pixel art')
       );
-      // Offline on a first visit, neither of civ.one's sets loads: the hexagonal one has interface art too (#1063).
       expect(
         'or none, with no art at all',
         [
           (installTilesets({
             civ1: { complete: false, metadata: null },
             'civ1-pixelart': { complete: false, metadata: null },
-            'hex-pixelart': { complete: false, metadata: null },
           }),
           themeArtLine(before)),
         ],

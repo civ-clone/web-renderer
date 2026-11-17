@@ -368,8 +368,10 @@ const reset = () => {
 
   thrown = null;
 
-  // No set is installed for hex here, as none is where the pixel art's hexagonal sheet couldn't be loaded: it ships with
-  //  civ.one, so there's nothing to import, and the grid is said to be one that can't be drawn (#1063).
+  // The pixel art's hexagonal sheet couldn't be loaded, so no set is installed for hex: it ships with civ.one, so
+  //  there's nothing to import, and the grid is said to be one that can't be drawn (#1063).
+  installTilesets({ 'hex-pixelart': { complete: false, metadata: null } });
+
   await loadSaveFromFile(
     new File([onGrid('hex-odd-r')], 'hex.civ-clone.json')
   ).catch((error: Error) => (thrown = error));

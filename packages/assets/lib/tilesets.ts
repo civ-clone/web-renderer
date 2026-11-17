@@ -226,6 +226,28 @@ export const installTilesets = (states: {
   return installedTilesets();
 };
 
+// The grids a new game doesn't offer yet, though a save on one loads where it can be drawn: hex, until its overlays
+//  and its city screen are done (Track A of docs/civ5-plan.md). A page loaded with `?hex=1` offers them (`bootstrap.ts`).
+const unfinishedGrids: readonly TopologyId[] = ['hex-odd-r'];
+
+let offeringUnfinished = false;
+
+/**
+ * Has new games offer the grids that aren't finished yet (hex), as a page loaded with `?hex=1` does, or not. What's
+ *  settled from the installed sets is settled again, as the interface's art leaves the hidden grids' sets out.
+ */
+export const offerUnfinishedGrids = (offer: boolean): void => {
+  offeringUnfinished = offer;
+  installedHandlers.forEach((handler) => handler());
+};
+
+/**
+ * The grids a new game leaves out, though they can be drawn: the unfinished ones, unless they're offered. Their sets
+ *  aren't listed in the library, nor fallen back on for the interface's art (`interfaceArt`).
+ */
+export const hiddenGrids = (): string[] =>
+  offeringUnfinished ? [] : [...unfinishedGrids];
+
 /** The option the art the player chose for the `grid` grid's maps is kept under (#1063): `tileset.<grid>`, a set's id. */
 export const mapTilesetOption = (grid: TopologyId | string): string =>
   `tileset.${grid}`;

@@ -3,6 +3,7 @@ import { TopologyId } from '@civ-clone/ui-client/lib/topologyFor';
 import { drawableGrids } from './projectionFor';
 import {
   bundledTilesets,
+  hiddenGrids,
   installedTilesets,
   isHosted,
 } from '@civ-clone/ui-assets/lib/tilesets';
@@ -24,20 +25,12 @@ export const drawnTopologies = (
       tilesets.some((tileset) => tileset.grid === grid)
   );
 
-// The grids a new game doesn't offer yet, though a save on one loads where it can be drawn: hex, until its overlays
-//  and its city screen are done (Track A of docs/civ5-plan.md). A page loaded with `?hex=1` offers them.
-const unfinishedGrids: readonly TopologyId[] = ['hex-odd-r'];
-
-let offeringUnfinished = false;
-
-/** Has new games offer the grids that aren't finished yet (hex), as a page loaded with `?hex=1` does, or not. */
-export const offerUnfinishedGrids = (offer: boolean): void => {
-  offeringUnfinished = offer;
-};
-
-/** The grids a new game leaves out, though they can be drawn: the unfinished ones, unless they're offered. */
-export const hiddenGrids = (): TopologyId[] =>
-  offeringUnfinished ? [] : [...unfinishedGrids];
+// The grids a new game leaves out until they're finished, hex without `?hex=1`: kept beside the tilesets, as the
+//  interface's art leaves their sets out too (`interfaceArt`).
+export {
+  hiddenGrids,
+  offerUnfinishedGrids,
+} from '@civ-clone/ui-assets/lib/tilesets';
 
 /**
  * The grids a new game offers (#89): those it can be drawn on (`drawnTopologies`) but the ones it leaves out
@@ -47,7 +40,7 @@ export const hiddenGrids = (): TopologyId[] =>
 export const supportedTopologies = (
   tilesets: TilesetDescriptor[] = installedTilesets(),
   drawable: TopologyId[] = drawableGrids(),
-  hidden: TopologyId[] = hiddenGrids()
+  hidden: string[] = hiddenGrids()
 ): TopologyId[] =>
   drawnTopologies(tilesets, drawable).filter((grid) => !hidden.includes(grid));
 

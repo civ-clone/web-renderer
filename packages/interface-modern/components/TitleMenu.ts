@@ -12,7 +12,7 @@ import HallOfFameWindow, {
 import LibraryWindow from '@civ-clone/ui-menus/components/LibraryWindow';
 import ResumeGameWindow from '@civ-clone/ui-menus/components/ResumeGameWindow';
 import Transport from '@civ-clone/ui-client/Transport';
-import { cantPlayReason } from '@civ-clone/ui-menus/lib/playable';
+import { canLoad, cantPlayReason } from '@civ-clone/ui-menus/lib/playable';
 import { chooseSave } from '@civ-clone/ui-menus/components/LoadGameWindow';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import { loadSaveFromFile } from '@civ-clone/ui-menus/lib/savedGame';
@@ -86,11 +86,13 @@ export class TitleMenu extends Element {
 
   async build(): Promise<void> {
     // A game is offered whenever there's art to draw it with (#1063): civ.one's own, or the player's import. Without
-    //  any, on a first visit offline with nothing imported, the menu says why in place of the game's items.
+    //  any, on a first visit offline with nothing imported, the menu says why in place of the game's items. A save
+    //  loads wherever its art is there, on a grid new games don't offer yet too (`canLoad`).
     const reason = cantPlayReason(),
       playable = reason === null,
+      loadable = canLoad(),
       saves = await listSaves().catch((): BrowserSave[] => []),
-      save = playable ? newestSave(saves) : null,
+      save = loadable ? newestSave(saves) : null,
       finished = (): void => this.remove();
 
     // Nothing to build, and above all no keys to listen for, in the game that's loading.
@@ -158,6 +160,10 @@ export class TitleMenu extends Element {
               hotkey: t('TitleMenu.key.earth'),
               action: (): void => askEarth(this.#transport, finished),
             },
+          ]
+        : []),
+      ...(loadable
+        ? [
             {
               name: 'load-game',
               label: t('TitleMenu.load-game'),
