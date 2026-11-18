@@ -6,11 +6,32 @@
 //  - **the wheel,** or a trackpad's pinch, zooms about the pointer, by the 2D map's steps and pauses;
 //  - **two fingers:** pinching zooms, twisting turns, and moving both up or down tilts;
 //  - **Safari's trackpad gestures:** pinching zooms and twisting turns.
-// The right button is left to the unit's menu (#808), and a press that doesn't move is left as a click (slice 1.3).
+// A press that doesn't move is a click, and one held still a moment is the unit's menu, as is a right-click where the
+//  interface opens it there (#808): the view says what they do (`CameraPresses`).
 
 import { Glide, Press, WheelTurn } from '@civ-clone/ui-widgets/lib/mapGestures';
 import prefersReducedMotion from '@civ-clone/ui-map/lib/reducedMotion';
 import { Orbit, clampOrbit, groundAt, panned, zoomed } from './orbit';
+
+/** What a press that doesn't move does: where it is in the canvas's px, and on the page. */
+export type CameraPresses = {
+  // A press let go where it began.
+  click(x: number, y: number, clientX: number, clientY: number): void;
+  // A press held still (`pressed`), or a right-click: the unit's menu. Whether it opened one: a held press that did
+  //  is no longer a click.
+  menu(
+    x: number,
+    y: number,
+    clientX: number,
+    clientY: number,
+    pressed: boolean
+  ): boolean;
+  // Whether a right-click opens the menu, in place of the browser's own.
+  menuOnRightClick(): boolean;
+};
+
+// How long a press is held still before it's the unit's menu, as on the 2D map.
+const HOLD = 350;
 
 /** What the input asks of the view. */
 export type CameraTarget = {
@@ -55,10 +76,18 @@ export class CameraInput {
   // Safari's pinch: the camera it began at, and when it last moved.
   #gesture: { orbit: Orbit; at: number } | null = null;
   #listeners: [string, EventListener, AddEventListenerOptions?][] = [];
+  #presses: CameraPresses | null;
+  // A press waiting to be held long enough to be the unit's menu.
+  #hold: number | null = null;
 
-  constructor(canvas: HTMLCanvasElement, target: CameraTarget) {
+  constructor(
+    canvas: HTMLCanvasElement,
+    target: CameraTarget,
+    presses: CameraPresses | null = null
+  ) {
     this.#canvas = canvas;
     this.#target = target;
+    this.#presses = presses;
     this.#glide = new Glide((dx, dy) => {
       const [x, y] = this.#middle();
 
@@ -92,6 +121,9 @@ export class CameraInput {
       (event) => this.#safari(event as GestureEvent, 'end'),
       { passive: false }
     );
+    this.#listen('contextmenu', (event) =>
+      this.#rightClick(event as MouseEvent)
+    );
     // A drag on a touch screen moves the map, not the page.
     this.#listen('touchstart', (event) => event.preventDefault(), {
       passive: false,
@@ -106,6 +138,7 @@ export class CameraInput {
   /** Takes its listeners off the canvas, and stops a glide. */
   dispose(): void {
     this.#glide.stop();
+    this.#stopHold();
     this.#listeners.forEach(([type, listener, options]) =>
       this.#canvas.removeEventListener(type, listener, options)
     );
@@ -177,6 +210,7 @@ export class CameraInput {
       // A second finger: no longer a drag, but a pinch, a twist and a tilt.
       if (this.#fingers.size === 2) {
         this.#press = null;
+        this.#stopHold();
         this.#pair = this.#measurePair();
 
         return;
@@ -206,9 +240,48 @@ export class CameraInput {
     }
 
     if (event.button === 0) {
-      this.#press = new Press(event);
-      this.#last = this.#at(event);
+      const press = new Press(event),
+        [x, y] = this.#at(event),
+        { clientX, clientY } = event;
+
+      this.#press = press;
+      this.#last = [x, y];
+      this.#stopHold();
+      this.#hold = window.setTimeout(() => {
+        this.#hold = null;
+
+        // Held still: the unit's menu, and then not a click.
+        if (
+          this.#press === press &&
+          !press.dragging() &&
+          this.#presses?.menu(x, y, clientX, clientY, true) === true
+        ) {
+          this.#press = null;
+        }
+      }, HOLD);
     }
+  }
+
+  #stopHold(): void {
+    if (this.#hold !== null) {
+      window.clearTimeout(this.#hold);
+      this.#hold = null;
+    }
+  }
+
+  // A right-click, where the interface opens the unit's menu with it: the menu, and not the browser's own.
+  #rightClick(event: MouseEvent): void {
+    if (this.#presses === null || !this.#presses.menuOnRightClick()) {
+      return;
+    }
+
+    event.preventDefault();
+    this.#stopHold();
+    this.#press = null;
+
+    const [x, y] = this.#at(event);
+
+    this.#presses.menu(x, y, event.clientX, event.clientY, false);
   }
 
   #move(event: PointerEvent): void {
@@ -246,6 +319,9 @@ export class CameraInput {
       return;
     }
 
+    // A drag now, not a held press.
+    this.#stopHold();
+
     const now = this.#at(event);
 
     this.#pan(this.#last, now);
@@ -277,9 +353,19 @@ export class CameraInput {
     }
 
     this.#press = null;
+    this.#stopHold();
+
+    // Let go where it began: a click.
+    if (!press.dragging()) {
+      const [x, y] = this.#at(event);
+
+      this.#presses?.click(x, y, event.clientX, event.clientY);
+
+      return;
+    }
 
     // A flick carries on, unless the player has asked for less motion (#856).
-    if (press.dragging() && !prefersReducedMotion()) {
+    if (!prefersReducedMotion()) {
       this.#glide.start(press.releaseVelocity(event.timeStamp));
     }
   }
@@ -293,6 +379,7 @@ export class CameraInput {
 
     if (this.#press?.pointerId === event.pointerId) {
       this.#press = null;
+      this.#stopHold();
     }
 
     if (this.#turning?.pointerId === event.pointerId) {
@@ -396,6 +483,7 @@ export class CameraInput {
     if (phase === 'start') {
       this.#glide.stop();
       this.#press = null;
+      this.#stopHold();
       this.#gesture = { orbit: this.#target.orbit(), at: event.timeStamp };
 
       return;

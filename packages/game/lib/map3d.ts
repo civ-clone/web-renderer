@@ -27,6 +27,7 @@ import {
   zoomOption,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import MapView2D, { MapView2DDeps } from '../MapView2D';
+import mapSquares from './mapSquares';
 import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
 
 /** The option the 3D camera's distance is kept in, as each set's zoom is kept in its own (`zoomOption`). */
@@ -243,6 +244,7 @@ export const makeMapView = (
       lockVerticalEdges: deps.options.get('lockVerticalEdges', false),
       mapCanvas: deps.mapPortal,
       playerId: deps.playerId,
+      squares: mapSquares,
       transport: deps.transport,
       world,
     });

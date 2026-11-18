@@ -470,6 +470,7 @@ expect(
 
   // What's on the screen: the canvas's box, as the DOM here has no layout, and what floats over it.
   Object.defineProperties(mapCanvas, {
+    setPointerCapture: { value: () => {}, configurable: true },
     clientWidth: { get: () => box.width, configurable: true },
     clientHeight: { get: () => box.height, configurable: true },
     getBoundingClientRect: {
@@ -756,17 +757,83 @@ expect(
     true
   );
 
+  // Choosing a square for a long-range order: a click on the map picks the square under it, if it's one taken. On a
+  //  canvas of its own: the 2D maps made above leave their listeners on theirs.
+  const ownBox = document.createElement('div'),
+    ownCanvas = document.createElement('canvas');
+
+  ownBox.append(ownCanvas);
+  document.body.append(ownBox);
+  Object.defineProperties(ownCanvas, {
+    setPointerCapture: { value: () => {}, configurable: true },
+    clientWidth: { get: () => box.width, configurable: true },
+    clientHeight: { get: () => box.height, configurable: true },
+    getBoundingClientRect: {
+      value: () => ({ left: 0, top: 0, right: box.width, bottom: box.height }),
+      configurable: true,
+    },
+  });
+
+  const chooser = makeMapView({
+      ...deps2D,
+      mapPortal: ownCanvas,
+    }) as MapView3D,
+    picked: string[] = [],
+    clickAt = (clientX: number, clientY: number): void =>
+      ['pointerdown', 'pointerup'].forEach((type) =>
+        ownCanvas.dispatchEvent(
+          Object.assign(new Event(type), {
+            clientX,
+            clientY,
+            button: 0,
+            pointerId: 1,
+            isPrimary: true,
+            pointerType: 'mouse',
+            timeStamp: 0,
+          })
+        )
+      );
+
+  chooser.centre(tiles[5] as Tile);
+  chooser.pickTile(
+    (tile) => tile.x !== 0,
+    (tile) => void picked.push(`${tile.x},${tile.y}`),
+    'Where?'
+  );
+
+  const choosing = [
+    chooser.picking(),
+    ownCanvas.classList.contains('picking-tile'),
+    document.querySelectorAll('.pick-tile').length,
+  ];
+
+  // The middle of the canvas: the square the camera looks at.
+  clickAt(box.width / 2, box.height / 2);
+
+  expect(
+    'choosing a square: a window says what for, and a click on the map picks the square under it; then it ends',
+    [
+      choosing,
+      picked,
+      chooser.picking(),
+      ownCanvas.classList.contains('picking-tile'),
+    ],
+    [[true, true, 1], ['1,1'], false, false]
+  );
+
+  chooser.dispose();
+  ownBox.remove();
+  staged.splice(0);
+
   view.pickTile(
     () => true,
     () => {},
     'Where?'
   );
+  view.endPicking();
 
-  expect(
-    'no square can be picked yet, and nothing is being chosen',
-    view.picking(),
-    false
-  );
+  expect('given up, nothing is being chosen', view.picking(), false);
+
   expect('nor are there view modes to flip', view.debugViewModes(), []);
 
   // A unit picked in a city screen, and a city opened from the HUD.

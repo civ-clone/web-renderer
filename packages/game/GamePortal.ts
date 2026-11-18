@@ -25,13 +25,12 @@ import {
 } from '@civ-clone/ui-assets/lib/tilesets';
 import { TilesetDescriptor } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import { hasFeature } from '@civ-clone/ui-platform/lib/interfaceMode';
-import { openUnitSelection } from '@civ-clone/ui-city/components/choices';
+import { clickSquare, pickPrompt } from './lib/mapSquares';
 import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import { Rect } from '@civ-clone/ui-map/lib/viewport';
 import prefersReducedMotion from '@civ-clone/ui-map/lib/reducedMotion';
 import mapMenus from '@civ-clone/ui-menus/components/mapMenus';
-import ActionWindow from '@civ-clone/ui-component-window/ActionWindow';
 import { on } from '@dom111/element';
 import { t } from 'i18next';
 
@@ -83,7 +82,7 @@ type Hover = {
 type Picking = {
   accept: (tile: Tile) => boolean;
   onPick: (tile: Tile) => void;
-  window: ActionWindow | null;
+  window: { close(): void } | null;
 };
 
 export class GamePortal extends Portal {
@@ -120,18 +119,7 @@ export class GamePortal extends Portal {
     this.#picking = picking;
     this.canvas().classList.add('picking-tile');
 
-    picking.window = new ActionWindow(t('DistantOrder.square.title'), prompt, {
-      classes: ['actionWindow', 'pick-tile'],
-      actions: {
-        primary: {
-          label: t('Generic.cancel'),
-          cancel: true,
-          action: (window) => window.close(),
-        },
-      },
-    });
-
-    picking.window.on('close', () => {
+    picking.window = pickPrompt(prompt, () => {
       if (this.#picking === picking) {
         this.#picking = null;
         this.canvas().classList.remove('picking-tile');
@@ -225,39 +213,8 @@ export class GamePortal extends Portal {
         return;
       }
 
-      const playerTileUnits = (tile?.units ?? []).filter(
-        (unit: Unit) => unit.player.id === this.playerId()
-      );
-
-      // A click on a banner is for its city, unless the square under it is a city's, or has units of ours, which a click
-      //  opens or selects wherever they are: the banner's city opens, or the map centres on it. A banner can hang past
-      //  a locked pole.
-      if (bannerCity !== null && !tile?.city && playerTileUnits.length === 0) {
-        if (!this.openCity(bannerCity)) {
-          this.setCenter(bannerCity.tile.x, bannerCity.tile.y);
-        }
-
-        return;
-      }
-
-      // Past a locked pole: nothing there to open or centre on.
-      if (tile === null) {
-        return;
-      }
-
-      // A city that opens, or the square's units; a city that doesn't open (another civilisation's) is a square like
-      //  any other.
-      const opened = tile.city ? this.openCity(tile.city) : false;
-
-      if (!opened && playerTileUnits.length) {
-        openUnitSelection(playerTileUnits, this.transport(), (unit: Unit) =>
-          this.emit('activate-unit', unit)
-        );
-
-        return;
-      }
-
-      this.setCenter(tile.x, tile.y);
+      // What a click does, as on the 3D map.
+      clickSquare(this, tile, bannerCity);
     });
 
     const showActionMenu = (tile: Tile, x: number, y: number) => {

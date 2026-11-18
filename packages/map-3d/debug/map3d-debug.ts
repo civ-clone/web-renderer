@@ -97,6 +97,14 @@ const start = (script: Map3DScript): void => {
       lockVerticalEdges: true,
       mapCanvas: canvas,
       playerId: 'debug',
+      // No game: a click centres the map on its square, as a click on a square with nothing to open does.
+      squares: {
+        click: (portal, tile) => portal.setCenter(tile.x, tile.y),
+        prompt: () => ({ close: () => {} }),
+        menu: () => {},
+        menuOnRightClick: () => false,
+        menuOpen: () => false,
+      },
       // Nothing on the page talks to a game.
       transport: {} as Transport,
       world,

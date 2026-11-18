@@ -33,6 +33,7 @@ import {
 import prefersReducedMotion from '@civ-clone/ui-map/lib/reducedMotion';
 import CameraInput from './camera/CameraInput';
 import markerFor from './markers/markerFor';
+import pickGround from './camera/pick';
 
 // How long, in ms, each frame may go on building the land's chunks while any wait. A chunk is built whole, once a frame
 //  has begun one: one takes 17–25 ms, so a frame builds one, and more only where they're quicker.
@@ -44,6 +45,13 @@ const GLIDE = 350;
 // How much of the way to the land's height under the focus the camera rises or falls each frame, so it doesn't jolt
 //  over every hill as it moves.
 const HEIGHT_EASE = 0.25;
+
+// A square being chosen for a long-range order: which it takes, what's done with it, and the window saying what for.
+type Picking = {
+  accept: (tile: Tile) => boolean;
+  onPick: (tile: Tile) => void;
+  window: { close(): void } | null;
+};
 
 export class MapView3D implements MapRenderer {
   readonly portal: MapPortal3D;
@@ -68,6 +76,10 @@ export class MapView3D implements MapRenderer {
   #input: CameraInput;
   #distance: MapView3DDeps['cameraDistance'];
   #keptDistance: number | null;
+  // What a square does when clicked or held, the page's; and a square being chosen for a long-range order, if one is.
+  #squares: MapView3DDeps['squares'];
+  #transport: MapView3DDeps['transport'];
+  #picking: Picking | null = null;
   // The squares marked now, by `x,y`, each with what it was marked with, so a square marked the same is left alone.
   #marked = new Map<string, string>();
   // A frame asked for to draw in, if one is.
@@ -129,11 +141,22 @@ export class MapView3D implements MapRenderer {
 
     this.portal.on('activate-unit', (unit) => deps.activateUnit(unit));
 
-    this.#input = new CameraInput(deps.mapCanvas, {
-      orbit: () => this.#orbit,
-      lookHeight: () => this.#lookHeight ?? 0,
-      setOrbit: (orbit) => this.setOrbit(orbit),
-    });
+    this.#squares = deps.squares;
+    this.#transport = deps.transport;
+    this.#input = new CameraInput(
+      deps.mapCanvas,
+      {
+        orbit: () => this.#orbit,
+        lookHeight: () => this.#lookHeight ?? 0,
+        setOrbit: (orbit) => this.setOrbit(orbit),
+      },
+      {
+        click: (x, y) => this.#clicked(x, y),
+        menu: (x, y, clientX, clientY, pressed) =>
+          this.#menu(x, y, clientX, clientY, pressed),
+        menuOnRightClick: () => this.#squares.menuOnRightClick(),
+      }
+    );
 
     window.addEventListener('resize', this.#resizeHandler);
 
@@ -214,7 +237,18 @@ export class MapView3D implements MapRenderer {
     }
   }
 
-  endPicking(): void {}
+  /** Gives up choosing a square, if one is being chosen: its window goes, and a click is a click again. */
+  endPicking(): void {
+    const picking = this.#picking;
+
+    if (picking === null) {
+      return;
+    }
+
+    this.#picking = null;
+    this.#canvas.classList.remove('picking-tile');
+    picking.window?.close();
+  }
 
   /** The tiles released so far are taken, the land they change queued to be built again, and the map drawn. */
   flush(): void {
@@ -251,17 +285,33 @@ export class MapView3D implements MapRenderer {
       .filter(({ left, top, right, bottom }) => right > left && bottom > top);
   }
 
-  /** No square can be picked yet (slice 1.3): the order is given up, as if the player had. */
+  /**
+   * Takes the next click on a square `accept` allows for `onPick` (a long-range order's target, M2b), instead of what a
+   *  click does: a window says what for (`prompt`), and closing it, or Escape, gives up. A click on any other square
+   *  does nothing. The map's cursor is a crosshair meanwhile, as on the 2D map. Choosing again gives up the last.
+   */
   pickTile(
     accept: (tile: Tile) => boolean,
     onPick: (tile: Tile) => void,
     prompt: string
   ): void {
-    void [accept, onPick, prompt];
+    this.endPicking();
+
+    const picking: Picking = { accept, onPick, window: null };
+
+    this.#picking = picking;
+    this.#canvas.classList.add('picking-tile');
+    picking.window = this.#squares.prompt(prompt, () => {
+      if (this.#picking === picking) {
+        this.#picking = null;
+        this.#canvas.classList.remove('picking-tile');
+      }
+    });
   }
 
+  /** Whether a square is being chosen for a long-range order. */
   picking(): boolean {
-    return false;
+    return this.#picking !== null;
   }
 
   queueTile(tile: Tile): void {
@@ -424,6 +474,97 @@ export class MapView3D implements MapRenderer {
           py <= bottom + square / 2
       )
     );
+  }
+
+  // The square under (`x`, `y`) in the canvas's px: what's shown there, the land or the water over it, on the world.
+  //  Nothing above the horizon, or past a pole the world doesn't wrap over.
+  #tileAt(x: number, y: number): Tile | null {
+    const width = this.#canvas.clientWidth,
+      height = this.#canvas.clientHeight;
+
+    if (width <= 0 || height <= 0) {
+      return null;
+    }
+
+    const ground = pickGround(
+      this.#orbit,
+      this.#lookHeight ?? 0,
+      [(x / width) * 2 - 1, 1 - (y / height) * 2],
+      width / height,
+      (u, v) => this.#land.heightAt(u, v)
+    );
+
+    if (ground === null) {
+      return null;
+    }
+
+    const [tileX, tileY] = this.#land.layout.tileAt(...ground),
+      worldWidth = this.world.width(),
+      worldHeight = this.world.height(),
+      wrapsY = this.#land.layout.period().v !== null;
+
+    if (!wrapsY && (tileY < 0 || tileY >= worldHeight)) {
+      return null;
+    }
+
+    return this.world.get(
+      ((tileX % worldWidth) + worldWidth) % worldWidth,
+      ((tileY % worldHeight) + worldHeight) % worldHeight
+    );
+  }
+
+  // A click on the map: for the square being chosen, if one is, or else what a click does, as on the 2D map.
+  #clicked(x: number, y: number): void {
+    const tile = this.#tileAt(x, y);
+
+    if (tile !== null) {
+      this.portal.emit('tile-clicked', tile.x, tile.y);
+    }
+
+    const picking = this.#picking;
+
+    if (picking !== null) {
+      if (tile !== null && picking.accept(tile)) {
+        this.endPicking();
+        picking.onPick(tile);
+      }
+
+      return;
+    }
+
+    if (tile !== null) {
+      this.#squares.click(this.portal, tile);
+    }
+  }
+
+  // A press held, or a right-click: the active unit's menu for the square, if there is an active unit. Choosing a
+  //  square ends, as the menu is another way to give the unit orders.
+  #menu(
+    x: number,
+    y: number,
+    clientX: number,
+    clientY: number,
+    pressed: boolean
+  ): boolean {
+    const unit = this.#activeUnit,
+      tile = this.#tileAt(x, y);
+
+    if (unit === null || tile === null) {
+      return false;
+    }
+
+    this.endPicking();
+    this.#squares.menu(
+      this.portal,
+      clientX,
+      clientY,
+      unit,
+      tile,
+      this.#transport,
+      pressed
+    );
+
+    return true;
   }
 
   // The point on the ground the camera looks at.

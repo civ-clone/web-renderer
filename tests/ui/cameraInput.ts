@@ -25,9 +25,12 @@ const expect = (description: string, actual: unknown, expected: unknown) => {
   }
 };
 
-// The frames a glide asks for, run by hand, and whether the player has asked for less motion.
-const frames = new Map<number, (now: number) => void>();
+// The frames a glide asks for and the timers a held press sets, run by hand, and whether the player has asked for less
+//  motion.
+const frames = new Map<number, (now: number) => void>(),
+  timers = new Map<number, () => void>();
 let nextFrame = 1,
+  nextTimer = 1,
   lessMotion = false;
 
 Object.assign(globalThis, {
@@ -38,6 +41,12 @@ Object.assign(globalThis, {
       return nextFrame++;
     },
     cancelAnimationFrame: (frame: number): void => void frames.delete(frame),
+    setTimeout: (callback: () => void): number => {
+      timers.set(nextTimer, callback);
+
+      return nextTimer++;
+    },
+    clearTimeout: (timer: number): void => void timers.delete(timer),
     matchMedia: () => ({ matches: lessMotion }),
   },
 });
@@ -109,15 +118,36 @@ const start: Orbit = {
   },
   height = 0.1;
 
-let orbit: Orbit = start;
+let orbit: Orbit = start,
+  menuOnRightClick = false;
 
-const input = new CameraInput(canvas, {
-    orbit: () => orbit,
-    lookHeight: () => height,
-    setOrbit: (next) => {
-      orbit = next;
+// What presses that don't move did: clicks, and menus held (`hold`) or right-clicked (`right`), where they were.
+const presses: string[] = [],
+  input = new CameraInput(
+    canvas,
+    {
+      orbit: () => orbit,
+      lookHeight: () => height,
+      setOrbit: (next) => {
+        orbit = next;
+      },
     },
-  }),
+    {
+      click: (x, y) => void presses.push(`click ${x},${y}`),
+      menu: (x, y, clientX, clientY, pressed) => {
+        presses.push(`${pressed ? 'hold' : 'right'} ${x},${y}`);
+
+        return true;
+      },
+      menuOnRightClick: () => menuOnRightClick,
+    }
+  ),
+  runTimers = (): void => {
+    const waiting = [...timers.values()];
+
+    timers.clear();
+    waiting.forEach((callback) => callback());
+  },
   screen = (x: number, y: number): [number, number] => [
     (x / 800) * 2 - 1,
     1 - (y / 600) * 2,
@@ -139,9 +169,57 @@ pointer('pointermove', 403, 302);
 pointer('pointerup', 403, 302);
 
 expect(
-  'a press that moves less than a drag is a click, and moves nothing',
-  [orbit === start, input.dragging()],
-  [true, false]
+  'a press that moves less than a drag is a click where it was let go, and moves nothing',
+  [orbit === start, input.dragging(), presses.splice(0)],
+  [true, false, ['click 403,302']]
+);
+
+// Held still: the unit's menu, and then not a click. Moved first: neither.
+pointer('pointerdown', 200, 100);
+runTimers();
+pointer('pointerup', 200, 100);
+
+const held = presses.splice(0);
+
+pointer('pointerdown', 200, 100);
+pointer('pointermove', 260, 100);
+runTimers();
+pointer('pointerup', 260, 100);
+
+expect(
+  'a press held still is the unit’s menu, not a click; one dragged first is neither',
+  [held, presses.splice(0)],
+  [['hold 200,100'], []]
+);
+
+orbit = start;
+
+// A right-click: the menu, where the interface opens it with one; else the browser's own.
+let prevented = false;
+
+fire('contextmenu', {
+  clientX: 50,
+  clientY: 60,
+  preventDefault: () => {
+    prevented = true;
+  },
+});
+
+const browsers = [presses.splice(0), prevented];
+
+menuOnRightClick = true;
+fire('contextmenu', {
+  clientX: 50,
+  clientY: 60,
+  preventDefault: () => {
+    prevented = true;
+  },
+});
+
+expect(
+  'a right-click is the unit’s menu where the interface says, and not the browser’s; elsewhere it’s left to the browser',
+  [browsers, presses.splice(0), prevented],
+  [[[], false], ['right 50,60'], true]
 );
 
 // A drag: the ground under the pointer stays under it.

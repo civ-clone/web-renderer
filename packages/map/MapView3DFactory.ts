@@ -6,8 +6,8 @@
 //  `MapView3DDeps`, made by the page's own bundle: the 3D script imports nothing that has state of its own, so no
 //  registry or singleton is bundled twice.
 
-import { Unit } from '@civ-clone/ui-protocol/types';
-import { CityOpener } from './MapPortal';
+import { Tile, Unit } from '@civ-clone/ui-protocol/types';
+import { CityOpener, MapPortal } from './MapPortal';
 import MapRenderer from './MapRenderer';
 import { Size } from './lib/projection';
 import Transport from '@civ-clone/ui-client/Transport';
@@ -15,6 +15,30 @@ import World from './components/World';
 
 /** Where the 3D script puts what it makes: `window.civMap3D`. */
 export const MAP3D_GLOBAL = 'civMap3D';
+
+/**
+ * What a square of the map does when clicked, held or right-clicked, and the window that asks for one: the page's own
+ *  (`@civ-clone/ui-game/lib/mapSquares`), so both maps open the same cities, units and menus.
+ */
+export type MapSquares = {
+  // A click on `tile`, held by `portal`.
+  click(portal: MapPortal, tile: Tile): void;
+  // The window saying what a square is being chosen for: `closed` is told when it closes, however it does.
+  prompt(prompt: string, closed: () => void): { close(): void };
+  // The active unit's menu at (`x`, `y`) on the page, for `tile`: `pressed` for a press held, rather than a right-click.
+  menu(
+    launcher: object,
+    x: number,
+    y: number,
+    unit: Unit,
+    tile: Tile,
+    transport: Transport,
+    pressed: boolean
+  ): void;
+  // Whether a right-click opens the unit's menu, and whether a menu is open over the map.
+  menuOnRightClick(): boolean;
+  menuOpen(): boolean;
+};
 
 export type MapView3DDeps = {
   // A unit picked on the map, or in a city screen's units (the portal's `activate-unit`).
@@ -43,6 +67,8 @@ export type MapView3DDeps = {
   // The canvas the map is drawn on, sized to its parent.
   mapCanvas: HTMLCanvasElement;
   playerId: string;
+  // What a square does when clicked, held or right-clicked.
+  squares: MapSquares;
   transport: Transport;
   // The player's world, made by the page, which tile patches are written to.
   world: World;
