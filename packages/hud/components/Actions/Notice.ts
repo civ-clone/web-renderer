@@ -78,7 +78,7 @@ export class Notice extends Action {
 
       this.append(button);
 
-      // Not in the page yet, so drawn at the sprite's own size and enlarged pixel by pixel by the stylesheet.
+      // Not in the page yet, so drawn for the 16px the stylesheet shows it at, on this screen.
       drawUnitActionIcon(button.querySelector('canvas')!, [
         { type: 'city', text: null, colours },
       ]);

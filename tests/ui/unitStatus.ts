@@ -193,6 +193,16 @@ expect(
     text: ['fillText', 'S', 9, 12],
   }
 );
+// #1118: never an uneven enlargement, which would double some of the picture's pixels and not others.
+expect(
+  "a 24px button is drawn twice the picture's size, each of its pixels two, and shrunk to fit",
+  icon(24, 1),
+  {
+    size: [32, 32],
+    transform: ['setTransform', 2, 0, 0, 2, 0, 0],
+    text: ['fillText', 'S', 9, 12],
+  }
+);
 expect(
   'a button not laid out yet is drawn at the picture size, for the screen',
   icon(0, 1),
