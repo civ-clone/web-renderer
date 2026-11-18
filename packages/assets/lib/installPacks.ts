@@ -3,6 +3,7 @@ import { AssetStore, assetStore } from '../AssetStore';
 import {
   PackState,
   bundledTilesets,
+  chooseMapTileset,
   chosenMapTileset,
   hiddenGrids,
   hostedSheet,
@@ -75,6 +76,33 @@ export const ensureMapArt = (
   topologyId: string,
   store: AssetStore = assetStore
 ): Promise<void> => ensureTilesetLoaded(mapTileset(topologyId), store);
+
+/**
+ * Chooses the installed set `id` as the art for the `grid` grid's maps (`chooseMapTileset`), once it's ready to draw
+ *  from (`ensureTilesetLoaded`): a game on that grid draws its map with it as soon as it's chosen (#1118), so a hosted
+ *  set's sheet is fetched first. Rejects, saying why, and leaves the choice as it was, when it can't be loaded; and
+ *  leaves it too when, by then, `stillWanted` says another has been chosen since.
+ */
+export const useMapArt = async (
+  grid: string,
+  id: string,
+  store: AssetStore = assetStore,
+  stillWanted: () => boolean = () => true
+): Promise<void> => {
+  const tileset = installedTilesets().find(
+    (installed) => installed.grid === grid && installed.id === id
+  );
+
+  if (tileset === undefined) {
+    throw new Error(`No ${id} set is installed for the ${grid} grid.`);
+  }
+
+  await ensureTilesetLoaded(tileset, store);
+
+  if (stillWanted()) {
+    chooseMapTileset(grid, id);
+  }
+};
 
 // Whether every sprite `pack` requires was read into `store` by its last `load`, whatever the store says it holds.
 const spritesLoaded = async (

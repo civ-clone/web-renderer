@@ -265,6 +265,19 @@ export const loadSaveFromFile = async (
     return;
   }
 
+  await handOverSave(data, seats);
+};
+
+/**
+ * Hands `data`, a save, to the page the reload brings, with `seats` reassigned (none, to keep them as they are), and
+ *  reloads into it: Load Game's, and a game in progress carried over to a new page (#1118). Rejects, once it has said
+ *  so (`failure`, the key of what it says), when it can't be handed over, and the page stays as it is.
+ */
+export const handOverSave = async (
+  data: string,
+  seats: SeatChanges = {},
+  failure: string = 'SavedGame.could-not-hand-over'
+): Promise<void> => {
   try {
     await pendingSaveStore().set(data, PENDING);
 
@@ -276,9 +289,7 @@ export const loadSaveFromFile = async (
     // than blink and carry on with the game that is already running.
     await discardPendingSave();
 
-    window.alert(
-      t('SavedGame.could-not-hand-over', { error: (error as Error).message })
-    );
+    window.alert(t(failure, { error: (error as Error).message }));
 
     throw error;
   }

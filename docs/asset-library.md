@@ -73,13 +73,26 @@ with civ.one. [asset-system.md](asset-system.md) describes the system as it is t
      - the interface art's at start-up;
      - a map set's when a game on its grid starts or loads, before the first draw.
    - The browser's own cache keeps the sheet, so it's fetched once per version, and nothing is written to IndexedDB.
-   - **Changing the map's art in a running game** should be possible. The game's state is in the worker and doesn't
-     depend on the art, and the map's view can already be disposed of (`MapView.dispose`), so choosing other art for
-     the grid would build the view again with it. That `GameSession` can rebuild its view, and that nothing else keeps
-     the old one, is to be proven in slice 3.
-   - If it is, a sheet that fails to load doesn't stop a game. The grid falls back to another set that is ready, with a
-     message saying why. Only a first visit offline with nothing imported for that grid has no set to fall back to,
-     and then the start stops with that message.
+   - **Changing the map's art in a running game** works (#1118), but not by building the view again, as first
+     planned. Too much keeps the view's portal: the HUD, the unit panel, the active unit's controller, the game menu,
+     the keyboard, the debug panel and any open city screen. The portal's canvas listeners are never removed either,
+     so a second portal on the same canvas would take every click twice. So the view keeps its portal and swaps the
+     art inside it instead:
+     - `useMapArt` fetches the set's sheet before choosing it, so the map is never drawn from a sheet still on its way.
+       If the fetch fails, the choice stays as it was and the set's entry says why.
+     - Choosing it (`tileset.<grid>`) has `GameSession` call `MapView.redrawArt`. That gives the portal the new set's
+       tile size and its own zoom (`zoom.<id>`) through `Portal.retile`, and draws every layer again from the same
+       middle. The minimaps' overviews draw colours, not sprites, and stay as they are.
+     - What draws the map's art outside the map follows it: the unit panel and an open city screen draw again, and
+       Options' zoom slider takes the new set's range.
+     - Art whose cities and units stack the other way from the layers built (`cities.mode`) is drawn at its own size
+       at once, but only a new page stacks them as it does. The game is carried over to one, as for a theme's new
+       interface art (The interface's art), or, where it can't be now, the player is told it waits for the next load.
+       No two sets on one grid differ so yet.
+   - So a sheet that fails to load as a game starts needn't stop it, which is still to do (#1141): the start stops
+     with a message today. The grid would fall back to another set that is ready, with a message saying why. Only a first
+     visit offline with nothing imported for that grid has no set to fall back to, and then the start stops with that
+     message.
    - Why: the bundle stays small, a set can change without the code changing, and it works with storage blocked (5).
 4. **Migration: the map scale moves into the zoom.**
    - Imported sprites keep their keys (`spriteKey`: the set's storage prefix, name and extension), and the sound driver
@@ -202,7 +215,10 @@ it has today. The import window's own handling of the file goes, and the music r
   Civ1's optional improvement and Wonder icons (`city-improvements/*`, `wonders/*`) have no stand-in, and the city
   screen already draws nothing where one is missing.
 - **Changing theme:** its colours change at once, as now. When it changes the interface art too, the page reloads, as
-  it does after an import, since windows already open have drawn their icons.
+  it does after an import, since windows already open have drawn their icons. During a game (#1118) the game is
+  carried over to the new page first. It's saved, handed over as Load Game hands a save over, and loaded again on
+  the same turn, with nobody's seat changed (`handOverGame`). That happens only on the player's own turn. While the
+  computer players move, and in a game being watched, the art waits for the next load, with a hint saying so.
 - **What it covers:** only the interface's art. A unit in a window is drawn with the map's art, not the theme's
   (`hud/components/Unit.ts`), so it looks as it does on the map.
 - **The menus:** they stop gating New Game and Load Game on Civ1's import. They gate on there being interface art and
@@ -237,7 +253,9 @@ it has today. The import window's own handling of the file goes, and the music r
 
 ## The screen
 
-The library replaces Import Assets. It opens from the main menu and from Options, wherever Import Assets is now.
+The library replaces Import Assets. It opens from the main menu and from Options, wherever Import Assets is now, and
+during a game from the game's menu and Options (#1118). During a game nothing is imported, as an import loads the
+page again, and the library says so. Map art and themes can still be chosen.
 
 - **Sections:**
   - _Map art_, by grid;
@@ -275,8 +293,8 @@ The library replaces Import Assets. It opens from the main menu and from Options
 3. **Hosted sets, and the square pixel art.**
    - The pieces: the build step, the sheet loader, and `tileset-pixelart` registering the square set.
    - The menus stop gating on Civ1's import.
-   - Choosing art per grid arrives here too, as #56's step e, and changing it in a running game if that's proven
-     (decision 3).
+   - Choosing art per grid arrives here too, as #56's step e. Changing it in a running game followed (#1118, decision
+     3).
 4. **The hexagonal pixel art.**
    - Its descriptor is registered from the same package, keeping its own city rim colours (Hosted sets).
    - Hex is offered for new games (#94) only on a page loaded with `?hex=1` for now (`offerUnfinishedGrids`), as the

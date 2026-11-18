@@ -552,7 +552,8 @@ const save = (
     resetStore();
   }
 
-  // In a game, Options has no Assets row: the import reloads the page, and the game with it.
+  // In a game, Options has the Assets row too (#1118): its library opens for a game, where nothing is imported, as
+  //  an import reloads the page, and the game with it; and it isn't modal, as Options isn't then.
   {
     const options = new GameOptions({
       scale: () => 2,
@@ -560,10 +561,23 @@ const save = (
       lockVerticalEdges: () => false,
     } as unknown as IPortal);
 
+    (
+      options.element().querySelector('.assets button') as HTMLButtonElement
+    ).click();
+
+    const library = document.querySelector(
+      'dialog.library-window'
+    ) as HTMLElement | null;
+
     expect(
-      'Options in a game has no Assets row',
-      options.element().querySelector('.assets'),
-      null
+      'Options in a game opens the library for a game, not modal',
+      [
+        library !== null,
+        library?.classList.contains('modal'),
+        (library?.querySelector('.imports-in-game') as HTMLElement | null)
+          ?.hidden,
+      ],
+      [true, false, false]
     );
 
     closeWindows();

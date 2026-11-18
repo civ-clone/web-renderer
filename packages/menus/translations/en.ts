@@ -21,6 +21,7 @@ i18next.addResources('en', 'default', {
     'Loading a saved game will end the game in progress. Any unsaved progress will be lost.',
   'GameMenu.military-report': 'Military Report',
   'GameMenu.options': 'Options',
+  'GameMenu.library': '$t(LibraryWindow.title)',
   'GameMenu.quit': 'Quit',
   'GameMenu.quit-confirm':
     'Quitting will end the game in progress and return to the main menu. Any unsaved progress will be lost.',
@@ -161,6 +162,9 @@ i18next.addResources('en', 'default', {
   'LibraryWindow.status.none': 'Not imported',
   'LibraryWindow.status.unloaded': 'Couldn’t be loaded',
   'LibraryWindow.import': 'Import…',
+  // During a game (#1118), when nothing can be imported.
+  'LibraryWindow.import-in-game':
+    'Art and sound are imported from the main menu, as importing loads the page again, which would end this game.',
   'LibraryWindow.import-again': 'Import again',
   // The buttons' names for assistive technology, which say whose they are.
   'LibraryWindow.import-set': 'Import {{name}}',
@@ -219,6 +223,9 @@ i18next.addResources('en', 'default', {
   'Menus.no-art.map':
     'There’s no art to draw a map with: civ.one’s own couldn’t be loaded. Check your connection and reload the page, or import Civilization’s art in Art and sound.',
   'ReleaseWindow.title': 'Releases',
+  // A game carried over to a new page for new art (#1118) that couldn't be: it goes on as it was.
+  'SavedGame.could-not-carry-over':
+    'The game could not be carried over to a new page, so it goes on as it was, and the new art is drawn from the next time the page loads: {{- error}}',
   'SavedGame.could-not-hand-over':
     'That save could not be handed to the reloading page, so the game has not been loaded: {{- error}}',
   'SavedGame.could-not-read': 'That save could not be read: {{- error}}',

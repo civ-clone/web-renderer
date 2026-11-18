@@ -10,7 +10,6 @@ import {
 import { TilesetDescriptor } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import {
   bundledTilesets,
-  chooseMapTileset,
   hiddenGrids,
   installedTilesets,
   isHosted,
@@ -28,7 +27,7 @@ import {
 import Window, { WindowOptions } from '@civ-clone/ui-component-window/Window';
 import ImportAssetsWindow from './ImportAssetsWindow';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
-import { loadFailed } from '@civ-clone/ui-assets/lib/installPacks';
+import { loadFailed, useMapArt } from '@civ-clone/ui-assets/lib/installPacks';
 import { button } from '@civ-clone/ui-component-button/button';
 import chooseUiTheme from '../lib/chooseUiTheme';
 import { h } from '@civ-clone/ui-widgets/lib/html';
@@ -40,9 +39,11 @@ import '../lib/civ1Sound';
 
 // The library of art and sound (#1063): every set the game can draw or play with, by what it is for (the map's art by
 //  grid, the interface's themes, the sound), saying where each comes from, whether it's ready, and opening its import.
-//  It replaces Import assets: the imports are each set's own (`ImportAssetsWindow`), in any order (#1063). It's
-//  opened only before a game (the main menus, and Options with no game), so a set chosen here is drawn from the next
-//  game on.
+//  It replaces Import assets: the imports are each set's own (`ImportAssetsWindow`), in any order (#1063). It opens
+//  before a game (the main menus, and Options) and during one (the game's menu, and Options, #1118). During a game the
+//  map is drawn with the art chosen for its grid at once, and a theme with other interface art carries the game over to
+//  a new page (`chooseUiTheme`); but nothing is imported, as an import loads the page again, which would lose the
+//  game.
 
 /**
  * A set as the library lists it: its manifest's head, what it gives the game, the grid it draws maps on if it does,
@@ -252,13 +253,18 @@ const sourceOf = ({ source, licence, pack }: LibrarySet): HTMLElement => {
 
 /**
  * `set`'s Use for the `grid` grid's maps (#1063), named for the set, and what marks it as the one in use. Choosing it
- *  keeps it as the art for that grid (`chooseMapTileset`) and calls `chosen`. The one in use is out of use but kept in
+ *  keeps it as the art for that grid once it's ready to draw from (`useMapArt`), as a game on that grid draws with it
+ *  at once (#1118), and calls `chosen`; or, when it can't be loaded, `failed`. The one in use is out of use but kept in
  *  the tab order, so focus stays on it once it's chosen.
  */
+// The latest Use for each grid (#1118): a sheet still loading for an earlier one is never chosen over it.
+const latestUse = new Map<string, number>();
+
 const mapUse = (
   { id, name }: LibrarySet,
   grid: string,
-  chosen: () => void
+  chosen: () => void,
+  failed: (error: unknown) => void
 ): MapUseEntry => {
   // A grid's name is a common noun, lower case within a sentence: "Use for square maps".
   const gridName = t(`Grid.${grid}`).toLocaleLowerCase(i18next.language),
@@ -270,12 +276,23 @@ const mapUse = (
     ),
     use = h(button(t('LibraryWindow.use-for-grid', { grid: gridName })), {
       click: (): void => {
-        if (use.getAttribute('aria-disabled') === 'true') {
+        if (
+          use.getAttribute('aria-disabled') === 'true' ||
+          use.getAttribute('aria-busy') === 'true'
+        ) {
           return;
         }
 
-        chooseMapTileset(grid, id);
-        chosen();
+        // A hosted set's sheet may be fetched first: one click, while it is, and only the latest Use for the grid is
+        //  chosen once it's there.
+        const request = (latestUse.get(grid) ?? 0) + 1;
+
+        latestUse.set(grid, request);
+        use.setAttribute('aria-busy', 'true');
+
+        useMapArt(grid, id, undefined, () => latestUse.get(grid) === request)
+          .then(chosen, failed)
+          .finally(() => use.removeAttribute('aria-busy'));
       },
     });
 
@@ -298,10 +315,28 @@ export class LibraryWindow extends Window {
   #storageBlocked: HTMLDivElement;
   // Over Options, which is modal before a game: the import it opens must be too, or it would open behind it.
   #modal: boolean;
+  // During a game (#1118): nothing is imported, and a theme with other art carries the game over to a new page.
+  #inGame: boolean;
+  // Said when a theme's art waits for the next load: it couldn't be carried over now (waiting for the turn, say).
+  #themeHint: HTMLParagraphElement;
 
-  constructor(windowOptions: WindowOptions = {}) {
+  constructor(
+    windowOptions: WindowOptions = {},
+    { inGame = false }: { inGame?: boolean } = {}
+  ) {
     const storageBlocked = s<HTMLDivElement>(
         '<div class="storage-blocked" role="alert" hidden></div>'
+      ),
+      // Why nothing can be imported during a game: said once, above everything, as the storage's reason is.
+      importsInGame = s<HTMLParagraphElement>(
+        `<p class="hint imports-in-game"${inGame ? '' : ' hidden'}>${t(
+          'LibraryWindow.import-in-game'
+        )}</p>`
+      ),
+      themeHint = s<HTMLParagraphElement>(
+        `<p class="hint" aria-live="polite" hidden>${t(
+          'GameOptions.theme-art-next-load'
+        )}</p>`
       ),
       themes = s<HTMLUListElement>('<ul class="library-sets"></ul>'),
       entries: Entry[] = [],
@@ -347,7 +382,24 @@ export class LibraryWindow extends Window {
         const actions = s<HTMLElement>('<div class="actions"></div>');
 
         if (set.grid !== undefined && installed.includes(set.id)) {
-          const use = mapUse(set, set.grid, () => this.#markMapUses());
+          const use = mapUse(
+            set,
+            set.grid,
+            // Ready again, if a try before had failed.
+            (): void => {
+              status.textContent = t('LibraryWindow.status.ready');
+              status.dataset.state = 'ready';
+
+              this.#markMapUses();
+            },
+            // Its sheet couldn't be fetched (offline, say): the map stays as it was, and its entry says why.
+            (error): void => {
+              console.error(error);
+
+              status.textContent = t('LibraryWindow.status.unloaded');
+              status.dataset.state = 'needs';
+            }
+          );
 
           mapUses.push(use);
           actions.append(use.use, use.inUse);
@@ -393,6 +445,7 @@ export class LibraryWindow extends Window {
       s(
         '<div class="library"></div>',
         storageBlocked,
+        importsInGame,
         s(
           '<section class="library-section" data-section="map"></section>',
           s(`<h4>${t('LibraryWindow.map')}</h4>`),
@@ -404,7 +457,8 @@ export class LibraryWindow extends Window {
         s(
           '<section class="library-section" data-section="themes"></section>',
           s(`<h4>${t('LibraryWindow.themes')}</h4>`),
-          themes
+          themes,
+          themeHint
         ),
         s(
           '<section class="library-section" data-section="sound"></section>',
@@ -419,6 +473,8 @@ export class LibraryWindow extends Window {
     this.#mapUses = mapUses;
     this.#storageBlocked = storageBlocked;
     this.#modal = windowOptions.modal ?? false;
+    this.#inGame = inGame;
+    this.#themeHint = themeHint;
 
     this.addClass('library-window');
 
@@ -475,8 +531,8 @@ export class LibraryWindow extends Window {
           }
         )
       );
-      // The storage's reason it can't be imported is said once, above everything.
-      importButton.disabled = !usable;
+      // The storage's reason it can't be imported is said once, above everything, as the game's is.
+      importButton.disabled = !usable || this.#inGame;
     });
   }
 
@@ -496,8 +552,11 @@ export class LibraryWindow extends Window {
               return;
             }
 
-            // Only before a game, which the library is opened from: new interface art loads the page again.
-            chooseUiTheme(id);
+            // New interface art loads the page again: before a game at once, and during one once the game is carried
+            //  over to it, or, where it can't be now, at the next load, which the hint says.
+            this.#themeHint.hidden = !chooseUiTheme(id, {
+              inGame: this.#inGame,
+            });
             this.#markThemes();
           },
         }),

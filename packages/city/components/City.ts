@@ -29,6 +29,8 @@ import progressBar from '@civ-clone/ui-component-progress-bar/ProgressBar';
 import { specialistForKey } from '@civ-clone/ui-client/lib/specialists';
 import { t } from 'i18next';
 import watchCity from './lib/watchCity';
+import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
+import { mapTilesetOption } from '@civ-clone/ui-assets/lib/tilesets';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 
 // The id of the note that a city's build can't be completed yet (#959), which its Buy buttons are described by.
@@ -202,6 +204,8 @@ export class City extends Window {
   #transport: Transport;
   // None for a rival's city, which isn't kept up to date.
   #unwatch: (() => void) | null = null;
+  // The map's art chosen again while the screen is open (#1118): its map and units are drawn again with it.
+  #stopFollowingArt: () => void;
 
   /**
    * With `readOnly`, as for a rival's city a Diplomat has investigated (#58), the screen shows the city as it was sent
@@ -245,6 +249,18 @@ export class City extends Window {
     if (!readOnly) {
       this.#watch();
     }
+
+    this.#stopFollowingArt = options.onChange((key): void => {
+      if (
+        key ===
+        mapTilesetOption(this.#city.player?.world?.topologyId ?? 'square')
+      ) {
+        const restoreFocus = keepFocus(this.element());
+
+        this.update(this.#details(this.#city));
+        restoreFocus();
+      }
+    });
 
     this.on('keydown', (event) => {
       if (readOnly) {
@@ -477,6 +493,7 @@ export class City extends Window {
 
   override close(): void {
     this.#unwatch?.();
+    this.#stopFollowingArt();
 
     super.close();
   }

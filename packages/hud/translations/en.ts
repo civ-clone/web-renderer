@@ -209,6 +209,11 @@ i18next.addResources('en', 'default', {
   // The active unit's square and stack, as both interfaces' unit details show them, and the wait between turns.
   'Generic.coordinates': '{{x, number}}, {{y, number}}',
   'Game.waiting': 'Waiting for the other civilizations…',
+  // The game being saved, to load again on a new page with a theme's new art (#1118).
+  'Game.carrying-over': 'Carrying the game over to a new page for the new art…',
+  // Map art whose units and cities stack the other way, chosen when the game can't be carried over to a new page (#1118).
+  'Game.art-next-load':
+    'The new art’s units and cities are stacked as they should be from the next time the page loads.',
   'UnitDetails.home-city': 'Home city: {{city}} (opens the city)',
   'UnitDetails.tile-units_one':
     '{{count, number}} other unit here (choose a unit)',

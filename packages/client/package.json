@@ -33,6 +33,7 @@
     "./lib/dismissals": "./lib/dismissals.ts",
     "./lib/distantActions": "./lib/distantActions.ts",
     "./lib/endTurn": "./lib/endTurn.ts",
+    "./lib/gameHandOver": "./lib/gameHandOver.ts",
     "./lib/gameSetup": "./lib/gameSetup.ts",
     "./lib/government": "./lib/government.ts",
     "./lib/hallOfFame": "./lib/hallOfFame.ts",

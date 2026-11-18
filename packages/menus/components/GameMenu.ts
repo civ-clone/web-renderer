@@ -13,6 +13,7 @@ import Civilopedia from '@civ-clone/ui-reports/components/Civilopedia';
 import { openSpaceshipWindow } from '@civ-clone/ui-hud/components/Actions/Spaceship';
 import ConfirmationWindow from '@civ-clone/ui-component-window/ConfirmationWindow';
 import GameOptions from './GameOptions';
+import LibraryWindow from './LibraryWindow';
 import { Player } from '@civ-clone/ui-protocol/types';
 import { GameMenuItem, GameMenuRows, mapMenus } from './mapMenus';
 import { windowKey } from '@civ-clone/ui-component-window/windowEyebrows';
@@ -138,6 +139,13 @@ export class GameMenu extends Element {
           label: t('GameMenu.options'),
           action: () => {
             new GameOptions(this.#portal, this.#transport);
+          },
+        },
+        // The library of art and sound (#1118): the map's art and the theme changed during the game.
+        {
+          label: t('GameMenu.library'),
+          action: () => {
+            new LibraryWindow({}, { inGame: true });
           },
         },
       ],

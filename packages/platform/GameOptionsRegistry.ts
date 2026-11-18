@@ -45,12 +45,28 @@ export class GameOptionsRegistry extends EntityRegistry<GameOption> {
     }
 
     this.register(new GameOption(key, value));
-    this.#changeHandlers.forEach((handler) => handler(key));
+
+    // Each told whatever another does: one that throws (the map's art failing to draw, #1118) would otherwise keep the
+    //  rest from hearing, and `set` from keeping the value.
+    this.#changeHandlers.forEach((handler) => {
+      try {
+        handler(key);
+      } catch (error) {
+        console.error(`An option's change handler failed for ${key}.`, error);
+      }
+    });
   }
 
-  /** Calls `handler` with an option's key whenever it is given a value, by `defaults` or `set`. */
-  onChange(handler: (key: string) => void): void {
+  /**
+   * Calls `handler` with an option's key whenever it is given a value, by `defaults` or `set`. Returns what stops it,
+   *  for a handler that lives no longer than a game or a window.
+   */
+  onChange(handler: (key: string) => void): () => void {
     this.#changeHandlers.add(handler);
+
+    return (): void => {
+      this.#changeHandlers.delete(handler);
+    };
   }
 
   /** Registers each option, using the stored value where there is one of the same kind as the default. */

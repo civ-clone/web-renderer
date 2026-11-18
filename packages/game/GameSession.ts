@@ -13,7 +13,14 @@ import {
   allowLeaving,
   guardLeaving,
 } from '@civ-clone/ui-component-window/leaveGuard';
-import { unsupportedGridMessage } from '@civ-clone/ui-menus/lib/savedGame';
+import {
+  handOverSave,
+  unsupportedGridMessage,
+} from '@civ-clone/ui-menus/lib/savedGame';
+import {
+  handOverGame,
+  provideGameHandOver,
+} from '@civ-clone/ui-client/lib/gameHandOver';
 import { autosaveDue } from '@civ-clone/ui-client/lib/browserSaves';
 import { isSupportedTopology } from '@civ-clone/ui-map/lib/supportedTopologies';
 import NotificationWindow from '@civ-clone/ui-component-window/NotificationWindow';
@@ -111,6 +118,7 @@ export class GameSession {
   #mapView!: MapView;
   #dismissals!: Dismissals;
   #gameMenuItem!: GameMenu;
+  #unitDetails!: ReturnType<ReturnType<typeof unitPanel.current>>;
   // The frame a redraw is waiting for, if any: `#scheduleRender` asks for one, and `#render`, a turn starting and
   //  the session's end each give it up.
   #renderFrame: number | null = null;
@@ -174,6 +182,7 @@ export class GameSession {
       this.#receiveGame();
       this.#showObserverBar(observer);
       this.#receiveDiplomatReports();
+      this.#followArt();
       this.#bindKeyboard();
     } catch (e) {
       console.error(e);
@@ -461,6 +470,7 @@ export class GameSession {
       );
 
     this.#gameMenuItem = gameMenuItem;
+    this.#unitDetails = unitDetails;
 
     this.#unitController = unitController;
     this.#hud = hud;
@@ -899,6 +909,97 @@ export class GameSession {
           })
       )
     );
+  }
+
+  // The map's art chosen again during the game (#1118), in the library: the map is drawn with it at once, from the same
+  //  middle. And the game carried over to a new page (#1118), for what needs one: a theme with other interface art,
+  //  since what's drawn with the old art stays drawn. Saved and loaded again as Load Game does, on the player's own
+  //  turn: while waiting for it, the worker is busy with the others', and the art waits for the next load. Not for a
+  //  game being watched, which is nobody's to save. While it's carried over the game waits, as it does for the others'
+  //  turns, since anything done after the save would be lost with the page; and goes on if the save fails.
+  #followArt(): void {
+    const { transport, transportDisposers } = this.#deps;
+
+    transportDisposers.push(
+      options.onChange((key): void => {
+        if (key.startsWith('tileset.')) {
+          this.#artChanged();
+        }
+      })
+    );
+
+    if (this.#observing) {
+      return;
+    }
+
+    let handingOver = false;
+
+    // The game as it was before the hand-over: playable again.
+    const handedBack = (): void => {
+      if (!handingOver) {
+        return;
+      }
+
+      handingOver = false;
+
+      this.#gameState.setWaiting(false);
+      this.#mapView.portal.setWaiting(false);
+      this.#waitingBanner.textContent = '';
+
+      this.#gameState.update();
+    };
+
+    provideGameHandOver((): boolean => {
+      if (handingOver || this.#endTurnSent || this.#gameState.waiting()) {
+        return false;
+      }
+
+      handingOver = true;
+
+      this.#gameState.setWaiting(true);
+      this.#mapView.portal.setWaiting(true);
+      this.#waitingBanner.textContent = t('Game.carrying-over');
+
+      transport.send('save', {
+        name: 'hand-over',
+        handOver: true,
+      });
+
+      return true;
+    });
+
+    transportDisposers.push(
+      (): void => provideGameHandOver(null),
+      transport.receive('handOverGame', ({ data }): void => {
+        handOverSave(data, {}, 'SavedGame.could-not-carry-over').catch(
+          (error): void => {
+            console.error(error);
+
+            handedBack();
+          }
+        );
+      }),
+      // A save that couldn't be written is said by the page (`WorkerFailures`), and the game goes on.
+      transport.receive('saveFailed', (): void => handedBack())
+    );
+  }
+
+  // The map drawn with the art for its grid as it is now, and what's drawn with it outside the map: the active unit's
+  //  panel. Art whose units and cities stack the other way from the layers made needs a new page to stack them as it
+  //  does: the game is carried over to one, or, where it can't be now, that waits for the next load, which is said.
+  #artChanged(): void {
+    const redrawn = this.#mapView.redrawArt();
+
+    if (redrawn === 'unchanged') {
+      return;
+    }
+
+    this.#unitDetails.update(this.#unitController!.active());
+    this.#scheduleRender();
+
+    if (redrawn === 'reload' && !handOverGame()) {
+      this.#deps.notificationBar.show(t('Game.art-next-load'));
+    }
   }
 
   // The game's keyboard. Registered here, as the handler always

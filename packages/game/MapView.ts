@@ -121,6 +121,11 @@ export class MapView {
   #restyleHandler = (): void => this.#restyle();
   // Whether `t` shows the units, cities and city names, which the yields can hide the city names apart from.
   #unitsShown = true;
+  // The set the map is drawn with, and whether its cities are drawn under its units, as the layers were stacked for it:
+  //  the art can change during a game (#1118).
+  #tilesetId: string;
+  #citiesUnderUnits: boolean;
+  #options: MapViewDeps['options'];
 
   // Keyed by coordinate: a tile resent several times between two renders
   // only needs building once. A layer redraws a tile by looking its
@@ -144,6 +149,7 @@ export class MapView {
     world: worldData,
   }: MapViewDeps) {
     this.#cityLabels = cityLabels.current();
+    this.#options = options;
     this.#coveredBy = coveredBy;
     this.#mapPortal = mapPortal;
     this.#marker = new UnitMarker(mapPortal);
@@ -192,6 +198,8 @@ export class MapView {
 
     setMapGrid(world.topologyId());
 
+    this.#tilesetId = tileset.id;
+    this.#citiesUnderUnits = tileset.cities.mode === 'styles';
     this.world = world;
     this.#intervalHandler = intervalHandler;
     this.portal = portal;
@@ -290,6 +298,41 @@ export class MapView {
 
     this.portal.render();
     this.#minimapAfterRender();
+  }
+
+  /**
+   * Draws the map with the art for its grid as it is now (`mapTileset`), if that has changed since it was drawn: the
+   *  player chose other art during a game (#1118). Its tiles may be another size, and its zoom is its own
+   *  (`zoomOption`), so the portal is sized and every layer drawn again, from the same middle. Says whether it was
+   *  redrawn or unchanged; or `reload` for art whose cities and units stack the other way from the layers made,
+   *  which only a new page puts right: drawn with it all the same until then, at its own size, its units and cities
+   *  stacked as the old art's.
+   */
+  redrawArt(): 'redrawn' | 'unchanged' | 'reload' {
+    const tileset = mapTileset(this.world.topologyId());
+
+    if (tileset.id === this.#tilesetId) {
+      return 'unchanged';
+    }
+
+    const stackedOtherWay =
+      (tileset.cities.mode === 'styles') !== this.#citiesUnderUnits;
+
+    this.#tilesetId = tileset.id;
+
+    this.portal.retile(
+      nativeTileSize(tileset),
+      zoomFor(
+        tileset,
+        this.#options.get(zoomOption(tileset), defaultZoom(tileset))
+      )
+    );
+
+    this.measureCovered();
+    this.#placeMarker();
+    this.#minimapAfterRender();
+
+    return stackedOtherWay ? 'reload' : 'redrawn';
   }
 
   dispose(): void {

@@ -851,6 +851,38 @@ export class Portal
     this.emit('focus-changed', this.#center.x, this.#center.y);
   }
 
+  /**
+   * Draw with the map's art as it is now (`mapTileset`), its tiles `tileSize` native px across and down, at `zoom`,
+   *  keeping the same tile in the middle: the art was changed during a game (#1118). Every layer is drawn again, as
+   *  its sprites are another set's even where the tiles and the zoom are the same.
+   */
+  retile(tileSize: Size, zoom: number): void {
+    this.#tileSize = { ...tileSize };
+    this.#zoom = snapZoom(zoom);
+    this.#scale = scaleOfZoom(this.#zoom);
+
+    if (this.#shownIn !== null && this.#refit()) {
+      this.emit('resized');
+    }
+
+    this.#projection = this.createProjection();
+    this.#offset.x = 0;
+    this.#offset.y = 0;
+
+    this.eachLayer((layer) => {
+      layer.setScale(this.#scale);
+      layer.retile(this.#tileSize);
+    });
+
+    // As for a new scale: nothing on the layers is drawn with the art now, whatever the origin.
+    this.#viewport = { x: 0, y: 0, width: -1, height: -1 };
+    this.#fullRender = true;
+
+    this.render();
+
+    this.emit('focus-changed', this.#center.x, this.#center.y);
+  }
+
   /** The parts of the canvas, in its px, that the interface floats over, which `isVisible` counts as out of view. */
   setCovered(covered: Rect[]): void {
     this.#covered = covered;
