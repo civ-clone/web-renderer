@@ -18,6 +18,9 @@ i18next.addResources('en', 'default', {
     '{{perTurn, number(signDisplay: exceptZero)}} / turn',
   'Actions.AdjustTradeRates.Effect.research': 'Research',
   'Actions.AdjustTradeRates.Effect.was': '(was {{value, number}})',
+  // Moves made after End Turn is sent, before it's answered (#1183).
+  'Actions.AdjustTradeRates.held':
+    'Ending your turn: these rates are applied only if it goes on.',
   'Actions.ChooseGovernment.body':
     'Your revolution is over. Which government would you like?',
   'Actions.ChooseGovernment.title': 'Choose government',
