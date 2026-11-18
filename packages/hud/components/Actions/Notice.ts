@@ -6,7 +6,7 @@ import MapPortal from '@civ-clone/ui-map/MapPortal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { heldNoticeData } from '@civ-clone/ui-client/components/lib/cityBuild';
-import { drawUnitActionIcon } from '@civ-clone/ui-assets/lib/unitActionIcon';
+import { currentOrderIcons } from '@civ-clone/ui-assets/lib/orderIcons';
 import { s } from '@dom111/element';
 import showCityAction from '../lib/showCityAction';
 import showCityOnMapAction from '../lib/showCityOnMap';
@@ -79,7 +79,7 @@ export class Notice extends Action {
       this.append(button);
 
       // Not in the page yet, so drawn for the 16px the stylesheet shows it at, on this screen.
-      drawUnitActionIcon(button.querySelector('canvas')!, [
+      currentOrderIcons().draw(button.querySelector('canvas')!, [
         { type: 'city', text: null, colours },
       ]);
 

@@ -14,7 +14,8 @@
     "talks": "windows",
     "mapMenus": "popups",
     "turnControls": "orbs",
-    "windowChrome": "plain"
+    "windowChrome": "plain",
+    "orderIcons": "gameArt"
   },
   "features": []
 }

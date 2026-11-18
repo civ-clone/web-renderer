@@ -26,6 +26,7 @@ export const SLOTS = [
   'mapMenus',
   'turnControls',
   'windowChrome',
+  'orderIcons',
 ] as const;
 
 export type SlotName = (typeof SLOTS)[number];

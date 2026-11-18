@@ -27,6 +27,7 @@
     "./lib/spriteAnchors": "./lib/spriteAnchors.ts",
     "./lib/tilesets": "./lib/tilesets.ts",
     "./lib/unitActionIcon": "./lib/unitActionIcon.ts",
+    "./lib/orderIcons": "./lib/orderIcons.ts",
     "./sounds/SoundDescriptor": "./sounds/SoundDescriptor.ts",
     "./sounds/civ1Adlib": "./sounds/civ1Adlib.ts",
     "./tilesets/TilesetDescriptor": "./tilesets/TilesetDescriptor.ts"
