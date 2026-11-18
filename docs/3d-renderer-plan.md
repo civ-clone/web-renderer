@@ -152,6 +152,16 @@ and a colour per terrain. It's built a few chunks a frame, from where the map is
 
 ### 1.1b The debug world page
 
+**Done:** `dist/map3d-debug.html`, served beside the scripts (open it as `/dist/map3d-debug.html`). A form on the page
+sets its address: `grid`, `width`, `height`, `seed` and `seen` (0 to 1), and `x` and `y` for the square it's centred
+on. The arrow keys move that square a step at a time, and the address follows, so a reload or a link shows the same
+place.
+- **Code:** `packages/map-3d/debug`: the page, its script, its options, and `generateWorld.ts`. That makes a world with
+  about two fifths land, ice at the poles, hills, mountains, rivers, and terrain by latitude and wetness. It isn't the
+  engine's generator.
+- **Tests:** `tests/ui/debugWorld.ts`. It also checks the land over a debug world builds every chunk once, the nearest
+  to the map's centre first.
+
 - **What:** a page that builds a generated world on any grid (`square`, `staggered-iso`, `hex-odd-r`), with no game,
   from a seed and a size in its address, and draws it with the 3D map. It's for screenshots and for trying the grids a
   game can't start on yet (the isometric grid needs Civ2's art to start a game).

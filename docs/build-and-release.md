@@ -11,7 +11,7 @@
 
 ## Bundle outputs
 
-`esbuild.js` bundles five entry points into `dist/`:
+`esbuild.js` bundles six entry points into `dist/`:
 
 - `src/css/app.scss` -> `dist/app.css`
 - `src/js/backend.ts` -> `dist/backend.js`
@@ -19,6 +19,9 @@
 - `packages/audio/musicWorklet.ts` -> `dist/musicWorklet.js`, the music's worklet (#126)
 - `packages/map-3d/map3d.ts` -> `dist/map3d.js`, the 3D map with three.js, which `frontend.js` fetches only when a game
   starts in 3D (`docs/3d-renderer.md` §2.4)
+- `packages/map-3d/debug/map3d-debug.ts` -> `dist/map3d-debug.js`, the 3D map's debug page's own script. The build
+  copies the page itself, `packages/map-3d/debug/map3d-debug.html`, to `dist/map3d-debug.html`. It draws a made-up
+  world on any grid with `dist/map3d.js`, with no game (`docs/3d-renderer-plan.md` 1.1b).
 
 `frontend.js` starts `dist/backend.js` as a Web Worker (`src/js/frontend.ts`), so both
 have to be served from `dist/`. It also copies `changelog/releases.json` to

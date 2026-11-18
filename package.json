@@ -144,6 +144,7 @@
     "test:ground-layouts": "node tools/run-suite.js ui groundLayouts",
     "test:relief": "node tools/run-suite.js ui relief",
     "test:chunks": "node tools/run-suite.js ui chunks",
+    "test:debug-world": "node tools/run-suite.js ui debugWorld",
     "test:map-navigation": "node tools/run-suite.js ui mapNavigation",
     "test:projection": "node tools/run-suite.js ui projection",
     "test:iso-render-geometry": "node tools/run-suite.js ui isoRenderGeometry",
