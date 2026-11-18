@@ -149,6 +149,15 @@ if (typeof document !== 'undefined') {
   if (script === undefined) {
     document.body.append('dist/map3d.js did not load: run the build first.');
   } else {
-    start(script);
+    // Said on the page, as there's no game to fall back to 2D: no WebGL2, say.
+    try {
+      start(script);
+    } catch (error) {
+      const said = document.createElement('p');
+
+      said.textContent = `The 3D map couldn't start: ${String(error)}`;
+      document.body.append(said);
+      console.error(error);
+    }
   }
 }

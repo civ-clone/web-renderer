@@ -155,11 +155,11 @@ expect(
   {
     topologyId: 'square',
     width: 8,
-    height: 400,
+    height: 160,
     seed: 1,
     seen: 1,
     x: 0,
-    y: 200,
+    y: 80,
   }
 );
 expect(
@@ -193,6 +193,7 @@ grids.forEach((topologyId) => {
             ({
               x,
               y,
+              isWater: name === 'Ocean',
               terrain: { _: name, __: [name], id: `${name}-${x}-${y}` },
             } as never)
         )

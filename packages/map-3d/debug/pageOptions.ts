@@ -23,9 +23,10 @@ export const pageOptions = (search: string) => {
     },
     grid = query.get('grid') as TopologyName | null,
     topologyId = grid !== null && grids.includes(grid) ? grid : 'square',
-    width = number('width', 80, 8, 400),
+    // No more than 160 a side until distant land is drawn more coarsely (M6): a world 400 across is hundreds of MB.
+    width = number('width', 80, 8, 160),
     // The staggered and hex grids wrap over the poles, so need an even number of rows.
-    rows = number('height', 50, 8, 400),
+    rows = number('height', 50, 8, 160),
     height = topologyId === 'square' || rows % 2 === 0 ? rows : rows + 1,
     seen = given('seen');
 

@@ -69,19 +69,20 @@
           <option value="hex-odd-r">Hex</option>
         </select>
       </label>
-      <label>Width <input name="width" type="number" min="8" max="400" /></label>
+      <label>Width <input name="width" type="number" min="8" max="160" /></label>
       <label
-        >Height <input name="height" type="number" min="8" max="400"
+        >Height <input name="height" type="number" min="8" max="160"
       /></label>
       <label>Seed <input name="seed" type="number" min="0" /></label>
       <label
-        >Seen <input name="seen" type="number" min="0" max="1" step="0.05"
+        >Seen <input name="seen" type="number" min="0" max="1" step="any"
       /></label>
       <button type="submit">Build</button>
       <p>The arrow keys move the map's centre a square at a time.</p>
     </form>
 
-    <script src="map3d.js"></script>
-    <script src="map3d-debug.js"></script>
+    <!-- Versioned by the build, as the game's own scripts are, so a deploy never pairs an old one with a new one. -->
+    <script src="map3d.js?v={{version}}"></script>
+    <script src="map3d-debug.js?v={{version}}"></script>
   </body>
 </html>

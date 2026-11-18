@@ -931,8 +931,9 @@ CI has no GPU, so the logic is kept apart from the drawing and tested headless:
     yaw and pitch, the water's surface where the land is below it;
   - the minimap's four-sided view outline is right.
 - **Map events:** a worker-client suite, like the battle sound's. A move the player can't see sends nothing.
-- **What's drawn:** a debug page (`?3d=1&debug=1`) with fixed seeds and saved camera positions, for screenshots in a
-  browser at each slice. It also has a stats overlay (frame time, draw calls, triangles, GPU memory). Pixel
+- **What's drawn:** a debug page (`dist/map3d-debug.html`, plan 1.1b) that draws a seeded, made-up world on any grid,
+  for screenshots in a browser at each slice, with the place it looks at kept in its address. Under `?debug=1`, a game
+  under `?3d=1` and the debug page have a stats overlay (frame time, draw calls, triangles, chunks waiting). Pixel
   comparisons can come later, if CI gets a software GPU.
 
 ---
