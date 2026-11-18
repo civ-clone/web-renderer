@@ -16,11 +16,13 @@ import {
   interfaceSpriteKey,
   interfaceNames,
   ownInterfaceArt,
+  provideInterfaceArt,
 } from '@civ-clone/ui-assets/lib/interfaceArt';
 import {
   installTilesets,
   setMapGrid,
   setRuleSetTileset,
+  sheetFailure,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import { AssetStore } from '@civ-clone/ui-assets/AssetStore';
 import { buildingSprite } from '@civ-clone/ui-assets/components/lib/buildingIcon';
@@ -196,7 +198,7 @@ const run = async (): Promise<void> => {
     ]
   );
   expect(
-    'a sprite Civ2 has none of, such as the cursor, is the pixel art’s or Civ1’s too',
+    'a sprite Civ2 has none of, such as the cursor, is the pixel art’s when it has loaded, and Civ1’s here, where it hasn’t',
     from('cursor/torch')[0],
     'civ1'
   );
@@ -234,7 +236,7 @@ const run = async (): Promise<void> => {
     []
   );
 
-  // As a Civ2 game starts, its map's art is ready, and the pixel art with it.
+  // As a Civ2 game starts, its map's art is ready, and the pixel art is fetched with it, but not waited for.
   const asked: string[] = [],
     store = {
       loadHostedPack: ({ id }: { id: string }) => {
@@ -250,6 +252,35 @@ const run = async (): Promise<void> => {
     'civ2',
     'civ1-pixelart',
   ]);
+
+  // A pixel art sheet that can't be fetched holds nothing up, and isn't marked as failed for the square maps.
+  const failing = {
+    loadHostedPack: ({ id }: { id: string }) =>
+      id === 'civ1-pixelart'
+        ? Promise.reject(new Error('offline'))
+        : Promise.resolve(),
+  } as unknown as AssetStore;
+
+  expect(
+    "a Civ2 game starts without the pixel art's sheet",
+    [
+      (await ensureMapArt('staggered-iso', failing)).tileset.id,
+      sheetFailure('civ1-pixelart'),
+    ],
+    ['civ2', null]
+  );
+
+  // The theme's own art the pixel art: nothing to fall back to before it.
+  provideInterfaceArt(() => ['civ1-pixelart']);
+  loaded('./assets/civ1-pixelart/city/gold.png');
+
+  expect(
+    "with the pixel art the theme's, a sprite Civ2 hasn't got is the theme's",
+    from(groupIcons.Gold),
+    ['civ1-pixelart', './assets/civ1-pixelart/city/gold.png']
+  );
+
+  provideInterfaceArt(() => []);
 
   asked.length = 0;
   setRuleSetTileset(null);

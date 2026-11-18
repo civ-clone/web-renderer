@@ -74,14 +74,15 @@ export const ensureTilesetLoaded = async (
 
 /**
  * For a map drawn with the art its rule set names, when that has interface sprites of its own without being interface
- *  art (Civ2's, `gameInterfaceArt`), has civ.one's
- *  own interface art (`ownInterfaceArt`, the pixel art) ready too, as the sprites that set hasn't got are drawn from it
- *  (`interfaceSprite`). Never rejects: without it, the theme's art draws them.
+ *  art (Civ2's, `gameInterfaceArt`), starts fetching civ.one's own interface art (`ownInterfaceArt`, the pixel art), as
+ *  the sprites that set hasn't got are drawn from it (`interfaceSprite`) once it's there. Not waited for: the game can
+ *  be played without it, with the theme's art in its place until then. A sheet that can't be fetched isn't marked as
+ *  failed (`setSheetFailed`), so the square maps and the library don't pass the pixel art over for it.
  */
-const ensureFallbackInterfaceArt = async (
+const startFallbackInterfaceArt = (
   tileset: TilesetDescriptor,
   store: AssetStore
-): Promise<void> => {
+): void => {
   const own = ownInterfaceArt();
 
   if (
@@ -92,9 +93,11 @@ const ensureFallbackInterfaceArt = async (
     return;
   }
 
-  await ensureTilesetLoaded(own, store).catch((error) =>
-    console.error(`Could not load the ${own.id} set's sheet.`, error)
-  );
+  store
+    .loadHostedPack(packFor(own))
+    .catch((error) =>
+      console.error(`Could not load the ${own.id} set's sheet.`, error)
+    );
 };
 
 /** What a map on a grid is drawn with as a game starts or loads (`ensureMapArt`), and the art it fell back from. */
@@ -172,7 +175,7 @@ export const ensureMapArt = async (
     }
 
     if (await tried(tileset)) {
-      await ensureFallbackInterfaceArt(tileset, store);
+      startFallbackInterfaceArt(tileset, store);
 
       return { tileset, failed };
     }
