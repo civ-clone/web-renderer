@@ -380,6 +380,9 @@
       }
     },
     "conflicts": {
+      "@civ-clone/civ2-earth-generator": [
+        "@civ-clone/civ1-earth-generator"
+      ],
       "@civ-clone/civ2-enhanced": [
         "@civ-clone/civ1-enhanced"
       ],
