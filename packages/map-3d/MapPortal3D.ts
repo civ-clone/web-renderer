@@ -25,6 +25,9 @@ export type MapPortal3DCamera = {
   centreOn(x: number, y: number): void;
   // Something has changed: draw again.
   changed(): void;
+  // Whether the square at (`x`, `y`) is on the screen, `margin` squares in from its edges, and not under what floats
+  //  over the map.
+  visible(x: number, y: number, margin: number): boolean;
 };
 
 export class MapPortal3D
@@ -47,9 +50,9 @@ export class MapPortal3D
     return this.#camera.centre();
   }
 
-  /** Every square is in view until picking knows what the camera sees (slice 1.3): nothing is brought into view. */
-  isVisible(): boolean {
-    return true;
+  /** Whether the square is on the screen, `margin` squares in from its edges, and not under what floats over the map. */
+  isVisible(x: number, y: number, margin: number = 0): boolean {
+    return this.#camera.visible(x, y, margin);
   }
 
   lockVerticalEdges(): boolean {

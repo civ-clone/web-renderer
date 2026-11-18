@@ -467,6 +467,51 @@ expect(
     [lookedAt[0], lookedAt[1], lookedAt[2]! >= 0],
     [1.5, 1.5, true]
   );
+
+  // What's on the screen: the canvas's box, as the DOM here has no layout, and what floats over it.
+  Object.defineProperties(mapCanvas, {
+    clientWidth: { get: () => box.width, configurable: true },
+    clientHeight: { get: () => box.height, configurable: true },
+    getBoundingClientRect: {
+      value: () => ({
+        left: 0,
+        top: 0,
+        right: box.width,
+        bottom: box.height,
+        width: box.width,
+        height: box.height,
+      }),
+      configurable: true,
+    },
+  });
+
+  const onScreen = [
+    view.portal.isVisible(1, 1),
+    view.portal.isVisible(1, 1, 100),
+  ];
+
+  // A sidebar over the whole map.
+  deps2D.coveredBy.push({
+    getBoundingClientRect: () => ({
+      left: 0,
+      top: 0,
+      right: box.width,
+      bottom: box.height,
+    }),
+    parentElement: null,
+  } as unknown as HTMLElement);
+  view.measureCovered();
+
+  const covered = view.portal.isVisible(1, 1);
+
+  deps2D.coveredBy.length = 0;
+  view.measureCovered();
+
+  expect(
+    'the square it looks at is on the screen; not with a margin wider than the screen, nor under what floats over the map',
+    [...onScreen, covered, view.portal.isVisible(1, 1)],
+    [true, false, false, true]
+  );
   expect(
     'every chunk of the land was built as it started',
     chunksSet.size > 0,

@@ -27,6 +27,7 @@ import {
   between,
   defaultOrbit,
   settled,
+  toScreen,
   zoomed,
 } from './camera/orbit';
 import prefersReducedMotion from '@civ-clone/ui-map/lib/reducedMotion';
@@ -49,6 +50,9 @@ export class MapView3D implements MapRenderer {
   readonly world: World;
 
   #canvas: HTMLCanvasElement;
+  // What floats over the map, and where it covers it, in the canvas's px from its corner (`measureCovered`).
+  #coveredBy: HTMLElement[];
+  #covered: { left: number; top: number; right: number; bottom: number }[] = [];
   #land: Land;
   #stage: Stage;
   // The `?debug=1` overlay: frame time, draw calls, triangles and chunks waiting (§12).
@@ -90,6 +94,7 @@ export class MapView3D implements MapRenderer {
 
   constructor(deps: MapView3DDeps, stageFactory: StageFactory = createStage) {
     this.#canvas = deps.mapCanvas;
+    this.#coveredBy = deps.coveredBy;
     this.#art = deps.art;
     this.#artId = deps.art.id();
     this.world = deps.world;
@@ -107,6 +112,7 @@ export class MapView3D implements MapRenderer {
       centre: () => this.#centreSquare(),
       centreOn: (x, y) => this.#centreOn(x, y),
       changed: () => this.#draw(),
+      visible: (x, y, margin) => this.#visible(x, y, margin),
     });
     this.#stage = stageFactory(deps.mapCanvas, {
       period: this.#land.layout.period(),
@@ -221,8 +227,29 @@ export class MapView3D implements MapRenderer {
     void event;
   }
 
-  /** Nothing floats over anything to keep the active unit out from under yet (slice 1.2). */
-  measureCovered(): void {}
+  /**
+   * Measures again what floats over the map (the sidebar's sections, #697), for the active unit to be kept out from
+   *  under it: each cut to its container's box, as the sidebar scrolls what doesn't fit, and to the canvas's.
+   */
+  measureCovered(): void {
+    const canvas = this.#canvas.getBoundingClientRect();
+
+    this.#covered = this.#coveredBy
+      .map((element) => {
+        const box = element.getBoundingClientRect(),
+          container = element.parentElement?.getBoundingClientRect() ?? box;
+
+        return {
+          left: Math.max(box.left, container.left, canvas.left) - canvas.left,
+          top: Math.max(box.top, container.top, canvas.top) - canvas.top,
+          right:
+            Math.min(box.right, container.right, canvas.right) - canvas.left,
+          bottom:
+            Math.min(box.bottom, container.bottom, canvas.bottom) - canvas.top,
+        };
+      })
+      .filter(({ left, top, right, bottom }) => right > left && bottom > top);
+  }
 
   /** No square can be picked yet (slice 1.3): the order is given up, as if the player had. */
   pickTile(
@@ -335,6 +362,68 @@ export class MapView3D implements MapRenderer {
     }
 
     this.#draw();
+  }
+
+  // Whether the square at (`x`, `y`) is on the screen: its middle, at its copy nearest the camera, `margin` squares and
+  //  half a square in from the screen's edges, as big as a square is there, and not under what floats over the map.
+  #visible(x: number, y: number, margin: number): boolean {
+    const width = this.#canvas.clientWidth,
+      height = this.#canvas.clientHeight;
+
+    // Not laid out yet: nothing can be seen.
+    if (width <= 0 || height <= 0) {
+      return false;
+    }
+
+    const [u, v] = this.#land.layout.centre(x, y),
+      { u: periodU, v: periodV } = this.#land.layout.period(),
+      [focusU, focusV] = this.#orbit.focus,
+      nearest = (value: number, focus: number, period: number | null) =>
+        period === null
+          ? value
+          : value + period * Math.round((focus - value) / period),
+      at: [number, number, number] = [
+        nearest(u, focusU, periodU),
+        Math.max(0, this.#land.heightAt(u, v)),
+        nearest(v, focusV, periodV),
+      ],
+      aspect = width / height,
+      look = this.#lookHeight ?? 0,
+      middle = toScreen(this.#orbit, look, at, aspect),
+      // A square's width there, along the screen.
+      beside = toScreen(
+        this.#orbit,
+        look,
+        [
+          at[0] + Math.cos(this.#orbit.yaw),
+          at[1],
+          at[2] + Math.sin(this.#orbit.yaw),
+        ],
+        aspect
+      );
+
+    if (middle === null || beside === null) {
+      return false;
+    }
+
+    const px = ((middle[0] + 1) / 2) * width,
+      py = ((1 - middle[1]) / 2) * height,
+      square = Math.abs(beside[0] - middle[0]) * (width / 2),
+      inset = (margin + 0.5) * square;
+
+    return (
+      px >= inset &&
+      px <= width - inset &&
+      py >= inset &&
+      py <= height - inset &&
+      !this.#covered.some(
+        ({ left, top, right, bottom }) =>
+          px >= left - square / 2 &&
+          px <= right + square / 2 &&
+          py >= top - square / 2 &&
+          py <= bottom + square / 2
+      )
+    );
   }
 
   // The point on the ground the camera looks at.
@@ -619,6 +708,8 @@ export class MapView3D implements MapRenderer {
 
     this.#size = size;
     this.#stage.resize(width, height, ratio);
+    // What floats over the map sits elsewhere over it now.
+    this.measureCovered();
     this.#stage.render();
   }
 }

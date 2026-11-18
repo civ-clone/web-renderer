@@ -126,6 +126,37 @@ export const eye = (orbit: Orbit, height: number): ScenePoint => {
 };
 
 /**
+ * Where `point` in the scene is on the screen, as `groundAt` takes a point on the screen (-1 to 1 across and up, on a
+ *  screen `aspect` times as wide as it's tall), seen by the camera looking at its focus raised to `height`. Nothing for
+ *  a point behind the camera.
+ */
+export const toScreen = (
+  orbit: Orbit,
+  height: number,
+  [u, up, v]: ScenePoint,
+  aspect: number
+): [number, number] | null => {
+  const { forward, right, up: upward } = basis(orbit),
+    from = eye(orbit, height),
+    along = [u - from[0], up - from[1], v - from[2]],
+    dot = (axis: ScenePoint): number =>
+      (along[0] ?? 0) * axis[0] +
+      (along[1] ?? 0) * axis[1] +
+      (along[2] ?? 0) * axis[2],
+    depth = dot(forward),
+    spread = Math.tan(FIELD_OF_VIEW / 2);
+
+  if (depth <= 1e-6) {
+    return null;
+  }
+
+  return [
+    dot(right) / (depth * spread * aspect),
+    dot(upward) / (depth * spread),
+  ];
+};
+
+/**
  * The ray from the camera, looking at its focus raised to `height`, through a point on the screen (as `groundAt` takes
  *  it): where it starts, and which way it goes, as far for each unit along as the screen's middle goes for one.
  */

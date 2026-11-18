@@ -21,6 +21,7 @@ import {
   panned,
   presetFor,
   settled,
+  toScreen,
   zoomed,
 } from '@civ-clone/ui-map-3d/camera/orbit';
 import { copiesNear } from '@civ-clone/ui-map-3d/stage';
@@ -130,6 +131,37 @@ expect(
       groundAt(orbit, height, [0, horizon(orbit) * 0.999], aspect) === null
   ).length,
   0
+);
+
+expect(
+  'a point on the ground goes back to where it was on the screen, at every yaw and pitch; one behind the camera has no place there',
+  [
+    orbits.flatMap((orbit) =>
+      screenPoints.flatMap((point) => {
+        const ground = groundAt(orbit, height, point, aspect, 0.05),
+          back =
+            ground === null
+              ? null
+              : toScreen(orbit, height, [ground[0], 0.05, ground[1]], aspect);
+
+        return back !== null &&
+          Math.abs(back[0] - point[0]) < 1e-9 &&
+          Math.abs(back[1] - point[1]) < 1e-9
+          ? []
+          : [[orbit.yaw, orbit.pitch, point]];
+      })
+    ).length,
+    orbits.every((orbit) => {
+      const [x, y, z] = eye(orbit, height),
+        [u, , v] = [orbit.focus[0], 0, orbit.focus[1]];
+
+      // Past the camera, the other way from its focus.
+      return (
+        toScreen(orbit, height, [2 * x - u, y, 2 * z - v], aspect) === null
+      );
+    }),
+  ],
+  [0, true]
 );
 
 expect(
