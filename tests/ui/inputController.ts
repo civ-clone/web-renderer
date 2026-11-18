@@ -3,7 +3,8 @@
 //  through the active unit's `pressKey`; Escape blurs; Tab focuses the first action; `c`/`w`/`t`/`y`; Shift+5 then
 //  Shift+6 turns the cheats on; a leader screen opens, its key going on through the handler as any other, but not over
 //  a modal window; `?` opens the Civilopedia, once; `+` and `-` open the trade rates window, once, when the engine
-//  offers it; Shift+S saves, but not over a modal window; and `dispose` removes the listener. Driven with stub dependencies.
+//  offers it; `z` and `x` zoom the map (#1101), but not over a modal window or into a field; Shift+S saves, but not over a
+//  modal window; and `dispose` removes the listener. Driven with stub dependencies.
 
 // Must stay first: it gives the controller a `document`.
 import './lib/dom';
@@ -86,7 +87,13 @@ let nextTurnButton: {
 } | null = null;
 
 // Choosing a square for a long-range order (M2b): whether one is being chosen, and what gave it up.
-const portal: { picking?: () => boolean; endPicking?: () => void } = {},
+// And the map's zoom (#1101): the steps asked for.
+const zooms: number[] = [],
+  portal: {
+    picking?: () => boolean;
+    endPicking?: () => void;
+    zoomBy: (steps: number) => void;
+  } = { zoomBy: (steps: number): void => void zooms.push(steps) },
   pickingEnded: string[] = [];
 
 const actionArea = document.createElement('div');
@@ -243,12 +250,12 @@ const run = async (): Promise<void> => {
   document.body.append(modal);
 
   // #351: one the browser has closed, but which is still in the page, isn't drawn and doesn't take the keys.
-  event = press({ key: 'x' });
+  event = press({ key: 'q' });
 
   expect(
     'a closed modal window gets no keys',
     [modalKeys, pressed, event.defaultPrevented],
-    [[], ['x'], false]
+    [[], ['q'], false]
   );
 
   reset();
@@ -725,6 +732,84 @@ const run = async (): Promise<void> => {
   expect('a unit key comes first', tradeRatesWindows(), 0);
 
   unitKeys = [];
+
+  // `z` and `x` zoom the map in and out a tenth (#1101): Civ2's keys, as `+` and `-` are the trade rates'.
+  {
+    reset();
+    zooms.splice(0);
+
+    const zoomIn = press({ code: 'KeyZ', key: 'z' }),
+      zoomOut = press({ code: 'KeyX', key: 'x' });
+
+    expect(
+      'z zooms in a tenth and x out, and nothing else has them',
+      [zooms, zoomIn.defaultPrevented, zoomOut.defaultPrevented, calls],
+      [[1, -1], true, true, []]
+    );
+
+    zooms.splice(0);
+    press({ code: 'KeyZ', key: 'Z', shiftKey: true });
+    press({ code: 'KeyZ', key: 'z', ctrlKey: true });
+    press({ code: 'KeyX', key: 'x', metaKey: true });
+
+    expect('not with Shift, Ctrl or Cmd', zooms, []);
+
+    const held = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      key: 'z',
+    });
+
+    Object.defineProperty(held, 'repeat', { value: true });
+    press({ code: 'KeyZ', key: 'z' });
+    document.dispatchEvent(held);
+
+    expect('held down, it carries on zooming', zooms, [1, 1]);
+
+    // Let go, then held again from somewhere that took it first: `x` closing the city screen, held on after it closes.
+    zooms.splice(0);
+    document.dispatchEvent(new KeyboardEvent('keyup', { key: 'z' }));
+    document.dispatchEvent(held);
+
+    const heldX = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      key: 'x',
+    });
+
+    Object.defineProperty(heldX, 'repeat', { value: true });
+    document.dispatchEvent(heldX);
+
+    expect(
+      "a key's repeats don't zoom unless it zoomed when first pressed",
+      [zooms, heldX.defaultPrevented],
+      [[], false]
+    );
+
+    zooms.splice(0);
+
+    const field = document.createElement('input');
+
+    document.body.append(field);
+    focused = field;
+    press({ code: 'KeyZ', key: 'z', target: field });
+    focused = document.body;
+    field.remove();
+
+    const over = document.createElement('dialog'),
+      overButton = document.createElement('button');
+
+    over.className = 'window modal';
+    over.setAttribute('open', '');
+    over.append(overButton);
+    document.body.append(over);
+    focused = overButton;
+    press({ code: 'KeyX', key: 'x', target: overButton });
+    focused = document.body;
+    over.remove();
+
+    expect('not typed into a field, nor over a modal window', zooms, []);
+  }
 
   // Over a modal window a leader screen would be drawn out of reach: the key goes to the modal window instead.
   const notice = document.createElement('dialog');

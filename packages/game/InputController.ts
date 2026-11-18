@@ -31,7 +31,7 @@ const withoutCapsLock = (key: string, event: KeyboardEvent): string =>
 
 // The game's keyboard: the leader screens (F1 to F9), the Civilopedia (`?`), a key passed on to a modal
 //  window, Shift+S to save, the unit keys, Escape, Enter to end the turn, Tab to the first action, `c`/`w`/`t`/`y`,
-//  `+`/`-` for the trade rates, and the Shift+5, Shift+6 cheat sequence.
+//  `z`/`x` to zoom the map in and out, `+`/`-` for the trade rates, and the Shift+5, Shift+6 cheat sequence.
 //
 // Registered on `document` in the bubble phase, after `ReloadGuard` (which must stay the first bubble listener: it
 //  reads whether the game has started, as F5 is the Trade Report once it has) and after `DebugPanel`'s capture-phase
@@ -50,7 +50,13 @@ const takesEnter = (target: EventTarget | null): boolean =>
     ) ||
       target.closest('dialog') !== null),
   isNextTurn = (target: EventTarget | null): boolean =>
-    target instanceof Element && target.matches('.ui-next-turn');
+    target instanceof Element && target.matches('.ui-next-turn'),
+  // What a letter typed into is for: a window's filter, say, not the map.
+  takesText = (target: EventTarget | null): boolean =>
+    target instanceof Element &&
+    target.matches('input, select, textarea, [contenteditable]'),
+  // The map's zoom (#1101), a tenth at a time: Civilization II's keys. `+` and `-` are the trade rates'.
+  zoomKeys: { [key: string]: number } = { z: 1, x: -1 };
 
 export type InputControllerDeps = {
   // The primary actions' area, whose first button Tab focuses.
@@ -90,6 +96,12 @@ export class InputController {
   #lastShiftedCode = '';
   #leaderScreensMap: { [key: string]: () => any };
   #listener = (event: KeyboardEvent): void => this.#keydown(event);
+  // The zoom key being held down (#1101), whose repeats carry on zooming: none for a key first pressed elsewhere, as `x`
+  //  closing the city screen, held on after it's closed. Let go of any key, none.
+  #zoomKeyHeld: string | null = null;
+  #keyupListener = (): void => {
+    this.#zoomKeyHeld = null;
+  };
 
   constructor(deps: InputControllerDeps) {
     this.#deps = deps;
@@ -111,11 +123,13 @@ export class InputController {
     };
 
     on(document, 'keydown', this.#listener);
+    on(document, 'keyup', this.#keyupListener);
   }
 
   // Not called yet: the listener has always lasted as long as the page, and the `pagehide` teardown leaves it.
   dispose(): void {
     off(document, 'keydown', this.#listener);
+    off(document, 'keyup', this.#keyupListener);
   }
 
   #keydown(event: KeyboardEvent): void {
@@ -304,6 +318,22 @@ export class InputController {
 
     if (key === 'y') {
       mapView.toggleYields();
+
+      return;
+    }
+
+    // Held down, it carries on zooming, if it zoomed when first pressed: the portal draws what's asked within a frame
+    //  once.
+    if (
+      key in zoomKeys &&
+      !modalWindow &&
+      !takesText(event.target) &&
+      (!event.repeat || this.#zoomKeyHeld === key)
+    ) {
+      this.#zoomKeyHeld = key;
+      this.#deps.portal.zoomBy(zoomKeys[key]!);
+
+      event.preventDefault();
 
       return;
     }
