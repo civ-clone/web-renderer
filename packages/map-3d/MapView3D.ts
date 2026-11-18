@@ -97,7 +97,9 @@ export class MapView3D implements MapRenderer {
   #input: CameraInput;
   #distance: MapView3DDeps['cameraDistance'];
   #keptDistance: number;
+  // The wait to keep a distance, and the distance it's waiting to keep.
   #keeping: ReturnType<typeof setTimeout> | null = null;
+  #waitingToKeep: number | null = null;
   // Whether the camera stops at the poles, as it starts: the portal's after that, which the options can change.
   #lockAtStart: boolean;
   // Whether the camera has been centred on anything yet: the first time, it's put there at once.
@@ -256,6 +258,14 @@ export class MapView3D implements MapRenderer {
   /** The camera now, for the `?debug=1` console and the tests. */
   orbit(): Orbit {
     return this.#orbit;
+  }
+
+  /**
+   * Whether the camera's on its way somewhere: gliding to a square, or being dragged, pinched or flicked. The debug page
+   *  follows it once it's still.
+   */
+  moving(): boolean {
+    return this.#glide !== null || this.#input.moving();
   }
 
   /** The camera put where it's asked, at once, for the `?debug=1` console. */
@@ -1045,30 +1055,49 @@ export class MapView3D implements MapRenderer {
   }
 
   // The camera's distance kept when it's changed, once it's stayed the same for a moment: not mid-glide, which only
-  //  passes through, nor every frame of a pinch or a zoom. Kept at once as the map's taken down.
+  //  passes through, nor every frame of a pinch or a zoom. Taken down, the distance it was at or gliding to is kept at
+  //  once.
   #keepDistance(now = false): void {
-    if (this.#keeping !== null) {
-      clearTimeout(this.#keeping);
-      this.#keeping = null;
-    }
+    const distance = (now ? this.#glide?.to ?? this.#orbit : this.#orbit)
+        .distance,
+      stop = (): void => {
+        if (this.#keeping !== null) {
+          clearTimeout(this.#keeping);
+        }
 
-    const { distance } = this.#orbit;
+        this.#keeping = null;
+        this.#waitingToKeep = null;
+      },
+      keep = (): void => {
+        stop();
+        this.#keptDistance = distance;
+        this.#distance.set(distance);
+      };
 
-    if (this.#glide !== null || distance === this.#keptDistance) {
+    if (now) {
+      stop();
+
+      if (distance !== this.#keptDistance) {
+        keep();
+      }
+
       return;
     }
 
-    const keep = (): void => {
-      this.#keeping = null;
-      this.#keptDistance = distance;
-      this.#distance.set(distance);
-    };
+    if (this.#glide !== null || distance === this.#keptDistance) {
+      stop();
 
-    if (now) {
-      keep();
-    } else {
-      this.#keeping = setTimeout(keep, KEEP_DISTANCE_AFTER);
+      return;
     }
+
+    // Already waiting to keep this one: frames drawn meanwhile don't put it off.
+    if (this.#keeping !== null && distance === this.#waitingToKeep) {
+      return;
+    }
+
+    stop();
+    this.#waitingToKeep = distance;
+    this.#keeping = setTimeout(keep, KEEP_DISTANCE_AFTER);
   }
 
   // Drawn on the next frame, once however often it's asked for in one.

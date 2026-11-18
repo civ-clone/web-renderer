@@ -142,6 +142,11 @@ export class CameraInput {
     return this.#press?.dragging() === true || this.#turning !== null;
   }
 
+  /** Whether it's moving the camera: dragged, turned, pinched, or gliding on after a flick. */
+  moving(): boolean {
+    return this.dragging() || this.#pair !== null || this.#glide.gliding();
+  }
+
   /** Takes its listeners off the canvas, and stops a glide. */
   dispose(): void {
     this.#glide.stop();

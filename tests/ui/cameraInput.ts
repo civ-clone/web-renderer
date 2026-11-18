@@ -300,20 +300,25 @@ const dragged = [
   ];
 
 expect(
-  'a flick glides on, the way it was going',
+  'a flick glides on, the way it was going, and the camera is moving meanwhile',
   [
     frames.size > 0,
     (dragged[0] ?? 0) * (glided[0] ?? 0) +
       (dragged[1] ?? 0) * (glided[1] ?? 0) >
       0,
+    input.moving(),
   ],
-  [true, true]
+  [true, true, true]
 );
 
 pointer('pointerdown', 300, 300, { timeStamp: 2000 });
 pointer('pointerup', 300, 300, { timeStamp: 2001 });
 
-expect('catching it stops the glide', frames.size, 0);
+expect(
+  'catching it stops the glide, and the camera',
+  [frames.size, input.moving()],
+  [0, false]
+);
 
 lessMotion = true;
 pointer('pointerdown', 300, 300, { timeStamp: 3000 });

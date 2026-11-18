@@ -1163,14 +1163,15 @@ expect(
     glider.orbit().focus,
     glider.portal.isVisible(3, 1, 1),
     glider.portal.isVisible(1, 1, 1),
+    glider.moving(),
   ];
 
   runFrames();
 
   expect(
-    'mid-glide, what’s on the screen is what will be once the camera’s there',
-    midGlide,
-    [middleOf(tiles[1 * 4 + 1] as Tile), true, false]
+    'mid-glide, what’s on the screen is what will be once the camera’s there; it’s moving until it is',
+    [...midGlide, glider.moving()],
+    [middleOf(tiles[1 * 4 + 1] as Tile), true, false, true, false]
   );
 
   glider.dispose();
@@ -1192,19 +1193,27 @@ expect(
 
   const unsaved = distanceKept();
 
+  // Its first centring is at once: the next glides.
+  keeper.centre(tiles[5] as Tile);
+  runFrames();
   keeper.zoomBy(2);
   runFrames();
 
-  // Not every frame of a zoom or a pinch: once it's stayed the same a moment.
+  // Not every frame of a zoom or a pinch: once it's stayed the same a moment, however many frames are drawn meanwhile.
   const notYet = distanceKept();
 
-  await new Promise((resolve) => setTimeout(resolve, 600));
+  for (let wait = 0; wait < 7; wait++) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    keeper.portal.render();
+    runFrames();
+  }
 
   const saved = distanceKept();
 
-  // At once, as the map's taken down.
+  // At once, as the map's taken down, even mid-glide: the distance it's gliding at.
   keeper.zoomBy(1);
   runFrames();
+  keeper.centre(tiles[6] as Tile);
   keeper.dispose();
 
   const atDispose = distanceKept(),
