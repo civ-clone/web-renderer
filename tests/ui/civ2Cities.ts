@@ -38,6 +38,9 @@ import {
   stageMoods,
 } from '@civ-clone/ui-city/components/lib/cityYields';
 import { TilesetDescriptor } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+import { buildCityRow } from '@civ-clone/ui-interface-classic/components/HappinessReport';
+import { renderHappinessDetails } from '@civ-clone/ui-interface-modern/components/HappinessTable';
+import Portal from '@civ-clone/ui-map/components/Portal';
 import CityBuildSelectionWindow from '@civ-clone/ui-interface-classic/components/CityBuildSelectionWindow';
 import Transport from '@civ-clone/ui-client/Transport';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
@@ -202,6 +205,26 @@ const run = async (): Promise<void> => {
       ['Wonders', 6],
     ]
   );
+  // The stages are the Happiness report's (#1166): the classic row opens to them, though a city may have no causes,
+  //  and the new table's details show them.
+  const row = await buildCityRow(staged, {} as Portal, {} as Transport);
+
+  (row as HTMLElement).click();
+
+  expect(
+    "the classic Happiness report's row opens to the stages",
+    [
+      row.querySelector('.reasons')?.classList.contains('hidden'),
+      row.querySelectorAll('.reasons .happiness-stage').length,
+    ],
+    [false, 5]
+  );
+  expect(
+    "the new Happiness table's details show the stages",
+    renderHappinessDetails(staged).querySelectorAll('.happiness-stage').length,
+    5
+  );
+
   expect(
     "a city without stages (Civ1's) has none",
     renderHappinessStages(city({ citizens: { moods: ['happy'], causes: [] } })),

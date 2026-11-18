@@ -254,7 +254,7 @@ const run = async (): Promise<void> => {
         },
       }),
     stagesShown = (screen: { element(): HTMLElement }): number =>
-      screen.element().querySelectorAll('.happiness-stages, details').length,
+      screen.element().querySelectorAll('.happiness-stages').length,
     classicStaged = openCity(staged('City-S1'), portal, transport),
     classicStagesShown = stagesShown(classicStaged);
 

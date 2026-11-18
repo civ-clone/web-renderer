@@ -86,7 +86,8 @@ const reasonLabel = (
 /** Why a city's citizens are as they are, step by step, under the table for the city chosen in it. */
 export const renderHappinessDetails = (city: CityData): HTMLElement => {
   const causes = city.citizens?.causes ?? [],
-    // Under rules that work happiness out in stages (Civ2, M2c), the stages, as its city screen lists them.
+    // Under rules that work happiness out in stages (Civ2, M2c), the stages, as Civ2's city screen lists them: here
+    //  rather than on civ.one's city screen, where Civ1's happiness is (#1166).
     stages = renderHappinessStages(city);
 
   return s(
