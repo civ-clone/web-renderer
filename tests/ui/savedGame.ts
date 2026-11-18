@@ -18,6 +18,8 @@ import { failStore, resetStore, storedRecords } from './lib/FakeStore';
 import {
   fileName,
   loadSaveFromFile,
+  discardPendingSave,
+  readPendingSave,
   savedTopologyId,
   takePendingSave,
 } from '@civ-clone/ui-menus/lib/savedGame';
@@ -188,6 +190,24 @@ const reset = () => {
     'a save with no marker is not another tab’s to take',
     await takePendingSave(),
     null
+  );
+
+  // Read, not taken, until its load is sent (#1114): a load that stops before then, as its map's art couldn't be
+  //  loaded, is tried again by reloading.
+  reset();
+
+  const retried = save(1024);
+
+  await loadSaveFromFile(new File([retried], 'retried.civ-clone.json'));
+
+  expect(
+    'a save read for loading is still there to read after a reload, until it is discarded',
+    JSON.stringify([
+      (await readPendingSave())?.data,
+      (await readPendingSave())?.data,
+      await discardPendingSave().then(readPendingSave),
+    ]),
+    JSON.stringify([retried, retried, null])
   );
 
   // A plain-JSON save, as a browser with no `CompressionStream` writes.

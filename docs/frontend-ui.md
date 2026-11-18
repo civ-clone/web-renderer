@@ -36,8 +36,8 @@ rest for each game.
 3. Initialize i18n (`i18next` + browser language detector).
 4. Bind global key handlers: Ctrl/Cmd+R asks before reloading, and so does F5
    until a game starts (in a game F5 is the Trade report).
-5. Set the default client options (see below), take any save waiting to be
-   loaded (`takePendingSave`), and build `TitleMenu`, or `MainMenu` under the
+5. Set the default client options (see below), read any save waiting to be
+   loaded (`readPendingSave`, forgotten once its load is sent), and build `TitleMenu`, or `MainMenu` under the
    classic interface (#749).
 6. Receive initial `gameData`: show the welcome window (new games only), turn on
    the leave guard, and build `World`, `GamePortal` with its layers, `Minimap`,

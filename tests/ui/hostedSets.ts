@@ -35,6 +35,7 @@ import {
   chooseMapTileset,
   offerUnfinishedGrids,
   installTilesets,
+  installedTilesets,
   interfaceTileset,
   mapTileset,
   mapTilesetOption,
@@ -42,6 +43,7 @@ import {
   setRuleSetTileset,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import {
+  followSavedRuleSet,
   importedTilesets,
   mayOfferOtherGames,
 } from '@civ-clone/ui-menus/lib/pluginSets';
@@ -58,11 +60,14 @@ import civ2Json from '@civ-clone/ui-tileset-civ2/civ2.json';
 import getPreloadedImage from '@civ-clone/ui-assets/lib/getPreloadedImage';
 import installPacks, {
   ensureMapArt,
+  loadFailed,
 } from '@civ-clone/ui-assets/lib/installPacks';
 import prepareStart, {
   provideStartPreparation,
 } from '@civ-clone/ui-client/lib/startPreparation';
-import prepareMapArt from '@civ-clone/ui-menus/lib/mapArt';
+import prepareMapArt, {
+  prepareSavedMapArt,
+} from '@civ-clone/ui-menus/lib/mapArt';
 import { askPlayerCount } from '@civ-clone/ui-menus/components/newGame';
 import { GameSetup } from '@civ-clone/ui-client/lib/gameSetup';
 import i18next from 'i18next';
@@ -1260,20 +1265,126 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
     await installPacks(new AssetStore(civ1));
     keys = [];
 
-    // The start of a game waits for its map's art, through the page's preparation, and stops, saying why, without it.
+    // The start of a game waits for its map's art, through the page's preparation. A chosen set whose sheet can't be
+    //  fetched is passed over for another ready for the grid, which is said (#1141).
     provideStartPreparation(prepareMapArt);
     chooseMapTileset('square', 'civ1-pixelart');
     offline = true;
     logged.length = 0;
 
-    const refused = await prepareStart('square');
+    const fellBack = await prepareStart('square'),
+      fellBackSaid = (document as unknown as Document).body.textContent ?? '';
+
+    expect(
+      "a game whose chosen art can't be fetched starts with Civ1's, ready for its grid, and says why, keeping the choice",
+      [
+        fellBack,
+        mapTileset('square').id,
+        options.get(mapTilesetOption('square')),
+        loadFailed(pixelArt),
+        fellBackSaid.includes(
+          'Pixel art couldn’t be loaded (Failed to fetch'
+        ) && fellBackSaid.includes('so the map is drawn with Civilization'),
+      ],
+      [true, 'civ1', 'civ1-pixelart', true, true]
+    );
+
+    // A saved game loading (bootstrap's load path) does the same: drawn with Civ1's, which is said (#1114, #1141).
+    const openDialogs = (): number =>
+        (document as unknown as Document).querySelectorAll('dialog[open]')
+          .length,
+      dialogsBefore = openDialogs(),
+      squareSave = {
+        entities: [{ type: 'World', state: { _topologyId: 'square' } }],
+      },
+      loading = await prepareSavedMapArt({} as any, squareSave);
+
+    expect(
+      "a save loading whose chosen art can't be fetched loads with Civ1's, saying why",
+      [
+        loading.tileset.id,
+        loading.failed.map(({ tileset }) => tileset.id),
+        openDialogs() - dialogsBefore,
+      ],
+      ['civ1', ['civ1-pixelart'], 1]
+    );
+
+    // A choice whose sheet failed as the page started, and was left uninstalled, is tried again as a game starts:
+    //  said while it still fails, and installed again and drawn with once it loads.
+    keys = civ1Keys;
+
+    const startUp = new AssetStore(civ1);
+
+    await installPacks(startUp);
+
+    const leftOut = !ids(installedTilesets()).includes('civ1-pixelart'),
+      stillFailing = await ensureMapArt('square', startUp);
+
+    offline = false;
+
+    const loadsNow = await ensureMapArt('square', startUp);
+
+    const reinstalled = ids(installedTilesets()).includes('civ1-pixelart');
+
+    keys = [];
+
+    // Offline as the page starts with nothing imported, it fails again as the game starts: nothing to draw with.
+    offline = true;
+
+    const bare = new AssetStore(civ1);
+
+    await installPacks(bare);
+
+    const nothingToDraw = await ensureMapArt('square', bare).then(
+      () => 'drawn',
+      (error: Error) => error.message
+    );
+
+    offline = false;
+
+    expect(
+      'offline from the start with nothing imported, a game on the grid is refused, saying why',
+      nothingToDraw,
+      "Pixel art (civ1-pixelart) couldn't be loaded: Failed to fetch"
+    );
+
+    expect(
+      'a choice that failed as the page started is tried again as a game starts: said while it fails, drawn with once it loads',
+      [
+        leftOut,
+        stillFailing.tileset.id,
+        stillFailing.failed.map(({ tileset }) => tileset.id),
+        loadsNow.tileset.id,
+        loadsNow.failed,
+        reinstalled,
+      ],
+      [true, 'civ1', ['civ1-pixelart'], 'civ1-pixelart', [], true]
+    );
+
+    // With nothing else for the grid (nothing imported), the start stops, saying why.
+    (document as unknown as Document)
+      .querySelectorAll('dialog[open]')
+      .forEach((dialog) => dialog.removeAttribute('open'));
+    offline = false;
+    await installPacks(new AssetStore(civ1));
+    offline = true;
+    logged.length = 0;
+
+    const refused = await prepareStart('square'),
+      loadRefused = await prepareSavedMapArt({} as any, {
+        entities: [{ type: 'World', state: { _topologyId: 'square' } }],
+      }).then(
+        () => null,
+        (error: Error) => error.message
+      );
 
     offline = false;
     fetched.length = 0;
 
     expect(
-      "a game whose art can't be fetched doesn't start, and the player is told why",
+      "a game whose art can't be fetched, with no other art ready for its grid, doesn't start, and the player is told why",
       [
+        ids(installedTilesets()).includes('civ1'),
         refused,
         logged.some((message) =>
           message.startsWith(
@@ -1284,7 +1395,12 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
           "Pixel art (civ1-pixelart) couldn't be loaded"
         ) ?? false,
       ],
-      [false, true, true]
+      [false, false, true, true]
+    );
+    expect(
+      'and a save loading on it stops too, saying why, for the page to say',
+      loadRefused,
+      "Pixel art (civ1-pixelart) couldn't be loaded: Failed to fetch"
     );
 
     expect(
@@ -1605,6 +1721,49 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
       mapTileset('staggered-iso').id,
       'hosted-iso'
     );
+
+    // A save is drawn with the art its rule set names too (#1114), as the worker says which that is.
+    {
+      const asked: unknown[] = [],
+        transport = {
+          request: async (request: { args: () => unknown[] }) => {
+            asked.push(request.args()[0]);
+
+            return {
+              sets: [
+                { id: 'civ1', tileset: null },
+                { id: 'civ2', tileset: 'civ2' },
+              ],
+              default: 'civ1',
+              chosen: null,
+            };
+          },
+        } as any;
+
+      await followSavedRuleSet(transport, 'civ2');
+
+      const civ2Save = mapTileset('staggered-iso').id;
+
+      await followSavedRuleSet(transport, 'civ1');
+
+      const civ1Save = mapTileset('staggered-iso').id;
+
+      await followSavedRuleSet(transport, undefined);
+
+      expect(
+        "a save with Civ2's rules is drawn with its art; one with rules that name none, or none, with the choice",
+        [civ2Save, civ1Save, mapTileset('staggered-iso').id, asked],
+        [
+          'civ2',
+          'hosted-iso',
+          'hosted-iso',
+          [
+            ['civ1', 'civ2'],
+            ['civ1', 'civ2'],
+          ],
+        ]
+      );
+    }
 
     options.set(mapTilesetOption('staggered-iso'), '');
 

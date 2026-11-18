@@ -1,0 +1,1 @@
+{"version":"0.1.0@f9d2625c","date":"2026-11-18T12:53:15.000Z","localChanges":["When you change the map's art during a game, the units in windows that are still open, such as the unit stack, the production list and a city's units, are drawn again with the new art at once, rather than when they're next opened (closes #1142)."],"externalChanges":{}}

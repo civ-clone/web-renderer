@@ -13,6 +13,10 @@ import {
   isHosted,
   keepsMetadata,
   mapTileset,
+  reinstallHostedTileset,
+  ruleSetMapTileset,
+  setSheetFailed,
+  sheetFailure,
 } from './tilesets';
 import { interfaceArt } from './interfaceArt';
 import { TilesetDescriptor, spriteKey } from '../tilesets/TilesetDescriptor';
@@ -35,15 +39,12 @@ export const packFor = (tileset: TilesetDescriptor): AssetPack => {
   };
 };
 
-// The hosted sets whose sheet the last try couldn't load (`ensureTilesetLoaded`), by id: the library says so.
-const failedSets = new Set<string>();
-
 /**
  * Whether the last try to load `tileset`'s sheet, a hosted set's, failed (`ensureTilesetLoaded`): at start-up, or as a
  *  game on its grid started. False for one not tried yet, which counts as there until it is (#1063).
  */
 export const loadFailed = ({ id }: Pick<TilesetDescriptor, 'id'>): boolean =>
-  failedSets.has(id);
+  sheetFailure(id) !== null;
 
 /**
  * Draws from `tileset`'s sprites once they are there: for a hosted set (#1063), its sheet fetched and cut up into
@@ -56,26 +57,97 @@ export const ensureTilesetLoaded = async (
 ): Promise<void> => {
   try {
     await store.loadHostedPack(packFor(tileset));
-    failedSets.delete(tileset.id);
+    setSheetFailed(tileset.id, null);
   } catch (error) {
-    failedSets.add(tileset.id);
+    const reason = String((error as Error)?.message ?? error);
+
+    setSheetFailed(tileset.id, reason);
 
     throw new Error(
-      `${tileset.name} (${tileset.id}) couldn't be loaded: ${
-        (error as Error)?.message ?? error
-      }`
+      `${tileset.name} (${tileset.id}) couldn't be loaded: ${reason}`
     );
   }
 };
 
+/** What a map on a grid is drawn with as a game starts or loads (`ensureMapArt`), and the art it fell back from. */
+export type MapArt = {
+  /** The set the map is drawn with. */
+  tileset: TilesetDescriptor;
+  /** The sets passed over as their sheets couldn't be loaded, with why. */
+  failed: { tileset: TilesetDescriptor; reason: string }[];
+};
+
 /**
  * Has the art a map on the `topologyId` grid is drawn with (`mapTileset`) ready to draw from (`ensureTilesetLoaded`),
- *  before a game on that grid starts or loads. Rejects, saying why, when it can't be.
+ *  before a game on that grid starts or loads. A hosted set whose sheet can't be loaded, offline say, is passed over
+ *  for the next set ready for the grid (#1141), and resolves saying which were. Each set for the grid is tried again
+ *  first, a hosted one left uninstalled as its sheet failed as the page started among them, installed again once it
+ *  loads. Rejects, saying why, when a set failed and none is left installed for the grid to draw with.
  */
-export const ensureMapArt = (
+export const ensureMapArt = async (
   topologyId: string,
   store: AssetStore = assetStore
-): Promise<void> => ensureTilesetLoaded(mapTileset(topologyId), store);
+): Promise<MapArt> => {
+  const failed: MapArt['failed'] = [],
+    tried = async (tileset: TilesetDescriptor): Promise<boolean> => {
+      try {
+        await ensureTilesetLoaded(tileset, store);
+
+        return true;
+      } catch (error) {
+        failed.push({
+          tileset,
+          reason: sheetFailure(tileset.id) ?? String(error),
+        });
+
+        return false;
+      }
+    };
+
+  // A game's start is a new try for each set for the grid, in case its sheet can be loaded now.
+  installedTilesets()
+    .filter(({ grid }) => grid === topologyId)
+    .forEach(({ id }) => setSheetFailed(id, null));
+
+  // And for a hosted one whose sheet failed as the page started, which was left uninstalled: unless the rule set's own
+  //  art is drawn on the grid, whatever happens to it.
+  if (ruleSetMapTileset(topologyId) === null) {
+    const installed = installedTilesets();
+
+    for (const tileset of bundledTilesets().filter(
+      (bundled) =>
+        bundled.grid === topologyId &&
+        isHosted(bundled) &&
+        !installed.includes(bundled) &&
+        sheetFailure(bundled.id) !== null
+    )) {
+      if (await tried(tileset)) {
+        reinstallHostedTileset(tileset);
+      }
+    }
+  }
+
+  for (;;) {
+    const tileset = mapTileset(topologyId),
+      [first] = failed;
+
+    // A set failed, and what's left for the grid is its bundled pack, uninstalled or failed too: there's nothing to
+    //  draw with, which is said by the first that failed.
+    if (
+      first !== undefined &&
+      (sheetFailure(tileset.id) !== null ||
+        !installedTilesets().includes(tileset))
+    ) {
+      throw new Error(
+        `${first.tileset.name} (${first.tileset.id}) couldn't be loaded: ${first.reason}`
+      );
+    }
+
+    if (await tried(tileset)) {
+      return { tileset, failed };
+    }
+  }
+};
 
 /**
  * Chooses the installed set `id` as the art for the `grid` grid's maps (`chooseMapTileset`), once it's ready to draw

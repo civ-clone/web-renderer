@@ -5,6 +5,7 @@ import { s } from '@dom111/element';
 const FALLBACK = {
   body: 'The game could not start. Reload the page to try again.',
   reload: 'Reload',
+  menu: 'Back to the menu',
 };
 
 // An error's message, for saying: anything thrown, `Error` or not.
@@ -14,12 +15,14 @@ const describe = (error: unknown): string =>
 /**
  * Tells the player the game could not start (#850). A failure while starting used to be logged and nothing more, which
  *  left a blank page. It is a `<dialog>`, shown as a modal where the browser can, so it is over whatever was drawn
- *  before the failure. The error goes in as text: it can hold text from a save file.
+ *  before the failure. The error goes in as text: it can hold text from a save file. With `toMenu`, a save that was
+ *  being loaded can be left for the menu (#1114), as Reload tries loading it again.
  */
 export const showStartFailure = (
   error: unknown,
   parent: HTMLElement = document.body,
-  reload: () => void = (): void => window.location.reload()
+  reload: () => void = (): void => window.location.reload(),
+  toMenu: (() => void) | null = null
 ): HTMLDialogElement => {
   const dialog = document.createElement('dialog'),
     what = document.createElement('p'),
@@ -51,6 +54,16 @@ export const showStartFailure = (
   again.textContent = say('reload');
   again.addEventListener('click', (): void => reload());
   dialog.append(again);
+
+  if (toMenu !== null) {
+    const menu = s<HTMLButtonElement>(
+      '<button type="button" class="btn-secondary"></button>'
+    );
+
+    menu.textContent = say('menu');
+    menu.addEventListener('click', (): void => toMenu());
+    dialog.append(menu);
+  }
 
   parent.append(dialog);
 
