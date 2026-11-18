@@ -259,6 +259,11 @@ ed25519 key, replace both, and delete the old deploy key.
 
 It mirrors `dist/` with `rsync --delete`, so superseded hashed assets are
 removed rather than accumulating as they did with `update.sh`'s `cp -R`.
+The one exception is the hosted sets' sheets the last build asked for
+(`dist/sets/`, named in the old `frontend.js`), which are put back for one more
+deploy (#1114). A page cached from before the deploy (the site has a ten-minute
+cache) still asks for them, and without them its art would be left uninstalled.
+Two deploys inside those ten minutes can still strand a page two builds old.
 `CNAME` and `favicon.ico` exist only in the site repository and are left alone.
 
 To look at a build before pushing:

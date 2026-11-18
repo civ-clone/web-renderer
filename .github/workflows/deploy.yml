@@ -82,7 +82,19 @@ jobs:
         env:
           BUILD: ${{ github.sha }}
         run: |
+          # The hosted sets' sheets the last build asked for (#1114), kept for one more deploy: a page cached from
+          # before this one still asks for them, and they're named by their content's hash, so this build's
+          # differ wherever the art changed.
+          PREVIOUS_SHEETS="$(grep -ohE 'dist/sets/[A-Za-z0-9._-]+\.(png|json)' site/dist/frontend.js 2>/dev/null | sort -u || true)"
+
           rsync -a --delete dist/ site/dist/
+
+          for sheet in $PREVIOUS_SHEETS; do
+            if [ ! -e "site/$sheet" ]; then
+              git -C site checkout HEAD -- "$sheet" ||
+                echo "::warning::The last build's $sheet isn't in the site to keep."
+            fi
+          done
 
           # The build on the stylesheet's and script's URLs, as frontend.js puts
           # it on the worker's (#476): the site is served with a ten-minute

@@ -13,7 +13,7 @@
 //   - opens each report by its key and closes it with Escape;
 //   - opens a city from the City Status report, and closes it.
 // Then, once: the same save as one written before a plugin was renamed loads too (#915), and with site data blocked
-// the title menu still comes up (#850).
+// the title menu still comes up (#850), the pixel art's sheet fetched for it (#1114).
 //
 // It fails on an uncaught error or a `console.error`, but for the missing sprites: nothing is imported here, and each
 // one is said.
@@ -775,6 +775,22 @@ const main = async () => {
           'with site data blocked, the title menu still comes up, and nothing else goes wrong',
           menu && said.length === 0,
           said.slice(0, 3).join(' | ')
+        );
+
+        // With nothing imported or readable, the pixel art draws the interface (#1063, #1114): its sheet is fetched
+        //  as the page starts.
+        const sheet = await page.run(`
+          const fetched = performance
+            .getEntriesByType('resource')
+            .filter((entry) => /\\/dist\\/sets\\/civ1-pixelart\\.[0-9a-f]+\\.(png|json)$/.test(entry.name));
+
+          return fetched.map((entry) => entry.name.split('.').pop() + ' ' + entry.responseStatus).sort();
+        `);
+
+        check(
+          "and the pixel art's sheet and index are fetched as it starts, for the interface to draw with",
+          JSON.stringify(sheet) === JSON.stringify(['json 200', 'png 200']),
+          JSON.stringify(sheet)
         );
       } finally {
         page.close();

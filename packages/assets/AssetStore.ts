@@ -94,12 +94,14 @@ export const HOSTED_TIMEOUT = 15000;
 
 /**
  * What `work` makes, given a signal that aborts once `timeout` ms have gone: rejects, naming `what`, if it hasn't
- *  finished by then, so a request that hangs, or a decode that does, doesn't hold up whatever waits on it.
+ *  finished by then, so a request that hangs, or a decode that does, doesn't hold up whatever waits on it. `doing`
+ *  says what it was still doing then, where it has more than one step (#1114).
  */
 const withinTime = async <T>(
   what: string,
   timeout: number,
-  work: (signal: AbortSignal) => Promise<T>
+  work: (signal: AbortSignal) => Promise<T>,
+  doing: () => string | null = () => null
 ): Promise<T> => {
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -109,8 +111,16 @@ const withinTime = async <T>(
       work(controller.signal),
       new Promise<never>((_, reject) => {
         timer = setTimeout(() => {
+          const step = doing();
+
           controller.abort();
-          reject(new Error(`${what} didn't come within ${timeout} ms.`));
+          reject(
+            new Error(
+              `${what} didn't come within ${timeout} ms${
+                step === null ? '' : `: it was still ${step}`
+              }.`
+            )
+          );
         }, timeout);
       }),
     ]);
@@ -212,15 +222,23 @@ export const loadHosted = (
   pack: AssetPack,
   hosted: HostedSheet,
   timeout: number = HOSTED_TIMEOUT
-): Promise<Map<string, CanvasImageSource>> =>
-  withinTime(`The ${pack.id} set's sheet`, timeout, (signal) =>
-    cutHosted(pack, hosted, signal)
+): Promise<Map<string, CanvasImageSource>> => {
+  // What it's doing, for a timeout to say which step held it up (#1114).
+  const step = { doing: 'being fetched' };
+
+  return withinTime(
+    `The ${pack.id} set's sheet`,
+    timeout,
+    (signal) => cutHosted(pack, hosted, signal, step),
+    () => step.doing
   );
+};
 
 const cutHosted = async (
   pack: AssetPack,
   { sheet, index }: HostedSheet,
-  signal: AbortSignal
+  signal: AbortSignal,
+  step: { doing: string }
 ): Promise<Map<string, CanvasImageSource>> => {
   const [blob, json] = await Promise.all([
     fetched(sheet, (response) => response.blob(), signal),
@@ -231,8 +249,12 @@ const cutHosted = async (
     throw new TypeError(`${index} is not the ${pack.id} set's index.`);
   }
 
+  step.doing = 'being decoded';
+
   const image = await decodeSprite(blob),
     loaded = new Map<string, CanvasImageSource>();
+
+  step.doing = 'being cut up';
 
   try {
     await Promise.all(

@@ -146,6 +146,59 @@ const memoryStorage = (initial: { [key: string]: string } = {}) => {
   );
 }
 
+// Change handlers (#1114): one that throws keeps neither the value from being kept nor the others from hearing, and
+//  each can be stopped.
+{
+  const { items, storage } = memoryStorage(),
+    registry = new GameOptionsRegistry(() => storage),
+    heard: string[] = [],
+    errors: unknown[][] = [],
+    logError = console.error;
+
+  console.error = (...args: unknown[]) => errors.push(args);
+
+  const stopThrowing = registry.onChange((key) => {
+      throw new Error(`can't follow ${key}`);
+    }),
+    stopHearing = registry.onChange((key) => heard.push(key));
+
+  registry.defaults(defaults);
+  registry.set('mapScale', 3);
+
+  expect(
+    "a handler that throws: every default still registered, the change still kept, the other handler told, and it's logged",
+    [
+      registry.get('autoEndOfTurn'),
+      registry.get('mapScale'),
+      JSON.parse(items.gameOptions ?? '{}'),
+      heard,
+      errors.length,
+    ],
+    [
+      true,
+      3,
+      { mapScale: 3 },
+      ['autoEndOfTurn', 'autoEndOfTurnExceptions', 'mapScale', 'mapScale'],
+      4,
+    ]
+  );
+
+  stopThrowing();
+  stopHearing();
+  stopHearing();
+  heard.length = 0;
+  errors.length = 0;
+  registry.set('mapScale', 4);
+
+  expect(
+    'stopped handlers hear nothing, and stopping one twice is harmless',
+    [registry.get('mapScale'), heard, errors.length],
+    [4, [], 0]
+  );
+
+  console.error = logError;
+}
+
 {
   const registry = pageLoad(() => null);
 
