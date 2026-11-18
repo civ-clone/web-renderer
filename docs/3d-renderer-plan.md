@@ -185,13 +185,14 @@ covered. Many Wonders have real-monument scans. The gaps:
   data;
 - archers, paratroopers and civilians in period dress;
 - a catapult;
-- 10 of Civ1's 21 Wonders.
+- Wonders: 9 of Civ1's 21 have no candidate, and 13 of Civ2's 28.
 
-Three sources need a decision:
+Three sources needed a decision, and I've allowed all three, each credited:
 - CMU's motion capture and NASA's models, whose terms are permissive but not CC0 or CC BY;
 - a CC0 aircraft series, much of it made with AI.
 
-Some CivFanatics modellers are leads that need written permission. Before use, check whether the soldiers' rigs embed
+Some CivFanatics modellers are leads that need written permission: their models can be tried locally, but aren't
+committed or deployed until I have it. Before use, check whether the soldiers' rigs embed
 Epic's UE4 skeleton or only match its bone names.
 
 - **What:** realistic (D2), not stylised, CC0 and CC BY glTF models for people, animals, ships, vehicles and aircraft,
