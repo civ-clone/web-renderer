@@ -29,7 +29,17 @@ import { buildingSprite } from '@civ-clone/ui-assets/components/lib/buildingIcon
 import * as Civ2CityImprovements from '@civ-clone/civ2-city-improvement/CityImprovements';
 import * as Civ2Wonders from '@civ-clone/civ2-wonder/Wonders';
 import civ2Json from '@civ-clone/ui-tileset-civ2/civ2.json';
-import { ensureMapArt } from '@civ-clone/ui-assets/lib/installPacks';
+import {
+  ensureMapArt,
+  setFallbackRetryDelays,
+  startFallbackInterfaceArt,
+} from '@civ-clone/ui-assets/lib/installPacks';
+import {
+  citizenFace,
+  yieldIcon,
+} from '@civ-clone/ui-city/components/lib/cityYields';
+import { assetStore } from '@civ-clone/ui-assets/AssetStore';
+import { mapTileset } from '@civ-clone/ui-assets/lib/tilesets';
 import { groupIcons } from '@civ-clone/ui-assets/lib/groupIcons';
 import { setSprites } from '@civ-clone/ui-assets/lib/getPreloadedImage';
 
@@ -60,6 +70,8 @@ const expect = (description: string, actual: unknown, expected: unknown) => {
 };
 
 console.error = () => {};
+
+const civ2Tileset = () => mapTileset('staggered-iso');
 
 const run = async (): Promise<void> => {
   // Civ1's, the theme's; Civ2's, imported; the pixel art, hosted.
@@ -303,6 +315,69 @@ const run = async (): Promise<void> => {
     'civ1',
     'civ2',
   ]);
+
+  // In a Civ2 game, a sheet that couldn't be fetched is tried again, and is drawn from once it comes.
+  setRuleSetTileset('civ2');
+  setFallbackRetryDelays([0, 0]);
+
+  let tries = 0;
+
+  const flaky = {
+    loadHostedPack: () =>
+      ++tries < 3 ? Promise.reject(new Error('offline')) : Promise.resolve(),
+  } as unknown as AssetStore;
+
+  await startFallbackInterfaceArt(civ2Tileset(), flaky);
+
+  expect(
+    'a sheet that fails is tried again, until it loads',
+    [tries, sheetFailure('civ1-pixelart')],
+    [3, null]
+  );
+
+  tries = -10;
+  await startFallbackInterfaceArt(civ2Tileset(), flaky);
+
+  expect('and no more than a few times', tries, -7);
+
+  // What's drawn before the pixel art comes is drawn again with it.
+  const imported = new Set<string>(),
+    settle = () => new Promise((resolve) => setTimeout(resolve, 0)),
+    src = (element: Element) =>
+      element.querySelector('img')?.getAttribute('src') ?? null;
+
+  (assetStore as any).shownAtURL = (key: string) => Promise.resolve(key);
+  (assetStore as any).firstImported = (keys: string[]) =>
+    Promise.resolve(keys.find((key) => imported.has(key)) ?? keys.at(-1));
+
+  loaded();
+
+  const gold = yieldIcon('Gold'),
+    face = citizenFace('happy');
+
+  await settle();
+
+  expect(
+    "before the pixel art comes, the theme's",
+    [src(gold), src(face)],
+    [civ1Key('city/gold'), civ1Key('city/people_happy_m')]
+  );
+
+  const pixelGold = './assets/civ1-pixelart/city/gold.png',
+    pixelFaces = [
+      './assets/civ1-pixelart/city/people_happy_m.png',
+      './assets/civ1-pixelart/city/people_happy_f.png',
+    ];
+
+  pixelFaces.forEach((key) => imported.add(key));
+  loaded(pixelGold, ...pixelFaces);
+  await settle();
+
+  expect(
+    "and once it has come, the pixel art's, in what's already drawn",
+    [src(gold), pixelFaces.includes(src(face)!)],
+    [pixelGold, true]
+  );
 
   finished = true;
 };

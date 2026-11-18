@@ -7,7 +7,10 @@ import {
   onTilesetsInstalled,
   ruleSetMapTileset,
 } from './tilesets';
-import { hasPreloadedImage } from './getPreloadedImage';
+import {
+  hasPreloadedImage,
+  onPreloadedImagesChanged,
+} from './getPreloadedImage';
 
 // The interface's art (#1063): the icons, citizens, meters, cursors and textures every screen draws, and the map draws
 //  over its tiles. A theme names the tilesets it draws them with, in order (`UiTheme.art`), and the first one there is
@@ -180,6 +183,35 @@ export const interfaceSprite = (name: string): InterfaceSprite => {
   }
 
   return { tileset: theme, key: interfaceSpriteKey(name, theme) };
+};
+
+// What's drawn with the interface's art, to draw again as the sprites change (`followInterfaceArt`), each held weakly so
+//  an element that's gone is let go.
+const followers = new Set<{ element: WeakRef<Element>; refresh: () => void }>();
+
+onPreloadedImagesChanged(() =>
+  followers.forEach((follower) => {
+    if (follower.element.deref() === undefined) {
+      followers.delete(follower);
+
+      return;
+    }
+
+    follower.refresh();
+  })
+);
+
+/**
+ * Runs `refresh` whenever the sprites drawn from change, for as long as `element` is around: as a sheet a sprite falls
+ *  back to arrives in a Civ2 game (the pixel art, `startFallbackInterfaceArt`), or an import adds the game's own, so a
+ *  picture already drawn takes the sprite `interfaceSprite` now says. `refresh` resolves its sprites again, and draws
+ *  only the ones that changed.
+ */
+export const followInterfaceArt = (
+  element: Element,
+  refresh: () => void
+): void => {
+  followers.add({ element: new WeakRef(element), refresh });
 };
 
 /**
