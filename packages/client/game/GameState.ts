@@ -61,10 +61,11 @@ const drawnUnit = (value: PlainObject | undefined): string | null =>
 
 // What the map draws of a city, as the map holds it, given its growth: its
 //  owner, whose colours it is drawn in and whose list its name is looked up in,
-//  its name, its square, its size and whether the engine has declared it in
-//  disorder. Your own city's size is in its growth, a separate object; a
-//  rival's, the stand-in you are sent, holds it inline. No layer draws a city's
-//  improvements, such as its walls, so they are left out. `null` for anything
+//  its name, its square, its size, whether the engine has declared it in
+//  disorder and whether it's walled (#688). Your own city's size is in its
+//  growth, a separate object; a rival's, the stand-in you are sent, holds it
+//  inline. No layer draws a city's other improvements, which the rules' `walled`
+//  stands for, so they are left out. `null` for anything
 //  that is not a city. A city that changes hands to or from you changes id (your
 //  city or a rival's stand-in), so that, and a city destroyed, still rely on the
 //  worker sending the tile with it.
@@ -83,6 +84,8 @@ const drawnCity = (
         value.celebrateLeader,
         // Its style, under rules with eras (Civ2, M2c), a rival's as last seen.
         value.style,
+        // Its walls, under rules that say (#688).
+        value.walled,
       ])
     : null;
 

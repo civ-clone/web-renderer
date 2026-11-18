@@ -121,6 +121,12 @@ export type WorkerRules = {
   /** How a city is drawn, for a rival's city, which goes without the rule set's own city data. None by default. */
   cityStyle?: (city: City) => object | null;
   /**
+   * Whether the map draws a city walled (#688), for a rival's city, which goes without the rule set's own city data:
+   *  the same as its `walled` AdditionalData says of one's own. Under rules without it, a rival's city goes as it always
+   *  has, with no say.
+   */
+  walled?: (city: City) => boolean;
+  /**
    * Whether having seen a city a player holds or founded counts as meeting them, for naming them (`hasMet`). Yes by
    *  default, as the client has always had it (Civ1); Civ2's rules say no, as the Apollo Program shows every city
    *  without making contact (#1067).

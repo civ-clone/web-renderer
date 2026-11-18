@@ -18,6 +18,9 @@ export class City extends DataObject {
   #tile: Tile;
   // How the city is drawn, under rules that say (M2c, Civ2's era rows), as last seen.
   #style: object | null = null;
+  // Whether it's drawn walled, under rules that say (#688), as last seen: v474.05 reads the walls as they are now, which
+  //  tells the player of walls built since they last saw it.
+  #walled: boolean | null = null;
 
   constructor(
     name: string,
@@ -70,6 +73,25 @@ export class City extends DataObject {
     return this.#style;
   }
 
+  // Under rules that say whether a city is walled (#688), and only then.
+  #setWalled(city: CoreCity): void {
+    const walledOf = workerRules().walled;
+
+    if (walledOf === undefined) {
+      return;
+    }
+
+    if (this.#walled === null) {
+      this.addKey('walled');
+    }
+
+    this.#walled = walledOf(city);
+  }
+
+  walled(): boolean | null {
+    return this.#walled;
+  }
+
   static fromCity(city: CoreCity): City {
     const cityGrowth = cityGrowthRegistryInstance.getByCity(city);
 
@@ -83,6 +105,7 @@ export class City extends DataObject {
     );
 
     unknownCity.#setStyle(city);
+    unknownCity.#setWalled(city);
 
     return unknownCity;
   }
@@ -125,6 +148,7 @@ export class City extends DataObject {
     this.#growth.size = cityGrowth.size();
     this.#civilDisorderDeclared = workerRules().civilDisorder(city);
     this.#setStyle(city);
+    this.#setWalled(city);
   }
 }
 

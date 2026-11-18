@@ -267,6 +267,14 @@ export interface TilesetCities {
   /** Where the sprite has its top-left corner, from the tile's, as for units. `{ x: 0, y: 0 }` when left out. */
   anchor?: Point;
   /**
+   * Drawn over a walled city (#688), for a pack whose city sprites don't show walls themselves: Civ1 draws the fortified
+   * unit's frame over a walled city (v474.05's `MAP.C`, image 29, at the box's corner plus 1, 1). `at` is where its
+   * top-left corner goes from the tile's, in native px, within the tile, `{ x: 0, y: 0 }` when left out. What reaches
+   * past the tile is cut off. Not for a pack whose city sprite
+   * has `{walls}`. Left out, a walled city is drawn as any other.
+   */
+  walls?: { sprite: string; at?: Point };
+  /**
    * Where a city's size and name go: across at `x` of the tile (within it), on baselines at those parts of it, and the
    * unhappy citizen in place of the size at `disorderIcon` native px from its corner (within it). A sprite whose size
    * goes somewhere of its own has `size`, which the size is written at in place of `x` and `sizeBaseline`.
@@ -886,6 +894,24 @@ export const readDescriptor = (json: unknown): TilesetDescriptor => {
         );
       }
     });
+  }
+
+  if (cities.walls !== undefined) {
+    const { sprite, at = { x: 0, y: 0 } } = cities.walls;
+
+    fills('cities.walls.sprite', sprite, []);
+
+    if (placeholders(cities.sprite).includes('walls')) {
+      refuse(
+        'cities.walls is for city sprites that show no walls: cities.sprite has {walls}, which shows them.'
+      );
+    }
+
+    if (at.x < 0 || at.y < 0 || at.x >= tile.width || at.y >= tile.height) {
+      refuse(
+        'cities.walls.at must have a whole x and y in px, within the tile.'
+      );
+    }
   }
 
   const icon = cities.labels.disorderIcon;

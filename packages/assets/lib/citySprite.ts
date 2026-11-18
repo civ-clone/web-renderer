@@ -1,12 +1,6 @@
 import { TilesetDescriptor, expandName } from '../tilesets/TilesetDescriptor';
 import { City } from '@civ-clone/ui-protocol/types';
 
-/**
- * The improvement, as the engine names it, that a `styles` city is drawn walled for. Only where the page is told the
- * city's improvements: your own cities', not your rivals' (#688), which are drawn without.
- */
-export const wallsImprovement = 'CityWalls';
-
 /** The bucket of `styles` a city of `size` is in: the last whose size it has reached, the first when it has none. */
 export const sizeBucket = (sizes: number[], size: number): number =>
   sizes.reduce((bucket, from, index) => (size >= from ? index : bucket), 0);
@@ -20,20 +14,18 @@ export const sizeBucket = (sizes: number[], size: number): number =>
 export const citySprite = (
   { cities }: TilesetDescriptor,
   city: Pick<City, 'player' | 'growth'> & {
-    improvements?: City['improvements'];
     style?: City['style'];
+    walled?: City['walled'];
   }
 ): string => {
   if (cities.mode !== 'styles') {
     return cities.sprite;
   }
 
-  // `validateDescriptor` holds a styles city to having its styles.
+  // `validateDescriptor` holds a styles city to having its styles. Walled as the rules say (#688), your rivals' cities
+  //  too: the rules' own test, not a look for one improvement (#1069, Civ2's Great Wall).
   const styles = cities.styles!,
-    walled =
-      city.improvements?.some(
-        (improvement) => improvement._ === wallsImprovement
-      ) ?? false;
+    walled = city.walled === true;
 
   const style =
       (city.style ? styles.eras?.[city.style.era] : undefined) ??

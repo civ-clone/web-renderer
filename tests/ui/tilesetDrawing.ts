@@ -40,6 +40,7 @@ import Yields, { innerArea } from '@civ-clone/ui-map/components/Map/Yields';
 import isoJson from './fixtures/iso-tileset.json';
 import civ2Json from '@civ-clone/ui-tileset-civ2/civ2.json';
 import hexPixelArtJson from '@civ-clone/civ1-tileset-pixelart/pack-hex/tileset.json';
+import pixelArtJson from '@civ-clone/civ1-tileset-pixelart/pack/tileset.json';
 import {
   clearSpriteAnchors,
   setSpriteAnchors,
@@ -1638,6 +1639,49 @@ expect(
   ['putImageData(#0000ff,#123456)', 'putImageData(#ff0000,#123456)']
 );
 
+// A walled city (#688): Civ1 draws the fortified unit's frame over it, a pixel in, last, as v474.05 does; the stub has no
+//  walls to draw. A city that isn't walled, or whose rules don't say, has none.
+const walledWorld = (walled?: boolean): World => {
+    const world = makeWorld(5, 5, { '2,2': { city: { size: 3 } } });
+
+    if (walled !== undefined) {
+      Object.assign(world.get(2, 2).city!, { walled });
+    }
+
+    return world;
+  },
+  spritesOf = (calls: string[]): string[] =>
+    calls.filter((call) => call.includes('@'));
+
+expect(
+  "a walled city: Civ1's fortified frame over it, a pixel in; a pack without walls draws none",
+  both(Cities, walledWorld(true), 2, 2).map(spritesOf),
+  [['map/city@2,2', 'map/fortify@2,2'], ['towns/city@6,6']]
+);
+expect(
+  'the walls are cut off at the tile, so walls drawn past it leave nothing behind when they go',
+  drawn(Cities, civ1, walledWorld(true), 2, 2).filter((call) =>
+    /^(save|beginPath|rect|clip|restore)\b/.test(call)
+  ),
+  ['save()', 'beginPath()', 'rect(0,0,32,32)', 'clip()', 'restore()']
+);
+// The pixel art's, which ships with civ.one: its own fortified frame, a pixel in on the square grid as Civ1's is, so a
+//  garrisoned city's occupied box still shows on its top and left; at the hexagon's corner on the hexagonal grid.
+expect(
+  "the pixel art's walls: its fortified frame, a pixel in on the square grid, at the corner on the hexagonal grid",
+  [pixelArtJson, hexPixelArtJson].map(
+    (json) => validateDescriptor(json).cities.walls
+  ),
+  [{ sprite: 'map/fortify', at: { x: 1, y: 1 } }, { sprite: 'map/fortify' }]
+);
+expect(
+  "a city that isn't walled, or whose rules don't say, has no walls",
+  [walledWorld(false), walledWorld()].map((world) =>
+    spritesOf(drawn(Cities, civ1, world, 2, 2))
+  ),
+  [['map/city@2,2'], ['map/city@2,2']]
+);
+
 // Civ1's size is centred three quarters of the way down and its name hangs 1.6 tiles down, in 16px; the stub's are a
 //  quarter across, half way and a tile and a quarter down, in 12px.
 expect(
@@ -1840,14 +1884,15 @@ expect(
   const cityAt = (
     city: { size: number; disorder?: boolean },
     owner: ReturnType<typeof isoPlayer>,
-    improvements: string[] | undefined
+    walled: boolean | undefined
   ): World => {
     const world = isoWorld({ '1,1': { city } }),
       tile = world.get(1, 1);
 
+    // Walled as the rules send it (#688); left out, as under rules that don't say.
     Object.assign(tile.city!, {
       player: owner,
-      improvements: improvements?.map((_) => ({ _ })),
+      ...(walled === undefined ? {} : { walled }),
     });
 
     return world;
@@ -1860,9 +1905,7 @@ expect(
     [
       isoDrawn(
         Cities,
-        cityAt({ size: 5 }, isoPlayer(['#00ff00', '#008000'], 'English'), [
-          'CityWalls',
-        ])
+        cityAt({ size: 5 }, isoPlayer(['#00ff00', '#008000'], 'English'), true)
       ),
       isoDrawn(
         Cities,
@@ -1891,6 +1934,63 @@ expect(
       'putImageData(#00ff00,#008000,#123456)',
       'putImageData(#ffff00,#808000,#123456)',
     ]
+  );
+
+  // A styles pack whose sprites show no walls draws its walls over a walled city (#688), as the hexagonal pixel art
+  //  does: over the city's sprite, from the tile's corner where it says, and under the flag, which stays in front.
+  const overlaidWalls: TilesetDescriptor = {
+    ...isoTileset,
+    cities: {
+      ...isoTileset.cities,
+      sprite: 'city/{style}/{size}',
+      styles: {
+        ...isoTileset.cities.styles!,
+        walls: { plain: '', walled: '' },
+      },
+      walls: { sprite: 'units/shield', at: { x: 1, y: 2 } },
+    },
+  };
+
+  expect(
+    'a styles pack with walls of its own to draw over a city: valid, refused with {walls} in its sprite, and refused with walls placed past the tile',
+    (
+      [
+        [overlaidWalls, { x: 0, y: 0 }],
+        [isoTileset, { x: 0, y: 0 }],
+        [overlaidWalls, { x: 64, y: 0 }],
+      ] as const
+    ).map(([tileset, at]) => {
+      try {
+        validateDescriptor({
+          ...tileset,
+          cities: {
+            ...tileset.cities,
+            walls: { sprite: 'units/shield', at },
+          },
+        });
+
+        return null;
+      } catch (error) {
+        return (error as Error).message;
+      }
+    }),
+    [
+      null,
+      'Tileset "iso-units": cities.walls is for city sprites that show no walls: cities.sprite has {walls}, which shows them.',
+      'Tileset "iso-units": cities.walls.at must have a whole x and y in px, within the tile.',
+    ]
+  );
+  expect(
+    "a styles city's walls: over its sprite, from the tile's corner, and under its flag",
+    drawn(
+      Cities,
+      overlaidWalls,
+      cityAt({ size: 3 }, isoPlayer(['#ffff00', '#808000']), true),
+      1,
+      1,
+      { width: 64, height: 32 }
+    ).filter((call) => call.includes('@')),
+    ['city/ancient/0@0,-32', 'units/shield@2,4', 'city/flag@80,-20']
   );
 
   // A styles city with units in it: none of them over it, and a box in its player's colours, the first edged with the
@@ -1936,7 +2036,7 @@ expect(
     "a styles city's size is written from its sprite's own anchor for it, and its name centred below the tile",
     isoDrawn(
       CityNames,
-      cityAt({ size: 5 }, isoPlayer(['#00ff00'], 'English'), ['CityWalls'])
+      cityAt({ size: 5 }, isoPlayer(['#00ff00'], 'English'), true)
     ),
     [
       'font=bold 16px sans-serif',
@@ -1962,7 +2062,7 @@ expect(
 
       isoDrawn(
         CityNames,
-        cityAt({ size: 5, disorder: true }, isoPlayer(['#00ff00']), [])
+        cityAt({ size: 5, disorder: true }, isoPlayer(['#00ff00']), undefined)
       );
 
       class IsoYields extends Yields {

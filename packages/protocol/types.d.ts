@@ -69,6 +69,9 @@ export interface City extends EntityInstance<'City'> {
   }[];
   // How it's drawn, under rules with eras (Civ2, M2c), a rival's city's too.
   style?: CityStyle;
+  // Whether the map draws it walled, as the rules say (#688): City Walls, or under Civ2 its owner's Great Wall too
+  //  (#1069). A rival's city's too. Absent under rules that don't say.
+  walled?: boolean;
   tile: PlayerTile;
   tiles: PlayerTile[];
   tilesWorked: PlayerTile[];

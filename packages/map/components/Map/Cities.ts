@@ -100,6 +100,32 @@ export class Cities extends Map {
       offsetX: inset,
       offsetY: inset,
     });
+
+    this.#drawWalls(tile.city, offsetX, offsetY);
+  }
+
+  // A walled city's walls (#688), where the pack draws them over the city rather than in its sprite: Civ1's, the
+  //  fortified unit's frame, as v474.05 draws it, last, over the box and its streets. Not recoloured. Cut off at the
+  //  tile, so walls that run past it leave nothing behind when they go (#486): a frame the tile's size drawn a pixel in,
+  //  as the pixel art's is, loses its last row and column.
+  #drawWalls(city: City, offsetX: number, offsetY: number): void {
+    const { walls } = this.tileset().cities;
+
+    if (walls === undefined || city.walled !== true) {
+      return;
+    }
+
+    const { x, y } = walls.at ?? { x: 0, y: 0 },
+      { width, height } = this.projection().footprint(),
+      scale = this.scale(),
+      context = this.context();
+
+    context.save();
+    context.beginPath();
+    context.rect(offsetX, offsetY, width, height);
+    context.clip();
+    this.drawImage(walls.sprite, offsetX + x * scale, offsetY + y * scale);
+    context.restore();
   }
 
   // A `styles` city with units in it shows a small box in its player's colours, the first edged with the second (black
@@ -141,6 +167,8 @@ export class Cities extends Map {
       scale = this.scale();
 
     this.drawImage(sprite, cityX, cityY);
+    // Under the flag, which stays in front.
+    this.#drawWalls(city, offsetX, offsetY);
 
     if (flagAt === null) {
       return;

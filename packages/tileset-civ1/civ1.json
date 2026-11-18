@@ -482,6 +482,7 @@
     "sprite": "map/city",
     "inset": 1,
     "occupied": "#000",
+    "walls": { "sprite": "map/fortify", "at": { "x": 1, "y": 1 } },
     "colouring": {
       "mode": "replaceColours",
       "keys": ["#000"],
