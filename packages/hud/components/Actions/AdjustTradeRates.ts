@@ -70,6 +70,23 @@ declare global {
 export const tradeRatesOpen = (): boolean =>
   open !== null && open.element().isConnected;
 
+// Rates sent that the game hasn't answered yet: until it has, the cities' figures are from before them.
+let unanswered = 0;
+
+/**
+ * Whether the trade rates are still being settled: the window is open, or rates it sent haven't been answered, so the
+ *  figures on hand may be from before them. The turn isn't ended for the player until they are (#1058).
+ */
+export const tradeRatesSettling = (): boolean =>
+  tradeRatesOpen() || unanswered > 0;
+
+/** The game has answered an `AdjustTradeRates`: whether that was the last one outstanding. */
+export const tradeRatesAnswered = (): boolean => {
+  unanswered = Math.max(0, unanswered - 1);
+
+  return unanswered === 0;
+};
+
 // Whether the game is waiting for the other civilizations, when it takes no actions: the window shows the rates, but
 //  can't change them until the turn comes back (#1058).
 let waitingForTurn = false,
@@ -78,7 +95,21 @@ let waitingForTurn = false,
 /** Said by the game as the turn ends and starts again, for an open window to stop or start taking changes. */
 export const setTradeRatesWaiting = (waiting: boolean): void => {
   waitingForTurn = waiting;
+  // Rates sent before the turn changed hands are answered, or will never be: none is outstanding into the next.
+  unanswered = 0;
   showWaiting?.();
+};
+
+/** The game is going: an open window closes without sending, and nothing it held carries over (#1058). */
+export const disposeTradeRates = (): void => {
+  disposeOpen?.();
+  open?.element().remove();
+  open = null;
+  refreshOpen = null;
+  showWaiting = null;
+  latestPlayer = null;
+  waitingForTurn = false;
+  unanswered = 0;
 };
 
 // A window taken off the page without being closed (a game torn down, say): its End Turn listener and pending send go
@@ -161,7 +192,9 @@ export const openTradeRates = (
     sent = opening,
     engine = opening,
     pending: ReturnType<typeof setTimeout> | null = null,
-    kept = false;
+    kept = false,
+    // A refresh moving the sliders to new maximums: the rebalance isn't the player's to send.
+    refreshing = false;
 
   const values = (): [string, number][] =>
       sliders.map((slider): [string, number] => [slider.key(), slider.value()]),
@@ -172,11 +205,13 @@ export const openTradeRates = (
       ),
     // Whether it sent anything.
     send = (value: [string, number][]): boolean => {
-      if (same(value, sent) && same(value, engine)) {
+      // The game takes no actions while waiting, or keeps none (a game being carried over): nothing is sent.
+      if (waitingForTurn || (same(value, sent) && same(value, engine))) {
         return false;
       }
 
       sent = value;
+      unanswered++;
 
       transport.send('action', {
         name: 'AdjustTradeRates',
@@ -351,7 +386,10 @@ export const openTradeRates = (
   sliders.forEach((slider) =>
     slider.onInput(() => {
       showSplit();
-      schedule();
+
+      if (!refreshing) {
+        schedule();
+      }
     })
   );
 
@@ -361,9 +399,11 @@ export const openTradeRates = (
   refreshOpen = (rates: PlayerTradeRates, player: Player | null): void => {
     current = rates;
     engine = rates.all.map((rate): [string, number] => [rate._, rate.value]);
+    refreshing = true;
     sliders.forEach((slider) =>
       slider.setMax(rates.maxRates?.[slider.key()] ?? 100)
     );
+    refreshing = false;
     notes.replaceChildren(...limitNotes(rates));
     showEffect(player);
   };
@@ -387,15 +427,27 @@ export const openTradeRates = (
     cancelButton = window
       .element()
       .querySelector('.btn-quiet') as HTMLButtonElement | null,
-    waitingNote = s('<p class="adjust-trade-rates-waiting" hidden></p>');
+    waitingNote = s(
+      '<p class="adjust-trade-rates-waiting" role="status" hidden></p>'
+    );
 
   waitingNote.textContent = text('Game.waiting');
   rateRows.after(waitingNote);
 
   showWaiting = (): void => {
     // Focus in the rows would fall to the page as they go inert, out of the window's reach for Escape.
-    if (waitingForTurn && rateRows.contains(document.activeElement)) {
+    if (
+      waitingForTurn &&
+      (rateRows.contains(document.activeElement) ||
+        document.activeElement === okButton)
+    ) {
       cancelButton?.focus();
+    }
+
+    // A move not yet sent won't be taken now.
+    if (waitingForTurn && pending !== null) {
+      clearTimeout(pending);
+      pending = null;
     }
 
     rateRows.inert = waitingForTurn;
@@ -437,10 +489,8 @@ export const openTradeRates = (
       refreshOpen = null;
     }
 
-    let sentOnClose: boolean;
-
     if (kept) {
-      sentOnClose = flush();
+      flush();
     } else {
       if (pending !== null) {
         clearTimeout(pending);
@@ -448,19 +498,20 @@ export const openTradeRates = (
       }
 
       // Put back the rates it opened with, unless a new government's maximums leave them out of reach.
-      sentOnClose =
+      if (
         opening.every(
           ([rate, value]) => value <= (current.maxRates?.[rate] ?? 100)
-        ) && send(opening);
+        )
+      ) {
+        send(opening);
+      }
     }
 
-    // The turn may be ended for the player again. When rates went just now, the engine's answer looks again, once the
-    //  cities are as they now are: looked at at once, the turn would end on the figures from before them.
-    if (!sentOnClose) {
-      queueMicrotask(() =>
-        document.dispatchEvent(new CustomEvent('traderatesclosed'))
-      );
-    }
+    // The turn may be ended for the player again: at once if nothing is outstanding, or once the game has answered the
+    //  last of the rates sent, when the cities are as they now are (`tradeRatesSettling`).
+    queueMicrotask(() =>
+      document.dispatchEvent(new CustomEvent('traderatesclosed'))
+    );
   });
 
   open = window;

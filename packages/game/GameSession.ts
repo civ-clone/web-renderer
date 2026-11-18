@@ -6,8 +6,10 @@ import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
 import openCity from '@civ-clone/ui-city/components/openCity';
 import CitiesList from '@civ-clone/ui-hud/components/CitiesList';
 import {
+  disposeTradeRates,
   setTradeRatesWaiting,
-  tradeRatesOpen,
+  tradeRatesAnswered,
+  tradeRatesSettling,
 } from '@civ-clone/ui-hud/components/Actions/AdjustTradeRates';
 import { redrawWindowUnits } from '@civ-clone/ui-hud/components/Unit';
 import GameMenu from '@civ-clone/ui-menus/components/GameMenu';
@@ -558,9 +560,10 @@ export class GameSession {
     const tradeRatesClosed = (): void => this.#autoEndTurn();
 
     document.addEventListener('traderatesclosed', tradeRatesClosed);
-    transportDisposers.push((): void =>
-      document.removeEventListener('traderatesclosed', tradeRatesClosed)
-    );
+    transportDisposers.push((): void => {
+      document.removeEventListener('traderatesclosed', tradeRatesClosed);
+      disposeTradeRates();
+    });
   }
 
   // After each update, and when a notification is dismissed (#416): ends the turn if there's nothing left to do.
@@ -572,8 +575,9 @@ export class GameSession {
 
     if (
       !this.#endTurnSent &&
-      // Not while the trade rates are being tried out: moving them can clear the disorder that held the turn (#1058).
-      !tradeRatesOpen() &&
+      // Not while the trade rates are being tried out, or their answer is on its way: moving them can clear the disorder
+      //  that held the turn, and the figures until the answer are from before them (#1058).
+      !tradeRatesSettling() &&
       shouldAutoEndTurn(data.player, options, gameState.waiting(), (action) =>
         dismissals.has(actionKey(action), Number(data.turn?.value ?? 0))
       )
@@ -797,6 +801,15 @@ export class GameSession {
     //  Turn may be sent again.
     if (action.name === 'EndTurn') {
       this.#endTurnSent = false;
+    }
+
+    // The last trade rates answered, their patch already in: the turn may be ended on the figures they give (#1058).
+    if (
+      action.name === 'AdjustTradeRates' &&
+      tradeRatesAnswered() &&
+      !tradeRatesSettling()
+    ) {
+      this.#autoEndTurn();
     }
 
     this.#unitController!.actionHandled(action);

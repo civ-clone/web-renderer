@@ -14,7 +14,9 @@ import {
   refreshTradeRates,
   tradeRatesDelay,
   setTradeRatesWaiting,
+  tradeRatesAnswered,
   tradeRatesOpen,
+  tradeRatesSettling,
 } from '@civ-clone/ui-hud/components/Actions/AdjustTradeRates';
 import { Player, PlayerTradeRates } from '@civ-clone/ui-protocol/types';
 import Transport from '@civ-clone/ui-client/Transport';
@@ -270,26 +272,34 @@ const liveAndCancel = async (): Promise<void> => {
 
   document.removeEventListener('traderatesclosed', countClosed);
 
-  // Closed having just sent rates (Cancel here), it leaves the look at the turn to the engine's answer: looked at at once,
-  //  the turn would be ended on the figures from before the rates went back.
+  // Closed having just sent rates (Cancel here), the rates are still settling until the game has answered every send:
+  //  until then the turn isn't ended for the player, on figures from before them.
   const reverting = openTradeRates(plain([40, 0, 60]), transport);
+
+  // Every earlier send answered.
+  while (!tradeRatesAnswered());
 
   move(reverting.element(), 1, 30);
   await wait(tradeRatesDelay + 50);
-  await wait(0);
-
-  let revertClosedEvents = 0;
-  const countRevert = () => revertClosedEvents++;
-
-  document.addEventListener('traderatesclosed', countRevert);
   cancel(reverting.element()).click();
   await wait(0);
-  document.removeEventListener('traderatesclosed', countRevert);
+
+  const settlingAfterClose = tradeRatesSettling(),
+    // The move's answer, late: the cities are on its rates, the revert's still to come.
+    lastAfterFirst = tradeRatesAnswered(),
+    settlingAfterFirst = tradeRatesSettling(),
+    lastAfterSecond = tradeRatesAnswered();
 
   expect(
-    'closed having just sent rates, it doesn’t say so: the answer will',
-    revertClosedEvents,
-    0
+    'closed with sends outstanding, the rates settle only once the last is answered',
+    [
+      settlingAfterClose,
+      lastAfterFirst,
+      settlingAfterFirst,
+      lastAfterSecond,
+      tradeRatesSettling(),
+    ],
+    [true, false, true, true, false]
   );
 
   // A refresh that comes before a later send's answer, and then a move back to its rates: they're sent, rather than
@@ -346,19 +356,23 @@ const liveAndCancel = async (): Promise<void> => {
       .element()
       .querySelector('.adjust-trade-rates-waiting') as HTMLElement;
 
-  setTradeRatesWaiting(true);
+  // A move made just before the wait isn't sent once it starts, nor is Cancel's revert while it lasts.
+  move(waiting.element(), 0, 45);
 
-  const whileWaiting = [okButton.disabled, waitingNote.hidden];
+  const beforeWaiting = sent.length;
+
+  setTradeRatesWaiting(true);
+  await wait(tradeRatesDelay + 50);
+
+  const whileWaiting = [okButton.disabled, waitingNote.hidden],
+    sentWhileWaiting = sent.length - beforeWaiting;
 
   setTradeRatesWaiting(false);
 
   expect(
-    'while waiting, OK is disabled and the window says why; at the turn, both are back',
-    [whileWaiting, [okButton.disabled, waitingNote.hidden]],
-    [
-      [true, false],
-      [false, true],
-    ]
+    'while waiting, nothing is sent, OK is disabled and the window says why; at the turn, both are back',
+    [sentWhileWaiting, whileWaiting, [okButton.disabled, waitingNote.hidden]],
+    [0, [true, false], [false, true]]
   );
 
   waiting.close();
