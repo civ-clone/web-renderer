@@ -68,11 +68,19 @@ type WheelTurn = {
 };
 
 // Safari's `GestureEvent` (#1138), which isn't in the DOM's types: a trackpad's pinch, `scale` times the size it was
-//  when it began, and where on the page it is.
+//  when it began, and where on the page it is (on a Mac: iOS's has no `clientX` or `clientY`).
 type GestureEvent = UIEvent & {
   scale: number;
-  clientX: number;
-  clientY: number;
+  clientX?: number;
+  clientY?: number;
+};
+
+// A pinch in Safari over the map (#1138): the zoom the fingers' spread is measured from, in the set it's for, and when
+//  it last moved.
+type Gesture = {
+  from: number;
+  tileset: TilesetDescriptor;
+  at: number;
 };
 
 // The zoom the wheel or the keys have asked for, waiting for the next frame (#1101), the set it's for, and where on the
@@ -131,8 +139,7 @@ export class GamePortal extends Portal {
   #inertiaFrame: number | null = null;
   #pendingZoom: PendingZoom | null = null;
   #wheelTurn: WheelTurn = { delta: 0, direction: 0, at: -Infinity, tenths: 0 };
-  // The zoom a pinch in Safari began at, while it's pinched (#1138).
-  #gestureFrom: number | null = null;
+  #gesture: Gesture | null = null;
   #zoomFrame: number | null = null;
   #showActionMenuTimeout: number | null = null;
   #waiting = false;
@@ -373,19 +380,19 @@ export class GamePortal extends Portal {
     on(
       this.canvas(),
       'gesturestart',
-      (event: Event) => this.#gesture(event as GestureEvent, 'start'),
+      (event: Event) => this.#pinch(event as GestureEvent, 'start'),
       { passive: false }
     );
     on(
       this.canvas(),
       'gesturechange',
-      (event: Event) => this.#gesture(event as GestureEvent, 'change'),
+      (event: Event) => this.#pinch(event as GestureEvent, 'change'),
       { passive: false }
     );
     on(
       this.canvas(),
       'gestureend',
-      (event: Event) => this.#gesture(event as GestureEvent, 'end'),
+      (event: Event) => this.#pinch(event as GestureEvent, 'end'),
       { passive: false }
     );
 
@@ -560,33 +567,52 @@ export class GamePortal extends Portal {
    * Safari's trackpad pinch over the map (#1138): the zoom follows the fingers, the size it began at times how far
    *  they've spread, in tenths, about where they are.
    */
-  #gesture(event: GestureEvent, phase: 'start' | 'change' | 'end'): void {
+  #pinch(event: GestureEvent, phase: 'start' | 'change' | 'end'): void {
     event.preventDefault();
 
     if (phase === 'end') {
-      this.#gestureFrom = null;
+      this.#gesture = null;
 
       return;
     }
 
-    const tileset = mapTileset(this.world().topologyId());
+    const tileset = mapTileset(this.world().topologyId()),
+      asked = this.#zoomAsked(tileset);
 
     if (phase === 'start') {
       // Held still where the fingers are, which a glide would carry off.
       this.stopGlide();
-      this.#gestureFrom = this.#zoomAsked(tileset);
+      this.#gesture = { from: asked, tileset, at: event.timeStamp };
 
       return;
     }
+
+    const gesture = this.#gesture;
 
     // A change to a pinch that didn't begin over the map.
-    if (this.#gestureFrom === null) {
+    if (gesture === null) {
       return;
     }
 
-    const steps = Math.round(
-      (this.#gestureFrom * event.scale - this.#zoomAsked(tileset)) / ZOOM_STEP
-    );
+    gesture.at = event.timeStamp;
+
+    // The map's art changed mid-pinch (#1118): measured afresh, from the new set's zoom.
+    if (gesture.tileset !== tileset) {
+      gesture.tileset = tileset;
+      gesture.from = asked / event.scale;
+
+      return;
+    }
+
+    const wanted = gesture.from * event.scale,
+      zoom = zoomFor(tileset, wanted);
+
+    // Pinched past either end: measured from there instead, so the zoom turns back as soon as the fingers do.
+    if (Math.abs(zoom - wanted) > ZOOM_STEP / 2) {
+      gesture.from = zoom / event.scale;
+    }
+
+    const steps = Math.round((zoom - asked) / ZOOM_STEP);
 
     if (steps === 0) {
       return;
@@ -594,10 +620,13 @@ export class GamePortal extends Portal {
 
     const box = this.canvas().getBoundingClientRect();
 
-    this.zoomBy(steps, {
-      x: event.clientX - box.left,
-      y: event.clientY - box.top,
-    });
+    // About the fingers, where Safari says where they are, or else the middle.
+    this.zoomBy(
+      steps,
+      Number.isFinite(event.clientX) && Number.isFinite(event.clientY)
+        ? { x: event.clientX! - box.left, y: event.clientY! - box.top }
+        : undefined
+    );
   }
 
   /**
@@ -612,8 +641,14 @@ export class GamePortal extends Portal {
       delta = event.deltaY,
       turn = this.#wheelTurn;
 
-    // Safari pinching, should it send the wheel with Ctrl as well: the gesture zooms already.
-    if (delta === 0 || (event.ctrlKey && this.#gestureFrom !== null)) {
+    // Safari pinching, should it send the wheel with Ctrl as well: the gesture zooms already. A pinch whose end went
+    //  astray (the window losing focus) stops counting once it's been still a moment.
+    if (
+      delta === 0 ||
+      (event.ctrlKey &&
+        this.#gesture !== null &&
+        event.timeStamp - this.#gesture.at <= WHEEL_PAUSE)
+    ) {
       return;
     }
 
@@ -648,7 +683,10 @@ export class GamePortal extends Portal {
       turn.delta = 0;
     }
 
-    turn.tenths += 1;
+    // Only what the cap counts.
+    if (inPixels && !event.ctrlKey) {
+      turn.tenths += 1;
+    }
 
     // Held still where the pointer is, which a glide would carry off.
     this.stopGlide();

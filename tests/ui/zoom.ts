@@ -222,19 +222,25 @@ const wheel = (
 };
 
 // linkedom has no `GestureEvent`: Safari's trackpad pinch (#1138), its `type` (`gesturestart`, `gesturechange` or
-//  `gestureend`), at `scale` times the size it began at, at `x`, `y` in the page's px from the window's corner. Whether
-//  it was default-prevented.
+//  `gestureend`), at `scale` times the size it began at, at `x`, `y` in the page's px from the window's corner (none,
+//  as iOS's has none, where `x` is `null`). Whether it was default-prevented.
 const gesture = (
   canvas: HTMLCanvasElement,
   type: string,
   scale: number,
-  { x = 110, y = 70 }: { x?: number; y?: number } = {}
+  {
+    timeStamp = 0,
+    x = 110,
+    y = 70,
+  }: { timeStamp?: number; x?: number | null; y?: number } = {}
 ): boolean => {
   const event = new Event(type, { cancelable: true });
 
-  Object.entries({ scale, clientX: x, clientY: y }).forEach(([key, value]) =>
-    Object.defineProperty(event, key, { value })
-  );
+  Object.entries({
+    scale,
+    timeStamp,
+    ...(x === null ? {} : { clientX: x, clientY: y }),
+  }).forEach(([key, value]) => Object.defineProperty(event, key, { value }));
 
   canvas.dispatchEvent(event);
 
@@ -989,45 +995,95 @@ const run = async (): Promise<void> => {
     canvas.getBoundingClientRect = () =>
       ({ left: 10, top: 20, width: 240, height: 180 } as DOMRect);
 
+    const pinch = (type: string, scale: number, timeStamp = 9500) =>
+      gesture(canvas, type, scale, { timeStamp });
+
     expect(
       "Safari's pinch zooms with the fingers, from the zoom it began at, about where they are, and isn't the page's zoom",
       [
-        turned(() => [
-          gesture(canvas, 'gesturestart', 1),
-          gesture(canvas, 'gesturechange', 1.02),
-        ]),
-        turned(() => gesture(canvas, 'gesturechange', 1.5)),
+        turned(() => [pinch('gesturestart', 1), pinch('gesturechange', 1.02)]),
+        turned(() => pinch('gesturechange', 1.5)),
         anchors.splice(0),
-        turned(() => [
-          gesture(canvas, 'gesturechange', 1.7),
-          gesture(canvas, 'gesturechange', 2),
-        ]),
-        turned(() => gesture(canvas, 'gesturechange', 0.5)),
+        turned(() => [pinch('gesturechange', 1.7), pinch('gesturechange', 2)]),
       ],
       [
         [[true, true], [], 1.4],
         [true, [2.1], 2.1],
         [{ x: 100, y: 50 }],
         [[true, true], [2.8], 2.8],
+      ]
+    );
+
+    expect(
+      'pinched past the smallest, it stops there, and zooms in again as soon as the fingers spread again',
+      [
+        turned(() => pinch('gesturechange', 0.5)),
+        turned(() => pinch('gesturechange', 0.4)),
+        turned(() => pinch('gesturechange', 0.6)),
+      ],
+      [
         [true, [1], 1],
+        [true, [], 1],
+        [true, [1.5], 1.5],
       ]
     );
 
     expect(
       'while it pinches, the wheel with Ctrl held, should Safari send it too, does nothing; once it ends, it zooms again, and a change to a pinch that began elsewhere does nothing',
       [
-        turned(() => wheel(canvas, -100, { ctrlKey: true, timeStamp: 10000 })),
+        turned(() => wheel(canvas, -100, { ctrlKey: true, timeStamp: 9600 })),
         turned(() => [
-          gesture(canvas, 'gestureend', 0.5),
+          pinch('gestureend', 0.6, 9610),
           wheel(canvas, -100, { ctrlKey: true, timeStamp: 11000 }),
         ]),
-        turned(() => gesture(canvas, 'gesturechange', 3)),
+        turned(() => pinch('gesturechange', 3, 11010)),
       ],
       [
-        [true, [], 1],
-        [[true, true], [1.1], 1.1],
-        [true, [], 1.1],
+        [true, [], 1.5],
+        [[true, true], [1.6], 1.6],
+        [true, [], 1.6],
       ]
+    );
+
+    expect(
+      'a pinch whose end never came stops swallowing the wheel once it has been still a moment',
+      [
+        turned(() => [
+          pinch('gesturestart', 1, 12000),
+          wheel(canvas, -100, { ctrlKey: true, timeStamp: 12100 }),
+        ]),
+        turned(() => wheel(canvas, -100, { ctrlKey: true, timeStamp: 13000 })),
+      ],
+      [
+        [[true, true], [], 1.6],
+        [true, [1.7], 1.7],
+      ]
+    );
+
+    expect(
+      "iOS's pinch, which says nowhere, zooms about the middle",
+      [
+        turned(() => [
+          gesture(canvas, 'gesturestart', 1, { x: null }),
+          gesture(canvas, 'gesturechange', 1.5, { x: null }),
+          gesture(canvas, 'gestureend', 1.5, { x: null }),
+        ]),
+        anchors.splice(0),
+      ],
+      [[[true, true, true], [2.6], 2.6], [null]]
+    );
+
+    expect(
+      'a pinch that begins while a zoom waits for the frame measures from that zoom',
+      turned(() => {
+        portal.zoomBy(-5);
+        pinch('gesturestart', 1);
+        pinch('gesturechange', 1.01);
+        pinch('gestureend', 1.01);
+
+        return null;
+      }),
+      [null, [2.1], 2.1]
     );
 
     turned(() => portal.zoomBy(-50));
