@@ -164,6 +164,7 @@ const portal = {
     emit: () => {},
     openCity: () => true,
     scale: () => 1,
+    zoom: () => 1,
     tileSize: () => ({ width: 16, height: 16 }),
     nativeTileSize: () => ({ width: 16, height: 16 }),
   } as unknown as Portal,

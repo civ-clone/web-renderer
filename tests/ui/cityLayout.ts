@@ -17,6 +17,7 @@ import './lib/artPacks';
 
 import City from '@civ-clone/ui-city/components/City';
 import classicCityLayout from '@civ-clone/ui-interface-classic/components/classicCityLayout';
+import modernCityLayout from '@civ-clone/ui-interface-modern/components/CityLayout';
 import { City as CityData, GameData } from '@civ-clone/ui-protocol/types';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
@@ -183,6 +184,7 @@ const emitted: [string, unknown][] = [],
   portal = {
     emit: (event: string, value: unknown) => emitted.push([event, value]),
     scale: () => 1,
+    zoom: () => 1,
     tileSize: () => ({ width: 16, height: 16 }),
     nativeTileSize: () => ({ width: 16, height: 16 }),
   } as unknown as Portal;
@@ -1303,6 +1305,7 @@ const run = async (): Promise<void> => {
     const isoPortal = {
         ...portal,
         scale: () => 1,
+        zoom: () => 1,
         tileSize: () => ({ width: 64, height: 32 }),
         nativeTileSize: () => ({ width: 64, height: 32 }),
       } as unknown as Portal,
@@ -1613,6 +1616,55 @@ const run = async (): Promise<void> => {
   );
 
   plain.close();
+
+  // The city's map at a zoom between two whole scales (#1102): the map is drawn at the one above, shown smaller.
+  {
+    const mapOf = (
+        layout: typeof classicCityLayout,
+        scale: number,
+        zoom: number
+      ) => {
+        const window = new City(
+            cityData('City-F', 'Ur'),
+            { ...portal, scale: () => scale, zoom: () => zoom } as Portal,
+            transport,
+            { layout }
+          ),
+          canvas = window
+            .element()
+            .querySelector('.city-map canvas') as HTMLCanvasElement,
+          found: [number, string] = [canvas.width, canvas.style.width];
+
+        window.close();
+
+        return found;
+      },
+      [width] = mapOf(classicCityLayout, 1, 1),
+      [, shown] = mapOf(modernCityLayout, 1, 1);
+
+    expect(
+      "the classic screen's map, shown at its own size, is drawn at the zoom down to a whole scale, not the map's scale above it",
+      [
+        mapOf(classicCityLayout, 2, 1.4),
+        mapOf(classicCityLayout, 3, 2.5),
+        mapOf(classicCityLayout, 2, 2),
+      ],
+      [
+        [width, ''],
+        [width * 2, ''],
+        [width * 2, ''],
+      ]
+    );
+
+    expect(
+      "the modern screen's, sized by its own CSS, is drawn at the map's scale and shown the same size at any zoom",
+      [mapOf(modernCityLayout, 2, 1.4), mapOf(modernCityLayout, 3, 2.5)],
+      [
+        [width * 2, shown],
+        [width * 3, shown],
+      ]
+    );
+  }
 
   finished = true;
 
