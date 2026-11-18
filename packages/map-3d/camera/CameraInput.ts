@@ -367,10 +367,9 @@ export class CameraInput {
     this.#fingers.delete(event.pointerId);
 
     if (this.#pair !== null) {
-      // A pinch ends with either finger: what's left is held, not dragged.
-      if (this.#fingers.size < 2) {
-        this.#pair = null;
-      }
+      // A pinch ends with either finger: what's left is held, not dragged. With a third finger down, the two left carry
+      //  it on from where the camera is, rather than from the first two's start.
+      this.#pair = this.#fingers.size < 2 ? null : this.#measurePair();
 
       return;
     }
@@ -408,8 +407,8 @@ export class CameraInput {
   #cancel(event: PointerEvent): void {
     this.#fingers.delete(event.pointerId);
 
-    if (this.#fingers.size < 2) {
-      this.#pair = null;
+    if (this.#pair !== null) {
+      this.#pair = this.#fingers.size < 2 ? null : this.#measurePair();
     }
 
     if (this.#press?.pointerId === event.pointerId) {

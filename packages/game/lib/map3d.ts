@@ -26,6 +26,7 @@ import {
   zoomFor,
   zoomOption,
 } from '@civ-clone/ui-assets/lib/tilesets';
+import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import MapView2D, { MapView2DDeps } from '../MapView2D';
 import mapSquares from './mapSquares';
 import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
@@ -241,6 +242,7 @@ export const makeMapView = (
         set: (distance: number): void =>
           options.set(MAP3D_DISTANCE_OPTION, distance),
       },
+      cityName,
       cityOpener: deps.cityOpener,
       coveredBy: deps.coveredBy ?? [],
       debug,

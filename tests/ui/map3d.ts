@@ -51,7 +51,8 @@ import {
   prepareMap3D,
 } from '@civ-clone/ui-game/lib/map3d';
 import { Stage } from '@civ-clone/ui-map-3d/stage';
-import { TileMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
+import markerFor, { TileMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
+import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { setBuild } from '@civ-clone/ui-client/lib/build';
 import { sourcesUnder, specifiersOf } from './lib/imports';
 import { createRequire } from 'module';
@@ -220,12 +221,18 @@ expect(
 (async (): Promise<void> => {
   const told: string[] = [],
     say = (text: string) => void told.push(text);
-  let loads = 0;
+  let loads = 0,
+    // What the page last gave the 3D map.
+    given: MapView3DDeps | null = null;
 
   const load = async (): Promise<CreateMapView3D> => {
       loads++;
 
-      return (deps: MapView3DDeps) => new MapView3D(deps, fakeStage);
+      return (deps: MapView3DDeps) => {
+        given = deps;
+
+        return new MapView3D(deps, fakeStage);
+      };
     },
     // A page as each case starts: nothing fetched, nothing said.
     fresh = (): void => {
@@ -397,6 +404,12 @@ expect(
     sizes(view.portal),
     shown2D()
   );
+  expect(
+    'it is given the page’s names for cities, as its other maps and windows give them',
+    // By identity: `expect` compares by JSON, which a function has none of.
+    (given as MapView3DDeps | null)?.cityName === cityName,
+    true
+  );
   expect('at the zoom kept', sizes(view.portal)[0], 2.6);
 
   // Options keeps the zoom, then tells the portal: read when asked, the new zoom is the city screen's.
@@ -541,6 +554,7 @@ expect(
     closeUp,
     [true, false, false]
   );
+
   expect(
     'every chunk of the land was built as it started',
     chunksSet.size > 0,
@@ -682,14 +696,19 @@ expect(
       tile: town,
     };
 
-  Object.assign(town, {
-    city: {
+  const roma = {
       name: 'Roma',
       growth: { size: 3 },
       player: owner,
+      originalPlayer: { civilization: { _: 'Romans' } },
       walled: true,
       civilDisorderDeclared: false,
     },
+    // As the page names it.
+    romaName = cityName(roma as unknown as City);
+
+  Object.assign(town, {
+    city: roma,
     units: [warriors, phalanx],
   });
   view.queueTile(town);
@@ -712,7 +731,7 @@ expect(
     [markers.get(townKey)?.city, markers.get(townKey)?.unit],
     [
       {
-        name: 'Roma',
+        name: romaName,
         size: 3,
         colours: ['#aa0000', '#ffffff'],
         walled: true,
@@ -746,11 +765,20 @@ expect(
     'the active unit is on top of its stack; t hides the rest, but not the active unit; shown again, all are back',
     [activeOnTop, hiddenButActive, allHidden, marked()],
     [
-      ['Roma', 'Warriors', true],
+      [romaName, 'Warriors', true],
       [null, 'Warriors', true],
       null,
-      ['Roma', 'Phalanx', false],
+      [romaName, 'Phalanx', false],
     ]
+  );
+
+  expect(
+    'a city is named as the page names it, or by its own name where the page gives none',
+    [
+      markerFor(town, null, true, { cityName: () => 'Rome' })?.city?.name,
+      markerFor(town, null, true)?.city?.name,
+    ],
+    ['Rome', 'Roma']
   );
 
   staged.splice(0);
@@ -1121,6 +1149,30 @@ expect(
     ]
   );
 
+  // Close up, gliding to the square two along, before a frame's moved it: what's on the screen is what will be once it's
+  //  there, so the game doesn't move it again for a unit by the square it's leaving, nor leave one it's going to.
+  glider.setOrbit({
+    ...glider.orbit(),
+    yaw: 0,
+    distance: DISTANCE_MIN,
+    focus: middleOf(tiles[1 * 4 + 1] as Tile),
+  });
+  glider.centre(tiles[1 * 4 + 3] as Tile);
+
+  const midGlide = [
+    glider.orbit().focus,
+    glider.portal.isVisible(3, 1, 1),
+    glider.portal.isVisible(1, 1, 1),
+  ];
+
+  runFrames();
+
+  expect(
+    'mid-glide, what’s on the screen is what will be once the camera’s there',
+    midGlide,
+    [middleOf(tiles[1 * 4 + 1] as Tile), true, false]
+  );
+
   glider.dispose();
   Object.defineProperty(performance, 'now', {
     value: realNow,
@@ -1143,11 +1195,20 @@ expect(
   keeper.zoomBy(2);
   runFrames();
 
+  // Not every frame of a zoom or a pinch: once it's stayed the same a moment.
+  const notYet = distanceKept();
+
+  await new Promise((resolve) => setTimeout(resolve, 600));
+
   const saved = distanceKept();
 
+  // At once, as the map's taken down.
+  keeper.zoomBy(1);
+  runFrames();
   keeper.dispose();
 
-  const readBack = makeMapView(deps2D) as MapView3D,
+  const atDispose = distanceKept(),
+    readBack = makeMapView(deps2D) as MapView3D,
     readDistance = readBack.orbit().distance;
 
   readBack.dispose();
@@ -1164,15 +1225,19 @@ expect(
   };
 
   expect(
-    'the camera’s distance is kept once the player changes it, read back by the next map, and kept within its range',
+    'the camera’s distance is kept once the player changes it and it’s stayed the same a moment, or the map’s taken down, read back by the next map, and kept within its range',
     [
       unsaved,
-      typeof saved === 'number' && saved < 24,
-      readDistance === saved,
+      notYet,
+      typeof saved === 'number' && saved > 0 && saved < 24,
+      typeof atDispose === 'number' &&
+        typeof saved === 'number' &&
+        atDispose < saved,
+      readDistance === atDispose,
       rangeOf(5000),
       rangeOf(-5),
     ],
-    [0, true, true, DISTANCE_MAX, 24]
+    [0, 0, true, true, true, DISTANCE_MAX, 24]
   );
 
   optionsRegistry.set(MAP3D_DISTANCE_OPTION, 0);
@@ -1186,7 +1251,9 @@ expect(
 
       return view.orbit().focus[1];
     },
-    lockedAt = beyond(locked);
+    lockedAt = beyond(locked),
+    // The square it looks at, past the pole: the last row's, not the first's.
+    lockedCentre = locked.portal.center();
 
   // A glide from the top row to the bottom goes down the world, not over the pole it's stopped at: on the clock run by
   //  hand again.
@@ -1214,13 +1281,14 @@ expect(
   wrapping.dispose();
 
   expect(
-    'stopped at the poles, the camera stays at the world’s last row, and glides down the world to a square; otherwise it goes round',
+    'stopped at the poles, the camera stays at the world’s last row, looking at a square in it, and glides down the world to a square; otherwise it goes round',
     [
       lockedAt === locked.land().extentV(),
+      lockedCentre,
       glidedTo,
       wrappedAt < locked.land().extentV(),
     ],
-    [true, bottom, true]
+    [true, { x: 1, y: 3 }, bottom, true]
   );
 
   delete (globalThis as any).requestAnimationFrame;

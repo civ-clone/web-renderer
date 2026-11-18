@@ -6,7 +6,7 @@
 //  `MapView3DDeps`, made by the page's own bundle: the 3D script imports nothing that has state of its own, so no
 //  registry or singleton is bundled twice.
 
-import { Tile, Unit } from '@civ-clone/ui-protocol/types';
+import { City, Tile, Unit } from '@civ-clone/ui-protocol/types';
 import { CityOpener, MapPortal } from './MapPortal';
 import MapRenderer from './MapRenderer';
 import { Size } from './lib/projection';
@@ -65,6 +65,8 @@ export type MapView3DDeps = {
     get(): number | null;
     set(distance: number): void;
   };
+  // A city's name as the page's other maps and windows give it (the locale's, by its founder), or its own name.
+  cityName?: (city: City) => string;
   // How a city opens from the map (`lib/cityOpeners.ts`): the player's own, or a watcher's.
   cityOpener: CityOpener;
   // What floats over the map (the sidebar's sections, #697).

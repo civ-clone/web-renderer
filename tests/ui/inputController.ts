@@ -845,6 +845,24 @@ const run = async (): Promise<void> => {
       [-1, 'north']
     );
 
+    // Dvorak types / and ? on the first of them: Find City's and the Civilopedia's, as on any keyboard, and no turn,
+    //  with a window open or not.
+    turns.splice(0);
+    calls = [];
+    press({ code: 'BracketLeft', key: '/' });
+    press({ code: 'BracketLeft', key: '?', shiftKey: true });
+    press({ code: 'BracketLeft', key: '/' });
+
+    expect(
+      'on Dvorak, / and ? on that key are the game’s, and don’t turn the map, even over the Civilopedia',
+      [turns, calls, document.querySelectorAll('dialog.civilopedia').length],
+      [[], ['findCity'], 1]
+    );
+
+    document
+      .querySelectorAll('dialog.civilopedia')
+      .forEach((dialog) => dialog.remove());
+
     turns.splice(0);
 
     const held = new KeyboardEvent('keydown', {

@@ -4,7 +4,7 @@
 // The unit on top is the one the 2D map draws there: the active unit if it's in the stack, or else the one with the best
 //  defence, as the engine sends it. Hidden (`t`), only the active unit is marked, as on the 2D map.
 
-import { Player, Tile, Unit } from '@civ-clone/ui-protocol/types';
+import { City, Player, Tile, Unit } from '@civ-clone/ui-protocol/types';
 
 /** Two colours, a civilization's first and second, as CSS colours. */
 export type MarkerColours = readonly [string, string];
@@ -63,14 +63,20 @@ export const unitOnTop = (
   )[0] ??
   null;
 
+/** How the page words what markers show, as its other maps and windows do: a city's name. */
+export type MarkerWords = {
+  cityName?: (city: City) => string;
+};
+
 /**
  * What to mark on `tile`, with the unit `activeUnitId` active, and the units and cities `shown` or hidden (`t`):
- *  nothing, for a square with neither.
+ *  nothing, for a square with neither. Its words are the page's, where it gives them.
  */
 export const markerFor = (
   tile: Pick<Tile, 'city' | 'units'>,
   activeUnitId: string | null,
-  shown: boolean
+  shown: boolean,
+  words: MarkerWords = {}
 ): TileMarker | null => {
   const units = tile.units ?? [],
     top = unitOnTop(units, activeUnitId),
@@ -78,7 +84,7 @@ export const markerFor = (
     city: CityMarker | null =
       shown && tile.city
         ? {
-            name: tile.city.name,
+            name: words.cityName?.(tile.city) ?? tile.city.name,
             size: tile.city.growth?.size ?? 1,
             colours: coloursOf(tile.city.player),
             walled: tile.city.walled === true,

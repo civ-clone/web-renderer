@@ -419,7 +419,34 @@ expect(
 
 fire('gestureend', { scale: 1.2, rotation: 5, timeStamp: 5520 });
 
+// A third finger down, and one of the first two lifted: the two left carry the pinch on from where the camera is, with
+//  no jump, and spread apart they zoom from there.
+const pinched = orbit;
+
+pointer('pointerdown', 700, 500, { ...touch, pointerId: 13, isPrimary: false });
 pointer('pointerup', 400, 200, { ...touch, pointerId: 11 });
+pointer('pointermove', 700, 500, { ...touch, pointerId: 13, isPrimary: false });
+
+const handedOn = orbit;
+
+pointer('pointermove', 1000, 400, {
+  ...touch,
+  pointerId: 13,
+  isPrimary: false,
+});
+
+expect(
+  'with a third finger, the two left after one lifts carry the pinch on from where the camera is',
+  [
+    near(handedOn.distance, pinched.distance),
+    near(Math.cos(handedOn.yaw - pinched.yaw), 1, 1e-9),
+    near(handedOn.pitch, pinched.pitch),
+    orbit.distance < pinched.distance,
+  ],
+  [true, true, true, true]
+);
+
+pointer('pointerup', 1000, 400, { ...touch, pointerId: 13, isPrimary: false });
 pointer('pointerup', 400, 600, { ...touch, pointerId: 12, isPrimary: false });
 
 // Safari's trackpad: pinched out twice as far and twisted 30°.

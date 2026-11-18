@@ -1,10 +1,12 @@
 // The sea's surface on the 3D map (docs/3d-renderer-plan.md 1.4), without a GPU to draw it:
 //  - the land's heights it reads start at sea level, and each chunk built writes its points' heights at their places on
 //    the ground, near enough for half floats; points past the ground's edge are left out;
-//  - it follows the camera, as wide as it sees, with the sun's direction for its glint.
+//  - it follows the camera, as wide as it sees, with the sun's direction for its glint;
+//  - it, and the cloud, know how far the ground runs down and whether it wraps over the poles, and are drawn only on
+//    the ground on a world that doesn't.
 
 import { Color, Vector3 } from 'three';
-import Water from '@civ-clone/ui-map-3d/water';
+import Water, { Clouds } from '@civ-clone/ui-map-3d/water';
 import { ChunkMesh } from '@civ-clone/ui-map-3d/terrain/chunks';
 
 const failures: string[] = [];
@@ -126,6 +128,34 @@ expect(
   [[10, 0, 20], [300, 300, 1], Math.round((-Math.PI / 2) * 1000), [0.6, 0.8, 0]]
 );
 
+// The poles: how far down the ground runs (8 rows half a unit apart), and whether it wraps there.
+const wrapping = new Water({ ...ground, wrapsV: true }, new Color('#9fb3c4')),
+  clouds = new Clouds(water.texture(), ground),
+  wrappingClouds = new Clouds(wrapping.texture(), { ...ground, wrapsV: true }),
+  uniformsOf = (material: { uniforms: { [name: string]: { value: any } } }) => [
+    material.uniforms['extentV']?.value ?? material.uniforms['extent']?.value.y,
+    material.uniforms['wrapsV']!.value,
+  ],
+  // Each shader leaves out what's past the poles of a world that doesn't wrap over them.
+  stopsAtThePoles = (shader: string): boolean =>
+    /if \(!wrapsV && \(vWorld\.z < 0\.0 \|\| vWorld\.z > extent(V|\.y)\)\) \{\s*discard;/.test(
+      shader
+    );
+
+expect(
+  'the sea and the cloud know how far the ground runs down and whether it wraps there, and are drawn only on it where it doesn’t',
+  [
+    uniformsOf(water.mesh.material),
+    uniformsOf(wrapping.mesh.material),
+    uniformsOf(clouds.mesh.material),
+    uniformsOf(wrappingClouds.mesh.material),
+    stopsAtThePoles(water.mesh.material.fragmentShader),
+    stopsAtThePoles(clouds.mesh.material.fragmentShader),
+  ],
+  [[4, false], [4, true], [4, false], [4, true], true, true]
+);
+
+[wrapping, clouds, wrappingClouds].forEach((each) => each.dispose());
 water.dispose();
 
 if (failures.length > 0) {

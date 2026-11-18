@@ -70,9 +70,9 @@ const takesEnter = (target: EventTarget | null): boolean =>
     BracketRight: 1,
     Backslash: 'north',
   },
-  // What a key types that's the game's own whatever key types it: a letter or digit (a unit's order, a report), or the
-  //  trade rates' `+` and `-`.
-  gameKey = (key: string): boolean => /^[a-z0-9+\-=]$/i.test(key);
+  // What a key types that's the game's own whatever key types it: a letter or digit (a unit's order, a report), the
+  //  trade rates' `+` and `-`, or the Civilopedia's `?` and a window's filter's `/` (which Dvorak types on `[`).
+  gameKey = (key: string): boolean => /^[a-z0-9+\-=/?]$/i.test(key);
 
 export type InputControllerDeps = {
   // The primary actions' area, whose first button Tab focuses.

@@ -73,10 +73,18 @@ uniform vec3 foam;
 uniform vec3 sky;
 uniform vec3 sunDirection;
 uniform vec3 sunColour;
+// How far the ground runs down, and whether it wraps down.
+uniform float extentV;
+uniform bool wrapsV;
 
 varying vec3 vWorld;
 
 void main() {
+  // Past the poles of a world that doesn't wrap over them: no sea, as there's no land under it to read.
+  if (!wrapsV && (vWorld.z < 0.0 || vWorld.z > extentV)) {
+    discard;
+  }
+
   // The land's height here, from its points, each a texel's middle.
   vec2 uv = (vWorld.xz / cell + 0.5) / size;
   vec4 here = texture2D(ground, uv);
@@ -152,6 +160,8 @@ export class Water {
           sky: { value: sky.clone() },
           sunDirection: { value: new Vector3(0.5, 0.7, 0.4).normalize() },
           sunColour: { value: new Color('#fff0d8') },
+          extentV: { value: 0 },
+          wrapsV: { value: false },
         },
       ]),
       vertexShader,
@@ -164,6 +174,8 @@ export class Water {
     material.uniforms['ground']!.value = this.#texture;
     material.uniforms['cell']!.value.set(ground.spacingU, ground.spacingV);
     material.uniforms['size']!.value.set(ground.columns, ground.rows);
+    material.uniforms['extentV']!.value = ground.rows * ground.spacingV;
+    material.uniforms['wrapsV']!.value = ground.wrapsV;
 
     this.mesh = new Mesh(new PlaneGeometry(1, 1), material);
     this.mesh.rotation.x = -Math.PI / 2;

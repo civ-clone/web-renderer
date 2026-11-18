@@ -32,7 +32,7 @@ import {
 } from './camera/orbit';
 import prefersReducedMotion from '@civ-clone/ui-map/lib/reducedMotion';
 import CameraInput from './camera/CameraInput';
-import markerFor from './markers/markerFor';
+import markerFor, { MarkerWords } from './markers/markerFor';
 import pickGround from './camera/pick';
 import Minimap3D from './minimap/Minimap3D';
 
@@ -42,6 +42,9 @@ const BUILD_BUDGET = 10;
 
 // How long the camera takes to glide to a square it's centred on, or to turn, in ms.
 const GLIDE = 350;
+
+// How long the camera's distance stays the same before it's kept, in ms: a pinch or a zoom changes it every frame.
+const KEEP_DISTANCE_AFTER = 500;
 
 // How much of the way to the land's height under the focus the camera rises or falls each frame, so it doesn't jolt
 //  over every hill as it moves.
@@ -94,12 +97,15 @@ export class MapView3D implements MapRenderer {
   #input: CameraInput;
   #distance: MapView3DDeps['cameraDistance'];
   #keptDistance: number;
+  #keeping: ReturnType<typeof setTimeout> | null = null;
   // Whether the camera stops at the poles, as it starts: the portal's after that, which the options can change.
   #lockAtStart: boolean;
   // Whether the camera has been centred on anything yet: the first time, it's put there at once.
   #centred = false;
   // What a square does when clicked or held, the page's; and a square being chosen for a long-range order, if one is.
   #squares: MapView3DDeps['squares'];
+  // How the page words markers: cities' names.
+  #words: MarkerWords;
   #transport: MapView3DDeps['transport'];
   #picking: Picking | null = null;
   // The square the mouse rests on, waiting to show its tooltip or showing it, and whose tooltips they'd be.
@@ -154,6 +160,7 @@ export class MapView3D implements MapRenderer {
     this.#canvas = deps.mapCanvas;
     this.#coveredBy = deps.coveredBy;
     this.#art = deps.art;
+    this.#words = { cityName: deps.cityName };
     this.#artId = deps.art.id();
     this.world = deps.world;
     this.#land = new Land(deps.world);
@@ -286,6 +293,7 @@ export class MapView3D implements MapRenderer {
   }
 
   dispose(): void {
+    this.#keepDistance(true);
     this.#disposed = true;
     this.#endHover();
     this.#input.dispose();
@@ -496,6 +504,7 @@ export class MapView3D implements MapRenderer {
 
   // Whether the square at (`x`, `y`) is on the screen: its middle, at its copy nearest the camera, `margin` squares and
   //  half a square in from the screen's edges, as big as a square is there, and not under what floats over the map.
+  //  Mid-glide, where the camera's going: the game asks so as to know whether to move it there again.
   #visible(x: number, y: number, margin: number): boolean {
     const width = this.#canvas.clientWidth,
       height = this.#canvas.clientHeight;
@@ -505,9 +514,10 @@ export class MapView3D implements MapRenderer {
       return false;
     }
 
-    const [u, v] = this.#land.layout.centre(x, y),
+    const orbit = this.#glide?.to ?? this.#orbit,
+      [u, v] = this.#land.layout.centre(x, y),
       { u: periodU, v: periodV } = this.#period(),
-      [focusU, focusV] = this.#orbit.focus,
+      [focusU, focusV] = orbit.focus,
       nearest = (value: number, focus: number, period: number | null) =>
         period === null
           ? value
@@ -519,16 +529,12 @@ export class MapView3D implements MapRenderer {
       ],
       aspect = width / height,
       look = this.#lookHeight ?? 0,
-      middle = toScreen(this.#orbit, look, at, aspect),
+      middle = toScreen(orbit, look, at, aspect),
       // A square's width there, along the screen.
       beside = toScreen(
-        this.#orbit,
+        orbit,
         look,
-        [
-          at[0] + Math.cos(this.#orbit.yaw),
-          at[1],
-          at[2] + Math.sin(this.#orbit.yaw),
-        ],
+        [at[0] + Math.cos(orbit.yaw), at[1], at[2] + Math.sin(orbit.yaw)],
         aspect
       );
 
@@ -736,7 +742,8 @@ export class MapView3D implements MapRenderer {
     return [...this.#orbit.focus];
   }
 
-  // The square the camera looks at, on the world.
+  // The square the camera looks at, on the world: past a pole the camera stops at, the row at that pole, not the far
+  //  one's.
   #centreSquare(): Coordinate {
     const [x, y] = this.#land.layout.tileAt(...this.#orbit.focus),
       width = this.world.width(),
@@ -744,7 +751,10 @@ export class MapView3D implements MapRenderer {
 
     return {
       x: ((x % width) + width) % width,
-      y: Math.min(height - 1, Math.max(0, ((y % height) + height) % height)),
+      y:
+        this.#period().v === null
+          ? Math.min(height - 1, Math.max(0, y))
+          : ((y % height) + height) % height,
     };
   }
 
@@ -905,7 +915,8 @@ export class MapView3D implements MapRenderer {
       marker = markerFor(
         this.world.get(x, y),
         this.#activeUnit?.id ?? null,
-        this.#unitsShown
+        this.#unitsShown,
+        this.#words
       );
 
     const [u, v] = this.#land.layout.centre(x, y),
@@ -1033,16 +1044,31 @@ export class MapView3D implements MapRenderer {
       : null;
   }
 
-  // The camera's distance kept, once a frame at most, when it's changed: not mid-glide, which only passes through.
-  #keepDistance(): void {
+  // The camera's distance kept when it's changed, once it's stayed the same for a moment: not mid-glide, which only
+  //  passes through, nor every frame of a pinch or a zoom. Kept at once as the map's taken down.
+  #keepDistance(now = false): void {
+    if (this.#keeping !== null) {
+      clearTimeout(this.#keeping);
+      this.#keeping = null;
+    }
+
     const { distance } = this.#orbit;
 
     if (this.#glide !== null || distance === this.#keptDistance) {
       return;
     }
 
-    this.#keptDistance = distance;
-    this.#distance.set(distance);
+    const keep = (): void => {
+      this.#keeping = null;
+      this.#keptDistance = distance;
+      this.#distance.set(distance);
+    };
+
+    if (now) {
+      keep();
+    } else {
+      this.#keeping = setTimeout(keep, KEEP_DISTANCE_AFTER);
+    }
   }
 
   // Drawn on the next frame, once however often it's asked for in one.

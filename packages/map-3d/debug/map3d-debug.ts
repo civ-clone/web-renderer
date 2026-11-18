@@ -146,14 +146,22 @@ const start = (script: Map3DScript): void => {
 
   view.centre(world.get(centre.x, centre.y));
 
-  // Dragged or zoomed since: the address follows that too, and the arrows move on from there.
-  canvas.addEventListener('pointerup', () => {
-    const { x, y } = view.portal.center();
+  // However the camera's moved since (dragged, glided, zoomed about the pointer, sent by the minimap): once it's come to
+  //  rest, the address follows, and the arrows move on from there. Looked at four times a second.
+  let last = view.portal.center();
 
-    centre.x = x;
-    centre.y = y;
-    remember();
-  });
+  window.setInterval(() => {
+    const now = view.portal.center(),
+      resting = now.x === last.x && now.y === last.y;
+
+    last = now;
+
+    if (resting && (now.x !== centre.x || now.y !== centre.y)) {
+      centre.x = now.x;
+      centre.y = now.y;
+      remember();
+    }
+  }, 250);
 
   document.addEventListener('keydown', (event) => {
     const move = moves[event.key],

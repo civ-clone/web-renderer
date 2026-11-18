@@ -147,12 +147,23 @@ expect(
   [(width - 1) * height * 2, (width - 1) * 2, (width - 1) * (height - 1) * 2]
 );
 expect(
-  'and a dot in its owner’s colour for the stack and for the city, bigger for the city, at their squares’ middles, row by row',
+  'and a dot in its owner’s colour for the stack and for the city, bigger for the city, at their squares’ middles and a world either side, row by row',
   dots.map(({ args }) => args),
-  [
-    [4.5 * 4 - 1.4, 1.5 * 4 - 1.4, 1.4 * 2, 1.4 * 2],
-    [2.5 * 4 - 2.2, 2.5 * 4 - 2.2, 2.2 * 2, 2.2 * 2],
-  ]
+  [-width, 0, width]
+    .map((across) => [
+      (4.5 + across) * 4 - 1.4,
+      1.5 * 4 - 1.4,
+      1.4 * 2,
+      1.4 * 2,
+    ])
+    .concat(
+      [-width, 0, width].map((across) => [
+        (2.5 + across) * 4 - 2.2,
+        2.5 * 4 - 2.2,
+        2.2 * 2,
+        2.2 * 2,
+      ])
+    )
 );
 
 shown.drawn.length = 0;
@@ -172,17 +183,23 @@ const ops = shown.drawn.map(({ op }) => op),
     .map(({ args }) => args);
 
 expect(
-  'shown, it draws the overview, a white dot for the unit awaiting orders, and the camera’s patch at each copy',
+  'shown, it draws the overview, a white dot for the unit awaiting orders and the camera’s patch at each copy',
   [
     ops.slice(0, 2),
-    shown.drawn.find(({ op, fill }) => op === 'fillRect' && fill === '#ffffff')
-      ?.args,
+    shown.drawn
+      .filter(({ op, fill }) => op === 'fillRect' && fill === '#ffffff')
+      .map(({ args }) => args),
     moves,
     ops.filter((op) => op === 'stroke').length,
   ],
   [
     ['clearRect', 'drawImage'],
-    [5.5 * 4 - 2, 0.5 * 4 - 2, 4, 4],
+    [-width, 0, width].map((across) => [
+      (5.5 + across) * 4 - 2,
+      0.5 * 4 - 2,
+      4,
+      4,
+    ]),
     [
       [(1 - width) * 4, 4],
       [4, 4],
@@ -243,10 +260,15 @@ expect(
   'on a world that wraps over the poles, each seen square is drawn a world up too, and the camera’s patch, taken into the period, a world up and down as well as across',
   [
     wrappingOverview.drawn.filter(({ op }) => op === 'fill').length,
+    wrappingOverview.drawn.filter(
+      ({ op, fill }) => op === 'fillRect' && fill === '#aa0000'
+    ).length,
     wrapping.drawn.filter(({ op }) => op === 'moveTo').map(({ args }) => args),
   ],
   [
     (width - 1) * height * 4,
+    // The stack’s and the city’s, at nine copies each.
+    2 * 9,
     [-height, 0, height].flatMap((down) =>
       [-width, 0, width].map((across) => [(1 + across) * 4, (3 + down) * 4])
     ),

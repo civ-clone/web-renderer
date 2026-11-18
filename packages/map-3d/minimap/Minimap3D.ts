@@ -165,19 +165,33 @@ export class Minimap3D {
       }
     }
 
-    dots.forEach(([u, v, colour, size]) => {
-      const [px, py] = this.#px(u, v);
+    // Each at every copy that could show on the overview, so one at an edge shows on the far side too.
+    dots.forEach(([u, v, colour, size]) =>
+      this.#everywhere(u, v).forEach(([px, py]) => {
+        context.fillStyle = '#000000';
+        context.fillRect(
+          px - size - 0.5,
+          py - size - 0.5,
+          size * 2 + 1,
+          size * 2 + 1
+        );
+        context.fillStyle = colour;
+        context.fillRect(px - size, py - size, size * 2, size * 2);
+      })
+    );
+  }
 
-      context.fillStyle = '#000000';
-      context.fillRect(
-        px - size - 0.5,
-        py - size - 0.5,
-        size * 2 + 1,
-        size * 2 + 1
-      );
-      context.fillStyle = colour;
-      context.fillRect(px - size, py - size, size * 2, size * 2);
-    });
+  // A point on the ground on the overview, at every copy that could show on it: where it is, a world either side, and a
+  //  world up and down where the world wraps over the poles.
+  #everywhere(u: number, v: number): [number, number][] {
+    const downs =
+      this.#periodV === null ? [0] : [-this.#periodV, 0, this.#periodV];
+
+    return downs.flatMap((down) =>
+      [-this.#across, 0, this.#across].map((across) =>
+        this.#px(u + across, v + down)
+      )
+    );
   }
 
   /**
@@ -198,11 +212,12 @@ export class Minimap3D {
     context.drawImage(this.#overview, 0, 0);
 
     if (active !== null) {
-      const [u, v] = this.#layout.centre(active.x, active.y),
-        [px, py] = this.#px(u, v);
+      const [u, v] = this.#layout.centre(active.x, active.y);
 
       context.fillStyle = '#ffffff';
-      context.fillRect(px - 2, py - 2, 4, 4);
+      this.#everywhere(u, v).forEach(([px, py]) =>
+        context.fillRect(px - 2, py - 2, 4, 4)
+      );
     }
 
     if (patch === null || patch.length < 3) {
