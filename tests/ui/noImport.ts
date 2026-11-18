@@ -131,15 +131,19 @@ const statusFont = (): string | undefined => {
   return calls.find(([name]) => name === 'fillText')?.[1];
 };
 
-// What an action button's picture is drawn with: its transforms, and where its city is drawn.
-const actionIcon = (): { transforms: unknown[][]; city: unknown[] } => {
+// What an action button's picture is drawn with, shown `shownAt` px across on a screen of `ratio`: its canvas's size,
+//  its transforms, and where its city is drawn.
+const actionIcon = (
+  shownAt = 32,
+  ratio = 1
+): { transforms: unknown[][]; city: unknown[]; size?: number[] } => {
   const { calls, canvas } = fakeCanvas(16, 16),
     context = canvas.getContext('2d') as any;
 
   context.setTransform = (...args: unknown[]) =>
     calls.push(['setTransform', ...args]);
-  (canvas as any).clientWidth = 32;
-  (globalThis as any).devicePixelRatio = 1;
+  (canvas as any).clientWidth = shownAt;
+  (globalThis as any).devicePixelRatio = ratio;
 
   drawUnitActionIcon(canvas, [{ type: 'city', text: 'S', colours: null }]);
 
@@ -148,6 +152,9 @@ const actionIcon = (): { transforms: unknown[][]; city: unknown[] } => {
       .filter(([name]) => name === 'setTransform')
       .map(([, scale]) => [scale]),
     city: calls.find(([name]) => name === 'drawImage')?.slice(2) ?? [],
+    ...(shownAt === 32 && ratio === 1
+      ? {}
+      : { size: [canvas.width, canvas.height] }),
   };
 };
 
@@ -222,6 +229,23 @@ const run = async (): Promise<void> => {
       transforms: [[1], [2], [1]],
       city: [1, 1],
     }
+  );
+  // #1118: a 32 px sprite shrunk into the 24 px a menu shows it at, pixel by pixel, would lose a pixel in four.
+  expect(
+    "an action button shown smaller than the pixel art's sprites is drawn at their size, every pixel of them kept",
+    [actionIcon(24), actionIcon(28)],
+    [
+      { transforms: [[1], [2], [1]], city: [1, 1], size: [32, 32] },
+      { transforms: [[1], [2], [1]], city: [1, 1], size: [32, 32] },
+    ]
+  );
+  expect(
+    'and one shown larger, at the next whole number of them: each of their pixels two of the canvas’s',
+    [actionIcon(24, 2), actionIcon(40)],
+    [
+      { transforms: [[2], [4], [2]], city: [1, 1], size: [64, 64] },
+      { transforms: [[2], [4], [2]], city: [1, 1], size: [64, 64] },
+    ]
   );
   expect(
     "the cursor is the pixel art's torch, at its cursor size",

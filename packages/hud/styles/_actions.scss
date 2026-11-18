@@ -163,9 +163,10 @@
       border-color: var(--ui-glow);
     }
 
+    // Drawn at least as large as it's shown, a whole number of the sprites' size (#1118), so only ever shrunk, and
+    //  shrunk smoothly: `pixelated` would drop whole pixels of the art.
     canvas {
       height: 100%;
-      image-rendering: pixelated;
       width: 100%;
     }
   }

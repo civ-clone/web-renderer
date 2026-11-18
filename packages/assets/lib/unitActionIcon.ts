@@ -222,11 +222,28 @@ const drawMark = (context: CanvasRenderingContext2D, text: string): void => {
   context.fillText(text, iconSize / 2, iconSize * 0.75 - 1);
 };
 
-// How many of the canvas's pixels make one of the picture's: as many as the screen shows it at (#352), so the
-//  marks are written at that size rather than enlarged. A canvas not laid out yet is shown at the picture's own size.
-export const iconScale = (canvas: HTMLCanvasElement): number =>
-  ((canvas.clientWidth || iconSize) * (globalThis.devicePixelRatio || 1)) /
-  iconSize;
+// The sprites' own tile, which may be larger than the picture (the pixel art's 32 px): the picture is fitted into it.
+export const iconPictureSize = (
+  tileset: TilesetDescriptor = interfaceArt()
+): number => Math.max(iconSize, tileset.tile.width);
+
+/**
+ * How many pixels across an icon's canvas is drawn (#1118): a whole number of the sprites' own size, so each of their
+ *  pixels is the same number of the canvas's, and never fewer than the screen shows it at (#352), so the marks are
+ *  written at that size and no sprite pixel is dropped. Where that's more than the screen shows, the browser shrinks
+ *  the whole drawing smoothly. A canvas not laid out yet is shown at the picture's own size.
+ */
+export const iconCanvasSize = (
+  canvas: HTMLCanvasElement,
+  tileset: TilesetDescriptor = interfaceArt()
+): number => {
+  const pictureSize = iconPictureSize(tileset),
+    shown =
+      (canvas.clientWidth || iconSize) * (globalThis.devicePixelRatio || 1);
+
+  // Less a little, so a size that is already a whole number of sprites, give or take rounding, isn't taken up a step.
+  return pictureSize * Math.max(1, Math.ceil(shown / pictureSize - 1e-6));
+};
 
 export const drawUnitActionIcon = (
   canvas: HTMLCanvasElement,
@@ -238,17 +255,14 @@ export const drawUnitActionIcon = (
     return;
   }
 
-  const scale = iconScale(canvas);
-
-  canvas.width = Math.round(iconSize * scale);
-  canvas.height = Math.round(iconSize * scale);
-
   // The interface's own art (#1063): a button's picture is the same whatever pack the map is drawn with.
   const tileset = interfaceArt(),
+    size = iconCanvasSize(canvas, tileset),
     stacked = layers.filter((layer) => layer.type === 'unit').length > 1,
-    // The sprites' own tile, which may be larger than the picture (the pixel art's 32 px): fitted into it.
-    pictureSize = Math.max(iconSize, tileset.tile.width),
-    spriteScale = (scale * iconSize) / pictureSize,
+    pictureSize = iconPictureSize(tileset),
+    // How many of the canvas's pixels make one of the picture's, for the marks; and one of the sprites', always whole.
+    scale = size / iconSize,
+    spriteScale = size / pictureSize,
     // Drawn in the sprites' own pixels; the sprites are enlarged pixel by pixel, and the marks written at full size,
     //  in the picture's.
     drawSprites = (): void =>
@@ -258,6 +272,9 @@ export const drawUnitActionIcon = (
       drawMark(context, text);
       drawSprites();
     };
+
+  canvas.width = size;
+  canvas.height = size;
 
   drawSprites();
   context.imageSmoothingEnabled = false;
