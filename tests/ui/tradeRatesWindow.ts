@@ -270,6 +270,56 @@ const liveAndCancel = async (): Promise<void> => {
 
   document.removeEventListener('traderatesclosed', countClosed);
 
+  // Closed having just sent rates (Cancel here), it leaves the look at the turn to the engine's answer: looked at at once,
+  //  the turn would be ended on the figures from before the rates went back.
+  const reverting = openTradeRates(plain([40, 0, 60]), transport);
+
+  move(reverting.element(), 1, 30);
+  await wait(tradeRatesDelay + 50);
+  await wait(0);
+
+  let revertClosedEvents = 0;
+  const countRevert = () => revertClosedEvents++;
+
+  document.addEventListener('traderatesclosed', countRevert);
+  cancel(reverting.element()).click();
+  await wait(0);
+  document.removeEventListener('traderatesclosed', countRevert);
+
+  expect(
+    'closed having just sent rates, it doesn’t say so: the answer will',
+    revertClosedEvents,
+    0
+  );
+
+  // A refresh that comes before a later send's answer, and then a move back to its rates: they're sent, rather than
+  //  taken as the engine's, as the later send may yet land.
+  const stale = openTradeRates(plain([40, 0, 60]), transport);
+
+  move(stale.element(), 0, 50);
+  await wait(tradeRatesDelay + 50);
+  move(stale.element(), 0, 60);
+  await wait(tradeRatesDelay + 50);
+  // The answer to the first send, 50, arrives after the second, 60, went.
+  refreshTradeRates(plain([50, 0, 50]), playerWith(25, 8, true));
+  move(stale.element(), 0, 50);
+
+  const beforeBack = sent.length;
+
+  await wait(tradeRatesDelay + 50);
+
+  expect(
+    'moved back to the rates of a send already answered, they are sent again',
+    [
+      sent.length - beforeBack,
+      sent.at(-1)?.[1].value.find(([rate]: [string]) => rate === 'Tax'),
+    ],
+    [1, ['Tax', 50]]
+  );
+
+  stale.close();
+  await wait(0);
+
   // A window taken off the page without being closed: its End Turn listener goes with it when the next one opens.
   const removed = openTradeRates(plain([40, 0, 60]), transport);
 
