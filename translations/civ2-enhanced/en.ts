@@ -56,5 +56,5 @@ i18next.addResources('en', 'ruleset', {
   'civ2-enhanced.computer-launch-wait.name':
     'Above King, a computer player holds its spaceship back while a rival computer player’s ship would arrive first',
   'civ2-enhanced.computer-launch-wait.description':
-    'The original means its computer players to wait like this, but a slip in the game compares their arrival with a ship that never flies, so none of them ever waits.',
+    'In the original, a slip in the game compares their arrival with a ship that never flies, so no computer player ever waits.',
 });

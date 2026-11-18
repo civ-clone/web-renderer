@@ -295,9 +295,11 @@ const civ2Endgame = (): string | null => {
 
   recordUse(loser!.civilization().sourceClass() as never);
 
-  // A ship's count of steps at sea, on the person's ship: a barbarian ship of its own would give up as the barbarians'
-  //  next turn starts (no horde aboard), and a computer player's could be moved or lost while the loaded game plays on,
-  //  where the person's waits for orders. Its rules count only a barbarian ship's steps, so the count stays as saved.
+  // A ship's count of steps at sea, on a ship of the person's: a barbarian ship of its own would give up as the
+  //  barbarians' next turn starts (no horde aboard). Automation plays the person's turns, so the ship may move, or be
+  //  lost at sea, while the loaded game plays on, but only a barbarian ship's steps are counted, and a lost ship's
+  //  record is dropped only as a barbarian player's turn starts. Any unit added changes how the loaded game plays on:
+  //  a Transport in its place changed the outcome of the diplomacy records' check.
   const person = computers.find((player) =>
       isHuman(player, clientRegistryInstance)
     ),
@@ -379,8 +381,8 @@ const civ2EndgameState = (rebelCivilization: string | null) => {
       pendingEffectRegistryInstance
         .getByHandler(CIVILIZATION_USES)[0]
         ?.data() ?? null,
-    // Each count at sea: its ship's type and owner, whether it is the ship the game has (not a copy left behind by the
-    //  load), and the count.
+    // Each count at sea: its ship's id, type and owner, the count, and that the ship is the game's own unit, not a copy
+    //  the load left behind (the registry's unit of that id, unless the ship has since been lost).
     shipsAtSea: pendingEffectRegistryInstance
       .getByHandler(SHIP_AT_SEA)
       .map((record) => {
@@ -389,9 +391,13 @@ const civ2EndgameState = (rebelCivilization: string | null) => {
         return ship === null
           ? null
           : {
+              id: ship.id(),
               type: typeNameOf(ship.sourceClass()),
               human: isHuman(ship.player(), clientRegistryInstance),
-              registered: unitRegistryInstance.entries().includes(ship),
+              theGames:
+                (unitRegistryInstance
+                  .entries()
+                  .find((unit) => unit.id() === ship.id()) ?? ship) === ship,
               count: shipCount(defaultGame, ship),
             };
       }),
@@ -1439,7 +1445,9 @@ if (scenario !== null) {
       endgame?.warming,
       endgame?.comebacks !== null,
       endgame?.rebels,
-      endgame?.shipsAtSea,
+      endgame?.shipsAtSea?.map(
+        (record: any) => record && { ...record, id: typeof record.id }
+      ),
     ],
     [
       'SpaceshipLayout',
@@ -1449,7 +1457,15 @@ if (scenario !== null) {
       { level: 9, warmings: 1, turn: endgame?.warming?.turn },
       true,
       ['Breakaway'],
-      [{ type: 'Trireme', human: true, registered: true, count: 3 }],
+      [
+        {
+          id: 'string',
+          type: 'Trireme',
+          human: true,
+          theGames: true,
+          count: 3,
+        },
+      ],
     ]
   );
   // The loaded game plays on before it's read, and the warming level moves each turn toward what the pollution makes
