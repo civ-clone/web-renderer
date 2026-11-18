@@ -6,7 +6,7 @@
 //  load puts it back, and that the civilopedia stops saying a unit goes obsolete in a game where it doesn't. And, with
 //  sets of its own in rules of its own (#954), that what is wrong with the sets goes to the page with each answer, and
 //  that a game is not started or loaded under sets with a problem that blocks. With the plugins again, the enhanced
-//  rules (`civ1-enhanced`, #954, #959, #960): where play departs from the original, each of the seventeen a set that a
+//  rules (`civ1-enhanced`, #954, #959, #960): where play departs from the original, each of the eighteen a set that a
 //  game can switch back, as it starts (all but the seven new variants on, which is play as it has been: the Hydro Plant
 //  on its own square, SDI Defense sparing its city, defectors staying veteran, fixed research costs, ages, research
 //  cost by age, the barbarians' activity), switched, started, saved and loaded. The barbarians' activity (#1008) is a
@@ -41,6 +41,7 @@ import {
   HYDRO_PLANT_SITE,
   OBSOLETE_BUILDS,
   POLLUTION_IN_EVERY_CITY,
+  RAILROADS_IN_CITIES,
   SDI_DEFENSE_SPARES_CITIES,
   SETTLERS_WAIT_FOR_SIZE_TWO,
   STARTING_ADVANCES_COUNT,
@@ -54,6 +55,7 @@ import {
   AGE_BY_TIER_RULE,
   BARBARIAN_ACTIVITY_RULE,
   RATE_MULTIPLIER_BY_AGE_RULE,
+  CATCH_UP_FROM_RENAISSANCE_RULE,
   CLEAR_CAPTURED_BUILD_RULE,
   EVERY_ADVANCE_COUNT_RULE,
   HALVE_CITIES_RULE,
@@ -62,6 +64,8 @@ import {
   LAND_UPRISING_RULE,
   POLLUTION_RULE,
   RAIDERS_ONLY_RULE,
+  RAILROAD_IN_CITIES_RULE,
+  RAILROAD_ON_BOTH_SQUARES_RULE,
   RANSOM_RULE,
   REVALIDATE_BUILDS_RULE,
   SETTLERS_WAIT_RULE,
@@ -72,6 +76,8 @@ import {
 import {
   CHIEFTAIN_SETTLERS_RULE as CIV1_CHIEFTAIN_SETTLERS_RULE,
   HALVE_CITIES_RULE as CIV1_HALVE_CITIES_RULE,
+  NO_RAILROAD_IN_CITIES_RULE as CIV1_NO_RAILROAD_IN_CITIES_RULE,
+  RAILROAD_MOVEMENT_RULE as CIV1_RAILROAD_MOVEMENT_RULE,
   START_AFRESH_RULE as CIV1_START_AFRESH_RULE,
   STEAL_RULE as CIV1_STEAL_RULE,
 } from '@civ-clone/civ1-unit/RuleIds';
@@ -368,7 +374,7 @@ const check = async (): Promise<void> => {
       ? originals
       : [originals];
 
-  const sets: [string, string, string | string[] | null][] = [
+  const sets: [string, string | string[], string | string[] | null][] = [
       [HYDRO_PLANT_SITE, HYDRO_PLANT_SITE_RULE, CIV1_HYDRO_PLANT_SITE_RULE],
       [BARBARIAN_LEADER_RANSOM, RANSOM_RULE, CIV1_RANSOM_RULE],
       [OBSOLETE_BUILDS, REVALIDATE_BUILDS_RULE, null],
@@ -392,10 +398,10 @@ const check = async (): Promise<void> => {
       [FIXED_RESEARCH_COSTS, TIERED_COST_RULE, CIV1_COST_RULE],
       // #1076: rules added to Civ1's, so nothing to replace; one of them stands for the rest.
       [AGES, AGE_BY_TIER_RULE, null],
-      // #1077: two rules, each in place of one of civ1-science's; the multiplier stands for both of its own.
+      // #1077: two rules, each in place of one of civ1-science's.
       [
         RESEARCH_COST_BY_AGE,
-        RATE_MULTIPLIER_BY_AGE_RULE,
+        [RATE_MULTIPLIER_BY_AGE_RULE, CATCH_UP_FROM_RENAISSANCE_RULE],
         [CIV1_RATE_MULTIPLIER_RULE, CIV1_CATCH_UP_RULE],
       ],
       // #973: today's count, on to start with, in place of v474.05's of only the advances gained in play.
@@ -406,6 +412,13 @@ const check = async (): Promise<void> => {
       ],
       // #1008: a rule added to Civ1's, answering civ1-barbarians' activity level with the level chosen beneath it.
       [BARBARIAN_ACTIVITY, BARBARIAN_ACTIVITY_RULE, null],
+      // #1029: today's railroads, on to start with, in place of v474.05's refusal of a city's Railroad and its
+      //  movement.
+      [
+        RAILROADS_IN_CITIES,
+        [RAILROAD_IN_CITIES_RULE, RAILROAD_ON_BOTH_SQUARES_RULE],
+        [CIV1_NO_RAILROAD_IN_CITIES_RULE, CIV1_RAILROAD_MOVEMENT_RULE],
+      ],
     ],
     // The new variants, each off to start with.
     startsOff = [
@@ -419,11 +432,11 @@ const check = async (): Promise<void> => {
     ],
     // As the game has been played: every one on but the new variants.
     asPlayed = sets.map(([id]) => id).filter((id) => !startsOff.includes(id)),
-    // Which of the rules they switch run, enhanced and original.
+    // Which of the rules they switch run, enhanced and original (a set may have more than one of each).
     running = (): string[] =>
       sets
         .flatMap(([, enhanced, originals]) => [
-          enhanced,
+          ...originalsOf(enhanced),
           ...originalsOf(originals),
         ])
         .filter(
@@ -433,7 +446,7 @@ const check = async (): Promise<void> => {
     // Which of them should run with `on` the sets in force: each one's enhanced rule, or else its original.
     inForce = (on: string[]): string[] =>
       sets.flatMap(([id, enhanced, originals]) =>
-        on.includes(id) ? [enhanced] : originalsOf(originals)
+        on.includes(id) ? originalsOf(enhanced) : originalsOf(originals)
       ),
     // How the setup should draw each set with `on` the sets in force.
     drawn = (on: string[]): string[] =>
@@ -451,7 +464,7 @@ const check = async (): Promise<void> => {
     asStarted = ruleSetsData(null);
 
   expect(
-    'the enhanced rules are a set the setup is told of, mixed: the seven new variants off, the other ten on, as the game has been played; nothing is chosen, and nothing is wrong',
+    'the enhanced rules are a set the setup is told of, mixed: the seven new variants off, the other eleven on, as the game has been played; nothing is chosen, and nothing is wrong',
     [enhanced(asStarted.sets), asStarted.choices, asStarted.problems],
     [['set', 'mixed', true, drawn(asPlayed)], [], []]
   );
@@ -667,6 +680,7 @@ const check = async (): Promise<void> => {
       { id: SDI_DEFENSE_SPARES_CITIES, value: true },
       { id: SETTLERS_WAIT_FOR_SIZE_TWO, value: false },
       { id: STARTING_ADVANCES_COUNT, value: false },
+      { id: RAILROADS_IN_CITIES, value: false },
     ],
     enhancedOn = [HYDRO_PLANT_SITE, OBSOLETE_BUILDS, SDI_DEFENSE_SPARES_CITIES];
 
