@@ -48,7 +48,8 @@ export interface ReliefMap {
   refresh(): void;
 }
 
-// How much of a peak is in the blend with its neighbours: the rest is its own, at its middle.
+// How much of a peak's height is its own, weighted by the square of its weight: the rest is in the blend with its
+//  neighbours.
 const PEAK_SHARE = 0.65;
 
 // A CSS hex colour as linear red, green and blue, for the renderer's lighting.

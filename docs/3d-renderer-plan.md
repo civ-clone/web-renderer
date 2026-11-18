@@ -126,6 +126,17 @@ A point exactly on an edge goes to either square, whichever the rounding gives.
 
 ### 1.1 Relief and the land's mesh
 
+**Done** (spec §4.1 and §4.2, "As built"): under `?3d=1`, a game shows its land on every grid: relief, the sea's floor
+and a colour per terrain. It's built a few chunks a frame, from where the map is centred.
+- **Code:** `packages/map-3d/terrain` (kernel, noise, relief, chunks) and `packages/map-3d/Land.ts`, with the terrain
+  table in `packages/models-builtin/terrain.ts`.
+- **Tests:** `tests/ui/relief.ts` and `tests/ui/chunks.ts`.
+- **Colour:** one per terrain, blended by the same kernel as the height.
+- **Squares never seen:** flat at sea level and dark. The cloud over them is 1.4's.
+- **Speed:** an 80×50 world builds in 250–370 ms, 17–25 ms a chunk, at 10 ms of building a frame.
+- **`?debug=1`:** the stats overlay, and `window.civMap3DView` for the console.
+- **Moved to 1.1b:** fixed seeds and a world on any grid without a game. Saved camera positions wait for the camera (1.2).
+
 - **What:**
   - the height function (spec §4.1), with relief profiles from the built-in set's terrain table;
   - chunks;
@@ -136,6 +147,14 @@ A point exactly on an edge goes to either square, whichever the rounding gives.
   screenshots at this slice and every one after.
 - **Tests:** determinism, seams and `Unknown`.
 - **Done when:** a Civ1 world on each grid shows its land from a fixed camera.
+
+### 1.1b The debug world page
+
+- **What:** a page that builds a generated world on any grid (`square`, `staggered-iso`, `hex-odd-r`), with no game,
+  from a seed and a size in its address, and draws it with the 3D map. It's for screenshots and for trying the grids a
+  game can't start on yet (the isometric grid needs Civ2's art to start a game).
+- **It has:** the stats overlay, and every square seen or a fog of war at random.
+- **It doesn't:** start the game's worker, or load the 2D art.
 
 ### 1.2 Camera
 
