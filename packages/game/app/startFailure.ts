@@ -56,7 +56,9 @@ export const showStartFailure = (
   dialog.append(again);
 
   if (toMenu !== null) {
-    const menu = s<HTMLButtonElement>('<button type="button"></button>');
+    const menu = s<HTMLButtonElement>(
+      '<button type="button" class="btn-secondary"></button>'
+    );
 
     menu.textContent = say('menu');
     menu.addEventListener('click', (): void => toMenu());
