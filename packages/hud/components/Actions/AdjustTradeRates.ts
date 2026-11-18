@@ -69,6 +69,17 @@ declare global {
 export const tradeRatesOpen = (): boolean =>
   open !== null && open.element().isConnected;
 
+// Whether the game is waiting for the other civilizations, when it takes no actions: the window shows the rates, but
+//  can't change them until the turn comes back (#1058).
+let waitingForTurn = false,
+  showWaiting: (() => void) | null = null;
+
+/** Said by the game as the turn ends and starts again, for an open window to stop or start taking changes. */
+export const setTradeRatesWaiting = (waiting: boolean): void => {
+  waitingForTurn = waiting;
+  showWaiting?.();
+};
+
 // A window taken off the page without being closed (a game torn down, say): its End Turn listener and pending send go
 //  with it.
 let disposeOpen: (() => void) | null = null;
@@ -362,6 +373,29 @@ export const openTradeRates = (
 
   document.addEventListener('beforeendturn', settle);
 
+  // Waiting for the turn, the rates and OK are out of reach, and the window says why; Cancel and closing still work.
+  const rateRows = window
+      .element()
+      .querySelector('.adjust-trade-rates-rates') as HTMLElement,
+    okButton = window
+      .element()
+      .querySelector('.btn-primary') as HTMLButtonElement | null,
+    waitingNote = s('<p class="adjust-trade-rates-waiting" hidden></p>');
+
+  waitingNote.textContent = text('Game.waiting');
+  rateRows.after(waitingNote);
+
+  showWaiting = (): void => {
+    rateRows.inert = waitingForTurn;
+    waitingNote.hidden = !waitingForTurn;
+
+    if (okButton !== null) {
+      okButton.disabled = waitingForTurn;
+    }
+  };
+
+  showWaiting();
+
   disposeOpen = (): void => {
     document.removeEventListener('beforeendturn', settle);
 
@@ -374,6 +408,7 @@ export const openTradeRates = (
       open = null;
       refreshOpen = null;
       disposeOpen = null;
+      showWaiting = null;
     }
   };
 
@@ -382,6 +417,7 @@ export const openTradeRates = (
 
     if (open === window) {
       disposeOpen = null;
+      showWaiting = null;
     }
 
     // Once it's settled, below, the turn may be ended for the player again.

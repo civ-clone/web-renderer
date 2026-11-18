@@ -5,7 +5,10 @@ import { t } from 'i18next';
 import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
 import openCity from '@civ-clone/ui-city/components/openCity';
 import CitiesList from '@civ-clone/ui-hud/components/CitiesList';
-import { tradeRatesOpen } from '@civ-clone/ui-hud/components/Actions/AdjustTradeRates';
+import {
+  setTradeRatesWaiting,
+  tradeRatesOpen,
+} from '@civ-clone/ui-hud/components/Actions/AdjustTradeRates';
 import { redrawWindowUnits } from '@civ-clone/ui-hud/components/Unit';
 import GameMenu from '@civ-clone/ui-menus/components/GameMenu';
 import { GameMenuItem } from '@civ-clone/ui-menus/components/mapMenus';
@@ -801,6 +804,8 @@ export class GameSession {
 
   #turnEnded(): void {
     this.#gameState.setWaiting(true);
+    // The game takes no actions until the turn comes back: an open trade rates window can't change the rates (#1058).
+    setTradeRatesWaiting(true);
     this.#mapView.portal.setWaiting(true);
     this.#waitingBanner.textContent = t(
       this.#observing ? 'Observer.watching' : 'Game.waiting'
@@ -818,6 +823,8 @@ export class GameSession {
     // A new turn: an End Turn sent before it was handed over is never answered, as the worker wasn't listening
     //  (#151).
     this.#endTurnSent = false;
+
+    setTradeRatesWaiting(false);
 
     // Nor is any unit's order sent while waiting: the keys are free for the new turn (#543).
     this.#unitController!.turnStarted();

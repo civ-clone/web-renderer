@@ -13,6 +13,7 @@ import {
   openTradeRates,
   refreshTradeRates,
   tradeRatesDelay,
+  setTradeRatesWaiting,
   tradeRatesOpen,
 } from '@civ-clone/ui-hud/components/Actions/AdjustTradeRates';
 import { Player, PlayerTradeRates } from '@civ-clone/ui-protocol/types';
@@ -286,6 +287,32 @@ const liveAndCancel = async (): Promise<void> => {
     [sent.length - beforeRemoved, next !== removed],
     [0, true]
   );
+
+  // Waiting for the other civilizations, the game takes no actions: the window says so, and its rates and OK can't be
+  //  used until the turn comes back.
+  const waiting = openTradeRates(plain([40, 0, 60]), transport),
+    okButton = ok(waiting.element()),
+    waitingNote = waiting
+      .element()
+      .querySelector('.adjust-trade-rates-waiting') as HTMLElement;
+
+  setTradeRatesWaiting(true);
+
+  const whileWaiting = [okButton.disabled, waitingNote.hidden];
+
+  setTradeRatesWaiting(false);
+
+  expect(
+    'while waiting, OK is disabled and the window says why; at the turn, both are back',
+    [whileWaiting, [okButton.disabled, waitingNote.hidden]],
+    [
+      [true, false],
+      [false, true],
+    ]
+  );
+
+  waiting.close();
+  await wait(0);
 
   // The turn ends with it open, a move still pending: what's on screen is sent at once, ahead of End Turn, and kept.
   const ending = openTradeRates(plain([40, 0, 60]), transport),
