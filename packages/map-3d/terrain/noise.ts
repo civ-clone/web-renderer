@@ -1,6 +1,7 @@
 // Noise that repeats exactly over the world's period (docs/3d-renderer.md §4.1), so the land has no seam where the world
-//  wraps: value noise on a lattice whose cells divide the period, each lattice point's value hashed from its own
-//  co-ordinates (taken round the period) and a seed. The same point always gives the same value.
+//  wraps: gradient (Perlin) noise on a lattice whose cells divide the period, each lattice point's slope hashed from its
+//  own co-ordinates (taken round the period) and a seed. The same point always gives the same value. Gradient noise,
+//  not value noise: value noise flattens at every lattice point, which shows as a grid of lines in the light.
 
 /** A point's noise, between -1 and 1. */
 export type Noise = (u: number, v: number) => number;
@@ -44,22 +45,35 @@ export const periodicNoise = ({
     wrapV = (j: number): number =>
       cellsV === null ? j : ((j % cellsV) + cellsV) % cellsV;
 
+  // The slope at a lattice point, along (`dx`, `dy`) from it: one of 16 directions round the circle, hashed.
+  const slope = (i: number, j: number, dx: number, dy: number): number => {
+    const angle = Math.floor(hash(i, j, seed) * 16) * (Math.PI / 8);
+
+    return Math.cos(angle) * dx + Math.sin(angle) * dy;
+  };
+
   return (u: number, v: number): number => {
     const x = u / stepU,
       y = v / stepV,
       i = Math.floor(x),
       j = Math.floor(y),
-      fx = fade(x - i),
-      fy = fade(y - j),
+      dx = x - i,
+      dy = y - j,
+      fx = fade(dx),
+      fy = fade(dy),
       i0 = wrapU(i),
       i1 = wrapU(i + 1),
       j0 = wrapV(j),
       j1 = wrapV(j + 1),
-      top = hash(i0, j0, seed) + (hash(i1, j0, seed) - hash(i0, j0, seed)) * fx,
+      top =
+        slope(i0, j0, dx, dy) +
+        (slope(i1, j0, dx - 1, dy) - slope(i0, j0, dx, dy)) * fx,
       bottom =
-        hash(i0, j1, seed) + (hash(i1, j1, seed) - hash(i0, j1, seed)) * fx;
+        slope(i0, j1, dx, dy - 1) +
+        (slope(i1, j1, dx - 1, dy - 1) - slope(i0, j1, dx, dy - 1)) * fx;
 
-    return (top + (bottom - top) * fy) * 2 - 1;
+    // Gradient noise stays within about ±0.71: scaled to about ±1.
+    return Math.max(-1, Math.min(1, (top + (bottom - top) * fy) * 1.4));
   };
 };
 

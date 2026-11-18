@@ -193,7 +193,10 @@ const canvasFor2D = (canvas: HTMLCanvasElement): HTMLCanvasElement => {
  *  the city screen still draws with. A 3D map that can't be made here after all (WebGL2 refused on the map's own
  *  canvas) leaves the game on the 2D map, and the player told why.
  */
-export const makeMapView = (deps: MapView2DDeps): MapRenderer => {
+export const makeMapView = (
+  deps: MapView2DDeps,
+  { debug = false }: { debug?: boolean } = {}
+): MapRenderer => {
   if (factory === null) {
     return new MapView2D(deps);
   }
@@ -220,6 +223,7 @@ export const makeMapView = (deps: MapView2DDeps): MapRenderer => {
       },
       cityOpener: deps.cityOpener,
       coveredBy: deps.coveredBy ?? [],
+      debug,
       lockVerticalEdges: deps.options.get('lockVerticalEdges', false),
       mapCanvas: deps.mapPortal,
       playerId: deps.playerId,

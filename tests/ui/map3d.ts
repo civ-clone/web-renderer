@@ -153,10 +153,16 @@ Object.defineProperties(mapCanvas.parentElement, {
 
 // What the stage was asked to do: the test's DOM has no WebGL to draw with.
 const staged: string[] = [],
+  // The land's chunks the stage was given, and where its camera looked last, apart from what's drawn.
+  chunksSet = new Set<string>(),
+  lookedAt: number[] = [],
   fakeStage = (): Stage => ({
     render: () => void staged.push('render'),
     resize: (stageWidth, stageHeight, ratio) =>
       void staged.push(`resize ${stageWidth}×${stageHeight}@${ratio}`),
+    setChunk: (i, j) => void chunksSet.add(`${i},${j}`),
+    lookAt: (u, v, height) => void lookedAt.splice(0, 3, u, v, height),
+    stats: () => ({ drawCalls: 0, triangles: 0, geometries: 0 }),
     dispose: () => void staged.push('dispose'),
   });
 
@@ -448,6 +454,16 @@ expect(
     [view.portal.center(), staged.splice(0)],
     [{ x: 1, y: 1 }, ['render']]
   );
+  expect(
+    'and the camera looks at the middle of that square on the ground, no lower than the sea',
+    [lookedAt[0], lookedAt[1], lookedAt[2]! >= 0],
+    [1.5, 1.5, true]
+  );
+  expect(
+    'every chunk of the land was built as it started',
+    chunksSet.size > 0,
+    true
+  );
 
   view.portal.setCenter(1, 1);
 
@@ -460,14 +476,19 @@ expect(
 
   expect('a queued tile waits for the world', view.tilesPending(), 0);
 
+  chunksSet.clear();
   view.releaseTiles();
 
-  expect('released, each square once', view.tilesPending(), 2);
+  expect(
+    'released, they are taken on the next frame (at once, with no frames here), their land built again, and drawn',
+    [view.tilesPending(), chunksSet.size > 0, staged.splice(0)],
+    [0, true, ['render']]
+  );
 
   view.flush();
 
   expect(
-    'a flush takes them, and draws',
+    'a flush with nothing released draws',
     [view.tilesPending(), staged.splice(0)],
     [0, ['render']]
   );
@@ -674,12 +695,13 @@ expect(
     others = inputs.filter(
       (path: string) =>
         !path.startsWith('packages/map-3d/') &&
+        !path.startsWith('packages/models-builtin/') &&
         !/node_modules\/(\.pnpm\/[^/]+\/node_modules\/)?three\//.test(path) &&
         !/@dom111\/typed-event-emitter\//.test(path)
     );
 
   expect(
-    'map3d.js bundles three.js, its own code, the emitter, and the factory’s name alone',
+    'map3d.js bundles three.js, its own code, the built-in model set, the emitter, and the factory’s name alone',
     others,
     ['packages/map/MapView3DFactory.ts']
   );

@@ -51,7 +51,8 @@ const grassland: TerrainEntry = {
 export const terrainTable: { readonly [terrain: string]: TerrainEntry } = {
   // The sea's floor is `seaFloor`'s, by distance from land: this is its deepest.
   Ocean: {
-    relief: { base: seaFloor.deep, roughness: 0.008, shape: 'rolling' },
+    // A calm floor: the sea's surface (slice 1.4) lies over it.
+    relief: { base: seaFloor.deep, roughness: 0.003, shape: 'rolling' },
     colour: '#33505f',
   },
   Grassland: grassland,

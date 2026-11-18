@@ -1,9 +1,9 @@
 // The 3D map (`MapRenderer`, docs/3d-renderer.md §2.1), behind `?3d=1` until it shows everything the 2D map does (§11).
 //
-// This is slice 0.2's: an empty, lit scene where the map was, so that a game runs under it, with every window working
-//  and its tile patches taken. What it shows comes slice by slice:
-//  - the land in 1.1;
-//  - the camera, centring and zoom in 1.2;
+// It shows the land (slice 1.1), its relief and its terrain's colours, built a few chunks a frame from where the map is
+//  centred, and again where tile patches change it; the camera looks down at the square the map is centred on. The
+//  rest comes slice by slice:
+//  - turning, tilting and zooming the camera in 1.2;
 //  - picking squares, hovering and hiding the units in 1.3.
 //  - the minimap's view of it in 1.5: it's left empty until then.
 // Until then, what the game asks of it is kept or let go as below, and a long-range order's square can't be picked: the
@@ -19,13 +19,21 @@ import MapPortal3D from './MapPortal3D';
 import MapRenderer from '@civ-clone/ui-map/MapRenderer';
 import World from '@civ-clone/ui-map/components/World';
 import { Stage, StageFactory, createStage } from './stage';
+import Land from './Land';
+
+// How long, in ms, each frame may spend building the land's chunks while any wait.
+const BUILD_BUDGET = 10;
 
 export class MapView3D implements MapRenderer {
   readonly portal: MapPortal3D;
   readonly world: World;
 
   #canvas: HTMLCanvasElement;
+  #land: Land;
   #stage: Stage;
+  // The `?debug=1` overlay: frame time, draw calls, triangles and chunks waiting (§12).
+  #stats: HTMLElement | null = null;
+  #frameTime = 0;
   // A frame asked for to draw in, if one is.
   #frame: number | null = null;
   // Keyed by the square, as the 2D map's: a tile waits in `#incomingTiles` until the world has it (`releaseTiles`).
@@ -51,7 +59,18 @@ export class MapView3D implements MapRenderer {
     this.#artId = deps.art.id();
     this.world = deps.world;
     this.portal = new MapPortal3D(deps, () => this.#draw());
-    this.#stage = stageFactory(deps.mapCanvas);
+    this.#land = new Land(deps.world);
+    this.#stage = stageFactory(deps.mapCanvas, {
+      copies: this.#land.copies(),
+    });
+
+    if (deps.debug && deps.mapCanvas.parentElement) {
+      this.#stats = this.#statsOverlay(deps.mapCanvas.parentElement);
+      // For the console, as `?debug=1` tooling is.
+      (window as unknown as { civMap3DView?: MapView3D }).civMap3DView = this;
+    }
+
+    this.#land.queueAll(...this.#focus());
 
     this.portal.on('activate-unit', (unit) => deps.activateUnit(unit));
 
@@ -64,6 +83,11 @@ export class MapView3D implements MapRenderer {
     }
 
     this.#resize();
+  }
+
+  /** The land, for the `?debug=1` console. */
+  land(): Land {
+    return this.#land;
   }
 
   /** The unit active now, and where it's drawn while its move is answered. */
@@ -90,14 +114,15 @@ export class MapView3D implements MapRenderer {
     }
 
     this.#frame = null;
+    this.#stats?.remove();
     this.#stage.dispose();
   }
 
   endPicking(): void {}
 
-  /** The tiles released so far are taken, and the map drawn. */
+  /** The tiles released so far are taken, the land they change queued to be built again, and the map drawn. */
   flush(): void {
-    this.#tilesToDraw.clear();
+    this.#takeTiles();
     this.#draw();
   }
 
@@ -142,11 +167,16 @@ export class MapView3D implements MapRenderer {
     return 'redrawn';
   }
 
+  /** The world has the queued tiles now: they're taken on the next frame, if a flush doesn't take them first. */
   releaseTiles(): void {
     this.#incomingTiles.forEach((tile, key) =>
       this.#tilesToDraw.set(key, tile)
     );
     this.#incomingTiles.clear();
+
+    if (this.#tilesToDraw.size > 0) {
+      this.#draw();
+    }
   }
 
   setActiveUnit(unit: Unit | null, pendingTile?: Coordinate | null): void {
@@ -194,6 +224,43 @@ export class MapView3D implements MapRenderer {
     void steps;
   }
 
+  // The square the map is centred on, on the ground.
+  #focus(): [number, number] {
+    const { x, y } = this.portal.center();
+
+    return [...this.#land.layout.centre(x, y)];
+  }
+
+  // The tiles released, their squares' land queued to be built again.
+  #takeTiles(): void {
+    const squares = [...this.#tilesToDraw.values()].map(
+      ({ x, y }): [number, number] => [x, y]
+    );
+
+    this.#tilesToDraw.clear();
+    this.#land.changed(squares, ...this.#focus());
+  }
+
+  // A frame: the tiles released taken, as many chunks built as the budget allows (every one, where there are no
+  //  frames to spread them over), the camera on the square the map is centred on, and the scene drawn. Another frame
+  //  is asked for while chunks wait.
+  #frameDrawn(budget: number | null): void {
+    const started = performance.now(),
+      [u, v] = this.#focus();
+
+    this.#takeTiles();
+    this.#land.build(this.#stage, budget);
+    // Over the sea, at the sea's surface.
+    this.#stage.lookAt(u, v, Math.max(0, this.#land.heightAt(u, v)));
+    this.#stage.render();
+    this.#frameTime = performance.now() - started;
+    this.#showStats();
+
+    if (this.#land.pending() > 0) {
+      this.#draw();
+    }
+  }
+
   // Drawn on the next frame, once however often it's asked for in one.
   #draw(): void {
     // Taken down: nothing left to draw on.
@@ -202,7 +269,7 @@ export class MapView3D implements MapRenderer {
     }
 
     if (typeof requestAnimationFrame !== 'function') {
-      this.#stage.render();
+      this.#frameDrawn(null);
 
       return;
     }
@@ -213,8 +280,46 @@ export class MapView3D implements MapRenderer {
 
     this.#frame = requestAnimationFrame(() => {
       this.#frame = null;
-      this.#stage.render();
+      this.#frameDrawn(BUILD_BUDGET);
     });
+  }
+
+  // Over the map's top left corner, after the canvas so it's drawn over it.
+  #statsOverlay(parent: HTMLElement): HTMLElement {
+    const overlay = document.createElement('pre');
+
+    overlay.className = 'map3d-stats';
+    overlay.setAttribute('aria-hidden', 'true');
+    Object.assign(overlay.style, {
+      background: 'var(--ui-overlay-bg, rgba(0, 0, 0, 0.6))',
+      color: 'var(--ui-overlay-fg, #fff)',
+      font: '12px/1.4 monospace',
+      left: '0.5rem',
+      margin: '0',
+      padding: '0.25rem 0.5rem',
+      pointerEvents: 'none',
+      position: 'absolute',
+      bottom: '0.5rem',
+    });
+    parent.append(overlay);
+
+    return overlay;
+  }
+
+  #showStats(): void {
+    if (this.#stats === null) {
+      return;
+    }
+
+    const { drawCalls, triangles, geometries } = this.#stage.stats();
+
+    this.#stats.textContent = [
+      `frame ${this.#frameTime.toFixed(1)} ms`,
+      `draw calls ${drawCalls}`,
+      `triangles ${triangles.toLocaleString()}`,
+      `geometries ${geometries}`,
+      `chunks waiting ${this.#land.pending()}`,
+    ].join('\n');
   }
 
   // Sized to its parent's box, only when that or the screen's pixels have changed: sizing a canvas clears it, even to

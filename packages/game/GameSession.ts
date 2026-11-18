@@ -339,30 +339,33 @@ export class GameSession {
 
     mapWrapper.append(waitingBanner);
 
-    const mapView: MapRenderer = makeMapView({
-      activateUnit: (unit): void => {
-        if (gameState.waiting()) {
-          return;
-        }
+    const mapView: MapRenderer = makeMapView(
+      {
+        activateUnit: (unit): void => {
+          if (gameState.waiting()) {
+            return;
+          }
 
-        unitController.set(unit);
+          unitController.set(unit);
+        },
+        activeUnit: () => unitController.active(),
+        // A watcher opens any city of a civilisation watched, read-only (#613).
+        cityOpener: observing
+          ? observerCityOpener(transport, observer)
+          : playerCityOpener(),
+        // The sidebar's sections float over the map (#697).
+        coveredBy: Array.from(
+          document.querySelectorAll<HTMLElement>('#sidebar > .sidebar-section')
+        ),
+        mapPortal,
+        minimapCanvas,
+        options,
+        playerId: gameState.data().player.id,
+        transport,
+        world: gameState.data().player.world,
       },
-      activeUnit: () => unitController.active(),
-      // A watcher opens any city of a civilisation watched, read-only (#613).
-      cityOpener: observing
-        ? observerCityOpener(transport, observer)
-        : playerCityOpener(),
-      // The sidebar's sections float over the map (#697).
-      coveredBy: Array.from(
-        document.querySelectorAll<HTMLElement>('#sidebar > .sidebar-section')
-      ),
-      mapPortal,
-      minimapCanvas,
-      options,
-      playerId: gameState.data().player.id,
-      transport,
-      world: gameState.data().player.world,
-    });
+      { debug: this.#deps.debugFlags.debugMode }
+    );
 
     this.#mapView = mapView;
 
