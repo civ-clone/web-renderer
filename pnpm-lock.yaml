@@ -408,7 +408,7 @@ importers:
         version: 0.1.15
       '@civ-clone/simple-ai-client':
         specifier: github:civ-clone/simple-ai-client
-        version: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/bf86422be0210e638ba9316fcb5fd732ca6737b5
+        version: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/ea139adabb3d2fca4f00bae4d1ad935854c8f1ae
       '@civ-clone/simple-world-generator':
         specifier: github:civ-clone/simple-world-generator
         version: https://codeload.github.com/civ-clone/simple-world-generator/tar.gz/15a7fdc268702f605c7fd38c21dda6e438658790
@@ -2870,9 +2870,9 @@ packages:
   '@civ-clone/library-world@0.1.0':
     resolution: {integrity: sha512-OSd1jsJiN+/MQtA56spokVxsTDt5bQN34utkK+ZZ6jUhKE06sYtyjXf5D8qP9BVxEwc8qv+J3weM3GCUvaQVbw==}
 
-  '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/bf86422be0210e638ba9316fcb5fd732ca6737b5':
-    resolution: {gitHosted: true, integrity: sha512-yjvDrLeEBuATT3lr+cR4uTIAsTKH1S/Bq5ob36P8hoivmrk6phdUBJhq+Tt6Xjc/fP6EQqeWag0rEDsp0e0muw==, tarball: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/bf86422be0210e638ba9316fcb5fd732ca6737b5}
-    version: 0.1.42
+  '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/ea139adabb3d2fca4f00bae4d1ad935854c8f1ae':
+    resolution: {gitHosted: true, integrity: sha512-XoWZustYbigUS/erwRese+vEZCvdp2ziqggdPTK7KDWOq1deQEWuKC3LlikdJXJe6amgYkFMHhY7KNj+reQ6vQ==, tarball: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/ea139adabb3d2fca4f00bae4d1ad935854c8f1ae}
+    version: 0.1.43
 
   '@civ-clone/simple-world-generator@https://codeload.github.com/civ-clone/simple-world-generator/tar.gz/15a7fdc268702f605c7fd38c21dda6e438658790':
     resolution: {gitHosted: true, tarball: https://codeload.github.com/civ-clone/simple-world-generator/tar.gz/15a7fdc268702f605c7fd38c21dda6e438658790}
@@ -9247,7 +9247,7 @@ snapshots:
       '@civ-clone/base-tile-improvement-railroad': 0.1.0
       '@civ-clone/base-tile-improvement-road': 0.1.0
 
-  '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/bf86422be0210e638ba9316fcb5fd732ca6737b5':
+  '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/ea139adabb3d2fca4f00bae4d1ad935854c8f1ae':
     dependencies:
       '@civ-clone/base-barbarians': 0.1.1
       '@civ-clone/base-city-happiness': 0.1.3
