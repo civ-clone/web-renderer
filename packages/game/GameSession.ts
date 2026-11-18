@@ -980,8 +980,13 @@ export class GameSession {
           }
         );
       }),
-      // A save that couldn't be written is said by the page (`WorkerFailures`), and the game goes on.
-      transport.receive('saveFailed', (): void => handedBack())
+      // A hand-over's save that couldn't be built is said by the page (`WorkerFailures`), and the game goes on. Not the
+      //  player's own save failing while the hand-over's is still on its way.
+      transport.receive('saveFailed', ({ handOver }): void => {
+        if (handOver === true) {
+          handedBack();
+        }
+      })
     );
   }
 

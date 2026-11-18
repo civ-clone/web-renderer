@@ -503,7 +503,16 @@ const run = async (): Promise<void> => {
       ['Carrying the game over', false]
     );
 
-    deliver('saveFailed', { message: 'full' });
+    // The player's own save failing while the hand-over's is on its way doesn't hand the game back.
+    deliver('saveFailed', { message: "the player's" });
+
+    expect(
+      "the player's own save failing leaves the hand-over waiting",
+      banner(),
+      'Carrying the game over'
+    );
+
+    deliver('saveFailed', { message: 'full', handOver: true });
 
     expect(
       'a save that failed hands the game back, to try again',
@@ -511,7 +520,7 @@ const run = async (): Promise<void> => {
       ['', true]
     );
 
-    deliver('saveFailed', { message: 'full' });
+    deliver('saveFailed', { message: 'full', handOver: true });
   }
 
   // Art whose units and cities stack the other way from the layers built needs a new page (#1144): the game is carried
@@ -570,7 +579,7 @@ const run = async (): Promise<void> => {
       ]
     );
 
-    deliver('saveFailed', { message: 'full' });
+    deliver('saveFailed', { message: 'full', handOver: true });
     MapView.prototype.redrawArt = redrawArt;
     window.alert = alert;
   }
