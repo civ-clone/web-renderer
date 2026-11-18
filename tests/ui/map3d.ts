@@ -497,6 +497,44 @@ expect(
     [true, ['render']]
   );
 
+  // The world's terrain read again only when its tiles have been replaced: a whole new world, perhaps with none.
+  const readAgain: boolean[] = [],
+    land = view.land(),
+    changed = land.changed.bind(land);
+
+  land.changed = (squares, u, v, always = false): void => {
+    readAgain.push(always);
+    changed(squares, u, v, always);
+  };
+
+  view.flush();
+  view.flush();
+
+  const unchanged = readAgain.splice(0),
+    known = view.world.tiles();
+
+  chunksSet.clear();
+  view.world.setTiles([], true);
+  view.flush();
+
+  const replaced = [readAgain.splice(0), chunksSet.size > 0];
+
+  view.world.setTiles(known, true);
+  view.flush();
+  land.changed = changed;
+
+  // Each flush takes the tiles, and so does the frame it draws (at once, with no frames here).
+  expect(
+    'flushed, the terrain is read again only once the world’s tiles are replaced, and the land built again then',
+    [unchanged, replaced, readAgain],
+    [
+      [false, false, false, false],
+      [[true, false], true],
+      [true, false],
+    ]
+  );
+
+  staged.splice(0);
   view.flush();
 
   expect(

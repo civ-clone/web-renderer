@@ -42,6 +42,9 @@ export class MapView3D implements MapRenderer {
   // Keyed by the square, as the 2D map's: a tile waits in `#incomingTiles` until the world has it (`releaseTiles`).
   #incomingTiles = new Map<string, Tile>();
   #tilesToDraw = new Map<string, Tile>();
+  // The world's tiles, and how many, when its terrain was last read: replaced, it's read again.
+  #worldTiles: Tile[] = [];
+  #worldTileCount = 0;
   #activeUnit: Unit | null = null;
   #pendingTile: Coordinate | null = null;
   #unitsShown = true;
@@ -63,6 +66,9 @@ export class MapView3D implements MapRenderer {
     this.world = deps.world;
     this.portal = new MapPortal3D(deps, () => this.#draw());
     this.#land = new Land(deps.world);
+    // Read just now, by the land.
+    this.#worldTiles = deps.world.tiles();
+    this.#worldTileCount = this.#worldTiles.length;
     this.#stage = stageFactory(deps.mapCanvas, {
       copies: this.#land.copies(),
     });
@@ -135,7 +141,7 @@ export class MapView3D implements MapRenderer {
 
   /** The tiles released so far are taken, the land they change queued to be built again, and the map drawn. */
   flush(): void {
-    this.#takeTiles(true);
+    this.#takeTiles();
     this.#draw();
   }
 
@@ -244,15 +250,21 @@ export class MapView3D implements MapRenderer {
     return [...this.#land.layout.centre(x, y)];
   }
 
-  // The tiles released, their squares' land queued to be built again.
-  //  `always`, the world's terrain is read again even with no tiles released, as a whole new world may have none.
-  #takeTiles(always = false): void {
+  // The tiles released, their squares' land queued to be built again. The world's terrain is read again even with
+  //  none released when its tiles have been replaced, as a whole new world may have none: not otherwise, as reading
+  //  it all takes milliseconds.
+  #takeTiles(): void {
     const squares = [...this.#tilesToDraw.values()].map(
-      ({ x, y }): [number, number] => [x, y]
-    );
+        ({ x, y }): [number, number] => [x, y]
+      ),
+      tiles = this.world.tiles(),
+      replaced =
+        tiles !== this.#worldTiles || tiles.length !== this.#worldTileCount;
 
+    this.#worldTiles = tiles;
+    this.#worldTileCount = tiles.length;
     this.#tilesToDraw.clear();
-    this.#land.changed(squares, ...this.#focus(), always);
+    this.#land.changed(squares, ...this.#focus(), replaced);
   }
 
   // A frame: the tiles released taken, as many chunks built as the budget allows (every one, where there are no
