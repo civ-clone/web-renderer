@@ -446,8 +446,11 @@ map is drawn with, through `Map.getInterfaceImage`; except the yields of a pack 
 which `Yields` takes from the map's pack, icon by icon, wherever that icon is imported (`hasPreloadedImage`), and from
 the interface's where not. It lays those out in a block centred in the pack's `area`, one row or two of
 `tileYieldGrid`'s columns, each icon its own size apart or closer, so the block fits the area while an icon does; the
-largest icon drawn sets the spacing. A pack without `yields` is drawn as before, each icon at `tileYieldIcons`' fraction
-of the tile's box. What the format itself refuses (a `corners` or
+largest icon drawn sets the spacing. A pack without `yields` is drawn as before, each icon at `tileYieldIcons`'
+fraction of the tile's box, on a grid whose tiles fill their boxes. Where they have a shape of their own (`outline()`:
+the hexagons, the isometric diamonds), the interface's icons are laid out the same way in `innerArea`, the box inside
+that shape whose shorter side is longest in px (22 × 23 of a 32 × 36 hexagon), so they don't spill on to the
+neighbours (#1122). What the format itself refuses (a `corners` or
 `dither` family other than the coast) is refused by the schema.
 
 ## Runtime usage patterns

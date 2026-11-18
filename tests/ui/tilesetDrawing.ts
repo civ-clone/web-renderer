@@ -31,9 +31,11 @@ import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
 import ActiveUnit from '@civ-clone/ui-map/components/Map/ActiveUnit';
 import HudUnit, { unitBox } from '@civ-clone/ui-hud/components/Unit';
 import Unworkable from '@civ-clone/ui-map/components/Map/Unworkable';
-import Yields from '@civ-clone/ui-map/components/Map/Yields';
+import projectionFor from '@civ-clone/ui-map/lib/projectionFor';
+import Yields, { innerArea } from '@civ-clone/ui-map/components/Map/Yields';
 import isoJson from './fixtures/iso-tileset.json';
 import civ2Json from '@civ-clone/ui-tileset-civ2/civ2.json';
+import hexPixelArtJson from '@civ-clone/civ1-tileset-pixelart/pack-hex/tileset.json';
 import {
   clearSpriteAnchors,
   setSpriteAnchors,
@@ -1978,6 +1980,83 @@ expect(
     })(),
     ['./assets/city/people_unhappy_m.png', './assets/city/food.png']
   );
+
+  // A pack with no yield icons of its own on a grid whose tiles have a shape (#1122): the interface's icons go inside the
+  //  largest near-square box in the tile's shape, not at the box's fractions, which put them on the neighbours.
+  {
+    const rounded = (area: object) =>
+      Object.fromEntries(
+        Object.entries(area).map(([key, value]) => [
+          key,
+          Math.round((value as number) * 1000) / 1000,
+        ])
+      );
+
+    const hexPixelArt = validateDescriptor(hexPixelArtJson);
+
+    expect(
+      "the box for the interface's icons in a pointy-topped hexagon, 32 × 36, and in the isometric grid's diamond, 64 × 32",
+      [
+        rounded(
+          innerArea(
+            projectionFor(hexPixelArt, hexWorld({}), { width: 32, height: 36 })
+              .outline!(),
+            { width: 32, height: 36 }
+          )
+        ),
+        rounded(
+          innerArea(
+            projectionFor(isoTileset, isoWorld({}), {
+              width: 64,
+              height: 32,
+            }).outline!(),
+            { width: 64, height: 32 }
+          )
+        ),
+      ],
+      [
+        { x: 0.15, y: 0.175, width: 0.7, height: 0.65 },
+        { x: 0.325, y: 0.175, width: 0.35, height: 0.65 },
+      ]
+    );
+
+    ['food', 'production', 'trade'].forEach((name) =>
+      preloadImage(`city/${name}`, 14, 14)
+    );
+
+    const { calls, canvas } = recordingCanvas(200, 200),
+      world = hexWorld({});
+
+    class HexYields extends Yields {
+      override tileset(): TilesetDescriptor {
+        return hexPixelArt;
+      }
+
+      draw(tile: Tile): void {
+        this.drawTile(tile, 0, 0);
+      }
+    }
+
+    new HexYields(world, 1, { width: 32, height: 36 }, canvas).draw({
+      ...world.get(2, 1),
+      yields: [
+        { _: 'Food', value: 2 },
+        { _: 'Production', value: 1 },
+        { _: 'Trade', value: 1 },
+      ],
+    } as unknown as Tile);
+
+    expect(
+      "a hexagonal map with no yield icons of its own: the interface's, two by two inside the hexagon",
+      calls.filter((call) => call.startsWith('drawImage(')),
+      [
+        'drawImage(city/food,5,6,14,14)',
+        'drawImage(city/food,13,6,14,14)',
+        'drawImage(city/production,5,16,14,14)',
+        'drawImage(city/trade,13,16,14,14)',
+      ]
+    );
+  }
 
   // Civ2's own yield icons (#999): the map takes them from its pack when the player has imported ICONS.GIF, and the
   //  interface's (Civ1's) otherwise, icon by icon, laid out in the middle of the diamond rather than from the box's
