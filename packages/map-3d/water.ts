@@ -185,6 +185,13 @@ export class Water {
     this.#texture.needsUpdate = true;
   }
 
+  /** The land's height the surface reads at the ground's point `column` across and `row` down. */
+  height(column: number, row: number): number {
+    return DataUtils.fromHalfFloat(
+      this.#heights[row * this.#ground.columns + column] ?? 0
+    );
+  }
+
   /** The surface under the camera, round (`u`, `v`), `across` wide, and the sun's direction for its glint. */
   follow(u: number, v: number, across: number, sun: Vector3): void {
     this.mesh.position.set(u, 0, v);
