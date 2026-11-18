@@ -676,7 +676,7 @@ const text = (element: Element | null): string =>
     civ2Metadata: PackMetadata = { anchors: {}, colours: flagColours };
 
   expect(
-    "Civ2's pack incomplete, or without the record of its sprites' anchors, isn't installed: Civ1's and the pixel art's are, so square and hex",
+    "Civ2's pack incomplete, or without the record of its sprites' anchors, isn't installed: Civ1's and the pixel art's are, so square, isometric and hex",
     [
       installTilesets({
         civ2: { complete: false, metadata: civ2Metadata },
@@ -688,10 +688,10 @@ const text = (element: Element | null): string =>
       supportedTopologies(),
     ],
     [
-      ['civ1', 'civ1-pixelart', 'hex-pixelart'],
-      ['square', 'hex-odd-r'],
-      ['civ1', 'civ1-pixelart', 'hex-pixelart'],
-      ['square', 'hex-odd-r'],
+      ['civ1', 'civ1-pixelart', 'hex-pixelart', 'iso-pixelart'],
+      ['square', 'staggered-iso', 'hex-odd-r'],
+      ['civ1', 'civ1-pixelart', 'hex-pixelart', 'iso-pixelart'],
+      ['square', 'staggered-iso', 'hex-odd-r'],
     ]
   );
   expect(
@@ -702,16 +702,34 @@ const text = (element: Element | null): string =>
       supportedTopologies(),
       mapTileset('hex-odd-r').id,
     ],
-    [true, ['square', 'hex-odd-r'], ['square', 'hex-odd-r'], 'hex-pixelart']
+    [
+      true,
+      ['square', 'staggered-iso', 'hex-odd-r'],
+      ['square', 'staggered-iso', 'hex-odd-r'],
+      'hex-pixelart',
+    ]
   );
   expect(
-    "without it, an isometric world is the one that needs Civ2's art imported, and a square one needs nothing",
+    "the isometric pixel art installed as it ships: isometric is offered to new games without Civ2's art, a save on it loads, and it's drawn with the pixel art",
     [
-      tilesetToImport('staggered-iso')?.id,
+      isSupportedTopology('staggered-iso'),
+      supportedTopologies().includes('staggered-iso'),
+      mapTileset('staggered-iso').id,
+    ],
+    [true, true, 'iso-pixelart']
+  );
+  expect(
+    "without Civ2's art, no world needs anything imported, as the pixel art draws every grid; without the isometric pixel art too, an isometric world is the one that needs Civ2's art imported",
+    [
+      tilesetToImport('staggered-iso'),
       tilesetToImport('square'),
       tilesetToImport('hex-odd-r'),
+      tilesetToImport(
+        'staggered-iso',
+        installedTilesets().filter(({ id }) => id !== 'iso-pixelart')
+      )?.id,
     ],
-    ['civ2', null, null]
+    [null, null, null, 'civ2']
   );
 
   installTilesets({ civ2: { complete: true, metadata: civ2Metadata } });
@@ -730,6 +748,7 @@ const text = (element: Element | null): string =>
         ['civ2', 'staggered-iso'],
         ['civ1-pixelart', 'square'],
         ['hex-pixelart', 'hex-odd-r'],
+        ['iso-pixelart', 'staggered-iso'],
       ],
       ['square', 'staggered-iso', 'hex-odd-r'],
       true,
@@ -805,7 +824,7 @@ const text = (element: Element | null): string =>
     installTilesets({ 'no-record': { complete: true, metadata: null } }).map(
       ({ id }) => id
     ),
-    ['civ1', 'civ1-pixelart', 'hex-pixelart', 'no-record']
+    ['civ1', 'civ1-pixelart', 'hex-pixelart', 'iso-pixelart', 'no-record']
   );
 
   installTilesets({});

@@ -280,17 +280,17 @@ const run = async (): Promise<void> => {
     [16, 2, 1, 1, Math.min(2, civ2!.defaultScale)]
   );
 
-  // Saves: one on the square grid loads without Civilization's art, and one on the isometric grid still needs
-  //  Civilization II's.
+  // Saves: one on the square grid loads without Civilization's art, and one on the isometric grid without
+  //  Civilization II's, as the isometric pixel art draws it.
   expect(
-    "a square save loads without Civilization's art; an isometric one names Civilization II's to import",
+    "a square save loads without Civilization's art, and an isometric one without Civilization II's",
     [
       isSupportedTopology('square'),
       tilesetToImport('square'),
       isSupportedTopology('staggered-iso'),
-      tilesetToImport('staggered-iso')?.id,
+      tilesetToImport('staggered-iso'),
     ],
-    [true, null, false, 'civ2']
+    [true, null, true, null]
   );
 
   // The square pixel art's sheet not loaded either: the hexagonal pixel art, which has the same interface art, draws
@@ -311,14 +311,15 @@ const run = async (): Promise<void> => {
       isSupportedTopology('square'),
       tilesetToImport('square')?.id,
     ],
-    ['hex-pixelart', true, null, ['hex-odd-r'], false, 'civ1']
+    ['hex-pixelart', true, null, ['staggered-iso', 'hex-odd-r'], false, 'civ1']
   );
 
-  // The hexagonal pixel art's sheet not loaded either: nothing to play with.
+  // The hexagonal and isometric pixel art's sheets not loaded either: nothing to play with.
   installTilesets({
     civ1: { complete: false, metadata: null },
     'civ1-pixelart': { complete: false, metadata: null },
     'hex-pixelart': { complete: false, metadata: null },
+    'iso-pixelart': { complete: false, metadata: null },
   });
 
   expect(
@@ -337,6 +338,7 @@ const run = async (): Promise<void> => {
   installTilesets({
     civ1: { complete: false, metadata: null },
     'civ1-pixelart': { complete: false, metadata: null },
+    'iso-pixelart': { complete: false, metadata: null },
   });
   provideInterfaceArt(() => ['hex-pixelart']);
 
@@ -392,7 +394,7 @@ const run = async (): Promise<void> => {
       ],
       // The hexagonal pixel art is installed as it ships too, its sheet fetched only for a hex game (#1063).
       [
-        ['civ1-pixelart', 'hex-pixelart'],
+        ['civ1-pixelart', 'hex-pixelart', 'iso-pixelart'],
         ['civ1-pixelart'],
         'civ1-pixelart',
         null,
@@ -419,7 +421,12 @@ const run = async (): Promise<void> => {
         interfaceArt().id,
         missingArt(),
       ],
-      [['civ1', 'civ1-pixelart', 'hex-pixelart'], [], 'civ1', null]
+      [
+        ['civ1', 'civ1-pixelart', 'hex-pixelart', 'iso-pixelart'],
+        [],
+        'civ1',
+        null,
+      ]
     );
   }
 
@@ -438,7 +445,7 @@ const run = async (): Promise<void> => {
         missingArt(),
       ],
       [
-        ['civ1-pixelart', 'hex-pixelart'],
+        ['civ1-pixelart', 'hex-pixelart', 'iso-pixelart'],
         ['civ1-pixelart'],
         'civ1-pixelart',
         'civ1-pixelart',

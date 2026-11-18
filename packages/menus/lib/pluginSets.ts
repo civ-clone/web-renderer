@@ -44,6 +44,12 @@ export const importedTilesets = (): string[] =>
     .filter((tileset) => !isHosted(tileset))
     .map(({ id }) => id);
 
+/** The ids of every art pack that can be imported here, imported or not: not those that ship with civ.one. */
+export const importableTilesets = (): string[] =>
+  bundledTilesets()
+    .filter((tileset) => !isHosted(tileset))
+    .map(({ id }) => id);
+
 /**
  * Whether there can be another game to offer: only once the player has imported art beyond the interface's, which every
  *  game has, as a game that needs art of its own needs it from another game (Civ2's). The art that ships with civ.one
@@ -77,9 +83,11 @@ export const askGameChoices = async (
 
 /**
  * Has a saved game's map drawn with the art its rule set names (`setRuleSetTileset`), as a new game with it is
- *  (`playGame`), before it loads (#1114): `pluginSet` is the set the save names, if any. Only a set whose own art the
- *  player has imported names any (Civ2's), so the worker is asked only then. A worker that can't say leaves the map
- *  drawn with the player's choice for its grid.
+ *  (`playGame`), before it loads (#1114): `pluginSet` is the set the save names, if any. The worker is asked as if
+ *  every pack that can be imported had been, so it names the set's own art (Civ2's) whether or not it's here, and asking
+ *  loads nothing. A save whose rules need art that isn't imported is refused, saying which to import: its grid may be
+ *  drawn with civ.one's own art, which has none of its units (#97). A worker that can't say leaves the map drawn with
+ *  the player's choice for its grid.
  */
 export const followSavedRuleSet = async (
   transport: Transport,
@@ -87,19 +95,35 @@ export const followSavedRuleSet = async (
 ): Promise<void> => {
   setRuleSetTileset(null);
 
-  if (typeof pluginSet !== 'string' || !mayOfferOtherGames()) {
+  if (typeof pluginSet !== 'string') {
     return;
   }
 
+  let tileset: string | null;
+
   try {
     const { sets } = await transport.request(
-      new PluginSets(importedTilesets())
+      new PluginSets(importableTilesets())
     );
 
-    setRuleSetTileset(sets.find(({ id }) => id === pluginSet)?.tileset ?? null);
+    tileset = sets.find(({ id }) => id === pluginSet)?.tileset ?? null;
   } catch (error) {
     console.error(error);
+
+    return;
   }
+
+  if (tileset !== null && !importedTilesets().includes(tileset)) {
+    throw new Error(
+      t('SavedGame.needs-rules-art', {
+        game: gameName(pluginSet),
+        tileset:
+          bundledTilesets().find(({ id }) => id === tileset)?.name ?? tileset,
+      })
+    );
+  }
+
+  setRuleSetTileset(tileset);
 };
 
 /** A game's name, from the translations: its set's id where it has none. */

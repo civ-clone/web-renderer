@@ -717,7 +717,7 @@ const run = async (): Promise<void> => {
         ],
       ],
       [
-        ['civ1', 'civ2', 'civ1-pixelart', 'hex-pixelart'],
+        ['civ1', 'civ2', 'civ1-pixelart', 'hex-pixelart', 'iso-pixelart'],
         ['civ1', 'civ1-adlib', 'civ2'],
       ]
     );
@@ -799,7 +799,7 @@ const run = async (): Promise<void> => {
       "and Civ2's and the music's, theirs",
       [instructions(civ2), instructions(sound)],
       [
-        'Upload TERRAIN1.GIF, TERRAIN2.GIF, UNITS.GIF, and CITIES.GIF from Civilization II to play on an isometric map (these will be stored locally). You can add them a few at a time. Add ICONS.GIF and PEOPLE.GIF too for Civilization II’s own icons, pictures of improvements and Wonders, and citizens in its games (optional).',
+        'Upload TERRAIN1.GIF, TERRAIN2.GIF, UNITS.GIF, and CITIES.GIF from Civilization II to draw the isometric map with its art (these will be stored locally). You can add them a few at a time. Add ICONS.GIF and PEOPLE.GIF too for Civilization II’s own icons, pictures of improvements and Wonders, and citizens in its games (optional).',
         'Upload ASOUND.CVL from the original Civilization files for the music (it will be stored locally).',
       ]
     );
@@ -1809,7 +1809,7 @@ const run = async (): Promise<void> => {
     expect(
       "Civ2 status: with only ICONS.GIF's icons in, the map's four sheets are still to import",
       await opened(),
-      'Civilization II’s map art is not complete yet: add TERRAIN1.GIF, TERRAIN2.GIF, UNITS.GIF, and CITIES.GIF to play on the isometric map.'
+      'Civilization II’s map art is not complete yet: add TERRAIN1.GIF, TERRAIN2.GIF, UNITS.GIF, and CITIES.GIF to draw the isometric map with it.'
     );
 
     civ2State(civ2Required.length, [], fullMetadata);
@@ -1817,7 +1817,7 @@ const run = async (): Promise<void> => {
     expect(
       'Civ2 status: with every sprite and the record of their anchors, it is complete',
       await opened(),
-      'Civilization II’s map art is imported: new games can be played on the isometric map.'
+      'Civilization II’s map art is imported: new games on the isometric map are drawn with it.'
     );
     expect(
       'Civ2 status: ICONS.GIF is never a sheet still to import, as the map can do without it (#999): not with everything the map needs in, nor with nothing in',
@@ -1843,7 +1843,7 @@ const run = async (): Promise<void> => {
     expect(
       'Civ2 status: the sheets holding its missing sprites are named',
       await opened(),
-      'Civilization II’s map art is not complete yet: add TERRAIN2.GIF and UNITS.GIF to play on the isometric map.'
+      'Civilization II’s map art is not complete yet: add TERRAIN2.GIF and UNITS.GIF to draw the isometric map with it.'
     );
 
     // Flag colours the map can't draw a flag from, held to the installer's rule (`isFlagRow`): CITIES.GIF to import
@@ -1868,7 +1868,7 @@ const run = async (): Promise<void> => {
       badStatuses,
       badFlags.map(
         () =>
-          'Civilization II’s map art is not complete yet: add CITIES.GIF to play on the isometric map.'
+          'Civilization II’s map art is not complete yet: add CITIES.GIF to draw the isometric map with it.'
       )
     );
     expect(
@@ -1903,7 +1903,7 @@ const run = async (): Promise<void> => {
     expect(
       "Civ2 status: a record of anchors that can't be read names the sheets that say them",
       await opened(),
-      'Civilization II’s map art is not complete yet: add UNITS.GIF and CITIES.GIF to play on the isometric map.'
+      'Civilization II’s map art is not complete yet: add UNITS.GIF and CITIES.GIF to draw the isometric map with it.'
     );
 
     civ2State(
@@ -1936,7 +1936,7 @@ const run = async (): Promise<void> => {
         ],
         [
           'Done! Please reload the page to utilize the fresh assets.',
-          'Civilization II’s map art is not complete yet: add TERRAIN2.GIF and UNITS.GIF to play on the isometric map.',
+          'Civilization II’s map art is not complete yet: add TERRAIN2.GIF and UNITS.GIF to draw the isometric map with it.',
           0,
           false,
           false,
@@ -1956,7 +1956,7 @@ const run = async (): Promise<void> => {
         'Civ2 status: an import that completes it says so, and reloads to use it',
         [statusOf(window), civ2Reloads],
         [
-          'Civilization II’s map art is imported: new games can be played on the isometric map.',
+          'Civilization II’s map art is imported: new games on the isometric map are drawn with it.',
           1,
         ]
       );
@@ -2162,7 +2162,7 @@ const run = async (): Promise<void> => {
         'Art and sound',
         ['Map art', 'Themes', 'Sound'],
         ['Square', 'Isometric', 'Hex'],
-        ['civ1', 'civ1-pixelart', 'civ2', 'hex-pixelart'],
+        ['civ1', 'civ1-pixelart', 'civ2', 'iso-pixelart', 'hex-pixelart'],
         ['civ1-adlib', 'test-chimes', 'test-bells'],
       ]
     );
@@ -2175,6 +2175,15 @@ const run = async (): Promise<void> => {
           ?.textContent,
       ],
       ['Ready', 'Pixel art (hexagonal)']
+    );
+    expect(
+      'and the isometric grid with the isometric pixel art, ready as it ships, beside Civilization II’s',
+      [
+        entryOf(library, 'iso-pixelart').status,
+        entryOf(library, 'iso-pixelart').entry.querySelector('.name')
+          ?.textContent,
+      ],
+      ['Ready', 'Pixel art (isometric)']
     );
 
     expect(
@@ -2850,6 +2859,7 @@ const run = async (): Promise<void> => {
             civ1: { complete: false, metadata: null },
             'civ1-pixelart': { complete: false, metadata: null },
             'hex-pixelart': { complete: false, metadata: null },
+            'iso-pixelart': { complete: false, metadata: null },
           }),
           themeArtLine(before)),
         ],

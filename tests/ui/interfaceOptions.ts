@@ -467,7 +467,7 @@ Object.assign(globalThis, {
       [await statusOf(null), await statusOf(['terrain/coast/n-011'])],
       [
         'Civilization assets imported · 289 sprites',
-        'Civilization assets imported · 289 sprites · Civilization II’s map art is not complete yet: add TERRAIN2.GIF, UNITS.GIF, and CITIES.GIF to play on the isometric map.',
+        'Civilization assets imported · 289 sprites · Civilization II’s map art is not complete yet: add TERRAIN2.GIF, UNITS.GIF, and CITIES.GIF to draw the isometric map with it.',
       ]
     );
 

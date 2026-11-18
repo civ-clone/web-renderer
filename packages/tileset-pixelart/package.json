@@ -2,7 +2,7 @@
   "name": "@civ-clone/ui-tileset-pixelart",
   "version": "0.1.0",
   "private": true,
-  "description": "civ.one's own pixel art (civ-clone/civ1-tileset-pixelart): its square tileset, the square map's and the interface's when Civilization's isn't imported, and its hexagonal one, the hex map's, each served as a sheet beside the game. Loading it registers them.",
+  "description": "civ.one's own pixel art (civ-clone/civ1-tileset-pixelart): its square tileset, the square map's and the interface's when Civilization's isn't imported, its hexagonal one, the hex map's, and its isometric one, the isometric map's when Civilization II's isn't imported, each served as a sheet beside the game. Loading it registers them.",
   "license": "MIT",
   "dependencies": {
     "@civ-clone/ui-assets": "workspace:*"
@@ -20,6 +20,9 @@
       },
       {
         "descriptor": "@civ-clone/civ1-tileset-pixelart/pack-hex/tileset.json"
+      },
+      {
+        "descriptor": "@civ-clone/civ1-tileset-pixelart/pack-iso/tileset.json"
       }
     ]
   }
