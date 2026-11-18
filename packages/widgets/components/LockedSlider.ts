@@ -1,15 +1,27 @@
 import { Element, s } from '@dom111/element';
+import { glyph } from '@civ-clone/ui-platform/lib/glyphs';
 import { t } from 'i18next';
 
-const template: (label: string, value: number) => HTMLFieldSetElement = (
-  label: string,
-  value: number
-) =>
-  s(
-    `<fieldset><legend>${label}</legend><input type="range" max="100" min="0" step="1" value="${value}"><input type="number"><label><input type="checkbox">${t(
-      'LockedSlider.lock'
-    )}</label></fieldset>`
-  ) as HTMLFieldSetElement;
+// One row (#1058): an optional icon and the name, the track, a narrow number box to type into, and a lock that holds
+//  the value while the others move. The lock is a toggle button, sized for a finger, with the rate's name for a screen
+//  reader.
+const template = (label: string, value: number): HTMLElement => {
+  const row = s(
+      `<div class="locked-slider" role="group"><span class="locked-slider-icon"></span><span class="locked-slider-name"></span><input type="range" max="100" min="0" step="1" value="${value}"><input type="number" inputmode="numeric" min="0"><button type="button" class="btn-icon locked-slider-lock" aria-pressed="false">${glyph(
+        'unlock'
+      )}${glyph('lock')}</button></div>`
+    ),
+    name = row.querySelector('.locked-slider-name')!,
+    lock = row.querySelector('.locked-slider-lock') as HTMLButtonElement;
+
+  // As text: the label is a translation, not markup.
+  name.textContent = label;
+  row.setAttribute('aria-label', label);
+  lock.setAttribute('aria-label', t('LockedSlider.lock-rate', { label }));
+  lock.title = t('LockedSlider.lock-title');
+
+  return row;
+};
 
 export type onInputHandler = () => void;
 
@@ -20,16 +32,22 @@ export class LockedSlider extends Element {
   #max: number;
   #range: HTMLInputElement;
   #number: HTMLInputElement;
-  #lock: HTMLInputElement;
+  #lock: HTMLButtonElement;
   #listeners: onInputHandler[] = [];
 
   constructor(
     key: string,
     currentValue: number,
     label: string,
-    max: number = 100
+    max: number = 100,
+    // Drawn before the name, such as the rate's yield icon: decorative, as the name says what it is.
+    icon: Node | null = null
   ) {
     super(template(label, currentValue));
+
+    if (icon !== null) {
+      this.element().querySelector('.locked-slider-icon')!.append(icon);
+    }
 
     this.#key = key;
     this.#label = label;
@@ -41,10 +59,10 @@ export class LockedSlider extends Element {
       'input[type="number"]'
     ) as HTMLInputElement;
     this.#lock = this.element().querySelector(
-      'input[type="checkbox"]'
-    ) as HTMLInputElement;
+      '.locked-slider-lock'
+    ) as HTMLButtonElement;
 
-    // Each named after its rate: the legend alone leaves a screen reader saying "slider, 50" (#857).
+    // Each named after its rate: the row's name alone leaves a screen reader saying "slider, 50" (#857).
     this.#range.setAttribute('aria-label', label);
     this.#number.setAttribute('aria-label', label);
 
@@ -55,9 +73,9 @@ export class LockedSlider extends Element {
   // A maximum below 100 is said, and the number box stops at it as the slider does; the track ends at it, so its thumb
   //  at the end is the most the rate can be.
   #showMax(): void {
-    const legend = this.element().querySelector('legend')!;
+    const name = this.element().querySelector('.locked-slider-name')!;
 
-    legend.querySelector('.locked-slider-max')?.remove();
+    name.querySelector('.locked-slider-max')?.remove();
 
     if (this.#max >= 100) {
       this.#number.removeAttribute('max');
@@ -72,7 +90,7 @@ export class LockedSlider extends Element {
     maximum.textContent = t('LockedSlider.max', { max: this.#max });
     this.#number.setAttribute('max', String(this.#max));
     this.#range.setAttribute('max', String(this.#max));
-    legend.append(maximum);
+    name.append(' ', maximum);
   }
 
   /**
@@ -92,7 +110,7 @@ export class LockedSlider extends Element {
 
     this.#number.addEventListener('input', () => this.set(this.#number.value));
 
-    this.#lock.addEventListener('input', () => this.lock());
+    this.#lock.addEventListener('click', () => this.toggleLock());
 
     this.lock();
   }
@@ -105,7 +123,15 @@ export class LockedSlider extends Element {
     return this.#label;
   }
 
+  /** Locks it, or takes the lock off, as its button does. */
+  toggleLock(): void {
+    this.#lock.setAttribute('aria-pressed', String(!this.isLocked()));
+    this.lock();
+  }
+
   private lock(): void {
+    this.element().classList.toggle('locked', this.isLocked());
+
     if (this.isLocked()) {
       this.#range.setAttribute('disabled', '');
       this.#number.setAttribute('disabled', '');
@@ -122,7 +148,7 @@ export class LockedSlider extends Element {
   }
 
   isLocked(): boolean {
-    return this.#lock.checked;
+    return this.#lock.getAttribute('aria-pressed') === 'true';
   }
 
   max(): number {
@@ -131,7 +157,7 @@ export class LockedSlider extends Element {
 
   /** Takes the lock off, as when the rates can only come to 100 by moving it. */
   unlock(): void {
-    this.#lock.checked = false;
+    this.#lock.setAttribute('aria-pressed', 'false');
     this.lock();
   }
 

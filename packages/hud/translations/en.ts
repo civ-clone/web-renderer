@@ -8,6 +8,16 @@ i18next.addResources('en', 'default', {
   // Civ2's Fundamentalism: research takes no more than half of each city's trade, whatever its rate (M2d).
   'Actions.AdjustTradeRates.limited':
     'Under this government, {{rate}} gets no more than {{limit}}% of each city’s trade, however high its rate. The rest goes to taxes.',
+  // What the rates give, as the trade rates window shows it while they're moved (#1058).
+  'Actions.AdjustTradeRates.Effect.cities_zero': 'None',
+  'Actions.AdjustTradeRates.Effect.cities_one': '{{count, number}} city',
+  'Actions.AdjustTradeRates.Effect.cities_other': '{{count, number}} cities',
+  'Actions.AdjustTradeRates.Effect.disorder': 'In disorder',
+  'Actions.AdjustTradeRates.Effect.gold': 'Gold',
+  'Actions.AdjustTradeRates.Effect.per-turn':
+    '{{perTurn, number(signDisplay: exceptZero)}} / turn',
+  'Actions.AdjustTradeRates.Effect.research': 'Research',
+  'Actions.AdjustTradeRates.Effect.was': '(was {{value, number}})',
   'Actions.ChooseGovernment.body':
     'Your revolution is over. Which government would you like?',
   'Actions.ChooseGovernment.title': 'Choose government',

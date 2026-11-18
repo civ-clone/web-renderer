@@ -184,12 +184,106 @@
   }
 }
 
-// The rates dialog under rules with a maximum rate (Civ2's, M2d): each rate's maximum beside its name, and a note under
-//  the sliders where a rate is worth less than it's set to.
+// The trade rates window (#1058): the split as a bar, a row for each rate (its icon and name, the track, a narrow
+//  number box and a padlock), what the rates give a turn as the engine counts it, and OK and Cancel. Laid out on a grid
+//  whose columns every row shares, so the tracks line up, and narrow enough for a phone without any of a row wrapping.
 .adjust-trade-rates {
+  .content {
+    max-width: 30em;
+    padding: 0.5em 0.75em;
+  }
+
+  .adjust-trade-rates-bar {
+    background: var(--ui-sunken);
+    border: 1px solid var(--ui-bevel-dark);
+    box-sizing: border-box;
+    display: flex;
+    height: 0.75em;
+    margin-bottom: 0.75em;
+    overflow: hidden;
+
+    .segment {
+      flex-basis: 0;
+      min-width: 0;
+
+      &.tax {
+        background: var(--ui-rate-tax);
+      }
+
+      &.luxury {
+        background: var(--ui-rate-luxury);
+      }
+
+      &.science {
+        background: var(--ui-rate-science);
+      }
+    }
+  }
+
+  .adjust-trade-rates-rates {
+    align-items: center;
+    column-gap: 0.5em;
+    display: grid;
+    grid-template-columns: auto max-content minmax(5em, 1fr) 3.5em auto;
+    row-gap: 0.25em;
+  }
+
+  // Each track filled in its rate's colour, as the bar is.
+  @each $rate in tax, luxury, science {
+    .locked-slider.#{$rate} {
+      --ui-range-fill: var(--ui-rate-#{$rate});
+    }
+  }
+
+  .locked-slider {
+    align-items: center;
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+
+    input[type='range'] {
+      margin: 0;
+      min-width: 0;
+      width: 100%;
+    }
+
+    input[type='number'] {
+      box-sizing: border-box;
+      min-width: 0;
+      text-align: right;
+      width: 100%;
+    }
+
+    // Unlocked, the open padlock shows, faintly; locked, the closed one, at full strength.
+    .locked-slider-lock {
+      margin: 0;
+      opacity: 0.6;
+
+      .glyph-lock {
+        display: none;
+      }
+    }
+
+    &.locked .locked-slider-lock {
+      opacity: 1;
+
+      .glyph-lock {
+        display: inline;
+      }
+
+      .glyph-unlock {
+        display: none;
+      }
+    }
+  }
+
+  .locked-slider-icon {
+    display: inline-flex;
+    min-width: 1.5em;
+  }
+
   .locked-slider-max {
     font-size: 0.85em;
-    margin-left: 0.25em;
     font-weight: normal;
     opacity: 0.8;
     white-space: nowrap;
@@ -198,6 +292,33 @@
   .adjust-trade-rates-limit {
     font-size: 0.9em;
     margin: 0.5rem 0 0;
-    max-width: 24rem;
+  }
+
+  .adjust-trade-rates-effect {
+    border-top: 1px solid var(--ui-footer-edge);
+    display: grid;
+    gap: 0.25em 0.75em;
+    grid-template-columns: auto 1fr;
+    margin: 0.75em 0 0;
+    padding-top: 0.75em;
+
+    dt {
+      align-items: center;
+      display: flex;
+      gap: 0.5em;
+    }
+
+    dd {
+      margin: 0;
+      text-align: right;
+    }
+
+    .detail {
+      opacity: 0.8;
+    }
+
+    dd.negative .value {
+      color: var(--ui-negative, inherit);
+    }
   }
 }
