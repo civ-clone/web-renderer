@@ -13,6 +13,7 @@ import './lib/artPacks';
 
 import {
   AssetStore,
+  cutSprite,
   fetchHosted,
   loadHosted,
 } from '@civ-clone/ui-assets/AssetStore';
@@ -50,6 +51,7 @@ import interfaceArt, {
   requiredInterfaceNames,
 } from '@civ-clone/ui-assets/lib/interfaceArt';
 import { readFileSync, existsSync } from 'fs';
+import { crc32, deflateSync, inflateSync } from 'zlib';
 import { Store } from '@civ-clone/ui-platform/Store';
 import civ1Json from '@civ-clone/ui-tileset-civ1/civ1.json';
 import civ2Json from '@civ-clone/ui-tileset-civ2/civ2.json';
@@ -582,6 +584,146 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
     ]
   );
 
+  // The build's PNG reader and writer checked by what they didn't make (#1114): a browser's PNG, and rows filtered
+  //  every way a PNG can be, read back by `readPng`; and the built sheets' rows read here, without it.
+  {
+    // A pattern of colours, with some pixels clear, as the browser's PNG below holds it.
+    const pattern = (width: number, height: number): Buffer => {
+        const data = Buffer.alloc(width * height * 4);
+
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            const at = (y * width + x) * 4;
+
+            if ((x + y) % 7 !== 0) {
+              data[at] = (x * 37 + y * 5) % 256;
+              data[at + 1] = (y * 53 + x * 3) % 256;
+              data[at + 2] = (x * y * 11) % 256;
+              data[at + 3] = 255;
+            }
+          }
+        }
+
+        return data;
+      },
+      // Chrome's `canvas.toDataURL('image/png')` of `pattern(16, 8)`.
+      browserPng = Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAABAAAAAICAYAAADwdn+XAAABQElEQVR4AWyRwUcEYRjG33czKZvSHhKx2dRuVJcYe4ytw9pMh07baakOSxSpiCVqDmkjEWVJidWQ0iliiO1QW39BpK10iOhU57fnM9b4MsNzmPm97298zxciPH0NJJlGkoVmkr0Wkus2kpcICRD1d5JYXSSLUZL9GInbS/KW8NjAEEnIMEkMM0yG2YHEkEEkST3fxE0ZCyyL9xlkHllFbOp+Ig7nSmBlUgJ81AUpt8qfBRsDFpguGDkt8NduFKwEFiCY3nL4/qKMgRQGdEFuuZUfb7fBdsACBOvZQ3ZeLzGQxIAuWBu94rPfDzAbLEBwEnd4M6L+7HVgmL7gqH2Ji4k4lr0ODPOfoPJT5fyYOrNfYl1wU0vz3NQklv0S6wL34Y5D7xXi9IpqW78FJaidD/N4MY9l/RaU4PlglieON+QPAAD///9+3ZsAAAAGSURBVAMA19p/4fJV7X8AAAAASUVORK5CYII=',
+        'base64'
+      ),
+      // A PNG of `data` whose row y is filtered with filter y % 5: none, Sub, Up, Average and Paeth, as the PNG
+      //  specification sets them out.
+      filteredPng = (width: number, height: number, data: Buffer): Buffer => {
+        const stride = width * 4,
+          raw = Buffer.alloc((stride + 1) * height),
+          at = (x: number, y: number): number =>
+            x < 0 || y < 0 ? 0 : data[y * stride + x]!,
+          chunk = (type: string, body: Buffer): Buffer => {
+            const length = Buffer.alloc(4),
+              crc = Buffer.alloc(4),
+              typed = Buffer.concat([Buffer.from(type, 'ascii'), body]);
+
+            length.writeUInt32BE(body.length);
+            crc.writeUInt32BE(crc32(typed));
+
+            return Buffer.concat([length, typed, crc]);
+          },
+          header = Buffer.alloc(13);
+
+        for (let y = 0; y < height; y++) {
+          const filter = y % 5;
+
+          raw[y * (stride + 1)] = filter;
+
+          for (let x = 0; x < stride; x++) {
+            const value = at(x, y),
+              a = at(x - 4, y),
+              b = at(x, y - 1),
+              c = at(x - 4, y - 1),
+              p = a + b - c,
+              [pa, pb, pc] = [a, b, c].map((near) => Math.abs(p - near)),
+              predicted = [
+                0,
+                a,
+                b,
+                (a + b) >> 1,
+                pa! <= pb! && pa! <= pc! ? a : pb! <= pc! ? b : c,
+              ][filter]!;
+
+            raw[y * (stride + 1) + 1 + x] = (value - predicted) & 0xff;
+          }
+        }
+
+        header.writeUInt32BE(width, 0);
+        header.writeUInt32BE(height, 4);
+        header[8] = 8;
+        header[9] = 6;
+
+        return Buffer.concat([
+          Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+          chunk('IHDR', header),
+          chunk('IDAT', deflateSync(raw)),
+          chunk('IEND', Buffer.alloc(0)),
+        ]);
+      },
+      // The pixels of a PNG whose rows are all unfiltered, as `writePng` writes them, read without `readPng`: its
+      //  IDAT inflated, and each row's filter byte dropped. Null for a row with another filter.
+      unfiltered = (png: Buffer): Pixels | null => {
+        const width = png.readUInt32BE(16),
+          height = png.readUInt32BE(20),
+          stride = width * 4,
+          idat: Buffer[] = [];
+
+        for (let at = 8; at < png.length; ) {
+          const length = png.readUInt32BE(at);
+
+          if (png.toString('ascii', at + 4, at + 8) === 'IDAT') {
+            idat.push(png.subarray(at + 8, at + 8 + length));
+          }
+
+          at += length + 12;
+        }
+
+        const raw = inflateSync(Buffer.concat(idat)),
+          data = Buffer.alloc(stride * height);
+
+        for (let y = 0; y < height; y++) {
+          if (raw[y * (stride + 1)] !== 0) {
+            return null;
+          }
+
+          raw.copy(
+            data,
+            y * stride,
+            y * (stride + 1) + 1,
+            (y + 1) * (stride + 1)
+          );
+        }
+
+        return { width, height, data };
+      },
+      big = pattern(23, 11);
+
+    expect(
+      "a browser's PNG, and one with rows filtered each of the five ways, read as they were drawn",
+      [
+        readPng(browserPng).data.equals(pattern(16, 8)),
+        readPng(filteredPng(23, 11, big)).data.equals(big),
+      ],
+      [true, true]
+    );
+    expect(
+      'the built sheets, read without the reader that built them, are the pixels it reads',
+      Object.values(sheets).map(({ sheet }) => {
+        const png = readFileSync(sheet),
+          read = unfiltered(png);
+
+        return read !== null && read.data.equals(readPng(png).data);
+      }),
+      [true, true]
+    );
+  }
+
   // Loading a hosted set: its sheet and index fetched, and each sprite it lists cut out under its key.
   const fixture = buildSheet(
       { id: 'fixture', assets: { required: ['a', 'b'], optional: ['c'] } },
@@ -786,6 +928,18 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
             (error: Error) => error.message
           );
 
+          // The same request hung, through the set's own load: said to be the fetch, not the decode (#1114).
+          (globalThis as any).fetch = () => new Promise(() => {});
+
+          const unfetched = await loadHosted(
+            fixturePack,
+            fixturePack.hosted!,
+            5
+          ).then(
+            () => null,
+            (error: Error) => error.message
+          );
+
           // A sheet that comes, and a decode that never finishes.
           (globalThis as any).fetch = fetching;
           (globalThis as any).createImageBitmap = () => new Promise(() => {});
@@ -799,9 +953,22 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
             (error: Error) => error.message
           );
 
+          // A sheet decoded, and a sprite cut from it that never is.
+          (globalThis as any).createImageBitmap = (source: unknown) =>
+            source instanceof Blob ? decoding(source) : new Promise(() => {});
+
+          const uncut = await loadHosted(
+            fixturePack,
+            fixturePack.hosted!,
+            20
+          ).then(
+            () => null,
+            (error: Error) => error.message
+          );
+
           (globalThis as any).createImageBitmap = decoding;
 
-          return [hung, stalled, undecoded];
+          return [hung, stalled, unfetched, undecoded, uncut];
         })(),
       ]),
       [
@@ -810,9 +977,79 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
         [
           "sets/fixture.png didn't come within 5 ms.",
           "sets/fixture.json didn't come within 5 ms.",
-          "The fixture set's sheet didn't come within 20 ms.",
+          "The fixture set's sheet didn't come within 5 ms: it was still being fetched.",
+          "The fixture set's sheet didn't come within 20 ms: it was still being decoded.",
+          "The fixture set's sheet didn't come within 20 ms: it was still being cut up.",
         ],
       ]
+    );
+
+    // What comes in time leaves no timer behind (#1114): a timer left would abort, or reject, once nothing waits.
+    const setTimer = globalThis.setTimeout,
+      clearTimer = globalThis.clearTimeout,
+      pending = new Set<unknown>();
+
+    (globalThis as any).setTimeout = (
+      ...args: Parameters<typeof setTimeout>
+    ) => {
+      const timer = setTimer(...args);
+
+      pending.add(timer);
+
+      return timer;
+    };
+    (globalThis as any).clearTimeout = (
+      timer: ReturnType<typeof setTimeout>
+    ) => {
+      pending.delete(timer);
+      clearTimer(timer);
+    };
+
+    const fetchedInTime = await fetchHosted('sets/fixture.json', (response) =>
+        response.json()
+      ).then(() => pending.size),
+      loadedInTime = await loadHosted(fixturePack, fixturePack.hosted!).then(
+        (sprites) => [sprites.size, pending.size]
+      );
+
+    globalThis.setTimeout = setTimer;
+    globalThis.clearTimeout = clearTimer;
+
+    expect(
+      "a sheet or index that comes in time clears the timer that would have given up on it, and the decode's",
+      [fetchedInTime, loadedInTime],
+      [0, [3, 0]]
+    );
+  }
+
+  // A sheet decoded as an `<img>`, as a background tab's is (#1114): each sprite cut onto a canvas of its own size.
+  {
+    const image = (document as unknown as Document).createElement('img'),
+      drawn: unknown[][] = [],
+      getContext = HTMLCanvasElement.prototype.getContext;
+
+    HTMLCanvasElement.prototype.getContext = function () {
+      return { drawImage: (...args: unknown[]) => drawn.push(args) } as any;
+    } as any;
+
+    const cut = (await cutSprite(image, {
+      x: 4,
+      y: 2,
+      width: 3,
+      height: 5,
+    })) as HTMLCanvasElement;
+
+    HTMLCanvasElement.prototype.getContext = getContext;
+
+    expect(
+      'a sprite cut from an <img> is a canvas its size, drawn from the sheet where the index says, with no bitmap made',
+      [
+        cut instanceof HTMLCanvasElement,
+        cut.width,
+        cut.height,
+        drawn.map(([source, ...rest]) => [source === image, ...rest]),
+      ],
+      [true, 3, 5, [[true, 4, 2, 3, 5, 0, 0, 3, 5]]]
     );
   }
 
@@ -1161,6 +1398,51 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
       );
 
       provideStartPreparation(prepareMapArt);
+    }
+
+    // New Game's wait through the page's own preparation (#1114), not a stand-in: the hex grid's art, not yet fetched,
+    //  is fetched first, and nothing is sent until it has come.
+    {
+      const sent: string[] = [],
+        fetching = (globalThis as any).fetch,
+        held: (() => void)[] = [],
+        transport = {
+          request: async () => ({}),
+          send: (channel: string) => sent.push(channel),
+        } as any;
+
+      (globalThis as any).fetch = (url: string) =>
+        new Promise<void>((resolve) => held.push(resolve)).then(() =>
+          fetching(url)
+        );
+      fetched.length = 0;
+
+      (document as unknown as Document)
+        .querySelectorAll('dialog[open]')
+        .forEach((dialog) => dialog.removeAttribute('open'));
+      askPlayerCount(transport, { topologyId: 'hex-odd-r' }, [2, 3], 2);
+      choose('2');
+      await settle();
+
+      const waiting = [...sent];
+
+      held.forEach((release) => release());
+
+      for (let tries = 0; tries < 100 && sent.length === 0; tries++) {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      }
+
+      (globalThis as any).fetch = fetching;
+
+      expect(
+        "New Game on a grid whose art isn't fetched yet waits for it, through the page's preparation, then starts",
+        [waiting, fetched, sent],
+        [
+          [],
+          [sheets['hex-pixelart']!.sheet, sheets['hex-pixelart']!.index],
+          ['start'],
+        ]
+      );
     }
 
     chooseMapTileset('square', '');

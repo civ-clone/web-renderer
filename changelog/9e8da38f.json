@@ -1,0 +1,1 @@
+{"version":"0.1.0@9e8da38f","date":"2026-11-18T12:20:47.000Z","localChanges":["The classic city screen draws its map at the map's zoom rounded down to a whole size, so at a zoom such as 1.4 it's the size it was at 1, not twice it (closes #1102)."],"externalChanges":{}}
