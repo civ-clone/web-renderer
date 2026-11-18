@@ -428,7 +428,7 @@ expect(
 );
 
 expect(
-  'a square on the square grid is 1 across, and the others have the same area',
+  'a square on the square grid is 1 across, an isometric diamond has the same area, and a hex 1 across its flats √3/2',
   [
     groundLayoutFor({ width, height, topologyId: 'square', wrapsY: true }),
     groundLayoutFor({
