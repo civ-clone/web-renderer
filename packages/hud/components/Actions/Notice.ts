@@ -2,7 +2,7 @@ import Action from './Action';
 import ActionWindow from '@civ-clone/ui-component-window/ActionWindow';
 import { Notice as NoticeData } from '../Notices';
 import { PlayerAction } from '@civ-clone/ui-protocol/types';
-import Portal from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { heldNoticeData } from '@civ-clone/ui-client/components/lib/cityBuild';
@@ -40,9 +40,9 @@ export const noticeText = (
   }) as unknown as string;
 
 export class Notice extends Action {
-  #portal: Portal;
+  #portal: MapPortal;
 
-  constructor(action: PlayerAction, portal: Portal, transport: Transport) {
+  constructor(action: PlayerAction, portal: MapPortal, transport: Transport) {
     super(action, transport);
 
     this.#portal = portal;

@@ -62,8 +62,7 @@ const sent: [string, unknown][] = [],
     receiveOnce: () => {},
   } as unknown as Transport;
 
-const layer = () => ({ isVisible: () => true, setVisible: () => {} }),
-  notificationArea = document.createElement('div'),
+const notificationArea = document.createElement('div'),
   notificationBar = new NotificationBar(notificationArea);
 
 // linkedom's `innerText` has no setter, which the bar uses to empty itself.
@@ -100,19 +99,15 @@ const notificationsSent = (): unknown[] =>
 // `?debug=1`: the stress runner starts with the panel, its windows off.
 const flags = new DebugFlags(true),
   panel = new DebugPanel(flags, {
-    citiesMap: layer() as any,
-    cityNamesMap: layer() as any,
     currentObjectCount: () => 0,
     currentTurn: () => 1,
     data: () => ({} as any),
-    minimap: { update: () => {} } as any,
     notificationBar,
     portal: { render: () => {} } as any,
     setActiveUnit: () => {},
     tilesPendingRender: () => 0,
     transport,
-    unitsMap: layer() as any,
-    yieldsMap: layer() as any,
+    viewModes: () => [() => {}, () => {}],
   });
 
 expect('the stress runner starts with the panel', !!flags.uiStressRunner, true);

@@ -14,7 +14,7 @@ import './lib/artPacks';
 
 import { Tile, Unit, World as WorldData } from '@civ-clone/ui-protocol/types';
 import CityBanners from '@civ-clone/ui-interface-modern/components/CityBanners';
-import MapView from '@civ-clone/ui-game/MapView';
+import MapView2D from '@civ-clone/ui-game/MapView2D';
 import { Map as MapLayer } from '@civ-clone/ui-map/components/Map';
 import Units from '@civ-clone/ui-map/components/Map/Units';
 import Cities from '@civ-clone/ui-map/components/Map/Cities';
@@ -190,7 +190,7 @@ let activeUnit: Unit | null = null,
   // The player's choice of how the unit awaiting orders is marked (#753): the theme's, until a test chooses.
   unitMarker = 'theme';
 
-const mapView = new MapView({
+const mapView = new MapView2D({
   activateUnit: (unit) => activated.push(unit.id),
   cityOpener: playerCityOpener(),
   coveredBy: [section],
@@ -416,6 +416,163 @@ expect(
 portal.emit('activate-unit', { id: 'Unit-2' } as unknown as Unit);
 
 expect('a unit picked on the map is handed on', activated, ['Unit-2']);
+
+// What the game asks of the map (`MapRenderer`, docs/3d-renderer.md §2.1), done to the portal and the layers as the game
+//  did itself before. Each call is recorded in place of what it does, which `tests/ui/activeUnit.ts` and the suites of
+//  the portal check.
+{
+  const asked: string[] = [],
+    record = <T extends object>(target: T, name: string, method: keyof T) => {
+      const original = target[method];
+
+      (target as any)[method] = (...args: unknown[]) => {
+        asked.push(
+          `${name}.${String(method)}(${args
+            .map((arg) =>
+              arg === undefined
+                ? 'undefined'
+                : typeof arg === 'function'
+                ? 'fn'
+                : Array.isArray(arg)
+                ? `${arg.length} tiles`
+                : arg !== null && typeof arg === 'object' && 'id' in arg
+                ? (arg as { id: string }).id
+                : JSON.stringify(arg)
+            )
+            .join(', ')})`
+        );
+
+        return method === 'picking' ? true : undefined;
+      };
+
+      return () => ((target as any)[method] = original);
+    },
+    restore = [
+      record(portal, 'portal', 'setActiveUnit'),
+      record(portal, 'portal', 'setWaiting'),
+      record(portal, 'portal', 'pickTile'),
+      record(portal, 'portal', 'picking'),
+      record(portal, 'portal', 'endPicking'),
+      record(portal, 'portal', 'zoomBy'),
+      record(mapView.unitsLayer, 'units', 'setActiveUnit'),
+      record(mapView.unitsLayer, 'units', 'update'),
+      record(mapView.unitsLayer, 'units', 'setVisible'),
+      record(mapView.activeUnitLayer, 'active', 'setActiveUnit'),
+      record(mapView.activeUnitLayer, 'active', 'render'),
+      record(mapView.activeUnitLayer, 'active', 'setVisible'),
+    ],
+    unit = { id: 'Unit-3' } as unknown as Unit;
+
+  counted();
+
+  mapView.setActiveUnit(unit, { x: 2, y: 2 });
+
+  expect(
+    'the unit made active is the portal’s, the units layer’s and the active unit’s layer’s, in that order',
+    asked.splice(0),
+    [
+      'portal.setActiveUnit(Unit-3)',
+      'units.setActiveUnit(Unit-3, {"x":2,"y":2})',
+      'active.setActiveUnit(Unit-3, {"x":2,"y":2})',
+    ]
+  );
+
+  mapView.setActiveUnit(null);
+
+  expect('and none', asked.splice(0), [
+    'portal.setActiveUnit(null)',
+    'units.setActiveUnit(null, undefined)',
+    'active.setActiveUnit(null, undefined)',
+  ]);
+
+  mapView.showActiveUnit([tiles[1], tiles[2]]);
+
+  expect(
+    'showing it redraws the squares it changed on the units layer, then the unit, and shows both layers',
+    asked.splice(0),
+    [
+      'units.update(2 tiles)',
+      'units.setVisible(true)',
+      'active.render()',
+      'active.setVisible(true)',
+    ]
+  );
+
+  expect('neither draws the map', counted(), [0, 0]);
+
+  mapView.setWaiting(true);
+  mapView.pickTile(
+    () => true,
+    () => {},
+    'Where?'
+  );
+
+  const picking = mapView.picking();
+
+  mapView.endPicking();
+  mapView.zoomBy(-2);
+
+  expect(
+    'waiting, choosing a square and zooming are the portal’s',
+    [asked.splice(0), picking],
+    [
+      [
+        'portal.setWaiting(true)',
+        'portal.pickTile(fn, fn, "Where?")',
+        'portal.picking()',
+        'portal.endPicking()',
+        'portal.zoomBy(-2)',
+      ],
+      true,
+    ]
+  );
+
+  restore.forEach((undo) => undo());
+
+  // The stress runner's view modes (`?debug=1`): each flips its layers, draws the map and the minimap, and leaves `t`'s
+  //  own state alone.
+  const [yieldsMode, unitsMode] = mapView.debugViewModes(),
+    shown = () => [
+      mapView.yieldsLayer.isVisible(),
+      mapView.unitsLayer.isVisible(),
+      mapView.citiesLayer.isVisible(),
+      mapView.cityNamesLayer.isVisible(),
+    ],
+    before = shown();
+
+  yieldsMode();
+
+  expect('the first flips the yields', shown(), [
+    !before[0],
+    ...before.slice(1),
+  ]);
+  expect('and draws the map and the minimap', counted(), [1, 1]);
+
+  yieldsMode();
+  unitsMode();
+
+  expect('the second flips the units, cities and city names', shown(), [
+    before[0],
+    ...before.slice(1).map((visible) => !visible),
+  ]);
+  expect('each drawing the map and the minimap', counted(), [2, 2]);
+
+  // `t` still has the units shown: pressed now, it hides them (as they are), where it would show them had the view
+  //  mode hidden them for it.
+  mapView.toggleUnits();
+
+  expect(
+    'and leaves `t` as it was: pressed after it, `t` hides them',
+    mapView.unitsLayer.isVisible(),
+    false
+  );
+
+  mapView.toggleUnits();
+
+  expect('and shows them again', shown(), before);
+
+  counted();
+}
 
 // The blink.
 
@@ -929,7 +1086,7 @@ expect('and the resize handler', mapPortal.width, 10);
 //  (#747), which the classic theme draws as the labels.
 applyInterface('modern', null);
 
-const withBanners = new MapView({
+const withBanners = new MapView2D({
   activateUnit: () => {},
   cityOpener: playerCityOpener(),
   activeUnit: () => null,
@@ -998,7 +1155,7 @@ applyInterface('classic', null);
 // The order the units and cities are drawn in (#97): Civ1's box cities over their units, as always; a pack whose
 //  cities are taller than their tile (Civ2's) with its units over them, so a unit in a city stands in front of it.
 {
-  const isoView = new MapView({
+  const isoView = new MapView2D({
       activateUnit: () => {},
       cityOpener: playerCityOpener(),
       activeUnit: () => null,
@@ -1018,7 +1175,7 @@ applyInterface('classic', null);
         topologyId: 'staggered-iso',
       } as unknown as WorldData,
     }),
-    order = (view: MapView): string[] =>
+    order = (view: MapView2D): string[] =>
       view.portal
         .getLayers(MapLayer)
         // The units' own layer, not the active unit's, which is drawn over everything.
@@ -1046,7 +1203,7 @@ applyInterface('classic', null);
   chooseMapTileset('square', '');
 
   const zooms: { [key: string]: number } = { 'zoom.civ1-pixelart': 1.5 },
-    artView = new MapView({
+    artView = new MapView2D({
       activateUnit: () => {},
       cityOpener: playerCityOpener(),
       activeUnit: () => null,

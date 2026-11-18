@@ -31,7 +31,9 @@ This feeds the 3D view's `appearance` (spec D9): `walled` is the first piece of 
 
 ### P2. Map events: who moved where, who fought whom
 
-**Today** [verified]:
+**Done:** #1173 (2736197d).
+
+**Before it** [verified]:
 
 - A move reaches the page only as two tile patches (`unit:moved` in `patchEvents.ts`).
 - A battle reaches it only as a sound (`battle` in `battleEvents.ts`).
@@ -64,12 +66,20 @@ If a later slice finds the patches already carry enough (a unit's id on both squ
   - What `GameSession`, `InputController` and `ActiveUnitController` use of `MapView` becomes `MapRenderer`, and what
     everything else holds the portal for (the HUD, the reports, the unit panel, the city list, the game menu, the
     cheats, the city openers and the city screen's sizes) becomes `MapPortal` (spec §2.1).
-  - The layer calls they make become methods on the view. The debug panel's layer handles stay the 2D view's own.
+  - The layer calls they make become methods on the view. The debug panel's layer handles stay the 2D view's own: it
+    asks the view for its view modes.
   - `MapView` becomes `MapView2D`.
 - **Proof that nothing changes:** the render-geometry fixture, `npm test`, and a game played in the browser on all
   three grids.
-- **Also:** the input handling the 3D view will share is lifted out of `GamePortal` into a module of its own: the drag
+
+### 0.1b The map's input, shared
+
+Split from 0.1, as its risk and its proof are different: the timing of events, not where calls go.
+
+- **What:** the input handling the 3D view will share is lifted out of `GamePortal` into a module of its own: the drag
   threshold, the glide, wheel steps, pinch and Safari's gestures.
+- **Proof that nothing changes:** the `mapNavigation` and `zoom` suites, and a mouse, a trackpad and Safari's pinch
+  tried in the browser.
 
 ### 0.2 The package, three.js and a lazy entry
 
@@ -314,9 +324,10 @@ sets in 6.4.
 
 ## Order and what runs alongside
 
-- **Done:** P1.
-- **Now, in parallel:** P2 (map events), 0.1 (the seam), and 2.0 (the licence survey, which is research).
-- **Then, in order:** 0.2 (the entry), 0.3 (layouts), then M1.
+- **Done:** P1, P2.
+- **Now, in parallel:** 0.1 (the seam), and 2.0 (the licence survey, which is research).
+- **Then, in order:** 0.1b (the input), 0.2 (the entry), 0.3 (layouts), then M1. 0.1b can run beside 0.2 and 0.3,
+  which don't touch `GamePortal`.
 - **After M1:**
   - M2, whose 2.3 needs P2;
   - M3, alongside M2.

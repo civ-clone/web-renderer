@@ -1,16 +1,11 @@
 import { GameData, Unit } from '@civ-clone/ui-protocol/types';
 import createMemoryTestbed, { MemoryTestbed } from '../lib/memoryTestbed';
-import Cities from '@civ-clone/ui-map/components/Map/Cities';
-import { Map as MapLayer } from '@civ-clone/ui-map/components/Map';
 import DebugFlags from '@civ-clone/ui-client/debug/DebugFlags';
-import GamePortal from '../GamePortal';
-import { GridMinimap } from '@civ-clone/ui-map/lib/projectionFor';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import NotificationBar from '../app/NotificationBar';
 import Transport from '@civ-clone/ui-client/Transport';
 import UIStressRunner from '../lib/UIStressRunner';
 import { exportDebugCsv, exportDebugJson } from './debugExport';
-import Units from '@civ-clone/ui-map/components/Map/Units';
-import Yields from '@civ-clone/ui-map/components/Map/Yields';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';
 
@@ -18,22 +13,18 @@ import { s } from '@dom111/element';
 // getters, so the panel and the stress runner read the live value rather than
 // the one there was when the panel was made.
 export type DebugPanelDeps = {
-  citiesMap: Cities;
-  // Whichever names the cities (`cityLabels`).
-  cityNamesMap: MapLayer;
   currentObjectCount: () => number;
   currentTurn: () => number;
   data: () => GameData;
-  minimap: GridMinimap;
   // Where the panel's notices show. Not `transport.send('notification')`: that
   // channel only comes from the worker.
   notificationBar: NotificationBar;
-  portal: GamePortal;
+  portal: MapPortal;
   setActiveUnit: (unit: Unit | null) => void;
   tilesPendingRender: () => number;
   transport: Transport;
-  unitsMap: Units;
-  yieldsMap: Yields;
+  // What the stress runner flips the map between (`MapRenderer#debugViewModes`).
+  viewModes: () => (() => void)[];
 };
 
 // The `?debug=1` tooling: the memory testbed (`window.__civMemoryTestbed`),
@@ -196,16 +187,12 @@ export class DebugPanel {
     }
 
     const {
-      citiesMap,
-      cityNamesMap,
       data,
-      minimap,
       notificationBar,
       portal,
       setActiveUnit,
       transport,
-      unitsMap,
-      yieldsMap,
+      viewModes,
     } = this.#deps;
 
     notificationBar.show(
@@ -219,20 +206,7 @@ export class DebugPanel {
       getData: () => data(),
       portal,
       setActiveUnit: (unit) => setActiveUnit(unit),
-      toggleViewModes: [
-        () => {
-          yieldsMap.setVisible(!yieldsMap.isVisible());
-          portal.render();
-          minimap.update();
-        },
-        () => {
-          unitsMap.setVisible(!unitsMap.isVisible());
-          citiesMap.setVisible(!citiesMap.isVisible());
-          cityNamesMap.setVisible(!cityNamesMap.isVisible());
-          portal.render();
-          minimap.update();
-        },
-      ],
+      toggleViewModes: viewModes(),
       transport,
     });
   }

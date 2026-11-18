@@ -12,7 +12,7 @@ import {
   openHappinessReport,
   openTradeReport,
 } from '@civ-clone/ui-reports/components/reports';
-import Portal from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import ScienceReport from '@civ-clone/ui-reports/components/ScienceReport';
 import Transport from '@civ-clone/ui-client/Transport';
 import endTurn from '@civ-clone/ui-client/lib/endTurn';
@@ -31,7 +31,7 @@ export type UIStressRunnerOptions = {
   enableWindows?: boolean;
   getData: () => GameData | null;
   intervalMs?: number;
-  portal: Portal;
+  portal: MapPortal;
   screenDurationMs?: number;
   setActiveUnit: (unit: Unit | null) => void;
   toggleViewModes: (() => void)[];
@@ -92,7 +92,7 @@ export class UIStressRunner {
   #getData: UIStressRunnerOptions['getData'];
   #interval: number;
   #openedWindows = new Set<WindowLike>();
-  #portal: Portal;
+  #portal: MapPortal;
   #screenDurationMs: number;
   #setActiveUnit: UIStressRunnerOptions['setActiveUnit'];
   #tick: number = 0;

@@ -142,7 +142,7 @@ staggered isometric grid, which `tileset-civ2` registers (`registerTileset(tiles
   `#ff0000`.
 - The map is drawn with `mapTileset(topologyId)`, the installed pack for the world's grid (or the bundled one, sprites
   missing, if none is installed, which loading refuses before then): `Map.tileset()`, `Portal`'s projection and default
-  tile size and scale, `MapView` and the minimap all take the world's `topologyId()`. `setMapGrid` (from `MapView`)
+  tile size and scale, `MapView2D` and the minimap all take the world's `topologyId()`. `setMapGrid` (from `MapView2D`)
   makes it the default for the windows' units (`hud/Unit`, the unit card), which follow the map's pack, at no more than
   its own default scale for a tile wider than the 16 px windows are laid out for (`shownScale`,
   `REFERENCE_TILE_WIDTH`), and for Options' zoom. A sprite looked up (`getPreloadedImage`) or a unit drawn
@@ -194,7 +194,7 @@ staggered isometric grid, which `tileset-civ2` registers (`registerTileset(tiles
 - Coast quarters are named for their three neighbours last-clockwise first: the top quarter `n` for `ne`, `n`, `nw`,
   so `n-001` has land along its NW edge (`tests/ui/tilesetDrawing.ts` pins one case per quarter against `civ2.json`).
 - Units and cities are 64 × 48, drawn 16 px above the tile. The map draws its units over its cities for a `styles`
-  pack (`MapView`), so a tall unit on the tile in front stands in front of a city; Civ1's box cities stay over their
+  pack (`MapView2D`), so a tall unit on the tile in front stands in front of a city; Civ1's box cities stay over their
   units. A `styles` city's own units aren't drawn over it (`Units`), all but the active one: `Cities` marks it occupied
   (#1122) with a box in its player's colours, the first edged with the second, 6 native px square on the tile's left
   halfway down, where every grid's tile is its full width.

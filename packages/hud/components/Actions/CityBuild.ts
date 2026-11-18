@@ -5,7 +5,7 @@ import {
 import Action from './Action';
 import CityBuildAvailable from '@civ-clone/ui-protocol/Requests/CityBuildAvailable';
 import { openCityBuild } from '@civ-clone/ui-city/components/choices';
-import Portal from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { s } from '@dom111/element';
@@ -18,9 +18,9 @@ import { interfaceSpriteKey } from '@civ-clone/ui-assets/lib/interfaceArt';
 export class CityBuild extends Action {
   // Whether the picker is waiting for what the city can build (#484).
   #opening = false;
-  #portal: Portal;
+  #portal: MapPortal;
 
-  constructor(action: PlayerAction, portal: Portal, transport: Transport) {
+  constructor(action: PlayerAction, portal: MapPortal, transport: Transport) {
     super(action, transport);
 
     this.#portal = portal;

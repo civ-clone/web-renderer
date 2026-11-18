@@ -5,7 +5,7 @@ import {
   YieldTotals,
   yieldData,
 } from '@civ-clone/ui-city/components/lib/cityYields';
-import Portal from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import Transport from '@civ-clone/ui-client/Transport';
 import FilterableWindow from '@civ-clone/ui-component-window/FilterableWindow';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
@@ -120,10 +120,10 @@ export class CityStatus extends FilterableWindow {
   #cities: CityData[];
   // Counts the tables asked for, so that one whose rows took longer to build than a later one's isn't shown over it.
   #updates = 0;
-  #portal: Portal;
+  #portal: MapPortal;
   #unwatch: () => void;
 
-  constructor(player: Player, portal: Portal, transport: Transport) {
+  constructor(player: Player, portal: MapPortal, transport: Transport) {
     super(t('CityStatus.title'), s('<div class="loading"></div>'), {
       classes: 'city-status',
       rowSelector: 'tr',

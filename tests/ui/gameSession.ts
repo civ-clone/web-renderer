@@ -31,7 +31,7 @@ import {
 import { ObserverState } from '@civ-clone/ui-protocol/observer';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import { City as CityData, Tile } from '@civ-clone/ui-protocol/types';
-import { MapView } from '@civ-clone/ui-game/MapView';
+import { MapView2D } from '@civ-clone/ui-game/MapView2D';
 import DebugFlags from '@civ-clone/ui-client/debug/DebugFlags';
 import HaltedUnits from '@civ-clone/ui-client/lib/haltedUnits';
 import Notices from '@civ-clone/ui-hud/components/Notices';
@@ -448,11 +448,11 @@ const run = async (): Promise<void> => {
 
   // The map's art chosen again during the game (#1118): the map is drawn with it at once, and again as it goes back.
   {
-    const { redrawArt } = MapView.prototype,
+    const { redrawArt } = MapView2D.prototype,
       redrawn: string[] = [];
 
-    MapView.prototype.redrawArt = function (
-      this: MapView
+    MapView2D.prototype.redrawArt = function (
+      this: MapView2D
     ): ReturnType<typeof redrawArt> {
       const result = redrawArt.call(this);
 
@@ -467,7 +467,7 @@ const run = async (): Promise<void> => {
     options.set('autosave', '5');
     chooseMapTileset('square', '');
 
-    MapView.prototype.redrawArt = redrawArt;
+    MapView2D.prototype.redrawArt = redrawArt;
     // Civ1's alone again, as the rest expects: no hex art to draw a hex world with.
     installTilesets({
       'civ1-pixelart': { complete: false, metadata: null },
@@ -530,14 +530,15 @@ const run = async (): Promise<void> => {
   //  over to one, or, where it can't be now, the player is told the art waits for the next load. The save comes back
   //  on `handOverGame` to be handed over (`handOverSave`): where it can't be, that's said and the game goes on.
   {
-    const { redrawArt } = MapView.prototype,
+    const { redrawArt } = MapView2D.prototype,
       { alert } = window,
       alerted: string[] = [],
       banner = (): string | null | undefined =>
         elements.mapWrapper.querySelector('.waiting')?.textContent,
       before = sent.length;
 
-    MapView.prototype.redrawArt = (): ReturnType<typeof redrawArt> => 'reload';
+    MapView2D.prototype.redrawArt = (): ReturnType<typeof redrawArt> =>
+      'reload';
     window.alert = (message: string): void => {
       alerted.push(message);
     };
@@ -583,7 +584,7 @@ const run = async (): Promise<void> => {
     );
 
     deliver('saveFailed', { message: 'full', handOver: true });
-    MapView.prototype.redrawArt = redrawArt;
+    MapView2D.prototype.redrawArt = redrawArt;
     window.alert = alert;
   }
 
@@ -672,7 +673,7 @@ const run = async (): Promise<void> => {
   );
 
   // A new game opens on the player's start, once (#705), and a loaded one where it is.
-  const mapViewCentre = MapView.prototype.centre,
+  const mapViewCentre = MapView2D.prototype.centre,
     centred: string[] = [],
     startWith = (
       pendingSave: string | null,
@@ -696,7 +697,7 @@ const run = async (): Promise<void> => {
       }).start(makeMap(1, 1, cityOnTile));
     };
 
-  MapView.prototype.centre = function (this: MapView, tile: Tile): void {
+  MapView2D.prototype.centre = function (this: MapView2D, tile: Tile): void {
     centred.push(`${tile.x},${tile.y}`);
   };
 
@@ -731,7 +732,7 @@ const run = async (): Promise<void> => {
     '1,0',
   ]);
 
-  MapView.prototype.centre = mapViewCentre;
+  MapView2D.prototype.centre = mapViewCentre;
   document.querySelectorAll('.welcome').forEach((welcome) => welcome.remove());
 
   // A world on a grid that can't be drawn here (#89): said, and back to the menu, with no game started.

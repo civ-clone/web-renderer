@@ -224,8 +224,8 @@ prerequisite P1) with a `walled` flag on every city, the first piece of `appeara
 
 ### 2.1 A second map view
 
-Today the game makes one `MapView` (`packages/game/MapView.ts`), which owns a `GamePortal` and its 2D layers
-[verified]. The game uses a small part of it:
+Before slice 0.1, the game made one `MapView` (`packages/game/MapView.ts`), which owns a `GamePortal` and its 2D
+layers [verified]. The game used a small part of it:
 
 - **`GameSession`:**
   - `queueTile`, `releaseTiles`, `world.setTiles`, `flush`, `centre`, `redrawArt`, `dispose`, `measureCovered`;
@@ -242,28 +242,47 @@ Today the game makes one `MapView` (`packages/game/MapView.ts`), which owns a `G
 - **The city screen:** it stays 2D, but sizes its own map from the game portal's `zoom()` and `nativeTileSize()`
   (`cityParts.ts`).
 
-That use becomes two interfaces, which both views implement:
+That use is now two interfaces, which both views implement (slice 0.1). Both are in `packages/map`, so the 3D view's
+package can implement them without depending on the game's:
 
-- **`MapRenderer`:** what `GameSession`, `InputController` and `ActiveUnitController` use. The layers' own calls become
-  methods on it, such as "the active unit is now this", "show or hide units" and "show or hide yields", so the game
-  stops reaching into layers that the 3D view doesn't have.
-- **`MapPortal`:** what everything else holds the portal for. That's today's `IPortal`
-  (`packages/map/components/Portal.ts`), plus what `GamePortal` adds that others call:
-  - **The HUD, reports and menus:** `openCity`, `setCenter`, `center`, `render`, `isVisible`, `playerId` and
-    `transport` (the city openers).
+- **`MapRenderer`** (`packages/map/MapRenderer.ts`): what `GameSession`, `InputController` and `ActiveUnitController`
+  use. The layers' own calls are methods on it, so the game no longer reaches into layers the 3D view doesn't have:
+  - **The portal:** `portal`, the view's `MapPortal`, which the game hands on to the rest.
+  - **The tiles:** `queueTile`, `releaseTiles`, `tilesPending`, `flush` and `world` (its `setTiles`).
+  - **The view:** `centre`, `redrawArt`, `measureCovered`, `dispose` and `mapEvent`.
+  - **What's shown:** `toggleUnits` and `toggleYields`.
+  - **The active unit:** `setActiveUnit(unit, pendingTile)` tells the map which unit is active, and `showActiveUnit`
+    draws it.
+  - **Orders:** `pickTile`, `picking` and `endPicking` choose a square for a long-range order, and `setWaiting` says
+    the game is waiting for the next turn (the 2D map's tooltips stay shut meanwhile; the game, not the map, refuses
+    orders).
+  - **Zoom:** `zoomBy`, for the zoom keys.
+  - **Debugging:** `debugViewModes`, what the `?debug=1` stress runner flips between.
+
+  `pickTile` and the rest of `GamePortal`'s own are here rather than on `MapPortal`. That's because the 2D portal hands
+  itself, a plain `Portal`, to the city openers, which have only `MapPortal`'s members.
+- **`MapPortal`** (`packages/map/MapPortal.ts`): what everything else holds the portal for. `Portal` implements it.
+  It's the part of `IPortal` others call, plus the two events they use, and its event methods take only those two:
+  - **The HUD, reports and menus:** `openCity` and `setCenter`; `center` (the cheats); `playerId` and `transport`
+    (the city openers).
+  - **The active unit's controller:** `isVisible`, `setCenter` and `render`.
   - **The city screen:** `zoom`, `scale` and `nativeTileSize` to size its map, and the `activate-unit` event.
   - **Options:** `zoom`, `setZoom`, `lockVerticalEdges` and `setLockVerticalEdges`.
   - **The cheats:** the `tile-clicked` event.
-  - **`GameSession`:** `pickTile`.
 
-  The 3D view implements all of it. `setCenter` and `center` move and read the camera's focus. For the city screen,
-  `zoom`, `scale` and `nativeTileSize` answer as the 2D map art would, because the city screen still draws with that
-  art. `lockVerticalEdges` keeps the camera's focus off the poles. The 2D-only members (`getLayer`, `getLayers`,
-  `build`, `canvas`) stay on `MapView2D`, where the debug panel finds them, and aren't part of `MapPortal`.
+  The 3D view implements all of it:
+  - `setCenter` and `center` move and read the camera's focus.
+  - For the city screen, `zoom`, `scale` and `nativeTileSize` answer as the 2D map art would, because the city screen
+    still draws with that art.
+  - `lockVerticalEdges` keeps the camera's focus off the poles.
+
+  The rest of `IPortal` stays with `MapView2D` and its portal, and isn't part of `MapPortal`: the layers (`getLayer`,
+  `getLayers`, `build`), the canvas and its geometry (`canvas`, `tileSize`, `setScale`, `scrollBy`, `setCovered`,
+  `visibleBounds`, `visibleRange`) and `world`. The minimaps hold the 2D portal itself.
 
 And:
 
-- **`MapView2D`** is today's class under a new name, with no change in what it does.
+- **`MapView2D`** (`packages/game/MapView2D.ts`) is the old class under a new name, with no change in what it does.
 - **`MapView3D`** is the new view.
 - **Choosing:** the game picks one when the game starts. To switch mid-game, the game is handed over to a new page
   that starts with the other view, as an art change that can't be made in place is (#1118, #1144). `redrawArt` itself
@@ -273,7 +292,7 @@ And:
 
 - **The city screen's map:** it builds a `Portal` of its own [verified: `packages/city/components/lib/cityParts.ts`].
 - **The minimap and the overview:** these draw the world, not the view. Today the overview gets its tiles by riding
-  in `GamePortal`'s layer list, which `portal.build()` feeds (`MapView.ts`), and the square grid's minimap reads the
+  in `GamePortal`'s layer list, which `portal.build()` feeds (`MapView2D.ts`), and the square grid's minimap reads the
   portal's `rawVisibleRange()` for its box [verified: `packages/map-square/Minimap.ts`]. The 3D view keeps a 2D
   overview of its own and feeds it the same tile updates. For the box, it gives the minimap the part of the ground the
   camera sees, which is a four-sided shape that turns with the camera, not a rectangle.
@@ -533,7 +552,7 @@ Each is looked up by its type name in the model set.
 - **Sentry, and orders:** a small symbol on the flag, from the interface art, as the 2D map does today.
 - **Working (Settlers):** the `work` clip.
 - **The active unit:** a ring laid on the land under it. It follows the unit marker option (ring, blink or both) and the
-  theme's colours [verified: `UnitMarker` and the `--ui-unit-ring` tokens, `packages/game/MapView.ts`].
+  theme's colours [verified: `UnitMarker` and the `--ui-unit-ring` tokens, `packages/game/MapView2D.ts`].
 - **Hidden units:** `t` hides units and cities, as it does on the 2D map.
 
 ### 6.4 Animation
@@ -698,7 +717,7 @@ mapEvent:
 
 - **Shown state:** the 3D view draws what's shown. The game's own state can be a little ahead of it.
 - **Holding patches:** while an animation is queued for a unit, the patches for the squares it involves are held. This
-  is the same idea as `#incomingTiles` in `MapView` [verified]. They apply when the animation ends.
+  is the same idea as `#incomingTiles` in `MapView2D` [verified]. They apply when the animation ends.
 - **Squares no animation involves** apply at once.
 - **One queue:** events play in the order they came. Moves by different units that don't touch the same squares can
   play at the same time.

@@ -1,5 +1,4 @@
 import {
-  Coordinate,
   GameData,
   PlayerAction,
   Tile,
@@ -27,48 +26,40 @@ import chooseDistantTarget, {
   PickTile,
 } from '@civ-clone/ui-hud/lib/distantOrders';
 import ActiveUnitTiles from '@civ-clone/ui-map/lib/ActiveUnitTiles';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
+import MapRenderer from '@civ-clone/ui-map/MapRenderer';
 import PendingMove from '@civ-clone/ui-client/lib/PendingMove';
 import playUnitKey, { PlayedKey } from './lib/playUnitKey';
 import { Topology } from '@civ-clone/ui-client/lib/topologyFor';
 
-// The active unit: which one it is, what the map layers and the unit details show for it, and what a unit key or one
-//  of its buttons does to it, typed now or kept while a move or another order is answered (#326, #543).
+// The active unit: which one it is, what the map and the unit details show for it, and what a unit key or one of its
+//  buttons does to it, typed now or kept while a move or another order is answered (#326, #543).
 //
 // Reaches into `document` in one place: `drain` leaves the kept keys to a modal window, or a window with the focus,
 //  as a key typed now would be (`dialog.window.modal[open]`, `document.activeElement`).
 
-/** What the controller needs of the map portal (`GamePortal`). */
-export interface ActiveUnitPortal {
-  isVisible(x: number, y: number, margin?: number): boolean;
-  render(): void;
-  setActiveUnit(unit: Unit | null): void;
-  setCenter(x: number, y: number): void;
-}
+/** What the controller needs of the map's portal. */
+export type ActiveUnitPortal = Pick<
+  MapPortal,
+  'isVisible' | 'render' | 'setCenter'
+>;
 
-/** What the controller needs of the units layer (`Units`). */
-export interface ActiveUnitUnitsLayer {
-  setActiveUnit(unit: Unit | null, pendingTile?: Coordinate | null): void;
-  setVisible(visible: boolean): void;
-  update(tiles: Tile[]): void;
-}
-
-/** What the controller needs of the active unit's layer (`ActiveUnit`). */
-export interface ActiveUnitLayer {
-  render(): void;
-  setActiveUnit(unit: Unit | null, pendingTile?: Coordinate | null): void;
-  setVisible(visible: boolean): void;
-}
+/** What the controller needs of the map itself (`MapRenderer`): to be told the active unit, and to draw it. */
+export type ActiveUnitMap = Pick<
+  MapRenderer,
+  'setActiveUnit' | 'showActiveUnit'
+>;
 
 export type ActiveUnitControllerDeps = {
-  activeUnitLayer: ActiveUnitLayer;
   // Once a halted unit's window has closed, chosen or dismissed (#357).
   arrivalClosed: () => void;
   // Read when an action is acknowledged, so always the latest rebuild.
   data: () => GameData;
   haltedUnits: HaltedUnits;
+  map: ActiveUnitMap;
   options: { get(key: string, defaultValue?: any): any };
-  // Lets the player click a square on the map for a long-range order (M2b), and gives that up: the map's portal, where
-  //  there is one.
+  // Lets the player click a square on the map for a long-range order (M2b), and gives that up: the map's
+  //  (`MapRenderer#pickTile`), where there is one.
   pickTile?: PickTile;
   endPickTile?: () => void;
   // The tests keep their own, to look at what is kept. Otherwise made here.
@@ -78,7 +69,6 @@ export type ActiveUnitControllerDeps = {
   // Builds the unit details panel for `unit` (`UnitDetails`).
   showUnitDetails: (unit: Unit | null) => void;
   transport: Pick<Transport, 'send'>;
-  unitsLayer: ActiveUnitUnitsLayer;
   // `topology` for the keys that move a unit: one per direction the world has (#88).
   world: {
     get(x: number, y: number): Tile;
@@ -256,11 +246,11 @@ export class ActiveUnitController {
     this.drain();
   }
 
-  // Input-critical state only: keeps `activeUnit`/`lastUnit` and the map
-  // layers' active-unit pointers current synchronously, so consecutive
+  // Input-critical state only: keeps `activeUnit`/`lastUnit` and the
+  // map's active-unit pointers current synchronously, so consecutive
   // moves of a multi-move unit always read the post-move tile. No render.
   apply(unit: Unit | null): void {
-    const { activeUnitLayer, portal, unitsLayer } = this.#deps,
+    const { map } = this.#deps,
       pendingMove = this.#pendingMove;
 
     // The keys kept for one unit were meant for it, not the next (#326).
@@ -281,9 +271,7 @@ export class ActiveUnitController {
 
     this.#activeUnit = unit;
 
-    portal.setActiveUnit(unit);
-    unitsLayer.setActiveUnit(unit, pendingTile);
-    activeUnitLayer.setActiveUnit(unit, pendingTile);
+    map.setActiveUnit(unit, pendingTile);
 
     if (unit !== null) {
       this.#lastUnit = unit;
@@ -450,20 +438,14 @@ export class ActiveUnitController {
 
   // Display half: safe to defer/coalesce (canvas composites + unit info).
   render(unit: Unit | null): void {
-    const { activeUnitLayer, options, portal, showUnitDetails, unitsLayer } =
-      this.#deps;
+    const { map, options, portal, showUnitDetails } = this.#deps;
 
     showUnitDetails(unit);
 
     // Only the tiles an active-unit change actually invalidated, rather
-    // than a full-world re-render of the layer on every unit selection
-    // and move. Every other tile reaches this layer the same way it
-    // reaches the others, through `portal.build(tilesToRender)`.
-    unitsLayer.update(this.#activeUnitTiles.take());
-
-    unitsLayer.setVisible(true);
-    activeUnitLayer.render();
-    activeUnitLayer.setVisible(true);
+    // than a full-world re-render on every unit selection and move. Every
+    // other tile reaches the map the same way, through its tile patches.
+    map.showActiveUnit(this.#activeUnitTiles.take());
 
     if (unit === null) {
       portal.render();

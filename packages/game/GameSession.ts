@@ -47,7 +47,8 @@ import shouldAutoEndTurn from '@civ-clone/ui-client/lib/autoEndTurn';
 import { beforeEndTurn } from '@civ-clone/ui-client/lib/endTurn';
 import { instance as dataChanges } from '@civ-clone/ui-client/lib/DataChanges';
 import ActiveUnitController from './ActiveUnitController';
-import MapView from './MapView';
+import MapRenderer from '@civ-clone/ui-map/MapRenderer';
+import MapView2D from './MapView2D';
 import Hud from './Hud';
 import GameState from '@civ-clone/ui-client/game/GameState';
 import InputController from './InputController';
@@ -123,7 +124,8 @@ export class GameSession {
   #gameState!: GameState;
   // `#buildInterface`'s.
   #waitingBanner!: HTMLElement;
-  #mapView!: MapView;
+  // The map the game is shown on (`MapRenderer`): the 2D map, for now.
+  #mapView!: MapRenderer;
   #dismissals!: Dismissals;
   #gameMenuItem!: GameMenu;
   #unitDetails!: ReturnType<ReturnType<typeof unitPanel.current>>;
@@ -336,7 +338,7 @@ export class GameSession {
 
     mapWrapper.append(waitingBanner);
 
-    const mapView: MapView = new MapView({
+    const mapView: MapRenderer = new MapView2D({
       activateUnit: (unit): void => {
         if (gameState.waiting()) {
           return;
@@ -391,7 +393,6 @@ export class GameSession {
         ? new PowerList(powerListElement, transport)
         : null,
       unitController = new ActiveUnitController({
-        activeUnitLayer: mapView.activeUnitLayer,
         arrivalClosed: (): void => {
           if (!gameState.waiting()) {
             gameState.update();
@@ -399,10 +400,11 @@ export class GameSession {
         },
         data: () => gameState.data(),
         haltedUnits,
+        map: mapView,
         options,
         pickTile: (accept, onPick, prompt): void =>
-          portal.pickTile(accept, onPick, prompt),
-        endPickTile: (): void => portal.endPicking(),
+          mapView.pickTile(accept, onPick, prompt),
+        endPickTile: (): void => mapView.endPicking(),
         portal,
         scheduleRender: (): void => this.#scheduleRender(),
         showUnitDetails: (unit): void => {
@@ -420,7 +422,6 @@ export class GameSession {
           mapView.measureCovered();
         },
         transport,
-        unitsLayer: mapView.unitsLayer,
         world,
       }),
       // The notifications dismissed this turn (#416): the HUD leaves them out, and auto end turn looks past them.
@@ -506,19 +507,15 @@ export class GameSession {
       unitController = this.#unitController!;
 
     return new DebugPanel(debugFlags, {
-      citiesMap: mapView.citiesLayer,
-      cityNamesMap: mapView.cityNamesLayer,
       currentObjectCount: () => gameState.currentObjectCount(),
       currentTurn: () => gameState.currentTurn(),
       data: () => gameState.data(),
-      minimap: mapView.minimap,
       notificationBar,
       portal: mapView.portal,
       setActiveUnit: (unit) => unitController.set(unit),
       tilesPendingRender: () => mapView.tilesPending(),
       transport,
-      unitsMap: mapView.unitsLayer,
-      yieldsMap: mapView.yieldsLayer,
+      viewModes: () => mapView.debugViewModes(),
     });
   }
 
@@ -653,7 +650,7 @@ export class GameSession {
     // this order, after `gameState` has rebuilt the data, pruned the
     // map and set the world's tiles. All state the input handlers
     // read synchronously (`unitController`'s active unit, queue and
-    // last unit, the map layers' active-unit pointers) must stay
+    // last unit, the map's active-unit pointers) must stay
     // here — deferring any of it (tried 2026-07-02) left `activeUnit`
     // stale for ~1 frame and broke consecutive moves of multi-move
     // units. Only `render()` is coalesced to one run per frame.
@@ -819,7 +816,7 @@ export class GameSession {
     this.#gameState.setWaiting(true);
     // The game takes no actions until the turn comes back: an open trade rates window can't change the rates (#1058).
     setTradeRatesWaiting(true);
-    this.#mapView.portal.setWaiting(true);
+    this.#mapView.setWaiting(true);
     this.#waitingBanner.textContent = t(
       this.#observing ? 'Observer.watching' : 'Game.waiting'
     );
@@ -845,7 +842,7 @@ export class GameSession {
     // Drops the rebuild deferred while waiting: this one replaces
     // it.
     gameState.setWaiting(false);
-    mapView.portal.setWaiting(false);
+    mapView.setWaiting(false);
     this.#waitingBanner.textContent = '';
     this.#hud!.nextTurn()?.waitingFor(null);
 
@@ -988,7 +985,7 @@ export class GameSession {
       handingOver = false;
 
       this.#gameState.setWaiting(false);
-      this.#mapView.portal.setWaiting(false);
+      this.#mapView.setWaiting(false);
       setTradeRatesWaiting(false, false);
       this.#waitingBanner.textContent = '';
 
@@ -1003,7 +1000,7 @@ export class GameSession {
       handingOver = true;
 
       this.#gameState.setWaiting(true);
-      this.#mapView.portal.setWaiting(true);
+      this.#mapView.setWaiting(true);
       // Rates changed now would be lost with the game carried over (#1058).
       setTradeRatesWaiting(true, false);
       this.#waitingBanner.textContent = t('Game.carrying-over');

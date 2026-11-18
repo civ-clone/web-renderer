@@ -24,7 +24,7 @@ export type FrameScheduler = {
   cancel(handle: number): void;
 };
 
-/** Where the map's tiles go: `MapView`'s `world` and its queue of tiles to draw. */
+/** Where the map's tiles go: the map's `world` and its queue of tiles to draw (`MapRenderer`). */
 export type GameStateTiles = {
   /** Each `PlayerTile` a patch carries, and the tile of each unit and city it changes the look of, once they are in the map. */
   queueTile(tile: Tile): void;

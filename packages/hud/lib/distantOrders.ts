@@ -10,7 +10,7 @@ import { targetedActions } from '@civ-clone/ui-client/lib/unitActions';
 
 /**
  * Lets the player click a square on the map, taking only those `accept` allows; `prompt` says what for. Calls
- *  `onPick` with the one clicked, once, and nothing if the player gives up. The map's portal does it (`GamePortal`).
+ *  `onPick` with the one clicked, once, and nothing if the player gives up. The map does it (`MapRenderer#pickTile`).
  */
 export type PickTile = (
   accept: (tile: Tile) => boolean,

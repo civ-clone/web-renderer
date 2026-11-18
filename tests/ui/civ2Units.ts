@@ -544,12 +544,12 @@ const run = async (): Promise<void> => {
     const sent: unknown[] = [],
       picked: ((tile: Tile) => void)[] = [],
       ended: number[] = [],
-      layer = { render() {}, setActiveUnit() {}, setVisible() {}, update() {} },
+      map = { setActiveUnit() {}, showActiveUnit() {} },
       controller = new ActiveUnitController({
-        activeUnitLayer: layer,
         arrivalClosed: () => {},
         data: () => ({ player: { units: [paratrooper] } } as any),
         haltedUnits: new HaltedUnits(),
+        map,
         options: {
           get: (key: string, defaultValue: any = null) => defaultValue,
         },
@@ -558,7 +558,6 @@ const run = async (): Promise<void> => {
         portal: {
           isVisible: () => true,
           render: () => {},
-          setActiveUnit: () => {},
           setCenter: () => {},
         },
         scheduleRender: () => {},
@@ -570,7 +569,6 @@ const run = async (): Promise<void> => {
             }
           }) as any,
         },
-        unitsLayer: layer,
         world: {
           get: (x: number) => tiles.find((tile) => tile.x === x)!,
           tiles: () => tiles,

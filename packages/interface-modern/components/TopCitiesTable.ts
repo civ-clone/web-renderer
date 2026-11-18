@@ -1,6 +1,6 @@
 import { City as CityData, Player } from '@civ-clone/ui-protocol/types';
 import ReportTable from '@civ-clone/ui-component-report-table/ReportTable';
-import Portal from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import TopCities from '@civ-clone/ui-protocol/Requests/TopCities';
 import { TopCitiesRow } from '@civ-clone/ui-protocol/reports';
 import Transport from '@civ-clone/ui-client/Transport';
@@ -90,7 +90,7 @@ export class TopCitiesTable extends Window {
   #table: ReportTable<TopCitiesRow>;
   #transport: Transport;
 
-  constructor(player: Player, portal: Portal, transport: Transport) {
+  constructor(player: Player, portal: MapPortal, transport: Transport) {
     // `top-cities-report` for the window's eyebrow, as the classic report has.
     super(t('TopCitiesReport.title'), s('<div></div>'), {
       classes: ['top-cities-report', 'ui-report'],

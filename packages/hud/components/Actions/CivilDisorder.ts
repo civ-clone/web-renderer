@@ -1,7 +1,7 @@
 import { City, PlayerAction } from '@civ-clone/ui-protocol/types';
 import Action from './Action';
 import ActionWindow from '@civ-clone/ui-component-window/ActionWindow';
-import Portal from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { s } from '@dom111/element';
@@ -11,9 +11,9 @@ import { t } from 'i18next';
 import { interfaceSpriteKey } from '@civ-clone/ui-assets/lib/interfaceArt';
 
 export class CivilDisorder extends Action {
-  #portal: Portal;
+  #portal: MapPortal;
 
-  constructor(action: PlayerAction, portal: Portal, transport: Transport) {
+  constructor(action: PlayerAction, portal: MapPortal, transport: Transport) {
     super(action, transport);
 
     this.#portal = portal;

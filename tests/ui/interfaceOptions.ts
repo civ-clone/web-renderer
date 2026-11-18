@@ -41,7 +41,7 @@ import forgetVisitParam, {
 import GameOptions, {
   assetsRow,
 } from '@civ-clone/ui-menus/components/GameOptions';
-import { IPortal } from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import {
   allowLeaving,
   guardLeaving,
@@ -481,7 +481,7 @@ Object.assign(globalThis, {
         scale: () => 2,
         zoom: () => 2,
         lockVerticalEdges: () => false,
-      } as unknown as IPortal);
+      } as unknown as MapPortal);
 
     expect(
       'Options is modal only before a game',

@@ -79,7 +79,7 @@ package but this, and no package imports the worker.
 Each path below is inside one of the workspace packages under `packages/` (see `docs/frontend-ui.md`, Packages).
 
 - `bootstrap.ts`: page start-up, the `Renderer` class `frontend.ts` starts; hands each game to `game/GameSession`.
-- `game/*`: one game: `GameSession`, `GameState` (patches and rebuilds), `ActiveUnitController`, `MapView`, `Hud`, `InputController`, and `GamePortal`, the map's input (click, drag, tooltips).
+- `game/*`: one game: `GameSession`, `GameState` (patches and rebuilds), `ActiveUnitController`, `MapView2D` (the 2D map, behind `MapRenderer`), `Hud`, `InputController`, and `GamePortal`, the map's input (click, drag, tooltips).
 - `app/*`: the page's elements, i18n, assets, options, reload guard, notification bar, choice windows and the windows that say what went wrong in the worker (`WorkerFailures`, #470).
 - `debug/*`: the `?debug=1` flags and panel, and the Game menu's cheat items and their windows (`cheats.ts`).
 - `Transport.ts`: UI-oriented transport type mapping.

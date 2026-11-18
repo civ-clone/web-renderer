@@ -5,7 +5,7 @@ import CheatPlayers, {
   CheatPlayersResult,
 } from '@civ-clone/ui-protocol/Requests/CheatPlayers';
 import { GameMenuItem } from '@civ-clone/ui-menus/components/mapMenus';
-import Portal from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import Transport from '@civ-clone/ui-client/Transport';
 import Window from '@civ-clone/ui-component-window/Window';
 import { elementId, h } from '@civ-clone/ui-widgets/lib/html';
@@ -132,7 +132,7 @@ const cheatGrantWindow = (
 const cheatCreateUnitWindow = (
   players: CheatPlayersResult[],
   unitTypes: string[],
-  portal: Portal,
+  portal: MapPortal,
   start: { x: number; y: number },
   onSubmit: (value: {
     player: string | null;
@@ -244,7 +244,7 @@ const cheatCreateUnitWindow = (
 // The Game menu's cheat items (`?cheat=1`, or Shift+5 then Shift+6), which `GameMenu` asks for each time it opens while
 //  the cheats are on.
 export const cheatRows = (
-  portal: Portal,
+  portal: MapPortal,
   transport: Transport
 ): GameMenuItem[] => [
   {

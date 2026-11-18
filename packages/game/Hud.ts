@@ -9,7 +9,7 @@ import GameDetails from '@civ-clone/ui-hud/components/GameDetails';
 import Dismissals from '@civ-clone/ui-client/lib/dismissals';
 import Notices from '@civ-clone/ui-hud/components/Notices';
 import PlayerDetails from '@civ-clone/ui-hud/components/PlayerDetails';
-import Portal from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import ScienceReport from '@civ-clone/ui-reports/components/ScienceReport';
 import PowerList from '@civ-clone/ui-hud/components/PowerList';
 import { openTradeReport } from '@civ-clone/ui-reports/components/reports';
@@ -46,7 +46,7 @@ export type HudDeps = {
   // Page-scoped, and cleared by the `document` `endturn` event: its notices are added to the primary panel each time.
   notices: Pick<Notices, 'actions'>;
   playerInfo: HTMLElement;
-  portal: Portal;
+  portal: MapPortal;
   // The sidebar's Power list (#701, #708), when the page has it.
   power?: Pick<PowerList, 'turn'> | null;
   secondaryActionArea: HTMLElement;

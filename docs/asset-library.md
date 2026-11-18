@@ -80,7 +80,7 @@ with civ.one. [asset-system.md](asset-system.md) describes the system as it is t
      art inside it instead:
      - `useMapArt` fetches the set's sheet before choosing it, so the map is never drawn from a sheet still on its way.
        If the fetch fails, the choice stays as it was and the set's entry says why.
-     - Choosing it (`tileset.<grid>`) has `GameSession` call `MapView.redrawArt`. That gives the portal the new set's
+     - Choosing it (`tileset.<grid>`) has `GameSession` call `MapView2D.redrawArt`. That gives the portal the new set's
        tile size and its own zoom (`zoom.<id>`) through `Portal.retile`, and draws every layer again from the same
        middle. The minimaps' overviews draw colours, not sprites, and stay as they are.
      - What draws the map's art outside the map follows it: the unit panel and an open city screen draw again, and
@@ -247,7 +247,7 @@ window's own handling of the file goes, and the music reads the driver through t
   - The canvas has more pixels to draw: just above a whole number, up to four times as many at 1.1 (drawn at 2), and
     about twice as many at 2.1 (drawn at 3).
   - Every layer of the portal is sized the same way, and whatever is placed over the map (the floating interface,
-    clicks) converts between the page's pixels and the canvas's. `MapView` already converts the floating interface's
+    clicks) converts between the page's pixels and the canvas's. `MapView2D` already converts the floating interface's
     boxes.
   - Whether the portal's layers take a CSS size cleanly is to be proven when it's built.
 - **Windows** keep whole scales: `shownScale` caps them at `defaultScale`, not the zoom, as their art is drawn at the

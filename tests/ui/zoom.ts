@@ -25,7 +25,8 @@ import GameOptionsRegistry, {
 } from '@civ-clone/ui-platform/GameOptionsRegistry';
 import GameOptions from '@civ-clone/ui-menus/components/GameOptions';
 import GamePortal from '@civ-clone/ui-game/GamePortal';
-import { IPortal, scaleOfZoom } from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
+import { scaleOfZoom } from '@civ-clone/ui-map/components/Portal';
 import World from '@civ-clone/ui-map/components/World';
 import { applyInterface } from '@civ-clone/ui-platform/lib/interfaceMode';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
@@ -668,7 +669,7 @@ const run = async (): Promise<void> => {
         scale: () => 2,
         zoom: () => 1.5,
         setZoom: (zoom: number) => zoomed.push(zoom),
-      } as unknown as IPortal),
+      } as unknown as MapPortal),
       slider = optionsWindow
         .element()
         .querySelector('input[type="range"][step="0.1"]') as HTMLInputElement,
@@ -1103,7 +1104,7 @@ const run = async (): Promise<void> => {
     turned(() => portal.zoomBy(-50));
     turned(() => portal.zoomBy(7));
 
-    const optionsWindow = new GameOptions(portal as unknown as IPortal),
+    const optionsWindow = new GameOptions(portal as unknown as MapPortal),
       slider = optionsWindow
         .element()
         .querySelector('input[type="range"][step="0.1"]') as HTMLInputElement;

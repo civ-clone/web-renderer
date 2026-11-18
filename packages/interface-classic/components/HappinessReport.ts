@@ -8,7 +8,7 @@ import {
 import { groupIcons } from '@civ-clone/ui-assets/lib/groupIcons';
 import { reduceKnownYield } from '@civ-clone/ui-client/lib/yieldMap';
 import Element from '@dom111/element';
-import Portal from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import SupportedUnit from '@civ-clone/ui-hud/components/SupportedUnit';
 import Transport from '@civ-clone/ui-client/Transport';
 import Unit from '@civ-clone/ui-hud/components/Unit';
@@ -34,7 +34,7 @@ import watchPlayer, {
 /** A city's row, which opens on a click to why its citizens are as they are: its stages, or its causes. */
 export const buildCityRow = async (
   city: CityData,
-  portal: Portal,
+  portal: MapPortal,
   transport: Transport
 ) => {
   const happinessReasons: {
@@ -122,11 +122,11 @@ export const buildCityRow = async (
 
 export class HappinessReport extends FilterableWindow {
   #player: Player;
-  #portal: Portal;
+  #portal: MapPortal;
   #transport: Transport;
   #unwatch: () => void;
 
-  constructor(player: Player, portal: Portal, transport: Transport) {
+  constructor(player: Player, portal: MapPortal, transport: Transport) {
     super(t('HappinessReport.title'), s('<div></div>'), {
       classes: 'happiness-report',
       rowSelector: '.city',

@@ -40,7 +40,7 @@ import topologyFor from '@civ-clone/ui-client/lib/topologyFor';
 import ActiveUnitController from '@civ-clone/ui-game/ActiveUnitController';
 import Units from '@civ-clone/ui-map/components/Map/Units';
 import ActiveUnit from '@civ-clone/ui-map/components/Map/ActiveUnit';
-import { Tile } from '@civ-clone/ui-protocol/types';
+import { Coordinate, Tile, Unit } from '@civ-clone/ui-protocol/types';
 import { TransportHandledAction } from '@civ-clone/ui-protocol/Transport';
 
 const failures: string[] = [];
@@ -453,17 +453,30 @@ const topology = topologyFor({ width: 10, height: 1 }),
   },
   unitsLayer = layer(TestUnits),
   activeLayer = layer(TestActiveUnit),
+  // The map, as the 2D map tells its layers of the active unit and draws them (`MapView2D#setActiveUnit` and
+  //  `#showActiveUnit`, which `mapView.ts` checks).
+  map = {
+    setActiveUnit: (unit: Unit | null, pendingTile?: Coordinate | null) => {
+      unitsLayer.layer.setActiveUnit(unit, pendingTile);
+      activeLayer.layer.setActiveUnit(unit, pendingTile);
+    },
+    showActiveUnit: (changed: Tile[]) => {
+      unitsLayer.layer.update(changed);
+      unitsLayer.layer.setVisible(true);
+      activeLayer.layer.render();
+      activeLayer.layer.setVisible(true);
+    },
+  },
   controller = new ActiveUnitController({
-    activeUnitLayer: activeLayer.layer,
     arrivalClosed: () => {},
     data: () => ({ player: gameData } as any),
     haltedUnits: new HaltedUnits(),
+    map,
     options: { get: (key: string, defaultValue: any = null) => defaultValue },
     pendingMove,
     portal: {
       isVisible: () => true,
       render: () => {},
-      setActiveUnit: () => {},
       setCenter: () => {},
     },
     scheduleRender: () => {},
@@ -487,7 +500,6 @@ const topology = topologyFor({ width: 10, height: 1 }),
         unacknowledged.push(action);
       }) as any,
     },
-    unitsLayer: unitsLayer.layer,
     world: world as any,
   }),
   current = (): any => controller.active();
