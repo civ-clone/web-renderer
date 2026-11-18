@@ -221,6 +221,26 @@ const wheel = (
   return event.defaultPrevented;
 };
 
+// linkedom has no `GestureEvent`: Safari's trackpad pinch (#1138), its `type` (`gesturestart`, `gesturechange` or
+//  `gestureend`), at `scale` times the size it began at, at `x`, `y` in the page's px from the window's corner. Whether
+//  it was default-prevented.
+const gesture = (
+  canvas: HTMLCanvasElement,
+  type: string,
+  scale: number,
+  { x = 110, y = 70 }: { x?: number; y?: number } = {}
+): boolean => {
+  const event = new Event(type, { cancelable: true });
+
+  Object.entries({ scale, clientX: x, clientY: y }).forEach(([key, value]) =>
+    Object.defineProperty(event, key, { value })
+  );
+
+  canvas.dispatchEvent(event);
+
+  return event.defaultPrevented;
+};
+
 // A game's map on `topologyId`'s grid, `width` × `height` squares, at `zoom`, its canvas shown in a 240 × 180 box.
 const gameMap = (
   topologyId: string,
@@ -909,6 +929,108 @@ const run = async (): Promise<void> => {
       ]
     );
 
+    expect(
+      "a trackpad's flick, running on with no pause as it slows, zooms a whole scale at most, and the rest of it does nothing but isn't the page's (#1139)",
+      [
+        turned(() =>
+          Array.from({ length: 60 }, (_, i) =>
+            wheel(canvas, -(200 - i * 3), { timeStamp: 6000 + i * 16 })
+          ).every((prevented) => prevented)
+        ),
+        turned(() => {
+          wheel(canvas, -40, { timeStamp: 6000 + 60 * 16 });
+
+          return frames.length;
+        }),
+      ],
+      [
+        [true, [2], 2],
+        [0, [], 2],
+      ]
+    );
+
+    expect(
+      'after a pause the wheel zooms again, and turned back the other way a flick goes as far out',
+      [
+        turned(() => wheel(canvas, -100, { timeStamp: 8000 })),
+        turned(() =>
+          Array.from({ length: 30 }, (_, i) =>
+            wheel(canvas, 150, { timeStamp: 8010 + i * 16 })
+          )
+        ).slice(1),
+      ],
+      [
+        [true, [2.1], 2.1],
+        [[1.1], 1.1],
+      ]
+    );
+
+    expect(
+      'a pinch, and a wheel counted in lines, go as far as they turn',
+      [
+        turned(() =>
+          Array.from({ length: 15 }, (_, i) =>
+            wheel(canvas, -8, { ctrlKey: true, timeStamp: 9000 + i })
+          )
+        ).slice(1),
+        turned(() =>
+          Array.from({ length: 12 }, (_, i) =>
+            wheel(canvas, 3, { deltaMode: 1, timeStamp: 9100 + i * 16 })
+          )
+        ).slice(1),
+      ],
+      [
+        [[2.6], 2.6],
+        [[1.4], 1.4],
+      ]
+    );
+
+    // Safari's pinch (#1138), on a canvas 10 px from the window's left and 20 from its top.
+    canvas.getBoundingClientRect = () =>
+      ({ left: 10, top: 20, width: 240, height: 180 } as DOMRect);
+
+    expect(
+      "Safari's pinch zooms with the fingers, from the zoom it began at, about where they are, and isn't the page's zoom",
+      [
+        turned(() => [
+          gesture(canvas, 'gesturestart', 1),
+          gesture(canvas, 'gesturechange', 1.02),
+        ]),
+        turned(() => gesture(canvas, 'gesturechange', 1.5)),
+        anchors.splice(0),
+        turned(() => [
+          gesture(canvas, 'gesturechange', 1.7),
+          gesture(canvas, 'gesturechange', 2),
+        ]),
+        turned(() => gesture(canvas, 'gesturechange', 0.5)),
+      ],
+      [
+        [[true, true], [], 1.4],
+        [true, [2.1], 2.1],
+        [{ x: 100, y: 50 }],
+        [[true, true], [2.8], 2.8],
+        [true, [1], 1],
+      ]
+    );
+
+    expect(
+      'while it pinches, the wheel with Ctrl held, should Safari send it too, does nothing; once it ends, it zooms again, and a change to a pinch that began elsewhere does nothing',
+      [
+        turned(() => wheel(canvas, -100, { ctrlKey: true, timeStamp: 10000 })),
+        turned(() => [
+          gesture(canvas, 'gestureend', 0.5),
+          wheel(canvas, -100, { ctrlKey: true, timeStamp: 11000 }),
+        ]),
+        turned(() => gesture(canvas, 'gesturechange', 3)),
+      ],
+      [
+        [true, [], 1],
+        [[true, true], [1.1], 1.1],
+        [true, [], 1.1],
+      ]
+    );
+
+    turned(() => portal.zoomBy(-50));
     turned(() => portal.zoomBy(7));
 
     const optionsWindow = new GameOptions(portal as unknown as IPortal),
