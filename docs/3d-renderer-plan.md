@@ -1,0 +1,339 @@
+# A 3D map (WebGL): plan of work
+
+2026-11-18. It builds what [3d-renderer.md](3d-renderer.md) specifies, with the decisions its §1 records (D1–D9).
+
+Each slice is one PR, reviewed as every PR is:
+
+- **Reviews:** a fresh agent with none of the context, plus Copilot for web-renderer.
+- **Fixes:** Mediums and Highs are fixed before merging, and Lows become issues.
+- **Release notes:** every commit on `main` is a release note, subject-only commits too (`toBullets` keeps the subject
+  when there's no body). So until the 3D map is offered, each slice's message says plainly that it's work towards a
+  3D map that isn't available yet, for example: 'Work towards a 3D map, not offered yet: units walk from square to
+  square.'
+
+---
+
+## Prerequisites: gaps in what the page is told
+
+Both of these are gaps today, apart from 3D. They're closed first.
+
+### P1. City walls on the map (#688, #1069)
+
+**Done:** #1170 (9fe998bb), with civ1-tileset-pixelart v0.2.2. Civ1's walls needed no new art: it draws them with the
+fortified unit's frame, which the import already has.
+
+- **The page** is told whether each city is walled, as the rules decide in the worker: Civ1's City Walls, or Civ2's
+  City Walls or the owner's Great Wall. Your own cities carry it as AdditionalData, and rivals' stand-ins through
+  `WorkerRules.walled`, kept up to date as buildings, Wonders and cities change hands.
+- **The descriptor** gains an optional `cities.walls` overlay, which Civ1's map and the pixel art use.
+
+This feeds the 3D view's `appearance` (spec D9): `walled` is the first piece of it.
+
+### P2. Map events: who moved where, who fought whom
+
+**Today** [verified]:
+
+- A move reaches the page only as two tile patches (`unit:moved` in `patchEvents.ts`).
+- A battle reaches it only as a sound (`battle` in `battleEvents.ts`).
+
+**The slice:**
+
+- **The event:** a `mapEvent` message on the transport, `moved` and `battle` (spec §8.1). It's sent from the worker as
+  the engine emits `unit:moved` and `unit:defeated`, before that move's patches flush.
+- **Who's told:** a step or a battle the player could see: the player's own always, anyone else's between squares
+  the player knows, one of them in sight. A watcher gets what their view sees: a player's or several players' view,
+  as those players would; the whole map, everything.
+- **On the page:** `GameSession` passes the events to the map view. The 2D view ignores them for now.
+- **Tests:** a worker-client suite like the battle sounds' covers:
+  - a move;
+  - a move the player can't see;
+  - an attack won and an attack lost;
+  - a defeat that wasn't a battle;
+  - a GoTo of three steps;
+  - a unit that boards a ship.
+
+If a later slice finds the patches already carry enough (a unit's id on both squares), P2 shrinks to the battle half.
+
+---
+
+## M0: foundations (nothing a player sees)
+
+### 0.1 The `MapRenderer` seam
+
+- **What changes:**
+  - What `GameSession`, `InputController` and `ActiveUnitController` use of `MapView` becomes `MapRenderer`, and what
+    everything else holds the portal for (the HUD, the reports, the unit panel, the city list, the game menu, the
+    cheats, the city openers and the city screen's sizes) becomes `MapPortal` (spec §2.1).
+  - The layer calls they make become methods on the view. The debug panel's layer handles stay the 2D view's own.
+  - `MapView` becomes `MapView2D`.
+- **Proof that nothing changes:** the render-geometry fixture, `npm test`, and a game played in the browser on all
+  three grids.
+- **Also:** the input handling the 3D view will share is lifted out of `GamePortal` into a module of its own: the drag
+  threshold, the glide, wheel steps, pinch and Safari's gestures.
+
+### 0.2 The package, three.js and a lazy entry
+
+- **Packages:**
+  - `packages/map-3d` and `packages/models-builtin`;
+  - three.js pinned to an exact version.
+- **The entry:** a second esbuild entry, `dist/map3d.js`, exporting `createMapView3D(deps)`. The main bundle fetches it
+  the first time a game starts in 3D (spec §2.4).
+- **The gate:** `?3d=1`, plus a WebGL2 check. Without WebGL2 the game stays 2D and says why once.
+- **Done when:**
+  - a game under `?3d=1` shows an empty lit scene where the map was;
+  - every window works;
+  - `dist/frontend.js` hasn't grown by more than the loader;
+  - `map3d.js`'s size is recorded in the PR.
+
+### 0.3 Ground layouts
+
+- **What:** `GroundLayout` for `square`, `staggered-iso` and `hex-odd-r` (spec §3), with no three.js import.
+- **Tests:**
+  - round trips;
+  - shared edges against `topologyFor`;
+  - periods;
+  - outlines against each 2D projection's outline once foreshortened, where it has one (isometric, hexagonal), and
+    against the footprint's box on the square grid.
+
+---
+
+## M1: a map you can play on (behind `?3d=1`)
+
+### 1.1 Relief and the land's mesh
+
+- **What:**
+  - the height function (spec §4.1), with relief profiles from the built-in set's terrain table;
+  - chunks;
+  - wrapped copies;
+  - unseen squares flat, under a plain cover.
+- **Colour:** flat, one per terrain (no textures yet).
+- **The debug page:** `?3d=1&debug=1`, with fixed seeds, saved camera positions and a stats overlay (spec §12), for
+  screenshots at this slice and every one after.
+- **Tests:** determinism, seams and `Unknown`.
+- **Done when:** a Civ1 world on each grid shows its land from a fixed camera.
+
+### 1.2 Camera
+
+- **What:**
+  - orbit, pan with glide, zoom on the shared wheel steps, turn and tilt;
+  - the three presets;
+  - the north-up key;
+  - pinch and twist.
+- **Keys:** chosen against the key table, so they don't clash with unit orders.
+- **Following:** `centre()` and `setCovered`.
+- **Zoom:** the camera's distance, with its own option, kept as the 2D map's zoom is (spec §11).
+- **Reduced motion:** no glide.
+
+### 1.3 Picking and input
+
+- **What:**
+  - a ray to what's shown, then to a square: the land, or the water's surface where the land is below it (spec §9.2);
+  - clicks, long presses and target picking;
+  - hover tooltips with the 2D map's content;
+  - `isVisible` with covered rectangles;
+  - `MapPortal`'s `openCity`, `setCenter` and `render`, and the city screen's sizes from the 2D art;
+  - hiding units and cities (`t`), and waiting for the next turn (`setWaiting`), as on the 2D map.
+- **Tests:** picking at every yaw and pitch over a known height function, the sea at 0 and a lake at its own height,
+  including a square under water at a low pitch.
+- **Done when:** a whole turn can be played by mouse and keyboard, with units and cities drawn as plain markers.
+
+### 1.4 Water, light and sky
+
+- **What:**
+  - the sea surface with depth tint and shore foam;
+  - a sky made by code, with its environment map;
+  - the sun with one shadow cascade;
+  - tone mapping.
+
+### 1.5 The minimap's view outline
+
+- **What:**
+  - the 3D view keeps a 2D overview of its own, fed the same tile updates as its map;
+  - the minimap marks the four-sided patch of ground the camera sees, in place of the box it works out today (the
+    square grid's from `rawVisibleRange()`, the isometric and hexagonal grids' in `StaggeredMinimap.viewport()`);
+  - a click on the minimap moves the camera's focus point.
+
+**M1 is done when** a Civ1 game can be played start to finish under `?3d=1` on every grid, with markers for units and
+cities.
+
+---
+
+## M2: units
+
+### 2.0 Licence survey (in parallel with M1)
+
+- **What:** realistic (D2), not stylised, CC0 and CC BY glTF models for people, animals, ships, vehicles and aircraft,
+  with rigs and the clips the spec names, and for Wonders and landmark buildings. Also textures and plants.
+- **Where to look:**
+  - the usual CC0 and CC BY libraries;
+  - modellers on CivFanatics who offer their work free to use. Their models need a licence, or permission in writing,
+    that allows hosting.
+- **Each file's licence is checked,** as was done for the hex art. The result is a table in the PR, as for D3: each
+  model's author, licence, link and the attribution it asks for.
+- **Nothing is fetched into a repo** until a pack has passed.
+- **Credits:** with the first third-party model comes an art credits list in the game, beside the library's
+  per-set licence (D3).
+
+### 2.1 The model set and the built-in units
+
+- **What:**
+  - the `models` manifest kind (spec §10) and its validator;
+  - the built-in set's placeholder units, by domain, made by code: figures, ships, vehicles, aircraft. Units' own models
+    come from CC0 or CC BY sets (D3, 2.2 and 6.4);
+  - the owner's colours;
+  - formations (D6), and stacks shown by their defender (D5);
+  - flags, with the veteran mark, the count, hit points, sentry and orders;
+  - the active unit's ring, following the marker option.
+- **Tests:** a test checks that every unit type Civ1 and Civ2 name has a model.
+
+### 2.2 glTF and skeletal animation
+
+- **What:**
+  - loading `.glb` with KTX2 textures;
+  - `AnimationMixer` clips and the fallbacks;
+  - instancing for squads.
+- **The first hosted pack** that passed 2.0 is wired in, as a hosted set in the library.
+
+### 2.3 Pacing and moves (needs P2)
+
+- **What:**
+  - the shown state and held patches (spec §8.2);
+  - GoTo steps joined;
+  - rivals' moves on screen only, with a backlog cap;
+  - the animation speed option, and whether to show rivals' moves;
+  - reduced motion;
+  - the game waiting for the queue.
+- **Tests:** the pacing suite.
+
+### 2.4 Battles
+
+- **What:**
+  - melee, ranged, naval and air;
+  - rounds under Civ2;
+  - death and fading;
+  - fading in and out for units that arrive or leave with no move.
+
+---
+
+## M3: depth on the land
+
+| Slice | What |
+|---|---|
+| 3.1 | The surface's materials: texture arrays, blend weights, slope and height rules, triplanar rock, snow, wet sand. CC0 textures if 2.0 found them, otherwise made by code. |
+| 3.2 | Vegetation: scatter tables, Poisson spacing, instancing per chunk, impostors, wind; forest, jungle and swamp first. |
+| 3.3 | Rivers: splines, channels cut into the land, flowing water. |
+| 3.4 | Improvements: roads, railroads, irrigation and Farmland, mines, Fortress and Airbase, pollution and fallout; specials and huts. |
+| 3.5 | Clouds over unseen squares, which clear when a square is seen. Squares not in sight are dimmed under rules that say. Grid lines and the hover highlight. |
+
+---
+
+## M4: cities
+
+### 4.0 Ages for every player, and `appearance` (D9, building on P1's `walled`)
+
+- **What:**
+  - each player's age, as AdditionalData, rivals included;
+  - each city's landmarks, decided in the worker by each rule set's own hook;
+  - Wonders for your own cities.
+- **Follow-up:** rivals' Wonders.
+- **Civ1's era:** from the owner's advances, by the tiers the ages and research-cost sets share. That may mean lifting
+  `lib/advanceTiers` out of `civ1-enhanced` into a package the worker can use.
+- **Civ2's era:** from its style.
+
+### 4.1 Sprawl
+
+- **What:** the area, streets, lots, growth and modernising, as pure functions with tests (spec §7.2), drawn as plain
+  blocks first.
+
+### 4.2 The building kit
+
+- **What:**
+  - buildings made by code for each era;
+  - landmarks for your own buildings;
+  - the palace;
+  - walls with gates;
+  - docks;
+  - styles for each civilization where the set has them.
+
+### 4.3 Banners and states
+
+- **What:**
+  - city banners on the overlay canvas, by depth, stacked where they overlap, as the 2D map stacks them;
+  - disorder, celebration, captured and destroyed;
+  - yields over squares (`y`).
+
+**M4 is done when** every row of spec §11 is in the 3D view but one: changing the art mid-game, which comes with model
+sets in 6.4.
+
+---
+
+## M5: Wonders
+
+### 5.1 Sites
+
+- **What:** the placement policy (spec §7.6), keyed on the city and the Wonder, with its tests:
+  - deterministic;
+  - stable as the city grows;
+  - never on water unless the Wonder's site is `harbour`;
+  - your own cities' Wonders; rivals' follow (D9).
+
+### 5.2 Models
+
+- **What:**
+  - Civ1's 21 Wonders from CC0 or CC BY models (D3, through 2.0's survey), each with a plain placeholder made by code
+    until one is found;
+  - the Great Wall along the edge of the city's area;
+  - the coastal Wonders: Colossus, Lighthouse, Magellan's;
+  - ruins for a Wonder lost with its city;
+  - then Civ2's.
+
+---
+
+## M6: realism and speed
+
+| Slice | What |
+|---|---|
+| 6.1 | Light: cascaded shadows fitted to the view, haze and aerial perspective, SSAO on High, choice of tone mapping. |
+| 6.2 | Quality presets, the first-game benchmark, the stats overlay; the budget (spec §9.4) measured on a Civ2 large map. |
+| 6.3 | Speed: building meshes and scatter in a worker if the main thread misses frames; level of detail on far chunks. |
+| 6.4 | Art: hosted model sets in the library, each under its own licence, chosen over the built-in set's placeholders (spec §10); licences and attribution shown on each set and in the art credits list. Changing the model set mid-game hands the game over to a new page (spec §11). |
+
+---
+
+## M7: offering it
+
+- **What:**
+  - Options gains **Map: 2D or 3D**;
+  - `?3d=1` is removed;
+  - a switch mid-game hands the game over to a new page with the other view, as an art change that can't be made in
+    place does (#1118, #1144).
+- **Docs:** README, quick start and `docs/frontend-ui.md`.
+- **Release notes:** written for players.
+
+---
+
+## Order and what runs alongside
+
+- **Done:** P1.
+- **Now, in parallel:** P2 (map events), 0.1 (the seam), and 2.0 (the licence survey, which is research).
+- **Then, in order:** 0.2 (the entry), 0.3 (layouts), then M1.
+- **After M1:**
+  - M2, whose 2.3 needs P2;
+  - M3, alongside M2.
+- **Then:** M4, whose 4.0 needs D9's ages; M5; M6; M7.
+
+- **Other sessions:** a slice that touches the rule packages or the tilesets (P2, 4.0) is told to the Civ2 session
+  first. The engine and asset releases follow the usual release check: commits on master that aren't ours mean asking
+  their session first.
+
+## Risks
+
+- **Bundle size:** a minimal scene with three.js, its glTF and KTX2 loaders, shadows and post-processing is 759 KB
+  minified, 199 KB gzipped (spec D1), against today's 296 KB gzipped `frontend.js`. The lazy entry keeps it off the 2D
+  path, and 0.2 records the real entry's size.
+- **Art:** a realistic look depends on models more than code. If the survey (2.0) finds little, the built-in set
+  carries more of the look, and the plan's art slices grow.
+- **Speed on large maps:** vegetation and cities are the heavy parts. The presets and 6.3 are the answer, and 6.2
+  measures before tuning.
+- **Two views drifting apart:** the `MapRenderer` seam and the parity table (spec §11) are the guard. A feature added
+  to the 2D map later has to say what the 3D view does with it.
