@@ -31,7 +31,7 @@ const withoutCapsLock = (key: string, event: KeyboardEvent): string =>
 
 // The game's keyboard: the leader screens (F1 to F9), the Civilopedia (`?`), a key passed on to a modal
 //  window, Shift+S to save, the unit keys, Escape, Enter to end the turn, Tab to the first action, `c`/`w`/`t`/`y`,
-//  `+`/`-` for the trade rates, and the Shift+5, Shift+6 cheat sequence.
+//  `z`/`x` to zoom the map in and out, `+`/`-` for the trade rates, and the Shift+5, Shift+6 cheat sequence.
 //
 // Registered on `document` in the bubble phase, after `ReloadGuard` (which must stay the first bubble listener: it
 //  reads whether the game has started, as F5 is the Trade Report once it has) and after `DebugPanel`'s capture-phase
@@ -50,7 +50,13 @@ const takesEnter = (target: EventTarget | null): boolean =>
     ) ||
       target.closest('dialog') !== null),
   isNextTurn = (target: EventTarget | null): boolean =>
-    target instanceof Element && target.matches('.ui-next-turn');
+    target instanceof Element && target.matches('.ui-next-turn'),
+  // What a letter typed into is for: a window's filter, say, not the map.
+  takesText = (target: EventTarget | null): boolean =>
+    target instanceof Element &&
+    target.matches('input, select, textarea, [contenteditable]'),
+  // The map's zoom (#1101), a tenth at a time: Civilization II's keys. `+` and `-` are the trade rates'.
+  zoomKeys: { [key: string]: number } = { z: 1, x: -1 };
 
 export type InputControllerDeps = {
   // The primary actions' area, whose first button Tab focuses.
@@ -304,6 +310,15 @@ export class InputController {
 
     if (key === 'y') {
       mapView.toggleYields();
+
+      return;
+    }
+
+    // Held down, it carries on zooming: the portal draws what's asked within a frame once.
+    if (key in zoomKeys && !modalWindow && !takesText(event.target)) {
+      this.#deps.portal.zoomBy(zoomKeys[key]!);
+
+      event.preventDefault();
 
       return;
     }

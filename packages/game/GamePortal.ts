@@ -12,6 +12,12 @@ import cityBannerTooltip, {
 import squareTooltip, {
   hasSquareTooltip,
 } from '@civ-clone/ui-hud/components/Map/squareTooltip';
+import {
+  ZOOM_STEP,
+  mapTileset,
+  zoomFor,
+  zoomOption,
+} from '@civ-clone/ui-assets/lib/tilesets';
 import { hasFeature } from '@civ-clone/ui-platform/lib/interfaceMode';
 import { openUnitSelection } from '@civ-clone/ui-city/components/choices';
 import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
@@ -35,7 +41,29 @@ const DRAG_THRESHOLD = 8,
   // the map clean across the world.
   INERTIA_MAX_SPEED = 3,
   // How long the mouse rests on a city's banner, or a square, before its tooltip opens, as the shared tooltip's (#742).
-  HOVER_TOOLTIP_DELAY = 400;
+  HOVER_TOOLTIP_DELAY = 400,
+  // How far, in px, the wheel turns for a tenth of zoom (#1101). A mouse's notch is about 100 px and makes a tenth at
+  //  once; a trackpad's two-finger scroll sends a few px at a time, added up until they reach this. A wheel counted in
+  //  lines or pages (Firefox's mouse) makes a tenth each time it turns.
+  WHEEL_STEP = 50,
+  // A trackpad's pinch, which comes as the wheel with Ctrl held, sends smaller deltas still: a pinch to twice the size
+  //  is about 70 px.
+  PINCH_STEP = 8,
+  // Past this long, in ms, without the wheel turning, what it turned before is forgotten: a new turn starts afresh.
+  WHEEL_PAUSE = 250;
+
+// What the wheel has turned since it last made a tenth of zoom, in px, and when it last turned.
+type WheelTurn = {
+  delta: number;
+  at: number;
+};
+
+// The zoom the wheel or the keys have asked for, waiting for the next frame (#1101), and where on the canvas to keep
+//  still.
+type PendingZoom = {
+  zoom: number;
+  anchor?: Coordinate;
+};
 
 type Drag = {
   pointerId: number;
@@ -83,6 +111,9 @@ export class GamePortal extends Portal {
   #drag: Drag | null = null;
   #hover: Hover | null = null;
   #inertiaFrame: number | null = null;
+  #pendingZoom: PendingZoom | null = null;
+  #wheelTurn: WheelTurn = { delta: 0, at: -Infinity };
+  #zoomFrame: number | null = null;
   #showActionMenuTimeout: number | null = null;
   #waiting = false;
 
@@ -312,6 +343,12 @@ export class GamePortal extends Portal {
       );
     });
 
+    // The wheel, or a trackpad's pinch, zooms the map about the pointer (#1101). Not passive: over the map, it's the
+    //  map's, and neither scrolls the page nor, with Ctrl as a pinch sends it, zooms the page.
+    on(this.canvas(), 'wheel', (event: WheelEvent) => this.#wheel(event), {
+      passive: false,
+    });
+
     // Prevent dragging address bar down by accident
     on(this.canvas(), 'touchstart', (event) => event.preventDefault());
 
@@ -425,6 +462,85 @@ export class GamePortal extends Portal {
 
       this.clearTimeout();
     });
+  }
+
+  /**
+   * Zooms the map `steps` tenths in, or out where it's less than none (#1101), within its set's range (`zoomFor`), and
+   *  keeps the zoom as the Options slider does (`zoomOption`). About `anchor`, in the page's px from the canvas's top
+   *  left corner, which stays over the same spot, or else the middle.
+   *
+   * Applied on the next frame: a fast wheel or a key held down asks many times a frame, and a new whole scale redraws
+   *  every layer, so what's asked within one frame adds up and is drawn once.
+   */
+  zoomBy(steps: number, anchor?: Coordinate): void {
+    const tileset = mapTileset(this.world().topologyId()),
+      from = this.#pendingZoom?.zoom ?? this.zoom(),
+      zoom = zoomFor(tileset, from + steps * ZOOM_STEP);
+
+    if (zoom === from) {
+      return;
+    }
+
+    this.#pendingZoom = { zoom, anchor };
+
+    if (this.#zoomFrame !== null) {
+      return;
+    }
+
+    this.#zoomFrame = window.requestAnimationFrame(() => {
+      const pending = this.#pendingZoom;
+
+      this.#zoomFrame = null;
+      this.#pendingZoom = null;
+
+      if (pending === null) {
+        return;
+      }
+
+      options.set(zoomOption(tileset), pending.zoom);
+      this.setZoom(pending.zoom, pending.anchor);
+    });
+  }
+
+  /**
+   * The wheel turned over the map (#1101): towards the player zooms out, away zooms in, a tenth for each notch or each
+   *  `WHEEL_STEP` (`PINCH_STEP` for a pinch) of px turned, about the pointer.
+   */
+  #wheel(event: WheelEvent): void {
+    event.preventDefault();
+
+    const delta = event.deltaY,
+      turn = this.#wheelTurn;
+
+    if (delta === 0) {
+      return;
+    }
+
+    // Turned the other way, or after a pause: what was turned before counts for nothing.
+    if (
+      event.timeStamp - turn.at > WHEEL_PAUSE ||
+      Math.sign(delta) !== Math.sign(turn.delta)
+    ) {
+      turn.delta = 0;
+    }
+
+    turn.at = event.timeStamp;
+    turn.delta += delta;
+
+    // One tenth at most for each turn of the wheel, however far it turned: a notch on a fast wheel is many hundreds px.
+    if (
+      event.deltaMode === 0 &&
+      Math.abs(turn.delta) < (event.ctrlKey ? PINCH_STEP : WHEEL_STEP)
+    ) {
+      return;
+    }
+
+    turn.delta = 0;
+
+    // Held still where the pointer is, which a glide would carry off.
+    this.stopGlide();
+
+    this.zoomBy(delta < 0 ? 1 : -1, { x: event.offsetX, y: event.offsetY });
   }
 
   /** While the other players move, the map's tooltips don't open, and any open one goes (#748). */

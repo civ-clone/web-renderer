@@ -46,7 +46,7 @@ export interface IPortal {
   setCovered(covered: Rect[]): void;
   setLockVerticalEdges(lock: boolean): void;
   setScale(scale: number): void;
-  setZoom(zoom: number): void;
+  setZoom(zoom: number, anchor?: Coordinate): void;
   tileSize(): Size;
   transport(): Transport;
   visibleBounds(): [number, number, number, number];
@@ -713,6 +713,17 @@ export class Portal
    * whichever tile ends up under the middle of the canvas.
    */
   scrollBy(deltaX: number, deltaY: number): void {
+    const moved = this.#moveBy(deltaX, deltaY);
+
+    this.render();
+
+    if (moved) {
+      this.emit('focus-changed', this.#center.x, this.#center.y);
+    }
+  }
+
+  /** `scrollBy`, without drawing: whether the centre moved to another tile. */
+  #moveBy(deltaX: number, deltaY: number): boolean {
     const [[column, row], offset] = this.#retarget(this.#center, {
       x: this.#offset.x + deltaX,
       y: this.#offset.y + deltaY,
@@ -721,9 +732,7 @@ export class Portal
     Object.assign(this.#offset, offset);
 
     if (column === this.#center.x && row === this.#center.y) {
-      this.render();
-
-      return;
+      return false;
     }
 
     const width = this.#world.width(),
@@ -737,9 +746,23 @@ export class Portal
       ? row
       : ((row % height) + height) % height;
 
-    this.render();
+    return true;
+  }
 
-    this.emit('focus-changed', this.#center.x, this.#center.y);
+  /**
+   * The world pixel, at the scale the map is drawn at now, shown at `x`, `y` in the page's px from the canvas's top left
+   *  corner: the centre tile's middle, as far off it as the view has been dragged, and as far off the canvas's middle
+   *  as the point is. Not rounded, as the drag offset is where it's drawn, so zooming in and out about a point doesn't
+   *  creep.
+   */
+  #worldPixelAt(x: number, y: number): [number, number] {
+    const [canvasX, canvasY] = this.toCanvas(x, y),
+      [middleX, middleY] = this.#middleOf(this.#center.x, this.#center.y);
+
+    return [
+      middleX + this.#offset.x + canvasX - Math.trunc(this.#canvas.width / 2),
+      middleY + this.#offset.y + canvasY - Math.trunc(this.#canvas.height / 2),
+    ];
   }
 
   setLockVerticalEdges(lock: boolean): void {
@@ -769,17 +792,23 @@ export class Portal
   }
 
   /**
-   * Show the map at `zoom` from now on, keeping the same tile in the middle (#1063): drawn at the whole scale at or
-   *  above it (`scaleOfZoom`), its canvas fitted to the box it's shown in again (`fit`) so the canvas is shown smaller
-   *  when the zoom is less than the scale.
+   * Show the map at `zoom` from now on (#1063): drawn at the whole scale at or above it (`scaleOfZoom`), its canvas
+   *  fitted to the box it's shown in again (`fit`) so the canvas is shown smaller when the zoom is less than the scale.
+   *  The same tile stays in the middle, or, given an `anchor` in the page's px from the canvas's top left corner (where
+   *  the mouse wheel turned, #1101), the same spot of the world stays under it. Drawn once either way.
    */
-  setZoom(zoom: number): void {
+  setZoom(zoom: number, anchor?: Coordinate): void {
     const snapped = snapZoom(zoom),
       scale = scaleOfZoom(snapped);
 
     if (snapped === this.#zoom && scale === this.#scale) {
       return;
     }
+
+    // Measured before anything changes: the canvas's size and the scale both go into where the anchor is.
+    const held =
+        anchor === undefined ? null : this.#worldPixelAt(anchor.x, anchor.y),
+      heldAtScale = this.#scale;
 
     this.#zoom = snapped;
 
@@ -789,26 +818,33 @@ export class Portal
       this.emit('resized');
     }
 
-    if (scale === this.#scale) {
-      // The same scale, on a canvas of another size: drawn again from the same middle.
-      if (resized) {
-        this.render();
-        this.emit('focus-changed', this.#center.x, this.#center.y);
-      }
+    const rescaled = scale !== this.#scale;
 
+    // The same scale, on a canvas of the same size: nothing shows any different.
+    if (!rescaled && !resized) {
       return;
     }
 
-    this.#scale = scale;
-    this.#projection = this.createProjection();
-    this.#offset.x = 0;
-    this.#offset.y = 0;
+    if (rescaled) {
+      this.#scale = scale;
+      this.#projection = this.createProjection();
+      this.#offset.x = 0;
+      this.#offset.y = 0;
 
-    this.#layers.forEach((layer) => layer.setScale(scale));
+      this.#layers.forEach((layer) => layer.setScale(scale));
 
-    // Nothing on the layers is at the new scale, so this has to reach them
-    // even if the arithmetic happened to land on the same origin.
-    this.#viewport = { x: 0, y: 0, width: -1, height: -1 };
+      // Nothing on the layers is at the new scale, so this has to reach them
+      // even if the arithmetic happened to land on the same origin.
+      this.#viewport = { x: 0, y: 0, width: -1, height: -1 };
+    }
+
+    if (held !== null) {
+      // The world's pixels are the native tile's times the scale, so the held spot is as far again at the new one.
+      const ratio = scale / heldAtScale,
+        [x, y] = this.#worldPixelAt(anchor!.x, anchor!.y);
+
+      this.#moveBy(held[0] * ratio - x, held[1] * ratio - y);
+    }
 
     this.render();
 
