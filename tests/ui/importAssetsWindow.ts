@@ -43,7 +43,7 @@ import {
   registerSoundSet,
   soundFileKey,
 } from '@civ-clone/ui-assets/sounds/SoundDescriptor';
-import { civ1Sound, soundDriverKey } from '@civ-clone/ui-menus/lib/civ1Sound';
+import { civ1Sound } from '@civ-clone/ui-menus/lib/civ1Sound';
 import {
   bundledTilesets,
   chooseMapTileset,
@@ -1037,9 +1037,9 @@ const run = async (): Promise<void> => {
       ]
     );
     expect(
-      "the key it's kept under is its manifest's storage with the file's name, and the one the music reads (#1106)",
+      "the key the music reads it from is its manifest's storage with the file's name (#1106)",
       [
-        soundDriverKey,
+        SOUND_DRIVER,
         soundFileKey(civ1Sound, 'ASOUND.CVL') === SOUND_DRIVER,
         soundFileKey({ storage: { prefix: './music/', ext: '.bin' } }, 'X'),
       ],
@@ -2653,6 +2653,9 @@ const run = async (): Promise<void> => {
         statuses.push([status, button]);
         withoutRecord.close();
       }
+
+      // The record read as the rest of the suite has it.
+      holds({});
 
       expect(
         "Civ2's sprites all in without a record of their anchors and colours, or with one that can't be read: not ready",

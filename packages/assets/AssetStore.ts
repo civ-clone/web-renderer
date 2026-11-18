@@ -7,6 +7,8 @@ import {
   metadataKey,
 } from './lib/packs';
 import { TilesetDescriptor, spriteKey } from './tilesets/TilesetDescriptor';
+import civ1Adlib from './sounds/civ1-adlib.json';
+import { soundFileKey } from './sounds/SoundDescriptor';
 import { interfaceTileset } from './lib/tilesets';
 import { imageSize } from './lib/imageSize';
 import scaleImage from './lib/scaleImage';
@@ -290,9 +292,9 @@ export const assetFromURI = async (
 
 /**
  * The key the player's ASOUND.CVL is kept under, as the file itself (#126): not a sprite, so it's never in the
- *  tileset's counts.
+ *  tileset's counts. From the music's manifest's `storage` (#1106), which the library registers.
  */
-export const SOUND_DRIVER = './sources/ASOUND.CVL';
+export const SOUND_DRIVER = soundFileKey(civ1Adlib, 'ASOUND.CVL');
 
 // The keys of every sprite `pack` lists, required and optional.
 const requiredKeys = (pack: AssetPack): string[] =>
