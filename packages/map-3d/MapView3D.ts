@@ -86,6 +86,9 @@ export class MapView3D implements MapRenderer {
     }
 
     this.#resize();
+    // The land built from the start, wherever the map is centred: centring it on the square it's on already asks for
+    //  nothing.
+    this.#draw();
   }
 
   /** The land, for the `?debug=1` console. */
@@ -132,7 +135,7 @@ export class MapView3D implements MapRenderer {
 
   /** The tiles released so far are taken, the land they change queued to be built again, and the map drawn. */
   flush(): void {
-    this.#takeTiles();
+    this.#takeTiles(true);
     this.#draw();
   }
 
@@ -242,13 +245,14 @@ export class MapView3D implements MapRenderer {
   }
 
   // The tiles released, their squares' land queued to be built again.
-  #takeTiles(): void {
+  //  `always`, the world's terrain is read again even with no tiles released, as a whole new world may have none.
+  #takeTiles(always = false): void {
     const squares = [...this.#tilesToDraw.values()].map(
       ({ x, y }): [number, number] => [x, y]
     );
 
     this.#tilesToDraw.clear();
-    this.#land.changed(squares, ...this.#focus());
+    this.#land.changed(squares, ...this.#focus(), always);
   }
 
   // A frame: the tiles released taken, as many chunks built as the budget allows (every one, where there are no

@@ -272,6 +272,7 @@ ids.forEach((topologyId) => {
     },
     same = (a: ChunkMesh, b: ChunkMesh): boolean =>
       a.positions.every((value, at) => value === b.positions[at]) &&
+      a.normals.every((value, at) => value === b.normals[at]) &&
       a.colours.every((value, at) => value === b.colours[at]),
     land = new Land(world);
 
@@ -365,25 +366,44 @@ ids.forEach((topologyId) => {
         .directions()
         .map((direction) => topology.neighbour(x, y, direction))
         .filter((square): square is [number, number] => square !== null),
-    row = 20,
-    // A square whose own reach (its kernel's, past its corner) stops short of the next chunk's border, but whose sea
-    //  two steps out, its floor raised, reaches over it.
-    // Away from the world's seam, so no neighbour is a world away.
-    chosen = Array.from({ length: seaWidth - 16 }, (_, x) => x + 8).find(
-      (x) => {
-        const [u] = layout.centre(x, row),
-          border = Math.ceil(u / chunkU) * chunkU;
+    // The furthest a neighbour's middle is: a step of the sea floor's walk.
+    step = Math.max(
+      ...neighbours(10, 20).map(([nx, ny]) => {
+        const [nu, nv] = layout.centre(nx, ny),
+          [u, v] = layout.centre(10, 20);
 
-        return (
-          border - u > kernel + 0.05 &&
-          neighbours(x, row)
-            .flatMap(([nx, ny]) => neighbours(nx, ny))
-            .some(
-              ([fx, fy]) => layout.centre(fx, fy)[0] + REACH > border + 0.05
-            )
-        );
-      }
+        return Math.hypot(nu - u, nv - v);
+      })
     ),
+    // A square whose own reach stops short of the next chunk's border by more than `short`, but whose sea two steps
+    //  out, its floor raised, reaches over it: on an even row or an odd one, whose middles lie half a step apart. Away
+    //  from the world's seam, so no neighbour is a world away.
+    choose = (short: number): [number, number] | undefined =>
+      [20, 21]
+        .flatMap((y) =>
+          Array.from({ length: seaWidth - 16 }, (_, x): [number, number] => [
+            x + 8,
+            y,
+          ])
+        )
+        .find(([x, y]) => {
+          const [u] = layout.centre(x, y),
+            border = Math.ceil(u / chunkU) * chunkU;
+
+          return (
+            border - u > short + 0.05 &&
+            neighbours(x, y)
+              .flatMap(([nx, ny]) => neighbours(nx, ny))
+              .some(
+                ([fx, fy]) => layout.centre(fx, fy)[0] + REACH > border + 0.05
+              )
+          );
+        }),
+    // Past a walk of one step too, where the grid has such a square, so the reach is two steps and not one. On the
+    //  square grid one step reaches as far: a diagonal step is longer than two steps along.
+    twoSteps = choose(kernel + step),
+    [chosen, row] = twoSteps ?? choose(kernel) ?? [undefined, 20],
+    short = twoSteps === undefined ? kernel : kernel + step,
     meshes = (land: Land): Map<string, ChunkMesh> => {
       const built = new Map<string, ChunkMesh>();
 
@@ -422,18 +442,21 @@ ids.forEach((topologyId) => {
             (value, at) => value === before.get(key)!.positions[at]
           )
     ),
-    kernelOnly = chunksNear(grid, layout, [[chosen!, row]], kernel).map(
+    within = chunksNear(grid, layout, [[chosen!, row]], short).map(
       ([i, j]) => `${i},${j}`
     );
 
   expect(
-    `${topologyId}: land rising from the sea rebuilds the chunk past where its own kernel reaches, whose floor it raised`,
+    `${topologyId}: land rising from the sea rebuilds the chunk past where its own kernel reaches${
+      topologyId === 'square' ? '' : ', and a step of the sea further'
+    }, whose floor it raised`,
     [
+      twoSteps !== undefined || topologyId === 'square',
       chosen !== undefined,
-      differ.some((key) => !kernelOnly.includes(key)),
+      differ.some((key) => !within.includes(key)),
       differ.filter((key) => !rebuilt.has(key)),
     ],
-    [true, true, []]
+    [true, true, true, []]
   );
 });
 

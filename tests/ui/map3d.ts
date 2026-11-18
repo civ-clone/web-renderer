@@ -418,11 +418,12 @@ expect(
   chooseMapTileset('square', '');
   view.redrawArt();
 
-  // The view: sized to its canvas's box, and drawn, as it starts.
+  // The view: sized to its canvas's box, and drawn, as it starts; then its land built and drawn, wherever it's centred
+  //  (at once, with no frames here).
   expect(
-    'the stage is sized to the map’s box as it starts, and drawn at once',
-    staged.splice(0),
-    ['resize 640×480@1', 'render']
+    'the stage is sized to the map’s box as it starts, and drawn at once, and its land built and drawn as it starts',
+    [staged.splice(0), chunksSet.size > 0],
+    [['resize 640×480@1', 'render', 'render'], true]
   );
 
   box.width = 800;

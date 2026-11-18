@@ -57,7 +57,7 @@ const sourceFor = (
   height,
   wrapsY: topology.wrapsY(),
   terrainAt,
-  waterAt: (x, y) => terrainAt(x, y) === 'Ocean',
+  waterAt: (x, y) => ['Ocean', 'Lake'].includes(terrainAt(x, y)),
   neighbours: (x, y) =>
     topology
       .directions()
@@ -267,6 +267,21 @@ ids.forEach((topologyId) => {
     'a square never seen among mountains is still flat at sea level',
     [0.5, 0.2, 0.8].map((along) => hidden.height(5 + along, 5 + 0.5)),
     [0, 0, 0]
+  );
+
+  // Water is what the engine says is water (`tile.isWater`), whatever the terrain's called: a lake among plains, the
+  //  sea's floor beside the shore.
+  const lake = createRelief({
+    layout,
+    source: sourceFor(topology, (x, y) =>
+      x === 5 && y === 5 ? 'Lake' : 'Plains'
+    ),
+  });
+
+  expect(
+    'a square the engine says is water, of a terrain the table doesn’t know, is the sea’s floor beside the shore',
+    lake.height(5.5, 5.5) < 0 && lake.height(5.5, 5.5) > -0.08,
+    true
   );
 
   // Land in the first three columns, sea beyond.

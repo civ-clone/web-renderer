@@ -104,10 +104,15 @@ export class Land {
 
   /**
    * The world's tiles at `squares` have changed: its terrain read again, and the chunks round any whose terrain has
-   *  changed queued with those waiting, the nearest to (`u`, `v`) first.
+   *  changed queued with those waiting, the nearest to (`u`, `v`) first. With none, it's read again only if `always`.
    */
-  changed(squares: [number, number][], u: number, v: number): void {
-    if (squares.length === 0) {
+  changed(
+    squares: [number, number][],
+    u: number,
+    v: number,
+    always = false
+  ): void {
+    if (squares.length === 0 && !always) {
       return;
     }
 
