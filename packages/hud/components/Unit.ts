@@ -55,7 +55,12 @@ const followingMap = new WeakMap<HTMLCanvasElement, Unit>();
  */
 export const redrawWindowUnits = (root: ParentNode = document): void =>
   root.querySelectorAll('canvas').forEach((canvas) => {
-    followingMap.get(canvas)?.redraw();
+    // Each on its own: one that can't be drawn leaves the rest drawn, and the map's art changed all the same.
+    try {
+      followingMap.get(canvas)?.redraw();
+    } catch (error) {
+      console.error(error);
+    }
   });
 
 export class Unit extends Element {

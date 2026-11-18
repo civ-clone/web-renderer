@@ -986,8 +986,9 @@ export class GameSession {
   }
 
   // The map drawn with the art for its grid as it is now, and what's drawn with it outside the map: the active unit's
-  //  panel, and the units open windows show. Art whose units and cities stack the other way from the layers made needs a new page to stack them as it
-  //  does: the game is carried over to one, or, where it can't be now, that waits for the next load, which is said.
+  //  panel, and the units open windows show. Art whose units and cities stack the other way from the layers made needs
+  //  a new page to stack them as it does: the game is carried over to one, or, where it can't be now, that waits for
+  //  the next load, which is said.
   #artChanged(): void {
     const redrawn = this.#mapView.redrawArt();
 
