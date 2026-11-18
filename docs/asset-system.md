@@ -193,7 +193,10 @@ staggered isometric grid, which `tileset-civ2` registers (`registerTileset(tiles
 - Coast quarters are named for their three neighbours last-clockwise first: the top quarter `n` for `ne`, `n`, `nw`,
   so `n-001` has land along its NW edge (`tests/ui/tilesetDrawing.ts` pins one case per quarter against `civ2.json`).
 - Units and cities are 64 × 48, drawn 16 px above the tile. The map draws its units over its cities for a `styles`
-  pack (`MapView`), so a unit in a city stands in front of it; Civ1's box cities stay over their units.
+  pack (`MapView`), so a tall unit on the tile in front stands in front of a city; Civ1's box cities stay over their
+  units. A `styles` city's own units aren't drawn over it (`Units`), all but the active one: `Cities` marks it occupied
+  (#1122) with a box in its player's colours, the first edged with the second, 6 native px square on the tile's left
+  halfway down, where every grid's tile is its full width.
 - The active unit's ring is the tile's diamond (`Projection.outline`), drawn on the map under the unit
   (`ActiveUnit.setRing`), in the theme's ring colours over its halo, its line as wide as the map's scale makes it:
   steady with the ring alone, blinking with the unit with both. Over the map it would cut through the tall sprite. The
@@ -432,7 +435,8 @@ it. Each of those leaves the list as the map learns to draw it.
 The map draws the shields, styles cities and tall sprites (#97): `renderUnit` draws a unit's sprite as it is, then the
 back-shield for a unit in a stack and the shield over it, both recoloured, cut off at the unit sprite's edges; `Units`
 and `ActiveUnit` draw it at `units.anchor`, with no copy behind a stack when there is no `stackOffset`; `Cities` draws
-a `styles` city's sprite at `cities.anchor` with no box, and its flag, recoloured, at the sprite's `flag` anchor (a
+a `styles` city's sprite at `cities.anchor` with no box, its flag, recoloured, at the sprite's `flag` anchor, and its
+occupied box when it has units in it (a
 rival's city is drawn without walls, as the page is not told its improvements, #688); `CityNames` writes the size from
 the sprite's `labels.size` anchor, left-aligned; and `Unworkable` fills the projection's `outline()`, a diamond on the
 isometric grid, rather than the tile's box. The interface's own art the map draws over its tiles (the yields, a city's
