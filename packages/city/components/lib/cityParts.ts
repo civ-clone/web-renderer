@@ -446,13 +446,25 @@ export type CityPortalFactory = (
 
 const newPortal: CityPortalFactory = (...args) => new Portal(...args);
 
-/** The city's squares, the worked ones with their yields, a click on one working it or not (#9). */
+/**
+ * The whole scale the city's map is drawn at where its canvas is shown at its own size, as the classic city screen
+ *  shows it (#1102): the map's zoom, down to a whole scale, rather than the whole scale at or above it the map is drawn
+ *  at, so a zoom between two doesn't make the city's map the larger.
+ */
+export const cityMapScale = (portal: Portal): number =>
+  Math.max(1, Math.floor(portal.zoom()));
+
+/**
+ * The city's squares, the worked ones with their yields, a click on one working it or not (#9). Drawn at `scale`, the
+ *  city map's own (`cityMapScale`) unless the layout sizes it itself.
+ */
 export const renderMap = (
   portal: Portal,
   city: CityData,
   transport: Transport,
   readOnly: boolean,
-  makePortal: CityPortalFactory = newPortal
+  makePortal: CityPortalFactory = newPortal,
+  scale: number = cityMapScale(portal)
 ): Node => {
   // Remap the city's tiles into a small local coordinate space so each layer
   // canvas is sized to the city's squares rather than the full world (a full
@@ -481,7 +493,7 @@ export const renderMap = (
       portalCanvas,
       {
         playerId: city.player.id,
-        scale: portal.scale(),
+        scale,
         tileSize: portal.nativeTileSize(),
       },
       Landscape,
