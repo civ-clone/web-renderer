@@ -94,32 +94,37 @@ export const startFallbackInterfaceArt = (
   tileset: TilesetDescriptor,
   store: AssetStore
 ): Promise<void> => {
-  const own = ownInterfaceArt(),
-    stillWanted = (): boolean =>
-      own !== null &&
-      ruleSetMapTileset(tileset.grid) === tileset &&
-      hasOwnInterfaceSprites(tileset);
+  // By id: an import mid-game installs the set again, as another object (`installTilesets`).
+  const stillWanted = (): boolean =>
+    ownInterfaceArt() !== null &&
+    ruleSetMapTileset(tileset.grid)?.id === tileset.id &&
+    hasOwnInterfaceSprites(tileset);
 
   if (!stillWanted()) {
     return Promise.resolve();
   }
 
-  const attempt = (retry: number): Promise<void> =>
-    store
-      .loadHostedPack(packFor(own!))
-      // Loaded: whatever an earlier try said, it's there now.
-      .then(() => setSheetFailed(own!.id, null))
-      .catch((error) => {
-        console.error(`Could not load the ${own!.id} set's sheet.`, error);
+  const attempt = (retry: number): Promise<void> => {
+    const own = ownInterfaceArt()!;
 
-        const delay = fallbackRetryDelays[retry];
+    return (
+      store
+        .loadHostedPack(packFor(own))
+        // Loaded: whatever an earlier try said, it's there now.
+        .then(() => setSheetFailed(own.id, null))
+        .catch((error) => {
+          console.error(`Could not load the ${own.id} set's sheet.`, error);
 
-        return delay === undefined
-          ? undefined
-          : new Promise<void>((resolve) => setTimeout(resolve, delay)).then(
-              () => (stillWanted() ? attempt(retry + 1) : undefined)
-            );
-      });
+          const delay = fallbackRetryDelays[retry];
+
+          return delay === undefined
+            ? undefined
+            : new Promise<void>((resolve) => setTimeout(resolve, delay)).then(
+                () => (stillWanted() ? attempt(retry + 1) : undefined)
+              );
+        })
+    );
+  };
 
   return attempt(0);
 };

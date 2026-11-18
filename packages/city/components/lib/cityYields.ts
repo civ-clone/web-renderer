@@ -123,7 +123,7 @@ const renderCitizen = (
             citizen.replaceChildren(s(`<img src="${url}" alt="">`));
           })
       )
-      .catch(() => {});
+      .catch((error) => console.error('Could not draw a citizen.', error));
   };
 
   draw();

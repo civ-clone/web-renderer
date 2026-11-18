@@ -15,13 +15,17 @@ import {
   interfaceSprite,
   interfaceSpriteKey,
   interfaceNames,
+  followerCount,
   ownInterfaceArt,
   provideInterfaceArt,
 } from '@civ-clone/ui-assets/lib/interfaceArt';
+import { runInNewContext } from 'vm';
+import { setFlagsFromString } from 'v8';
 import {
   installTilesets,
   setMapGrid,
   setRuleSetTileset,
+  setSheetFailed,
   sheetFailure,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import { AssetStore } from '@civ-clone/ui-assets/AssetStore';
@@ -70,6 +74,9 @@ const expect = (description: string, actual: unknown, expected: unknown) => {
 };
 
 console.error = () => {};
+
+// To check that what's followed is let go (`followInterfaceArt`).
+setFlagsFromString('--expose-gc');
 
 const civ2Tileset = () => mapTileset('staggered-iso');
 
@@ -277,6 +284,9 @@ const run = async (): Promise<void> => {
     'civ2'
   );
 
+  // No real waits between tries in this suite.
+  setFallbackRetryDelays([0, 0]);
+
   // One that can't be fetched isn't marked as failed for the square maps.
   const failing = {
     loadHostedPack: ({ id }: { id: string }) =>
@@ -318,9 +328,10 @@ const run = async (): Promise<void> => {
 
   // In a Civ2 game, a sheet that couldn't be fetched is tried again, and is drawn from once it comes.
   setRuleSetTileset('civ2');
-  setFallbackRetryDelays([0, 0]);
-
   let tries = 0;
+
+  // An earlier failure, said, which a sheet that loads clears.
+  setSheetFailed('civ1-pixelart', 'offline earlier');
 
   const flaky = {
     loadHostedPack: () =>
@@ -378,6 +389,37 @@ const run = async (): Promise<void> => {
     [src(gold), pixelFaces.includes(src(face)!)],
     [pixelGold, true]
   );
+
+  // What's followed is let go once it's gone, and nothing is followed in a game without art of its own.
+  const gc = runInNewContext('gc') as () => void,
+    before = followerCount();
+
+  for (let i = 0; i < 200; i++) {
+    yieldIcon('Gold');
+  }
+
+  expect(
+    'each picture drawn in a Civ2 game is followed',
+    followerCount(),
+    before + 200
+  );
+
+  await settle();
+  gc();
+  await settle();
+  gc();
+
+  expect("and let go once it's gone", followerCount() <= before + 1, true);
+
+  setRuleSetTileset(null);
+  setMapGrid('square');
+
+  const civ1Before = followerCount();
+
+  yieldIcon('Gold');
+  citizenFace('happy');
+
+  expect('nothing is followed in a Civ1 game', followerCount(), civ1Before);
 
   finished = true;
 };

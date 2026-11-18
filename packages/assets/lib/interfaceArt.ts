@@ -185,33 +185,63 @@ export const interfaceSprite = (name: string): InterfaceSprite => {
   return { tileset: theme, key: interfaceSpriteKey(name, theme) };
 };
 
-// What's drawn with the interface's art, to draw again as the sprites change (`followInterfaceArt`), each held weakly so
-//  an element that's gone is let go.
-const followers = new Set<{ element: WeakRef<Element>; refresh: () => void }>();
+// What's drawn with the interface's art in a game with art of its own, to draw again as the sprites change
+//  (`followInterfaceArt`): each element held weakly, with its redraw kept in a WeakMap by it, so the redraw, which
+//  holds the element, doesn't keep it alive. Elements gone are let go as the sprites change, and every so often as more
+//  are added.
+const followed = new Set<WeakRef<Element>>(),
+  redraws = new WeakMap<Element, () => void>();
 
-onPreloadedImagesChanged(() =>
-  followers.forEach((follower) => {
-    if (follower.element.deref() === undefined) {
-      followers.delete(follower);
+let addedSincePrune = 0;
 
-      return;
+const prune = (): void => {
+  addedSincePrune = 0;
+  followed.forEach((ref) => {
+    if (ref.deref() === undefined) {
+      followed.delete(ref);
     }
+  });
+};
 
-    follower.refresh();
-  })
-);
+onPreloadedImagesChanged(() => {
+  prune();
+  followed.forEach((ref) => {
+    const element = ref.deref();
+
+    if (element !== undefined) {
+      redraws.get(element)?.();
+    }
+  });
+});
 
 /**
- * Runs `refresh` whenever the sprites drawn from change, for as long as `element` is around: as a sheet a sprite falls
- *  back to arrives in a Civ2 game (the pixel art, `startFallbackInterfaceArt`), or an import adds the game's own, so a
- *  picture already drawn takes the sprite `interfaceSprite` now says. `refresh` resolves its sprites again, and draws
- *  only the ones that changed.
+ * Runs `refresh` whenever the sprites drawn from change, for as long as `element` is around, in a game with interface
+ *  art of its own (`gameInterfaceArt`, a Civ2 game): as a sheet a sprite falls back to arrives (the pixel art,
+ *  `startFallbackInterfaceArt`), so a picture already drawn takes the sprite `interfaceSprite` now says. `refresh`
+ *  resolves its sprites again, and draws only the ones that changed. Nothing in a game without such art, whose
+ *  pictures always resolve to the theme's.
  */
 export const followInterfaceArt = (
   element: Element,
   refresh: () => void
 ): void => {
-  followers.add({ element: new WeakRef(element), refresh });
+  if (gameInterfaceArt() === null) {
+    return;
+  }
+
+  redraws.set(element, refresh);
+  followed.add(new WeakRef(element));
+
+  if (++addedSincePrune >= 256) {
+    prune();
+  }
+};
+
+/** How many elements follow the interface's art (`followInterfaceArt`), the ones gone let go first: for a test. */
+export const followerCount = (): number => {
+  prune();
+
+  return followed.size;
 };
 
 /**
