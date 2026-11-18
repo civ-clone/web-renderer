@@ -164,7 +164,10 @@ to `tileset`, so a sound set's manifest has a schema and a reader of its own:
 ```
 
 Its import is a `PackImport` like the art's. It reads `ASOUND.CVL`, checks it (`CvlImage`) and keeps it under the key
-it has today. The import window's own handling of the file goes, and the music reads the driver through the set.
+it has today, `prefix + name + ext` from the manifest's `storage` (`soundFileKey`). The store reads the driver by its
+own constant (`SOUND_DRIVER`), as the assets package can't read the menus' manifest, so `civ1Sound.ts` checks the two
+agree as it loads (#1106). The import window's own handling of the file goes, and the music reads the driver through
+the set.
 
 ## Hosted sets
 

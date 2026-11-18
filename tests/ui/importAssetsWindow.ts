@@ -39,7 +39,11 @@ import ImportAssetsWindow from '@civ-clone/ui-menus/components/ImportAssetsWindo
 import LibraryWindow, {
   themeArtLine,
 } from '@civ-clone/ui-menus/components/LibraryWindow';
-import { registerSoundSet } from '@civ-clone/ui-assets/sounds/SoundDescriptor';
+import {
+  registerSoundSet,
+  soundFileKey,
+} from '@civ-clone/ui-assets/sounds/SoundDescriptor';
+import { civ1Sound, soundDriverKey } from '@civ-clone/ui-menus/lib/civ1Sound';
 import {
   bundledTilesets,
   chooseMapTileset,
@@ -50,7 +54,7 @@ import {
 import { instance as gameOptions } from '@civ-clone/ui-platform/GameOptionsRegistry';
 import { ensureTilesetLoaded } from '@civ-clone/ui-assets/lib/installPacks';
 import addFormatters from '@civ-clone/ui-game/app/i18nFormatters';
-import { assetStore } from '@civ-clone/ui-assets/AssetStore';
+import { SOUND_DRIVER, assetStore } from '@civ-clone/ui-assets/AssetStore';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import { Colour, encodeGif } from './lib/encodeGif';
 import {
@@ -872,6 +876,52 @@ const run = async (): Promise<void> => {
     window.close();
   }
 
+  // A first import of Civ1's art right through (#1106): the store holds every sprite once they're written, so the
+  //  window says Done and reloads the page to use them. Named in lower case, as some copies' files are.
+  {
+    const window = civ1Window(),
+      written: string[] = [],
+      { setAll, hasAllAssets, missingAssets } = store;
+    let reloads = 0;
+
+    store.setAll = async (assets: { name: string }[]): Promise<void> => {
+      written.push(...assets.map(({ name }) => name));
+    };
+    store.hasAllAssets = async (): Promise<boolean> =>
+      written.includes('./assets/units/warrior.png') &&
+      written.includes('./assets/terrain/land.png');
+    store.missingAssets = async (): Promise<string[]> =>
+      (await store.hasAllAssets()) ? [] : ['./assets/units/warrior.png'];
+    (globalThis as any).location = { reload: () => reloads++ };
+
+    await upload(window, [sheet('sp257.pic'), sheet('ter257.pic')]);
+
+    store.setAll = setAll;
+    store.hasAllAssets = hasAllAssets;
+    store.missingAssets = missingAssets;
+    delete (globalThis as any).location;
+
+    expect(
+      "a first import of Civ1's art, its files named in lower case: its sprites written, Done said, and the page reloaded",
+      [
+        written.includes('./assets/units/warrior.png'),
+        written.includes('./assets/terrain/land.png'),
+        progress(window).textContent,
+        progress(window).classList.contains('failed'),
+        reloads,
+      ],
+      [
+        true,
+        true,
+        'Done! Please reload the page to utilize the fresh assets.',
+        false,
+        1,
+      ]
+    );
+
+    window.close();
+  }
+
   // Replace existing assets left unticked: a group of sprites already imported isn't cut again. It never was skipped,
   //  as the paths it checked had the definition's index in them (#64).
   {
@@ -985,6 +1035,15 @@ const run = async (): Promise<void> => {
         cvl().size,
         1,
       ]
+    );
+    expect(
+      "the key it's kept under is its manifest's storage with the file's name, and the one the music reads (#1106)",
+      [
+        soundDriverKey,
+        soundFileKey(civ1Sound, 'ASOUND.CVL') === SOUND_DRIVER,
+        soundFileKey({ storage: { prefix: './music/', ext: '.bin' } }, 'X'),
+      ],
+      ['./sources/ASOUND.CVL', true, './music/X.bin']
     );
 
     for (const [description, file] of [
@@ -2474,20 +2533,37 @@ const run = async (): Promise<void> => {
 
       await upload(window, [sheet('TER257.PIC')]);
 
-      const refused = progress(window).textContent;
+      const refused = progress(window).textContent,
+        { hasAllAssets } = store;
+      let reloads = 0;
 
-      await upload(window, [sheet('SP257.PIC')]);
+      // #1106: and once it's written, every sprite is in, so it's finished as a first import is.
+      store.hasAllAssets = async (): Promise<boolean> =>
+        written.includes('./assets/units/warrior.png');
+      (globalThis as any).location = { reload: () => reloads++ };
+
+      await upload(window, [sheet('sp257.pic')]);
       store.setAll = setAll;
+      store.hasAllAssets = hasAllAssets;
+      delete (globalThis as any).location;
       window.close();
 
       expect(
-        'and its window asks for that file, and goes ahead with it alone',
+        'and its window asks for that file, goes ahead with it alone, even named in lower case, and is done',
         [
           refused,
           written.includes('./assets/units/warrior.png'),
           written.some((name) => name.startsWith('./assets/terrain/')),
+          progress(window).textContent,
+          reloads,
         ],
-        ['Please provide all files to generate assets: SP257.PIC.', true, false]
+        [
+          'Please provide all files to generate assets: SP257.PIC.',
+          true,
+          false,
+          'Done! Please reload the page to utilize the fresh assets.',
+          1,
+        ]
       );
     }
 
@@ -2556,6 +2632,37 @@ const run = async (): Promise<void> => {
     );
 
     library.close();
+
+    // #1106: Civ2's sprites all in, but no record of their anchors and flags' colours to draw them by, or one that
+    //  can't be read: not ready, as the map couldn't be drawn from it.
+    {
+      const statuses: unknown[] = [];
+
+      for (const readMetadata of [
+        async () => null,
+        async () => {
+          throw new Error('The record could not be read.');
+        },
+      ]) {
+        holds({ civ1: 'all', civ2: 'all' });
+        store.readMetadata = readMetadata;
+
+        const withoutRecord = await opened(),
+          { status, button } = entryOf(withoutRecord, 'civ2');
+
+        statuses.push([status, button]);
+        withoutRecord.close();
+      }
+
+      expect(
+        "Civ2's sprites all in without a record of their anchors and colours, or with one that can't be read: not ready",
+        statuses,
+        [
+          ['Needs UNITS.GIF and CITIES.GIF', 'Import…'],
+          ['Needs UNITS.GIF and CITIES.GIF', 'Import…'],
+        ]
+      );
+    }
 
     // Over Options, which is modal before a game, the library is modal, and so is the import it opens.
     {
@@ -2720,6 +2827,12 @@ const run = async (): Promise<void> => {
           themes().find(([id]) => id === before)?.[1],
         ],
         [other, 'In use', null]
+      );
+      expect(
+        // #1106: kept as the option the next page starts with, as Options keeps it.
+        'and keeps it as the uiTheme option, for the next page load',
+        gameOptions.get('uiTheme'),
+        other
       );
       expect(
         // linkedom keeps no focus: the button kept, and not disabled, is what keeps it in a browser.
