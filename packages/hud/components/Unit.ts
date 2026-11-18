@@ -43,9 +43,31 @@ const tileCanvas = (
   );
 };
 
+type UnitShown = Pick<UnitData, '_' | 'player' | 'improvements' | 'busy'>;
+
+// Each unit drawn for a window with the map's art, by its canvas: drawn again when that art changes (#1142).
+const followingMap = new WeakMap<HTMLCanvasElement, Unit>();
+
+/**
+ * Draws again, with the map's art as it is now (`mapTileset`), every unit a window in `root` shows with it (#1142): the
+ *  map's art was chosen again during a game (#1118). Each keeps its canvas, resized for the new art, so what holds it
+ *  or listens on it is unchanged. A unit drawn with art of its own choosing is left as it is.
+ */
+export const redrawWindowUnits = (root: ParentNode = document): void =>
+  root.querySelectorAll('canvas').forEach((canvas) => {
+    // Each on its own: one that can't be drawn leaves the rest drawn, and the map's art changed all the same.
+    try {
+      followingMap.get(canvas)?.redraw();
+    } catch (error) {
+      console.error(error);
+    }
+  });
+
 export class Unit extends Element {
   #scale: number = 2;
   #tileset: TilesetDescriptor;
+  #unit: UnitShown;
+  #scaleAsked: number;
 
   /**
    * `unit` drawn as `tileset` draws it, the game's map's (#97: the windows' units follow the map's pack, so a unit
@@ -53,21 +75,45 @@ export class Unit extends Element {
    *  64 px) is shown no larger than at its own default scale.
    */
   constructor(
-    unit: Pick<UnitData, '_' | 'player' | 'improvements' | 'busy'>,
+    unit: UnitShown,
     scale: number = 2,
-    tileset: TilesetDescriptor = mapTileset()
+    tileset: TilesetDescriptor | undefined = undefined
   ) {
-    const shownAt = shownScale(scale, tileset);
+    const drawnWith = tileset ?? mapTileset(),
+      shownAt = shownScale(scale, drawnWith);
 
-    super(tileCanvas(shownAt, tileset));
+    super(tileCanvas(shownAt, drawnWith));
 
     this.#scale = shownAt;
-    this.#tileset = tileset;
+    this.#scaleAsked = scale;
+    this.#tileset = drawnWith;
+    this.#unit = unit;
+
+    if (tileset === undefined) {
+      followingMap.set(this.element(), this);
+    }
 
     this.build(unit);
   }
 
-  build(unit: Pick<UnitData, '_' | 'player' | 'improvements' | 'busy'>) {
+  /** Draws the unit again with the map's art as it is now (`redrawWindowUnits`), on its canvas resized for it. */
+  redraw(): void {
+    const tileset = mapTileset(),
+      shownAt = shownScale(this.#scaleAsked, tileset),
+      { width, height } = unitBox(tileset),
+      canvas = this.element();
+
+    this.#scale = shownAt;
+    this.#tileset = tileset;
+
+    // Set even when they're the same, which clears what was drawn.
+    canvas.width = width * shownAt;
+    canvas.height = height * shownAt;
+
+    this.build(this.#unit);
+  }
+
+  build(unit: UnitShown) {
     const tileset = this.#tileset,
       tileSize = nativeTileSize(tileset),
       box = unitBox(tileset),

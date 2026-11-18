@@ -5,6 +5,7 @@ import { t } from 'i18next';
 import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
 import openCity from '@civ-clone/ui-city/components/openCity';
 import CitiesList from '@civ-clone/ui-hud/components/CitiesList';
+import { redrawWindowUnits } from '@civ-clone/ui-hud/components/Unit';
 import GameMenu from '@civ-clone/ui-menus/components/GameMenu';
 import { GameMenuItem } from '@civ-clone/ui-menus/components/mapMenus';
 import cheatRows from './debug/cheats';
@@ -985,8 +986,9 @@ export class GameSession {
   }
 
   // The map drawn with the art for its grid as it is now, and what's drawn with it outside the map: the active unit's
-  //  panel. Art whose units and cities stack the other way from the layers made needs a new page to stack them as it
-  //  does: the game is carried over to one, or, where it can't be now, that waits for the next load, which is said.
+  //  panel, and the units open windows show. Art whose units and cities stack the other way from the layers made needs
+  //  a new page to stack them as it does: the game is carried over to one, or, where it can't be now, that waits for
+  //  the next load, which is said.
   #artChanged(): void {
     const redrawn = this.#mapView.redrawArt();
 
@@ -995,6 +997,8 @@ export class GameSession {
     }
 
     this.#unitDetails.update(this.#unitController!.active());
+    // And what windows still open show with it: the unit stack, the production list, a city's units (#1142).
+    redrawWindowUnits();
     this.#scheduleRender();
 
     if (redrawn === 'reload' && !handOverGame()) {
