@@ -67,6 +67,7 @@ const run = async (): Promise<void> => {
           SavedGame: {
             'could-not-load': 'Not loaded: {{error}}',
             'could-not-write': 'Not saved: {{error}}',
+            'could-not-carry-over': 'Not carried over: {{error}}',
           },
           WorkerFailure: {
             body: 'Something went wrong.',
@@ -191,6 +192,15 @@ const run = async (): Promise<void> => {
     "a save the worker can't build is said as one the page can't write, unescaped, and the game goes on (#581)",
     [alerts, reloads, windows()],
     [["Not saved: can't <copy> 'x'"], 1, []]
+  );
+
+  alerts.splice(0);
+  deliver('saveFailed', { message: 'full', handOver: true });
+
+  expect(
+    "a hand-over the worker can't build says the game goes on and the new art waits for the next load (#1144)",
+    [alerts, reloads],
+    [['Not carried over: full'], 1]
   );
 
   // The page's side of the `Worker`: an error it raises, or a message it can't read, reaches the `workerError`

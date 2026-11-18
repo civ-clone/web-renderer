@@ -215,7 +215,8 @@ declare global {
     // A load that failed (#470): the page says so and goes back to the main menu.
     loadFailed: TransportData<{ message: string }, never>;
     // A save the worker could not build (#581): the page says so, as it does one it could not write.
-    saveFailed: TransportData<{ message: string }, never>;
+    // `handOver` when it was the game being carried over to a new page (#1118, #1144).
+    saveFailed: TransportData<{ message: string; handOver?: boolean }, never>;
     // The Top Cities in the World report (#124): the UI asks for up to this many rows.
     topCities: TransportData<TopCitiesRow[], number>;
     // The Wonders of the World report (#992): every Wonder built, in the Wonders' own order.

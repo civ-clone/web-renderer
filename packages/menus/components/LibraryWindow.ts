@@ -14,6 +14,7 @@ import {
   installedTilesets,
   isHosted,
   mapTileset,
+  ruleSetMapTileset,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import {
   currentUiTheme,
@@ -602,15 +603,27 @@ export class LibraryWindow extends Window {
 
   /**
    * Marks the map set in use for each grid (#1063): the one the player chose, or, unchosen, the one drawn by default
-   *  (`mapTileset`), and puts its Use out of use, as the themes' are.
+   *  (`mapTileset`), and puts its Use out of use, as the themes' are. During a game whose rule set names its own art
+   *  for a grid (Civ2's), the others' Use for that grid is out of use too, saying why: choosing one would change
+   *  nothing in this game (#1144).
    */
   #markMapUses(): void {
     this.#mapUses.forEach(({ id, grid, inUse, use }) => {
-      const used = mapTileset(grid).id === id;
+      const used = mapTileset(grid).id === id,
+        rules = this.#inGame ? ruleSetMapTileset(grid) : null,
+        ruled = !used && rules !== null && rules.id !== id;
 
       inUse.hidden = !used;
-      use.setAttribute('aria-disabled', String(used));
-      use.title = used ? inUse.textContent ?? '' : '';
+      use.setAttribute('aria-disabled', String(used || ruled));
+      use.title = used
+        ? inUse.textContent ?? ''
+        : ruled
+        ? t('LibraryWindow.rule-set-art', {
+            name: rules!.name,
+            grid: t(`Grid.${grid}`).toLocaleLowerCase(i18next.language),
+            interpolation: { escapeValue: false },
+          })
+        : '';
     });
   }
 
