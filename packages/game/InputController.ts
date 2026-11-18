@@ -57,7 +57,11 @@ const takesEnter = (target: EventTarget | null): boolean =>
     target instanceof Element &&
     target.matches('input, select, textarea, [contenteditable]'),
   // The map's zoom (#1101), a tenth at a time: Civilization II's keys. `+` and `-` are the trade rates'.
-  zoomKeys: { [key: string]: number } = { z: 1, x: -1 };
+  zoomKeys: { [key: string]: number } = { z: 1, x: -1 },
+  // The keys that turn a map that turns (the 3D map, docs/3d-renderer.md §9.1), by eighths of a turn, and the one that
+  //  turns it back to north. None is a unit's order, nor the numeric keypad's (`mappedKey`).
+  turnKeys: { [key: string]: number } = { '[': -1, ']': 1 },
+  NORTH_KEY = '\\';
 
 export type InputControllerDeps = {
   // The primary actions' area, whose first button Tab focuses.
@@ -78,8 +82,10 @@ export type InputControllerDeps = {
     | 'centre'
     | 'endPicking'
     | 'picking'
+    | 'faceNorth'
     | 'toggleUnits'
     | 'toggleYields'
+    | 'turnBy'
     | 'zoomBy'
   >;
   notificationBar: { show(text: string): void };
@@ -338,6 +344,24 @@ export class InputController {
     ) {
       this.#zoomKeyHeld = key;
       this.#deps.mapView.zoomBy(zoomKeys[key]!);
+
+      event.preventDefault();
+
+      return;
+    }
+
+    // Once for each press: held down, it would spin.
+    if (
+      (key in turnKeys || key === NORTH_KEY) &&
+      !modalWindow &&
+      !takesText(event.target) &&
+      !event.repeat
+    ) {
+      if (key === NORTH_KEY) {
+        this.#deps.mapView.faceNorth();
+      } else {
+        this.#deps.mapView.turnBy(turnKeys[key]!);
+      }
 
       event.preventDefault();
 

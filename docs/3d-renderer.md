@@ -805,6 +805,11 @@ mapEvent:
 - **The sidebar:** squares under the sidebar (`setCovered`) count as off screen, so the active unit is kept clear of it,
   as on the 2D map.
 
+- **As built (slice 1.2, first part):** `packages/map-3d/camera/orbit.ts`. The distance runs from 5 to 90 world units,
+  24 by default, and a step of zoom brings the camera 1.12 times nearer. The haze starts at 1.3 times the distance and
+  hides everything by 5 times it. The keys are `[` and `]` to turn an eighth of a turn and `\` to face north: none is a
+  unit's order or one the numeric keypad sends (`mappedKey`).
+
 ### 9.2 Picking
 
 - **A square:** a ray from the pointer meets what's shown there: the land, or the water's surface where the land is

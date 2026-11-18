@@ -4,7 +4,8 @@
 //
 // What it draws comes from its address, which the form on the page sets: `grid` (`square`, `staggered-iso` or
 //  `hex-odd-r`), `width`, `height`, `seed`, `seen` (how much has been seen, 0 to 1), and `x` and `y`, the square the map
-//  is centred on. The arrow keys move that square.
+//  is centred on. The arrow keys move the map two squares' width at a time, as the screen shows it; `[` and `]` turn
+//  it, `\` turns it back to north, and `z` and `x` zoom in and out, as in a game.
 
 import { MAP3D_GLOBAL, Map3DScript } from '@civ-clone/ui-map/MapView3DFactory';
 import { PlayerTile, Tile } from '@civ-clone/ui-protocol/types';
@@ -44,7 +45,7 @@ const tileAt = (x: number, y: number, terrain: string): PlayerTile => {
 
 const start = (script: Map3DScript): void => {
   const options = pageOptions(location.search),
-    { terrain } = generateWorld(options),
+    { terrain, layout } = generateWorld(options),
     map = document.getElementById('map'),
     canvas = map?.querySelector('canvas');
 
@@ -82,12 +83,23 @@ const start = (script: Map3DScript): void => {
       world,
     }),
     centre = { x: options.x, y: options.y },
-    moves: { [key: string]: [number, number] } = {
-      ArrowUp: [0, -1],
-      ArrowDown: [0, 1],
-      ArrowLeft: [-1, 0],
-      ArrowRight: [1, 0],
+    // Which way each arrow moves the map on the screen: up, then right, a quarter turn at a time.
+    moves: { [key: string]: number } = {
+      ArrowUp: 0,
+      ArrowRight: 1,
+      ArrowDown: 2,
+      ArrowLeft: 3,
     },
+    keys: { [key: string]: () => void } = {
+      '[': () => view.turnBy(-1),
+      ']': () => view.turnBy(1),
+      '\\': () => view.faceNorth(),
+      z: () => view.zoomBy(1),
+      x: () => view.zoomBy(-1),
+    },
+    // The camera's bearing, from the 3D view itself: the debug page knows it's that.
+    yaw = (): number =>
+      (view as unknown as { orbit?(): { yaw: number } }).orbit?.().yaw ?? 0,
     // The address follows the centre, so a reload or a copied link shows the same place.
     remember = (): void => {
       const query = new URLSearchParams(location.search);
@@ -100,10 +112,14 @@ const start = (script: Map3DScript): void => {
   view.centre(world.get(centre.x, centre.y));
 
   document.addEventListener('keydown', (event) => {
-    const move = moves[event.key];
+    const move = moves[event.key],
+      key = keys[event.key];
 
     if (
-      move === undefined ||
+      (move === undefined && key === undefined) ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey ||
       (event.target instanceof HTMLElement &&
         event.target.closest('form') !== null)
     ) {
@@ -111,9 +127,25 @@ const start = (script: Map3DScript): void => {
     }
 
     event.preventDefault();
-    centre.x =
-      (((centre.x + move[0]) % options.width) + options.width) % options.width;
-    centre.y = Math.min(options.height - 1, Math.max(0, centre.y + move[1]));
+
+    if (key !== undefined) {
+      if (!event.repeat) {
+        key();
+      }
+
+      return;
+    }
+
+    // Two squares' width that way on the screen, as the camera's turned, to the square there.
+    const bearing = yaw() + ((move ?? 0) * Math.PI) / 2,
+      [u, v] = layout.centre(centre.x, centre.y),
+      [x, y] = layout.tileAt(
+        u + Math.sin(bearing) * 2,
+        v - Math.cos(bearing) * 2
+      );
+
+    centre.x = ((x % options.width) + options.width) % options.width;
+    centre.y = ((y % options.height) + options.height) % options.height;
     view.centre(world.get(centre.x, centre.y));
     remember();
   });

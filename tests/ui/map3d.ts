@@ -28,6 +28,7 @@ import {
 } from '@civ-clone/ui-map/MapView3DFactory';
 import MapView2D from '@civ-clone/ui-game/MapView2D';
 import MapView3D from '@civ-clone/ui-map-3d/MapView3D';
+import { ZOOM_STEP } from '@civ-clone/ui-map-3d/camera/orbit';
 import Transport from '@civ-clone/ui-client/Transport';
 import World from '@civ-clone/ui-map/components/World';
 import {
@@ -161,7 +162,8 @@ const staged: string[] = [],
     resize: (stageWidth, stageHeight, ratio) =>
       void staged.push(`resize ${stageWidth}×${stageHeight}@${ratio}`),
     setChunk: (i, j) => void chunksSet.add(`${i},${j}`),
-    lookAt: (u, v, height) => void lookedAt.splice(0, 3, u, v, height),
+    view: (orbit, height) =>
+      void lookedAt.splice(0, 3, orbit.focus[0], orbit.focus[1], height),
     stats: () => ({ drawCalls: 0, triangles: 0, geometries: 0 }),
     dispose: () => void staged.push('dispose'),
   });
@@ -470,6 +472,44 @@ expect(
 
   expect('the same square again draws nothing', staged.splice(0), []);
 
+  // The camera: turned and zoomed at once, with no frames to glide over (slice 1.2).
+  const yawOf = (): number => Math.round((view.orbit().yaw * 180) / Math.PI),
+    distance = view.orbit().distance;
+
+  view.turnBy(1);
+
+  const turned = yawOf();
+
+  view.turnBy(-2);
+
+  const back = yawOf();
+
+  view.faceNorth();
+
+  expect(
+    'the keys turn the camera an eighth of a turn either way, and back to north, and draw it',
+    [turned, back, yawOf(), staged.splice(0)],
+    [45, 315, 0, ['render', 'render', 'render']]
+  );
+
+  view.zoomBy(2);
+
+  const zoomedIn = view.orbit().distance;
+
+  view.zoomBy(-2);
+
+  expect(
+    'zooming brings it nearer by the steps asked, and out again',
+    [
+      Math.abs(zoomedIn - distance / ZOOM_STEP ** 2) < 1e-9,
+      Math.abs(view.orbit().distance - distance) < 1e-9,
+      view.portal.center(),
+    ],
+    [true, true, { x: 1, y: 1 }]
+  );
+
+  staged.splice(0);
+
   // The tiles, as the 2D map takes them: queued, released once the world has them, and taken by a flush.
   view.queueTile(tiles[0]);
   view.queueTile(tiles[0]);
@@ -726,8 +766,9 @@ expect(
 
   delete (window as any)[MAP3D_GLOBAL];
 
-  // `dist/map3d.js`: three.js and the 3D map's own code, and from the rest only what has no state (the factory's name),
-  //  so no registry or singleton the page's bundle has is bundled again with its own state.
+  // `dist/map3d.js`: three.js and the 3D map's own code, and from the rest only what has no state (the factory's name,
+  //  and whether the player has asked for less motion), so no registry or singleton the page's bundle has is bundled
+  //  again with its own state. One more here is one to check has none.
   //  The suites run from the repository's root, and esbuild is loaded from there rather than bundled into this one.
   const { build } = createRequire(join(process.cwd(), 'package.json'))(
       'esbuild'
@@ -751,9 +792,9 @@ expect(
     );
 
   expect(
-    'map3d.js bundles three.js, its own code, the built-in model set, the emitter, and the factory’s name alone',
-    others,
-    ['packages/map/MapView3DFactory.ts']
+    'map3d.js bundles three.js, its own code, the built-in model set, the emitter, and from the rest only the factory’s name and reduced motion',
+    others.sort(),
+    ['packages/map/MapView3DFactory.ts', 'packages/map/lib/reducedMotion.ts']
   );
   expect(
     'and three.js is in it',

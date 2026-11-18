@@ -464,6 +464,14 @@ export class MapView2D implements MapRenderer {
     this.portal.endPicking();
   }
 
+  /** The 2D map always looks north. */
+  faceNorth(): void {}
+
+  /** The 2D map doesn't turn. */
+  turnBy(steps: number): void {
+    void steps;
+  }
+
   zoomBy(steps: number): void {
     this.portal.zoomBy(steps);
   }

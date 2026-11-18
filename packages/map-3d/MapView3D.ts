@@ -1,9 +1,10 @@
 // The 3D map (`MapRenderer`, docs/3d-renderer.md §2.1), behind `?3d=1` until it shows everything the 2D map does (§11).
 //
 // It shows the land (slice 1.1), its relief and its terrain's colours, built a few chunks a frame from where the map is
-//  centred, and again where tile patches change it; the camera looks down at the square the map is centred on. The
-//  rest comes slice by slice:
-//  - turning, tilting and zooming the camera in 1.2;
+//  centred, and again where tile patches change it. The camera (slice 1.2) orbits a point on the ground: centring the
+//  map glides it there, the keys turn it and zoom it, and its distance is kept as the 2D map's zoom is. The rest comes
+//  slice by slice:
+//  - dragging, tilting and pinching it, once the shared gestures are in (1.2);
 //  - picking squares, hovering and hiding the units in 1.3.
 //  - the minimap's view of it in 1.5: it's left empty until then.
 // Until then, what the game asks of it is kept or let go as below, and a long-range order's square can't be picked: the
@@ -18,12 +19,28 @@ import { MapView3DDeps } from '@civ-clone/ui-map/MapView3DFactory';
 import MapPortal3D from './MapPortal3D';
 import MapRenderer from '@civ-clone/ui-map/MapRenderer';
 import World from '@civ-clone/ui-map/components/World';
-import { SIGHT, Stage, StageFactory, createStage } from './stage';
+import { Stage, StageFactory, createStage } from './stage';
 import Land from './Land';
+import {
+  Orbit,
+  TURN_STEP,
+  between,
+  defaultOrbit,
+  settled,
+  zoomed,
+} from './camera/orbit';
+import prefersReducedMotion from '@civ-clone/ui-map/lib/reducedMotion';
 
 // How long, in ms, each frame may go on building the land's chunks while any wait. A chunk is built whole, once a frame
 //  has begun one: one takes 17–25 ms, so a frame builds one, and more only where they're quicker.
 const BUILD_BUDGET = 10;
+
+// How long the camera takes to glide to a square it's centred on, or to turn, in ms.
+const GLIDE = 350;
+
+// How much of the way to the land's height under the focus the camera rises or falls each frame, so it doesn't jolt
+//  over every hill as it moves.
+const HEIGHT_EASE = 0.25;
 
 export class MapView3D implements MapRenderer {
   readonly portal: MapPortal3D;
@@ -37,6 +54,10 @@ export class MapView3D implements MapRenderer {
   #frameTime = 0;
   // Where the map was centred when the chunks waiting were last put in order, as `u,v`.
   #focused = '';
+  // The camera now, the one it's gliding to, if it is, and the height it looks at, following the land's.
+  #orbit: Orbit;
+  #glide: { from: Orbit; to: Orbit; started: number | null } | null = null;
+  #lookHeight: number | null = null;
   // A frame asked for to draw in, if one is.
   #frame: number | null = null;
   // Keyed by the square, as the 2D map's: a tile waits in `#incomingTiles` until the world has it (`releaseTiles`).
@@ -64,13 +85,18 @@ export class MapView3D implements MapRenderer {
     this.#art = deps.art;
     this.#artId = deps.art.id();
     this.world = deps.world;
-    this.portal = new MapPortal3D(deps, () => this.#draw());
     this.#land = new Land(deps.world);
     // Read just now, by the land.
     this.#worldTiles = deps.world.tiles();
     this.#worldTileCount = this.#worldTiles.length;
+    this.#orbit = defaultOrbit(this.#land.layout.centre(0, 0));
+    this.portal = new MapPortal3D(deps, {
+      centre: () => this.#centreSquare(),
+      centreOn: (x, y) => this.#centreOn(x, y),
+      changed: () => this.#draw(),
+    });
     this.#stage = stageFactory(deps.mapCanvas, {
-      copies: this.#land.copies(SIGHT),
+      period: this.#land.layout.period(),
     });
 
     if (deps.debug && deps.mapCanvas.parentElement) {
@@ -102,6 +128,18 @@ export class MapView3D implements MapRenderer {
     return this.#land;
   }
 
+  /** The camera now, for the `?debug=1` console and the tests. */
+  orbit(): Orbit {
+    return this.#orbit;
+  }
+
+  /** The camera put where it's asked, at once, for the `?debug=1` console. */
+  setOrbit(orbit: Orbit): void {
+    this.#glide = null;
+    this.#orbit = this.#settle(orbit);
+    this.#draw();
+  }
+
   /** The unit active now, and where it's drawn while its move is answered. */
   activeUnit(): { unit: Unit | null; pendingTile: Coordinate | null } {
     return { unit: this.#activeUnit, pendingTile: this.#pendingTile };
@@ -109,6 +147,18 @@ export class MapView3D implements MapRenderer {
 
   centre(tile: Tile): void {
     this.portal.setCenter(tile.x, tile.y);
+  }
+
+  /** Turns the view `steps` eighths of a turn: clockwise seen from above, or the other way for fewer than none. */
+  turnBy(steps: number): void {
+    const target = this.#glide?.to ?? this.#orbit;
+
+    this.#moveTo({ ...target, yaw: target.yaw + steps * TURN_STEP });
+  }
+
+  /** Turns the view to look north, the short way round. */
+  faceNorth(): void {
+    this.#moveTo({ ...(this.#glide?.to ?? this.#orbit), yaw: 0 });
   }
 
   /** Nothing to flip yet: the stress runner's view modes are the 2D map's layers. */
@@ -238,16 +288,108 @@ export class MapView3D implements MapRenderer {
     this.#yieldsShown = !this.#yieldsShown;
   }
 
-  /** The camera's zoom is slice 1.2's. */
+  /** Brings the camera `steps` nearer, or further away for fewer than none, about the point it looks at. */
   zoomBy(steps: number): void {
-    void steps;
+    this.#orbit = zoomed(this.#orbit, steps);
+
+    if (this.#glide !== null) {
+      this.#glide.to = zoomed(this.#glide.to, steps);
+    }
+
+    this.#draw();
   }
 
-  // The square the map is centred on, on the ground.
+  // The point on the ground the camera looks at.
   #focus(): [number, number] {
-    const { x, y } = this.portal.center();
+    return [...this.#orbit.focus];
+  }
 
-    return [...this.#land.layout.centre(x, y)];
+  // The square the camera looks at, on the world.
+  #centreSquare(): Coordinate {
+    const [x, y] = this.#land.layout.tileAt(...this.#orbit.focus),
+      width = this.world.width(),
+      height = this.world.height();
+
+    return {
+      x: ((x % width) + width) % width,
+      y: Math.min(height - 1, Math.max(0, ((y % height) + height) % height)),
+    };
+  }
+
+  // Glides the camera to look at the middle of the square at (`x`, `y`), unless it's there already.
+  #centreOn(x: number, y: number): void {
+    const [u, v] = this.#land.layout.centre(x, y),
+      [toU, toV] = (this.#glide?.to ?? this.#orbit).focus;
+
+    if (u === toU && v === toV) {
+      return;
+    }
+
+    this.#moveTo({ ...(this.#glide?.to ?? this.#orbit), focus: [u, v] });
+  }
+
+  // The camera kept on the world: round its period, or within its rows where it doesn't wrap over the poles.
+  #settle(orbit: Orbit): Orbit {
+    return settled(orbit, this.#land.layout.period(), this.#land.extentV());
+  }
+
+  // The camera glides to `target`, or is put there at once where there are no frames to glide over, or the player
+  //  has asked for less motion.
+  #moveTo(target: Orbit): void {
+    if (typeof requestAnimationFrame !== 'function' || prefersReducedMotion()) {
+      this.#glide = null;
+      this.#orbit = this.#settle(target);
+    } else {
+      this.#glide = { from: this.#orbit, to: target, started: null };
+    }
+
+    this.#draw();
+  }
+
+  // The camera this frame: part of the way along a glide, if there is one. Whether it's still moving.
+  #moveCamera(now: number): boolean {
+    const glide = this.#glide;
+
+    if (glide === null) {
+      return false;
+    }
+
+    glide.started ??= now;
+
+    const t = Math.min(1, (now - glide.started) / GLIDE);
+
+    this.#orbit = this.#settle(
+      between(glide.from, glide.to, t, this.#land.layout.period())
+    );
+
+    if (t >= 1) {
+      this.#glide = null;
+    }
+
+    return t < 1;
+  }
+
+  // The height the camera looks at: following the land's under the focus, no lower than the sea's surface, part of
+  //  the way each frame where there are frames. Whether it's still moving.
+  #followHeight(eased: boolean): boolean {
+    const [u, v] = this.#orbit.focus,
+      target = Math.max(0, this.#land.heightAt(u, v));
+
+    if (!eased || this.#lookHeight === null || prefersReducedMotion()) {
+      this.#lookHeight = target;
+
+      return false;
+    }
+
+    this.#lookHeight += (target - this.#lookHeight) * HEIGHT_EASE;
+
+    if (Math.abs(target - this.#lookHeight) < 0.002) {
+      this.#lookHeight = target;
+
+      return false;
+    }
+
+    return true;
   }
 
   // The tiles released, their squares' land queued to be built again. The world's terrain is read again even with
@@ -272,6 +414,7 @@ export class MapView3D implements MapRenderer {
   //  is asked for while chunks wait.
   #frameDrawn(budget: number | null): void {
     const started = performance.now(),
+      moving = this.#moveCamera(started),
       [u, v] = this.#focus();
 
     this.#takeTiles();
@@ -283,13 +426,15 @@ export class MapView3D implements MapRenderer {
     }
 
     this.#land.build(this.#stage, budget);
-    // Over the sea, at the sea's surface.
-    this.#stage.lookAt(u, v, Math.max(0, this.#land.heightAt(u, v)));
+
+    const rising = this.#followHeight(budget !== null);
+
+    this.#stage.view(this.#orbit, this.#lookHeight ?? 0);
     this.#stage.render();
     this.#frameTime = performance.now() - started;
     this.#showStats();
 
-    if (this.#land.pending() > 0) {
+    if (this.#land.pending() > 0 || moving || rising) {
       this.#draw();
     }
   }

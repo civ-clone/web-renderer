@@ -91,6 +91,8 @@ let nextTurnButton: {
 // Choosing a square for a long-range order (M2b): whether one is being chosen, and what gave it up.
 // And the map's zoom (#1101): the steps asked for.
 const zooms: number[] = [],
+  // The turns asked of the map, in eighths, or `north`.
+  turns: (number | 'north')[] = [],
   pickingEnded: string[] = [];
 
 let picking = false;
@@ -136,6 +138,8 @@ const controller = new InputController({
       picking = false;
     },
     zoomBy: (steps: number): void => void zooms.push(steps),
+    turnBy: (steps: number): void => void turns.push(steps),
+    faceNorth: (): void => void turns.push('north'),
   },
   notificationBar: {
     show: (html: string): void => {
@@ -804,6 +808,67 @@ const run = async (): Promise<void> => {
     over.remove();
 
     expect('not typed into a field, nor over a modal window', zooms, []);
+  }
+
+  // `[` and `]` turn a map that turns (the 3D map) an eighth of a turn, and `\` turns it back to north: once for each
+  //  press, not over a modal window or into a field.
+  {
+    reset();
+    turns.splice(0);
+
+    const left = press({ code: 'BracketLeft', key: '[' }),
+      right = press({ code: 'BracketRight', key: ']' }),
+      north = press({ code: 'Backslash', key: '\\' });
+
+    expect(
+      '[ turns left, ] right, and \\ back to north, and nothing else has them',
+      [
+        turns,
+        left.defaultPrevented,
+        right.defaultPrevented,
+        north.defaultPrevented,
+        calls,
+      ],
+      [[-1, 1, 'north'], true, true, true, []]
+    );
+
+    turns.splice(0);
+
+    const held = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      key: ']',
+    });
+
+    Object.defineProperty(held, 'repeat', { value: true });
+    document.dispatchEvent(held);
+    press({ code: 'BracketLeft', key: '[', ctrlKey: true });
+
+    const field = document.createElement('input');
+
+    document.body.append(field);
+    focused = field;
+    press({ code: 'BracketLeft', key: '[', target: field });
+    focused = document.body;
+    field.remove();
+
+    const over = document.createElement('dialog'),
+      overButton = document.createElement('button');
+
+    over.className = 'window modal';
+    over.setAttribute('open', '');
+    over.append(overButton);
+    document.body.append(over);
+    focused = overButton;
+    press({ code: 'BracketRight', key: ']', target: overButton });
+    focused = document.body;
+    over.remove();
+
+    expect(
+      'not held down, with Ctrl, typed into a field, nor over a modal window',
+      turns,
+      []
+    );
   }
 
   // Over a modal window a leader screen would be drawn out of reach: the key goes to the modal window instead.

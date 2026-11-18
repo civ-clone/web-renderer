@@ -170,6 +170,20 @@ Building another world from the form starts it in the middle again.
 
 ### 1.2 Camera
 
+**First part done** (spec §9.1, "As built"): the camera's maths, the keys, and centring.
+- **The orbit:** `packages/map-3d/camera/orbit.ts`, with no three.js. It holds the yaw, pitch and distance, the presets, a
+  ray from the screen to the ground, and dragging that keeps the ground under the pointer. Tested at every yaw and pitch
+  by `tests/ui/orbit.ts`.
+- **What the view does:**
+  - centring on a square glides the camera there, at once under reduced motion;
+  - it follows the land's height under the focus, eased, so it doesn't jolt over hills;
+  - the world's copies follow the camera: every copy the haze doesn't hide is drawn, however far it sees;
+  - the haze, and how far the camera sees, follow its distance.
+- **Keys:** through `InputController`, as the zoom keys are. `[` and `]` turn the view an eighth of a turn, and `\`
+  turns it back to north. `z` and `x` zoom. A 2D map ignores the turn keys.
+- **Still to do:** dragging, turning and tilting with the mouse, the wheel, pinching and twisting, all through the
+  shared gestures (0.1b, #1187), and the camera's distance kept as an option.
+
 - **What:**
   - orbit, pan with glide, zoom on the shared wheel steps, turn and tilt;
   - the three presets;

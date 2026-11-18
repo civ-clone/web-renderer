@@ -73,33 +73,9 @@ export class Land {
     this.#reach = REACH + corner + (seaFloor.reach - 1) * step;
   }
 
-  /**
-   * Where the world's copies lie, as offsets: itself, and as many more a period away each way it wraps as the camera
-   *  can see `sight` across from anywhere on it, so a small world doesn't end inside the view.
-   */
-  copies(sight: number): [number, number][] {
-    const { u, v } = this.layout.period(),
-      along = (period: number | null): number[] => {
-        if (period === null) {
-          return [0];
-        }
-
-        const offsets: number[] = [];
-
-        for (
-          let k = Math.floor(-sight / period);
-          k <= Math.floor((period + sight) / period);
-          k++
-        ) {
-          offsets.push(k * period);
-        }
-
-        return offsets;
-      };
-
-    return along(u).flatMap((across) =>
-      along(v).map((offset): [number, number] => [across, offset])
-    );
+  /** How far the ground runs down: its period where it wraps over the poles, or to its last row's bottom. */
+  extentV(): number {
+    return this.#grid.chunksV * this.#grid.stepsV * this.#grid.spacingV;
   }
 
   /** The land's height at a point on the ground. */
