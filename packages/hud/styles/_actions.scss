@@ -38,10 +38,8 @@
         width: calc(8px * var(--scale));
       }
 
-      // A city is drawn pixel for pixel, as the map draws it (#420).
-      canvas {
-        image-rendering: pixelated;
-      }
+      // No `pixelated`: the city is drawn a whole number of times its sprite's size (#420, #1118), at least as large as
+      //  the 16px it's shown at, so it's only ever shrunk, and a `pixelated` shrink would drop whole pixels of it.
     }
 
     &.endTurn {
@@ -163,9 +161,10 @@
       border-color: var(--ui-glow);
     }
 
+    // Drawn at least as large as it's shown, a whole number of the sprites' size (#1118), so only ever shrunk, and
+    //  shrunk smoothly: `pixelated` would drop whole pixels of the art.
     canvas {
       height: 100%;
-      image-rendering: pixelated;
       width: 100%;
     }
   }

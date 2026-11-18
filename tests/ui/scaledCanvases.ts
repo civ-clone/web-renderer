@@ -5,9 +5,11 @@
 // Must stay first: the components read `document` as they load.
 import './lib/dom';
 import './lib/interfaces';
+import './lib/artPacks';
 
 import { darkenTopArrow } from '@civ-clone/ui-assets/components/lib/corruptionIcon';
 import ScaledCanvases from '@civ-clone/ui-assets/lib/scaledCanvases';
+import { iconCanvasSize } from '@civ-clone/ui-assets/lib/unitActionIcon';
 
 const failures: string[] = [];
 let checks = 0,
@@ -70,10 +72,10 @@ const canvas = (shownAt: number) => {
 
     return element;
   },
-  // As `drawUnitActionIcon` does: a drawing the size it's shown at.
+  // As `drawUnitActionIcon` does: a drawing a whole number of the sprites' size, at least the size it's shown at.
   drawing = (draws: string[], name: string) => (element: HTMLCanvasElement) => {
     draws.push(name);
-    element.width = element.clientWidth * (globalThis.devicePixelRatio || 1);
+    element.width = iconCanvasSize(element);
   };
 
 {

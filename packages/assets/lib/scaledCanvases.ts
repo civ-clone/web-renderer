@@ -1,4 +1,4 @@
-import { iconScale, iconSize } from './unitActionIcon';
+import { iconCanvasSize } from './unitActionIcon';
 
 type Draw = (canvas: HTMLCanvasElement) => void;
 
@@ -31,10 +31,11 @@ export class ScaledCanvases {
     this.#drawn.clear();
   }
 
-  // Only those whose drawing no longer fits: drawing one doesn't change what it's shown at, so this settles.
+  // Only those whose drawing no longer fits, by the size `drawUnitActionIcon` gives it: drawing one doesn't change what
+  //  it's shown at, so this settles.
   #redraw(): void {
     this.#drawn.forEach((draw, canvas) => {
-      if (canvas.width !== Math.round(iconSize * iconScale(canvas))) {
+      if (canvas.width !== iconCanvasSize(canvas)) {
         draw(canvas);
       }
     });
