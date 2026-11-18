@@ -2612,7 +2612,7 @@ packages:
 
   '@civ-clone/civ1-tileset-pixelart@https://codeload.github.com/civ-clone/civ1-tileset-pixelart/tar.gz/f22ae383cc448a18edecde0e2392c37ea007741c':
     resolution: {gitHosted: true, integrity: sha512-+UKjFJYcpqwa0x2dteJmgYgafKiLYccDjfOSM74FtEb6Osdz4wn3Tpi6dmQHoNk1C7v4LRAmdZWkpNcD0bDW+A==, tarball: https://codeload.github.com/civ-clone/civ1-tileset-pixelart/tar.gz/f22ae383cc448a18edecde0e2392c37ea007741c}
-    version: 0.2.2
+    version: 0.3.0
 
   '@civ-clone/civ1-trade-rate@https://codeload.github.com/civ-clone/civ1-trade-rate/tar.gz/42ba178d4af32e40f5a51a27c74845c1574d88ea':
     resolution: {gitHosted: true, tarball: https://codeload.github.com/civ-clone/civ1-trade-rate/tar.gz/42ba178d4af32e40f5a51a27c74845c1574d88ea}
