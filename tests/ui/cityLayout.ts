@@ -1633,7 +1633,7 @@ const run = async (): Promise<void> => {
           canvas = window
             .element()
             .querySelector('.city-map canvas') as HTMLCanvasElement,
-          found = [canvas.width, canvas.style.width];
+          found: [number, string] = [canvas.width, canvas.style.width];
 
         window.close();
 
