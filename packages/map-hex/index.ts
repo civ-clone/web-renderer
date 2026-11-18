@@ -10,8 +10,7 @@ import Overview from './Overview';
 import { TilesetDescriptor } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 
 // The hexagonal grid, made drawable (#94): the page loads this for the map to draw hex tilesets, such as the pixel art's
-//  that ships with civ.one (`@civ-clone/ui-tileset-pixelart`, #1063). New games offer it only on a page loaded with
-//  `?hex=1` until its overlays and city screen are done (`hiddenGrids`); a save on it loads either way.
+//  that ships with civ.one (`@civ-clone/ui-tileset-pixelart`, #1063), and new games offer it (#1122).
 
 /** The projection a hex `tileset` is drawn with, or a refusal for geometry `HexProjection` cannot draw. */
 export const hexProjection = (

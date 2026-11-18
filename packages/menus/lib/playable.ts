@@ -19,8 +19,7 @@ export type MissingArt = 'interface' | 'map';
 
 /**
  * What there's no art for, so that no game can be started, or loaded when `loading`, or null when one can. A new game
- *  needs a grid it's offered on (`supportedTopologies`); a save, one its art is there for (`drawnTopologies`), so a
- *  save on hex loads without `?hex=1` when hex is all there's art for.
+ *  needs a grid it's offered on (`supportedTopologies`); a save, one its art is there for (`drawnTopologies`).
  */
 export const missingArt = (loading: boolean = false): MissingArt | null =>
   !hasInstalledInterfaceArt()

@@ -17,7 +17,6 @@ import {
   chooseMapTileset,
   installTilesets,
   mapTileset,
-  offerUnfinishedGrids,
   setMapGrid,
   shownScale,
 } from '@civ-clone/ui-assets/lib/tilesets';
@@ -29,7 +28,7 @@ import interfaceArt, {
   hasInstalledInterfaceArt,
   provideInterfaceArt,
 } from '@civ-clone/ui-assets/lib/interfaceArt';
-import {
+import supportedTopologies, {
   isSupportedTopology,
   tilesetToImport,
 } from '@civ-clone/ui-map/lib/supportedTopologies';
@@ -294,11 +293,32 @@ const run = async (): Promise<void> => {
     [true, null, false, 'civ2']
   );
 
-  // The pixel art's sheet not loaded either: nothing to play with, and a square save names Civilization's art, the one
-  //  there is to import, not the pixel art.
+  // The square pixel art's sheet not loaded either: the hexagonal pixel art, which has the same interface art, draws
+  //  the interface instead, as hex is offered to every new game (#1122), and a square save names Civilization's art,
+  //  the one there is to import, not the pixel art.
   installTilesets({
     civ1: { complete: false, metadata: null },
     'civ1-pixelart': { complete: false, metadata: null },
+  });
+
+  expect(
+    "with no square art, the hexagonal pixel art draws the interface, a game on hex can be played, and a square save asks for Civilization's art",
+    [
+      interfaceArt().id,
+      hasInstalledInterfaceArt(),
+      missingArt(),
+      supportedTopologies(),
+      isSupportedTopology('square'),
+      tilesetToImport('square')?.id,
+    ],
+    ['hex-pixelart', true, null, ['hex-odd-r'], false, 'civ1']
+  );
+
+  // The hexagonal pixel art's sheet not loaded either: nothing to play with.
+  installTilesets({
+    civ1: { complete: false, metadata: null },
+    'civ1-pixelart': { complete: false, metadata: null },
+    'hex-pixelart': { complete: false, metadata: null },
   });
 
   expect(
@@ -312,24 +332,27 @@ const run = async (): Promise<void> => {
     [false, 'interface', false, 'civ1']
   );
 
-  // Art for hex alone (#1063): a theme drawing its interface with the hexagonal pixel art, and no square art. A new
-  //  game isn't offered without `?hex=1`, but a save on hex loads, as its art is there (`canLoad`).
+  // Art for hex alone (#1063): a theme drawing its interface with the hexagonal pixel art, and no square art. Hex is
+  //  offered to every new game (#1122), so a new game can be started on it, and a save on hex loads (`canLoad`).
+  installTilesets({
+    civ1: { complete: false, metadata: null },
+    'civ1-pixelart': { complete: false, metadata: null },
+  });
   provideInterfaceArt(() => ['hex-pixelart']);
 
   expect(
-    'with art for hex alone and no ?hex=1, no new game, but a save loads; with ?hex=1, both',
+    'with art for hex alone, a new game on hex, and a save loads',
     [
       interfaceArt().id,
       missingArt(),
       missingArt(true),
+      supportedTopologies(),
       canPlay(),
       canLoad(),
-      (offerUnfinishedGrids(true), [missingArt(), missingArt(true)]),
     ],
-    ['hex-pixelart', 'map', null, false, true, [null, null]]
+    ['hex-pixelart', null, null, ['hex-odd-r'], true, true]
   );
 
-  offerUnfinishedGrids(false);
   provideInterfaceArt(() => ['civ1', 'civ1-pixelart']);
 
   // The browser's storage (#850), as the page starts (`installPacks`), the pixel art's sheet fetched with no network.

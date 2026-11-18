@@ -299,8 +299,7 @@ page again, and the library says so. Map art and themes can still be chosen.
      3).
 4. **The hexagonal pixel art.**
    - Its descriptor is registered from the same package, keeping its own city rim colours (Hosted sets).
-   - Hex is offered for new games (#94) only on a page loaded with `?hex=1` for now (`offerUnfinishedGrids`), as the
-     civ5 plan's Track A still has hex overlays and the hex city screen to do. A save on hex loads either way.
+   - Every new game offers hex (#94, #1122), now its overlays and city screen are done.
    - This was the pack's first real test: the renderer had only drawn hex with stand-in square sprites.
 5. **Remove, and the space used.**
    - Then #964's installed sets join the list as a third source.

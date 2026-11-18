@@ -3,7 +3,6 @@ import { TopologyId } from '@civ-clone/ui-client/lib/topologyFor';
 import { drawableGrids } from './projectionFor';
 import {
   bundledTilesets,
-  hiddenGrids,
   installedTilesets,
   isHosted,
 } from '@civ-clone/ui-assets/lib/tilesets';
@@ -25,29 +24,17 @@ export const drawnTopologies = (
       tilesets.some((tileset) => tileset.grid === grid)
   );
 
-// The grids a new game leaves out until they're finished, hex without `?hex=1`: kept beside the tilesets, as the
-//  interface's art leaves their sets out too (`interfaceArt`).
-export {
-  hiddenGrids,
-  offerUnfinishedGrids,
-} from '@civ-clone/ui-assets/lib/tilesets';
-
 /**
- * The grids a new game offers (#89): those it can be drawn on (`drawnTopologies`) but the ones it leaves out
- *  (`hidden`, hex until it's finished). In the engine's order, which puts square first, as the grid New Game picks
- *  before the player chooses another.
+ * The grids a new game offers (#89): every one it can be drawn on (`drawnTopologies`), hex too now it's finished
+ *  (#1122). In the engine's order, which puts square first, as the grid New Game picks before the player chooses
+ *  another.
  */
 export const supportedTopologies = (
   tilesets: TilesetDescriptor[] = installedTilesets(),
-  drawable: TopologyId[] = drawableGrids(),
-  hidden: string[] = hiddenGrids()
-): TopologyId[] =>
-  drawnTopologies(tilesets, drawable).filter((grid) => !hidden.includes(grid));
+  drawable: TopologyId[] = drawableGrids()
+): TopologyId[] => drawnTopologies(tilesets, drawable);
 
-/**
- * Whether a world on `topologyId`'s grid can be drawn, and so loaded: a world that does not say is square. A grid new
- *  games don't offer yet still loads (`drawnTopologies`).
- */
+/** Whether a world on `topologyId`'s grid can be drawn, and so loaded: a world that does not say is square. */
 export const isSupportedTopology = (topologyId: string = 'square'): boolean =>
   (drawnTopologies() as string[]).includes(topologyId);
 

@@ -433,7 +433,7 @@ const reset = () => {
   expect('and is not handed over', storedRecords().size, 0);
 
   // The sets installed as the page installs them: the pixel art's hexagonal one with them, as it ships (#1063), so a save
-  //  on hex loads, though a new game doesn't offer hex without `?hex=1`.
+  //  on hex loads.
   installTilesets({});
 
   for (const topologyId of ['square', undefined, 'hex-odd-r']) {

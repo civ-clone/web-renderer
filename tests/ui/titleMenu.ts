@@ -380,12 +380,13 @@ const save = (
     menu.remove();
   }
 
-  // Nothing to draw with (#1063): a first visit offline, the pixel art's sheet not loaded and nothing imported. Only
-  //  what works without art, Art and sound among it, and why.
+  // Nothing to draw with (#1063): a first visit offline, the pixel art's sheets, square and hexagonal, not loaded and
+  //  nothing imported. Only what works without art, Art and sound among it, and why.
   {
     installTilesets({
       civ1: { complete: false, metadata: null },
       'civ1-pixelart': { complete: false, metadata: null },
+      'hex-pixelart': { complete: false, metadata: null },
     });
 
     const { menu, element } = await openMenu();
@@ -449,6 +450,7 @@ const save = (
         },
       },
       'civ1-pixelart': { complete: false, metadata: null },
+      'hex-pixelart': { complete: false, metadata: null },
     });
 
     expect(
@@ -457,8 +459,8 @@ const save = (
       ['interface', ['staggered-iso']]
     );
 
-    // Art for hex alone, drawing the interface too (#1063): without `?hex=1` there's no new game, but a save on hex
-    //  loads, as its art is there.
+    // Art for hex alone, drawing the interface too (#1063): hex is offered to every new game (#1122), so there's a new
+    //  game as well as a save on hex, and nothing to say why not.
     provideInterfaceArt(() => ['hex-pixelart']);
     installTilesets({
       civ1: { complete: false, metadata: null },
@@ -470,14 +472,20 @@ const save = (
       const { menu, element } = await openMenu();
 
       expect(
-        'with art for hex alone and no ?hex=1, Continue (a save kept above) and Load game, but no New game, and why',
+        'with art for hex alone, Continue (a save kept above), New game and Load game, with no reason given',
+        [items(element), element.querySelector('.ui-title-menu-no-art')],
         [
-          items(element),
-          element
-            .querySelector('.ui-title-menu-no-art')
-            ?.textContent?.startsWith('There’s no art to draw a map with'),
-        ],
-        [['continue', 'load-game', 'hall-of-fame', 'options', 'library'], true]
+          [
+            'continue',
+            'new-game',
+            'earth',
+            'load-game',
+            'hall-of-fame',
+            'options',
+            'library',
+          ],
+          null,
+        ]
       );
 
       menu.remove();
