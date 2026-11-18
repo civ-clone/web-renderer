@@ -126,6 +126,30 @@ export const eye = (orbit: Orbit, height: number): ScenePoint => {
 };
 
 /**
+ * The ray from the camera, looking at its focus raised to `height`, through a point on the screen (as `groundAt` takes
+ *  it): where it starts, and which way it goes, as far for each unit along as the screen's middle goes for one.
+ */
+export const rayThrough = (
+  orbit: Orbit,
+  height: number,
+  [x, y]: readonly [number, number],
+  aspect: number
+): { from: ScenePoint; direction: ScenePoint } => {
+  const { forward, right, up } = basis(orbit),
+    spread = Math.tan(FIELD_OF_VIEW / 2);
+
+  return {
+    from: eye(orbit, height),
+    direction: [0, 1, 2].map(
+      (axis) =>
+        (forward[axis] ?? 0) +
+        x * spread * aspect * (right[axis] ?? 0) +
+        y * spread * (up[axis] ?? 0)
+    ) as unknown as ScenePoint,
+  };
+};
+
+/**
  * Where a ray from the camera through a point on the screen meets the level ground at `plane`: the point as the
  *  screen's own `x` and `y`, from -1 at the left and bottom to 1 at the right and top, on a screen `aspect` times as
  *  wide as it's tall. Nothing for a point at or above the horizon, which never meets it.
@@ -133,19 +157,11 @@ export const eye = (orbit: Orbit, height: number): ScenePoint => {
 export const groundAt = (
   orbit: Orbit,
   height: number,
-  [x, y]: readonly [number, number],
+  point: readonly [number, number],
   aspect: number,
   plane: number = height
 ): GroundPoint | null => {
-  const { forward, right, up } = basis(orbit),
-    spread = Math.tan(FIELD_OF_VIEW / 2),
-    direction = [0, 1, 2].map(
-      (axis) =>
-        (forward[axis] ?? 0) +
-        x * spread * aspect * (right[axis] ?? 0) +
-        y * spread * (up[axis] ?? 0)
-    ) as [number, number, number],
-    from = eye(orbit, height);
+  const { from, direction } = rayThrough(orbit, height, point, aspect);
 
   // Level with the horizon or above it: never down to the ground.
   if (direction[1] > -1e-6) {
