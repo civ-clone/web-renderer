@@ -264,10 +264,10 @@ const CIV2_RULE_SETS = [
 //  a civil war's rebels with a city of the loser's; and from part 2, a ship's count of steps at sea (civ2-barbarians,
 //  which gives a barbarian ship up at 30). Returns the rebels' civilization, to find them again after a load.
 const civ2Endgame = (): string | null => {
-  const computers = playerRegistryInstance
+  const players = playerRegistryInstance
       .entries()
       .filter((candidate) => !isBarbarian(candidate)),
-    [, launcher, loser] = computers,
+    [, launcher, loser] = players,
     [launcherCity] = cityRegistryInstance.getByPlayer(launcher!),
     spaceship = shipFor(launcher!),
     // Enough structurals that one module of each kind and two of each component count (civ2-spaceship's `partLimit`).
@@ -298,9 +298,10 @@ const civ2Endgame = (): string | null => {
   // A ship's count of steps at sea, on a ship of the person's: a barbarian ship of its own would give up as the
   //  barbarians' next turn starts (no horde aboard). Automation plays the person's turns, so the ship may move, or be
   //  lost at sea, while the loaded game plays on, but only a barbarian ship's steps are counted, and a lost ship's
-  //  record is dropped only as a barbarian player's turn starts. Any unit added changes how the loaded game plays on:
+  //  record is dropped only as a barbarian player's turn starts: with this seed neither happens before the test reads
+  //  the loaded game, and the file is checked for the record too. Any unit added changes how the loaded game plays on:
   //  a Transport in its place changed the outcome of the diplomacy records' check.
-  const person = computers.find((player) =>
+  const person = players.find((player) =>
       isHuman(player, clientRegistryInstance)
     ),
     shore = unitRegistryInstance
@@ -381,25 +382,30 @@ const civ2EndgameState = (rebelCivilization: string | null) => {
       pendingEffectRegistryInstance
         .getByHandler(CIVILIZATION_USES)[0]
         ?.data() ?? null,
-    // Each count at sea: its ship's id, type and owner, the count, and that the ship is the game's own unit, not a copy
-    //  the load left behind (the registry's unit of that id, unless the ship has since been lost).
+    // Each count at sea: its ship's id, type and owner, and the count as the rules read it, through the game's own unit
+    //  of that id (`linked`: the record holds that very unit, not a copy the load left unregistered), or through the
+    //  record's target once the ship is lost (`linked` only if it's destroyed).
     shipsAtSea: pendingEffectRegistryInstance
       .getByHandler(SHIP_AT_SEA)
       .map((record) => {
         const ship = record.target() as Unit | null;
 
-        return ship === null
-          ? null
-          : {
-              id: ship.id(),
-              type: typeNameOf(ship.sourceClass()),
-              human: isHuman(ship.player(), clientRegistryInstance),
-              theGames:
-                (unitRegistryInstance
-                  .entries()
-                  .find((unit) => unit.id() === ship.id()) ?? ship) === ship,
-              count: shipCount(defaultGame, ship),
-            };
+        if (ship === null) {
+          return null;
+        }
+
+        const registered =
+          unitRegistryInstance
+            .entries()
+            .find((unit) => unit.id() === ship.id()) ?? null;
+
+        return {
+          id: ship.id(),
+          type: typeNameOf(ship.sourceClass()),
+          human: isHuman(ship.player(), clientRegistryInstance),
+          linked: registered === null ? ship.destroyed() : registered === ship,
+          count: shipCount(defaultGame, registered ?? ship),
+        };
       }),
     ship:
       ship === undefined
@@ -1462,7 +1468,7 @@ if (scenario !== null) {
           id: 'string',
           type: 'Trireme',
           human: true,
-          theGames: true,
+          linked: true,
           count: 3,
         },
       ],
@@ -1486,6 +1492,19 @@ if (scenario !== null) {
     [civ2Game.types, civ2Loaded.types].map((types) =>
       types.includes('SpaceshipLayout')
     ),
+    [true, true]
+  );
+
+  // The file itself holds the count, under its ship's id, whatever becomes of the ship once the loaded game plays on.
+  const atSeaId = endgame?.shipsAtSea?.[0]?.id,
+    savedFile = readFileSync(civ2Path, 'utf8');
+
+  expect(
+    'and its save holds the count at sea under its ship’s id',
+    [
+      savedFile.split('civ2-barbarians:ship-at-sea').length - 1 > 0,
+      typeof atSeaId === 'string' && savedFile.includes(atSeaId),
+    ],
     [true, true]
   );
 
