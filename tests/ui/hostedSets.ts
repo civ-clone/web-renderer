@@ -40,6 +40,7 @@ import {
   mapTilesetOption,
   registerTileset,
   setRuleSetTileset,
+  sheetFailure,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import {
   followSavedRuleSet,
@@ -76,6 +77,7 @@ import pixelArt, {
   hexPixelArtTileset as hexPixelArt,
 } from '@civ-clone/ui-tileset-pixelart';
 import hexPixelArtJson from '@civ-clone/civ1-tileset-pixelart/pack-hex/tileset.json';
+import isoPixelArtJson from '@civ-clone/civ1-tileset-pixelart/pack-iso/tileset.json';
 import pixelArtJson from '@civ-clone/civ1-tileset-pixelart/pack/tileset.json';
 import setOptionDefaults from '@civ-clone/ui-game/app/options';
 import { sheets } from '@civ-clone/ui-tileset-pixelart/sheets';
@@ -447,7 +449,7 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
         index === sheet.replace(/\.png$/, '.json'),
         Object.keys(sheets).sort(),
       ],
-      [true, true, ['civ1-pixelart', 'hex-pixelart']]
+      [true, true, ['civ1-pixelart', 'hex-pixelart', 'iso-pixelart']]
     );
     expect(
       'its index lists every sprite its descriptor does, every one it requires among them',
@@ -473,6 +475,53 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
         json.sprites['terrain/ocean'],
       ],
       [[], { ...json.sprites['terrain/ocean']!, width: 32, height: 36 }]
+    );
+  }
+
+  // The isometric pixel art as it is built: all its sprites, as its PNGs have them.
+  {
+    const { sheet, index } = sheets['iso-pixelart']!,
+      built = readPng(readFileSync(sheet)),
+      json = JSON.parse(readFileSync(index, 'utf8')) as Sheet['index'],
+      listed = [
+        ...isoPixelArtJson.assets.required,
+        ...isoPixelArtJson.assets.optional,
+      ],
+      pack = join(
+        process.cwd(),
+        'node_modules/@civ-clone/civ1-tileset-pixelart/pack-iso'
+      );
+
+    expect(
+      'the isometric pixel art is built into dist/sets beside the others, named by its hash, every sprite it requires indexed',
+      [
+        /^dist\/sets\/iso-pixelart\.[0-9a-f]{12}\.png$/.test(sheet),
+        index === sheet.replace(/\.png$/, '.json'),
+        Object.keys(json.sprites).sort(),
+        isoPixelArtJson.assets.required.filter(
+          (name) => json.sprites[name] === undefined
+        ),
+      ],
+      [true, true, [...listed].sort(), []]
+    );
+    expect(
+      'and each is in the sheet as its own PNG has it, a diamond tile 64 × 32 and a unit 64 × 48',
+      [
+        listed.filter((name) => {
+          const { x, y, width, height } = json.sprites[name]!;
+
+          return !crop(built, x, y, width, height).data.equals(
+            readPng(readFileSync(join(pack, `${name}.png`))).data
+          );
+        }),
+        json.sprites['terrain/ocean'],
+        json.sprites['units/settlers'],
+      ],
+      [
+        [],
+        { ...json.sprites['terrain/ocean']!, width: 64, height: 32 },
+        { ...json.sprites['units/settlers']!, width: 64, height: 48 },
+      ]
     );
   }
 
@@ -724,7 +773,7 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
 
         return read !== null && read.data.equals(readPng(png).data);
       }),
-      [true, true]
+      [true, true, true]
     );
   }
 
@@ -1078,7 +1127,13 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
         interfaceArt().id,
         store.hostedLoaded(pixelArt),
       ],
-      [['civ1', 'civ1-pixelart', 'hex-pixelart'], [], 'civ1', 'civ1', false]
+      [
+        ['civ1', 'civ1-pixelart', 'hex-pixelart', 'iso-pixelart'],
+        [],
+        'civ1',
+        'civ1',
+        false,
+      ]
     );
     expect(
       "nothing is asked of the worker for a game of another kind: the pixel art is no game's own",
@@ -1144,7 +1199,7 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
     expect(
       'and a chosen hosted set is fetched as the page starts',
       [ids(await installPacks(new AssetStore(civ1))), fetched.length],
-      [['civ1', 'civ1-pixelart', 'hex-pixelart'], 2]
+      [['civ1', 'civ1-pixelart', 'hex-pixelart', 'iso-pixelart'], 2]
     );
 
     chooseMapTileset('square', '');
@@ -1161,7 +1216,7 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
         fetched.length,
       ],
       [
-        ['civ1-pixelart', 'hex-pixelart'],
+        ['civ1-pixelart', 'hex-pixelart', 'iso-pixelart'],
         'civ1-pixelart',
         'civ1-pixelart',
         'civ1-pixelart',
@@ -1176,7 +1231,7 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
     expect(
       "offline with Civ1's art: nothing is fetched, so nothing fails, and the pixel art is still declared",
       [ids(await installPacks(new AssetStore(civ1))), logged],
-      [['civ1', 'civ1-pixelart', 'hex-pixelart'], []]
+      [['civ1', 'civ1-pixelart', 'hex-pixelart', 'iso-pixelart'], []]
     );
 
     keys = [];
@@ -1215,7 +1270,7 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
       "a store that opens but can't be read, with none of Civ1's sprites read: the pixel art stands in, fetched as the page starts",
       [ids(await installPacks(new AssetStore(civ1))), fetched],
       [
-        ['civ1-pixelart', 'hex-pixelart'],
+        ['civ1-pixelart', 'hex-pixelart', 'iso-pixelart'],
         [sheets['civ1-pixelart']!.sheet, sheets['civ1-pixelart']!.index],
       ]
     );
@@ -1236,7 +1291,7 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
         fetched,
       ],
       [
-        ['civ1-pixelart', 'hex-pixelart'],
+        ['civ1-pixelart', 'hex-pixelart', 'iso-pixelart'],
         'civ1-pixelart',
         'civ1-pixelart',
         [sheets['civ1-pixelart']!.sheet, sheets['civ1-pixelart']!.index],
@@ -1593,9 +1648,9 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
         ),
       ],
       [
-        ['civ1', 'civ1-pixelart', 'hex-pixelart', 'hosted-iso'],
-        ['civ1', 'civ1-pixelart', 'hex-pixelart', 'hosted-iso'],
-        ['civ1', 'hex-pixelart'],
+        ['civ1', 'civ1-pixelart', 'hex-pixelart', 'iso-pixelart', 'hosted-iso'],
+        ['civ1', 'civ1-pixelart', 'hex-pixelart', 'iso-pixelart', 'hosted-iso'],
+        ['civ1', 'hex-pixelart', 'iso-pixelart'],
       ]
     );
     expect(
@@ -1652,10 +1707,16 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
 
     installTilesets({ civ1: { complete: false, metadata: null } });
 
+    // The isometric pixel art's sheet couldn't be fetched earlier in this suite (offline), so it's passed over (#1141):
+    //  the fixture's hosted-iso is the isometric set that ships, here.
     expect(
-      'without one imported, the one that ships',
-      [mapTileset('square').id, mapTileset('staggered-iso').id],
-      ['civ1-pixelart', 'hosted-iso']
+      'without one imported, the one that ships, of those whose sheet has loaded',
+      [
+        mapTileset('square').id,
+        sheetFailure('iso-pixelart') !== null,
+        mapTileset('staggered-iso').id,
+      ],
+      ['civ1-pixelart', true, 'hosted-iso']
     );
 
     // Another imported square set, registered after the pixel art: imported comes first whatever the order.
@@ -1707,7 +1768,8 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
       'hosted-iso'
     );
 
-    // A save is drawn with the art its rule set names too (#1114), as the worker says which that is.
+    // A save is drawn with the art its rule set names too (#1114), as the worker says which that is, asked with every
+    //  pack that can be imported (here Civ1's, Civ2's and the imported square set above), imported or not.
     {
       const asked: unknown[] = [],
         transport = {
@@ -1743,11 +1805,43 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
           'hosted-iso',
           'hosted-iso',
           [
-            ['civ1', 'civ2'],
-            ['civ1', 'civ2'],
+            ['civ1', 'civ2', 'imported-square'],
+            ['civ1', 'civ2', 'imported-square'],
           ],
         ]
       );
+
+      // Without Civ2's art, the isometric grid is still drawn, with the pixel art, which has none of Civ2's units: a
+      //  save with Civ2's rules is refused, naming the art to import, and the worker is still asked for every pack.
+      installTilesets({ civ2: { complete: false, metadata: null } });
+
+      const refused = await followSavedRuleSet(transport, 'civ2').then(
+        () => '',
+        (error: Error) => error.message
+      );
+
+      await followSavedRuleSet(transport, 'civ1');
+
+      expect(
+        "without Civ2's art, a save with Civ2's rules is refused, naming Civ2's art, and one with Civ1's is drawn as the player chose",
+        [
+          /hasn’t been imported/.test(refused),
+          refused.includes(civ2Json.name),
+          mapTileset('staggered-iso').id,
+          asked.slice(-2),
+        ],
+        [
+          true,
+          true,
+          'hosted-iso',
+          [
+            ['civ1', 'civ2', 'imported-square'],
+            ['civ1', 'civ2', 'imported-square'],
+          ],
+        ]
+      );
+
+      installTilesets(civ2Installed);
     }
 
     options.set(mapTilesetOption('staggered-iso'), '');

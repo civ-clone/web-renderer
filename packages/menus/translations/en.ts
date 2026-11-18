@@ -241,6 +241,9 @@ i18next.addResources('en', 'default', {
   // A save on a grid whose pack's art hasn't been imported (#97), named by its tileset.
   'SavedGame.needs-import':
     'That save’s map is {{- grid}}, drawn with art from {{- tileset}}, which hasn’t been imported, so it has not been loaded. Import it in Art and sound, then load the save again.',
+  // A save whose rule set needs art of its own that hasn't been imported (#97): a Civ2 game without Civ2's art.
+  'SavedGame.needs-rules-art':
+    'That save is a {{- game}} game, drawn with art from {{- tileset}}, which hasn’t been imported, so it has not been loaded. Import it in Art and sound, then load the save again.',
   'SavedGame.no-decompression':
     'this browser cannot read compressed saves — it has no `DecompressionStream`',
   'SavedGame.not-a-save': 'the file is not a civ-clone save',

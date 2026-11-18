@@ -380,13 +380,14 @@ const save = (
     menu.remove();
   }
 
-  // Nothing to draw with (#1063): a first visit offline, the pixel art's sheets, square and hexagonal, not loaded and
-  //  nothing imported. Only what works without art, Art and sound among it, and why.
+  // Nothing to draw with (#1063): a first visit offline, the pixel art's sheets, square, hexagonal and isometric, not
+  //  loaded and nothing imported. Only what works without art, Art and sound among it, and why.
   {
     installTilesets({
       civ1: { complete: false, metadata: null },
       'civ1-pixelart': { complete: false, metadata: null },
       'hex-pixelart': { complete: false, metadata: null },
+      'iso-pixelart': { complete: false, metadata: null },
     });
 
     const { menu, element } = await openMenu();
@@ -451,6 +452,7 @@ const save = (
       },
       'civ1-pixelart': { complete: false, metadata: null },
       'hex-pixelart': { complete: false, metadata: null },
+      'iso-pixelart': { complete: false, metadata: null },
     });
 
     expect(

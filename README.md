@@ -14,9 +14,9 @@ map and the interface. If you have an original copy of Civilization, its art is
 an upgrade: on the main menu choose **Art and sound**, then **Import…** beside
 Civilization, and give it `TER257.PIC` and `SP257.PIC`, and `SP299.PIC` too for
 the improvement and Wonder icons. Art and sound imports the rest, each on its
-own and in any order: Civilization's music from `ASOUND.CVL`, and, to play on an
-isometric map, Civilization II's `TERRAIN1.GIF`, `TERRAIN2.GIF`, `UNITS.GIF` and
-`CITIES.GIF`, with `ICONS.GIF` and `PEOPLE.GIF` for its own yield icons and
+own and in any order: Civilization's music from `ASOUND.CVL`, and, to draw the
+isometric map with its art and play its rules, Civilization II's `TERRAIN1.GIF`,
+`TERRAIN2.GIF`, `UNITS.GIF` and `CITIES.GIF`, with `ICONS.GIF` and `PEOPLE.GIF` for its own yield icons and
 citizens (all optional). Files are read in your browser and kept in its storage;
 nothing is uploaded. Art and sound is also where you choose the art each map is
 drawn with. (On Brave, put Shields down for importing and playing, or the images

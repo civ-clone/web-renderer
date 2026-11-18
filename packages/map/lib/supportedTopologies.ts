@@ -10,9 +10,9 @@ import { topologyIds } from '@civ-clone/core-world/topologies';
 
 /**
  * The grids a game can be drawn on here, so the only ones a save can be loaded on: the grids the installed `tilesets`
- *  are drawn for (#92) that there is a projection for (`drawable`). Civ1's square, Civ2's isometric once its sprites
- *  have been imported (#97), and hex, whose pixel art ships with civ.one (#1063). In the engine's order, which puts
- *  square first.
+ *  are drawn for (#92) that there is a projection for (`drawable`): square, isometric and hex, each drawn with pixel
+ *  art that ships with civ.one (#1063) unless Civ1's or Civ2's art has been imported (#97). In the engine's order,
+ *  which puts square first.
  */
 export const drawnTopologies = (
   tilesets: TilesetDescriptor[] = installedTilesets(),

@@ -15,9 +15,9 @@ upgrade, all of it optional. With an original copy of Civilization (1991), choos
 it `TER257.PIC` and `SP257.PIC`, and `SP299.PIC` as well for the improvement and
 Wonder icons: the graphics are read from those files and kept in your browser's
 storage. Nothing is uploaded anywhere. Art and sound imports each of the rest on
-its own, in any order: Civilization's music from `ASOUND.CVL`, and, to play on an
-isometric map, Civilization II's `TERRAIN1.GIF`, `TERRAIN2.GIF`, `UNITS.GIF` and
-`CITIES.GIF` (then choose the grid when starting a game), with `ICONS.GIF` and
+its own, in any order: Civilization's music from `ASOUND.CVL`, and, to draw the
+isometric map with its art and play its rules, Civilization II's `TERRAIN1.GIF`,
+`TERRAIN2.GIF`, `UNITS.GIF` and `CITIES.GIF`, with `ICONS.GIF` and
 `PEOPLE.GIF` for its own yield icons and citizens. Each map set there has **Use for
 square maps** (or its grid), to choose which art that map is drawn with.
 

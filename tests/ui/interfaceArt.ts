@@ -189,6 +189,19 @@ expect(
   });
 
   expect(
+    "without that sheet either, the isometric pixel art's",
+    id(interfaceArt(uiThemeArt('slate'))),
+    'iso-pixelart'
+  );
+
+  installTilesets({
+    civ1: { complete: false, metadata: null },
+    'civ1-pixelart': { complete: false, metadata: null },
+    'hex-pixelart': { complete: false, metadata: null },
+    'iso-pixelart': { complete: false, metadata: null },
+  });
+
+  expect(
     "and without that sheet either, Civ1's",
     id(interfaceArt(uiThemeArt('slate'))),
     'civ1'

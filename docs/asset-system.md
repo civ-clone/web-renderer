@@ -164,8 +164,9 @@ staggered isometric grid, which `tileset-civ2` registers (`registerTileset(tiles
   row's. Until a package registers one, both throw, naming what to load;
   the asset store made as the page loads (`assetStore`) asks for its tileset only when it is first used.
 - A save on a grid whose bundled pack isn't installed is refused naming the pack to import (`SavedGame.needs-import`,
-  `tilesetToImport`), one imported rather than one that ships. A square save loads with the pixel art when Civ1's
-  isn't imported; an isometric one still needs Civ2's.
+  `tilesetToImport`), one imported rather than one that ships. Every grid has pixel art that ships, so a save loads
+  without Civ1's or Civ2's art, unless its rule set needs art of its own: a Civ2 game is refused without Civ2's
+  (`SavedGame.needs-rules-art`, `followSavedRuleSet`).
 
 ### Civ2's descriptor
 

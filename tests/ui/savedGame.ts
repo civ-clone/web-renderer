@@ -388,9 +388,13 @@ const reset = () => {
 
   thrown = null;
 
-  // The pixel art's hexagonal sheet couldn't be loaded, so no set is installed for hex: it ships with civ.one, so
-  //  there's nothing to import, and the grid is said to be one that can't be drawn (#1063).
-  installTilesets({ 'hex-pixelart': { complete: false, metadata: null } });
+  // The pixel art's hexagonal and isometric sheets couldn't be loaded, so no set is installed for hex or isometric:
+  //  hex's ships with civ.one, so there's nothing to import, and the grid is said to be one that can't be drawn (#1063);
+  //  isometric's can be drawn with Civilization II's too, which is named.
+  installTilesets({
+    'hex-pixelart': { complete: false, metadata: null },
+    'iso-pixelart': { complete: false, metadata: null },
+  });
 
   await loadSaveFromFile(
     new File([onGrid('hex-odd-r')], 'hex.civ-clone.json')
@@ -426,17 +430,22 @@ const reset = () => {
   ).catch(() => {});
 
   expect(
-    "an isometric save without Civ2's art imported is refused, saying to import it (#97)",
+    "an isometric save with neither the isometric pixel art nor Civ2's art is refused, saying to import Civ2's (#97)",
     alerts.join(),
     'That save’s map is Isometric, drawn with art from Civilization II, which hasn’t been imported, so it has not been loaded. Import it in Art and sound, then load the save again.'
   );
   expect('and is not handed over', storedRecords().size, 0);
 
-  // The sets installed as the page installs them: the pixel art's hexagonal one with them, as it ships (#1063), so a save
-  //  on hex loads.
+  // The sets installed as the page installs them: the pixel art's hexagonal and isometric ones with them, as they ship
+  //  (#1063), so a save on hex or isometric loads.
   installTilesets({});
 
-  for (const topologyId of ['square', undefined, 'hex-odd-r']) {
+  for (const topologyId of [
+    'square',
+    undefined,
+    'hex-odd-r',
+    'staggered-iso',
+  ]) {
     reset();
 
     await loadSaveFromFile(
