@@ -5,6 +5,7 @@ import { ObserverState, ObserverChoice } from './observer';
 import { DifficultyOption } from './Requests/Difficulties';
 import { RuleSetsAnswer, RuleSetsQuery } from './Requests/RuleSets';
 import { PluginSetsAnswer } from './Requests/PluginSets';
+import { WorldSizesAnswer } from './Requests/WorldSizes';
 import {
   IntelligenceRow,
   MilitaryReport,
@@ -131,6 +132,8 @@ declare global {
     mapEvent: TransportData<MapEvent, never>;
     // The difficulty levels the rules offer, for the new game menu (#173).
     difficulties: TransportData<DifficultyOption[], null>;
+    // The world sizes the rules offer a new game, and what a size typed in may be (#1175).
+    worldSizes: TransportData<WorldSizesAnswer, null>;
     // The rule sets a new game can switch (#158): as they start, or as they are with some choices and a change made.
     ruleSets: TransportData<RuleSetsAnswer, RuleSetsQuery | null>;
     // The sets of plugins a new game can be played with (#668), for the art packs the page has imported, and the one

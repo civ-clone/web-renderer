@@ -8,6 +8,7 @@ import {
   customSizeProblem,
   defaultWorldSize,
   earthWorldSizes,
+  ruleWorldSizes,
   worldSizesFor,
 } from './worldSizes';
 import AIClients from '@civ-clone/ui-protocol/Requests/AIClients';
@@ -25,6 +26,7 @@ import RuleSets, {
   RuleSetsAnswer,
 } from '@civ-clone/ui-protocol/Requests/RuleSets';
 import Request from '@civ-clone/core-data-client/Request';
+import { WorldSizesAnswer } from '@civ-clone/ui-protocol/Requests/WorldSizes';
 import { TopologyId } from './topologyFor';
 import Transport from '../Transport';
 import { rememberDifficulty } from './difficulty';
@@ -79,6 +81,11 @@ export type SetupData = {
   ruleSets?: RuleSetsAnswer;
   /** The game it is (#668), and the others there are, when the page offers more than one. */
   game?: GameChoice;
+  /**
+   * The world sizes the game's rules offer (#1175), and what a size typed in may be. Rules that offer none, or a page
+   *  that didn't ask, leave the setup offering its own.
+   */
+  worldSizes?: WorldSizesAnswer;
 };
 
 /** The world's land, as the Advanced section sets it. */
@@ -159,14 +166,14 @@ export class GameSetup {
     this.ruleSetChoices = data.ruleSets?.choices ?? [];
     this.ruleSetProblems = data.ruleSets?.problems ?? [];
 
-    // A game with a grid of its own (Civ2's) is on it, with that grid's size of the same name, and never on Earth,
-    //  whose maps are square.
+    // A game with a grid of its own (Civ2's) is on it, with that grid's size of the same name, or the rules' own size
+    //  of that name (#1175), and never on Earth, whose maps are square.
     const fixedGrid = this.fixedGrid();
 
     if (fixedGrid !== null) {
-      const size =
-        worldSizesFor(fixedGrid).find(({ key }) => key === this.size?.key) ??
-        null;
+      const sizes = this.sizesOn(fixedGrid),
+        size =
+          sizes.find(({ key }) => key === this.size?.key) ?? sizes[0] ?? null;
 
       this.topologyId = fixedGrid;
       this.size = size;
@@ -181,7 +188,7 @@ export class GameSetup {
     const width = Number(data.existing.width),
       height = Number(data.existing.height),
       existingSize =
-        worldSizesFor(this.topologyId).find(
+        this.sizesOn(this.topologyId).find(
           (size) => size.width === width && size.height === height
         ) ?? null;
 
@@ -191,10 +198,7 @@ export class GameSetup {
       height > 0 &&
       (fixedGrid === null || existingSize !== null)
     ) {
-      this.size =
-        worldSizesFor(this.topologyId).find(
-          (size) => size.width === width && size.height === height
-        ) ?? null;
+      this.size = existingSize;
       this.width = width;
       this.height = height;
     }
@@ -221,6 +225,8 @@ export class GameSetup {
         name,
       }));
     }
+
+    this.#fillSeats();
   }
 
   #newSeat(kind: SeatKind): SeatState {
@@ -235,26 +241,48 @@ export class GameSetup {
 
   defaultSeatCount(): number {
     return Math.min(
-      this.size?.players ?? defaultWorldSize.players,
+      this.size?.players ??
+        this.data.worldSizes?.custom?.players ??
+        defaultWorldSize.players,
       this.maxSeats()
     );
   }
 
-  /** As many seats as the map has room for, or as there are civilizations to play. */
+  /**
+   * As many seats as the map has room for, or as there are civilizations to play. A size typed in has room for as many
+   *  as the rules say (#1175), when they say.
+   */
   maxSeats(): number {
     return Math.min(
-      this.size?.maxPlayers ?? this.data.civilizations.length,
+      this.size?.maxPlayers ??
+        this.data.worldSizes?.custom?.maxPlayers ??
+        this.data.civilizations.length,
       this.data.civilizations.length
     );
   }
 
-  /** The only grid the game can be on, when it has one of its own (#668), or null when the player picks it. */
+  /**
+   * The only grid the game can be on, when it has one of its own (#668), or its rules' sizes are on one (#1175), or
+   *  null when the player picks it.
+   */
   fixedGrid(): TopologyId | null {
-    return this.data.game?.grid ?? null;
+    const [first] = ruleWorldSizes(this.data.worldSizes) ?? [];
+
+    return (
+      this.data.game?.grid ??
+      (first === undefined
+        ? null
+        : (this.data.worldSizes!.sizes[0]!.topologyId as TopologyId))
+    );
+  }
+
+  /** The sizes on `topologyId`'s grid: the rules' own (#1175), or the setup's own for that grid. */
+  sizesOn(topologyId: TopologyId): WorldSize[] {
+    return ruleWorldSizes(this.data.worldSizes) ?? worldSizesFor(topologyId);
   }
 
   sizes(): WorldSize[] {
-    return this.earth ? earthWorldSizes : worldSizesFor(this.topologyId);
+    return this.earth ? earthWorldSizes : this.sizesOn(this.topologyId);
   }
 
   /** The chosen map's value, as `maps()` lists it. */
@@ -273,7 +301,7 @@ export class GameSetup {
       });
 
     return [
-      ...worldSizesFor(this.topologyId).map(
+      ...this.sizesOn(this.topologyId).map(
         (size): MapChoice => ({
           value: `size:${size.key}`,
           label: label(size),
@@ -323,7 +351,7 @@ export class GameSetup {
 
     if (this.size) {
       this.size =
-        worldSizesFor(this.topologyId).find(
+        this.sizesOn(this.topologyId).find(
           (size) => size.key === this.size!.key
         ) ?? null;
       this.width = this.size?.width ?? this.width;
@@ -357,6 +385,8 @@ export class GameSetup {
 
       this.seats.splice(this.seats.indexOf(last ?? this.seats[0]!), 1);
     }
+
+    this.#fillSeats();
   }
 
   canAddSeat(): boolean {
@@ -369,9 +399,37 @@ export class GameSetup {
     }
   }
 
-  /** The last seat stays: a game needs one. */
+  /**
+   * The fewest seats a game has: as many civilizations as the rules' sizes need at least (Civ2's three, #1175), where
+   *  they say, and there are that many to play, or else one.
+   */
+  minSeats(): number {
+    const ruleMinimum =
+      ruleWorldSizes(this.data.worldSizes) === null
+        ? null
+        : this.size?.minPlayers ??
+          this.data.worldSizes?.custom?.minPlayers ??
+          null;
+
+    return Math.max(
+      1,
+      Math.min(ruleMinimum ?? 1, this.data.civilizations.length)
+    );
+  }
+
+  // Computer seats added at the end, up to the fewest the game has, as far as there's room.
+  #fillSeats(): void {
+    while (
+      this.seats.length < this.minSeats() &&
+      this.seats.length < this.maxSeats()
+    ) {
+      this.seats.push(this.#newSeat('computer'));
+    }
+  }
+
+  /** The fewest seats stay: a game needs one, and the rules may need more. */
   canRemoveSeat(): boolean {
-    return this.seats.length > 1;
+    return this.seats.length > this.minSeats();
   }
 
   removeSeat(index: number): void {
@@ -430,7 +488,12 @@ export class GameSetup {
   problem(width: string, height: string): ReturnType<typeof customSizeProblem> {
     return this.earth
       ? null
-      : customSizeProblem(this.topologyId, width, height);
+      : customSizeProblem(
+          this.topologyId,
+          width,
+          height,
+          this.data.worldSizes?.custom ?? null
+        );
   }
 
   /** A chosen leader is sent, but not a civilization's lone one, which the worker would choose anyway. */

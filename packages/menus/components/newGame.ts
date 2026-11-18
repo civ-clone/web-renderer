@@ -4,6 +4,7 @@ import {
   defaultWorldSize,
   earthWorldSizes,
   playerCounts,
+  ruleWorldSizes,
   worldSizes,
   worldSizesFor,
 } from '@civ-clone/ui-client/lib/worldSizes';
@@ -15,6 +16,7 @@ import {
 } from '@civ-clone/ui-client/lib/difficulty';
 import { ChoiceRow } from '@civ-clone/ui-component-choice-window/ChoiceWindow';
 import Difficulties from '@civ-clone/ui-protocol/Requests/Difficulties';
+import WorldSizes from '@civ-clone/ui-protocol/Requests/WorldSizes';
 import Request from '@civ-clone/core-data-client/Request';
 import { TopologyId } from '@civ-clone/ui-client/lib/topologyFor';
 import Transport from '@civ-clone/ui-client/Transport';
@@ -304,24 +306,53 @@ export const askNewGame = (
   customise: CustomiseHandler | null = null
 ): void =>
   askGame(transport, (pluginSet, grid) => {
-    const sizes = (topologyId: TopologyId): void =>
+    const sizes = (
+      topologyId: TopologyId,
+      offered: WorldSize[] = worldSizesFor(topologyId)
+    ): void =>
       askWorldSize(
         transport,
         onFinished,
-        worldSizesFor(topologyId),
+        offered,
         {
           topologyId,
         },
         customise === null ? null : () => customise(pluginSet)
       );
 
-    if (grid !== null) {
-      sizes(grid);
+    const onGrid = (): void => {
+      if (grid !== null) {
+        sizes(grid);
+
+        return;
+      }
+
+      askMapGrid(sizes);
+    };
+
+    // The default game, with nothing else to play, asks nothing more of the worker than it always has.
+    if (pluginSet === undefined) {
+      onGrid();
 
       return;
     }
 
-    askMapGrid(sizes);
+    // The game's own sizes (#1175), on their own grid: Civ2's. Rules that offer none (Civ1's) leave the page's own.
+    transport
+      .request(new WorldSizes())
+      .then((answer) => {
+        const offered = ruleWorldSizes(answer);
+
+        if (offered === null) {
+          onGrid();
+
+          return;
+        }
+
+        sizes(grid ?? (answer.sizes[0]!.topologyId as TopologyId), offered);
+      })
+      // Not answered: the player has been told (#580), and nothing more is asked.
+      .catch(unlessRequestFailed);
   });
 
 /**
