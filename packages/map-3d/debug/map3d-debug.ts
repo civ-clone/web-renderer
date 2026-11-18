@@ -72,6 +72,16 @@ const start = (script: Map3DScript): void => {
         scale: () => 1,
         zoom: () => 1,
       },
+      // Kept in the page's own address, as the centre is.
+      cameraDistance: {
+        get: () => options.distance,
+        set: (distance) => {
+          const query = new URLSearchParams(location.search);
+
+          query.set('distance', distance.toFixed(2));
+          history.replaceState(null, '', `?${query}`);
+        },
+      },
       cityOpener: { opens: () => false, open: () => {} },
       coveredBy: [],
       debug: true,

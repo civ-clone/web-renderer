@@ -30,6 +30,7 @@ import {
   zoomed,
 } from './camera/orbit';
 import prefersReducedMotion from '@civ-clone/ui-map/lib/reducedMotion';
+import CameraInput from './camera/CameraInput';
 
 // How long, in ms, each frame may go on building the land's chunks while any wait. A chunk is built whole, once a frame
 //  has begun one: one takes 17–25 ms, so a frame builds one, and more only where they're quicker.
@@ -58,6 +59,10 @@ export class MapView3D implements MapRenderer {
   #orbit: Orbit;
   #glide: { from: Orbit; to: Orbit; started: number | null } | null = null;
   #lookHeight: number | null = null;
+  // The mouse, the wheel and touch moving the camera; and where its distance is kept, and what was kept last.
+  #input: CameraInput;
+  #distance: MapView3DDeps['cameraDistance'];
+  #keptDistance: number | null;
   // A frame asked for to draw in, if one is.
   #frame: number | null = null;
   // Keyed by the square, as the 2D map's: a tile waits in `#incomingTiles` until the world has it (`releaseTiles`).
@@ -89,7 +94,12 @@ export class MapView3D implements MapRenderer {
     // Read just now, by the land.
     this.#worldTiles = deps.world.tiles();
     this.#worldTileCount = this.#worldTiles.length;
-    this.#orbit = defaultOrbit(this.#land.layout.centre(0, 0));
+    this.#distance = deps.cameraDistance;
+    this.#keptDistance = deps.cameraDistance.get();
+    this.#orbit = this.#settle({
+      ...defaultOrbit(this.#land.layout.centre(0, 0)),
+      ...(this.#keptDistance === null ? {} : { distance: this.#keptDistance }),
+    });
     this.portal = new MapPortal3D(deps, {
       centre: () => this.#centreSquare(),
       centreOn: (x, y) => this.#centreOn(x, y),
@@ -108,6 +118,12 @@ export class MapView3D implements MapRenderer {
     this.#land.queueAll(...this.#focus());
 
     this.portal.on('activate-unit', (unit) => deps.activateUnit(unit));
+
+    this.#input = new CameraInput(deps.mapCanvas, {
+      orbit: () => this.#orbit,
+      lookHeight: () => this.#lookHeight ?? 0,
+      setOrbit: (orbit) => this.setOrbit(orbit),
+    });
 
     window.addEventListener('resize', this.#resizeHandler);
 
@@ -168,6 +184,7 @@ export class MapView3D implements MapRenderer {
 
   dispose(): void {
     this.#disposed = true;
+    this.#input.dispose();
     window.removeEventListener('resize', this.#resizeHandler);
     this.#resizeObserver?.disconnect();
 
@@ -431,12 +448,25 @@ export class MapView3D implements MapRenderer {
 
     this.#stage.view(this.#orbit, this.#lookHeight ?? 0);
     this.#stage.render();
+    this.#keepDistance();
     this.#frameTime = performance.now() - started;
     this.#showStats();
 
     if (this.#land.pending() > 0 || moving || rising) {
       this.#draw();
     }
+  }
+
+  // The camera's distance kept, once a frame at most, when it's changed: not mid-glide, which only passes through.
+  #keepDistance(): void {
+    const { distance } = this.#orbit;
+
+    if (this.#glide !== null || distance === this.#keptDistance) {
+      return;
+    }
+
+    this.#keptDistance = distance;
+    this.#distance.set(distance);
   }
 
   // Drawn on the next frame, once however often it's asked for in one.

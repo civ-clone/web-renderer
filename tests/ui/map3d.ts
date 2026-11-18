@@ -767,8 +767,8 @@ expect(
   delete (window as any)[MAP3D_GLOBAL];
 
   // `dist/map3d.js`: three.js and the 3D map's own code, and from the rest only what has no state (the factory's name,
-  //  and whether the player has asked for less motion), so no registry or singleton the page's bundle has is bundled
-  //  again with its own state. One more here is one to check has none.
+  //  whether the player has asked for less motion, and the gestures the 2D map shares with it), so no registry or
+  //  singleton the page's bundle has is bundled again with its own state. One more here is one to check has none.
   //  The suites run from the repository's root, and esbuild is loaded from there rather than bundled into this one.
   const { build } = createRequire(join(process.cwd(), 'package.json'))(
       'esbuild'
@@ -792,9 +792,14 @@ expect(
     );
 
   expect(
-    'map3d.js bundles three.js, its own code, the built-in model set, the emitter, and from the rest only the factory’s name and reduced motion',
+    'map3d.js bundles three.js, its own code, the built-in model set, the emitter, and from the rest only the factory’s name, reduced motion and the shared gestures',
     others.sort(),
-    ['packages/map/MapView3DFactory.ts', 'packages/map/lib/reducedMotion.ts']
+    [
+      'packages/map/MapView3DFactory.ts',
+      'packages/map/lib/reducedMotion.ts',
+      'packages/widgets/lib/drag.ts',
+      'packages/widgets/lib/mapGestures.ts',
+    ]
   );
   expect(
     'and three.js is in it',

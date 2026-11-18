@@ -805,10 +805,11 @@ mapEvent:
 - **The sidebar:** squares under the sidebar (`setCovered`) count as off screen, so the active unit is kept clear of it,
   as on the 2D map.
 
-- **As built (slice 1.2, first part):** `packages/map-3d/camera/orbit.ts`. The distance runs from 5 to 90 world units,
+- **As built (slice 1.2):** `packages/map-3d/camera/orbit.ts`, and `CameraInput.ts` for the mouse, the wheel and touch. The distance runs from 5 to 90 world units,
   24 by default, and a step of zoom brings the camera 1.12 times nearer. The haze starts at 1.3 times the distance and
   hides everything by 5 times it. The keys are `[` and `]` to turn an eighth of a turn and `\` to face north: none is a
-  unit's order or one the numeric keypad sends (`mappedKey`).
+  unit's order or one the numeric keypad sends (`mappedKey`). Two fingers on a touch screen also tilt the view by
+  moving up or down together. The distance is kept in the `map3dDistance` option.
 
 ### 9.2 Picking
 

@@ -132,19 +132,23 @@ expect(
     height: 50,
     seed: 1,
     seen: 1,
+    distance: null,
     x: 40,
     y: 25,
   }
 );
 expect(
   'each as asked',
-  pageOptions('?grid=hex-odd-r&width=40&height=30&seed=9&seen=0.5&x=3&y=4'),
+  pageOptions(
+    '?grid=hex-odd-r&width=40&height=30&seed=9&seen=0.5&distance=12.5&x=3&y=4'
+  ),
   {
     topologyId: 'hex-odd-r',
     width: 40,
     height: 30,
     seed: 9,
     seen: 0.5,
+    distance: 12.5,
     x: 3,
     y: 4,
   }
@@ -158,6 +162,7 @@ expect(
     height: 160,
     seed: 1,
     seen: 1,
+    distance: null,
     x: 0,
     y: 80,
   }

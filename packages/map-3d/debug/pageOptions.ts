@@ -36,6 +36,8 @@ export const pageOptions = (search: string) => {
     height,
     seed: number('seed', 1, 0, 2 ** 31 - 1),
     seen: seen === null ? 1 : Math.min(1, Math.max(0, seen)),
+    // The camera's distance, if one was kept: the 3D map keeps it within its own range.
+    distance: given('distance'),
     x: number('x', Math.floor(width / 2), 0, width - 1),
     y: number('y', Math.floor(height / 2), 0, height - 1),
   };

@@ -919,6 +919,9 @@ importers:
       '@civ-clone/ui-protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@civ-clone/ui-widgets':
+        specifier: workspace:*
+        version: link:../widgets
 
   packages/map-hex:
     dependencies:

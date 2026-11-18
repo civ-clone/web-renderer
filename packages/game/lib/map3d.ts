@@ -27,6 +27,10 @@ import {
   zoomOption,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import MapView2D, { MapView2DDeps } from '../MapView2D';
+import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
+
+/** The option the 3D camera's distance is kept in, as each set's zoom is kept in its own (`zoomOption`). */
+export const MAP3D_DISTANCE_OPTION = 'map3dDistance';
 
 // How long the script has to arrive before the game starts in 2D without it.
 const LOAD_TIMEOUT = 30000;
@@ -220,6 +224,18 @@ export const makeMapView = (
         nativeTileSize: () => nativeTileSize(tileset()),
         scale: () => scaleOfZoom(zoom()),
         zoom,
+      },
+      // An option of its own (docs/3d-renderer.md §11), as each set's zoom is.
+      cameraDistance: {
+        get: (): number | null => {
+          const distance = options.get(MAP3D_DISTANCE_OPTION, null);
+
+          return typeof distance === 'number' && Number.isFinite(distance)
+            ? distance
+            : null;
+        },
+        set: (distance: number): void =>
+          options.set(MAP3D_DISTANCE_OPTION, distance),
       },
       cityOpener: deps.cityOpener,
       coveredBy: deps.coveredBy ?? [],

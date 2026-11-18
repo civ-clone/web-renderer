@@ -170,7 +170,7 @@ Building another world from the form starts it in the middle again.
 
 ### 1.2 Camera
 
-**First part done** (spec §9.1, "As built"): the camera's maths, the keys, and centring.
+**Done** (spec §9.1, "As built"): the camera's maths, the keys, centring, and the mouse, the wheel and touch.
 - **The orbit:** `packages/map-3d/camera/orbit.ts`, with no three.js. It holds the yaw, pitch and distance, the presets, a
   ray from the screen to the ground, and dragging that keeps the ground under the pointer. Tested at every yaw and pitch
   by `tests/ui/orbit.ts`.
@@ -181,8 +181,14 @@ Building another world from the form starts it in the middle again.
   - the haze, and how far the camera sees, follow its distance.
 - **Keys:** through `InputController`, as the zoom keys are. `[` and `]` turn the view an eighth of a turn, and `\`
   turns it back to north. `z` and `x` zoom. A 2D map ignores the turn keys.
-- **Still to do:** dragging, turning and tilting with the mouse, the wheel, pinching and twisting, all through the
-  shared gestures (0.1b, #1187), and the camera's distance kept as an option.
+- **The mouse, the wheel and touch:** `packages/map-3d/camera/CameraInput.ts`, on the shared gestures (0.1b):
+  - a drag keeps the ground under the pointer, and a flick glides on, unless the player asked for less motion;
+  - the middle button, or the main one with Alt, turns and tilts; the right button is left to the unit's menu;
+  - the wheel, or a trackpad's pinch, zooms about the pointer, in the 2D map's steps and pauses;
+  - two fingers pinch, twist and tilt, and Safari's trackpad gestures pinch and twist.
+
+  Tested by `tests/ui/cameraInput.ts`.
+- **Its distance** is kept as an option of its own, `map3dDistance`, as each set's zoom is.
 
 - **What:**
   - orbit, pan with glide, zoom on the shared wheel steps, turn and tilt;

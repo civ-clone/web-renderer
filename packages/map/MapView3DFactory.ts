@@ -27,6 +27,11 @@ export type MapView3DDeps = {
     scale(): number;
     zoom(): number;
   };
+  // The camera's distance, kept as the 2D map's zoom is: what the player last chose, or nothing for the default.
+  cameraDistance: {
+    get(): number | null;
+    set(distance: number): void;
+  };
   // How a city opens from the map (`lib/cityOpeners.ts`): the player's own, or a watcher's.
   cityOpener: CityOpener;
   // What floats over the map (the sidebar's sections, #697).
