@@ -82,7 +82,7 @@ M2c (#1007) brought Civ2's cities: shield waste and the capital link, Entertaine
 
 ## Science
 
-- **Research cost** is Civ2's, but compares with the person who knows the most advances, not Civ2's rank-based reference player. With no person playing (M2e part 2), which Civ2 never has, the player who knows the most advances stands in, barbarians left out. (civ2-science.) Not scheduled.
+- **Research cost** is Civ2's, but compares with the person who knows the most advances, not Civ2's rank-based reference player. With no person playing (M2e part 2), which Civ2 never has, the player who knows the most advances stands in, barbarians left out; a destroyed leader stays the reference until someone overtakes it (civ-clone/civ2-science#6). (civ2-science.) Not scheduled.
 - **Advances from the start balancing** count towards the cost, which Civ2 does not do. (civ2-science, civ2-player.) Not scheduled.
 - **Disorder** still stops a city's research, as in Civ1. (civ2-science.) By design for now.
 - **Fundamentalism's science** (M2d): research gets no more than half of each city's trade when it's split, whatever the research rate, and tax the rest; then it loses half. The rates dialog says so under Fundamentalism. A computer player's luxuries go to science under it. (civ2-science, web-renderer.)
@@ -168,6 +168,8 @@ The AI is the shared one (`simple-ai-client`). Since M2e part 2 it reads Civ2's 
   - **The part is chosen when a city picks its build,** and **the launch is decided at the end of the player's turn;** Civ2 asks as each part is finished. (civ2-spaceship, simple-ai-client.) By design.
   - **Life support:** like Civ2, a computer player decides to launch with life support left out, but the ship launches only when it can launch with it counted, so a ship with a solar module and no life support yet waits for its life support where Civ2's would go. (civ2-spaceship.) By design.
   - **Going for an enemy's capital pauses its own parts** while that capital is the target (#1127). (simple-ai-client.) Planned.
+  - **Automate doesn't race for space:** an automated seat of yours builds the Apollo Program but never a part or a launch, since Civ2's choices of part and launch are for computer players only; Civ2 has no Automate, while Civ1's automated seats do race (#1132). (civ2-spaceship, simple-ai-client.) Not scheduled.
+  - **After a spaceship win, if you keep playing,** a landed ship holds back the computer players' launches until their ships are built in full (#1131). (civ2-spaceship.) Not scheduled.
   - **Above King, the wait for another computer player's ship** never waits, as Civ2's slip has it (it compares with a barbarian ship that never flies). The **civ2-enhanced** rule that makes it wait is off to start with. (civ2-spaceship, civ2-enhanced.) By design.
 - **Not yet:** aircraft, carriers, missiles, paradrop and airlift (#1124), warships, submarines, fortresses and airbases (#1128), and nuclear units (#399). At Emperor with every advance known, computer players' Diplomats and Spies can loop without acting (#1125). (simple-ai-client.) Planned.
 - **Barbarians** use the shared barbarian client on every grid. (simple-ai-client.)
