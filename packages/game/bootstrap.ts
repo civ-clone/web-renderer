@@ -26,6 +26,7 @@ import prepareMapArt, {
   prepareSavedMapArt,
 } from '@civ-clone/ui-menus/lib/mapArt';
 import { provideStartPreparation } from '@civ-clone/ui-client/lib/startPreparation';
+import { prepareMap3D } from './lib/map3d';
 import setOptionDefaults from './app/options';
 import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
 import {
@@ -115,7 +116,21 @@ export class Renderer {
     //  sprites have all been imported installed, so their grids are offered (#97). A hosted set's sheet is fetched now
     //  only when the interface draws from it; a game's map's, as that game starts or loads (#1063).
     await installPacks();
-    provideStartPreparation(prepareMapArt);
+
+    // How the player is told the map is 2D after all under `?3d=1`: the notification bar, once it's made below.
+    let tell3D = (text: string): void => console.warn(text);
+
+    // The art the map is drawn with, and the 3D map if the page asked for it (`lib/map3d.ts`), both before the game
+    //  starts.
+    provideStartPreparation(async (topologyId: string): Promise<boolean> => {
+      if (!(await prepareMapArt(topologyId))) {
+        return false;
+      }
+
+      await prepareMap3D((text) => tell3D(text));
+
+      return true;
+    });
     // Then the interface's art, settled from the sets installed (#1063): its sizes and cursor, and every icon after.
     setTilesetSizes(interfaceArt());
     await setCursor();
@@ -192,6 +207,8 @@ export class Renderer {
       );
 
       const notificationBar = new NotificationBar(elements.notificationArea);
+
+      tell3D = (text: string): void => notificationBar.show(text);
 
       // Saves are kept in the browser (#653), and downloaded from Load Game. One the browser won't keep is downloaded
       //  now instead, so it isn't lost.
@@ -320,6 +337,7 @@ export class Renderer {
         //  to be (#1063), or another set ready for its grid, which is said, when it can't be (#1141). With none, the
         //  start stops, saying why, and the save waits for a reload to try again, or is left for the menu.
         await prepareSavedMapArt(transport, save);
+        await prepareMap3D((text) => tell3D(text));
 
         await discardPendingSave();
         loadWaiting = false;

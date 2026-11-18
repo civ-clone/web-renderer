@@ -49,7 +49,7 @@ import { beforeEndTurn } from '@civ-clone/ui-client/lib/endTurn';
 import { instance as dataChanges } from '@civ-clone/ui-client/lib/DataChanges';
 import ActiveUnitController from './ActiveUnitController';
 import MapRenderer from '@civ-clone/ui-map/MapRenderer';
-import MapView2D from './MapView2D';
+import { makeMapView } from './lib/map3d';
 import Hud from './Hud';
 import GameState from '@civ-clone/ui-client/game/GameState';
 import InputController from './InputController';
@@ -125,7 +125,7 @@ export class GameSession {
   #gameState!: GameState;
   // `#buildInterface`'s.
   #waitingBanner!: HTMLElement;
-  // The map the game is shown on (`MapRenderer`): the 2D map, for now.
+  // The map the game is shown on (`MapRenderer`): the 2D map, or the 3D map under `?3d=1` (`lib/map3d.ts`).
   #mapView!: MapRenderer;
   #dismissals!: Dismissals;
   #gameMenuItem!: GameMenu;
@@ -339,7 +339,7 @@ export class GameSession {
 
     mapWrapper.append(waitingBanner);
 
-    const mapView: MapRenderer = new MapView2D({
+    const mapView: MapRenderer = makeMapView({
       activateUnit: (unit): void => {
         if (gameState.waiting()) {
           return;

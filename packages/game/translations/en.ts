@@ -8,6 +8,11 @@ i18next.addResources('en', 'default', {
   'JoinCity.too-large.body':
     '{{- city}} is too large for Settlers to join. Only cities smaller than size {{size}} can be joined.',
   'JoinCity.too-large.title': 'City too large',
+  // The 3D map, asked for with `?3d=1`, which this browser can't draw, or which couldn't be fetched: the game is drawn in
+  //  2D instead.
+  'Map3D.no-webgl2':
+    "This browser can't draw the 3D map, which needs WebGL 2, so the map is 2D.",
+  'Map3D.not-loaded': "The 3D map couldn't be loaded, so the map is 2D.",
   'Meeting.title': 'Meeting with {{- leader}}',
   // The talks' lines, each with who said it, and the button that says the player's one answer (#751).
   'Negotiation.continue': 'Continue',

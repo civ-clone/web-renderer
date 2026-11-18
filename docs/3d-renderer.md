@@ -326,6 +326,21 @@ The build is one `dist/frontend.js`, loaded by a classic `<script>`, with no cod
 - Anything with state, such as the world, the transport, the options and the interface art, comes in through `deps`.
   Nothing with state is imported, so no registry or singleton is bundled twice.
 
+As built in slice 0.2:
+
+- **The factory's types** (`MapView3DDeps`, `CreateMapView3D`) are in `packages/map/MapView3DFactory.ts`. The game
+  depends on them, not on `packages/map-3d`, so nothing in the main bundle can import three.js.
+- **The script** is loaded by a `<script>` tag, versioned by the build as `releases.json` is. It puts its factory on
+  `window.civMap3D` (`packages/game/lib/map3d.ts`).
+- **When it's fetched:** a new game and a load both wait for the map's art before the worker is told to start
+  (`provideStartPreparation`, `prepareSavedMapArt`). The script is fetched there too, so the game itself still starts
+  all at once, on whichever map is ready.
+- **The gate:** `?3d=1`, and WebGL2. Without WebGL2, or if the script won't load, the map is 2D and the notification
+  bar says why, once.
+- **A test** (`tests/ui/map3d.ts`) bundles `map3d.js` and fails if it takes in anything from the other packages but the
+  factory's name.
+- **Sizes**, minified: `map3d.js` is 556 KB (140 KB gzipped), and `frontend.js` grew by 1.7 KB (0.8 KB gzipped).
+
 ---
 
 ## 3. Grids in 3D: ground layouts

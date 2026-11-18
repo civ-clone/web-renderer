@@ -83,6 +83,9 @@ Split from 0.1, as its risk and its proof are different: the timing of events, n
 
 ### 0.2 The package, three.js and a lazy entry
 
+**Done** (spec §2.4, "As built"): an empty, lit scene under `?3d=1`. `map3d.js` is 556 KB minified (140 KB gzipped),
+and `frontend.js` grew by 1.7 KB. `packages/models-builtin` waits for its first use, the terrain table in 1.1.
+
 - **Packages:**
   - `packages/map-3d` and `packages/models-builtin`;
   - three.js pinned to an exact version.
