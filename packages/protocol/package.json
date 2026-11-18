@@ -33,6 +33,7 @@
     "./civilopedia": "./civilopedia.ts",
     "./lib/savedSeats": "./lib/savedSeats.ts",
     "./lib/seats": "./lib/seats.ts",
+    "./mapEvents": "./mapEvents.ts",
     "./observer": "./observer.ts",
     "./reports": "./reports.ts",
     "./requirements": "./requirements.ts",

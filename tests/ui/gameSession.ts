@@ -374,6 +374,7 @@ const run = async (): Promise<void> => {
       'gameDataPatch',
       'gameNotification',
       'battle',
+      'mapEvent',
       'unitHalted',
       'embassyEstablished',
       'investigateCity',
@@ -384,7 +385,7 @@ const run = async (): Promise<void> => {
   expect(
     "the page's disposers stay first, then the render frame's, the state's, one per receiver, the unit panel's, and the map's art's and the hand-over's",
     transportDisposers.length,
-    1 + 3 + 13 + 1 + 2
+    1 + 3 + 14 + 1 + 2
   );
   expect('nothing went wrong starting', errors, []);
   expect('the game has started', gameStarted, true);
@@ -629,6 +630,7 @@ const run = async (): Promise<void> => {
       'gameDataPatch',
       'gameNotification',
       'battle',
+      'mapEvent',
       'unitHalted',
       'embassyEstablished',
       'investigateCity',

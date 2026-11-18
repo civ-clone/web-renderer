@@ -727,6 +727,14 @@ export class GameSession {
       )
     );
 
+    // A move or a battle as it happens, for the map (docs/3d-renderer.md §8). One that comes before the map is made is
+    //  shown by the game data the map is made from.
+    transportDisposers.push(
+      transport.receive('mapEvent', (event): void =>
+        this.#mapView?.mapEvent(event)
+      )
+    );
+
     transportDisposers.push(
       transport.receive('unitHalted', (halt): void => {
         this.#deps.haltedUnits.add(halt);

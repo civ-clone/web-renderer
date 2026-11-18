@@ -1,4 +1,5 @@
 import { Tile, Unit, World as WorldData } from '@civ-clone/ui-protocol/types';
+import type { MapEvent } from '@civ-clone/ui-protocol/mapEvents';
 import { CityOpener } from '@civ-clone/ui-hud/lib/cityOpeners';
 import { off, on } from '@dom111/element';
 import ActiveUnit, {
@@ -410,6 +411,15 @@ export class MapView {
   #updateMinimap(): void {
     this.minimap.update();
     this.#minimapViewport = this.#viewport();
+  }
+
+  /**
+   * A move or a battle the player sees, as it happens, before the tile patches that show where things are after it
+   *  (`mapEvent`, docs/3d-renderer.md §8). This map draws units where those patches put them, so it has nothing to do
+   *  here: a map that shows moves and battles happening takes them here.
+   */
+  mapEvent(event: MapEvent): void {
+    void event;
   }
 
   /** Builds the tiles released so far, then composites the map and updates the minimap. */
