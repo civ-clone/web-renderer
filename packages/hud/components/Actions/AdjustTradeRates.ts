@@ -173,23 +173,32 @@ export const openTradeRates = (
 
         segments[index]!.style.flexGrow = `${slider?.value() ?? 0}`;
       }),
-    term = (
-      className: string,
-      icon: string,
-      title: string,
-      value: string,
-      detail: string = ''
-    ): HTMLElement[] => {
-      const dt = s(`<dt class="${className}"></dt>`),
+    // One term and its figure for each of gold, research and disorder: made once, the first time there's a player to
+    //  count, and after that only their text changes, and only when it differs, so a screen reader hears a figure
+    //  when it changes rather than the list again at every patch.
+    terms: { [name: string]: HTMLElement } = {},
+    term = (name: string, icon: string, title: string): void => {
+      const dt = s(`<dt class="${name}"></dt>`),
         dd = s(
-          `<dd class="${className}"><span class="value"></span> <span class="detail"></span></dd>`
+          `<dd class="${name}"><span class="value"></span> <span class="detail"></span></dd>`
         );
 
       dt.append(yieldIcon(icon), title);
-      dd.querySelector('.value')!.textContent = value;
-      dd.querySelector('.detail')!.textContent = detail;
+      effect.append(dt, dd);
+      terms[name] = dd;
+    },
+    show = (name: string, value: string, detail: string): void => {
+      const dd = terms[name]!,
+        valueElement = dd.querySelector('.value')!,
+        detailElement = dd.querySelector('.detail')!;
 
-      return [dt, dd];
+      if (valueElement.textContent !== value) {
+        valueElement.textContent = value;
+      }
+
+      if (detailElement.textContent !== detail) {
+        detailElement.textContent = detail;
+      }
     },
     was = (now: number, then: number | undefined): string =>
       then === undefined || then === now
@@ -197,50 +206,55 @@ export const openTradeRates = (
         : text('Actions.AdjustTradeRates.Effect.was', { value: then }),
     showEffect = (player: Player | null): void => {
       if (player === null) {
-        effect.replaceChildren();
-
         return;
+      }
+
+      if (Object.keys(terms).length === 0) {
+        term('gold', 'Gold', text('Actions.AdjustTradeRates.Effect.gold'));
+        term(
+          'research',
+          'Research',
+          text('Actions.AdjustTradeRates.Effect.research')
+        );
+        term(
+          'disorder',
+          'Unhappiness',
+          text('Actions.AdjustTradeRates.Effect.disorder')
+        );
       }
 
       const totals = empireTotals(player);
 
-      effect.replaceChildren(
-        ...term(
-          'gold',
-          'Gold',
-          text('Actions.AdjustTradeRates.Effect.gold'),
-          text('Actions.AdjustTradeRates.Effect.per-turn', {
-            perTurn: totals.gold,
-          }),
-          was(totals.gold, before?.gold)
-        ),
-        ...term(
-          'research',
-          'Research',
-          text('Actions.AdjustTradeRates.Effect.research'),
-          text('Actions.AdjustTradeRates.Effect.per-turn', {
-            perTurn: totals.research,
-          }),
-          [
-            text('PlayerDetails.Researching.detail', {
-              turns: totals.researchTurns,
-              context: totals.researchContext,
-            }),
-            was(totals.research, before?.research),
-          ]
-            .filter((part) => part !== '')
-            .join(' ')
-        ),
-        ...term(
-          `disorder${totals.disorder > 0 ? ' negative' : ''}`,
-          'Unhappiness',
-          text('Actions.AdjustTradeRates.Effect.disorder'),
-          text('Actions.AdjustTradeRates.Effect.cities', {
-            count: totals.disorder,
-          }),
-          was(totals.disorder, before?.disorder)
-        )
+      show(
+        'gold',
+        text('Actions.AdjustTradeRates.Effect.per-turn', {
+          perTurn: totals.gold,
+        }),
+        was(totals.gold, before?.gold)
       );
+      show(
+        'research',
+        text('Actions.AdjustTradeRates.Effect.per-turn', {
+          perTurn: totals.research,
+        }),
+        [
+          text('PlayerDetails.Researching.detail', {
+            turns: totals.researchTurns,
+            context: totals.researchContext,
+          }),
+          was(totals.research, before?.research),
+        ]
+          .filter((part) => part !== '')
+          .join(' ')
+      );
+      show(
+        'disorder',
+        text('Actions.AdjustTradeRates.Effect.cities', {
+          count: totals.disorder,
+        }),
+        was(totals.disorder, before?.disorder)
+      );
+      terms.disorder!.classList.toggle('negative', totals.disorder > 0);
     };
 
   const window = new Window(

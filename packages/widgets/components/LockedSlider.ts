@@ -5,6 +5,9 @@ import { t } from 'i18next';
 // One row (#1058): an optional icon and the name, the track, a narrow number box to type into, and a lock that holds
 //  the value while the others move. The lock is a toggle button, sized for a finger, with the rate's name for a screen
 //  reader.
+// Each row's name has an id of its own, for the row to be labelled by: the name with its maximum, where there is one.
+let rows = 0;
+
 const template = (label: string, value: number): HTMLElement => {
   const row = s(
       `<div class="locked-slider" role="group"><span class="locked-slider-icon"></span><span class="locked-slider-name"></span><input type="range" max="100" min="0" step="1" value="${value}"><input type="number" inputmode="numeric" min="0"><button type="button" class="btn-icon locked-slider-lock" aria-pressed="false">${glyph(
@@ -16,7 +19,8 @@ const template = (label: string, value: number): HTMLElement => {
 
   // As text: the label is a translation, not markup.
   name.textContent = label;
-  row.setAttribute('aria-label', label);
+  name.id = `locked-slider-name-${++rows}`;
+  row.setAttribute('aria-labelledby', name.id);
   lock.setAttribute('aria-label', t('LockedSlider.lock-rate', { label }));
   lock.title = t('LockedSlider.lock-title');
 
@@ -90,7 +94,7 @@ export class LockedSlider extends Element {
     maximum.textContent = t('LockedSlider.max', { max: this.#max });
     this.#number.setAttribute('max', String(this.#max));
     this.#range.setAttribute('max', String(this.#max));
-    name.append(' ', maximum);
+    name.append(maximum);
   }
 
   /**
@@ -98,7 +102,15 @@ export class LockedSlider extends Element {
    *  rebalances the others as moving it does.
    */
   setMax(max: number): void {
-    this.#max = Math.min(Math.max(max, 0), 100);
+    const clamped = Math.min(Math.max(max, 0), 100);
+
+    // The same maximum, as every patch while a window is open brings: nothing to do, and setting the value again would
+    //  fill in a number box the player has just cleared to type into (#485).
+    if (clamped === this.#max) {
+      return;
+    }
+
+    this.#max = clamped;
     this.#showMax();
     this.set(String(this.value()));
   }

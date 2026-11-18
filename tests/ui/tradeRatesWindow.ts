@@ -159,6 +159,51 @@ const liveAndCancel = async (): Promise<void> => {
     ]
   );
 
+  // A box cleared to type into stays clear as the engine's patches come in: the window's own live send among them.
+  const clearing = openTradeRates(plain([40, 0, 60]), transport),
+    box = clearing
+      .element()
+      .querySelector('input[type="number"]') as HTMLInputElement,
+    figure = clearing
+      .element()
+      .querySelector('.adjust-trade-rates-effect dd.gold .value')!,
+    // A node kept, rather than a new one, is how a screen reader is spared the list again.
+    figureNode = figure.firstChild,
+    beforeClearing = sent.length;
+
+  box.value = '';
+  box.dispatchEvent(new Event('input'));
+  refreshTradeRates(plain([40, 0, 60]), playerWith(10, 20));
+
+  expect(
+    'a cleared box stays clear as the same rates come in, and nothing is sent',
+    [box.value, sent.length - beforeClearing],
+    ['', 0]
+  );
+  expect(
+    'a figure that hasn’t changed is left as it was',
+    figure.firstChild === figureNode,
+    true
+  );
+
+  // Escape puts the rates back too.
+  move(clearing.element(), 0, 90);
+  await wait(tradeRatesDelay + 50);
+  clearing
+    .element()
+    .dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+    );
+
+  expect(
+    'Escape puts back the rates it opened with',
+    [
+      clearing.element().isConnected,
+      sent.at(-1)?.[1].value.find(([rate]: [string]) => rate === 'Tax'),
+    ],
+    [false, ['Tax', 40]]
+  );
+
   const count = sent.length,
     again = openTradeRates(plain([40, 0, 60]), transport);
 
