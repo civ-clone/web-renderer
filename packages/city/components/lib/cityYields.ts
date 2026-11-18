@@ -246,7 +246,8 @@ export const stageMoods = (
 /**
  * The city's citizens after each of its rules' stages of happiness (Civ2's: the base, luxuries, buildings, martial law
  *  or units, and Wonders, M2c), as Civ2's city screen lists them: a row of faces for each, with the stage's name.
- *  `null` under rules that don't send stages (Civ1), whose screens show nothing more.
+ *  `null` under rules that don't send stages (Civ1), whose Happiness reports show their causes instead. Shown in the
+ *  Happiness report, not on the city screen (#1166).
  */
 export const renderHappinessStages = (city: CityData): HTMLElement | null => {
   const stages = city.citizens?.stages;
@@ -276,19 +277,6 @@ export const renderHappinessStages = (city: CityData): HTMLElement | null => {
       )
     )
   );
-};
-
-/** The stages under a heading that opens them, for a city screen: empty under rules without stages. */
-export const renderHappinessPanel = (city: CityData): HTMLElement | string => {
-  const stages = renderHappinessStages(city);
-
-  return stages === null
-    ? ''
-    : s(
-        '<details class="happiness-stages-panel"></details>',
-        s('<summary></summary>', t('City.Happiness.title')),
-        stages
-      );
 };
 
 /**

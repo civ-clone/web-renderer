@@ -3,7 +3,8 @@
 // - an angry citizen is drawn with its own face, the interface's unhappy one where there's no angry face (marked so it
 //   reads apart), and said as angry; with Civ2's people imported, a city's citizens are its era's, men and women in
 //   turn;
-// - the stages of happiness (`citizens.stages`) are a row of faces each, under their names, and a Civ1 city has none;
+// - the stages of happiness (`citizens.stages`) are a row of faces each, under their names, and a Civ1 city has none
+//   (the Happiness report shows them, not the city screen, #1166);
 // - the build list warns of the shields a change would lose (`progressAfterChange`), counts the turns from what would
 //   be left, and shows Capitalization's gold per turn (`goldPerTurn`) in place of its cost and turns, in both
 //   interfaces; the city screen says the gold of a city building it;
@@ -32,12 +33,14 @@ import {
   peopleFaces,
 } from '@civ-clone/ui-client/lib/citizens';
 import {
-  renderHappinessPanel,
   renderHappinessStages,
   renderPopulation,
   stageMoods,
 } from '@civ-clone/ui-city/components/lib/cityYields';
 import { TilesetDescriptor } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+import { buildCityRow } from '@civ-clone/ui-interface-classic/components/HappinessReport';
+import { renderHappinessDetails } from '@civ-clone/ui-interface-modern/components/HappinessTable';
+import Portal from '@civ-clone/ui-map/components/Portal';
 import CityBuildSelectionWindow from '@civ-clone/ui-interface-classic/components/CityBuildSelectionWindow';
 import Transport from '@civ-clone/ui-client/Transport';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
@@ -202,15 +205,30 @@ const run = async (): Promise<void> => {
       ['Wonders', 6],
     ]
   );
+  // The stages are the Happiness report's (#1166): the classic row opens to them, though a city may have no causes,
+  //  and the new table's details show them.
+  const row = await buildCityRow(staged, {} as Portal, {} as Transport);
+
+  (row as HTMLElement).click();
+
   expect(
-    "a city without stages (Civ1's) has none, and its screen nothing more",
+    "the classic Happiness report's row opens to the stages",
     [
-      renderHappinessStages(
-        city({ citizens: { moods: ['happy'], causes: [] } })
-      ),
-      renderHappinessPanel(city()),
+      row.querySelector('.reasons')?.classList.contains('hidden'),
+      row.querySelectorAll('.reasons .happiness-stage').length,
     ],
-    [null, '']
+    [false, 5]
+  );
+  expect(
+    "the new Happiness table's details show the stages",
+    renderHappinessDetails(staged).querySelectorAll('.happiness-stage').length,
+    5
+  );
+
+  expect(
+    "a city without stages (Civ1's) has none",
+    renderHappinessStages(city({ citizens: { moods: ['happy'], causes: [] } })),
+    null
   );
 
   // The build list: the change penalty and Capitalization.

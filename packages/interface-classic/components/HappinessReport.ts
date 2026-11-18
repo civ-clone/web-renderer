@@ -31,7 +31,8 @@ import watchPlayer, {
   cityIds,
 } from '@civ-clone/ui-reports/components/lib/watchPlayer';
 
-const buildCityRow = async (
+/** A city's row, which opens on a click to why its citizens are as they are: its stages, or its causes. */
+export const buildCityRow = async (
   city: CityData,
   portal: Portal,
   transport: Transport
@@ -76,7 +77,8 @@ const buildCityRow = async (
     )
   );
 
-  // Under rules that work happiness out in stages (Civ2, M2c), the stages, as its city screen lists them.
+  // Under rules that work happiness out in stages (Civ2, M2c), the stages, as Civ2's city screen lists them: here
+  //  rather than on civ.one's city screen, where Civ1's happiness is (#1166).
   const stages = renderHappinessStages(city),
     reasonWrapper = s(
       '<div class="reasons hidden"></div>',
@@ -107,7 +109,8 @@ const buildCityRow = async (
     ),
     {
       click() {
-        if (reasons.length === 0) {
+        // Nothing to open: no stages, and no causes either.
+        if (stages === null && reasons.length === 0) {
           return;
         }
 
