@@ -28,6 +28,12 @@ export class Units extends Map implements IMap {
       return;
     }
 
+    // A city drawn by style (Civ2's, the hexagonal pixel art's) shows that it's occupied by a box in its player's colours
+    //  (`Cities`) rather than with a unit over it, which would hide it. Civ1's box city is drawn over its units.
+    if (tile.city && this.tileset().cities.mode === 'styles') {
+      return;
+    }
+
     const units = this.otherUnits(tile);
 
     if (units.length === 0) {

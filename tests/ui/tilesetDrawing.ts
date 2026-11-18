@@ -1887,6 +1887,45 @@ expect(
     ]
   );
 
+  // A styles city with units in it: none of them over it, and a box in its player's colours, the first edged with the
+  //  second, on the tile's left halfway down (19 of 128 px across, 12 px square at 2×); edged in black for a player with
+  //  one colour.
+  const occupiedAt = (colours: string[]): World => {
+    const world = cityAt({ size: 3 }, isoPlayer(colours), undefined);
+
+    world
+      .get(1, 1)
+      .units.push(
+        ...isoWorld({ '1,1': { units: [{ _: 'Settlers' }] } }).get(1, 1).units
+      );
+
+    return world;
+  };
+
+  expect(
+    "a styles city with units in it shows a box in its player's colours rather than a unit over it",
+    [
+      isoDrawn(Cities, occupiedAt(['#ffff00', '#808000'])).slice(-4),
+      isoDrawn(Cities, occupiedAt(['#ffff00'])).slice(-4),
+      isoDrawn(Units, occupiedAt(['#ffff00', '#808000'])),
+    ],
+    [
+      [
+        'fillStyle=#808000',
+        'fillRect(19,26,12,12)',
+        'fillStyle=#ffff00',
+        'fillRect(21,28,8,8)',
+      ],
+      [
+        'fillStyle=#000',
+        'fillRect(19,26,12,12)',
+        'fillStyle=#ffff00',
+        'fillRect(21,28,8,8)',
+      ],
+      [],
+    ]
+  );
+
   expect(
     "a styles city's size is written from its sprite's own anchor for it, and its name centred below the tile",
     isoDrawn(

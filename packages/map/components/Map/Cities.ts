@@ -10,6 +10,11 @@ import {
 } from '@civ-clone/ui-assets/lib/renderUnit';
 import { resolveAnchor } from '@civ-clone/ui-assets/lib/spriteAnchors';
 
+// The occupied box drawn on a `styles` city, in native px across and down, and where it starts across the tile, as a part
+//  of its width.
+const occupiedBox = 6,
+  occupiedAcross = 0.15;
+
 export class Cities extends Map {
   // The city glyph is drawn the tileset's inset right of and below the tile's corner (Civ1's, a scale step). A sprite
   //  taller than the tile reaches above it as far as its anchor puts it (Civ2's), which the projection's own reach
@@ -55,6 +60,10 @@ export class Cities extends Map {
     if (this.tileset().cities.mode === 'styles') {
       this.#drawStyled(tile.city, offsetX, offsetY);
 
+      if (tile.units.length > 0) {
+        this.#drawOccupied(tile.city, offsetX, offsetY);
+      }
+
       return;
     }
 
@@ -91,6 +100,27 @@ export class Cities extends Map {
       offsetX: inset,
       offsetY: inset,
     });
+  }
+
+  // A `styles` city with units in it shows a small box in its player's colours, the first edged with the second (black
+  //  for a civilization with one), as its units aren't drawn over it (`Units`). The box is on the left of the tile,
+  //  halfway down, where the tile is its full width on every grid (a square, the isometric grid's diamond, a
+  //  pointy-topped hexagon), so it stays within the tile, off the size and name the labels write across its middle. In
+  //  whole pixels, so it stays crisp.
+  #drawOccupied(city: City, offsetX: number, offsetY: number): void {
+    const { width, height } = this.projection().footprint(),
+      scale = this.scale(),
+      size = occupiedBox * scale,
+      x = offsetX + Math.round(width * occupiedAcross),
+      y = offsetY + Math.round((height - size) / 2),
+      context = this.context(),
+      [fill, edge = '#000'] = playerColours(city.player);
+
+    context.fillStyle = edge;
+    context.fillRect(x, y, size, size);
+    // Every civilization has at least one colour.
+    context.fillStyle = fill!;
+    context.fillRect(x + scale, y + scale, size - scale * 2, size - scale * 2);
   }
 
   // A `styles` city (Civ2's): the sprite for its style, size and walls, with no box round it, and its player's flag over
