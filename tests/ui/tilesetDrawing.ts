@@ -29,7 +29,11 @@ import { setSprites } from '@civ-clone/ui-assets/lib/getPreloadedImage';
 import { createTopology } from '@civ-clone/core-world/topologies';
 import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
 import ActiveUnit from '@civ-clone/ui-map/components/Map/ActiveUnit';
-import HudUnit, { unitBox } from '@civ-clone/ui-hud/components/Unit';
+import HudUnit, {
+  redrawWindowUnits,
+  unitBox,
+} from '@civ-clone/ui-hud/components/Unit';
+import { mapTileset, setMapGrid } from '@civ-clone/ui-assets/lib/tilesets';
 import Unworkable from '@civ-clone/ui-map/components/Map/Unworkable';
 import projectionFor from '@civ-clone/ui-map/lib/projectionFor';
 import Yields, { innerArea } from '@civ-clone/ui-map/components/Map/Yields';
@@ -2504,6 +2508,35 @@ expect(
       return madeCanvases[0]!.filter((call) => call.startsWith('drawImage'));
     })(),
     []
+  );
+
+  expect(
+    "a window's unit drawn with the map's art is drawn again with the art chosen since, on its own canvas; one drawn with art of its own isn't (#1142)",
+    (() => {
+      const unit = {
+          _: 'Settlers',
+          player: isoPlayer(['#ff00ff']),
+          improvements: [],
+          busy: null,
+        } as any,
+        following = new HudUnit(unit).element(),
+        own = new HudUnit(unit, 2, civ1).element(),
+        before = [following.width, following.height];
+
+      setMapGrid('staggered-iso');
+      redrawWindowUnits({
+        querySelectorAll: () => [following, own],
+      } as unknown as ParentNode);
+      setMapGrid('square');
+
+      return [
+        before,
+        mapTileset('staggered-iso').id,
+        [following.width, following.height],
+        [own.width, own.height],
+      ];
+    })(),
+    [[32, 32], 'civ2', [64, 48], [32, 32]]
   );
 
   clearSpriteAnchors();
