@@ -1302,7 +1302,29 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
 
     const loadsNow = await ensureMapArt('square', startUp);
 
+    const reinstalled = ids(installedTilesets()).includes('civ1-pixelart');
+
     keys = [];
+
+    // Offline as the page starts with nothing imported, it fails again as the game starts: nothing to draw with.
+    offline = true;
+
+    const bare = new AssetStore(civ1);
+
+    await installPacks(bare);
+
+    const nothingToDraw = await ensureMapArt('square', bare).then(
+      () => 'drawn',
+      (error: Error) => error.message
+    );
+
+    offline = false;
+
+    expect(
+      'offline from the start with nothing imported, a game on the grid is refused, saying why',
+      nothingToDraw,
+      "Pixel art (civ1-pixelart) couldn't be loaded: Failed to fetch"
+    );
 
     expect(
       'a choice that failed as the page started is tried again as a game starts: said while it fails, drawn with once it loads',
@@ -1312,7 +1334,7 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
         stillFailing.failed.map(({ tileset }) => tileset.id),
         loadsNow.tileset.id,
         loadsNow.failed,
-        ids(installedTilesets()).includes('civ1-pixelart'),
+        reinstalled,
       ],
       [true, 'civ1', ['civ1-pixelart'], 'civ1-pixelart', [], true]
     );
