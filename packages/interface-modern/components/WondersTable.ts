@@ -1,6 +1,6 @@
 import { City as CityData, Player } from '@civ-clone/ui-protocol/types';
 import ReportTable from '@civ-clone/ui-component-report-table/ReportTable';
-import Portal from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import Transport from '@civ-clone/ui-client/Transport';
 import Window from '@civ-clone/ui-component-window/Window';
 import Wonders from '@civ-clone/ui-protocol/Requests/Wonders';
@@ -91,7 +91,7 @@ export class WondersTable extends Window {
   #table: ReportTable<WondersRow>;
   #transport: Transport;
 
-  constructor(player: Player, portal: Portal, transport: Transport) {
+  constructor(player: Player, portal: MapPortal, transport: Transport) {
     // `wonders-report` for the window's eyebrow, as the classic report has.
     super(t('WondersReport.title'), s('<div></div>'), {
       classes: ['wonders-report', 'ui-report'],

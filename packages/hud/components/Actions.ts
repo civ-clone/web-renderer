@@ -8,7 +8,7 @@ import CivilDisorder from './Actions/CivilDisorder';
 import EndTurn from './Actions/EndTurn';
 import Notice from './Actions/Notice';
 import { Player, PlayerAction } from '@civ-clone/ui-protocol/types';
-import Portal from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import Revolution from './Actions/Revolution';
 import Spaceship from './Actions/Spaceship';
 import Transport from '@civ-clone/ui-client/Transport';
@@ -32,7 +32,7 @@ export interface IActions {
  */
 export const createAction = (
   playerAction: PlayerAction,
-  portal: Portal,
+  portal: MapPortal,
   transport: Transport,
   player?: Player
 ): Action | null => {
@@ -82,7 +82,7 @@ export const createAction = (
 
 export class Actions extends Element implements IActions {
   #actions = new Map<Node, Action>();
-  #portal: Portal;
+  #portal: MapPortal;
   #transport: Transport;
 
   #actionedHandler = (event: CustomEvent<Action>) => event.detail.remove();
@@ -184,7 +184,7 @@ export class Actions extends Element implements IActions {
 
   constructor(
     container: HTMLElement = s('<div class="actions"></div>'),
-    portal: Portal,
+    portal: MapPortal,
     transport: Transport
   ) {
     super(container);

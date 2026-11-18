@@ -7,7 +7,7 @@ import ReportTable, {
   ReportCell,
 } from '@civ-clone/ui-component-report-table/ReportTable';
 import FilterableWindow from '@civ-clone/ui-component-window/FilterableWindow';
-import Portal from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { getLabelForBuildableEntity } from '@civ-clone/ui-client/components/lib/cityBuild';
 import isAnarchy from '@civ-clone/ui-client/lib/government';
@@ -82,7 +82,7 @@ export class TradeTable extends FilterableWindow {
   #table: ReportTable<CityData>;
   #unwatch: () => void;
 
-  constructor(player: Player, portal: Portal) {
+  constructor(player: Player, portal: MapPortal) {
     // `trade-report` for the window's eyebrow and size, as the classic report has.
     super(t('TradeReport.title'), s('<div></div>'), {
       classes: ['trade-report', 'ui-report'],

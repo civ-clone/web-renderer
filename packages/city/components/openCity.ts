@@ -1,6 +1,6 @@
 import City, { CityLayout } from './City';
 import { City as CityData } from '@civ-clone/ui-protocol/types';
-import Portal from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { defineSlot } from '@civ-clone/ui-platform/lib/interfaceMode';
 
@@ -13,7 +13,7 @@ export const cityScreen = defineSlot<CityLayout>('cityScreen');
  */
 export const openCity = (
   city: CityData,
-  portal: Portal,
+  portal: MapPortal,
   transport: Transport,
   { readOnly = false }: { readOnly?: boolean } = {}
 ): City =>

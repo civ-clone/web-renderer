@@ -1,12 +1,12 @@
 // How a city opens from the map, a report or a notice: a player's own city opens its screen from the data the page
 //  holds; a watcher (#607, #613) asks the worker for the city in full, as a Diplomat's investigation is sent, and
-//  opens it read-only. Every way in goes through `Portal#openCity`, so one choice covers them all.
+//  opens it read-only. Every way in goes through the map's `openCity` (`MapPortal`), so one choice covers them all.
 
 import { City as CityData } from '@civ-clone/ui-protocol/types';
 import openCity from '@civ-clone/ui-city/components/openCity';
 import ObserveCity from '@civ-clone/ui-protocol/Requests/ObserveCity';
 import { ObserverState } from '@civ-clone/ui-protocol/observer';
-import Portal, { CityOpener } from '@civ-clone/ui-map/components/Portal';
+import { CityOpener } from '@civ-clone/ui-map/MapPortal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 

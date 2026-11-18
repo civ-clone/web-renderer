@@ -30,7 +30,7 @@ import {
   renderMap,
   renderYields,
 } from '@civ-clone/ui-city/components/lib/cityParts';
-import Portal from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import SupportedUnit from '@civ-clone/ui-hud/components/SupportedUnit';
 import Transport from '@civ-clone/ui-client/Transport';
 import Unit from '@civ-clone/ui-hud/components/Unit';
@@ -204,7 +204,7 @@ const renderBuild = (
   },
   renderGarrisonedUnits = (
     city: CityData,
-    portal: Portal,
+    portal: MapPortal,
     transport: Transport,
     readOnly: boolean
   ): Node => {
@@ -249,7 +249,7 @@ const renderBuild = (
   },
   cityDetails = (
     city: CityData,
-    portal: Portal,
+    portal: MapPortal,
     transport: Transport,
     chooseProduction: () => void,
     completeProduction: (spendCost: SpendCost) => void,

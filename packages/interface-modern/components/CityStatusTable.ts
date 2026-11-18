@@ -15,7 +15,7 @@ import {
 } from '@civ-clone/ui-city/components/lib/cityYields';
 import corruptionIcon from '@civ-clone/ui-assets/components/lib/corruptionIcon';
 import FilterableWindow from '@civ-clone/ui-component-window/FilterableWindow';
-import Portal from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import {
   cityName,
   growthLimitText,
@@ -234,7 +234,7 @@ export class CityStatusTable extends FilterableWindow {
   #table: ReportTable<CityData>;
   #unwatch: () => void;
 
-  constructor(player: Player, portal: Portal) {
+  constructor(player: Player, portal: MapPortal) {
     // `city-status` for the window's eyebrow and size, as the classic report has.
     super(t('CityStatus.title'), s('<div></div>'), {
       classes: ['city-status', 'ui-report'],

@@ -69,19 +69,18 @@ let arrivalsClosed = 0;
     unacknowledged: TransportHandledAction[] = [],
     pendingMove = new PendingMove<Tile>(),
     haltedUnits = new HaltedUnits(),
-    layer = { render() {}, setActiveUnit() {}, setVisible() {}, update() {} },
+    map = { setActiveUnit() {}, showActiveUnit() {} },
     topology = topologyFor({ width: 3, height: 1 }),
     controller = new ActiveUnitController({
-      activeUnitLayer: layer,
       arrivalClosed: () => arrivalsClosed++,
       data: () => ({ player: { units: [caravan] } } as any),
       haltedUnits,
+      map,
       options: { get: (key: string, defaultValue: any = null) => defaultValue },
       pendingMove,
       portal: {
         isVisible: () => true,
         render: () => {},
-        setActiveUnit: () => {},
         setCenter: () => {},
       },
       scheduleRender: () => {},
@@ -94,7 +93,6 @@ let arrivalsClosed = 0;
           }
         }) as any,
       },
-      unitsLayer: layer,
       world: {
         get: (x: number) => tiles[x],
         tiles: () => tiles,

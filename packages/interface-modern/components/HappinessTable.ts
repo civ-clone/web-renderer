@@ -17,7 +17,7 @@ import { reduceKnownYield } from '@civ-clone/ui-client/lib/yieldMap';
 import Element from '@dom111/element';
 import FilterableWindow from '@civ-clone/ui-component-window/FilterableWindow';
 import { filteredOutClass } from '@civ-clone/ui-widgets/lib/filterRows';
-import Portal from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import ReportTable from '@civ-clone/ui-component-report-table/ReportTable';
 import SupportedUnit from '@civ-clone/ui-hud/components/SupportedUnit';
 import Unit from '@civ-clone/ui-hud/components/Unit';
@@ -162,7 +162,7 @@ export class HappinessTable extends FilterableWindow {
   #table: ReportTable<CityData>;
   #unwatch: () => void;
 
-  constructor(player: Player, portal: Portal) {
+  constructor(player: Player, portal: MapPortal) {
     // `happiness-report` for the window's eyebrow, as the classic report has.
     super(t('HappinessReport.title'), s('<div></div>'), {
       classes: ['happiness-report', 'ui-report'],

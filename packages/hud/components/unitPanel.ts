@@ -1,5 +1,5 @@
 import { Tile, Unit } from '@civ-clone/ui-protocol/types';
-import Portal from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { defineSlot } from '@civ-clone/ui-platform/lib/interfaceMode';
 
@@ -9,7 +9,7 @@ import { defineSlot } from '@civ-clone/ui-platform/lib/interfaceMode';
 
 export type UnitPanelDeps = {
   // Opens the unit's home city, as a click on it on the map does.
-  portal: Pick<Portal, 'openCity'>;
+  portal: Pick<MapPortal, 'openCity'>;
   // For the stack window, which wakes the unit chosen.
   transport: Transport;
   // Makes the unit chosen in the stack window the active one, as choosing it from the map does (#482).

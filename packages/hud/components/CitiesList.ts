@@ -17,7 +17,7 @@ import DataChanges, {
 import watchPlayer, {
   cityRowIds,
 } from '@civ-clone/ui-reports/components/lib/watchPlayer';
-import Portal from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { glyph } from '@civ-clone/ui-platform/lib/glyphs';
 import { reduceKnownYield } from '@civ-clone/ui-client/lib/yieldMap';
@@ -104,7 +104,7 @@ const flag = (className: string, label: string): HTMLElement => {
  */
 export class CitiesList extends Element {
   #player: Player;
-  #portal: Pick<Portal, 'openCity'>;
+  #portal: Pick<MapPortal, 'openCity'>;
   // What the list last drew, as `shown` says it.
   #shown: string | null = null;
   #showAll = false;
@@ -113,7 +113,7 @@ export class CitiesList extends Element {
   constructor(
     element: HTMLElement,
     player: Player,
-    portal: Pick<Portal, 'openCity'>,
+    portal: Pick<MapPortal, 'openCity'>,
     changes: DataChanges = dataChanges
   ) {
     super(element);

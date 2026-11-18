@@ -4,7 +4,7 @@ import { NextTurnItem } from '@civ-clone/ui-client/lib/nextTurnQueue';
 import { PendingMeeting } from '@civ-clone/ui-hud/components/turnControls';
 import Action from '@civ-clone/ui-hud/components/Actions/Action';
 import Notice from '@civ-clone/ui-hud/components/Actions/Notice';
-import Portal from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { TransportTranslatedNotice } from '@civ-clone/ui-protocol/Transport';
 import button from '@civ-clone/ui-component-button/button';
@@ -27,7 +27,7 @@ const waitingKeys: Record<string, string> = {
 };
 
 export type NextTurnDeps = {
-  portal: Portal;
+  portal: MapPortal;
   transport: Transport;
   // The units awaiting orders: the map centred on the active one.
   centreActiveUnit: () => void;

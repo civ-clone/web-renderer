@@ -1,4 +1,9 @@
-import { Tile, Unit, World as WorldData } from '@civ-clone/ui-protocol/types';
+import {
+  Coordinate,
+  Tile,
+  Unit,
+  World as WorldData,
+} from '@civ-clone/ui-protocol/types';
 import type { MapEvent } from '@civ-clone/ui-protocol/mapEvents';
 import { CityOpener } from '@civ-clone/ui-hud/lib/cityOpeners';
 import { off, on } from '@dom111/element';
@@ -13,6 +18,7 @@ import Fog from '@civ-clone/ui-map/components/Map/Fog';
 import GamePortal from './GamePortal';
 import IntervalHandler from '@civ-clone/ui-client/lib/IntervalHandler';
 import Landscape from '@civ-clone/ui-map/components/Map/Landscape';
+import MapRenderer from '@civ-clone/ui-map/MapRenderer';
 import { Map as MapLayer } from '@civ-clone/ui-map/components/Map';
 import Transport from '@civ-clone/ui-client/Transport';
 import UnitMarker, {
@@ -32,8 +38,9 @@ import {
 } from '@civ-clone/ui-assets/lib/tilesets';
 import { GridMinimap, overviewFor } from '@civ-clone/ui-map/lib/projectionFor';
 
-// The map: the world the layers look tiles up in, the portal and its layers, the minimap, the active unit's blink, and
-//  the tiles waiting to be redrawn.
+// The 2D map (`MapRenderer`, docs/3d-renderer.md §2.1): the world the layers look tiles up in, the portal and its
+//  layers, the minimap, the active unit's blink, and the tiles waiting to be redrawn. The layers are its own: the game
+//  asks for what it wants done to the map, and this does it to them.
 //
 // Reaches beyond its own canvases in one place: the `window` `resize` handler, and an observer of the map's parent
 //  (`#map`), size the map's canvas to that parent, as the game sizes it once at the start. The observer is for the
@@ -46,7 +53,7 @@ import { GridMinimap, overviewFor } from '@civ-clone/ui-map/lib/projectionFor';
 //  they stay live against a game that never started, reading a controller that was never set: the game is dead either
 //  way, and nothing disposes them.
 
-export type MapViewDeps = {
+export type MapView2DDeps = {
   // The portal's `activate-unit`: a unit picked on the map.
   activateUnit: (unit: Unit) => void;
   // Read on every minimap update, so always the unit active now.
@@ -79,7 +86,7 @@ const ringColours = (): RingColours => {
   };
 };
 
-export class MapView {
+export class MapView2D implements MapRenderer {
   readonly activeUnitLayer: ActiveUnit;
   readonly citiesLayer: Cities;
   readonly cityNamesLayer: MapLayer;
@@ -126,7 +133,7 @@ export class MapView {
   //  the art can change during a game (#1118).
   #tilesetId: string;
   #citiesUnderUnits: boolean;
-  #options: MapViewDeps['options'];
+  #options: MapView2DDeps['options'];
 
   // Keyed by coordinate: a tile resent several times between two renders
   // only needs building once. A layer redraws a tile by looking its
@@ -148,7 +155,7 @@ export class MapView {
     playerId,
     transport,
     world: worldData,
-  }: MapViewDeps) {
+  }: MapView2DDeps) {
     this.#cityLabels = cityLabels.current();
     this.#options = options;
     this.#coveredBy = coveredBy;
@@ -414,6 +421,75 @@ export class MapView {
   }
 
   /**
+   * The unit active now, or none, for the portal (whose click on its square opens its stack), the units layer (which
+   *  leaves it out, drawn on the active unit's layer) and the active unit's layer, drawn on `pendingTile` while its move
+   *  is answered. Nothing is drawn.
+   */
+  setActiveUnit(unit: Unit | null, pendingTile?: Coordinate | null): void {
+    this.portal.setActiveUnit(unit);
+    this.unitsLayer.setActiveUnit(unit, pendingTile);
+    this.activeUnitLayer.setActiveUnit(unit, pendingTile);
+  }
+
+  /**
+   * The squares a change of active unit touched drawn again on the units layer, the active unit drawn again, and both
+   *  layers shown: units hidden with `t` come back with a unit to give orders to, and the blink's tick brings the
+   *  cities and their names back with them (#804). The portal isn't drawn.
+   */
+  showActiveUnit(changed: Tile[]): void {
+    this.unitsLayer.update(changed);
+    this.unitsLayer.setVisible(true);
+    this.activeUnitLayer.render();
+    this.activeUnitLayer.setVisible(true);
+  }
+
+  /** While the other players move, the map's tooltips don't open (`GamePortal#setWaiting`). */
+  setWaiting(waiting: boolean): void {
+    this.portal.setWaiting(waiting);
+  }
+
+  pickTile(
+    accept: (tile: Tile) => boolean,
+    onPick: (tile: Tile) => void,
+    prompt: string
+  ): void {
+    this.portal.pickTile(accept, onPick, prompt);
+  }
+
+  picking(): boolean {
+    return this.portal.picking();
+  }
+
+  endPicking(): void {
+    this.portal.endPicking();
+  }
+
+  zoomBy(steps: number): void {
+    this.portal.zoomBy(steps);
+  }
+
+  /**
+   * The stress runner's view modes (`?debug=1`): the yields, and the units, cities and city names, each flipped on its
+   *  own. Not `toggleYields` and `toggleUnits`: these leave what `t` shows alone, and draw the minimap however it was.
+   */
+  debugViewModes(): (() => void)[] {
+    return [
+      () => {
+        this.yieldsLayer.setVisible(!this.yieldsLayer.isVisible());
+        this.portal.render();
+        this.minimap.update();
+      },
+      () => {
+        this.unitsLayer.setVisible(!this.unitsLayer.isVisible());
+        this.citiesLayer.setVisible(!this.citiesLayer.isVisible());
+        this.cityNamesLayer.setVisible(!this.cityNamesLayer.isVisible());
+        this.portal.render();
+        this.minimap.update();
+      },
+    ];
+  }
+
+  /**
    * A move or a battle the player sees, as it happens, before the tile patches that show where things are after it
    *  (`mapEvent`, docs/3d-renderer.md §8). This map draws units where those patches put them, so it has nothing to do
    *  here: a map that shows moves and battles happening takes them here.
@@ -610,4 +686,4 @@ export class MapView {
   }
 }
 
-export default MapView;
+export default MapView2D;

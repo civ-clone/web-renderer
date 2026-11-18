@@ -1,10 +1,10 @@
 import { City as CityData } from '@civ-clone/ui-protocol/types';
 import { INotificationWindow } from '@civ-clone/ui-component-window/NotificationWindow';
-import Portal from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { t } from 'i18next';
 
-export const showCityOnMapAction = (city: CityData, portal: Portal) => ({
+export const showCityOnMapAction = (city: CityData, portal: MapPortal) => ({
   label: t('Actions.ShowOnMap.label', {
     cityName: cityName(city),
   }),

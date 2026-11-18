@@ -1,5 +1,5 @@
 import { Player, PlayerAction } from '@civ-clone/ui-protocol/types';
-import Portal from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { TransportTranslatedNotice } from '@civ-clone/ui-protocol/Transport';
 import { defineSlot } from '@civ-clone/ui-platform/lib/interfaceMode';
@@ -30,7 +30,7 @@ export type TurnControlsDeps = {
   centreActiveUnit: () => void;
   // An action dismissed for the turn (#416): the HUD keeps which, and draws again.
   dismiss: (action: PlayerAction) => void;
-  portal: Portal;
+  portal: MapPortal;
   transport: Transport;
 };
 

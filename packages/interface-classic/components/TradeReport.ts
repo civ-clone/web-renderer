@@ -4,7 +4,7 @@ import {
   Player,
   Yield,
 } from '@civ-clone/ui-protocol/types';
-import Portal from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import Transport from '@civ-clone/ui-client/Transport';
 import FilterableWindow from '@civ-clone/ui-component-window/FilterableWindow';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
@@ -26,10 +26,10 @@ import { yieldData } from '@civ-clone/ui-city/components/lib/cityYields';
 export class TradeReport extends FilterableWindow {
   #cities: CityData[];
   #player: Player;
-  #portal: Portal;
+  #portal: MapPortal;
   #unwatch: () => void;
 
-  constructor(player: Player, portal: Portal, transport: Transport) {
+  constructor(player: Player, portal: MapPortal, transport: Transport) {
     super(t('TradeReport.title'), s('<div class="loading"></div>'), {
       classes: 'trade-report',
       rowSelector: 'tr',

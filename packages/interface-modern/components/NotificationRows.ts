@@ -2,7 +2,7 @@ import { City, Player, PlayerAction } from '@civ-clone/ui-protocol/types';
 import { Element, s } from '@dom111/element';
 import { noticeText } from '@civ-clone/ui-hud/components/Actions/Notice';
 import { Notice as NoticeData } from '@civ-clone/ui-hud/components/Notices';
-import Portal from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { actionKey } from '@civ-clone/ui-client/lib/nextTurnQueue';
 import button from '@civ-clone/ui-component-button/button';
@@ -18,7 +18,7 @@ import { t } from 'i18next';
 //  new one slides in and the others stay put.
 
 export type NotificationRowsDeps = {
-  portal: Portal;
+  portal: MapPortal;
   transport: Transport;
   // For the turn: a notice is dismissed for good, as opening it does; a city in disorder until the next turn.
   dismiss: (action: PlayerAction) => void;

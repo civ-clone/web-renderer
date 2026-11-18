@@ -39,7 +39,7 @@ Loading a saved game takes a different path. The player picks a file, `packages/
 - `packages/game/bootstrap.ts` (the `Renderer` class)
   - Page start-up: cursor, i18n, the reload guard, option defaults, the pending save, and the receivers that outlive a game (`saveGame`, `gameOver`, notifications, choice lists). The first `gameData` starts a `GameSession`; a pending save is sent with `load` last.
 - `packages/game/*`
-  - One game, split out of the old `Renderer.ts` (#344). `GameSession` composes the rest: `GameState` applies patches to the raw object map and rebuilds the rich UI state from it with `IncrementalReconstituter`; `ActiveUnitController` holds the active unit and its keys; `MapView` the map layers and minimap; `Hud` the action panels and details; `InputController` the hotkeys and leader screens.
+  - One game, split out of the old `Renderer.ts` (#344). `GameSession` composes the rest: `GameState` applies patches to the raw object map and rebuilds the rich UI state from it with `IncrementalReconstituter`; `ActiveUnitController` holds the active unit and its keys; `MapView2D` the map layers and minimap, which the game drives through `MapRenderer` and the rest of the interface holds as a `MapPortal` (`packages/map`, docs/3d-renderer.md §2.1); `Hud` the action panels and details; `InputController` the hotkeys and leader screens.
 - `packages/game/app/*`, `packages/game/debug/*`
   - The page's elements, i18n, assets, options, reload guard, notification bar, choice windows and the windows that say what went wrong in the worker (#470); the `?debug=1` flags and panel.
 - `packages/menus/components/*`, `packages/hud/components/*`, and the components every window is built from, `packages/component-*/` (`Window`, the

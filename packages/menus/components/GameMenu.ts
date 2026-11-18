@@ -17,7 +17,7 @@ import LibraryWindow from './LibraryWindow';
 import { Player } from '@civ-clone/ui-protocol/types';
 import { GameMenuItem, GameMenuRows, mapMenus } from './mapMenus';
 import { windowKey } from '@civ-clone/ui-component-window/windowEyebrows';
-import Portal from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import ScienceReport from '@civ-clone/ui-reports/components/ScienceReport';
 import Transport from '@civ-clone/ui-client/Transport';
 import { allowLeaving } from '@civ-clone/ui-component-window/leaveGuard';
@@ -31,7 +31,7 @@ export class GameMenu extends Element {
   #getPlayer: () => Player;
   #getTurn: () => number;
   #getYear: () => number;
-  #portal: Portal;
+  #portal: MapPortal;
   #transport: Transport;
   #cheatsEnabled: boolean;
   #cheats: () => GameMenuItem[];
@@ -45,7 +45,7 @@ export class GameMenu extends Element {
     getPlayer: () => Player,
     getTurn: () => number,
     getYear: () => number,
-    portal: Portal,
+    portal: MapPortal,
     transport: Transport,
     cheatsEnabled: boolean = false,
     findCity: () => void = (): void => {},

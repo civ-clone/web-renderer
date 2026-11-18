@@ -33,7 +33,7 @@ import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import GameOptions from '@civ-clone/ui-menus/components/GameOptions';
-import { IPortal } from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import { resetStore } from './lib/FakeStore';
 import { setBuild } from '@civ-clone/ui-client/lib/build';
 import interfaceArt, {
@@ -567,7 +567,7 @@ const save = (
       scale: () => 2,
       zoom: () => 2,
       lockVerticalEdges: () => false,
-    } as unknown as IPortal);
+    } as unknown as MapPortal);
 
     (
       options.element().querySelector('.assets button') as HTMLButtonElement

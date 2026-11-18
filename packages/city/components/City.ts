@@ -19,7 +19,7 @@ import CityBuildAvailable from '@civ-clone/ui-protocol/Requests/CityBuildAvailab
 import { openCityBuild } from './choices';
 import CityNameWindow from './CityNameWindow';
 import ConfirmationWindow from '@civ-clone/ui-component-window/ConfirmationWindow';
-import Portal from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { escape } from '@civ-clone/ui-widgets/lib/html';
@@ -167,7 +167,7 @@ const heldNoteId = (city: CityData): string => `city-held-${city.id}`,
 
 /** What a layout of the city screen is given to draw it with: the screen's own actions, for its buttons and clicks. */
 export interface CityScreenContext {
-  portal: Portal;
+  portal: MapPortal;
   transport: Transport;
   // A rival's city, as a Diplomat investigates it (#58): shown, with nothing to change.
   readOnly: boolean;
@@ -196,7 +196,7 @@ export class City extends Window {
   #choosingProduction = false;
   #context: CityScreenContext;
   #layout: CityLayout;
-  #portal: Portal;
+  #portal: MapPortal;
   #readOnly: boolean;
   // Whether a specialist has been changed and the city not yet updated with it. Changing one replaces it, so a second
   //  change sent before then would name a specialist the city no longer has, and be lost (#484).
@@ -214,7 +214,7 @@ export class City extends Window {
    */
   constructor(
     city: CityData,
-    portal: Portal,
+    portal: MapPortal,
     transport: Transport,
     { readOnly = false, layout }: { readOnly?: boolean; layout: CityLayout }
   ) {

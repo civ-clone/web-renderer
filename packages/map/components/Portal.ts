@@ -21,12 +21,7 @@ import {
 import projectionFor from '../lib/projectionFor';
 import { City as CityData } from '@civ-clone/ui-protocol/types';
 
-/** How a city opens from the map: which do, and opening one (`lib/cityOpeners.ts` has the game's). */
-export type CityOpener = {
-  // Whether `city` is one that opens: the map's click moves on to the square's units otherwise.
-  opens(city: CityData, portal: Portal): boolean;
-  open(city: CityData, portal: Portal): void;
-};
+import { CityOpener, MapPortal } from '../MapPortal';
 
 export interface IPortal {
   build(updatedTiles: Tile[]): void;
@@ -115,7 +110,7 @@ export class Portal
     ['resized']: [];
     ['tile-clicked']: [number, number];
   }>
-  implements IPortal
+  implements IPortal, MapPortal
 {
   #canvas: HTMLCanvasElement;
   #center: Coordinate = { x: 0, y: 0 };

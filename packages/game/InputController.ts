@@ -1,4 +1,4 @@
-import { GameData, Tile, Unit } from '@civ-clone/ui-protocol/types';
+import { GameData, Unit } from '@civ-clone/ui-protocol/types';
 import { emit, off, on } from '@dom111/element';
 import { t } from 'i18next';
 import {
@@ -12,7 +12,8 @@ import {
   openWondersReport,
 } from '@civ-clone/ui-reports/components/reports';
 import Civilopedia from '@civ-clone/ui-reports/components/Civilopedia';
-import GamePortal from './GamePortal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
+import MapRenderer from '@civ-clone/ui-map/MapRenderer';
 import ScienceReport from '@civ-clone/ui-reports/components/ScienceReport';
 import Transport from '@civ-clone/ui-client/Transport';
 import { PlayerTradeRates } from '@civ-clone/ui-protocol/types';
@@ -72,13 +73,18 @@ export type InputControllerDeps = {
     press(): void;
     skip(): void;
   } | null;
-  mapView: {
-    centre(tile: Tile): void;
-    toggleUnits(): void;
-    toggleYields(): void;
-  };
+  mapView: Pick<
+    MapRenderer,
+    | 'centre'
+    | 'endPicking'
+    | 'picking'
+    | 'toggleUnits'
+    | 'toggleYields'
+    | 'zoomBy'
+  >;
   notificationBar: { show(text: string): void };
-  portal: GamePortal;
+  // The map as the reports (F1 to F8) hold it.
+  portal: MapPortal;
   transport: Transport;
   unitController: {
     active(): Unit | null;
@@ -158,11 +164,11 @@ export class InputController {
     //  A modal window opened over the map since (a city, a report) answers Escape first.
     if (
       key === 'Escape' &&
-      this.#deps.portal.picking?.() &&
+      this.#deps.mapView.picking() &&
       document.querySelector('dialog.window.modal[open]') === null
     ) {
       this.#deps.unitController.endChoosingTarget?.();
-      this.#deps.portal.endPicking();
+      this.#deps.mapView.endPicking();
 
       event.preventDefault();
 
@@ -322,7 +328,7 @@ export class InputController {
       return;
     }
 
-    // Held down, it carries on zooming, if it zoomed when first pressed: the portal draws what's asked within a frame
+    // Held down, it carries on zooming, if it zoomed when first pressed: the map draws what's asked within a frame
     //  once.
     if (
       key in zoomKeys &&
@@ -331,7 +337,7 @@ export class InputController {
       (!event.repeat || this.#zoomKeyHeld === key)
     ) {
       this.#zoomKeyHeld = key;
-      this.#deps.portal.zoomBy(zoomKeys[key]!);
+      this.#deps.mapView.zoomBy(zoomKeys[key]!);
 
       event.preventDefault();
 

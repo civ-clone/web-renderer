@@ -15,7 +15,7 @@ import './lib/artPacks';
 import { GameData, Tile, Unit } from '@civ-clone/ui-protocol/types';
 import i18next from 'i18next';
 import InputController from '@civ-clone/ui-game/InputController';
-import GamePortal from '@civ-clone/ui-game/GamePortal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import Transport from '@civ-clone/ui-client/Transport';
 
 const failures: string[] = [];
@@ -91,12 +91,9 @@ let nextTurnButton: {
 // Choosing a square for a long-range order (M2b): whether one is being chosen, and what gave it up.
 // And the map's zoom (#1101): the steps asked for.
 const zooms: number[] = [],
-  portal: {
-    picking?: () => boolean;
-    endPicking?: () => void;
-    zoomBy: (steps: number) => void;
-  } = { zoomBy: (steps: number): void => void zooms.push(steps) },
   pickingEnded: string[] = [];
+
+let picking = false;
 
 const actionArea = document.createElement('div');
 
@@ -133,13 +130,20 @@ const controller = new InputController({
     toggleYields: (): void => {
       calls.push('toggleYields');
     },
+    picking: () => picking,
+    endPicking: (): void => {
+      pickingEnded.push('map');
+      picking = false;
+    },
+    zoomBy: (steps: number): void => void zooms.push(steps),
   },
   notificationBar: {
     show: (html: string): void => {
       shown.push(html);
     },
   },
-  portal: portal as unknown as GamePortal,
+  // The reports' (F1 to F8), which open nothing here.
+  portal: {} as unknown as MapPortal,
   transport: {
     // The leader screens ask the worker for what they show; never answered here.
     request: () => new Promise(() => {}),
@@ -455,20 +459,14 @@ const run = async (): Promise<void> => {
   expect('Escape blurs what has the focus', blurred, 1);
 
   // Choosing a square for a paradrop (M2b): Escape gives it up, wherever the focus is, and blurs nothing.
-  let picking = true;
-
-  portal.picking = () => picking;
-  portal.endPicking = (): void => {
-    pickingEnded.push('portal');
-    picking = false;
-  };
+  picking = true;
   blurred = 0;
   press({ key: 'Escape' });
 
   expect(
     'Escape gives up choosing a square, in the controller and the map, and only that',
     [pickingEnded, blurred, picking],
-    [['controller', 'portal'], 0, false]
+    [['controller', 'map'], 0, false]
   );
 
   press({ key: 'Escape' });
@@ -493,9 +491,6 @@ const run = async (): Promise<void> => {
 
   overMap.remove();
   picking = false;
-
-  delete portal.picking;
-  delete portal.endPicking;
 
   focused = document.body;
 

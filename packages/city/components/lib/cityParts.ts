@@ -13,6 +13,7 @@ import {
 import Cities from '@civ-clone/ui-map/components/Map/Cities';
 import Fog from '@civ-clone/ui-map/components/Map/Fog';
 import Landscape from '@civ-clone/ui-map/components/Map/Landscape';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import Units from '@civ-clone/ui-map/components/Map/Units';
@@ -451,7 +452,7 @@ const newPortal: CityPortalFactory = (...args) => new Portal(...args);
  *  shows it (#1102): the map's zoom, down to a whole scale, rather than the whole scale at or above it the map is drawn
  *  at, so a zoom between two doesn't make the city's map the larger.
  */
-export const cityMapScale = (portal: Portal): number =>
+export const cityMapScale = (portal: MapPortal): number =>
   Math.max(1, Math.floor(portal.zoom()));
 
 /**
@@ -459,7 +460,7 @@ export const cityMapScale = (portal: Portal): number =>
  *  city map's own (`cityMapScale`) unless the layout sizes it itself.
  */
 export const renderMap = (
-  portal: Portal,
+  portal: MapPortal,
   city: CityData,
   transport: Transport,
   readOnly: boolean,

@@ -9,7 +9,7 @@ import chooseUiTheme, {
   THEME_CHOICE,
   themeChangesArt,
 } from '../lib/chooseUiTheme';
-import { IPortal } from '@civ-clone/ui-map/components/Portal';
+import MapPortal from '@civ-clone/ui-map/MapPortal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { UNIT_MARKER_CHOICES } from '@civ-clone/ui-map/components/Map/UnitMarker';
 import LibraryWindow from './LibraryWindow';
@@ -159,7 +159,7 @@ export const soundRows = (): HTMLElement[] => {
  *  range and zoom, until `stopOnClose`'s stop is called.
  */
 export const zoomRow = (
-  portal: IPortal | null | undefined,
+  portal: MapPortal | null | undefined,
   stopOnClose: (stop: () => void) => void
 ): HTMLElement[] => {
   let tileset = mapTileset();
@@ -339,7 +339,7 @@ export class GameOptions extends Window {
   // The map's options take effect as they are changed, so the window is given
   // the portal to apply them to, and the build options the transport to send them to the game on (#690, #691).
   //  From the main menu there's no game yet (#749): the map's options are kept for the next one.
-  constructor(portal: IPortal | null, transport: Transport | null = null) {
+  constructor(portal: MapPortal | null, transport: Transport | null = null) {
     // What stops listening once the window has closed: the zoom following the map's art (#1118).
     const stops: Array<() => void> = [];
 
