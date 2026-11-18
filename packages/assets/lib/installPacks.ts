@@ -17,7 +17,11 @@ import {
   setSheetFailed,
   sheetFailure,
 } from './tilesets';
-import { interfaceArt } from './interfaceArt';
+import {
+  hasOwnInterfaceSprites,
+  interfaceArt,
+  ownInterfaceArt,
+} from './interfaceArt';
 import { TilesetDescriptor, spriteKey } from '../tilesets/TilesetDescriptor';
 import { setSpriteAnchors } from './spriteAnchors';
 
@@ -66,6 +70,63 @@ export const ensureTilesetLoaded = async (
       `${tileset.name} (${tileset.id}) couldn't be loaded: ${reason}`
     );
   }
+};
+
+// How long to wait before each further try at the pixel art's sheet for a Civ2 game, in ms, after one fails: a few, then
+//  none until the next game's start.
+let fallbackRetryDelays: readonly number[] = [5_000, 30_000, 120_000];
+
+/** Sets how long `startFallbackInterfaceArt` waits before each further try, for a test that can't wait minutes. */
+export const setFallbackRetryDelays = (delays: readonly number[]): void => {
+  fallbackRetryDelays = delays;
+};
+
+/**
+ * For a map drawn with the art its rule set names, when that has interface sprites of its own without being interface
+ *  art (Civ2's, `gameInterfaceArt`), starts fetching civ.one's own interface art (`ownInterfaceArt`, the pixel art), as
+ *  the sprites that set hasn't got are drawn from it (`interfaceSprite`) once it's there: what's already drawn is drawn
+ *  again with it as it arrives (`followInterfaceArt`). Not waited for: the game can be played without it, with the
+ *  theme's art in its place until then. A sheet that can't be fetched is tried again a few times (`fallbackRetryDelays`)
+ *  while the game's art is still that set, and isn't marked as failed (`setSheetFailed`), so the square maps and the
+ *  library don't pass the pixel art over for it. Resolves once it has loaded, or the tries are over.
+ */
+export const startFallbackInterfaceArt = (
+  tileset: TilesetDescriptor,
+  store: AssetStore
+): Promise<void> => {
+  // By id: an import mid-game installs the set again, as another object (`installTilesets`).
+  const stillWanted = (): boolean =>
+    ownInterfaceArt() !== null &&
+    ruleSetMapTileset(tileset.grid)?.id === tileset.id &&
+    hasOwnInterfaceSprites(tileset);
+
+  if (!stillWanted()) {
+    return Promise.resolve();
+  }
+
+  const attempt = (retry: number): Promise<void> => {
+    const own = ownInterfaceArt()!;
+
+    return (
+      store
+        .loadHostedPack(packFor(own))
+        // Loaded: whatever an earlier try said, it's there now.
+        .then(() => setSheetFailed(own.id, null))
+        .catch((error) => {
+          console.error(`Could not load the ${own.id} set's sheet.`, error);
+
+          const delay = fallbackRetryDelays[retry];
+
+          return delay === undefined
+            ? undefined
+            : new Promise<void>((resolve) => setTimeout(resolve, delay)).then(
+                () => (stillWanted() ? attempt(retry + 1) : undefined)
+              );
+        })
+    );
+  };
+
+  return attempt(0);
 };
 
 /** What a map on a grid is drawn with as a game starts or loads (`ensureMapArt`), and the art it fell back from. */
@@ -143,6 +204,9 @@ export const ensureMapArt = async (
     }
 
     if (await tried(tileset)) {
+      // Not waited for: see `startFallbackInterfaceArt`.
+      void startFallbackInterfaceArt(tileset, store);
+
       return { tileset, failed };
     }
   }

@@ -16,6 +16,7 @@ import {
 } from '@civ-clone/ui-client/lib/yieldMap';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import interfaceArt, {
+  followInterfaceArt,
   interfaceSpriteKey,
 } from '@civ-clone/ui-assets/lib/interfaceArt';
 import { installedTilesets } from '@civ-clone/ui-assets/lib/tilesets';
@@ -82,30 +83,51 @@ const renderCitizen = (
   title?: string,
   packKeys: string[] = []
 ): HTMLElement => {
-  const citizen = s('<span class="citizen"></span>'),
-    interfaceKeys = sprites.map((sprite) => interfaceSpriteKey(sprite));
+  const citizen = s('<span class="citizen"></span>');
 
   if (title) {
     citizen.setAttribute('title', title);
   }
 
-  assetStore
-    .firstImported([...packKeys, ...interfaceKeys])
-    .then((path) => {
-      if (
-        sprites[0]?.includes('people_angry_') &&
-        path !== interfaceKeys[0] &&
-        !packKeys.includes(path)
-      ) {
-        citizen.classList.add('angry-fallback');
-      }
+  let shown: string | null = null;
 
-      return assetStore.shownAtURL(path, interfaceArt().ui.citizen.width);
-    })
-    .then((url) =>
-      // Decorative: the population as a whole is summarised in words (#272).
-      citizen.append(s(`<img src="${url}" alt="">`))
-    );
+  // Drawn again when the sprites it would take change (`followInterfaceArt`), as the pixel art arrives in a Civ2 game.
+  const draw = (): void => {
+    const interfaceKeys = sprites.map((sprite) => interfaceSpriteKey(sprite)),
+      keys = [...packKeys, ...interfaceKeys],
+      signature = keys.join();
+
+    if (signature === shown) {
+      return;
+    }
+
+    shown = signature;
+
+    assetStore
+      .firstImported(keys)
+      .then((path) =>
+        assetStore
+          .shownAtURL(path, interfaceArt().ui.citizen.width)
+          .then((url) => {
+            if (shown !== signature) {
+              return;
+            }
+
+            citizen.classList.toggle(
+              'angry-fallback',
+              (sprites[0]?.includes('people_angry_') ?? false) &&
+                path !== interfaceKeys[0] &&
+                !packKeys.includes(path)
+            );
+            // Decorative: the population as a whole is summarised in words (#272).
+            citizen.replaceChildren(s(`<img src="${url}" alt="">`));
+          })
+      )
+      .catch((error) => console.error('Could not draw a citizen.', error));
+  };
+
+  draw();
+  followInterfaceArt(citizen, draw);
 
   return citizen;
 };
@@ -343,11 +365,31 @@ export const yieldIcon = (group: string): HTMLElement => {
     return icon;
   }
 
-  assetStore
-    .shownAtURL(interfaceSpriteKey(path), interfaceArt().ui.icon)
-    .then((url) => icon.append(s(`<img src="${url}" alt="">`)))
-    // A tileset without the picture: the amount beside it says it all.
-    .catch(() => {});
+  let shown: string | null = null;
+
+  // Drawn again when the sprite it should take changes (`followInterfaceArt`), as the pixel art arrives in a Civ2 game.
+  const draw = (): void => {
+    const key = interfaceSpriteKey(path);
+
+    if (key === shown) {
+      return;
+    }
+
+    shown = key;
+
+    assetStore
+      .shownAtURL(key, interfaceArt().ui.icon)
+      .then((url) => {
+        if (shown === key) {
+          icon.replaceChildren(s(`<img src="${url}" alt="">`));
+        }
+      })
+      // A tileset without the picture: the amount beside it says it all.
+      .catch(() => {});
+  };
+
+  draw();
+  followInterfaceArt(icon, draw);
 
   return icon;
 };
