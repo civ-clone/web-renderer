@@ -552,7 +552,7 @@ const liveAndCancel = async (): Promise<void> => {
 
   endTurnSent();
   move(closedAccepted.element(), 0, 10);
-  cancel(closedAccepted.element()).click();
+  ok(closedAccepted.element()).click();
   // Accepted: `GameSession` leaves the ending as it is, and `turnEnded` follows.
   setTradeRatesWaiting(true);
   setTradeRatesWaiting(false);
@@ -564,6 +564,41 @@ const liveAndCancel = async (): Promise<void> => {
     0
   );
 
+  await wait(0);
+
+  // Opened again while End Turn's answer is awaited, after one was closed with OK: it starts from the rates OK left,
+  //  and, still open when End Turn is refused, sends them.
+  const firstEnding = openTradeRates(plain([40, 0, 60]), transport);
+
+  endTurnSent();
+  move(firstEnding.element(), 0, 10);
+  ok(firstEnding.element()).click();
+
+  const secondEnding = openTradeRates(plain([40, 0, 60]), transport),
+    secondEndingShows = Number(
+      (
+        secondEnding
+          .element()
+          .querySelector('input[type="number"]') as HTMLInputElement
+      ).value
+    ),
+    beforeSecondEnding = sent.length;
+
+  setTradeRatesEndingTurn(false);
+  await wait(tradeRatesDelay + 50);
+
+  expect(
+    'reopened before End Turn is refused, it shows the rates OK left, and sends them once',
+    [
+      secondEndingShows,
+      sent.length - beforeSecondEnding,
+      sent.at(-1)?.[1].value.find(([rate]: [string]) => rate === 'Tax'),
+    ],
+    [10, 1, ['Tax', 10]]
+  );
+
+  ok(secondEnding.element()).click();
+  answerAll();
   await wait(0);
 
   // Opened between End Turn and `turnEnded`: a move is held, not sent after End Turn.
