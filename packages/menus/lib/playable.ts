@@ -1,5 +1,7 @@
 import { hasInstalledInterfaceArt } from '@civ-clone/ui-assets/lib/interfaceArt';
-import supportedTopologies from '@civ-clone/ui-map/lib/supportedTopologies';
+import supportedTopologies, {
+  drawnTopologies,
+} from '@civ-clone/ui-map/lib/supportedTopologies';
 import { t } from 'i18next';
 
 // Whether a game can be started or loaded here (#1063): not whether Civilization's art has been imported, as it is
@@ -14,18 +16,25 @@ import { t } from 'i18next';
 /** What there's no art for: the interface (`interfaceArt`), or a map on any grid (`supportedTopologies`). */
 export type MissingArt = 'interface' | 'map';
 
-/** What there's no art for, so that no game can be started or loaded, or null when one can. */
-export const missingArt = (): MissingArt | null =>
+/**
+ * What there's no art for, so that no game can be started, or loaded when `loading`, or null when one can. A new game
+ *  needs a grid it's offered on (`supportedTopologies`); a save, one its art is there for (`drawnTopologies`), so a
+ *  save on hex loads without `?hex=1` when hex is all there's art for.
+ */
+export const missingArt = (loading: boolean = false): MissingArt | null =>
   !hasInstalledInterfaceArt()
     ? 'interface'
-    : supportedTopologies().length === 0
+    : (loading ? drawnTopologies() : supportedTopologies()).length === 0
     ? 'map'
     : null;
 
-/** Whether a game can be started or loaded: New Game, Load Game and the rest are offered only then. */
+/** Whether a game can be started: New Game and Earth are offered only then. */
 export const canPlay = (): boolean => missingArt() === null;
 
-/** Why no game can be started or loaded, for the menus to say in place of their items, or null when one can. */
+/** Whether a game can be loaded: Load Game and Continue are offered only then. */
+export const canLoad = (): boolean => missingArt(true) === null;
+
+/** Why no game can be started, for the menus to say in place of their items, or null when one can. */
 export const cantPlayReason = (): string | null => {
   const missing = missingArt();
 

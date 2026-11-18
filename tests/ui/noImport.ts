@@ -17,6 +17,7 @@ import {
   chooseMapTileset,
   installTilesets,
   mapTileset,
+  offerUnfinishedGrids,
   setMapGrid,
   shownScale,
 } from '@civ-clone/ui-assets/lib/tilesets';
@@ -44,7 +45,7 @@ import installPacks, {
 import { Store } from '@civ-clone/ui-platform/Store';
 import { drawUnitActionIcon } from '@civ-clone/ui-assets/lib/unitActionIcon';
 import i18next from 'i18next';
-import { missingArt } from '@civ-clone/ui-menus/lib/playable';
+import { canLoad, canPlay, missingArt } from '@civ-clone/ui-menus/lib/playable';
 import { setCursor } from '@civ-clone/ui-game/app/assets';
 
 const failures: string[] = [];
@@ -287,6 +288,26 @@ const run = async (): Promise<void> => {
     [false, 'interface', false, 'civ1']
   );
 
+  // Art for hex alone (#1063): a theme drawing its interface with the hexagonal pixel art, and no square art. A new
+  //  game isn't offered without `?hex=1`, but a save on hex loads, as its art is there (`canLoad`).
+  provideInterfaceArt(() => ['hex-pixelart']);
+
+  expect(
+    'with art for hex alone and no ?hex=1, no new game, but a save loads; with ?hex=1, both',
+    [
+      interfaceArt().id,
+      missingArt(),
+      missingArt(true),
+      canPlay(),
+      canLoad(),
+      (offerUnfinishedGrids(true), [missingArt(), missingArt(true)]),
+    ],
+    ['hex-pixelart', 'map', null, false, true, [null, null]]
+  );
+
+  offerUnfinishedGrids(false);
+  provideInterfaceArt(() => ['civ1', 'civ1-pixelart']);
+
   // The browser's storage (#850), as the page starts (`installPacks`), the pixel art's sheet fetched with no network.
   const civ1Store = (): { store: AssetStore; fetched: string[] } => {
       const store = new AssetStore(civ1!),
@@ -322,7 +343,13 @@ const run = async (): Promise<void> => {
         interfaceArt().id,
         missingArt(),
       ],
-      [['civ1-pixelart'], ['civ1-pixelart'], 'civ1-pixelart', null]
+      // The hexagonal pixel art is installed as it ships too, its sheet fetched only for a hex game (#1063).
+      [
+        ['civ1-pixelart', 'hex-pixelart'],
+        ['civ1-pixelart'],
+        'civ1-pixelart',
+        null,
+      ]
     );
   }
 
@@ -345,7 +372,7 @@ const run = async (): Promise<void> => {
         interfaceArt().id,
         missingArt(),
       ],
-      [['civ1', 'civ1-pixelart'], [], 'civ1', null]
+      [['civ1', 'civ1-pixelart', 'hex-pixelart'], [], 'civ1', null]
     );
   }
 
@@ -364,7 +391,7 @@ const run = async (): Promise<void> => {
         missingArt(),
       ],
       [
-        ['civ1-pixelart'],
+        ['civ1-pixelart', 'hex-pixelart'],
         ['civ1-pixelart'],
         'civ1-pixelart',
         'civ1-pixelart',

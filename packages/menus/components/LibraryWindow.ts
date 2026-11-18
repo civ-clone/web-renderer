@@ -11,6 +11,7 @@ import { TilesetDescriptor } from '@civ-clone/ui-assets/tilesets/TilesetDescript
 import {
   bundledTilesets,
   chooseMapTileset,
+  hiddenGrids,
   installedTilesets,
   isHosted,
   mapTileset,
@@ -151,29 +152,35 @@ export const setStatus = async (pack: PackImport): Promise<SetStatus> => {
   };
 };
 
-/** The sets with art for the map, by grid, in the order the grids' first sets were registered. */
+/**
+ * The sets with art for the map, by grid, in the order the grids' first sets were registered: but a grid new games
+ *  don't offer yet (`hiddenGrids`, hex without `?hex=1`), whose sets aren't listed.
+ */
 const mapSets = (): [string, LibrarySet[]][] => {
-  const grids = new Map<string, LibrarySet[]>();
+  const grids = new Map<string, LibrarySet[]>(),
+    hidden: string[] = hiddenGrids();
 
-  bundledTilesets().forEach(({ id, name, grid, source, licence, assets }) =>
-    grids.set(grid, [
-      ...(grids.get(grid) ?? []),
-      {
-        id,
-        name,
-        grid,
-        source,
-        licence,
-        provides: [
-          t('LibraryWindow.provides.map', { grid: t(`Grid.${grid}`) }),
-          ...(assets.ui.length > 0
-            ? [t('LibraryWindow.provides.interface')]
-            : []),
-        ],
-        pack: packImportOf(id),
-      },
-    ])
-  );
+  bundledTilesets()
+    .filter(({ grid }) => !hidden.includes(grid))
+    .forEach(({ id, name, grid, source, licence, assets }) =>
+      grids.set(grid, [
+        ...(grids.get(grid) ?? []),
+        {
+          id,
+          name,
+          grid,
+          source,
+          licence,
+          provides: [
+            t('LibraryWindow.provides.map', { grid: t(`Grid.${grid}`) }),
+            ...(assets.ui.length > 0
+              ? [t('LibraryWindow.provides.interface')]
+              : []),
+          ],
+          pack: packImportOf(id),
+        },
+      ])
+    );
 
   return [...grids.entries()];
 };

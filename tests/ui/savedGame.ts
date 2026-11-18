@@ -13,6 +13,7 @@
 
 import './lib/grids';
 import './lib/artPacks';
+import { installTilesets } from '@civ-clone/ui-assets/lib/tilesets';
 import { failStore, resetStore, storedRecords } from './lib/FakeStore';
 import {
   fileName,
@@ -367,12 +368,16 @@ const reset = () => {
 
   thrown = null;
 
+  // The pixel art's hexagonal sheet couldn't be loaded, so no set is installed for hex: it ships with civ.one, so
+  //  there's nothing to import, and the grid is said to be one that can't be drawn (#1063).
+  installTilesets({ 'hex-pixelart': { complete: false, metadata: null } });
+
   await loadSaveFromFile(
     new File([onGrid('hex-odd-r')], 'hex.civ-clone.json')
   ).catch((error: Error) => (thrown = error));
 
   expect(
-    'a save on a grid that cannot be drawn is refused, naming the grid',
+    'a save on a grid that cannot be drawn is refused, naming the grid, and no art that ships to import',
     alerts.join(),
     t('SavedGame.needs-grid', { grid: 'Hex' })
   );
@@ -407,7 +412,11 @@ const reset = () => {
   );
   expect('and is not handed over', storedRecords().size, 0);
 
-  for (const topologyId of ['square', undefined]) {
+  // The sets installed as the page installs them: the pixel art's hexagonal one with them, as it ships (#1063), so a save
+  //  on hex loads, though a new game doesn't offer hex without `?hex=1`.
+  installTilesets({});
+
+  for (const topologyId of ['square', undefined, 'hex-odd-r']) {
     reset();
 
     await loadSaveFromFile(

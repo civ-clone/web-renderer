@@ -13,7 +13,7 @@ import build from '@civ-clone/ui-client/lib/build';
 import { t } from 'i18next';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 import { askEarth, askNewGame } from '@civ-clone/ui-menus/components/newGame';
-import { cantPlayReason } from '@civ-clone/ui-menus/lib/playable';
+import { canLoad, cantPlayReason } from '@civ-clone/ui-menus/lib/playable';
 
 export class MainMenu extends Element {
   #transport: Transport;
@@ -30,9 +30,11 @@ export class MainMenu extends Element {
 
   async build() {
     // A game is offered whenever there's art to draw it with (#1063): civ.one's own, or the player's import. Without
-    //  any, on a first visit offline with nothing imported, the menu says why in place of the game's items.
+    //  any, on a first visit offline with nothing imported, the menu says why in place of the game's items. A save
+    //  loads wherever its art is there, on a grid new games don't offer yet too (`canLoad`).
     const reason = cantPlayReason(),
       playable = reason === null,
+      loadable = canLoad(),
       why = s<HTMLParagraphElement>('<p class="no-art" role="alert"></p>');
 
     why.textContent = reason ?? '';
@@ -99,7 +101,7 @@ export class MainMenu extends Element {
           ),
           h(
             s(
-              `<button class="btn-bare"${playable ? '' : ' hidden'}>${t(
+              `<button class="btn-bare"${loadable ? '' : ' hidden'}>${t(
                 'MainMenu.load-game'
               )}</button>`
             ),

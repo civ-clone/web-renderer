@@ -65,6 +65,7 @@ import { metadataKey } from '@civ-clone/ui-assets/lib/packs';
 import civ2ExtractData from '@civ-clone/civ2-asset-extractor/extract-data.json';
 import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';
 import i18next from 'i18next';
+import { offerUnfinishedGrids } from '@civ-clone/ui-map/lib/supportedTopologies';
 import { readFileSync } from 'fs';
 
 const failures: string[] = [];
@@ -712,7 +713,7 @@ const run = async (): Promise<void> => {
         ],
       ],
       [
-        ['civ1', 'civ2', 'civ1-pixelart'],
+        ['civ1', 'civ2', 'civ1-pixelart', 'hex-pixelart'],
         ['civ1', 'civ1-adlib', 'civ2'],
       ]
     );
@@ -2102,6 +2103,42 @@ const run = async (): Promise<void> => {
         ['civ1-adlib', 'test-chimes', 'test-bells'],
       ]
     );
+
+    // Hex, and its art, are listed only on a page loaded with `?hex=1` (#1063), as new games offer it only then.
+    offerUnfinishedGrids(true);
+
+    const withHex = await opened(),
+      mapArt = (window: LibraryWindow): [string[], string[]] => [
+        Array.from(
+          window.element().querySelectorAll('[data-section="map"] h5'),
+          (heading) => heading.textContent ?? ''
+        ),
+        Array.from(
+          window.element().querySelectorAll('[data-section="map"] [data-set]'),
+          (entry) => (entry as HTMLElement).dataset.set ?? ''
+        ),
+      ];
+
+    expect(
+      'with ?hex=1, the library lists hex too, with the hexagonal pixel art, ready as it ships',
+      [
+        mapArt(withHex),
+        entryOf(withHex, 'hex-pixelart').status,
+        entryOf(withHex, 'hex-pixelart').entry.querySelector('.name')
+          ?.textContent,
+      ],
+      [
+        [
+          ['Square', 'Isometric', 'Hex'],
+          ['civ1', 'civ1-pixelart', 'civ2', 'hex-pixelart'],
+        ],
+        'Ready',
+        'Pixel art (hexagonal)',
+      ]
+    );
+
+    withHex.close();
+    offerUnfinishedGrids(false);
     expect(
       'each set says its name, what it gives, and where it comes from',
       ['civ1', 'civ2', 'civ1-adlib', 'test-chimes'].map((id) => {

@@ -457,6 +457,34 @@ const save = (
       ['interface', ['staggered-iso']]
     );
 
+    // Art for hex alone, drawing the interface too (#1063): without `?hex=1` there's no new game, but a save on hex
+    //  loads, as its art is there.
+    provideInterfaceArt(() => ['hex-pixelart']);
+    installTilesets({
+      civ1: { complete: false, metadata: null },
+      'civ1-pixelart': { complete: false, metadata: null },
+    });
+    document.body.innerHTML = '';
+
+    {
+      const { menu, element } = await openMenu();
+
+      expect(
+        'with art for hex alone and no ?hex=1, Continue (a save kept above) and Load game, but no New game, and why',
+        [
+          items(element),
+          element
+            .querySelector('.ui-title-menu-no-art')
+            ?.textContent?.startsWith('There’s no art to draw a map with'),
+        ],
+        [['continue', 'load-game', 'hall-of-fame', 'options', 'library'], true]
+      );
+
+      menu.remove();
+    }
+
+    provideInterfaceArt(() => ['civ1', 'civ1-pixelart']);
+
     // As the page starts, with nothing installed yet but Civilization's.
     hasAssets = true;
     installTilesets({});
