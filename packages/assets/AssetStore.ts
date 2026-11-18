@@ -7,7 +7,7 @@ import {
   metadataKey,
 } from './lib/packs';
 import { TilesetDescriptor, spriteKey } from './tilesets/TilesetDescriptor';
-import civ1Adlib from './sounds/civ1-adlib.json';
+import civ1Adlib from './sounds/civ1Adlib';
 import { soundFileKey } from './sounds/SoundDescriptor';
 import { interfaceTileset } from './lib/tilesets';
 import { imageSize } from './lib/imageSize';
