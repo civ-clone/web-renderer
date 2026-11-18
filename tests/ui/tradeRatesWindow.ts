@@ -491,15 +491,33 @@ const liveAndCancel = async (): Promise<void> => {
   const refused = openTradeRates(plain([40, 0, 60]), transport),
     beforeRefused = sent.length;
 
+  const heldNote = refused
+      .element()
+      .querySelector('.adjust-trade-rates-held') as HTMLElement,
+    // Shown only once a move is being held, not for every End Turn.
+    heldShown: boolean[] = [];
+
   move(refused.element(), 0, 20);
   endTurnSent();
+  heldShown.push(!heldNote.hidden);
   move(refused.element(), 0, 30);
+  heldShown.push(!heldNote.hidden);
   await wait(tradeRatesDelay + 50);
 
   const whileAwaiting = sent.length - beforeRefused;
 
   setTradeRatesEndingTurn(false);
+  heldShown.push(!heldNote.hidden);
   await wait(tradeRatesDelay + 50);
+
+  expect(
+    'a move held for End Turn’s answer is said, until the answer comes (#1183)',
+    [heldShown, heldNote.textContent],
+    [
+      [false, true, false],
+      'Ending your turn: these rates are applied only if it goes on.',
+    ]
+  );
 
   const afterRefusal = sent
     .at(-1)?.[1]

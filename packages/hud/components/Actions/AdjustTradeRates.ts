@@ -162,6 +162,8 @@ export const setTradeRatesWaiting = (
 export const setTradeRatesEndingTurn = (ending: boolean): void => {
   endingTurn = ending;
 
+  showWaiting?.();
+
   if (ending) {
     return;
   }
@@ -500,10 +502,14 @@ export const openTradeRates = (
 
   const sliderGroup = new LockedSliderGroup(...sliders);
 
+  // Says whether moves are being held for End Turn's answer: set once the note is made, below.
+  let showHeld = (): void => {};
+
   // Every move, the player's or a rebalance's, redraws the split; the player's are sent once they pause.
   sliders.forEach((slider) =>
     slider.onInput(() => {
       showSplit();
+      showHeld();
 
       if (!refreshing) {
         schedule();
@@ -563,10 +569,20 @@ export const openTradeRates = (
       .querySelector('.btn-quiet') as HTMLButtonElement | null,
     waitingNote = s(
       '<p class="adjust-trade-rates-waiting" role="status" hidden></p>'
+    ),
+    // Moves made while End Turn's answer is awaited are held, and the figures don't follow them: said, as the answer
+    //  can be a while coming while talks are open, and the moves go if the turn ends (#1183).
+    heldNote = s(
+      '<p class="adjust-trade-rates-waiting adjust-trade-rates-held" role="status" hidden></p>'
     );
 
   waitingNote.textContent = text('Game.waiting');
-  rateRows.after(waitingNote);
+  heldNote.textContent = text('Actions.AdjustTradeRates.held');
+  rateRows.after(waitingNote, heldNote);
+
+  showHeld = (): void => {
+    heldNote.hidden = !(endingTurn && !waitingForTurn && !same(values(), sent));
+  };
 
   showWaiting = (): void => {
     // Focus in the rows would fall to the page as they go inert, out of the window's reach for Escape.
@@ -590,6 +606,8 @@ export const openTradeRates = (
     if (okButton !== null) {
       okButton.disabled = waitingForTurn;
     }
+
+    showHeld();
   };
 
   showWaiting();
