@@ -1,0 +1,10 @@
+{
+  "name": "@civ-clone/ui-models-builtin",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The 3D map's built-in model set (docs/3d-renderer.md §10, D3): what's made by code, so every name always has something. For now, the terrain table: each terrain's relief and colour.",
+  "license": "MIT",
+  "exports": {
+    "./terrain": "./terrain.ts"
+  }
+}
