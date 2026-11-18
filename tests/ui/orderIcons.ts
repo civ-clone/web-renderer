@@ -16,7 +16,10 @@ import {
 } from '@civ-clone/ui-assets/lib/unitActionIcon';
 import classicManifest from '@civ-clone/ui-interface-classic/manifest.json';
 import modernManifest from '@civ-clone/ui-interface-modern/manifest.json';
-import { provideInterfaceArt } from '@civ-clone/ui-assets/lib/interfaceArt';
+import {
+  followerCount,
+  provideInterfaceArt,
+} from '@civ-clone/ui-assets/lib/interfaceArt';
 import { setSprites } from '@civ-clone/ui-assets/lib/getPreloadedImage';
 import ScaledCanvases from '@civ-clone/ui-assets/lib/scaledCanvases';
 import { Tile, Unit, UnitAction } from '@civ-clone/ui-protocol/types';
@@ -287,8 +290,15 @@ drawUnitActionIcon(
 
 let civ1Draws = 0;
 
-new ScaledCanvases(() => 0).add(followedCanvas, () => civ1Draws++);
+const followersBefore = followerCount();
+
+new ScaledCanvases(() => 0).add(
+  { clientWidth: 16 } as unknown as HTMLCanvasElement,
+  () => civ1Draws++
+);
 setSprites(new Map());
+
+const followersAfter = followerCount();
 
 expect(
   "a Civ1 game's road: Civ1's sprites, each drawn whole at the picture's origin, and the button not followed",
@@ -301,6 +311,7 @@ expect(
         y,
       ]),
     civ1Draws,
+    followersAfter - followersBefore,
   ],
   [
     [
@@ -310,6 +321,7 @@ expect(
       [3, 0, 0],
     ],
     1,
+    0,
   ]
 );
 
