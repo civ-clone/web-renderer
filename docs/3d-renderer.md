@@ -380,6 +380,10 @@ interface GroundLayout {
   - its outline matches the 2D projection's outline once foreshortened;
   - neighbours share edges, as the topology says;
   - one period along, the copy of a square lands on the same point.
+- **As built (slice 0.3):** `packages/map-3d/layouts`, picked by `groundLayoutFor(world)`. A world's `wrapsY` comes from
+  its topology, so a layout's period down is `null` only where the topology doesn't wrap over the poles (the engine
+  wraps every grid today). The isometric grid's diamonds are squares of side 1 turned through 45°, √2 apart across
+  and √2/2 down; the hexes are regular, `1/√3` from middle to corner, their rows `√3/2` apart.
 
 ### 3.1 Wrapping under a turning camera
 

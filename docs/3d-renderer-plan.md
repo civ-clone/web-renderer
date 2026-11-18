@@ -104,6 +104,14 @@ and `frontend.js` grew by 1.7 KB. `packages/models-builtin` waits for its first 
 
 ### 0.3 Ground layouts
 
+**Done:** `packages/map-3d/layouts`, tested by `tests/ui/groundLayouts.ts`. Beyond the tests below, it checks:
+- each grid's sizes;
+- that every corner is shared by four squares, or three hexes;
+- that 20,000 seeded points out to a thousand worlds away, and points on edges and corners, are each given a square whose
+  outline holds them.
+
+A point exactly on an edge goes to either square, whichever the rounding gives.
+
 - **What:** `GroundLayout` for `square`, `staggered-iso` and `hex-odd-r` (spec §3), with no three.js import.
 - **Tests:**
   - round trips;
