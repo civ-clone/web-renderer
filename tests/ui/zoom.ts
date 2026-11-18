@@ -290,11 +290,12 @@ const clicksLand = (topologyId: string, zoom: number): string[] => {
 };
 
 // Whether the spot of the world at each anchor, in the page's px, is still under it once the map is zoomed from `from` to
-//  `to` about it, to within a px: the ones that moved, and how far.
+//  `to` about it, centred on `centre`, to within a px: the ones that moved, and how far.
 const anchorHolds = (
   topologyId: string,
   from: number,
   to: number,
+  [centreX, centreY]: [number, number] = [6, 6],
   anchors: Array<[number, number]> = [
     [30, 20],
     [120, 90],
@@ -306,7 +307,7 @@ const anchorHolds = (
   anchors.forEach(([x, y]) => {
     const { portal } = gameMap(topologyId, from);
 
-    portal.setCenter(6, 6);
+    portal.setCenter(centreX, centreY);
     // Off the middle of a square, as a drag leaves it.
     portal.scrollBy(7, -5);
 
@@ -318,7 +319,18 @@ const anchorHolds = (
 
     portal.setZoom(to, { x, y });
 
-    const after = portal.toPage(portal.boxOf(square.tile)),
+    // The copy of the square under the anchor now: a canvas wider than the world shows a square more than once.
+    const now = portal.squareAt(...portal.toCanvas(x, y))!;
+
+    if (now.tile.x !== square.tile.x || now.tile.y !== square.tile.y) {
+      moved.push(
+        `${from} → ${to} at ${x},${y}: ${now.tile.x},${now.tile.y} is under it, not ${square.tile.x},${square.tile.y}`
+      );
+
+      return;
+    }
+
+    const after = portal.toPage(now.box),
       spotX = after.x + across * after.width,
       spotY = after.y + down * after.height;
 
@@ -691,6 +703,39 @@ const run = async (): Promise<void> => {
     )
   );
 
+  // Centred on the first column, the left of the canvas is the far side of the world, across its seam.
+  (
+    [
+      ['square', 1.5, 2.3],
+      ['square', 2.3, 1.2],
+      ['staggered-iso', 1.3, 2],
+      ['hex-odd-r', 1.2, 1.7],
+    ] as Array<[string, number, number]>
+  ).forEach(([topologyId, from, to]) =>
+    expect(
+      `zoomed from ${from} to ${to} about a point across the world's seam on the ${topologyId} grid, the spot stays there`,
+      anchorHolds(topologyId, from, to, [0, 6]),
+      []
+    )
+  );
+
+  {
+    const { portal } = gameMap('square', 1.5);
+
+    portal.setLockVerticalEdges(true);
+    portal.setCenter(6, 0);
+
+    expect(
+      'locked to the poles, zoomed about a point by the top, the map stops at the pole, where the clamp puts it, and nothing throws',
+      [
+        thrown(() => portal.setZoom(2.6, { x: 30, y: 10 })),
+        portal.zoom(),
+        portal.squareAt(...portal.toCanvas(120, 1)) !== null,
+      ],
+      [null, 2.6, true]
+    );
+  }
+
   {
     const { portal } = gameMap('square', 1.5);
 
@@ -717,15 +762,18 @@ const run = async (): Promise<void> => {
 
     const { portal, canvas } = gameMap('square', 1.5),
       zoomed: number[] = [],
+      anchors: unknown[] = [],
       setZoom = portal.setZoom.bind(portal);
 
     portal.setZoom = (zoom: number, anchor?: { x: number; y: number }) => {
       zoomed.push(zoom);
+      anchors.push(anchor ?? null);
       setZoom(zoom, anchor);
     };
 
     const turned = (action: () => unknown) => {
       zoomed.length = 0;
+      anchors.length = 0;
 
       const result = action();
 
@@ -735,19 +783,17 @@ const run = async (): Promise<void> => {
     };
 
     expect(
-      "a notch of the wheel away from the player zooms in a tenth on the next frame, kept as the slider keeps it, and the page doesn't scroll",
+      "a notch of the wheel away from the player zooms in a tenth on the next frame, about the pointer, kept as the slider keeps it, and the page doesn't scroll",
       [
         (() => {
-          const prevented = wheel(canvas, -100);
+          const prevented = wheel(canvas, -100, { x: 200, y: 30 });
 
           return [prevented, portal.zoom()];
         })(),
         turned(() => null),
+        anchors.splice(0),
       ],
-      [
-        [true, 1.5],
-        [null, [1.6], 1.6],
-      ]
+      [[true, 1.5], [null, [1.6], 1.6], [{ x: 200, y: 30 }]]
     );
 
     expect(
@@ -757,35 +803,48 @@ const run = async (): Promise<void> => {
     );
 
     expect(
-      'five quick notches within a frame zoom half a step at once, drawn once',
-      turned(() =>
-        [1, 2, 3, 4, 5].map((t) => wheel(canvas, -100, { timeStamp: t }))
-      ),
-      [[true, true, true, true, true], [2], 2]
+      'five quick notches within a frame zoom half a step at once, drawn once, about the last place the pointer was',
+      [
+        turned(() =>
+          [1, 2, 3, 4, 5].map((t) =>
+            wheel(canvas, -100, { timeStamp: t, x: 50 + t, y: 40 })
+          )
+        ),
+        anchors.splice(0),
+      ],
+      [[[true, true, true, true, true], [2], 2], [{ x: 55, y: 40 }]]
     );
 
     expect(
-      "a trackpad's two-finger scroll is added up until it has turned a notch's worth",
-      turned(() => [
-        [1, 2, 3, 4].map((t) => wheel(canvas, 12, { timeStamp: 100 + t })),
-        zoomed.length,
-        frames.length,
-        wheel(canvas, 12, { timeStamp: 105 }),
-      ]),
-      [[[true, true, true, true], 0, 0, true], [1.9], 1.9]
+      "a trackpad's two-finger scroll makes a tenth as it starts, and adds up the rest until it has turned a notch's worth",
+      [
+        turned(() =>
+          [1, 2, 3, 4, 5].map((t) => wheel(canvas, 12, { timeStamp: 100 + t }))
+        ),
+        turned(() => wheel(canvas, 12, { timeStamp: 106 })),
+      ],
+      [
+        [[true, true, true, true, true], [1.9], 1.9],
+        [true, [1.8], 1.8],
+      ]
     );
 
     expect(
-      'what was turned is forgotten after a pause, or turned back the other way',
-      turned(() => {
-        wheel(canvas, 30, { timeStamp: 1000 });
-        wheel(canvas, 30, { timeStamp: 2000 });
-        wheel(canvas, -30, { timeStamp: 2010 });
-        wheel(canvas, 30, { timeStamp: 2020 });
+      "a slow notch, after a pause, makes a tenth however little it turns, as some browsers' wheels turn a few px; and so does one turned back the other way",
+      [
+        turned(() => wheel(canvas, 4, { timeStamp: 1000 })),
+        turned(() => {
+          wheel(canvas, 4, { timeStamp: 1100 });
 
-        return frames.length;
-      }),
-      [0, [], 1.9]
+          return frames.length;
+        }),
+        turned(() => wheel(canvas, -4, { timeStamp: 1110 })),
+      ],
+      [
+        [true, [1.7], 1.7],
+        [0, [], 1.7],
+        [true, [1.8], 1.8],
+      ]
     );
 
     expect(
@@ -793,14 +852,18 @@ const run = async (): Promise<void> => {
       turned(() => [
         wheel(canvas, -5, { ctrlKey: true, timeStamp: 3000 }),
         wheel(canvas, -5, { ctrlKey: true, timeStamp: 3001 }),
+        wheel(canvas, -5, { ctrlKey: true, timeStamp: 3002 }),
       ]),
-      [[true, true], [2], 2]
+      [[true, true, true], [2], 2]
     );
 
     expect(
       'a wheel counted in lines makes a tenth each time it turns',
-      turned(() => wheel(canvas, 3, { deltaMode: 1, timeStamp: 4000 })),
-      [true, [1.9], 1.9]
+      turned(() => [
+        wheel(canvas, 3, { deltaMode: 1, timeStamp: 4000 }),
+        wheel(canvas, 3, { deltaMode: 1, timeStamp: 4010 }),
+      ]),
+      [[true, true], [1.8], 1.8]
     );
 
     expect(
@@ -810,8 +873,8 @@ const run = async (): Promise<void> => {
         portal.zoomBy(3);
 
         return portal.center();
-      }).concat([portal.center(), portal.zoom()]),
-      [{ x: 6, y: 6 }, [2.2], 2.2, { x: 6, y: 6 }, 2.2]
+      }).concat([portal.center(), portal.zoom(), anchors.splice(0)]),
+      [{ x: 6, y: 6 }, [2.1], 2.1, { x: 6, y: 6 }, 2.1, [null]]
     );
 
     expect(

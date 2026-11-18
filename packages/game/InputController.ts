@@ -96,6 +96,12 @@ export class InputController {
   #lastShiftedCode = '';
   #leaderScreensMap: { [key: string]: () => any };
   #listener = (event: KeyboardEvent): void => this.#keydown(event);
+  // The zoom key being held down (#1101), whose repeats carry on zooming: none for a key first pressed elsewhere, as `x`
+  //  closing the city screen, held on after it's closed. Let go of any key, none.
+  #zoomKeyHeld: string | null = null;
+  #keyupListener = (): void => {
+    this.#zoomKeyHeld = null;
+  };
 
   constructor(deps: InputControllerDeps) {
     this.#deps = deps;
@@ -117,11 +123,13 @@ export class InputController {
     };
 
     on(document, 'keydown', this.#listener);
+    on(document, 'keyup', this.#keyupListener);
   }
 
   // Not called yet: the listener has always lasted as long as the page, and the `pagehide` teardown leaves it.
   dispose(): void {
     off(document, 'keydown', this.#listener);
+    off(document, 'keyup', this.#keyupListener);
   }
 
   #keydown(event: KeyboardEvent): void {
@@ -314,8 +322,15 @@ export class InputController {
       return;
     }
 
-    // Held down, it carries on zooming: the portal draws what's asked within a frame once.
-    if (key in zoomKeys && !modalWindow && !takesText(event.target)) {
+    // Held down, it carries on zooming, if it zoomed when first pressed: the portal draws what's asked within a frame
+    //  once.
+    if (
+      key in zoomKeys &&
+      !modalWindow &&
+      !takesText(event.target) &&
+      (!event.repeat || this.#zoomKeyHeld === key)
+    ) {
+      this.#zoomKeyHeld = key;
       this.#deps.portal.zoomBy(zoomKeys[key]!);
 
       event.preventDefault();

@@ -761,9 +761,30 @@ const run = async (): Promise<void> => {
     });
 
     Object.defineProperty(held, 'repeat', { value: true });
+    press({ code: 'KeyZ', key: 'z' });
     document.dispatchEvent(held);
 
-    expect('held down, it carries on zooming', zooms, [1]);
+    expect('held down, it carries on zooming', zooms, [1, 1]);
+
+    // Let go, then held again from somewhere that took it first: `x` closing the city screen, held on after it closes.
+    zooms.splice(0);
+    document.dispatchEvent(new KeyboardEvent('keyup', { key: 'z' }));
+    document.dispatchEvent(held);
+
+    const heldX = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      key: 'x',
+    });
+
+    Object.defineProperty(heldX, 'repeat', { value: true });
+    document.dispatchEvent(heldX);
+
+    expect(
+      "a key's repeats don't zoom unless it zoomed when first pressed",
+      [zooms, heldX.defaultPrevented],
+      [[], false]
+    );
 
     zooms.splice(0);
 

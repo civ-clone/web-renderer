@@ -18,6 +18,7 @@ import {
   zoomFor,
   zoomOption,
 } from '@civ-clone/ui-assets/lib/tilesets';
+import { TilesetDescriptor } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import { hasFeature } from '@civ-clone/ui-platform/lib/interfaceMode';
 import { openUnitSelection } from '@civ-clone/ui-city/components/choices';
 import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
@@ -42,9 +43,10 @@ const DRAG_THRESHOLD = 8,
   INERTIA_MAX_SPEED = 3,
   // How long the mouse rests on a city's banner, or a square, before its tooltip opens, as the shared tooltip's (#742).
   HOVER_TOOLTIP_DELAY = 400,
-  // How far, in px, the wheel turns for a tenth of zoom (#1101). A mouse's notch is about 100 px and makes a tenth at
-  //  once; a trackpad's two-finger scroll sends a few px at a time, added up until they reach this. A wheel counted in
-  //  lines or pages (Firefox's mouse) makes a tenth each time it turns.
+  // How far, in px, the wheel turns for a tenth of zoom (#1101), past the first turn after a pause, which makes a tenth
+  //  however small: a mouse turned a notch at a time zooms a tenth a notch, whatever its browser counts a notch as (as
+  //  little as a few px). A trackpad's two-finger scroll sends a few px at a time, added up until they reach this. A
+  //  wheel counted in lines or pages (Firefox's mouse) makes a tenth each time it turns.
   WHEEL_STEP = 50,
   // A trackpad's pinch, which comes as the wheel with Ctrl held, sends smaller deltas still: a pinch to twice the size
   //  is about 70 px.
@@ -52,16 +54,19 @@ const DRAG_THRESHOLD = 8,
   // Past this long, in ms, without the wheel turning, what it turned before is forgotten: a new turn starts afresh.
   WHEEL_PAUSE = 250;
 
-// What the wheel has turned since it last made a tenth of zoom, in px, and when it last turned.
+// What the wheel has turned since it last made a tenth of zoom, in px, which way (-1 or 1, 0 before it has), and when
+//  it last turned.
 type WheelTurn = {
   delta: number;
+  direction: number;
   at: number;
 };
 
-// The zoom the wheel or the keys have asked for, waiting for the next frame (#1101), and where on the canvas to keep
-//  still.
+// The zoom the wheel or the keys have asked for, waiting for the next frame (#1101), the set it's for, and where on the
+//  canvas to keep still.
 type PendingZoom = {
   zoom: number;
+  tileset: TilesetDescriptor;
   anchor?: Coordinate;
 };
 
@@ -112,7 +117,7 @@ export class GamePortal extends Portal {
   #hover: Hover | null = null;
   #inertiaFrame: number | null = null;
   #pendingZoom: PendingZoom | null = null;
-  #wheelTurn: WheelTurn = { delta: 0, at: -Infinity };
+  #wheelTurn: WheelTurn = { delta: 0, direction: 0, at: -Infinity };
   #zoomFrame: number | null = null;
   #showActionMenuTimeout: number | null = null;
   #waiting = false;
@@ -474,14 +479,17 @@ export class GamePortal extends Portal {
    */
   zoomBy(steps: number, anchor?: Coordinate): void {
     const tileset = mapTileset(this.world().topologyId()),
-      from = this.#pendingZoom?.zoom ?? this.zoom(),
+      // Asked for since the map's art changed (#1118), what's waiting is the other set's, and is forgotten.
+      waiting =
+        this.#pendingZoom?.tileset === tileset ? this.#pendingZoom : null,
+      from = waiting?.zoom ?? this.zoom(),
       zoom = zoomFor(tileset, from + steps * ZOOM_STEP);
 
     if (zoom === from) {
       return;
     }
 
-    this.#pendingZoom = { zoom, anchor };
+    this.#pendingZoom = { zoom, tileset, anchor };
 
     if (this.#zoomFrame !== null) {
       return;
@@ -493,11 +501,15 @@ export class GamePortal extends Portal {
       this.#zoomFrame = null;
       this.#pendingZoom = null;
 
-      if (pending === null) {
+      // Nothing waiting, or it was asked for in the art the map was drawn with before it changed.
+      if (
+        pending === null ||
+        pending.tileset !== mapTileset(this.world().topologyId())
+      ) {
         return;
       }
 
-      options.set(zoomOption(tileset), pending.zoom);
+      options.set(zoomOption(pending.tileset), pending.zoom);
       this.setZoom(pending.zoom, pending.anchor);
     });
   }
@@ -509,33 +521,37 @@ export class GamePortal extends Portal {
   #wheel(event: WheelEvent): void {
     event.preventDefault();
 
-    const delta = event.deltaY,
+    // Read first: Firefox counts its mouse's wheel in lines only for a page that asks how it counts before how far.
+    const inPixels = event.deltaMode === 0,
+      delta = event.deltaY,
       turn = this.#wheelTurn;
 
     if (delta === 0) {
       return;
     }
 
-    // Turned the other way, or after a pause: what was turned before counts for nothing.
-    if (
-      event.timeStamp - turn.at > WHEEL_PAUSE ||
-      Math.sign(delta) !== Math.sign(turn.delta)
-    ) {
-      turn.delta = 0;
-    }
+    // Turned the other way, or after a pause: a new turn, which makes a tenth at once, and what was turned before
+    //  counts for nothing.
+    const direction = Math.sign(delta),
+      fresh =
+        event.timeStamp - turn.at > WHEEL_PAUSE || direction !== turn.direction;
 
     turn.at = event.timeStamp;
-    turn.delta += delta;
+    turn.direction = direction;
 
-    // One tenth at most for each turn of the wheel, however far it turned: a notch on a fast wheel is many hundreds px.
-    if (
-      event.deltaMode === 0 &&
-      Math.abs(turn.delta) < (event.ctrlKey ? PINCH_STEP : WHEEL_STEP)
-    ) {
-      return;
+    if (fresh) {
+      turn.delta = 0;
+    } else if (inPixels) {
+      turn.delta += delta;
+
+      // One tenth at most for each turn of the wheel, however far it turned: a notch on a fast wheel is many hundreds
+      //  of px.
+      if (Math.abs(turn.delta) < (event.ctrlKey ? PINCH_STEP : WHEEL_STEP)) {
+        return;
+      }
+
+      turn.delta = 0;
     }
-
-    turn.delta = 0;
 
     // Held still where the pointer is, which a glide would carry off.
     this.stopGlide();
