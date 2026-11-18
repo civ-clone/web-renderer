@@ -28,9 +28,10 @@ import is an upgrade.
   - One set's import: its own instructions, a file picker offering its files' extensions, and only its files read
     (another's are left out with a console warning).
 - `packages/menus/lib/civ1Sound.ts` (#126, #1063)
-  - Civilization's music as a set: its manifest (`civ1-adlib.json`, a sound set's, read by
+  - Civilization's music as a set: its manifest (`packages/assets/sounds/civ1-adlib.json`, a sound set's, read by
     `packages/assets/sounds/SoundDescriptor.ts` against `sound.schema.json`) and its import, which checks `ASOUND.CVL`
-    with the `audio` package's `CvlImage` and keeps it under `SOUND_DRIVER`, as before. Registered beside the library,
+    with the `audio` package's `CvlImage` and keeps it under `SOUND_DRIVER`, as before, which the store takes from the
+    manifest's `storage` (#1106). Registered beside the library,
     which loads it, as the menus package has both the store and the audio package to hand.
 - `packages/tileset-civ1` (`@civ-clone/ui-tileset-civ1`, #97)
   - Civ1's art pack: its descriptor (`civ1.json`) and its import (`lib/civ1Import.ts`), which loading the package

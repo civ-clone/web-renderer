@@ -20,9 +20,10 @@
 `frontend.js` starts `dist/backend.js` as a Web Worker (`src/js/frontend.ts`), so both
 have to be served from `dist/`. It also copies `changelog/releases.json` to
 `dist/releases.json`, which the Releases window fetches when it opens (#476). And
-it copies the tileset descriptor's JSON Schema to `dist/tileset.schema.json`, where
-pack authors' editors can be pointed at it (#869, `docs/asset-system.md`); the copy
-in the bundle has its titles and descriptions left out.
+it copies the tileset descriptor's JSON Schema to `dist/tileset.schema.json`, and the
+sound set manifest's to `dist/sound.schema.json` (#1063), where pack authors' editors
+can be pointed at them (#869, `docs/asset-system.md`); the copies in the bundle have
+their titles and descriptions left out.
 
 Before bundling, it builds the hosted sets' sheets (#1063, `tools/lib/hostedSets.js`): each set that ships with
 civ.one, such as the pixel art, as one sprite sheet and an index of where each sprite is in it,

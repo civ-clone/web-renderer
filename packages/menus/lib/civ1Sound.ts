@@ -11,12 +11,9 @@ import {
   registerPackImport,
   unsupportedFile,
 } from '@civ-clone/ui-assets/lib/packImports';
-import {
-  readSoundDescriptor,
-  registerSoundSet,
-} from '@civ-clone/ui-assets/sounds/SoundDescriptor';
+import { registerSoundSet } from '@civ-clone/ui-assets/sounds/SoundDescriptor';
 import CvlImage from '@civ-clone/ui-audio/cvl/Image';
-import civ1Adlib from './civ1-adlib.json';
+import civ1Adlib from '@civ-clone/ui-assets/sounds/civ1Adlib';
 import { t } from 'i18next';
 
 // Civilization's music (#126), as a set in the library (#1063): the AdLib sound driver, ASOUND.CVL, from the player's
@@ -24,7 +21,7 @@ import { t } from 'i18next';
 //  music reads. Registered here, where the library is, as the audio package that reads the file doesn't use the store.
 
 /** The sound set's manifest. */
-export const civ1Sound = registerSoundSet(readSoundDescriptor(civ1Adlib));
+export const civ1Sound = registerSoundSet(civ1Adlib);
 
 const soundFile = 'ASOUND.CVL';
 

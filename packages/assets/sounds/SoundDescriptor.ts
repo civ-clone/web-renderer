@@ -40,6 +40,12 @@ export const readSoundDescriptor = (json: unknown): SoundDescriptor => {
   return json as SoundDescriptor;
 };
 
+/** The key `sound`'s file `name` is kept under in the store: `prefix + name + ext`, from its manifest's `storage`. */
+export const soundFileKey = (
+  { storage: { prefix, ext } }: Pick<SoundDescriptor, 'storage'>,
+  name: string
+): string => `${prefix}${name}${ext}`;
+
 const registered: SoundDescriptor[] = [];
 
 /** Lists `sound` in the library (#1063): its package calls this as it is loaded. Throws for a second with its id. */

@@ -1,5 +1,5 @@
 {
-  "$schema": "../../assets/sounds/sound.schema.json",
+  "$schema": "./sound.schema.json",
   "schema": 1,
   "kind": "sound",
   "id": "civ1-adlib",
