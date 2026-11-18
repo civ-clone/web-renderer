@@ -1,9 +1,13 @@
 // The 3D map's entry (docs/3d-renderer.md §2.4, plan 0.2):
-//  - `?3d=1` asks for it, a browser without WebGL2 or a script that won't load leaves the map 2D, and the player is told
-//    why once;
-//  - a game drawn in 3D is given what the 2D map is, with the 2D art's sizes as the 2D map's portal has them;
-//  - the 3D view takes the game's tiles and orders, opens cities and hands on a unit picked, and draws when asked;
-//  - `dist/map3d.js` bundles three.js and its own code, and nothing that has state of its own.
+//  - `?3d=1` asks for it; a browser without WebGL2, a script that won't load, or a 3D map that can't be made on the
+//    map's canvas leaves the map 2D, and the player is told why once;
+//  - the script is fetched by a tag versioned by the build, once however many starts ask, and given up after a while;
+//  - a game drawn in 3D is given what the 2D map is, with the 2D art's sizes as the 2D map's portal has them, and the
+//    art chosen mid-game followed;
+//  - the 3D view takes the game's tiles and orders, opens cities and hands on a unit picked, draws once a frame however
+//    often it's asked, is sized to its box only when that changes, and lets everything go when it's taken down;
+//  - `dist/map3d.js` bundles three.js and its own code, and nothing that has state of its own; and nothing outside the 3D
+//    map's package imports three.js or that package.
 
 // Must stay first: it gives the map a `document`.
 import './lib/dom';
@@ -19,29 +23,32 @@ import {
 } from '@civ-clone/ui-protocol/types';
 import {
   CreateMapView3D,
+  MAP3D_GLOBAL,
   MapView3DDeps,
 } from '@civ-clone/ui-map/MapView3DFactory';
 import MapView2D from '@civ-clone/ui-game/MapView2D';
 import MapView3D from '@civ-clone/ui-map-3d/MapView3D';
-import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import World from '@civ-clone/ui-map/components/World';
 import {
-  defaultZoom,
+  chooseMapTileset,
+  installTilesets,
   mapTileset,
-  nativeTileSize,
-  zoomFor,
   zoomOption,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import {
   forgetMap3D,
+  loadMap3DScript,
   makeMapView,
   map3dAsked,
   prepareMap3D,
 } from '@civ-clone/ui-game/lib/map3d';
 import { Stage } from '@civ-clone/ui-map-3d/stage';
+import { setBuild } from '@civ-clone/ui-client/lib/build';
+import { sourcesUnder, specifiersOf } from './lib/imports';
 import { createRequire } from 'module';
 import { join } from 'path';
+import { readFileSync } from 'fs';
 
 const failures: string[] = [];
 let checks = 0,
@@ -170,6 +177,7 @@ const activated: string[] = [],
       open: (city: City, portal: unknown) =>
         void opened.push(`${city.id} from ${portal?.constructor.name}`),
     },
+    coveredBy: [] as HTMLElement[],
     mapPortal: mapCanvas,
     minimapCanvas,
     options,
@@ -177,6 +185,10 @@ const activated: string[] = [],
     transport,
     world: worldData,
   };
+
+// Civ1's art for the square grid, which the pixel art can be chosen over mid-game.
+installTilesets({});
+chooseMapTileset('square', '');
 
 // The query string.
 
@@ -187,20 +199,24 @@ expect(
 );
 
 (async (): Promise<void> => {
-  // Not asked for: nothing is fetched, nothing is said, and the map is 2D.
-  const told: string[] = [];
+  const told: string[] = [],
+    say = (text: string) => void told.push(text);
   let loads = 0;
+
   const load = async (): Promise<CreateMapView3D> => {
-    loads++;
+      loads++;
 
-    return (deps: MapView3DDeps) => new MapView3D(deps, fakeStage);
-  };
+      return (deps: MapView3DDeps) => new MapView3D(deps, fakeStage);
+    },
+    // A page as each case starts: nothing fetched, nothing said.
+    fresh = (): void => {
+      forgetMap3D();
+      told.length = 0;
+      loads = 0;
+    };
 
-  await prepareMap3D((text) => told.push(text), {
-    search: '',
-    webgl2: () => true,
-    load,
-  });
+  // Not asked for: nothing is fetched, nothing is said, and the map is 2D.
+  await prepareMap3D({ say, search: '', webgl2: () => true, load });
 
   expect('not asked for, nothing is fetched or said', [loads, told], [0, []]);
 
@@ -215,18 +231,10 @@ expect(
   notAsked.dispose();
 
   // Asked for, in a browser without WebGL2: said once, and drawn in 2D.
-  forgetMap3D();
+  fresh();
 
-  await prepareMap3D((text) => told.push(text), {
-    search: '?3d=1',
-    webgl2: () => false,
-    load,
-  });
-  await prepareMap3D((text) => told.push(text), {
-    search: '?3d=1',
-    webgl2: () => false,
-    load,
-  });
+  await prepareMap3D({ say, search: '?3d=1', webgl2: () => false, load });
+  await prepareMap3D({ say, search: '?3d=1', webgl2: () => false, load });
 
   expect(
     'without WebGL2, nothing is fetched, and the player is told why once',
@@ -241,20 +249,18 @@ expect(
   noWebGL2.dispose();
 
   // Asked for, and its script won't load: said once, and drawn in 2D.
-  forgetMap3D();
-  told.length = 0;
+  fresh();
 
   const error = console.error;
 
   console.error = () => {};
 
-  await prepareMap3D((text) => told.push(text), {
+  await prepareMap3D({
+    say,
     search: '?3d=1',
     webgl2: () => true,
     load: () => Promise.reject(new Error('offline')),
   });
-
-  console.error = error;
 
   expect('a script that will not load is said, once', told.length, 1);
   expect(
@@ -269,27 +275,65 @@ expect(
     true
   );
 
-  // Asked for, with WebGL2: fetched once, and every game after is drawn in 3D.
-  forgetMap3D();
-  told.length = 0;
+  // Its factory throws on the map's own canvas (WebGL2 refused there after all): said once, and drawn in 2D.
+  fresh();
 
-  await prepareMap3D((text) => told.push(text), {
+  await prepareMap3D({
+    say,
     search: '?3d=1',
     webgl2: () => true,
-    load,
-  });
-  await prepareMap3D((text) => told.push(text), {
-    search: '?3d=1',
-    webgl2: () => true,
-    load,
+    load: async () => () => {
+      throw new Error('Error creating WebGL context.');
+    },
   });
 
-  expect('with WebGL2, fetched once, and nothing said', [loads, told], [1, []]);
+  const refused = makeMapView(deps2D);
+
+  console.error = error;
+
+  expect(
+    'a 3D map that cannot be made leaves the game on the 2D map, and says why once',
+    [refused instanceof MapView2D, told.length],
+    [true, 1]
+  );
+
+  refused.dispose();
+
+  // Asked for, with WebGL2: fetched once however many starts ask, and every game after is drawn in 3D.
+  fresh();
+
+  await Promise.all([
+    prepareMap3D({ say, search: '?3d=1', webgl2: () => true, load }),
+    prepareMap3D({ say, search: '?3d=1', webgl2: () => true, load }),
+  ]);
+  await prepareMap3D({ say, search: '?3d=1', webgl2: () => true, load });
+
+  expect(
+    'with WebGL2, fetched once for starts at once and after, and nothing said',
+    [loads, told],
+    [1, []]
+  );
 
   kept[zoomOption(mapTileset('square'))] = 2.6;
   kept.lockVerticalEdges = true;
 
-  const view = makeMapView({ ...deps2D, coveredBy: [] }) as MapView3D;
+  // The 2D map, as it would be drawn with the same art and options: the city screen draws its map with that art, so
+  //  the 3D map's portal says what the 2D map's does.
+  const sizes = (portal: {
+      zoom(): number;
+      scale(): number;
+      nativeTileSize(): { width: number; height: number };
+    }) => [portal.zoom(), portal.scale(), portal.nativeTileSize()],
+    shown2D = (): unknown[] => {
+      const view2D = new MapView2D(deps2D),
+        shown = sizes(view2D.portal);
+
+      view2D.dispose();
+
+      return shown;
+    };
+
+  const view = makeMapView(deps2D) as MapView3D;
 
   expect('the game is drawn on the 3D map', view instanceof MapView3D, true);
   expect(
@@ -297,43 +341,12 @@ expect(
     [view.world instanceof World, view.world.width(), view.world.get(2, 3).id],
     [true, 4, 'Tile-2-3']
   );
-
-  // The 2D map's portal, as the 2D map makes it for the same art and options (`MapView2D`): the city screen draws its
-  //  map with that art, so the 3D map's portal says what that one says.
-  const portal2D = (): Portal => {
-    const tileset = mapTileset('square');
-
-    return new Portal(
-      new World(worldData),
-      transport,
-      document.createElement('canvas'),
-      {
-        cityOpener: null,
-        lockVerticalEdges: false,
-        playerId: 'Player-1',
-        scale: tileset.defaultScale,
-        zoom: zoomFor(
-          tileset,
-          options.get(zoomOption(tileset), defaultZoom(tileset))
-        ),
-        tileSize: nativeTileSize(tileset),
-      }
-    );
-  };
-
-  const sizes = (portal: {
-      zoom(): number;
-      scale(): number;
-      nativeTileSize(): { width: number; height: number };
-    }) => [portal.zoom(), portal.scale(), portal.nativeTileSize()],
-    shown2D = sizes(portal2D());
-
   expect(
-    'the 3D map’s portal has the 2D map art’s zoom, scale and tile, as the 2D map’s portal does',
+    'its portal has the 2D map art’s zoom, scale and tile, as the 2D map’s does',
     sizes(view.portal),
-    shown2D
+    shown2D()
   );
-  expect('at the zoom kept', shown2D[0], 2.6);
+  expect('at the zoom kept', sizes(view.portal)[0], 2.6);
 
   // Options keeps the zoom, then tells the portal: read when asked, the new zoom is the city screen's.
   kept[zoomOption(mapTileset('square'))] = 1.4;
@@ -341,7 +354,7 @@ expect(
   expect(
     'a zoom chosen since is read when asked',
     sizes(view.portal),
-    sizes(portal2D())
+    shown2D()
   );
   expect(
     'and whether the view stops at the poles is the option’s',
@@ -349,9 +362,27 @@ expect(
     true
   );
 
-  // The view: sized to its canvas's box, and drawn when asked.
+  // Other art chosen mid-game (#1118): the 3D map isn't drawn with it, but the unit panel and windows are.
   expect(
-    'the stage is sized to the map’s box as it starts, and drawn',
+    'with the art as it was, nothing to redraw',
+    view.redrawArt(),
+    'unchanged'
+  );
+
+  chooseMapTileset('square', 'civ1-pixelart');
+
+  expect(
+    'other art chosen is redrawn, once, for the game to draw the panel and windows with it',
+    [view.redrawArt(), view.redrawArt(), sizes(view.portal)],
+    ['redrawn', 'unchanged', shown2D()]
+  );
+
+  chooseMapTileset('square', '');
+  view.redrawArt();
+
+  // The view: sized to its canvas's box, and drawn, as it starts.
+  expect(
+    'the stage is sized to the map’s box as it starts, and drawn at once',
     staged.splice(0),
     ['resize 640×480@1', 'render']
   );
@@ -359,10 +390,24 @@ expect(
   box.width = 800;
   window.dispatchEvent(new Event('resize'));
 
-  expect('and again as the window is resized', staged.splice(0), [
+  expect('and again as the box changes size', staged.splice(0), [
     'resize 800×480@1',
     'render',
   ]);
+
+  window.dispatchEvent(new Event('resize'));
+
+  expect(
+    'but not when it has not: sizing a canvas clears it',
+    staged.splice(0),
+    []
+  );
+
+  box.height = 0;
+  window.dispatchEvent(new Event('resize'));
+  box.height = 480;
+
+  expect('nor while its box has no size', staged.splice(0), []);
 
   view.centre(tiles[5]);
 
@@ -429,7 +474,6 @@ expect(
     false
   );
   expect('nor are there view modes to flip', view.debugViewModes(), []);
-  expect('nor art of its own to redraw', view.redrawArt(), 'unchanged');
 
   // A unit picked in a city screen, and a city opened from the HUD.
   view.portal.emit('activate-unit', { id: 'Unit-2' } as unknown as Unit);
@@ -459,9 +503,105 @@ expect(
 
   expect('dispose lets the stage go', staged.splice(0), ['dispose']);
 
+  box.width = 900;
   window.dispatchEvent(new Event('resize'));
 
   expect('and stops following the window', staged.splice(0), []);
+
+  // In a browser, drawing waits for a frame, and many asks in one are drawn once; taken down, a frame still to come is
+  //  given up.
+  const frames = new Map<number, () => void>();
+  let nextFrame = 1;
+
+  Object.assign(globalThis, {
+    requestAnimationFrame: (callback: () => void): number => {
+      frames.set(nextFrame, callback);
+
+      return nextFrame++;
+    },
+    cancelAnimationFrame: (frame: number) => void frames.delete(frame),
+  });
+
+  const framed = makeMapView(deps2D) as MapView3D;
+
+  staged.length = 0;
+  framed.portal.render();
+  framed.portal.setCenter(2, 2);
+  framed.flush();
+
+  expect(
+    'asked to draw three times, it waits for one frame',
+    [staged.splice(0), frames.size],
+    [[], 1]
+  );
+
+  [...frames.values()].forEach((callback) => callback());
+  frames.clear();
+
+  expect('and draws once in it', staged.splice(0), ['render']);
+
+  framed.portal.render();
+  framed.dispose();
+
+  expect(
+    'taken down with a frame still to come, the frame is given up',
+    [frames.size, staged.splice(0)],
+    [0, ['dispose']]
+  );
+
+  delete (globalThis as any).requestAnimationFrame;
+  delete (globalThis as any).cancelAnimationFrame;
+
+  // The script itself: a tag versioned by the build, whose factory is what it puts on the page.
+  setBuild({ version: '0.1.0@abc', musicWorkletUrl: '' });
+
+  const lastScript = (): HTMLScriptElement =>
+      [...document.head.querySelectorAll('script')].pop() as HTMLScriptElement,
+    factory3D: CreateMapView3D = (deps) => new MapView3D(deps, fakeStage),
+    loaded = loadMap3DScript();
+
+  expect(
+    'the script is asked for by a tag versioned by the build',
+    lastScript().getAttribute('src'),
+    'dist/map3d.js?v=0.1.0%40abc'
+  );
+
+  (window as any)[MAP3D_GLOBAL] = { createMapView3D: factory3D };
+  lastScript().dispatchEvent(new Event('load'));
+
+  expect(
+    'loaded, it gives the factory it put on the page',
+    await loaded,
+    factory3D
+  );
+
+  const outcome = (promise: Promise<unknown>): Promise<string> =>
+      promise.then(
+        () => 'resolved',
+        (failure: Error) => failure.message
+      ),
+    empty = loadMap3DScript();
+
+  delete (window as any)[MAP3D_GLOBAL];
+  lastScript().dispatchEvent(new Event('load'));
+
+  const failing = loadMap3DScript();
+
+  lastScript().dispatchEvent(new Event('error'));
+
+  expect(
+    'one that puts nothing on the page, or can’t be fetched, or takes too long, is refused',
+    [
+      await outcome(empty),
+      await outcome(failing),
+      await outcome(loadMap3DScript(5)),
+    ],
+    [
+      'dist/map3d.js put no map on the page',
+      'dist/map3d.js could not be fetched',
+      'dist/map3d.js took too long to fetch',
+    ]
+  );
 
   // `dist/map3d.js`: three.js and the 3D map's own code, and from the rest only what has no state (the factory's name),
   //  so no registry or singleton the page's bundle has is bundled again with its own state.
@@ -495,6 +635,28 @@ expect(
     'and three.js is in it',
     inputs.some((path: string) => /three\/build\//.test(path)),
     true
+  );
+
+  // And the page's own bundle can't take three.js in: nothing outside the 3D map's package imports it, or that package.
+  const root = process.cwd(),
+    importers = [
+      ...sourcesUnder(join(root, 'packages')).filter(
+        (path) => !path.startsWith(join(root, 'packages', 'map-3d') + '/')
+      ),
+      ...sourcesUnder(join(root, 'src')),
+    ].filter((path) =>
+      specifiersOf(readFileSync(path, 'utf8')).some(
+        (specifier) =>
+          specifier === 'three' ||
+          specifier.startsWith('three/') ||
+          specifier.startsWith('@civ-clone/ui-map-3d')
+      )
+    );
+
+  expect(
+    'nothing outside the 3D map imports three.js or the 3D map',
+    importers.map((path) => path.slice(root.length + 1)),
+    []
   );
 
   finished = true;

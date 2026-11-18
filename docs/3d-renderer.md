@@ -329,16 +329,20 @@ The build is one `dist/frontend.js`, loaded by a classic `<script>`, with no cod
 As built in slice 0.2:
 
 - **The factory's types** (`MapView3DDeps`, `CreateMapView3D`) are in `packages/map/MapView3DFactory.ts`. The game
-  depends on them, not on `packages/map-3d`, so nothing in the main bundle can import three.js.
+  depends on them, not on `packages/map-3d`, so the main bundle has no reason to import three.js.
 - **The script** is loaded by a `<script>` tag, versioned by the build as `releases.json` is. It puts its factory on
   `window.civMap3D` (`packages/game/lib/map3d.ts`).
 - **When it's fetched:** a new game and a load both wait for the map's art before the worker is told to start
   (`provideStartPreparation`, `prepareSavedMapArt`). The script is fetched there too, so the game itself still starts
   all at once, on whichever map is ready.
-- **The gate:** `?3d=1`, and WebGL2. Without WebGL2, or if the script won't load, the map is 2D and the notification
-  bar says why, once.
-- **A test** (`tests/ui/map3d.ts`) bundles `map3d.js` and fails if it takes in anything from the other packages but the
-  factory's name.
+- **The gate:** `?3d=1`, and WebGL2. The map is 2D, and a window says why, once, if any of these happen:
+  - the browser has no WebGL2;
+  - the script won't load within 30 seconds;
+  - three.js can't make its renderer on the map's own canvas. Then the 2D map gets a fresh canvas.
+- **Tests** (`tests/ui/map3d.ts`):
+  - one bundles `map3d.js` and fails if it takes in anything from the other packages but the factory's name;
+  - another fails if anything outside `packages/map-3d` imports three.js or that package.
+- **Until later slices:** the minimap stays empty (1.5), and a long-range order's square can't be picked (1.3).
 - **Sizes**, minified: `map3d.js` is 556 KB (140 KB gzipped), and `frontend.js` grew by 1.7 KB (0.8 KB gzipped).
 
 ---

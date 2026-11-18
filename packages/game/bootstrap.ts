@@ -117,9 +117,6 @@ export class Renderer {
     //  only when the interface draws from it; a game's map's, as that game starts or loads (#1063).
     await installPacks();
 
-    // How the player is told the map is 2D after all under `?3d=1`: the notification bar, once it's made below.
-    let tell3D = (text: string): void => console.warn(text);
-
     // The art the map is drawn with, and the 3D map if the page asked for it (`lib/map3d.ts`), both before the game
     //  starts.
     provideStartPreparation(async (topologyId: string): Promise<boolean> => {
@@ -127,7 +124,7 @@ export class Renderer {
         return false;
       }
 
-      await prepareMap3D((text) => tell3D(text));
+      await prepareMap3D();
 
       return true;
     });
@@ -207,8 +204,6 @@ export class Renderer {
       );
 
       const notificationBar = new NotificationBar(elements.notificationArea);
-
-      tell3D = (text: string): void => notificationBar.show(text);
 
       // Saves are kept in the browser (#653), and downloaded from Load Game. One the browser won't keep is downloaded
       //  now instead, so it isn't lost.
@@ -337,7 +332,7 @@ export class Renderer {
         //  to be (#1063), or another set ready for its grid, which is said, when it can't be (#1141). With none, the
         //  start stops, saying why, and the save waits for a reload to try again, or is left for the menu.
         await prepareSavedMapArt(transport, save);
-        await prepareMap3D((text) => tell3D(text));
+        await prepareMap3D();
 
         await discardPendingSave();
         loadWaiting = false;

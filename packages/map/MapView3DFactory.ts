@@ -2,9 +2,9 @@
 //  the first time a game starts in 3D, so a player who keeps the 2D map never downloads three.js. Loaded, it puts its
 //  factory on the page under `MAP3D_GLOBAL`.
 //
-// Everything with state (the world, the transport, the options, the art's sizes) comes in through `MapView3DDeps`,
-//  made by the page's own bundle: the 3D script imports nothing that has state of its own, so no registry or singleton
-//  is bundled twice.
+// Everything with state (the world, the transport, the options it reads, the 2D art's sizes) comes in through
+//  `MapView3DDeps`, made by the page's own bundle: the 3D script imports nothing that has state of its own, so no
+//  registry or singleton is bundled twice.
 
 import { Unit } from '@civ-clone/ui-protocol/types';
 import { CityOpener } from './MapPortal';
@@ -19,8 +19,10 @@ export const MAP3D_GLOBAL = 'civMap3D';
 export type MapView3DDeps = {
   // A unit picked on the map, or in a city screen's units (the portal's `activate-unit`).
   activateUnit: (unit: Unit) => void;
-  // The 2D map art's sizes, read when asked, which the city screen still draws its map with (§2.1).
+  // The 2D map art, read when asked, which the city screen still draws its map with (§2.1): which set it is, which
+  //  changes when the player chooses other art mid-game (#1118), and its sizes.
   art: {
+    id(): string;
     nativeTileSize(): Size;
     scale(): number;
     zoom(): number;

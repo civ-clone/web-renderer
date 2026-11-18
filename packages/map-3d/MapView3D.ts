@@ -5,6 +5,7 @@
 //  - the land in 1.1;
 //  - the camera, centring and zoom in 1.2;
 //  - picking squares, hovering and hiding the units in 1.3.
+//  - the minimap's view of it in 1.5: it's left empty until then.
 // Until then, what the game asks of it is kept or let go as below, and a long-range order's square can't be picked: the
 //  order is given up, as if the player had.
 //
@@ -35,11 +36,18 @@ export class MapView3D implements MapRenderer {
   #unitsShown = true;
   #yieldsShown = false;
   #waiting = false;
+  // The 2D art the city screen and windows draw with, as it was when last asked.
+  #art: MapView3DDeps['art'];
+  #artId: string;
+  // The canvas's box and the screen's pixels per px it was last sized to, as `width×height@ratio`.
+  #size = '';
   #resizeHandler = (): void => this.#resize();
   #resizeObserver: ResizeObserver | null = null;
 
   constructor(deps: MapView3DDeps, stageFactory: StageFactory = createStage) {
     this.#canvas = deps.mapCanvas;
+    this.#art = deps.art;
+    this.#artId = deps.art.id();
     this.world = deps.world;
     this.portal = new MapPortal3D(deps, () => this.#draw());
     this.#stage = stageFactory(deps.mapCanvas);
@@ -116,9 +124,20 @@ export class MapView3D implements MapRenderer {
     this.#incomingTiles.set(`${tile.x},${tile.y}`, tile);
   }
 
-  /** The 3D map isn't drawn with the 2D art, so another set chosen for it changes nothing here. */
-  redrawArt(): 'unchanged' {
-    return 'unchanged';
+  /**
+   * The 3D map isn't drawn with the 2D art, but the unit panel and windows are, so another set chosen mid-game (#1118)
+   *  is `redrawn`, for the game to draw them again with it.
+   */
+  redrawArt(): 'redrawn' | 'unchanged' {
+    const id = this.#art.id();
+
+    if (id === this.#artId) {
+      return 'unchanged';
+    }
+
+    this.#artId = id;
+
+    return 'redrawn';
   }
 
   releaseTiles(): void {
@@ -191,13 +210,23 @@ export class MapView3D implements MapRenderer {
     });
   }
 
+  // Sized to its parent's box, only when that or the screen's pixels have changed: sizing a canvas clears it, even to
+  //  the size it has (as `MapView2D#resize` says). Drawn at once, so a resize never shows a cleared canvas for a frame.
+  //  A box with no size yet (a layout not settled) is left until it has one.
   #resize(): void {
     const parent = this.#canvas.parentElement,
-      width = parent?.offsetWidth || this.#canvas.width,
-      height = parent?.offsetHeight || this.#canvas.height;
+      width = parent?.offsetWidth ?? 0,
+      height = parent?.offsetHeight ?? 0,
+      ratio = window.devicePixelRatio || 1,
+      size = `${width}×${height}@${ratio}`;
 
-    this.#stage.resize(width, height, window.devicePixelRatio || 1);
-    this.#draw();
+    if (width === 0 || height === 0 || size === this.#size) {
+      return;
+    }
+
+    this.#size = size;
+    this.#stage.resize(width, height, ratio);
+    this.#stage.render();
   }
 }
 
