@@ -175,8 +175,8 @@ Building another world from the form starts it in the middle again.
   (not offered yet: no key or menu chooses one), a ray from the screen to the ground, and dragging that keeps the ground
   under the pointer. Tested at every yaw and pitch by `tests/ui/orbit.ts`.
 - **What the view does:**
-  - centring on a square glides the camera there: at once the first time, as a game starts or loads, and under reduced
-    motion;
+  - centring on a square glides the camera there: at once the first time, as a game starts or loads, anywhere
+    further than about the camera sees round its focus, and under reduced motion;
   - the camera stops at the poles when the player asks the map to (`lockVerticalEdges`);
   - it follows the land's height under the focus, eased, so it doesn't jolt over hills;
   - the world's copies follow the camera: every copy the haze doesn't hide is drawn, however far it sees;

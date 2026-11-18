@@ -725,18 +725,22 @@ export class MapView3D implements MapRenderer {
       [toU, toV] = (this.#glide?.to ?? this.#orbit).focus;
 
     if (u === toU && v === toV) {
-      this.#centred = true;
-
       return;
     }
 
     const target: Orbit = {
-      ...(this.#glide?.to ?? this.#orbit),
-      focus: [u, v],
-    };
+        ...(this.#glide?.to ?? this.#orbit),
+        focus: [u, v],
+      },
+      { u: periodU, v: periodV } = this.#land.layout.period(),
+      short = (delta: number, period: number | null): number =>
+        period === null ? delta : delta - period * Math.round(delta / period),
+      [fromU, fromV] = this.#orbit.focus,
+      away = Math.hypot(short(u - fromU, periodU), short(v - fromV, periodV));
 
-    // The first time, as a game starts or loads: there at once, rather than gliding over the world from its corner.
-    if (!this.#centred) {
+    // The first time, as a game starts or loads, and anywhere further than the camera sees round its focus: there at
+    //  once, rather than gliding over the world.
+    if (!this.#centred || away > this.#orbit.distance * 1.5) {
       this.#centred = true;
       this.setOrbit(target);
 
