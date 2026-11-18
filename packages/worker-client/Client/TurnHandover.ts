@@ -194,12 +194,16 @@ export class TurnHandover {
   // Says an action has been handled, once the patch with its result has gone (#326). An action's patch can't be told
   //  from any other by what is in it (a `unitActions` answer can arrive first, with the unit where it was), so the UI
   //  waits for this to know a move it has drawn ahead was refused.
-  #acknowledge({ name, id, unitAction, target }: TransportHandledAction): void {
+  #acknowledge(
+    { name, id, unitAction, target }: TransportHandledAction,
+    turnEnded: boolean = false
+  ): void {
     this.#context.transport.send('actionHandled', {
       name,
       id,
       unitAction,
       target,
+      ...(turnEnded ? { turnEnded } : {}),
     });
   }
 
@@ -281,8 +285,9 @@ export class TurnHandover {
           acknowledged = false,
           turnEndedSent = false;
 
+        // Saying whether the turn ended, for the page to tell an `EndTurn` refused from one taken (#1169).
         const acknowledge = (): void => {
-          this.#acknowledge(args[0]);
+          this.#acknowledge(args[0], ended);
 
           acknowledged = true;
         };

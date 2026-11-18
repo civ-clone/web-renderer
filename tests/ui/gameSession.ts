@@ -944,14 +944,52 @@ const run = async (): Promise<void> => {
     [0, 1]
   );
 
-  // Tidied away for what follows.
+  // Its rates answered and the window closed, the turn is ended again; a window opened now and closed with a move held
+  //  sends nothing once the End Turn's answer says the turn has ended.
   deliver('gameDataPatch', []);
   deliver('actionHandled', { name: 'AdjustTradeRates' });
   (
     gapWindow.element().querySelector('footer .btn-primary') as HTMLElement
   ).click();
   await new Promise((resolve) => setTimeout(resolve, 0));
+  // OK sent the rates again, as the engine's patches never showed them taken here: answered too.
+  deliver('actionHandled', { name: 'AdjustTradeRates' });
+
+  const endTurnsBeforeAccepted = endTurns(),
+    acceptedWindow = openTradeRates(
+      {
+        id: 'PlayerTradeRates-1',
+        all: [
+          { _: 'Tax', value: 10 },
+          { _: 'Luxuries', value: 20 },
+          { _: 'Research', value: 70 },
+        ],
+      } as unknown as PlayerTradeRates,
+      transport
+    ),
+    acceptedTax = acceptedWindow
+      .element()
+      .querySelector('input[type="number"]') as HTMLInputElement,
+    rateSendsBeforeAccepted = rateSends();
+
+  acceptedTax.value = '60';
+  acceptedTax.dispatchEvent(new Event('input'));
+  // The sessions started earlier in this file still listen for the window's close, on maps with no actions to look at.
+  options.set('autoEndOfTurn', false);
+  (
+    acceptedWindow.element().querySelector('footer .btn-primary') as HTMLElement
+  ).click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  options.set('autoEndOfTurn', true);
+  deliver('actionHandled', { name: 'EndTurn', turnEnded: true });
+  await new Promise((resolve) => setTimeout(resolve, 250));
   deliver('turnEnded');
+
+  expect(
+    'closed before an End Turn that ends the turn, its rates are not sent after it',
+    [endTurnsBeforeAccepted, rateSends() - rateSendsBeforeAccepted],
+    [6, 0]
+  );
 
   options.set('autoEndOfTurn', false);
 

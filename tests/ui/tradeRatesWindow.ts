@@ -546,6 +546,26 @@ const liveAndCancel = async (): Promise<void> => {
   answerAll();
   await wait(0);
 
+  // Closed while End Turn's answer is awaited, and the turn ends: nothing is sent after it.
+  const closedAccepted = openTradeRates(plain([40, 0, 60]), transport),
+    beforeClosedAccepted = sent.length;
+
+  endTurnSent();
+  move(closedAccepted.element(), 0, 10);
+  cancel(closedAccepted.element()).click();
+  // Accepted: `GameSession` leaves the ending as it is, and `turnEnded` follows.
+  setTradeRatesWaiting(true);
+  setTradeRatesWaiting(false);
+  await wait(tradeRatesDelay + 50);
+
+  expect(
+    'closed before an End Turn that ends the turn, nothing is sent after it',
+    sent.length - beforeClosedAccepted,
+    0
+  );
+
+  await wait(0);
+
   // Opened between End Turn and `turnEnded`: a move is held, not sent after End Turn.
   endTurnSent();
 
@@ -606,6 +626,38 @@ const liveAndCancel = async (): Promise<void> => {
       sent.at(-1)?.[1].value.find(([rate]: [string]) => rate === 'Tax'),
     ],
     [0, ['Tax', 50], 1, 2, ['Tax', 10]]
+  );
+
+  answerAll();
+  await wait(0);
+
+  // Opened again during the hand-over, after one was cancelled: it starts from the rates the first put back, takes over
+  //  sending them, and its own Cancel leaves them to go once it's handed back, once.
+  const firstCarried = openTradeRates(plain([50, 0, 50]), transport);
+
+  move(firstCarried.element(), 0, 70);
+  await wait(tradeRatesDelay + 50);
+  answerAll();
+  setTradeRatesWaiting(true, false);
+  cancel(firstCarried.element()).click();
+
+  const secondCarried = openTradeRates(plain([70, 0, 30]), transport),
+    secondShows = Array.from(
+      secondCarried.element().querySelectorAll('input[type="number"]')
+    ).map((input) => Number((input as HTMLInputElement).value)),
+    beforeSecond = sent.length;
+
+  cancel(secondCarried.element()).click();
+  setTradeRatesWaiting(false, false);
+
+  expect(
+    'reopened during a hand-over, it starts from the rates to be put back, and they go once',
+    [
+      secondShows,
+      sent.length - beforeSecond,
+      sent.at(-1)?.[1].value.find(([rate]: [string]) => rate === 'Tax'),
+    ],
+    [[50, 0, 50], 1, ['Tax', 50]]
   );
 
   answerAll();
