@@ -1,0 +1,1 @@
+{"version":"0.1.0@1ef491d6","date":"2026-11-18T20:20:55.000Z","localChanges":["When you move a trade rate after ending your turn, before the game has answered, the Adjust trade rates window now says the new rates are applied only if your turn goes on, as they can wait a while when talks are open (closes #1183)."],"externalChanges":{}}
