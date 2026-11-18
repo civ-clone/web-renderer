@@ -140,6 +140,7 @@
     "test:minimap": "node tools/run-suite.js ui minimap",
     "test:map-gestures": "node tools/run-suite.js ui mapGestures",
     "test:map-view": "node tools/run-suite.js ui mapView",
+    "test:figures": "node tools/run-suite.js ui figures",
     "test:map3d": "node tools/run-suite.js ui map3d",
     "test:ground-layouts": "node tools/run-suite.js ui groundLayouts",
     "test:relief": "node tools/run-suite.js ui relief",

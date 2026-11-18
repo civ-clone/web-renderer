@@ -106,7 +106,7 @@ export class MapView3D implements MapRenderer {
   #centred = false;
   // What a square does when clicked or held, the page's; and a square being chosen for a long-range order, if one is.
   #squares: MapView3DDeps['squares'];
-  // How the page words markers: cities' names.
+  // How the page words markers: cities' names, and busy units' letters.
   #words: MarkerWords;
   #transport: MapView3DDeps['transport'];
   #picking: Picking | null = null;
@@ -162,7 +162,7 @@ export class MapView3D implements MapRenderer {
     this.#canvas = deps.mapCanvas;
     this.#coveredBy = deps.coveredBy;
     this.#art = deps.art;
-    this.#words = { cityName: deps.cityName };
+    this.#words = { cityName: deps.cityName, unitStatus: deps.unitStatus };
     this.#artId = deps.art.id();
     this.world = deps.world;
     this.#land = new Land(deps.world);

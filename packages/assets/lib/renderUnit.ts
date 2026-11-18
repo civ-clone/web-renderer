@@ -26,9 +26,11 @@ const renderedUnitCache = new Map<string, HTMLCanvasElement>();
 onPreloadedImagesChanged(() => renderedUnitCache.clear());
 onSpriteAnchorsChanged(() => renderedUnitCache.clear());
 
-// The letter shown over a busy unit: the locale's icon for its busy state, or the
-// capitals of the state's name.
-const unitStatus = (unit: Pick<UnitData, 'busy'>): string | null =>
+/**
+ * The letter shown over a busy unit: the locale's icon for its busy state, or the capitals of the state's name. The 3D
+ * map writes it on the unit's flag.
+ */
+export const unitStatus = (unit: Pick<UnitData, 'busy'>): string | null =>
   unit.busy
     ? entityName(
         unit.busy,

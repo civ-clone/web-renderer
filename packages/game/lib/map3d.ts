@@ -27,6 +27,7 @@ import {
   zoomOption,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
+import { unitStatus } from '@civ-clone/ui-assets/lib/renderUnit';
 import MapView2D, { MapView2DDeps } from '../MapView2D';
 import mapSquares from './mapSquares';
 import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
@@ -252,6 +253,7 @@ export const makeMapView = (
       playerId: deps.playerId,
       squares: mapSquares,
       transport: deps.transport,
+      unitStatus,
       world,
     });
   } catch (error) {

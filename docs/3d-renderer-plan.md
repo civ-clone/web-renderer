@@ -321,6 +321,19 @@ Epic's UE4 skeleton or only match its bone names.
   - flags, with the veteran mark, the count, hit points, sentry and orders;
   - the active unit's ring, following the marker option.
 - **Tests:** a test checks that every unit type Civ1 and Civ2 name has a model.
+- **First part, the built-in units:**
+  - `packages/models-builtin/units.ts` says what each of Civ1's and Civ2's unit types looks like: its shape (on foot,
+    mounted, an elephant, a cart, siege, a vehicle, a ship, an aircraft, a helicopter, a missile), its era's kit, what
+    it carries, its hull, and how many figures stand for it. A type it doesn't know is drawn by its kind (`Naval`,
+    `Air`).
+  - `packages/map-3d/markers/figures.ts` makes each look from plain shapes in the owner's colours, merged into one
+    geometry, half as big again as life so they read at a distance.
+  - A unit stands on a stand in its owner's second colour (a ship rides the water without one), behind a low wall when
+    fortified. Its flag flies over it, with the stack's size, the 2D map's letter for what it's busy with, a veteran's
+    star, and a bar for its hit points when it's hurt.
+  - The debug page lays out every unit type with `?gallery=1`.
+- **Still to do in 2.1:** the `models` manifest kind and its validator; the ring following the marker option; facing
+  the way a unit last moved (needs P2).
 
 ### 2.2 glTF and skeletal animation
 

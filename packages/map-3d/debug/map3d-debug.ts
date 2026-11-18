@@ -13,11 +13,18 @@ import Transport from '@civ-clone/ui-client/Transport';
 import World from '@civ-clone/ui-map/components/World';
 import generateWorld from './generateWorld';
 import pageOptions from './pageOptions';
-import populate from './populate';
+import populate, { gallery } from './populate';
 
-// The tiles, with the made-up cities and units on them.
-const populated = (tiles: PlayerTile[], seed: number): PlayerTile[] => {
-  populate(tiles, seed);
+// The tiles, with the made-up cities and units on them, or every unit type laid out about (`x`, `y`).
+const populated = (
+  tiles: PlayerTile[],
+  { seed, gallery: laidOut, x, y }: ReturnType<typeof pageOptions>
+): PlayerTile[] => {
+  if (laidOut) {
+    gallery(tiles, x, y);
+  } else {
+    populate(tiles, seed);
+  }
 
   return tiles;
 };
@@ -86,7 +93,7 @@ const start = (script: Map3DScript): void => {
       topologyId: options.topologyId,
       tiles: populated(
         terrain.flatMap((row, y) => row.map((name, x) => tileAt(x, y, name))),
-        options.seed
+        options
       ),
     }),
     view = script.createMapView3D({
@@ -121,6 +128,9 @@ const start = (script: Map3DScript): void => {
       },
       // Nothing on the page talks to a game.
       transport: {} as Transport,
+      // No locale here: the capitals of what a unit's busy with, as the 2D map falls back on.
+      unitStatus: (unit) =>
+        unit.busy ? unit.busy._.replace(/[a-z]+/g, '') : null,
       world,
     }),
     centre = { x: options.x, y: options.y },
