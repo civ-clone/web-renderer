@@ -3,6 +3,7 @@
 
 import { Tile, Unit as UnitData } from '@civ-clone/ui-protocol/types';
 import { IconLayer } from '@civ-clone/ui-assets/lib/unitActionIcon';
+import { followInterfaceArt } from '@civ-clone/ui-assets/lib/interfaceArt';
 import {
   OrderIcons,
   currentOrderIcons,
@@ -129,7 +130,11 @@ export const openUnitMenu = (
     });
 
   // Drawn once they're in the page, at the size it shows them (#352).
-  icons.forEach(([canvas, layers]) => draw(canvas, layers));
+  icons.forEach(([canvas, layers]) => {
+    draw(canvas, layers);
+    // Again as the sprites change, in a game with art of its own (`followInterfaceArt`).
+    followInterfaceArt(canvas, () => draw(canvas, layers));
+  });
 
   return menu;
 };

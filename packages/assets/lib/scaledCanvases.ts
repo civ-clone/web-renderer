@@ -1,3 +1,4 @@
+import { followInterfaceArt } from './interfaceArt';
 import { iconCanvasSize } from './unitActionIcon';
 
 type Draw = (canvas: HTMLCanvasElement) => void;
@@ -24,11 +25,19 @@ export class ScaledCanvases {
     this.#watchRatio();
   }
 
-  /** Draws `canvas` now, and again whenever it's shown at another size. */
+  /**
+   * Draws `canvas` now, and again whenever it's shown at another size, or, in a game with art of its own, the sprites
+   *  it's drawn from change (`followInterfaceArt`), as a sheet a sprite falls back to arrives.
+   */
   add(canvas: HTMLCanvasElement, draw: Draw): void {
     this.#drawn.set(canvas, draw);
     draw(canvas);
     this.#observer?.observe(canvas);
+    followInterfaceArt(canvas, () => {
+      if (this.#drawn.get(canvas) === draw) {
+        draw(canvas);
+      }
+    });
   }
 
   /** Forgets them all, as the buttons they're on are replaced. */

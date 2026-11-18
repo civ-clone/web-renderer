@@ -18,6 +18,7 @@ import classicManifest from '@civ-clone/ui-interface-classic/manifest.json';
 import modernManifest from '@civ-clone/ui-interface-modern/manifest.json';
 import { provideInterfaceArt } from '@civ-clone/ui-assets/lib/interfaceArt';
 import { setSprites } from '@civ-clone/ui-assets/lib/getPreloadedImage';
+import ScaledCanvases from '@civ-clone/ui-assets/lib/scaledCanvases';
 import { Tile, Unit, UnitAction } from '@civ-clone/ui-protocol/types';
 import {
   applyInterface,
@@ -217,6 +218,25 @@ expect(
   ]
 );
 
+// A button drawn before a sprite it takes has come is drawn again as it comes, until it's replaced.
+const canvases = new ScaledCanvases(() => 0),
+  followedCanvas = { clientWidth: 16 } as unknown as HTMLCanvasElement;
+let draws = 0;
+
+canvases.add(followedCanvas, () => draws++);
+setSprites(new Map());
+
+const afterChange = draws;
+
+canvases.clear();
+setSprites(new Map());
+
+expect(
+  "an order button is drawn again as the sprites change in a Civ2 game, and not once it's been replaced",
+  [afterChange, draws],
+  [2, 2]
+);
+
 // The lost-city notice: our city, in our colours and our civilization's style.
 expect(
   'the lost city is ours',
@@ -231,8 +251,69 @@ expect(
   ]
 );
 
-// The pixel art as the theme's art, in a Civ1 game: its own names, as before.
+// A Civ1 game's buttons are drawn as ever: each sprite centred by what's drawn in it, at the picture's own scale, and
+//  not followed.
 setRuleSetTileset(null);
+installTilesets({
+  civ1: { complete: true, metadata: null },
+  civ2: {
+    complete: true,
+    metadata: {
+      anchors: {},
+      colours: { flag: [{ primary: [250, 1, 2], secondary: [160, 3, 4] }] },
+    },
+  },
+});
+setMapGrid('square');
+
+const civ1Land = { width: 16, height: 16 },
+  civ1Grass = { width: 16, height: 16 },
+  civ1RoadW = { width: 16, height: 16 },
+  civ1RoadE = { width: 16, height: 16 };
+
+setSprites(
+  new Map<string, CanvasImageSource>([
+    ['./assets/terrain/land.png', civ1Land as any],
+    ['./assets/terrain/grassland.png', civ1Grass as any],
+    ['./assets/improvements/road_w.png', civ1RoadW as any],
+    ['./assets/improvements/road_e.png', civ1RoadE as any],
+  ])
+);
+calls.length = 0;
+drawUnitActionIcon(
+  canvas,
+  unitActionIconLayers(action('BuildRoad'), archers, null, 'S')
+);
+
+let civ1Draws = 0;
+
+new ScaledCanvases(() => 0).add(followedCanvas, () => civ1Draws++);
+setSprites(new Map());
+
+expect(
+  "a Civ1 game's road: Civ1's sprites, each drawn whole at the picture's origin, and the button not followed",
+  [
+    calls
+      .filter(([name]) => name === 'drawImage')
+      .map(([, image, x, y]) => [
+        [civ1Land, civ1Grass, civ1RoadW, civ1RoadE].indexOf(image as any),
+        x,
+        y,
+      ]),
+    civ1Draws,
+  ],
+  [
+    [
+      [0, 0, 0],
+      [1, 0, 0],
+      [2, 0, 0],
+      [3, 0, 0],
+    ],
+    1,
+  ]
+);
+
+// The pixel art as the theme's art, in a Civ1 game: its own names, as before.
 installTilesets({
   civ1: { complete: false, metadata: null },
   'civ1-pixelart': { complete: true, metadata: null },

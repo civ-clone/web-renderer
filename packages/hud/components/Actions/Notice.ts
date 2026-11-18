@@ -11,7 +11,10 @@ import { s } from '@dom111/element';
 import showCityAction from '../lib/showCityAction';
 import showCityOnMapAction from '../lib/showCityOnMap';
 import { t } from 'i18next';
-import { interfaceSpriteKey } from '@civ-clone/ui-assets/lib/interfaceArt';
+import {
+  followInterfaceArt,
+  interfaceSpriteKey,
+} from '@civ-clone/ui-assets/lib/interfaceArt';
 
 const cityNotices = [
   'City.abandoned',
@@ -80,12 +83,14 @@ export class Notice extends Action {
       this.append(button);
 
       // Not in the page yet, so drawn for the 16px the stylesheet shows it at, on this screen.
-      const icons = currentOrderIcons();
+      const icons = currentOrderIcons(),
+        canvas = button.querySelector('canvas')!,
+        drawCity = (): void =>
+          icons.draw(canvas, icons.lostCity(colours, civilization));
 
-      icons.draw(
-        button.querySelector('canvas')!,
-        icons.lostCity(colours, civilization)
-      );
+      drawCity();
+      // Again as the sprites change, in a game with art of its own (`followInterfaceArt`).
+      followInterfaceArt(canvas, drawCity);
 
       return;
     }
