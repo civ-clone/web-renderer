@@ -226,6 +226,27 @@ export const installTilesets = (states: {
   return installedTilesets();
 };
 
+/**
+ * Installs `tileset` again, a hosted set left uninstalled as its sheet couldn't be loaded as the page started
+ *  (`installPacks`), once it has been (#1141). Nothing for one that's installed, or isn't hosted.
+ */
+export const reinstallHostedTileset = (tileset: TilesetDescriptor): void => {
+  const now = installedTilesets();
+
+  if (!isHosted(tileset) || now.includes(tileset)) {
+    return;
+  }
+
+  // In the bundled order, each installed one as it was installed (an imported one with its import's keys).
+  installed = bundledTilesets().flatMap((bundled) =>
+    bundled === tileset
+      ? [tileset]
+      : now.filter((installedOne) => installedOne.id === bundled.id)
+  );
+  settledMaps.clear();
+  installedHandlers.forEach((handler) => handler());
+};
+
 // The grids a new game doesn't offer yet, though a save on one loads where it can be drawn: hex, until its overlays
 //  and its city screen are done (Track A of docs/civ5-plan.md). A page loaded with `?hex=1` offers them (`bootstrap.ts`).
 const unfinishedGrids: readonly TopologyId[] = ['hex-odd-r'];
@@ -300,6 +321,19 @@ export const setRuleSetTileset = (id: string | null): void => {
   ruleSetTileset = id;
   settledMaps.clear();
 };
+
+/**
+ * The installed set the rule set of the game being played names for the `grid` grid's maps (`setRuleSetTileset`), which
+ *  outranks the player's choice there, or null when it names none for that grid.
+ */
+export const ruleSetMapTileset = (
+  grid: TopologyId | string
+): TilesetDescriptor | null =>
+  ruleSetTileset === null
+    ? null
+    : installedTilesets().find(
+        (tileset) => tileset.grid === grid && tileset.id === ruleSetTileset
+      ) ?? null;
 
 /** The installed set the player chose for the `grid` grid's maps (`mapTilesetOption`), or null without one. */
 export const chosenMapTileset = (

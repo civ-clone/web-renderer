@@ -28,6 +28,8 @@ i18next.addResources('en', 'default', {
   'StartFailure.body':
     'The game could not start. Reload the page to try again.',
   'StartFailure.reload': 'Reload',
+  // A saved game whose load stopped before it began (#1114): left, rather than tried again.
+  'StartFailure.menu': 'Back to the menu',
   'Welcome.you-have-risen':
     '$t(Generic.leader-name, { "leader": "{{player.civilization.leader._}}", "ns": "default" }), you have risen to become leader of $t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" }).',
   'Welcome.your-people-have-knowledge-of':

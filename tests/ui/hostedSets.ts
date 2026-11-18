@@ -1287,6 +1287,36 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
       [true, 'civ1', 'civ1-pixelart', true, true]
     );
 
+    // A choice whose sheet failed as the page started, and was left uninstalled, is tried again as a game starts:
+    //  said while it still fails, and installed again and drawn with once it loads.
+    keys = civ1Keys;
+
+    const startUp = new AssetStore(civ1);
+
+    await installPacks(startUp);
+
+    const leftOut = !ids(installedTilesets()).includes('civ1-pixelart'),
+      stillFailing = await ensureMapArt('square', startUp);
+
+    offline = false;
+
+    const loadsNow = await ensureMapArt('square', startUp);
+
+    keys = [];
+
+    expect(
+      'a choice that failed as the page started is tried again as a game starts: said while it fails, drawn with once it loads',
+      [
+        leftOut,
+        stillFailing.tileset.id,
+        stillFailing.failed.map(({ tileset }) => tileset.id),
+        loadsNow.tileset.id,
+        loadsNow.failed,
+        ids(installedTilesets()).includes('civ1-pixelart'),
+      ],
+      [true, 'civ1', ['civ1-pixelart'], 'civ1-pixelart', [], true]
+    );
+
     // With nothing else for the grid (nothing imported), the start stops, saying why.
     (document as unknown as Document)
       .querySelectorAll('dialog[open]')

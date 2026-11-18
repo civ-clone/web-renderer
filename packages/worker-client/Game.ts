@@ -330,7 +330,7 @@ export class Game implements IGame {
   #answerSetup(): void {
     // The sets a new game can be played with (#668), for the art packs the page says the player has imported, and the
     //  one fixed already, if any: answered without loading anything, so asking fixes nothing. A page that is reloaded
-    //  to load a save asks nothing first, so the save's set is still free to load.
+    //  to load a save may ask, for the art the save's set names (#1114), and the save's set is still free to load.
     answer(this.#transport, 'pluginSets', (tilesets: unknown) => ({
       sets: offeredSets(
         this.#plugins,

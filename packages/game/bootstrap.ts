@@ -137,6 +137,10 @@ export class Renderer {
 
     DebugPanel.automateLocalPlayer(debugFlags, transport);
 
+    // Whether a save is waiting to be loaded and its load not yet sent: a start that stops then can go back to the menu
+    //  without it, as well as try again (#1114).
+    let loadWaiting = false;
+
     try {
       const elements = appElements(),
         notifications = new Notifications(),
@@ -316,16 +320,20 @@ export class Renderer {
         // Evolution on the title menu, as the original's menu plays it, on until the game begins (#126).
         music.play(4);
       } else {
+        loadWaiting = true;
+        // Nothing to choose from the menu while the save's art is readied.
+        mainMenu.remove();
+
         const save = JSON.parse(pendingLoad.data);
 
         // The art the save's map is drawn with, its rule set's when that names some (#1114), fetched first if it has
         //  to be (#1063), or another set ready for its grid, which is said, when it can't be (#1141). With none, the
-        //  start stops, saying why, and the save waits for a reload to try again.
+        //  start stops, saying why, and the save waits for a reload to try again, or is left for the menu.
         await followSavedRuleSet(transport, save?.pluginSet);
         sayMapArtFellBack(await ensureMapArt(savedTopologyId(save)));
 
-        mainMenu.remove();
         await discardPendingSave();
+        loadWaiting = false;
 
         // Marks a DevTools timeline or `performance.getEntriesByType('mark')` can read, for where a load's time goes
         //  (#325).
@@ -338,7 +346,15 @@ export class Renderer {
       }
     } catch (e) {
       console.error(e);
-      showStartFailure(e);
+      showStartFailure(
+        e,
+        document.body,
+        undefined,
+        loadWaiting
+          ? (): void =>
+              void discardPendingSave().finally(() => window.location.reload())
+          : null
+      );
     }
   }
 }

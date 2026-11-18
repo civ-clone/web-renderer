@@ -140,6 +140,25 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
   expect('its button reloads the page', reloads.length, 1);
   early.remove();
 
+  // A save whose load stopped before it began can be left for the menu (#1114), as Reload tries it again.
+  const left: number[] = [],
+    loading = showStartFailure(
+      new Error('offline'),
+      document.body,
+      () => reloads.push(1),
+      () => left.push(1)
+    ),
+    buttons = Array.from(loading.querySelectorAll('button'));
+
+  buttons[1]?.dispatchEvent(new Event('click'));
+
+  expect(
+    'a load that stopped offers the menu too, which leaves it',
+    [buttons.map((button) => button.textContent), left.length, reloads.length],
+    [['Reload', 'Back to the menu'], 1, 1]
+  );
+  loading.remove();
+
   await i18next.init({ ...i18nOptions, lng: 'en' });
   await import('./lib/strings');
 
