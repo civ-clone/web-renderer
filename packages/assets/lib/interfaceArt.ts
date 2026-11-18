@@ -205,6 +205,12 @@ const prune = (): void => {
 
 onPreloadedImagesChanged(() => {
   prune();
+
+  // Drawn in a Civ2 game that's over: a Civ1 game's pictures are the theme's, and stay as they are.
+  if (gameInterfaceArt() === null) {
+    return;
+  }
+
   followed.forEach((ref) => {
     const element = ref.deref();
 
