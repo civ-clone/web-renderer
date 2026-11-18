@@ -989,7 +989,7 @@ export class GameSession {
 
       this.#gameState.setWaiting(false);
       this.#mapView.portal.setWaiting(false);
-      setTradeRatesWaiting(false);
+      setTradeRatesWaiting(false, false);
       this.#waitingBanner.textContent = '';
 
       this.#gameState.update();
@@ -1005,7 +1005,7 @@ export class GameSession {
       this.#gameState.setWaiting(true);
       this.#mapView.portal.setWaiting(true);
       // Rates changed now would be lost with the game carried over (#1058).
-      setTradeRatesWaiting(true);
+      setTradeRatesWaiting(true, false);
       this.#waitingBanner.textContent = t('Game.carrying-over');
 
       transport.send('save', {

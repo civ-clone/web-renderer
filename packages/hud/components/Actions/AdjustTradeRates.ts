@@ -93,10 +93,18 @@ let waitingForTurn = false,
   showWaiting: (() => void) | null = null;
 
 /** Said by the game as the turn ends and starts again, for an open window to stop or start taking changes. */
-export const setTradeRatesWaiting = (waiting: boolean): void => {
+export const setTradeRatesWaiting = (
+  waiting: boolean,
+  // A wait that isn't the turn changing hands (the game being carried over): rates sent before it are still answered.
+  turnChanging: boolean = true
+): void => {
   waitingForTurn = waiting;
+
   // Rates sent before the turn changed hands are answered, or will never be: none is outstanding into the next.
-  unanswered = 0;
+  if (turnChanging) {
+    unanswered = 0;
+  }
+
   showWaiting?.();
 };
 

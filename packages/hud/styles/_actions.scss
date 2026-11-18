@@ -188,8 +188,8 @@
 //  number box and a padlock), what the rates give a turn as the engine counts it, and OK and Cancel. Laid out on a grid
 //  whose columns every row shares, so the tracks line up, and narrow enough for a phone without any of a row wrapping.
 .adjust-trade-rates {
+  // As wide as the window, which sets its own bounds in each interface.
   .content {
-    max-width: 30em;
     padding: 0.5em 0.75em;
   }
 
