@@ -38,6 +38,15 @@ export type MapSquares = {
   // Whether a right-click opens the unit's menu, and whether a menu is open over the map.
   menuOnRightClick(): boolean;
   menuOpen(): boolean;
+  // The tooltip for `tile`, or its city, over `box` on the page, where the interface shows one: whether it opened.
+  tooltip(
+    over: HTMLElement,
+    tile: Tile,
+    playerId: string,
+    box: { left: number; top: number; bottom: number }
+  ): boolean;
+  // Closes the tooltip open over `over`, if one is.
+  endTooltip(over: HTMLElement): void;
 };
 
 export type MapView3DDeps = {

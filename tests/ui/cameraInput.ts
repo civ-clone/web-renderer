@@ -90,6 +90,7 @@ const listeners = new Map<string, EventListener[]>(),
       pointerType = 'mouse',
       altKey = false,
       timeStamp = 0,
+      buttons = 0,
     }: {
       button?: number;
       pointerId?: number;
@@ -97,6 +98,7 @@ const listeners = new Map<string, EventListener[]>(),
       pointerType?: string;
       altKey?: boolean;
       timeStamp?: number;
+      buttons?: number;
     } = {}
   ): void =>
     fire(type, {
@@ -108,6 +110,7 @@ const listeners = new Map<string, EventListener[]>(),
       pointerType,
       altKey,
       timeStamp,
+      buttons,
     });
 
 const start: Orbit = {
@@ -121,8 +124,10 @@ const start: Orbit = {
 let orbit: Orbit = start,
   menuOnRightClick = false;
 
-// What presses that don't move did: clicks, and menus held (`hold`) or right-clicked (`right`), where they were.
+// What presses that don't move did: clicks, and menus held (`hold`) or right-clicked (`right`), where they were; and
+//  where the mouse rested, or `none`.
 const presses: string[] = [],
+  hovers: string[] = [],
   input = new CameraInput(
     canvas,
     {
@@ -140,6 +145,7 @@ const presses: string[] = [],
         return true;
       },
       menuOnRightClick: () => menuOnRightClick,
+      hover: (at) => void hovers.push(at === null ? 'none' : `${at.x},${at.y}`),
     }
   ),
   runTimers = (): void => {
@@ -163,15 +169,28 @@ const presses: string[] = [],
     near(a[0], b[0], 1e-6) &&
     near(a[1], b[1], 1e-6);
 
+// The mouse moving with no button held: what's under it; with a button held, or a finger, nothing; leaving the map, or
+//  pressing, the hover ends.
+pointer('pointermove', 120, 80);
+pointer('pointermove', 130, 80, { buttons: 1 });
+pointer('pointermove', 140, 80, { pointerType: 'touch' });
+fire('pointerleave', {});
+
+expect(
+  'the mouse resting over the map is a hover; with a button held, or a finger, it isn’t; leaving the map ends it',
+  hovers.splice(0),
+  ['120,80', 'none']
+);
+
 // A press that doesn't move: a click, which moves nothing.
 pointer('pointerdown', 400, 300);
 pointer('pointermove', 403, 302);
 pointer('pointerup', 403, 302);
 
 expect(
-  'a press that moves less than a drag is a click where it was let go, and moves nothing',
-  [orbit === start, input.dragging(), presses.splice(0)],
-  [true, false, ['click 403,302']]
+  'a press that moves less than a drag is a click where it was let go, and moves nothing, and ends a hover',
+  [orbit === start, input.dragging(), presses.splice(0), hovers.splice(0)],
+  [true, false, ['click 403,302'], ['none']]
 );
 
 // Held still: the unit's menu, and then not a click. Moved first: neither.

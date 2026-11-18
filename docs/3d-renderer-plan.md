@@ -214,8 +214,16 @@ Building another world from the form starts it in the middle again.
   colours, the active unit if it's in the stack or else the best defender, with a pennant giving the stack's size, and
   a ring under the active unit. `t` hides all but the active unit. Colours are the civilization's `colors` attribute.
   The debug page puts seeded cities and units on its world.
-- **Still to do:** clicks, long presses and right-clicks through the 2D map's own handling, hover tooltips, choosing
-  a square for a long-range order, `isVisible` with the covered rectangles, and waiting for the next turn.
+- **What's on the screen:** `isVisible` projects a square's middle to the screen, `margin` squares and half a square in
+  from its edges, and not under what floats over the map (`measureCovered`), so the game brings the active unit into
+  view as on the 2D map.
+- **Clicks, held presses and right-clicks** do what they do on the 2D map, through the page's own handling
+  (`packages/game/lib/mapSquares.ts`, which `GamePortal` uses too): open a city, choose among the player's units there,
+  or centre on the square; the unit's menu; and choosing a square for a long-range order.
+- **Tooltips:** the mouse resting on a square opens its tooltip, or its city's, after a moment, as on the 2D map, through
+  the page's own; a key, a press, the camera moving or the other players' turns close it.
+- **Still to do:** a city's banner as something to click and hover over of its own (on the 2D map it hangs past its
+  square), and waiting's cursor (the page's, not the map's).
 
 - **What:**
   - a ray to what's shown, then to a square: the land, or the water's surface where the land is below it (spec §9.2);

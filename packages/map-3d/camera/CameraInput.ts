@@ -28,6 +28,11 @@ export type CameraPresses = {
   ): boolean;
   // Whether a right-click opens the menu, in place of the browser's own.
   menuOnRightClick(): boolean;
+  // The mouse moved over the map with no button held, while it's still: or it left the map, or a press or a glide
+  //  began, where nothing's hovered (`null`).
+  hover(
+    at: { x: number; y: number; clientX: number; clientY: number } | null
+  ): void;
 };
 
 // How long a press is held still before it's the unit's menu, as on the 2D map.
@@ -124,6 +129,7 @@ export class CameraInput {
     this.#listen('contextmenu', (event) =>
       this.#rightClick(event as MouseEvent)
     );
+    this.#listen('pointerleave', () => this.#presses?.hover(null));
     // A drag on a touch screen moves the map, not the page.
     this.#listen('touchstart', (event) => event.preventDefault(), {
       passive: false,
@@ -203,6 +209,7 @@ export class CameraInput {
   #down(event: PointerEvent): void {
     // Catching a gliding map stops it where it is.
     this.#glide.stop();
+    this.#presses?.hover(null);
 
     if (event.pointerType === 'touch') {
       this.#fingers.set(event.pointerId, this.#at(event));
@@ -315,7 +322,27 @@ export class CameraInput {
 
     const press = this.#press;
 
-    if (press === null || press.move(event) === null) {
+    // The mouse, with no button held, over a map that isn't moving: what's under it.
+    if (press === null) {
+      if (
+        event.pointerType === 'mouse' &&
+        event.buttons === 0 &&
+        !this.#glide.gliding()
+      ) {
+        const [x, y] = this.#at(event);
+
+        this.#presses?.hover({
+          x,
+          y,
+          clientX: event.clientX,
+          clientY: event.clientY,
+        });
+      }
+
+      return;
+    }
+
+    if (press.move(event) === null) {
       return;
     }
 

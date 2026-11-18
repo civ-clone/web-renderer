@@ -116,6 +116,8 @@ const start = (script: Map3DScript): void => {
         menu: () => {},
         menuOnRightClick: () => false,
         menuOpen: () => false,
+        tooltip: () => false,
+        endTooltip: () => {},
       },
       // Nothing on the page talks to a game.
       transport: {} as Transport,

@@ -47,6 +47,20 @@ const GLIDE = 350;
 //  over every hill as it moves.
 const HEIGHT_EASE = 0.25;
 
+// How long the mouse rests on a square before its tooltip opens, as on the 2D map.
+const HOVER_DELAY = 400;
+
+// The square the mouse rests on: where the mouse is on the page, the timer before its tooltip opens, and whether it has.
+type Hover = {
+  key: string;
+  x: number;
+  y: number;
+  clientX: number;
+  clientY: number;
+  timer: number | null;
+  open: boolean;
+};
+
 // A square being chosen for a long-range order: which it takes, what's done with it, and the window saying what for.
 type Picking = {
   accept: (tile: Tile) => boolean;
@@ -85,6 +99,27 @@ export class MapView3D implements MapRenderer {
   #squares: MapView3DDeps['squares'];
   #transport: MapView3DDeps['transport'];
   #picking: Picking | null = null;
+  // The square the mouse rests on, waiting to show its tooltip or showing it, and whose tooltips they'd be.
+  #hover: Hover | null = null;
+  #playerId: string;
+  #endHover = (): void => {
+    const hover = this.#hover;
+
+    if (hover === null) {
+      return;
+    }
+
+    if (hover.timer !== null) {
+      window.clearTimeout(hover.timer);
+    }
+
+    this.#hover = null;
+    document.removeEventListener('keydown', this.#endHover, true);
+
+    if (hover.open) {
+      this.#squares.endTooltip(this.#canvas);
+    }
+  };
   // The minimap's overview, if there's a minimap, and whether the squares have changed since it was drawn.
   #minimap: Minimap3D | null = null;
   #minimapStale = true;
@@ -168,6 +203,7 @@ export class MapView3D implements MapRenderer {
     this.portal.on('activate-unit', (unit) => deps.activateUnit(unit));
 
     this.#squares = deps.squares;
+    this.#playerId = deps.playerId;
     this.#transport = deps.transport;
     this.#input = new CameraInput(
       deps.mapCanvas,
@@ -181,6 +217,7 @@ export class MapView3D implements MapRenderer {
         menu: (x, y, clientX, clientY, pressed) =>
           this.#menu(x, y, clientX, clientY, pressed),
         menuOnRightClick: () => this.#squares.menuOnRightClick(),
+        hover: (at) => this.#hovered(at),
       }
     );
 
@@ -210,6 +247,7 @@ export class MapView3D implements MapRenderer {
 
   /** The camera put where it's asked, at once, for the `?debug=1` console. */
   setOrbit(orbit: Orbit): void {
+    this.#endHover();
     this.#glide = null;
     this.#orbit = this.#settle(orbit);
     this.#draw();
@@ -243,6 +281,7 @@ export class MapView3D implements MapRenderer {
 
   dispose(): void {
     this.#disposed = true;
+    this.#endHover();
     this.#input.dispose();
     this.#minimap?.dispose();
     window.removeEventListener('resize', this.#resizeHandler);
@@ -388,8 +427,13 @@ export class MapView3D implements MapRenderer {
     this.#draw();
   }
 
+  /** While the other players move, no tooltip opens, and any open one goes, as on the 2D map. */
   setWaiting(waiting: boolean): void {
     this.#waiting = waiting;
+
+    if (waiting) {
+      this.#endHover();
+    }
   }
 
   /**
@@ -596,6 +640,68 @@ export class MapView3D implements MapRenderer {
     return true;
   }
 
+  // The mouse rests at a point on the canvas, or has left it (`null`): the square under it's tooltip opens after a moment,
+  //  if the interface has one for it. Not while the other players move, or over a menu.
+  #hovered(
+    at: { x: number; y: number; clientX: number; clientY: number } | null
+  ): void {
+    const tile =
+        at === null || this.#waiting || this.#squares.menuOpen()
+          ? null
+          : this.#tileAt(at.x, at.y),
+      current = this.#hover;
+
+    if (tile === null || at === null) {
+      this.#endHover();
+
+      return;
+    }
+
+    const key = `${tile.x},${tile.y}`;
+
+    // Still the same square: wait on, or leave it open.
+    if (current !== null && current.key === key) {
+      Object.assign(current, { clientX: at.clientX, clientY: at.clientY });
+
+      return;
+    }
+
+    this.#endHover();
+
+    const hover: Hover = {
+      key,
+      x: tile.x,
+      y: tile.y,
+      clientX: at.clientX,
+      clientY: at.clientY,
+      timer: null,
+      open: false,
+    };
+
+    hover.timer = window.setTimeout(() => {
+      hover.timer = null;
+      this.#showHover(hover);
+    }, HOVER_DELAY);
+    this.#hover = hover;
+
+    // A key, while it waits or once it's open: it may move the map, or open a window over it.
+    document.addEventListener('keydown', this.#endHover, true);
+  }
+
+  // The tooltip for the square the mouse rests on, as it is now, over the mouse.
+  #showHover(hover: Hover): void {
+    hover.open = this.#squares.tooltip(
+      this.#canvas,
+      this.world.get(hover.x, hover.y),
+      this.#playerId,
+      {
+        left: hover.clientX - 10,
+        top: hover.clientY - 10,
+        bottom: hover.clientY + 10,
+      }
+    );
+  }
+
   // The point on the ground the camera looks at.
   #focus(): [number, number] {
     return [...this.#orbit.focus];
@@ -730,6 +836,17 @@ export class MapView3D implements MapRenderer {
     this.#tilesToDraw.clear();
     this.#land.changed(squares, ...this.#focus(), replaced);
     squares.forEach(([x, y]) => this.#mark(x, y));
+
+    // The square an open tooltip is about has changed: it says what's there now.
+    const hover = this.#hover;
+
+    if (
+      hover !== null &&
+      hover.open &&
+      squares.some(([x, y]) => x === hover.x && y === hover.y)
+    ) {
+      this.#showHover(hover);
+    }
 
     if (squares.length > 0 || replaced) {
       this.#minimapStale = true;

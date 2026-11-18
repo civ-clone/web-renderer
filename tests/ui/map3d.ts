@@ -824,6 +824,82 @@ expect(
   );
 
   chooser.dispose();
+
+  // The mouse resting on a square: its tooltip opens after a moment, through the page's own; a key closes it, and while
+  //  the other players move none opens.
+  const tooltips: string[] = [],
+    tipper = new MapView3D(
+      {
+        activateUnit: () => {},
+        art: {
+          id: () => 'art',
+          nativeTileSize: () => ({ width: 16, height: 16 }),
+          scale: () => 1,
+          zoom: () => 1,
+        },
+        cameraDistance: { get: () => null, set: () => {} },
+        cityOpener: { opens: () => false, open: () => {} },
+        coveredBy: [],
+        lockVerticalEdges: false,
+        mapCanvas: ownCanvas,
+        minimapCanvas: null,
+        playerId: 'Player-1',
+        squares: {
+          click: () => {},
+          prompt: () => ({ close: () => {} }),
+          menu: () => {},
+          menuOnRightClick: () => false,
+          menuOpen: () => false,
+          tooltip: (over, tile) => {
+            tooltips.push(`open ${tile.x},${tile.y}`);
+
+            return true;
+          },
+          endTooltip: () => void tooltips.push('closed'),
+        },
+        transport,
+        world: new World(worldData),
+      },
+      fakeStage
+    ),
+    restAt = (clientX: number, clientY: number): void =>
+      void ownCanvas.dispatchEvent(
+        Object.assign(new Event('pointermove'), {
+          clientX,
+          clientY,
+          buttons: 0,
+          pointerId: 1,
+          isPrimary: true,
+          pointerType: 'mouse',
+        })
+      ),
+    pause = (ms: number): Promise<void> =>
+      new Promise((resolve) => setTimeout(resolve, ms));
+
+  tipper.centre(tiles[5] as Tile);
+  restAt(box.width / 2, box.height / 2);
+
+  const waited = [...tooltips];
+
+  await pause(450);
+
+  const tipsOpened = [...tooltips];
+
+  document.dispatchEvent(new Event('keydown'));
+
+  const closedByKey = tooltips.splice(0);
+
+  restAt(box.width / 2, box.height / 2);
+  tipper.setWaiting(true);
+  await pause(450);
+
+  expect(
+    'resting on a square opens its tooltip after a moment; a key closes it; while the other players move, none opens',
+    [waited, tipsOpened, closedByKey, tooltips],
+    [[], ['open 1,1'], ['open 1,1', 'closed'], []]
+  );
+
+  tipper.dispose();
   ownBox.remove();
   staged.splice(0);
 

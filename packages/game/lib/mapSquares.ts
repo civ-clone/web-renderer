@@ -8,6 +8,19 @@ import { MapSquares } from '@civ-clone/ui-map/MapView3DFactory';
 import { openUnitSelection } from '@civ-clone/ui-city/components/choices';
 import ActionWindow from '@civ-clone/ui-component-window/ActionWindow';
 import mapMenus from '@civ-clone/ui-menus/components/mapMenus';
+import {
+  hideTooltip,
+  showTooltipOver,
+  tooltipOpenOver,
+} from '@civ-clone/ui-component-tooltip/Tooltip';
+import cityBannerTooltip, {
+  hasBannerTooltip,
+} from '@civ-clone/ui-hud/components/Map/cityBannerTooltip';
+import squareTooltip, {
+  hasSquareTooltip,
+} from '@civ-clone/ui-hud/components/Map/squareTooltip';
+import { hasFeature } from '@civ-clone/ui-platform/lib/interfaceMode';
+import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
 import { t } from 'i18next';
 
 /**
@@ -88,6 +101,42 @@ export const mapSquares: MapSquares = {
     mapMenus.current().unitMenu(launcher, x, y, unit, tile, transport, pressed),
   menuOnRightClick: () => mapMenus.current().unitMenuOnRightClick,
   menuOpen: () => mapMenus.current().isOpen(),
+  // As the 2D map's (`GamePortal`): your city's banner's tooltip (#747), or the square's where the interface has them and
+  //  the player hasn't turned them off (#748).
+  tooltip: (over, tile, playerId, box) => {
+    const city = tile.city;
+
+    if (city && hasBannerTooltip(city)) {
+      showTooltipOver(
+        over,
+        () => box,
+        () => cityBannerTooltip(city)
+      );
+
+      return true;
+    }
+
+    if (
+      !hasFeature('squareTooltips') ||
+      !options.get('squareTooltips', true) ||
+      !hasSquareTooltip(tile)
+    ) {
+      return false;
+    }
+
+    showTooltipOver(
+      over,
+      () => box,
+      () => squareTooltip(tile, playerId)
+    );
+
+    return true;
+  },
+  endTooltip: (over) => {
+    if (tooltipOpenOver(over)) {
+      hideTooltip();
+    }
+  },
 };
 
 export default mapSquares;
