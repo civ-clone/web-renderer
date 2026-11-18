@@ -22,65 +22,18 @@ export class LockedSliderGroup {
     );
   }
 
+  // Shared within each slider's bounds, with or without maximums: the even split this replaced took the others' share
+  //  from one already at 0 too, and gave what it couldn't take back to the slider moved, so moving tax to 70 from 40,
+  //  with luxuries at 0, stopped it at 55 (#1058).
   private rebalance(slider: LockedSlider): void {
     if (this.total() === 100) {
       return;
     }
 
-    // With a maximum on any of them (Civ2's rates, M2d), each takes only what its bounds allow.
-    if (this.#sliders.some((each) => each.max() < 100)) {
-      this.rebalanceWithin(slider);
-
-      return;
-    }
-
-    const otherSliders = this.#sliders.filter(
-        (otherSlider) => otherSlider !== slider
-      ),
-      otherActiveSliders = otherSliders.filter((slider) => !slider.isLocked());
-
-    if (this.total() !== 100 && otherActiveSliders.length === 0) {
-      slider.set((100 - this.total(otherSliders)).toString());
-
-      return;
-    }
-
-    if (this.total() > 100) {
-      let overage = this.total() - 100,
-        chunk = Math.ceil(overage / otherActiveSliders.length);
-
-      otherActiveSliders.forEach((otherSlider) => {
-        otherSlider.set(
-          (otherSlider.value() - Math.min(chunk, overage)).toString()
-        );
-
-        overage -= chunk;
-      });
-
-      if (this.total() > 100) {
-        slider.set((100 - this.total(otherSliders)).toString());
-      }
-    }
-
-    if (this.total() < 100) {
-      let remaining = 100 - this.total(),
-        chunk = Math.ceil(remaining / otherActiveSliders.length);
-
-      otherActiveSliders.forEach((otherSlider) => {
-        otherSlider.set(
-          (otherSlider.value() + Math.min(chunk, remaining)).toString()
-        );
-
-        remaining -= chunk;
-      });
-
-      if (this.total() < 100) {
-        slider.set((100 - this.total(otherSliders)).toString());
-      }
-    }
+    this.rebalanceWithin(slider);
   }
 
-  // The difference from 100 shared between the other unlocked sliders, each within 0 and its maximum; what they can't
+  // The difference from 100 shared between the other unlocked sliders, each within 0 and its maximum (100 without one); what they can't
   //  take goes back to the slider moved, and failing that (the others locked, or at their bounds), to the locked ones,
   //  so the rates always come to 100.
   private rebalanceWithin(slider: LockedSlider): void {

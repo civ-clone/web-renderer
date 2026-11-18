@@ -16,6 +16,7 @@ import {
 } from '@civ-clone/ui-hud/components/Actions/AdjustTradeRates';
 import { Player, PlayerTradeRates } from '@civ-clone/ui-protocol/types';
 import Transport from '@civ-clone/ui-client/Transport';
+import { beforeEndTurn } from '@civ-clone/ui-client/lib/endTurn';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 
@@ -173,7 +174,8 @@ const liveAndCancel = async (): Promise<void> => {
 
   box.value = '';
   box.dispatchEvent(new Event('input'));
-  refreshTradeRates(plain([40, 0, 60]), playerWith(10, 20));
+  // The same rates and figures as the top bar last had.
+  refreshTradeRates(plain([40, 0, 60]), playerWith(25, 8, true));
 
   expect(
     'a cleared box stays clear as the same rates come in, and nothing is sent',
@@ -222,6 +224,27 @@ const liveAndCancel = async (): Promise<void> => {
     [sent.length - count, sent.at(-1)?.[1].value.at(-1)],
     [1, ['Research', 80]]
   );
+
+  // The turn ends with it open, a move still pending: what's on screen is sent at once, ahead of End Turn, and kept.
+  const ending = openTradeRates(plain([40, 0, 60]), transport),
+    beforeEnding = sent.length;
+
+  move(ending.element(), 0, 20);
+  beforeEndTurn();
+
+  expect(
+    'as the turn ends, the pending rates are sent at once and the window closes, keeping them',
+    [
+      ending.element().isConnected,
+      sent.length - beforeEnding,
+      sent.at(-1)?.[1].value.find(([rate]: [string]) => rate === 'Tax'),
+    ],
+    [false, 1, ['Tax', 20]]
+  );
+
+  await wait(tradeRatesDelay + 50);
+
+  expect('and nothing follows it', sent.length - beforeEnding, 1);
 };
 
 const run = async (): Promise<void> => {
@@ -292,6 +315,8 @@ const run = async (): Promise<void> => {
 
   expect('closed, nothing is refreshed', sent.length, 1);
 
+  await liveAndCancel();
+
   if (failures.length) {
     process.stderr.write(
       `FAIL tradeRatesWindow\n${failures
@@ -300,8 +325,6 @@ const run = async (): Promise<void> => {
     );
     process.exit(1);
   }
-
-  await liveAndCancel();
 
   console.log(`PASS tradeRatesWindow (${checks} checks)`);
   void document;

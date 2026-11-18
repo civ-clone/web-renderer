@@ -328,7 +328,18 @@ export const openTradeRates = (
     showEffect(player);
   };
 
+  // The turn is ending with the window open: the rates on screen are the turn's, so they're kept, and what's pending is
+  //  sent now, ahead of End Turn, which would otherwise leave it, or a later Cancel, to arrive after the turn had gone.
+  const settle = (): void => {
+    kept = true;
+    window.close();
+  };
+
+  document.addEventListener('beforeendturn', settle);
+
   window.on('close', () => {
+    document.removeEventListener('beforeendturn', settle);
+
     if (open === window) {
       open = null;
       refreshOpen = null;

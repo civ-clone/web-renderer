@@ -226,6 +226,24 @@ const tradeRates = (...values: number[]) => {
   );
 }
 
+// A rate moved takes what it's moved to, the others giving it up in turn while they have some to give: one already at 0
+//  doesn't hold it back (#1058).
+{
+  const sliders = tradeRates(40, 0, 60);
+
+  type(sliders[0]!, '70');
+
+  expect(
+    'tax moved to 70 gets 70, from research',
+    values(sliders),
+    [70, 0, 30]
+  );
+
+  type(sliders[2]!, '100');
+
+  expect('research moved to 100 gets it all', values(sliders), [0, 0, 100]);
+}
+
 // The lock is a toggle button named after its rate (#1058): pressed, it holds the slider and the number box, and the
 //  others take the change.
 {

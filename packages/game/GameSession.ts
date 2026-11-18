@@ -38,6 +38,7 @@ import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry'
 import Dismissals from '@civ-clone/ui-client/lib/dismissals';
 import { actionKey } from '@civ-clone/ui-client/lib/nextTurnQueue';
 import shouldAutoEndTurn from '@civ-clone/ui-client/lib/autoEndTurn';
+import { beforeEndTurn } from '@civ-clone/ui-client/lib/endTurn';
 import { instance as dataChanges } from '@civ-clone/ui-client/lib/DataChanges';
 import ActiveUnitController from './ActiveUnitController';
 import MapView from './MapView';
@@ -564,7 +565,10 @@ export class GameSession {
     ) {
       this.#endTurnSent = true;
 
-      // Not `endTurn()`: a turn nobody played should not clear the notices waiting to be read.
+      // Not `endTurn()`: a turn nobody played should not clear the notices waiting to be read. But whatever is open
+      //  settles first, as it does for the player's own End Turn.
+      beforeEndTurn();
+
       transport.send('action', {
         name: 'EndTurn',
       });
