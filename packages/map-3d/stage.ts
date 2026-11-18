@@ -3,11 +3,13 @@
 //  with.
 //
 // The land comes in chunks (`terrain/chunks.ts`), each drawn at every copy of the world the camera can see (§3.1), so
-//  the land carries on past the world's seam whichever way it looks. The camera is an orbit (`camera/orbit.ts`): the
-//  view says where it is, and the haze and how far it sees follow its distance.
+//  the land carries on past the world's seam whichever way it looks. The sea's surface lies over it (`water.ts`). The
+//  camera is an orbit (`camera/orbit.ts`): the view says where it is, and the haze, how far it sees, and the sun's
+//  shadows, fitted to what it sees, follow its distance.
 
 import {
   ACESFilmicToneMapping,
+  PCFSoftShadowMap,
   BufferAttribute,
   BufferGeometry,
   Color,
@@ -27,6 +29,7 @@ import { ChunkMesh } from './terrain/chunks';
 import { MarkerKit, drawMarker } from './markers/drawMarker';
 import { TileMarker } from './markers/markerFor';
 import { FIELD_OF_VIEW, Orbit, eye, sightFor } from './camera/orbit';
+import Water, { Ground } from './water';
 
 /** What the stage has drawn, for the debug overlay. */
 export type StageStats = {
@@ -60,6 +63,8 @@ export interface Stage {
 export type StageOptions = {
   // How far along the world repeats, across and down (`null` down for a world that doesn't wrap over the poles).
   period: { u: number; v: number | null };
+  // How the land's points lie on the ground, for the sea's surface to read their heights.
+  ground: Ground;
 };
 
 // Something drawn at every copy of the world in sight: where it lies, how to make another of it, and those drawn now.
@@ -113,7 +118,10 @@ export const copiesNear = (
   );
 };
 
-export const createStage: StageFactory = (canvas, { period }) => {
+// The sun's shadow map's size, in texels a side.
+const SHADOW_MAP = 2048;
+
+export const createStage: StageFactory = (canvas, { period, ground }) => {
   const renderer = new WebGLRenderer({ antialias: true, canvas }),
     scene = new Scene(),
     camera = new PerspectiveCamera(
@@ -134,6 +142,7 @@ export const createStage: StageFactory = (canvas, { period }) => {
     markers = new Map<string, Placed>(),
     markersGroup = new Group(),
     kit = new MarkerKit(),
+    water = new Water(ground, new Color(SKY)),
     fog = new Fog(SKY, 30, 110);
 
   // The copies of the world drawn now, and their key, to tell when they change.
@@ -142,6 +151,8 @@ export const createStage: StageFactory = (canvas, { period }) => {
 
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = ACESFilmicToneMapping;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = PCFSoftShadowMap;
 
   scene.background = new Color(SKY);
   // Haze into the distance (§9.3), so the land fades into the sky rather than ending at an edge: how far follows the
@@ -150,9 +161,15 @@ export const createStage: StageFactory = (canvas, { period }) => {
   scene.add(new HemisphereLight(SKY_LIGHT, GROUND_LIGHT, 0.9));
   scene.add(land);
   scene.add(markersGroup);
+  scene.add(water.mesh);
 
   // From the south-east and well up, so slopes facing it are lit and the far sides of ridges fall into shade.
   sun.position.set(30, 40, 20);
+  // One shadow map, over what the camera sees round its focus (`view`).
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(SHADOW_MAP, SHADOW_MAP);
+  sun.shadow.bias = -0.0004;
+  sun.shadow.normalBias = 0.02;
   scene.add(sun);
   scene.add(sun.target);
 
@@ -183,9 +200,28 @@ export const createStage: StageFactory = (canvas, { period }) => {
     fog.near = near;
     fog.far = far;
 
-    // The sun's direction stays the same wherever the camera looks.
+    // The sun's direction stays the same wherever the camera looks, and its shadows cover what the camera sees round
+    //  its focus, which the haze doesn't hide much of.
+    const reach = orbit.distance * 2.2,
+      shadow = sun.shadow.camera;
+
     sun.position.set(u + 30, height + 40, v + 20);
     sun.target.position.set(u, height, v);
+    shadow.left = -reach;
+    shadow.right = reach;
+    shadow.top = reach;
+    shadow.bottom = -reach;
+    shadow.near = 1;
+    shadow.far = 120;
+    shadow.updateProjectionMatrix();
+
+    // The sea's surface under the camera, as far as it sees.
+    water.follow(
+      u,
+      v,
+      far * 2.2,
+      sun.position.clone().sub(sun.target.position)
+    );
 
     // The copies of the world the haze doesn't hide: when they change, every chunk is drawn at the new ones.
     const inSight = copiesNear(orbit.focus, far, period),
@@ -234,12 +270,20 @@ export const createStage: StageFactory = (canvas, { period }) => {
       const chunk: Placed & { geometry: BufferGeometry } = {
         geometry,
         at: [mesh.u, 0, mesh.v],
-        make: () => new Mesh(geometry, material),
+        make: () => {
+          const drawn = new Mesh(geometry, material);
+
+          drawn.castShadow = true;
+          drawn.receiveShadow = true;
+
+          return drawn;
+        },
         drawn: [],
       };
 
       chunk.drawn = copiesOf(chunk, land);
       chunks.set(key, chunk);
+      water.setChunk(mesh);
     },
     setMarker: (key, at, marker): void => {
       const old = markers.get(key);
@@ -252,12 +296,18 @@ export const createStage: StageFactory = (canvas, { period }) => {
         return;
       }
 
-      const original = drawMarker(kit, marker),
-        placed: Placed = {
-          at,
-          make: () => original.clone(),
-          drawn: [],
-        };
+      const original = drawMarker(kit, marker);
+
+      // Markers cast shadows on the land, as the models will.
+      original.traverse((object) => {
+        object.castShadow = object instanceof Mesh;
+      });
+
+      const placed: Placed = {
+        at,
+        make: () => original.clone(),
+        drawn: [],
+      };
 
       placed.drawn = copiesOf(placed, markersGroup);
       markers.set(key, placed);
@@ -273,6 +323,7 @@ export const createStage: StageFactory = (canvas, { period }) => {
       chunks.clear();
       markers.clear();
       kit.dispose();
+      water.dispose();
       material.dispose();
       renderer.dispose();
     },

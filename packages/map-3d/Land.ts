@@ -11,6 +11,7 @@ import { REACH } from './terrain/kernel';
 import createRelief, { ReliefMap } from './terrain/relief';
 import { ChunkGrid, buildChunk, chunkGrid, chunksNear } from './terrain/chunks';
 import { Stage } from './stage';
+import { Ground } from './water';
 import World from '@civ-clone/ui-map/components/World';
 import { seaFloor } from '@civ-clone/ui-models-builtin/terrain';
 
@@ -71,6 +72,19 @@ export class Land {
       );
 
     this.#reach = REACH + corner + (seaFloor.reach - 1) * step;
+  }
+
+  /** How the land's points lie on the ground, for the sea's surface to read their heights (`water.ts`). */
+  ground(): Ground {
+    const { chunksU, chunksV, stepsU, stepsV, spacingU, spacingV } = this.#grid;
+
+    return {
+      columns: chunksU * stepsU,
+      rows: chunksV * stepsV,
+      spacingU,
+      spacingV,
+      wrapsV: this.layout.period().v !== null,
+    };
   }
 
   /** How far the ground runs down: its period where it wraps over the poles, or to its last row's bottom. */

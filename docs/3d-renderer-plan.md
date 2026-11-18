@@ -230,6 +230,16 @@ Building another world from the form starts it in the middle again.
 
 ### 1.4 Water, light and sky
 
+**First part done:**
+- **The sea:** `packages/map-3d/water.ts`. One surface at height 0 under the camera, drawn wherever the land is below it.
+  How deep the water is comes from the land's own heights, which each chunk writes into a texture the size of the ground
+  as it's built; the texture repeats as the world does. Teal over the shallows, deep blue out at sea, foam where it
+  meets the land, the sky in it at a low angle, and the sun's glint.
+- **Shadows:** the sun casts one shadow map, fitted round the camera's focus as it moves and zooms. The land shadows
+  itself, and markers cast shadows on it.
+- **Still to do:** the sky and its environment map, waves (they need frames all the time: for the quality presets,
+  M6), lakes at their own height, and cloud over the squares never seen (§4.5).
+
 - **What:**
   - the sea surface with depth tint and shore foam;
   - a sky made by code, with its environment map;

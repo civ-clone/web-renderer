@@ -153,6 +153,7 @@ export class MapView3D implements MapRenderer {
 
     this.#stage = stageFactory(deps.mapCanvas, {
       period: this.#land.layout.period(),
+      ground: this.#land.ground(),
     });
 
     if (deps.debug && deps.mapCanvas.parentElement) {
