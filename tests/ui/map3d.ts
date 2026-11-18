@@ -28,7 +28,8 @@ import {
 } from '@civ-clone/ui-map/MapView3DFactory';
 import MapView2D from '@civ-clone/ui-game/MapView2D';
 import MapView3D from '@civ-clone/ui-map-3d/MapView3D';
-import { ZOOM_STEP } from '@civ-clone/ui-map-3d/camera/orbit';
+import { DISTANCE_MAX, ZOOM_STEP } from '@civ-clone/ui-map-3d/camera/orbit';
+import { instance as optionsRegistry } from '@civ-clone/ui-platform/GameOptionsRegistry';
 import Transport from '@civ-clone/ui-client/Transport';
 import World from '@civ-clone/ui-map/components/World';
 import {
@@ -38,6 +39,7 @@ import {
   zoomOption,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import {
+  MAP3D_DISTANCE_OPTION,
   forgetMap3D,
   loadMap3DScript,
   makeMapView,
@@ -914,6 +916,155 @@ expect(
   framed.portal.render();
 
   expect('and nothing more is drawn', [frames.size, staged.splice(0)], [0, []]);
+
+  // With frames, and a clock run by hand: the first centring puts the camera there at once; after that it glides, and
+  //  the glide ends. Zoomed mid-glide, it carries on at the new distance rather than easing back.
+  let now = 1000;
+
+  const realNow = performance.now.bind(performance),
+    runFrames = (limit = 300): number => {
+      let count = 0;
+
+      while (frames.size > 0 && count < limit) {
+        const waiting = [...frames.values()];
+
+        frames.clear();
+        now += 16;
+        waiting.forEach((callback) => callback());
+        count++;
+      }
+
+      return count;
+    };
+
+  Object.defineProperty(performance, 'now', {
+    value: () => now,
+    configurable: true,
+  });
+
+  const glider = makeMapView(deps2D) as MapView3D,
+    middleOf = (tile: Tile): [number, number] =>
+      [...glider.land().layout.centre(tile.x, tile.y)] as [number, number];
+
+  runFrames();
+  glider.centre(tiles[5] as Tile);
+
+  const first = [...glider.orbit().focus];
+
+  glider.centre(tiles[10] as Tile);
+
+  const stillThere = [...glider.orbit().focus];
+
+  runFrames(1);
+  glider.zoomBy(2);
+
+  const zoomedTo = glider.orbit().distance;
+
+  runFrames(1);
+
+  const zoomedStill = glider.orbit().distance,
+    framesToEnd = runFrames();
+
+  expect(
+    'the first centring is at once; the next glides, carries on at a distance zoomed to mid-glide, and ends where it was going',
+    [
+      first,
+      stillThere,
+      Math.abs(zoomedStill - zoomedTo) < 1e-9,
+      framesToEnd < 300,
+      frames.size,
+      glider.orbit().focus,
+    ],
+    [
+      middleOf(tiles[5] as Tile),
+      middleOf(tiles[5] as Tile),
+      true,
+      true,
+      0,
+      middleOf(tiles[10] as Tile),
+    ]
+  );
+
+  glider.dispose();
+  Object.defineProperty(performance, 'now', {
+    value: realNow,
+    configurable: true,
+  });
+
+  // The camera's distance, kept as an option: not saved before the player changes it, saved once they do, read back by
+  //  the next map, and kept within the camera's range whatever's kept.
+  // None chosen (the default, 0), whatever the zooming above kept.
+  optionsRegistry.set(MAP3D_DISTANCE_OPTION, 0);
+
+  const distanceKept = (): unknown =>
+      optionsRegistry.get(MAP3D_DISTANCE_OPTION, 'none'),
+    keeper = makeMapView(deps2D) as MapView3D;
+
+  runFrames();
+
+  const unsaved = distanceKept();
+
+  keeper.zoomBy(2);
+  runFrames();
+
+  const saved = distanceKept();
+
+  keeper.dispose();
+
+  const readBack = makeMapView(deps2D) as MapView3D,
+    readDistance = readBack.orbit().distance;
+
+  readBack.dispose();
+
+  const rangeOf = (kept: number): number => {
+    optionsRegistry.set(MAP3D_DISTANCE_OPTION, kept);
+
+    const view = makeMapView(deps2D) as MapView3D,
+      { distance } = view.orbit();
+
+    view.dispose();
+
+    return distance;
+  };
+
+  expect(
+    'the camera’s distance is kept once the player changes it, read back by the next map, and kept within its range',
+    [
+      unsaved,
+      typeof saved === 'number' && saved < 24,
+      readDistance === saved,
+      rangeOf(5000),
+      rangeOf(-5),
+    ],
+    [0, true, true, DISTANCE_MAX, 24]
+  );
+
+  optionsRegistry.set(MAP3D_DISTANCE_OPTION, 0);
+
+  // Stopped at the poles, as the player can ask: the camera stays within the world's rows, rather than going round.
+  kept.lockVerticalEdges = true;
+
+  const locked = makeMapView(deps2D) as MapView3D,
+    beyond = (view: MapView3D): number => {
+      view.setOrbit({ ...view.orbit(), focus: [1, 1000] });
+
+      return view.orbit().focus[1];
+    },
+    lockedAt = beyond(locked);
+
+  locked.dispose();
+  kept.lockVerticalEdges = false;
+
+  const wrapping = makeMapView(deps2D) as MapView3D,
+    wrappedAt = beyond(wrapping);
+
+  wrapping.dispose();
+
+  expect(
+    'stopped at the poles, the camera stays at the world’s last row; otherwise it goes round',
+    [lockedAt === locked.land().extentV(), wrappedAt < locked.land().extentV()],
+    [true, true]
+  );
 
   delete (globalThis as any).requestAnimationFrame;
   delete (globalThis as any).cancelAnimationFrame;

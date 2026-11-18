@@ -246,6 +246,8 @@ runFrames(1);
 
 expect('let go still, it stays', [frames.size, orbit === stillAt], [0, true]);
 
+const pressedAt = orbit;
+
 pointer('pointerdown', 300, 300, { timeStamp: 1000 });
 pointer('pointermove', 320, 300, { timeStamp: 1010 });
 pointer('pointermove', 360, 300, { timeStamp: 1030 });
@@ -255,9 +257,24 @@ const flicked = orbit;
 pointer('pointerup', 360, 300, { timeStamp: 1040 });
 runFrames(3);
 
+// The way the drag moved the camera's focus, and the way the glide went on moving it.
+const dragged = [
+    flicked.focus[0] - pressedAt.focus[0],
+    flicked.focus[1] - pressedAt.focus[1],
+  ],
+  glided = [
+    orbit.focus[0] - flicked.focus[0],
+    orbit.focus[1] - flicked.focus[1],
+  ];
+
 expect(
   'a flick glides on, the way it was going',
-  [frames.size > 0, orbit !== flicked],
+  [
+    frames.size > 0,
+    (dragged[0] ?? 0) * (glided[0] ?? 0) +
+      (dragged[1] ?? 0) * (glided[1] ?? 0) >
+      0,
+  ],
   [true, true]
 );
 
@@ -355,6 +372,20 @@ expect(
   ],
   [true, true, true, false]
 );
+
+// On iOS a touch screen's pinch also comes as gestures: the fingers' tilt isn't undone by them.
+const tilted = orbit;
+
+fire('gesturestart', { scale: 1, rotation: 0, timeStamp: 5500 });
+fire('gesturechange', { scale: 1.2, rotation: 5, timeStamp: 5510 });
+
+expect(
+  'on iOS, the gestures that come with two fingers leave the camera to the fingers',
+  orbit === tilted,
+  true
+);
+
+fire('gestureend', { scale: 1.2, rotation: 5, timeStamp: 5520 });
 
 pointer('pointerup', 400, 200, { ...touch, pointerId: 11 });
 pointer('pointerup', 400, 600, { ...touch, pointerId: 12, isPrimary: false });

@@ -2,16 +2,13 @@
 //
 // It shows the land (slice 1.1), its relief and its terrain's colours, built a few chunks a frame from where the map is
 //  centred, and again where tile patches change it. The camera (slice 1.2) orbits a point on the ground: centring the
-//  map glides it there, the keys turn it and zoom it, and its distance is kept as the 2D map's zoom is. The rest comes
-//  slice by slice:
-//  - dragging, tilting and pinching it, once the shared gestures are in (1.2);
-//  - picking squares, hovering and hiding the units in 1.3.
-//  - the minimap's view of it in 1.5: it's left empty until then.
-// Until then, what the game asks of it is kept or let go as below, and a long-range order's square can't be picked: the
-//  order is given up, as if the player had.
+//  map glides it there (at once the first time), the keys turn it and zoom it, the mouse, the wheel and touch move it,
+//  and its distance is kept as the 2D map's zoom is. Cities and units are marked on the land (1.3), a click, a press
+//  held and a right-click do what they do on the 2D map, and the minimap shows its own overview (1.5). Still to come:
+//  hovering's tooltips, waiting's cursor, and units moving and fighting (M2).
 //
-// Reaches beyond its canvas in one place, as the 2D map does: the `window` `resize` handler and an observer of the
-//  canvas's parent, which size the canvas to it.
+// Reaches beyond its canvas where the 2D map does: the `window` `resize` handler and an observer of the canvas's
+//  parent, which size the canvas to it, and the minimap's canvas, which it draws its overview on.
 
 import { Coordinate, Tile, Unit } from '@civ-clone/ui-protocol/types';
 import { MapEvent } from '@civ-clone/ui-protocol/mapEvents';
@@ -25,6 +22,7 @@ import {
   Orbit,
   TURN_STEP,
   between,
+  clampOrbit,
   defaultOrbit,
   groundAt,
   settled,
@@ -78,7 +76,11 @@ export class MapView3D implements MapRenderer {
   // The mouse, the wheel and touch moving the camera; and where its distance is kept, and what was kept last.
   #input: CameraInput;
   #distance: MapView3DDeps['cameraDistance'];
-  #keptDistance: number | null;
+  #keptDistance: number;
+  // Whether the camera stops at the poles, as it starts: the portal's after that, which the options can change.
+  #lockAtStart: boolean;
+  // Whether the camera has been centred on anything yet: the first time, it's put there at once.
+  #centred = false;
   // What a square does when clicked or held, the page's; and a square being chosen for a long-range order, if one is.
   #squares: MapView3DDeps['squares'];
   #transport: MapView3DDeps['transport'];
@@ -121,11 +123,17 @@ export class MapView3D implements MapRenderer {
     this.#worldTiles = deps.world.tiles();
     this.#worldTileCount = this.#worldTiles.length;
     this.#distance = deps.cameraDistance;
-    this.#keptDistance = deps.cameraDistance.get();
+    this.#lockAtStart = deps.lockVerticalEdges;
+
+    const kept = deps.cameraDistance.get();
+
+    // The distance the player last chose, kept within the camera's range; and kept as it is, so it's saved again only
+    //  once the player changes it.
     this.#orbit = this.#settle({
       ...defaultOrbit(this.#land.layout.centre(0, 0)),
-      ...(this.#keptDistance === null ? {} : { distance: this.#keptDistance }),
+      ...(kept === null ? {} : { distance: kept }),
     });
+    this.#keptDistance = this.#orbit.distance;
     this.portal = new MapPortal3D(deps, {
       centre: () => this.#centreSquare(),
       centreOn: (x, y) => this.#centreOn(x, y),
@@ -425,7 +433,9 @@ export class MapView3D implements MapRenderer {
   zoomBy(steps: number): void {
     this.#orbit = zoomed(this.#orbit, steps);
 
+    // Both ends of a glide, so it carries on at the new distance rather than easing back to the old one.
     if (this.#glide !== null) {
+      this.#glide.from = zoomed(this.#glide.from, steps);
       this.#glide.to = zoomed(this.#glide.to, steps);
     }
 
@@ -608,15 +618,39 @@ export class MapView3D implements MapRenderer {
       [toU, toV] = (this.#glide?.to ?? this.#orbit).focus;
 
     if (u === toU && v === toV) {
+      this.#centred = true;
+
       return;
     }
 
-    this.#moveTo({ ...(this.#glide?.to ?? this.#orbit), focus: [u, v] });
+    const target: Orbit = {
+      ...(this.#glide?.to ?? this.#orbit),
+      focus: [u, v],
+    };
+
+    // The first time, as a game starts or loads: there at once, rather than gliding over the world from its corner.
+    if (!this.#centred) {
+      this.#centred = true;
+      this.setOrbit(target);
+
+      return;
+    }
+
+    this.#moveTo(target);
   }
 
-  // The camera kept on the world: round its period, or within its rows where it doesn't wrap over the poles.
+  // The camera kept on the world, round its period, or within its rows where it doesn't wrap over the poles or the
+  //  player stops it at them; and its pitch and distance within their ranges.
   #settle(orbit: Orbit): Orbit {
-    return settled(orbit, this.#land.layout.period(), this.#land.extentV());
+    const period = this.#land.layout.period(),
+      // Before the portal's made, as the view starts, as it started.
+      locked = this.portal?.lockVerticalEdges() ?? this.#lockAtStart;
+
+    return settled(
+      clampOrbit(orbit),
+      locked ? { u: period.u, v: null } : period,
+      this.#land.extentV()
+    );
   }
 
   // The camera glides to `target`, or is put there at once where there are no frames to glide over, or the player

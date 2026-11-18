@@ -832,6 +832,17 @@ const run = async (): Promise<void> => {
       [[-1, 1, 'north'], true, true, true, []]
     );
 
+    // A German keyboard types ü and # on those keys, and [ ] \\ only with AltGr, which the game leaves alone.
+    turns.splice(0);
+    press({ code: 'BracketLeft', key: 'ü' });
+    press({ code: 'Backslash', key: '#' });
+
+    expect(
+      'the same keys turn the map where a layout types something else on them',
+      turns,
+      [-1, 'north']
+    );
+
     turns.splice(0);
 
     const held = new KeyboardEvent('keydown', {

@@ -228,10 +228,13 @@ export const makeMapView = (
       },
       // An option of its own (docs/3d-renderer.md §11), as each set's zoom is.
       cameraDistance: {
+        // None chosen yet (`0`, the default), or nothing that's a distance: the camera's own.
         get: (): number | null => {
-          const distance = options.get(MAP3D_DISTANCE_OPTION, null);
+          const distance = options.get(MAP3D_DISTANCE_OPTION, 0);
 
-          return typeof distance === 'number' && Number.isFinite(distance)
+          return typeof distance === 'number' &&
+            Number.isFinite(distance) &&
+            distance > 0
             ? distance
             : null;
         },

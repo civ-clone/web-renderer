@@ -171,16 +171,18 @@ Building another world from the form starts it in the middle again.
 ### 1.2 Camera
 
 **Done** (spec §9.1, "As built"): the camera's maths, the keys, centring, and the mouse, the wheel and touch.
-- **The orbit:** `packages/map-3d/camera/orbit.ts`, with no three.js. It holds the yaw, pitch and distance, the presets, a
-  ray from the screen to the ground, and dragging that keeps the ground under the pointer. Tested at every yaw and pitch
-  by `tests/ui/orbit.ts`.
+- **The orbit:** `packages/map-3d/camera/orbit.ts`, with no three.js. It holds the yaw, pitch and distance, the presets
+  (not offered yet: no key or menu chooses one), a ray from the screen to the ground, and dragging that keeps the ground
+  under the pointer. Tested at every yaw and pitch by `tests/ui/orbit.ts`.
 - **What the view does:**
-  - centring on a square glides the camera there, at once under reduced motion;
+  - centring on a square glides the camera there: at once the first time, as a game starts or loads, and under reduced
+    motion;
+  - the camera stops at the poles when the player asks the map to (`lockVerticalEdges`);
   - it follows the land's height under the focus, eased, so it doesn't jolt over hills;
   - the world's copies follow the camera: every copy the haze doesn't hide is drawn, however far it sees;
   - the haze, and how far the camera sees, follow its distance.
 - **Keys:** through `InputController`, as the zoom keys are. `[` and `]` turn the view an eighth of a turn, and `\`
-  turns it back to north. `z` and `x` zoom. A 2D map ignores the turn keys.
+  turns it back to north, or the keys where those are on a US keyboard, for layouts that type them with AltGr. `z` and `x` zoom. A 2D map ignores the turn keys.
 - **The mouse, the wheel and touch:** `packages/map-3d/camera/CameraInput.ts`, on the shared gestures (0.1b):
   - a drag keeps the ground under the pointer, and a flick glides on, unless the player asked for less motion;
   - the middle button, or the main one with Alt, turns and tilts; the right button is left to the unit's menu;
@@ -188,7 +190,8 @@ Building another world from the form starts it in the middle again.
   - two fingers pinch, twist and tilt, and Safari's trackpad gestures pinch and twist.
 
   Tested by `tests/ui/cameraInput.ts`.
-- **Its distance** is kept as an option of its own, `map3dDistance`, as each set's zoom is.
+- **Its distance** is kept as an option of its own, `map3dDistance` (0 until the player zooms), as each set's zoom is,
+  and kept within the camera's range whatever's stored.
 
 - **What:**
   - orbit, pan with glide, zoom on the shared wheel steps, turn and tilt;

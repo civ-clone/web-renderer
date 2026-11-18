@@ -61,7 +61,14 @@ const takesEnter = (target: EventTarget | null): boolean =>
   // The keys that turn a map that turns (the 3D map, docs/3d-renderer.md §9.1), by eighths of a turn, and the one that
   //  turns it back to north. None is a unit's order, nor the numeric keypad's (`mappedKey`).
   turnKeys: { [key: string]: number } = { '[': -1, ']': 1 },
-  NORTH_KEY = '\\';
+  NORTH_KEY = '\\',
+  // And the same keys where they are on a US keyboard, for layouts that type them only with AltGr or Option, which the
+  //  game leaves to the browser: none types a letter there, so none is a unit's order.
+  turnCodes: { [code: string]: number | 'north' } = {
+    BracketLeft: -1,
+    BracketRight: 1,
+    Backslash: 'north',
+  };
 
 export type InputControllerDeps = {
   // The primary actions' area, whose first button Tab focuses.
@@ -351,16 +358,19 @@ export class InputController {
     }
 
     // Once for each press: held down, it would spin.
+    const turn =
+      key === NORTH_KEY ? 'north' : turnKeys[key] ?? turnCodes[event.code];
+
     if (
-      (key in turnKeys || key === NORTH_KEY) &&
+      turn !== undefined &&
       !modalWindow &&
       !takesText(event.target) &&
       !event.repeat
     ) {
-      if (key === NORTH_KEY) {
+      if (turn === 'north') {
         this.#deps.mapView.faceNorth();
       } else {
-        this.#deps.mapView.turnBy(turnKeys[key]!);
+        this.#deps.mapView.turnBy(turn);
       }
 
       event.preventDefault();

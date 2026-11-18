@@ -51,6 +51,22 @@ const tileAt = (x: number, y: number, terrain: string): PlayerTile => {
   return { ...tile, tile } as PlayerTile;
 };
 
+// What the address keeps, changed at most every quarter of a second: Safari refuses many changes in a short time.
+const waiting: { [name: string]: string } = {};
+let keeping: number | null = null;
+
+const keep = (values: { [name: string]: string }): void => {
+  Object.assign(waiting, values);
+
+  keeping ??= window.setTimeout(() => {
+    const query = new URLSearchParams(location.search);
+
+    keeping = null;
+    Object.entries(waiting).forEach(([name, value]) => query.set(name, value));
+    history.replaceState(null, '', `?${query}`);
+  }, 250);
+};
+
 const start = (script: Map3DScript): void => {
   const options = pageOptions(location.search),
     { terrain, layout } = generateWorld(options),
@@ -84,12 +100,7 @@ const start = (script: Map3DScript): void => {
       // Kept in the page's own address, as the centre is.
       cameraDistance: {
         get: () => options.distance,
-        set: (distance) => {
-          const query = new URLSearchParams(location.search);
-
-          query.set('distance', distance.toFixed(2));
-          history.replaceState(null, '', `?${query}`);
-        },
+        set: (distance) => keep({ distance: distance.toFixed(2) }),
       },
       cityOpener: { opens: () => false, open: () => {} },
       coveredBy: [],
@@ -129,15 +140,18 @@ const start = (script: Map3DScript): void => {
     yaw = (): number =>
       (view as unknown as { orbit?(): { yaw: number } }).orbit?.().yaw ?? 0,
     // The address follows the centre, so a reload or a copied link shows the same place.
-    remember = (): void => {
-      const query = new URLSearchParams(location.search);
-
-      query.set('x', String(centre.x));
-      query.set('y', String(centre.y));
-      history.replaceState(null, '', `?${query}`);
-    };
+    remember = (): void => keep({ x: String(centre.x), y: String(centre.y) });
 
   view.centre(world.get(centre.x, centre.y));
+
+  // Dragged or zoomed since: the address follows that too, and the arrows move on from there.
+  canvas.addEventListener('pointerup', () => {
+    const { x, y } = view.portal.center();
+
+    centre.x = x;
+    centre.y = y;
+    remember();
+  });
 
   document.addEventListener('keydown', (event) => {
     const move = moves[event.key],

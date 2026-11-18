@@ -474,6 +474,14 @@ export class CameraInput {
   #safari(event: GestureEvent, phase: 'start' | 'change' | 'end'): void {
     event.preventDefault();
 
+    // A touch screen's pinch on iOS comes as gestures too, alongside the fingers this follows already: they're the
+    //  fingers', or a tilt they make would be undone.
+    if (this.#pair !== null) {
+      this.#gesture = null;
+
+      return;
+    }
+
     if (phase === 'end') {
       this.#gesture = null;
 
