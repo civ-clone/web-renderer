@@ -357,6 +357,8 @@ export class GameSetupForm extends Window {
                 GameSetupForm.ask(this.#transport, this.#onFinished, {
                   ...preset,
                   advanced: advanced.open,
+                  // On Earth, the other game's Earth, where it has one (#1176).
+                  earth: this.#setup.earth,
                   pluginSet: game,
                   seats,
                 }),
@@ -450,8 +452,8 @@ export class GameSetupForm extends Window {
     this.#difficultyHint.hidden = this.#difficultyHint.textContent === '';
   }
 
-  // The map list, grouped: this grid's sizes, Earth's, and the custom size when one is typed. Earth is square only,
-  //  and its land is the map's, so those fields are held while it's chosen.
+  // The map list, grouped: this grid's sizes, Earth's, and the custom size when one is typed. Earth is on the game's own
+  //  grid, or else square, and its land is the map's, so those fields are held while it's chosen.
   #renderMap(): void {
     const setup = this.#setup,
       current = setup.map(),

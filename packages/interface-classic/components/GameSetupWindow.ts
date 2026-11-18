@@ -314,6 +314,8 @@ export class GameSetupWindow extends Window {
                 GameSetupWindow.ask(this.#transport, this.#onFinished, {
                   ...preset,
                   advanced: advanced.open,
+                  // On Earth, the other game's Earth, where it has one (#1176).
+                  earth: this.#setup.earth,
                   pluginSet: game,
                   seats,
                 }),
@@ -396,8 +398,8 @@ export class GameSetupWindow extends Window {
     });
   }
 
-  // The map list, as the setup has it. Earth is square only, and its land is the map's, so those controls are held
-  //  while it's chosen.
+  // The map list, as the setup has it. Earth is on the game's own grid, or else square, and its land is the map's, so
+  //  those controls are held while it's chosen.
   #renderMap(): void {
     const setup = this.#setup,
       current = setup.map();
@@ -411,7 +413,7 @@ export class GameSetupWindow extends Window {
     );
 
     if (setup.earth) {
-      this.#gridSelect.value = 'square';
+      this.#gridSelect.value = setup.topologyId;
     }
 
     this.#gridSelect.disabled = setup.earth;

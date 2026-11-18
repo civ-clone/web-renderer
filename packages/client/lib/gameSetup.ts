@@ -167,7 +167,8 @@ export class GameSetup {
     this.ruleSetProblems = data.ruleSets?.problems ?? [];
 
     // A game with a grid of its own (Civ2's) is on it, with that grid's size of the same name, or the rules' own size
-    //  of that name (#1175), and never on Earth, whose maps are square.
+    //  of that name (#1175), and on Earth only when its rules have an Earth of their own (#1176): the page's Earth
+    //  maps are square.
     const fixedGrid = this.fixedGrid();
 
     if (fixedGrid !== null) {
@@ -179,8 +180,17 @@ export class GameSetup {
       this.size = size;
       this.width = size?.width ?? this.width;
       this.height = size?.height ?? this.height;
-    } else if (preset.earth) {
+    }
+
+    if (preset.earth && this.earthSizes().length > 0) {
+      const sizes = this.earthSizes();
+
       this.earth = true;
+      this.size =
+        sizes.find(({ key }) => key === this.size?.key) ?? sizes[0] ?? null;
+      this.width = this.size?.width ?? this.width;
+      this.height = this.size?.height ?? this.height;
+      this.topologyId = fixedGrid ?? 'square';
     }
 
     // Customize World opens on the world last set: one of the sizes, or a custom one. On a grid of the game's own, only
@@ -281,8 +291,22 @@ export class GameSetup {
     return ruleWorldSizes(this.data.worldSizes) ?? worldSizesFor(topologyId);
   }
 
+  /**
+   * The sizes there is an Earth map for: the rules' own that say so (Civ2's, #1176), or, from rules with no sizes of
+   *  their own, the page's square Earth, unless the game has a grid of its own.
+   */
+  earthSizes(): WorldSize[] {
+    const sizes = ruleWorldSizes(this.data.worldSizes);
+
+    if (sizes !== null) {
+      return sizes.filter(({ earth }) => earth);
+    }
+
+    return this.fixedGrid() === null ? earthWorldSizes : [];
+  }
+
   sizes(): WorldSize[] {
-    return this.earth ? earthWorldSizes : this.sizesOn(this.topologyId);
+    return this.earth ? this.earthSizes() : this.sizesOn(this.topologyId);
   }
 
   /** The chosen map's value, as `maps()` lists it. */
@@ -308,8 +332,7 @@ export class GameSetup {
           group: 'size',
         })
       ),
-      // Earth's maps are square: not for a game with a grid of its own.
-      ...(this.fixedGrid() === null ? earthWorldSizes : []).map(
+      ...this.earthSizes().map(
         (size): MapChoice => ({
           value: `earth:${size.key}`,
           label: t('GameSetup.earth', { size: label(size) }),
@@ -334,7 +357,7 @@ export class GameSetup {
   chooseMap(value: string): void {
     const [kind, key] = value.split(':');
 
-    this.earth = kind === 'earth' && this.fixedGrid() === null;
+    this.earth = kind === 'earth' && this.earthSizes().length > 0;
     this.size = this.sizes().find((size) => size.key === key) ?? null;
 
     if (this.size) {
@@ -371,11 +394,11 @@ export class GameSetup {
     this.#settle();
   }
 
-  // Earth is square only. A smaller map has room for fewer: computer seats go first, from the end, so the human's
-  //  stays.
+  // Earth is on the game's own grid (Civ2's), or else square. A smaller map has room for fewer: computer seats go first,
+  //  from the end, so the human's stays.
   #settle(): void {
     if (this.earth) {
-      this.topologyId = 'square';
+      this.topologyId = this.fixedGrid() ?? 'square';
     }
 
     while (this.seats.length > this.maxSeats()) {

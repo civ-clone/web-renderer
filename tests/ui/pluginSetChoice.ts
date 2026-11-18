@@ -223,7 +223,8 @@ const civ2Players = { minPlayers: 3, maxPlayers: 7, players: 7 },
       width,
       height,
       ...civ2Players,
-      earth: false,
+      // Civ2's own Earth comes in each size (#1176).
+      earth: true,
     })),
     custom: {
       topologyId: 'staggered-iso',
@@ -448,6 +449,24 @@ const civ2Metadata: PackMetadata = {
 
     setup.close();
     closeAll();
+    log.length = 0;
+
+    askEarth(transport);
+    await settle();
+
+    expect(
+      "and Play Earth asks nothing either, and offers Civ1's square Earth",
+      [channels(log), shown()],
+      [
+        [],
+        {
+          title: 'How big a world?',
+          options: ['Normal (80 × 50)', 'Large (104 × 65)', 'Huge (128 × 80)'],
+        },
+      ]
+    );
+
+    closeAll();
   }
 
   installTilesets({ civ2: { complete: true, metadata: civ2Metadata } });
@@ -586,7 +605,7 @@ const civ2Metadata: PackMetadata = {
 
     closeAll();
 
-    // Earth after Civ2: Civ1's own game, on a new worker.
+    // Earth with Civ2 to play (#1176): which game first, then that game's Earth.
     worker.chosen = 'civ2';
     log.length = 0;
 
@@ -594,11 +613,124 @@ const civ2Metadata: PackMetadata = {
     await settle();
 
     expect(
-      'Earth after Civ2 puts Civ1’s game back first, and never asks which game',
-      [channels(log), shown().title],
-      [['pluginSets', 'replace'], 'How big a world?']
+      'Earth with Civ2 to play asks which game, starting on the one chosen last',
+      [
+        channels(log),
+        shown(),
+        latest().querySelector('option[selected]')?.getAttribute('value'),
+      ],
+      [
+        ['pluginSets'],
+        {
+          title: 'Which game?',
+          options: ['Civilization', 'Civilization II (preview)'],
+        },
+        'civ2',
+      ]
     );
 
+    const playEarth = async (game: string): Promise<{ [key: string]: any }> => {
+      log.length = 0;
+      choose(game);
+      await settle();
+
+      const sizes = shown();
+
+      choose('normal');
+      await settle();
+      choose(latest().querySelector('option')!.getAttribute('value')!);
+      await settle();
+      choose(
+        latest().querySelector('option[selected]')!.getAttribute('value')!
+      );
+      await settle();
+
+      return {
+        asked: channels(log).filter((channel) =>
+          ['replace', 'choosePluginSet', 'worldSizes'].includes(channel)
+        ),
+        sizes,
+        options: log.find(([channel]) => channel === 'setOptions')?.[1],
+      };
+    };
+
+    const civ1 = await playEarth('civ1-enhanced');
+
+    expect(
+      "Civilization's Earth is Civ1's, on the square grid, from a new worker, as it always was",
+      [
+        civ1.asked,
+        civ1.sizes,
+        (({ earth, topologyId, width, height }) => [
+          earth,
+          topologyId,
+          width,
+          height,
+        ])(civ1.options),
+      ],
+      [
+        ['replace', 'worldSizes'],
+        {
+          title: 'How big a world?',
+          options: ['Normal (80 × 50)', 'Large (104 × 65)', 'Huge (128 × 80)'],
+        },
+        [true, 'square', 80, 50],
+      ]
+    );
+
+    closeAll();
+
+    askEarth(transport);
+    await settle();
+
+    const civ2 = await playEarth('civ2');
+
+    expect(
+      "Civilization II's Earth is its own, in its three sizes, on its own grid",
+      [
+        civ2.asked,
+        civ2.sizes,
+        (({ earth, topologyId, width, height }) => [
+          earth,
+          topologyId,
+          width,
+          height,
+        ])(civ2.options),
+      ],
+      [
+        ['replace', 'choosePluginSet', 'worldSizes'],
+        {
+          title: 'How big a world?',
+          options: ['Small (40 × 50)', 'Normal (50 × 80)', 'Large (75 × 120)'],
+        },
+        [true, 'staggered-iso', 50, 80],
+      ]
+    );
+
+    closeAll();
+
+    // A game whose rules have sizes but no Earth: the player is told, and nothing more is asked.
+    const withEarth = civ2WorldSizes.sizes.map((size) => size.earth);
+
+    civ2WorldSizes.sizes.forEach((size) => (size.earth = false));
+    worker.chosen = 'civ2';
+
+    askEarth(transport);
+    await settle();
+    choose('civ2');
+    await settle();
+
+    expect(
+      'Earth for a game whose rules have no Earth says so, in a window',
+      openDialogs()
+        .filter((dialog) => dialog.classList.contains('notificationWindow'))
+        .map((dialog) => text(dialog.querySelector('p'))),
+      ['That game couldn’t be set up: it has no Earth map.']
+    );
+
+    civ2WorldSizes.sizes.forEach(
+      (size, index) => (size.earth = withEarth[index]!)
+    );
     closeAll();
   }
 
@@ -637,7 +769,7 @@ const civ2Metadata: PackMetadata = {
       ]
     );
     expect(
-      `${name}: on the isometric grid only, with no grid to choose and no Earth`,
+      `${name}: on the isometric grid only, with no grid to choose, and Civ2's own Earth`,
       [
         element.querySelector('select[name=topologyId]') === null,
         Array.from(
@@ -646,7 +778,7 @@ const civ2Metadata: PackMetadata = {
         ).some((value) => (value ?? '').startsWith('earth:')),
         element.querySelectorAll('select[name=difficulty] option').length,
       ],
-      [true, false, 6]
+      [true, true, 6]
     );
     expect(
       `${name}: its sizes are Civ2's own, from its rules, starting on Normal, which is what its inputs hold`,
@@ -664,6 +796,9 @@ const civ2Metadata: PackMetadata = {
           ['size:small', 'Small (40 × 50)'],
           ['size:normal', 'Normal (50 × 80)'],
           ['size:large', 'Large (75 × 120)'],
+          ['earth:small', 'Earth, Small (40 × 50)'],
+          ['earth:normal', 'Earth, Normal (50 × 80)'],
+          ['earth:large', 'Earth, Large (75 × 120)'],
         ],
         'size:normal',
         '50',
@@ -934,7 +1069,7 @@ const civ2Metadata: PackMetadata = {
       } as any);
 
     expect(
-      "a setup for rules with their own sizes is on their grid, at Normal, with their 7 civilizations of the 9 there are, and doesn't offer Earth",
+      'a setup for rules with their own sizes is on their grid, at Normal, with their 7 civilizations of the 9 there are, and offers their own Earth',
       [
         setup.fixedGrid(),
         setup.topologyId,
@@ -951,7 +1086,14 @@ const civ2Metadata: PackMetadata = {
         [50, 80],
         7,
         7,
-        ['size:small', 'size:normal', 'size:large'],
+        [
+          'size:small',
+          'size:normal',
+          'size:large',
+          'earth:small',
+          'earth:normal',
+          'earth:large',
+        ],
       ]
     );
 
@@ -1071,6 +1213,59 @@ const civ2Metadata: PackMetadata = {
         ).minSeats(),
       ],
       [['human:Dom', 'computer:', 'computer:'], 1]
+    );
+  }
+
+  // Civ2's Earth in the setup (#1176): on its own grid, in its sizes; and none from rules whose sizes have no Earth.
+  {
+    const data = (worldSizes: unknown) =>
+        ({
+          aiClients: ['SimpleAIClient'],
+          civilizations: [{ name: 'Roman', leaders: ['JuliusCaesar'] }],
+          difficulties: [],
+          existing: {},
+          worldSizes,
+        } as any),
+      setup = new GameSetup(data(civ2WorldSizes), { earth: true });
+
+    expect(
+      'a setup opened on Earth for rules with their own Earth is on it, on their grid',
+      [setup.earth, setup.topologyId, setup.map(), setup.width, setup.height],
+      [true, 'staggered-iso', 'earth:normal', 50, 80]
+    );
+
+    setup.chooseMap('earth:large');
+
+    expect(
+      'choosing another of their Earth sizes stays on their grid, and is still Earth',
+      [setup.earth, setup.topologyId, setup.width, setup.height],
+      [true, 'staggered-iso', 75, 120]
+    );
+
+    setup.chooseMap('size:small');
+
+    expect(
+      'and one of their sizes is not Earth',
+      [setup.earth, setup.topologyId, setup.map()],
+      [false, 'staggered-iso', 'size:small']
+    );
+
+    const noEarth = new GameSetup(
+      data({
+        ...civ2WorldSizes,
+        sizes: civ2WorldSizes.sizes.map((size) => ({ ...size, earth: false })),
+      }),
+      { earth: true }
+    );
+
+    expect(
+      'rules whose sizes have no Earth offer none, and a setup asked for Earth opens on their sizes',
+      [
+        noEarth.earth,
+        noEarth.maps().some(({ group }) => group === 'earth'),
+        noEarth.map(),
+      ],
+      [false, false, 'size:normal']
     );
   }
 

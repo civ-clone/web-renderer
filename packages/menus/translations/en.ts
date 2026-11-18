@@ -208,6 +208,7 @@ i18next.addResources('en', 'default', {
   'NewGameWindow.map-grid': 'Which map grid?',
   // New Game's first question once there is more than one game to play (#668).
   'NewGameWindow.game': 'Which game?',
+  'NewGameWindow.no-earth': 'it has no Earth map.',
   'NewGameWindow.world-size': 'How big a world?',
   // New Game's first row under the new interface (#749): the game setup, for everything the questions don't ask.
   'NewGameWindow.customize': 'Customize…',

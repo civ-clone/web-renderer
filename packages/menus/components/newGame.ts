@@ -104,7 +104,7 @@ const ask = (
  * Which grid the map is on: square, isometric or hex (#89). The first question of New Game and Customize World, and
  *  fixed for the rest of the game. Only the grids that can be drawn are offered: square and hex with the pixel art that
  *  ships, and isometric once Civ2's art is imported (#97). Where only one can be, the question answers itself and is
- *  never shown (#148). Earth is square, so it never asks.
+ *  never shown (#148). Earth is on its game's own grid, or else square, so it never asks.
  */
 export const askMapGrid = (
   onChoose: (grid: TopologyId) => void,
@@ -356,29 +356,53 @@ export const askNewGame = (
   });
 
 /**
- * A new game on Earth: the same questions as New Game, offering only the sizes there is an Earth map for. Earth's maps
- *  are square, so it never asks which grid (#89), and are civ.one's own game's, so it never asks which game either: one
- *  chosen before on this page is put back first.
+ * A new game on Earth: the same questions as New Game, offering only the sizes there is an Earth map for. Which game
+ *  first, when there is more than one to play (#1176): civ.one's own, whose Earth is Civ1's, on the square grid (#89),
+ *  or another whose rules have an Earth of their own (Civ2's), on its grid, in the sizes its rules have one for.
  */
 export const askEarth = (
   transport: Transport,
   onFinished?: FinishedHandler
 ): void => {
-  const sizes = (): void =>
+  const civ1Earth = (): void =>
     askWorldSize(transport, onFinished, earthWorldSizes, {
       earth: true,
       topologyId: 'square',
     });
 
   if (!mayOfferOtherGames()) {
-    sizes();
+    civ1Earth();
 
     return;
   }
 
-  askGameChoices(transport)
-    .then((choices) => playGame(transport, choices.default, choices))
-    .then(sizes)
-    // Not answered: the player has been told, and the main menu is still there (#580).
-    .catch(unlessRequestFailed);
+  askGame(transport, (pluginSet, grid) =>
+    transport
+      .request(new WorldSizes())
+      .then((answer) => {
+        const offered = ruleWorldSizes(answer);
+
+        // Rules with no sizes of their own (Civ1's) have the page's Earth.
+        if (offered === null) {
+          civ1Earth();
+
+          return;
+        }
+
+        const sizes = offered.filter(({ earth }) => earth);
+
+        if (sizes.length === 0) {
+          gameFailed(new Error(t('NewGameWindow.no-earth')));
+
+          return;
+        }
+
+        askWorldSize(transport, onFinished, sizes, {
+          earth: true,
+          topologyId: grid ?? (answer.sizes[0]!.topologyId as TopologyId),
+        });
+      })
+      // Not answered: the player has been told, and the main menu is still there (#580).
+      .catch(unlessRequestFailed)
+  );
 };
