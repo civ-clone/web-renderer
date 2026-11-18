@@ -411,7 +411,7 @@ blended across squares.
   - a roughness (how much noise rides on it);
   - a shape (`flat`, `rolling`, `ridged` or `peaked`).
 
-  Typical values, in world units: ocean −0.15, rising to −0.03 at the shore; plains 0.02; hills 0.12, rolling;
+  Typical values, in world units: ocean −0.15, rising to −0.03 at the shore; plains 0.02; hills 0.12, ridged;
   mountains 0.35, ridged and peaked.
 - **Blending:**
   - A point takes its square and that square's neighbours (from the topology), each weighted by a smooth kernel of its
@@ -428,6 +428,14 @@ blended across squares.
 - **Deterministic:** the same squares always give the same land. Every random choice is seeded from the square's
   co-ordinates.
 
+- **As built (slice 1.1):** `packages/map-3d/terrain/relief.ts`, with the table in `packages/models-builtin/terrain.ts`.
+  - A point takes every square whose middle is within the kernel's radius, chosen by distance rather than from the
+    topology's neighbours: on the hex grid a hex from the next ring out reaches a corner, and a neighbour list would
+    leave a step there.
+  - A peak keeps 65% of its height out of the blend, weighted by the square of its weight. The rest is blended.
+  - The sea's floor is −0.03 beside land, falling to −0.15 three squares out. The walk goes no further.
+  - The noise is gradient noise (Perlin's): value noise showed its lattice as lines across the sea.
+
 ### 4.2 The mesh
 
 - **Chunks:** each chunk is a regular grid of points on the ground, about 8 per square across, with a height and a
@@ -436,6 +444,17 @@ blended across squares.
 - **Grids:** the mesh doesn't follow squares' edges, so one builder serves every grid.
 - **Updates:** a tile patch rebuilds only the chunks within one square of it. A change that leaves the relief alone
   (a road, say) touches only the chunk's colours.
+- **As built (slice 1.1):** `packages/map-3d/terrain/chunks.ts` and `packages/map-3d/Land.ts`.
+  - Chunks are about 16 squares across, as many as divide the world's period exactly, so each point is placed by its
+    index on the whole ground and chunks meet without a seam.
+  - Normals come from the height function either side of a point, not from a chunk's triangles, so the light has no
+    seam along chunks' borders either.
+  - A tile patch rebuilds only round the squares whose terrain it changed: every chunk within the kernel's reach of
+    them, and of the sea within two squares, whose floor moves with them. Most patches (a unit moving, a city growing)
+    change no terrain and rebuild nothing. The chunks waiting are built nearest the map's centre first, and put in
+    order again when it moves. Water is the engine's (`tile.isWater`), not a terrain's name. There's no colour-only
+    update yet, and no level of detail.
+  - Each chunk is drawn once for each copy of the world (§3.1): nine copies when the world wraps both ways.
 
 ### 4.3 Surface
 

@@ -31,6 +31,8 @@ export type MapView3DDeps = {
   cityOpener: CityOpener;
   // What floats over the map (the sidebar's sections, #697).
   coveredBy: HTMLElement[];
+  // `?debug=1`: an overlay of what each frame costs (docs/3d-renderer.md §12).
+  debug?: boolean;
   // Whether the view stops at the top and bottom rows rather than wrapping over the poles.
   lockVerticalEdges: boolean;
   // The canvas the map is drawn on, sized to its parent.

@@ -481,6 +481,9 @@ importers:
       '@civ-clone/ui-menus':
         specifier: workspace:*
         version: link:packages/menus
+      '@civ-clone/ui-models-builtin':
+        specifier: workspace:*
+        version: link:packages/models-builtin
       '@civ-clone/ui-protocol':
         specifier: workspace:*
         version: link:packages/protocol
@@ -910,6 +913,9 @@ importers:
       '@civ-clone/ui-map':
         specifier: workspace:*
         version: link:../map
+      '@civ-clone/ui-models-builtin':
+        specifier: workspace:*
+        version: link:../models-builtin
       '@civ-clone/ui-protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -982,6 +988,8 @@ importers:
       '@civ-clone/ui-widgets':
         specifier: workspace:*
         version: link:../widgets
+
+  packages/models-builtin: {}
 
   packages/platform: {}
 

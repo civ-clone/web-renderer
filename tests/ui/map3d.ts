@@ -153,10 +153,16 @@ Object.defineProperties(mapCanvas.parentElement, {
 
 // What the stage was asked to do: the test's DOM has no WebGL to draw with.
 const staged: string[] = [],
+  // The land's chunks the stage was given, and where its camera looked last, apart from what's drawn.
+  chunksSet = new Set<string>(),
+  lookedAt: number[] = [],
   fakeStage = (): Stage => ({
     render: () => void staged.push('render'),
     resize: (stageWidth, stageHeight, ratio) =>
       void staged.push(`resize ${stageWidth}×${stageHeight}@${ratio}`),
+    setChunk: (i, j) => void chunksSet.add(`${i},${j}`),
+    lookAt: (u, v, height) => void lookedAt.splice(0, 3, u, v, height),
+    stats: () => ({ drawCalls: 0, triangles: 0, geometries: 0 }),
     dispose: () => void staged.push('dispose'),
   });
 
@@ -412,11 +418,12 @@ expect(
   chooseMapTileset('square', '');
   view.redrawArt();
 
-  // The view: sized to its canvas's box, and drawn, as it starts.
+  // The view: sized to its canvas's box, and drawn, as it starts; then its land built and drawn, wherever it's centred
+  //  (at once, with no frames here).
   expect(
-    'the stage is sized to the map’s box as it starts, and drawn at once',
-    staged.splice(0),
-    ['resize 640×480@1', 'render']
+    'the stage is sized to the map’s box as it starts, and drawn at once, and its land built and drawn as it starts',
+    [staged.splice(0), chunksSet.size > 0],
+    [['resize 640×480@1', 'render', 'render'], true]
   );
 
   box.width = 800;
@@ -448,6 +455,16 @@ expect(
     [view.portal.center(), staged.splice(0)],
     [{ x: 1, y: 1 }, ['render']]
   );
+  expect(
+    'and the camera looks at the middle of that square on the ground, no lower than the sea',
+    [lookedAt[0], lookedAt[1], lookedAt[2]! >= 0],
+    [1.5, 1.5, true]
+  );
+  expect(
+    'every chunk of the land was built as it started',
+    chunksSet.size > 0,
+    true
+  );
 
   view.portal.setCenter(1, 1);
 
@@ -460,14 +477,68 @@ expect(
 
   expect('a queued tile waits for the world', view.tilesPending(), 0);
 
+  chunksSet.clear();
   view.releaseTiles();
 
-  expect('released, each square once', view.tilesPending(), 2);
+  expect(
+    'released, they are taken on the next frame (at once, with no frames here), and drawn: with no terrain changed, no land is built again',
+    [view.tilesPending(), chunksSet.size, staged.splice(0)],
+    [0, 0, ['render']]
+  );
 
+  // A tile whose terrain the patch changed: its land is built again.
+  (tiles[1] as { terrain: { _: string } }).terrain = { _: 'Mountains' };
+  view.queueTile(tiles[1]);
+  view.releaseTiles();
+
+  expect(
+    'a tile whose terrain changed has the land round it built again',
+    [chunksSet.size > 0, staged.splice(0)],
+    [true, ['render']]
+  );
+
+  // The world's terrain read again only when its tiles have been replaced: a whole new world, perhaps with none.
+  const readAgain: boolean[] = [],
+    land = view.land(),
+    changed = land.changed.bind(land);
+
+  land.changed = (squares, u, v, always = false): void => {
+    readAgain.push(always);
+    changed(squares, u, v, always);
+  };
+
+  view.flush();
+  view.flush();
+
+  const unchanged = readAgain.splice(0),
+    known = view.world.tiles();
+
+  chunksSet.clear();
+  view.world.setTiles([], true);
+  view.flush();
+
+  const replaced = [readAgain.splice(0), chunksSet.size > 0];
+
+  view.world.setTiles(known, true);
+  view.flush();
+  land.changed = changed;
+
+  // Each flush takes the tiles, and so does the frame it draws (at once, with no frames here).
+  expect(
+    'flushed, the terrain is read again only once the world’s tiles are replaced, and the land built again then',
+    [unchanged, replaced, readAgain],
+    [
+      [false, false, false, false],
+      [[true, false], true],
+      [true, false],
+    ]
+  );
+
+  staged.splice(0);
   view.flush();
 
   expect(
-    'a flush takes them, and draws',
+    'a flush with nothing released draws',
     [view.tilesPending(), staged.splice(0)],
     [0, ['render']]
   );
@@ -674,12 +745,13 @@ expect(
     others = inputs.filter(
       (path: string) =>
         !path.startsWith('packages/map-3d/') &&
+        !path.startsWith('packages/models-builtin/') &&
         !/node_modules\/(\.pnpm\/[^/]+\/node_modules\/)?three\//.test(path) &&
         !/@dom111\/typed-event-emitter\//.test(path)
     );
 
   expect(
-    'map3d.js bundles three.js, its own code, the emitter, and the factory’s name alone',
+    'map3d.js bundles three.js, its own code, the built-in model set, the emitter, and the factory’s name alone',
     others,
     ['packages/map/MapView3DFactory.ts']
   );
