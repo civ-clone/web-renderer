@@ -183,6 +183,9 @@ const memoryStorage = (initial: { [key: string]: string } = {}) => {
     ]
   );
 
+  const stillHeard: string[] = [];
+
+  registry.onChange((key) => stillHeard.push(key));
   stopThrowing();
   stopHearing();
   stopHearing();
@@ -191,9 +194,9 @@ const memoryStorage = (initial: { [key: string]: string } = {}) => {
   registry.set('mapScale', 4);
 
   expect(
-    'stopped handlers hear nothing, and stopping one twice is harmless',
-    [registry.get('mapScale'), heard, errors.length],
-    [4, [], 0]
+    'stopped handlers hear nothing, and stopping one twice stops no other',
+    [registry.get('mapScale'), heard, errors.length, stillHeard],
+    [4, [], 0, ['mapScale']]
   );
 
   console.error = logError;

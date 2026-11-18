@@ -953,9 +953,22 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
             (error: Error) => error.message
           );
 
+          // A sheet decoded, and a sprite cut from it that never is.
+          (globalThis as any).createImageBitmap = (source: unknown) =>
+            source instanceof Blob ? decoding(source) : new Promise(() => {});
+
+          const uncut = await loadHosted(
+            fixturePack,
+            fixturePack.hosted!,
+            20
+          ).then(
+            () => null,
+            (error: Error) => error.message
+          );
+
           (globalThis as any).createImageBitmap = decoding;
 
-          return [hung, stalled, unfetched, undecoded];
+          return [hung, stalled, unfetched, undecoded, uncut];
         })(),
       ]),
       [
@@ -966,6 +979,7 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
           "sets/fixture.json didn't come within 5 ms.",
           "The fixture set's sheet didn't come within 5 ms: it was still being fetched.",
           "The fixture set's sheet didn't come within 20 ms: it was still being decoded.",
+          "The fixture set's sheet didn't come within 20 ms: it was still being cut up.",
         ],
       ]
     );

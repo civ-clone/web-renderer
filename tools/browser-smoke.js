@@ -756,6 +756,9 @@ const main = async () => {
           source: `
             const denied = () => { throw new DOMException('The operation is insecure.', 'SecurityError'); };
 
+            // Room for every request the start makes, so the sheet's is still listed when it's looked for.
+            performance.setResourceTimingBufferSize(10000);
+
             Object.defineProperty(window, 'indexedDB', { get: () => ({ open: denied, deleteDatabase: denied }) });
             Object.defineProperty(window, 'localStorage', { get: denied });
             Object.defineProperty(window, 'sessionStorage', { get: denied });
