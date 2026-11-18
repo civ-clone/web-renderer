@@ -71,7 +71,10 @@ export const tradeRatesOpen = (): boolean =>
   open !== null && open.element().isConnected;
 
 // Rates sent that the game hasn't answered yet: until it has, the cities' figures are from before them.
-let unanswered = 0;
+let unanswered = 0,
+  // The rates last sent, by any window: one opened before they're answered starts from them, not from the rates the
+  //  engine had before, which closing it would send back over them.
+  inFlight: [string, number][] | null = null;
 
 /**
  * Whether the trade rates are still being settled: the window is open, or rates it sent haven't been answered, so the
@@ -103,6 +106,7 @@ export const setTradeRatesWaiting = (
   // Rates sent before the turn changed hands are answered, or will never be: none is outstanding into the next.
   if (turnChanging) {
     unanswered = 0;
+    inFlight = null;
   }
 
   showWaiting?.();
@@ -118,6 +122,7 @@ export const disposeTradeRates = (): void => {
   latestPlayer = null;
   waitingForTurn = false;
   unanswered = 0;
+  inFlight = null;
 };
 
 // A window taken off the page without being closed (a game torn down, say): its End Turn listener and pending send go
@@ -186,10 +191,11 @@ export const openTradeRates = (
       '<dl class="adjust-trade-rates-effect" aria-live="polite"></dl>'
     ),
     // The rates the window opened with, which Cancel puts back, and the empire as it was then, to compare against.
-    opening = tradeRates.all.map((rate): [string, number] => [
-      rate._,
-      rate.value,
-    ]),
+    // The rates the engine holds, as the player last saw them.
+    held = tradeRates.all.map((rate): [string, number] => [rate._, rate.value]),
+    opening = unanswered > 0 && inFlight !== null ? inFlight : held,
+    openingValue = (rate: string): number =>
+      opening.find(([key]) => key === rate)?.[1] ?? 0,
     before = player === null ? null : empireTotals(player);
 
   // The rates as they were last sent, for the caps.
@@ -198,7 +204,7 @@ export const openTradeRates = (
     //  neither a send that never arrived nor a refresh that arrives before a later send's answer can leave the engine on
     //  rates the window doesn't show. A send now and then that wasn't needed does no harm.
     sent = opening,
-    engine = opening,
+    engine = held,
     pending: ReturnType<typeof setTimeout> | null = null,
     kept = false,
     // A refresh moving the sliders to new maximums: the rebalance isn't the player's to send.
@@ -220,6 +226,7 @@ export const openTradeRates = (
 
       sent = value;
       unanswered++;
+      inFlight = value;
 
       transport.send('action', {
         name: 'AdjustTradeRates',
@@ -350,7 +357,7 @@ export const openTradeRates = (
           // Each stops at its maximum, where the rules have one (Civ2's, M2d).
           const slider = new LockedSlider(
             tradeRate._,
-            tradeRate.value,
+            openingValue(tradeRate._),
             rateName(tradeRate._),
             tradeRates.maxRates?.[tradeRate._] ?? 100,
             yieldIcon(rateIcons[tradeRate._] ?? tradeRate._)

@@ -104,9 +104,15 @@ const liveAndCancel = async (): Promise<void> => {
   const sent: [string, any][] = [],
     transport = {
       send: (channel: string, data: unknown) => sent.push([channel, data]),
-    } as unknown as Transport;
+    } as unknown as Transport,
+    // The game answers every send so far.
+    answerAll = (): void => {
+      while (!tradeRatesAnswered());
+    };
 
   refreshTradeRates(plain([40, 0, 60]), playerWith(10, 20));
+
+  answerAll();
 
   const window = openTradeRates(plain([40, 0, 60]), transport),
     element = window.element(),
@@ -165,6 +171,8 @@ const liveAndCancel = async (): Promise<void> => {
   );
 
   // A box cleared to type into stays clear as the engine's patches come in: the window's own live send among them.
+  answerAll();
+
   const clearing = openTradeRates(plain([40, 0, 60]), transport),
     box = clearing
       .element()
@@ -217,6 +225,8 @@ const liveAndCancel = async (): Promise<void> => {
 
   expect('closed with nothing moved, nothing is sent', sent.length, count);
 
+  answerAll();
+
   const third = openTradeRates(plain([40, 0, 60]), transport);
 
   move(third.element(), 2, 80);
@@ -231,6 +241,8 @@ const liveAndCancel = async (): Promise<void> => {
 
   // A send the game never took (made while the other civilizations moved): the engine's rates come back unchanged, and
   //  OK sends the rates on screen again rather than taking them as sent.
+  answerAll();
+
   const dropped = openTradeRates(plain([40, 0, 60]), transport);
 
   move(dropped.element(), 0, 70);
@@ -258,6 +270,8 @@ const liveAndCancel = async (): Promise<void> => {
 
   document.addEventListener('traderatesclosed', countClosed);
 
+  answerAll();
+
   const holding = openTradeRates(plain([40, 0, 60]), transport),
     openWhileShown = tradeRatesOpen();
 
@@ -274,10 +288,12 @@ const liveAndCancel = async (): Promise<void> => {
 
   // Closed having just sent rates (Cancel here), the rates are still settling until the game has answered every send:
   //  until then the turn isn't ended for the player, on figures from before them.
+  answerAll();
+
   const reverting = openTradeRates(plain([40, 0, 60]), transport);
 
   // Every earlier send answered.
-  while (!tradeRatesAnswered());
+  answerAll();
 
   move(reverting.element(), 1, 30);
   await wait(tradeRatesDelay + 50);
@@ -304,6 +320,8 @@ const liveAndCancel = async (): Promise<void> => {
 
   // A refresh that comes before a later send's answer, and then a move back to its rates: they're sent, rather than
   //  taken as the engine's, as the later send may yet land.
+  answerAll();
+
   const stale = openTradeRates(plain([40, 0, 60]), transport);
 
   move(stale.element(), 0, 50);
@@ -330,7 +348,40 @@ const liveAndCancel = async (): Promise<void> => {
   stale.close();
   await wait(0);
 
+  // Opened again before the rates it kept are answered: it starts from them, not the engine's rates from before, and
+  //  closing it untouched leaves them.
+  answerAll();
+
+  const kept = openTradeRates(plain([40, 0, 60]), transport);
+
+  move(kept.element(), 0, 25);
+  ok(kept.element()).click();
+
+  const reopened = openTradeRates(plain([40, 0, 60]), transport),
+    reopenedValues = Array.from(
+      reopened.element().querySelectorAll('input[type="number"]')
+    ).map((input) => Number((input as HTMLInputElement).value));
+
+  cancel(reopened.element()).click();
+
+  expect(
+    'reopened before the answer, it shows the rates kept, and Cancel keeps them',
+    [
+      reopenedValues,
+      sent.at(-1)?.[1].value.find(([rate]: [string]) => rate === 'Tax'),
+    ],
+    [
+      [25, 8, 67],
+      ['Tax', 25],
+    ]
+  );
+
+  answerAll();
+  await wait(0);
+
   // A window taken off the page without being closed: its End Turn listener goes with it when the next one opens.
+  answerAll();
+
   const removed = openTradeRates(plain([40, 0, 60]), transport);
 
   move(removed.element(), 0, 10);
@@ -350,6 +401,8 @@ const liveAndCancel = async (): Promise<void> => {
 
   // Waiting for the other civilizations, the game takes no actions: the window says so, and its rates and OK can't be
   //  used until the turn comes back.
+  answerAll();
+
   const waiting = openTradeRates(plain([40, 0, 60]), transport),
     okButton = ok(waiting.element()),
     waitingNote = waiting
@@ -379,6 +432,8 @@ const liveAndCancel = async (): Promise<void> => {
   await wait(0);
 
   // The turn ends with it open, a move still pending: what's on screen is sent at once, ahead of End Turn, and kept.
+  answerAll();
+
   const ending = openTradeRates(plain([40, 0, 60]), transport),
     beforeEnding = sent.length;
 
