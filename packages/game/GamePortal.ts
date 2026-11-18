@@ -1,4 +1,9 @@
-import { DragSample, releaseVelocity } from '@civ-clone/ui-widgets/lib/drag';
+import {
+  Glide,
+  Pinch,
+  Press,
+  WheelTurn,
+} from '@civ-clone/ui-widgets/lib/mapGestures';
 import { Coordinate, Tile, Unit } from '@civ-clone/ui-protocol/types';
 import {
   TooltipContent,
@@ -30,42 +35,10 @@ import ActionWindow from '@civ-clone/ui-component-window/ActionWindow';
 import { on } from '@dom111/element';
 import { t } from 'i18next';
 
-// How far, in px, a press has to move before it is a drag rather than a click
-// or a long press. Enough to absorb a wobbling finger.
-const DRAG_THRESHOLD = 8,
-  // How much of its speed a glide keeps after each 16ms frame.
-  INERTIA_FRICTION = 0.92,
-  // Below this, in px per ms, a glide is over.
-  INERTIA_MIN_SPEED = 0.02,
-  // A hard flick is a few px per ms. Two pointer events a millisecond apart
-  // can make a short drag look many times faster than that, and would throw
-  // the map clean across the world.
-  INERTIA_MAX_SPEED = 3,
-  // How long the mouse rests on a city's banner, or a square, before its tooltip opens, as the shared tooltip's (#742).
-  HOVER_TOOLTIP_DELAY = 400,
-  // How far, in px, the wheel turns for a tenth of zoom (#1101), past the first turn after a pause, which makes a tenth
-  //  however small: a mouse turned a notch at a time zooms a tenth a notch, whatever its browser counts a notch as (as
-  //  little as a few px). A trackpad's two-finger scroll sends a few px at a time, added up until they reach this. A
-  //  wheel counted in lines or pages (Firefox's mouse) makes a tenth each time it turns.
-  WHEEL_STEP = 50,
-  // A trackpad's pinch, which comes as the wheel with Ctrl held, sends smaller deltas still: a pinch to twice the size
-  //  is about 70 px.
-  PINCH_STEP = 8,
-  // Past this long, in ms, without the wheel turning, what it turned before is forgotten: a new turn starts afresh.
-  WHEEL_PAUSE = 250,
-  // The most tenths a turn counted in px makes (#1139), a pinch's aside. A trackpad's flick runs on as it slows, with no
-  //  pause, and would otherwise run the zoom to one end of its range: past this, the rest of it is the map's, and does
-  //  nothing. A whole scale's worth, so a mouse's wheel spun fast still zooms far.
-  WHEEL_TURN_TENTHS = 10;
+// What a press, the wheel and a pinch do to the map is shared with the 3D map (`@civ-clone/ui-widgets/lib/mapGestures`).
 
-// What the wheel has turned since it last made a tenth of zoom, in px, which way (-1 or 1, 0 before it has), when it
-//  last turned, and how many tenths this turn has made.
-type WheelTurn = {
-  delta: number;
-  direction: number;
-  at: number;
-  tenths: number;
-};
+// How long the mouse rests on a city's banner, or a square, before its tooltip opens, as the shared tooltip's (#742).
+const HOVER_TOOLTIP_DELAY = 400;
 
 // Safari's `GestureEvent` (#1138), which isn't in the DOM's types: a trackpad's pinch, `scale` times the size it was
 //  when it began, and where on the page it is (on a Mac: iOS's has no `clientX` or `clientY`).
@@ -75,30 +48,12 @@ type GestureEvent = UIEvent & {
   clientY?: number;
 };
 
-// A pinch in Safari over the map (#1138): the zoom the fingers' spread is measured from, in the set it's for, and when
-//  it last moved.
-type Gesture = {
-  from: number;
-  tileset: TilesetDescriptor;
-  at: number;
-};
-
 // The zoom the wheel or the keys have asked for, waiting for the next frame (#1101), the set it's for, and where on the
 //  canvas to keep still.
 type PendingZoom = {
   zoom: number;
   tileset: TilesetDescriptor;
   anchor?: Coordinate;
-};
-
-type Drag = {
-  pointerId: number;
-  startX: number;
-  startY: number;
-  lastX: number;
-  lastY: number;
-  dragging: boolean;
-  samples: DragSample[];
 };
 
 // What the mouse rests on that has a tooltip: one of your cities' banners (#747), or a square (#748). The key says which
@@ -134,12 +89,16 @@ type Picking = {
 export class GamePortal extends Portal {
   #activeUnit: Unit | null = null;
   #picking: Picking | null = null;
-  #drag: Drag | null = null;
+  #drag: Press | null = null;
+  // A map let go while moving carries on, as a drag moves it.
+  #glide = new Glide((dx: number, dy: number): void =>
+    this.scrollBy(...this.toCanvas(dx, dy))
+  );
   #hover: Hover | null = null;
-  #inertiaFrame: number | null = null;
   #pendingZoom: PendingZoom | null = null;
-  #wheelTurn: WheelTurn = { delta: 0, direction: 0, at: -Infinity, tenths: 0 };
-  #gesture: Gesture | null = null;
+  #wheelTurn = new WheelTurn();
+  // A pinch in Safari over the map (#1138), measured in the set the map is drawn with.
+  #gesture = new Pinch<TilesetDescriptor>();
   #zoomFrame: number | null = null;
   #showActionMenuTimeout: number | null = null;
   #waiting = false;
@@ -225,10 +184,10 @@ export class GamePortal extends Portal {
 
       this.#drag = null;
 
-      if (drag.dragging) {
+      if (drag.dragging()) {
         // The map stops where it was let go for a player who has asked for less motion (#856).
         if (!prefersReducedMotion()) {
-          this.glide(releaseVelocity(drag.samples, event.timeStamp));
+          this.glide(drag.releaseVelocity(event.timeStamp));
         }
 
         return;
@@ -420,17 +379,7 @@ export class GamePortal extends Portal {
       // Catching a gliding map stops it where it is, as it would a real one.
       this.stopGlide();
 
-      this.#drag = {
-        pointerId: event.pointerId,
-        startX: event.clientX,
-        startY: event.clientY,
-        lastX: event.clientX,
-        lastY: event.clientY,
-        dragging: false,
-        samples: [
-          { x: event.clientX, y: event.clientY, time: event.timeStamp },
-        ],
-      };
+      this.#drag = new Press(event);
 
       // The press is the map's until it is let go, wherever that is: over the
       // sidebar, off the window or on a window opened under the pointer.
@@ -461,43 +410,21 @@ export class GamePortal extends Portal {
         return;
       }
 
-      if (drag.pointerId !== event.pointerId) {
+      // Another pointer, or a press that hasn't moved far enough to be a drag.
+      const moved = drag.move(event);
+
+      if (moved === null) {
         return;
       }
 
-      if (
-        !drag.dragging &&
-        Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) <
-          DRAG_THRESHOLD
-      ) {
-        return;
-      }
-
-      if (!drag.dragging) {
-        drag.dragging = true;
-
+      // Now a drag, not a long press.
+      if (moved.started) {
         this.clearTimeout();
       }
 
       // The map follows the pointer, so the view moves the opposite way: as far on the canvas as the pointer moved on
       //  the page, which is further when the canvas is shown smaller (#1063).
-      this.scrollBy(
-        ...this.toCanvas(drag.lastX - event.clientX, drag.lastY - event.clientY)
-      );
-
-      drag.lastX = event.clientX;
-      drag.lastY = event.clientY;
-
-      drag.samples.push({
-        x: event.clientX,
-        y: event.clientY,
-        time: event.timeStamp,
-      });
-
-      // Only the tail is used to work out the release speed.
-      if (drag.samples.length > 20) {
-        drag.samples.shift();
-      }
+      this.scrollBy(...this.toCanvas(moved.dx, moved.dy));
     });
 
     on(this.canvas(), 'pointercancel', (event) => {
@@ -571,7 +498,7 @@ export class GamePortal extends Portal {
     event.preventDefault();
 
     if (phase === 'end') {
-      this.#gesture = null;
+      this.#gesture.end();
 
       return;
     }
@@ -585,37 +512,19 @@ export class GamePortal extends Portal {
       this.stopGlide();
       this.#drag = null;
       this.clearTimeout();
-      this.#gesture = { from: asked, tileset, at: event.timeStamp };
+      this.#gesture.start(event.timeStamp, asked, tileset);
 
       return;
     }
 
-    const gesture = this.#gesture;
-
-    // A change to a pinch that didn't begin over the map.
-    if (gesture === null) {
-      return;
-    }
-
-    gesture.at = event.timeStamp;
-
-    // The map's art changed mid-pinch (#1118): measured afresh, from the new set's zoom.
-    if (gesture.tileset !== tileset) {
-      gesture.tileset = tileset;
-      gesture.from = asked / event.scale;
-
-      return;
-    }
-
-    const wanted = gesture.from * event.scale,
-      zoom = zoomFor(tileset, wanted);
-
-    // Pinched past either end: measured from there instead, so the zoom turns back as soon as the fingers do.
-    if (Math.abs(zoom - wanted) > ZOOM_STEP / 2) {
-      gesture.from = zoom / event.scale;
-    }
-
-    const steps = Math.round((zoom - asked) / ZOOM_STEP);
+    // Nothing for a pinch that didn't begin over the map; measured afresh if the map's art changed mid-pinch (#1118).
+    const steps = this.#gesture.change(
+      event,
+      asked,
+      tileset,
+      (zoom: number): number => zoomFor(tileset, zoom),
+      ZOOM_STEP
+    );
 
     if (steps === 0) {
       return;
@@ -634,67 +543,22 @@ export class GamePortal extends Portal {
 
   /**
    * The wheel turned over the map (#1101): towards the player zooms out, away zooms in, a tenth for each notch or each
-   *  `WHEEL_STEP` (`PINCH_STEP` for a pinch) of px turned, about the pointer.
+   *  so many px turned (`WheelTurn`, shared with the 3D map), about the pointer.
    */
   #wheel(event: WheelEvent): void {
     event.preventDefault();
 
-    // Read first: Firefox counts its mouse's wheel in lines only for a page that asks how it counts before how far.
-    const inPixels = event.deltaMode === 0,
-      delta = event.deltaY,
-      turn = this.#wheelTurn;
+    // Safari pinching, should it send the wheel with Ctrl as well: the gesture zooms already.
+    const steps = this.#wheelTurn.turned(event, this.#gesture.at());
 
-    // Safari pinching, should it send the wheel with Ctrl as well: the gesture zooms already. A pinch whose end went
-    //  astray (the window losing focus) stops counting once it's been still a moment.
-    if (
-      delta === 0 ||
-      (event.ctrlKey &&
-        this.#gesture !== null &&
-        event.timeStamp - this.#gesture.at <= WHEEL_PAUSE)
-    ) {
+    if (steps === 0) {
       return;
-    }
-
-    // Turned the other way, or after a pause: a new turn, which makes a tenth at once, and what was turned before
-    //  counts for nothing.
-    const direction = Math.sign(delta),
-      fresh =
-        event.timeStamp - turn.at > WHEEL_PAUSE || direction !== turn.direction;
-
-    turn.at = event.timeStamp;
-    turn.direction = direction;
-
-    if (fresh) {
-      turn.delta = 0;
-      turn.tenths = 0;
-    }
-
-    // A trackpad's flick running on past as far as a turn goes (#1139).
-    if (inPixels && !event.ctrlKey && turn.tenths >= WHEEL_TURN_TENTHS) {
-      return;
-    }
-
-    if (!fresh && inPixels) {
-      turn.delta += delta;
-
-      // One tenth at most for each turn of the wheel, however far it turned: a notch on a fast wheel is many hundreds
-      //  of px.
-      if (Math.abs(turn.delta) < (event.ctrlKey ? PINCH_STEP : WHEEL_STEP)) {
-        return;
-      }
-
-      turn.delta = 0;
-    }
-
-    // Only what the cap counts.
-    if (inPixels && !event.ctrlKey) {
-      turn.tenths += 1;
     }
 
     // Held still where the pointer is, which a glide would carry off.
     this.stopGlide();
 
-    this.zoomBy(delta < 0 ? 1 : -1, { x: event.offsetX, y: event.offsetY });
+    this.zoomBy(steps, { x: event.offsetX, y: event.offsetY });
   }
 
   /** While the other players move, the map's tooltips don't open, and any open one goes (#748). */
@@ -759,7 +623,7 @@ export class GamePortal extends Portal {
     const subject =
         event.pointerType === 'mouse' &&
         event.buttons === 0 &&
-        this.#inertiaFrame === null &&
+        !this.#glide.gliding() &&
         !this.#waiting
           ? this.#subjectAt(...this.toCanvas(event.offsetX, event.offsetY))
           : null,
@@ -885,49 +749,11 @@ export class GamePortal extends Portal {
 
   /** Carry on moving the map at `velocity` px per ms, slowing as it goes. */
   private glide(velocity: { x: number; y: number }): void {
-    this.stopGlide();
-
-    const speed = Math.hypot(velocity.x, velocity.y),
-      limit = speed > INERTIA_MAX_SPEED ? INERTIA_MAX_SPEED / speed : 1;
-
-    let velocityX = velocity.x * limit,
-      velocityY = velocity.y * limit,
-      last: number | null = null;
-
-    const step = (now: number) => {
-      const elapsed = last === null ? 16 : Math.min(now - last, 64);
-
-      last = now;
-
-      if (Math.hypot(velocityX, velocityY) < INERTIA_MIN_SPEED) {
-        this.#inertiaFrame = null;
-
-        return;
-      }
-
-      this.scrollBy(
-        ...this.toCanvas(-velocityX * elapsed, -velocityY * elapsed)
-      );
-
-      const decay = Math.pow(INERTIA_FRICTION, elapsed / 16);
-
-      velocityX *= decay;
-      velocityY *= decay;
-
-      this.#inertiaFrame = window.requestAnimationFrame(step);
-    };
-
-    this.#inertiaFrame = window.requestAnimationFrame(step);
+    this.#glide.start(velocity);
   }
 
   private stopGlide(): void {
-    if (this.#inertiaFrame === null) {
-      return;
-    }
-
-    window.cancelAnimationFrame(this.#inertiaFrame);
-
-    this.#inertiaFrame = null;
+    this.#glide.stop();
   }
 
   setActiveUnit(unit: Unit | null = null) {

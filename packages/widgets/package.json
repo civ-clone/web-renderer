@@ -13,9 +13,9 @@
     "./components/SidebarSection": "./components/SidebarSection.ts",
     "./lib/cannotHover": "./lib/cannotHover.ts",
     "./lib/contrast": "./lib/contrast.ts",
-    "./lib/drag": "./lib/drag.ts",
     "./lib/filterRows": "./lib/filterRows.ts",
     "./lib/html": "./lib/html.ts",
+    "./lib/mapGestures": "./lib/mapGestures.ts",
     "./lib/theme": "./lib/theme.ts"
   },
   "peerDependencies": {

@@ -138,6 +138,7 @@
     "test:iso-minimap": "node tools/run-suite.js ui isoMinimap",
     "test:hex-minimap": "node tools/run-suite.js ui hexMinimap",
     "test:minimap": "node tools/run-suite.js ui minimap",
+    "test:map-gestures": "node tools/run-suite.js ui mapGestures",
     "test:map-view": "node tools/run-suite.js ui mapView",
     "test:map3d": "node tools/run-suite.js ui map3d",
     "test:map-navigation": "node tools/run-suite.js ui mapNavigation",
