@@ -1,0 +1,1 @@
+{"version":"0.1.0@4aa1b181","date":"2026-11-18T12:10:11.000Z","localChanges":["With civ.one's pixel art, the pictures on the unit's action buttons, in the unit menu and on the lost-city notice no longer lose some of their pixels: they're drawn whole and shrunk smoothly to fit (closes #1118)."],"externalChanges":{}}
