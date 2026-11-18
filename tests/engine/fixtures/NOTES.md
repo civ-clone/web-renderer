@@ -602,3 +602,15 @@ rule has the criteria of civ1-unit 0.1.46's exactly (a land unit's move, a
 Railroad on both squares, no cost). With the set off (`--set civ1`), 8 seeds
 played to turn 500 end clean, with up to 348 Railroads a game and none built on
 a city's square.
+
+## Accepted change: DTO bytes, walled cities (#688)
+
+Civ1's worker rules now send whether each city is walled (`walled`, City Walls,
+as v474.05 draws them on the map), on your own cities and on the stand-ins of
+rivals' cities. The DTO the harness serialises carries the new field: its bytes
+at turn 10 rise from 412288 to 412468, and at turn 50 from 10968102 to
+10969827, and its hashes change with them. The client transcript's messages
+change the same way, with as many messages as before.
+
+The checksums (`99a58e61 / e7ec61bb / 781cb858`), state counts, rule totals and
+random-call counts are unchanged: nothing in the engine changes.

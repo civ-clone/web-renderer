@@ -85,6 +85,7 @@ import rechoose from './AdditionalData/rechoose';
 import { limitedRates, maxRates } from './AdditionalData/tradeRates';
 import stagedHappiness from '@civ-clone/civ2-city-happiness/lib/stagedHappiness';
 import civilDisorderDeclared from './AdditionalData/civilDisorderDeclared';
+import walledData, { walled } from './AdditionalData/walled';
 import { levelOf } from '@civ-clone/civ2-difficulty/level';
 import {
   conquestBonusFor,
@@ -185,6 +186,9 @@ export const civ2Rules: WorkerRules = {
   ],
   // How a rival's city is drawn, from its owner's advances, as one's own is (`style`).
   cityStyle: (city) => cityStyle(city),
+  // Whether a rival's city is drawn walled, as last seen, as one's own is (`walled`): its City Walls or its owner's
+  //  Great Wall (#688, #1069).
+  walled: (city) => walled(city),
   // civ2-score's conquest bonus, which reads whether eliminated civilizations come back (M2e).
   conquestBonus: (player, gameResults, playerWorlds, rules) =>
     conquestBonusFor(player, gameResults, playerWorlds, rules),
@@ -229,6 +233,7 @@ export const register = (): void => {
     anarchyTurns(),
     attackSound(),
     civilDisorderDeclared(),
+    walledData(),
     terrainDefenceBonus(),
     terrainMoveCost(),
     unitHitPoints(),

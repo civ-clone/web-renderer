@@ -409,12 +409,12 @@ const run = async (): Promise<void> => {
   // City styles by era.
 
   const descriptor = validateDescriptor(civ2) as TilesetDescriptor,
-    spriteOf = (size: number, style?: unknown, improvements: string[] = []) =>
+    spriteOf = (size: number, style?: unknown, walled?: boolean) =>
       citySprite(descriptor, {
         player,
         growth: { size },
-        improvements: improvements.map((_) => ({ _ })),
         ...(style ? { style } : {}),
+        ...(walled === undefined ? {} : { walled }),
       } as unknown as City);
 
   expect(
@@ -452,9 +452,7 @@ const run = async (): Promise<void> => {
     'a capital drawn a size larger, but never past the largest, and walled',
     [
       spriteOf(3, { era: 'ancient', people: 'ancient', larger: true }),
-      spriteOf(9, { era: 'ancient', people: 'ancient', larger: true }, [
-        'CityWalls',
-      ]),
+      spriteOf(9, { era: 'ancient', people: 'ancient', larger: true }, true),
     ],
     ['city/ancient-classical/1', 'city/ancient-classical/walled-3']
   );

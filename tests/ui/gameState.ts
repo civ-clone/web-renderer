@@ -608,6 +608,23 @@ const unitMoves = (state: GameState, id: string): number | undefined =>
   state.applyPatches([sent('City-2', rivalCity('City-2'))]);
   queuedIds();
 
+  // #688: a rival's city that builds walls, or loses them, is drawn again.
+  state.applyPatches([
+    sent('City-2', { ...rivalCity('City-2'), walled: true }),
+  ]);
+
+  check(
+    "a rival's city walled now queues its square",
+    queuedIds() === 'Tile-2'
+  );
+
+  state.applyPatches([sent('City-2', rivalCity('City-2'))]);
+
+  check(
+    "a rival's city that's lost its walls queues its square",
+    queuedIds() === 'Tile-2'
+  );
+
   // M2c: what your city's squares yield it (Civ2's `squareYields`) changes, a Harbour say: the squares it works are
   //  drawn again, as their yield icons show it; sent again the same, only its own square, for its banner.
   const yielding = (food: number): PlainObject => ({

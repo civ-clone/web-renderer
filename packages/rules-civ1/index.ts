@@ -38,6 +38,7 @@ import civilDisorderDeclared from './AdditionalData/civilDisorderDeclared';
 import conquestBonusFor from '@civ-clone/civ1-game-end/lib/conquestBonusFor';
 import { levelOf } from '@civ-clone/civ1-difficulty/level';
 import { wonderHistory } from '@civ-clone/civ1-wonder/lib/wonderHistory';
+import walledData, { walled } from './AdditionalData/walled';
 
 export const civ1Rules: WorkerRules = {
   // After the shared ones, in the order the client's `if` chain once tested them among those (#449).
@@ -50,6 +51,8 @@ export const civ1Rules: WorkerRules = {
   // What a computer player took in an exchange of knowledge (#453).
   saveableClasses: [AdvanceTaken],
   civilDisorder: (city) => civilDisorder(city) !== null,
+  // Whether a rival's city is drawn walled, as last seen, as one's own is (`walled`, #688).
+  walled: (city) => walled(city),
   autoBuild: (cityBuild, rules) => autoBuild(cityBuild, rules),
   citizenMoods: (cityGrowth, specialists) =>
     citizenSummary(
@@ -91,7 +94,8 @@ export const register = (): void => {
     anarchyTurns(),
     civilDisorderDeclared(),
     terrainDefenceBonus(),
-    terrainMoveCost()
+    terrainMoveCost(),
+    walledData()
   );
 };
 

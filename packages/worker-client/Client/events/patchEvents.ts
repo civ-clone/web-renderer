@@ -26,6 +26,7 @@ import { CityNewsCollector } from '../cityNews';
 import { ClientContext, Disposer, Registries } from '../ClientContext';
 import { filterToReference, filterToReferenceAllExcept } from '../refs';
 import { knownUnknownCity } from '../standIns';
+import type UnknownCity from '../../UnknownObjects/City';
 import { workerRules } from '../../workerRules';
 
 export type PatchEventsContext = Pick<
@@ -473,9 +474,122 @@ export const registerPatchEvents = (
     }
   );
 
-  // Our build is told of in `Client/notifications/city.ts`, as a rival's wonder is.
+  // A rival's cities, as the map draws them, where something other than their size or disorder can change how they're
+  //  drawn: their style (Civ2's eras, M2c) after an advance, their walls (#688) after a building or a Wonder (Civ2's
+  //  Great Wall is walls in every one of its owner's cities, #1069). Each the player has been sent goes again, with its
+  //  square, where its stand-in's style or walls change. None under rules that say neither.
+  const drawnBy = (): boolean =>
+      workerRules().cityStyle !== undefined ||
+      workerRules().walled !== undefined,
+    drawnAs = (unknownCity: UnknownCity): string =>
+      JSON.stringify([unknownCity.style(), unknownCity.walled()]);
+
+  const redrawRivalCities = (cities: City[]): void => {
+    if (!drawnBy()) {
+      return;
+    }
+
+    cities.forEach((city: City) => {
+      if (ctx.view.owns(city.player())) {
+        return;
+      }
+
+      const unknownCity = knownUnknownCity(city),
+        playerTile = ctx.view.tile(city.tile());
+
+      if (!unknownCity || !playerTile) {
+        return;
+      }
+
+      const before = drawnAs(unknownCity);
+
+      unknownCity.update(city);
+
+      if (drawnAs(unknownCity) === before) {
+        return;
+      }
+
+      ctx.patches.update(unknownCity.id(), () =>
+        unknownCity.toPlainObject(
+          ctx.dataFilter(filterToReference(Tile, Unit, Player))
+        )
+      );
+      ctx.patches.tile(playerTile);
+    });
+  };
+
+  // The same, read when the patch is built rather than now: a city's capture raises `city:captured` before the rules
+  //  that take its buildings and Wonders with it have run (each a `Captured` rule of its own). A stand-in that is drawn
+  //  as it was goes nowhere; one that changed is drawn again by the page from its city (`GameState`'s `drawnCity`).
+  const redrawRivalCitiesLater = (cities: City[]): void => {
+    if (!drawnBy()) {
+      return;
+    }
+
+    cities.forEach((city: City) => {
+      const unknownCity = knownUnknownCity(city);
+
+      if (
+        ctx.view.owns(city.player()) ||
+        !unknownCity ||
+        !ctx.view.tile(city.tile())
+      ) {
+        return;
+      }
+
+      ctx.patches.update(unknownCity.id(), () => {
+        const before = drawnAs(unknownCity);
+
+        unknownCity.update(city);
+
+        return drawnAs(unknownCity) === before
+          ? undefined
+          : unknownCity.toPlainObject(
+              ctx.dataFilter(filterToReference(Tile, Unit, Player))
+            );
+      });
+    });
+  };
+
+  // A Wonder can be walls in all its owner's cities (Civ2's Great Wall, #1069), so a city changing hands or lost
+  //  changes both players' others: a capture, a city lost, a civil war. Ours go in full on those already (#515).
+  const citiesOf = (...players: (Player | null)[]): City[] =>
+    players
+      .filter(
+        (player, index): player is Player =>
+          player !== null && players.indexOf(player) === index
+      )
+      .flatMap((player: Player) => ctx.cities.getByPlayer(player));
+
+  on('city:captured', (city: City, capturingPlayer: Player, player: Player) =>
+    redrawRivalCitiesLater(citiesOf(capturingPlayer, player))
+  );
+  on('city:destroyed', (city: City) =>
+    redrawRivalCitiesLater(citiesOf(city.player()))
+  );
+  on('player:civil-war', (loser: Player, rebels: Player) =>
+    redrawRivalCitiesLater(citiesOf(loser, rebels))
+  );
+  // A building lost, sabotaged by a Diplomat or Spy (City Walls among the targets) or sold for want of gold to keep it:
+  //  that city alone, a rival's or ours, which a rival's Diplomat can sabotage in its own turn.
+  ['city:sabotaged', 'city:unsupported-improvement'].forEach((event) =>
+    on(event, (city: City) => {
+      if (ctx.view.owns(city.player())) {
+        ctx.patches.city(city);
+
+        return;
+      }
+
+      redrawRivalCitiesLater([city]);
+    })
+  );
+
+  // Our build is told of in `Client/notifications/city.ts`, as a rival's wonder is. A rival's building can be its
+  //  walls (#688). Our city goes in the hand-over's patch, which sends our cities in full.
   on('city:building-complete', (cityBuild) => {
     if (!ctx.view.owns(cityBuild.city().player())) {
+      redrawRivalCities([cityBuild.city()]);
+
       return;
     }
 
@@ -497,38 +611,23 @@ export const registerPatchEvents = (
     }
   });
 
+  // A Wonder can be walls in all its owner's cities, from when it's built until it's obsolete (Civ2's Great Wall,
+  //  #1069). Ours go in full, now rather than at the hand-over: anyone's advance can make a Wonder obsolete mid-turn
+  //  (a hut, a theft, a parley).
+  ['wonder:built', 'wonder:obsolete'].forEach((event) =>
+    on(event, (_wonder: unknown, city: City) => {
+      if (workerRules().walled !== undefined && ctx.view.owns(city.player())) {
+        ctx.patches.cities();
+      }
+
+      redrawRivalCities(ctx.cities.getByPlayer(city.player()));
+    })
+  );
+
   // The advance is told of in `Client/notifications/player.ts`.
   on('player:research-complete', (playerResearch) => {
     if (!ctx.view.owns(playerResearch.player())) {
-      // A rival's advance can change how its cities are drawn (Civ2's eras, M2c): each of its cities the player has
-      //  been sent goes again, with its square, where its stand-in's style changes. None under rules without styles.
-      if (workerRules().cityStyle === undefined) {
-        return;
-      }
-
-      ctx.cities.getByPlayer(playerResearch.player()).forEach((city: City) => {
-        const unknownCity = knownUnknownCity(city),
-          playerTile = ctx.view.tile(city.tile());
-
-        if (!unknownCity || !playerTile) {
-          return;
-        }
-
-        const before = JSON.stringify(unknownCity.style());
-
-        unknownCity.update(city);
-
-        if (JSON.stringify(unknownCity.style()) === before) {
-          return;
-        }
-
-        ctx.patches.update(unknownCity.id(), () =>
-          unknownCity.toPlainObject(
-            ctx.dataFilter(filterToReference(Tile, Unit, Player))
-          )
-        );
-        ctx.patches.tile(playerTile);
-      });
+      redrawRivalCities(ctx.cities.getByPlayer(playerResearch.player()));
 
       return;
     }

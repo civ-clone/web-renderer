@@ -9,7 +9,8 @@
 // - the gold Capitalization makes (`goldPerTurn`), and the build list's progress after a change (`buildItemDetails`):
 //   a person's change across categories halves it, and changing back the same turn restores it;
 // - the Auto mode (`autoMode`), and the worker rules' `autoBuild` putting a city on Auto in a mode;
-// - a rival's city, sent as a stand-in, with its style.
+// - a rival's city, sent as a stand-in, with its style;
+// - whether a city is walled (#688, #1069): City Walls, or its owner's Great Wall, a rival's too.
 
 import './lib/seed';
 import '@civ-clone/ui-worker-client/Game';
@@ -20,9 +21,11 @@ import {
   Electronics,
   Industrialization,
   Invention,
+  Metallurgy,
   Philosophy,
 } from '@civ-clone/civ2-science/Advances';
 import {
+  CityWalls,
   Harbour,
   Palace,
   Temple,
@@ -32,7 +35,7 @@ import { Musketman, Settlers, Warrior } from '@civ-clone/civ2-unit/Units';
 import Capitalization from '@civ-clone/base-city-improvement-capitalization/Capitalization';
 import City from '@civ-clone/core-city/City';
 import Client from '@civ-clone/core-client/Client';
-import { Colossus } from '@civ-clone/civ2-wonder/Wonders';
+import { Colossus, GreatWall } from '@civ-clone/civ2-wonder/Wonders';
 import FillGenerator from '@civ-clone/simple-world-generator/tests/lib/FillGenerator';
 import Player from '@civ-clone/core-player/Player';
 import PlayerWorld from '@civ-clone/core-player-world/PlayerWorld';
@@ -435,7 +438,9 @@ const run = async (): Promise<void> => {
         playerWorlds: defaultGame.playerWorlds,
       } as any),
       listeners: { [event: string]: ((...args: any[]) => void)[] } = {},
-      patched: string[] = [];
+      // What was queued, in order: an update's value is built when the queue is sent (`emit`, below), as the client's
+      //  queue builds it, and one that comes back `undefined` is left out.
+      patched: (string | (() => string | null))[] = [];
 
     registerPatchEvents(
       {
@@ -447,24 +452,42 @@ const run = async (): Promise<void> => {
         view,
         cities: defaultGame.cities,
         units: defaultGame.units,
+        cityNews: { of: () => ({}) },
         dataFilter: () => (object: any) => object,
         patches: {
           tile: (tile: any) => tile && patched.push(`tile ${tile.id()}`),
           unit: (unit: any) => patched.push(`unit ${unit.id()}`),
           city: (city: any) => patched.push(`city ${city.name()}`),
-          update: (id: string) => patched.push(`update ${id}`),
+          update: (id: string, value: unknown) =>
+            patched.push(() =>
+              (typeof value === 'function' ? value() : value) === undefined
+                ? null
+                : `update ${id}`
+            ),
+          cities: () => patched.push('cities'),
           playerKey: () => {},
           flush: () => {},
         },
       } as any
     );
 
-    const emit = (event: string, ...args: unknown[]) => {
+    // The event raised, then anything `before` the queue is sent (the rules that run after the event is raised), then
+    //  what the queue sends.
+    const emitThen = (
+        before: () => void,
+        event: string,
+        ...args: unknown[]
+      ): string[] => {
         patched.length = 0;
         listeners[event]!.forEach((listener) => listener(...args));
+        before();
 
-        return [...patched];
+        return patched
+          .map((entry) => (typeof entry === 'function' ? entry() : entry))
+          .filter((entry): entry is string => entry !== null);
       },
+      emit = (event: string, ...args: unknown[]): string[] =>
+        emitThen(() => {}, event, ...args),
       tileId = (tile: Tile) => view.tile(tile)!.id();
 
     expect(
@@ -515,6 +538,150 @@ const run = async (): Promise<void> => {
         [`update ${theirCity.id()}`, `tile ${tileId(theirs.tile())}`],
         { era: 'industrial', people: 'industrial', larger: false },
       ]
+    );
+
+    // Walls (#688, #1069).
+    const theirBuild = defaultGame.cityBuilds.getByCity(theirs),
+      walled = () =>
+        [inland, coastal, theirs].map((city) => additional(city, 'walled'));
+
+    expect('to begin with, no city is walled', walled(), [false, false, false]);
+    expect(
+      "a rival's building that isn't walls sends nothing",
+      [emit('city:building-complete', theirBuild, null), theirCity.walled()],
+      [[], false]
+    );
+
+    defaultGame.cityImprovements.register(
+      new CityWalls(inland, defaultGame.rules)
+    );
+
+    expect('City Walls: that city alone is walled', walled(), [
+      true,
+      false,
+      false,
+    ]);
+
+    defaultGame.wonders.register(new GreatWall(coastal, defaultGame.rules));
+
+    expect(
+      "the Great Wall: walls in every one of its owner's cities, not a rival's",
+      [walled(), workerRules().walled!(coastal), workerRules().walled!(theirs)],
+      [[true, true, false], true, false]
+    );
+
+    const theirWalls = new CityWalls(theirs, defaultGame.rules);
+
+    defaultGame.cityImprovements.register(theirWalls);
+
+    expect(
+      "a rival's City Walls: its stand-in is walled, and goes again with its square",
+      [
+        emit('city:building-complete', theirBuild, null),
+        theirCity.keys().includes('walled'),
+        theirCity.walled(),
+      ],
+      [
+        [`update ${theirCity.id()}`, `tile ${tileId(theirs.tile())}`],
+        true,
+        true,
+      ]
+    );
+    expect(
+      "a Wonder that changes none of a rival's walls sends nothing",
+      emit('wonder:built', null, theirs),
+      []
+    );
+
+    // A rival's Great Wall reaches its other city, and leaves it once it's obsolete (anyone's Metallurgy).
+    const second = addCity(them, world.get(36, 30), 'Second'),
+      secondStandIn = unknownCityOf(second),
+      greatWall = new GreatWall(theirs, defaultGame.rules);
+
+    defaultGame.wonders.register(greatWall);
+
+    expect(
+      "a rival's Great Wall: its other city's stand-in is walled, and goes again with its square",
+      [emit('wonder:built', greatWall, theirs), secondStandIn.walled()],
+      [[`update ${secondStandIn.id()}`, `tile ${tileId(second.tile())}`], true]
+    );
+
+    theirResearch.addAdvance(Metallurgy);
+
+    expect(
+      'obsolete: that city is no longer walled, the one with City Walls still is',
+      [
+        emit('wonder:obsolete', greatWall, theirs),
+        secondStandIn.walled(),
+        theirCity.walled(),
+      ],
+      [
+        [`update ${secondStandIn.id()}`, `tile ${tileId(second.tile())}`],
+        false,
+        true,
+      ]
+    );
+    expect(
+      'our own Wonder made obsolete sends our cities in full, now',
+      emit('wonder:obsolete', null, coastal),
+      ['cities']
+    );
+
+    // A capture, a city lost, a civil war, a building sabotaged or lost for want of gold: the stand-ins are read when the
+    //  patch is built, after the rules that run once the event is raised (a capture's buildings and Wonders go in
+    //  `Captured` rules of their own). Walls built or lost in between are sent: read when the event is raised, they
+    //  would be read as they were, and go nowhere.
+    // Made walls are registered as they're made (the rules' `Created`), so each case first sets them as its stand-in
+    //  was last drawn.
+    const secondWalls = new CityWalls(second, defaultGame.rules),
+      setWalls = (city: City, walls: CityWalls, on: boolean): void => {
+        const has = defaultGame.cityImprovements
+          .getByCity(city)
+          .includes(walls);
+
+        if (on && !has) {
+          defaultGame.cityImprovements.register(walls);
+        }
+
+        if (!on && has) {
+          defaultGame.cityImprovements.unregister(walls);
+        }
+      };
+
+    (
+      [
+        ['city:captured', second, [theirs, us, them]],
+        ['city:destroyed', second, [theirs, us]],
+        ['player:civil-war', second, [them, them, []]],
+        ['city:sabotaged', theirs, [theirs, us, theirWalls]],
+        ['city:unsupported-improvement', theirs, [theirs, theirWalls]],
+      ] as [string, City, unknown[]][]
+    ).forEach(([event, changed, args]) => {
+      const standIn = unknownCityOf(changed),
+        walls = changed === theirs ? theirWalls : secondWalls,
+        was = standIn.walled()!;
+
+      setWalls(changed, walls, was);
+
+      expect(
+        `${event}: walls changed after it's raised, before it's sent, are sent`,
+        [
+          emitThen(
+            () => setWalls(changed, walls, !was),
+            event,
+            ...args
+          ).includes(`update ${standIn.id()}`),
+          standIn.walled(),
+        ],
+        [true, !was]
+      );
+    });
+
+    // Ours sabotaged in a rival's turn goes in full, now.
+    expect(
+      'our own city sabotaged goes again',
+      emit('city:sabotaged', inland, them, null),
+      ['city Inland']
     );
   }
 

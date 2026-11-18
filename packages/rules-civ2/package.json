@@ -36,6 +36,7 @@
     "@civ-clone/base-unit-fuel": "^0.1.1",
     "@civ-clone/base-unit-trait-paradrop": "^0.1.0",
     "@civ-clone/base-unit-veteran-promotion": "^0.1.0",
+    "@civ-clone/base-wonder": "^0.1.1",
     "@civ-clone/civ2-city": "*",
     "@civ-clone/civ2-city-happiness": "*",
     "@civ-clone/civ2-city-improvement": "*",
