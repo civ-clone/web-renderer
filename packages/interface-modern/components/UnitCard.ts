@@ -239,11 +239,13 @@ const othersOf = (unit: UnitData): UnitData[] =>
 const isVeteran = (unit: UnitData): boolean =>
   unit.improvements.some(({ _ }) => _ === 'Veteran');
 
-// What the card shows, so a render that changes none of it leaves the card (and the focus in it) alone.
+// What the card shows, so a render that changes none of it leaves the card (and the focus in it) alone: the map's art
+//  too, which the unit is drawn with, and which can be chosen again during a game (#1118).
 const shown = (unit: UnitData | null): string =>
   unit === null
     ? ''
     : JSON.stringify([
+        mapTileset().id,
         unit.id,
         unit._,
         unit.busy?._,

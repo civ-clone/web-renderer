@@ -22,6 +22,13 @@ import { unitMarkerMode } from '@civ-clone/ui-map/components/Map/UnitMarker';
 import { playerCityOpener } from '@civ-clone/ui-hud/lib/cityOpeners';
 import Transport from '@civ-clone/ui-client/Transport';
 import { applyInterface } from '@civ-clone/ui-platform/lib/interfaceMode';
+import {
+  chooseMapTileset,
+  hostedSheet,
+  installTilesets,
+  registerTileset,
+} from '@civ-clone/ui-assets/lib/tilesets';
+import { pixelArtTileset } from '@civ-clone/ui-tileset-pixelart';
 
 const failures: string[] = [];
 let checks = 0,
@@ -1029,6 +1036,104 @@ applyInterface('classic', null);
   );
 
   isoView.dispose();
+}
+
+// The map's art chosen again during a game (#1118): the view is drawn with it from the same portal, its tiles the new
+//  set's size and its zoom the new set's own, the overview left as it is; and art whose cities and units stack the
+//  other way is drawn so too, but needs a new page to stack them as it does.
+{
+  installTilesets({});
+  chooseMapTileset('square', '');
+
+  const zooms: { [key: string]: number } = { 'zoom.civ1-pixelart': 1.5 },
+    artView = new MapView({
+      activateUnit: () => {},
+      cityOpener: playerCityOpener(),
+      activeUnit: () => null,
+      mapPortal,
+      minimapCanvas,
+      options: {
+        get: (key: string, defaultValue?: any) => zooms[key] ?? defaultValue,
+      },
+      playerId: 'Player-1',
+      transport: {
+        send: () => {},
+        receive: () => () => {},
+      } as unknown as Transport,
+      world: {
+        id: 'PlayerWorld-3',
+        width,
+        height,
+        tiles,
+      } as unknown as WorldData,
+    }),
+    { portal } = artView,
+    units = portal.getLayer(Units)!,
+    overview = artView.overviewLayer.tileSize(),
+    shown = (): unknown[] => [
+      portal.nativeTileSize(),
+      portal.zoom(),
+      units.tileSize(),
+    ];
+
+  expect("drawn with Civ1's art to start with", shown(), [
+    { width: 16, height: 16 },
+    2,
+    { width: 32, height: 32 },
+  ]);
+  expect(
+    'nothing to redraw while the art stays',
+    artView.redrawArt(),
+    'unchanged'
+  );
+
+  chooseMapTileset('square', 'civ1-pixelart');
+
+  expect(
+    'the pixel art chosen redraws the map',
+    artView.redrawArt(),
+    'redrawn'
+  );
+  expect(
+    'with its tiles, at its own zoom (drawn at the next whole scale)',
+    shown(),
+    [{ width: 32, height: 32 }, 1.5, { width: 64, height: 64 }]
+  );
+  expect(
+    'the overview stays its own size',
+    artView.overviewLayer.tileSize(),
+    overview
+  );
+  expect('once', artView.redrawArt(), 'unchanged');
+
+  chooseMapTileset('square', 'civ1');
+
+  expect(
+    'and back again',
+    [artView.redrawArt(), ...shown()],
+    ['redrawn', { width: 16, height: 16 }, 2, { width: 32, height: 32 }]
+  );
+
+  // A set on the same grid whose units stand over its cities.
+  registerTileset(
+    {
+      ...pixelArtTileset,
+      id: 'stacked-art',
+      cities: { ...pixelArtTileset.cities, mode: 'styles' },
+    },
+    { hosted: hostedSheet(pixelArtTileset)! }
+  );
+  installTilesets({});
+  chooseMapTileset('square', 'stacked-art');
+
+  expect(
+    'art stacked the other way is drawn at its own size and zoom, and needs a new page to stack it as it does',
+    [artView.redrawArt(), ...shown()],
+    ['reload', { width: 32, height: 32 }, 1, { width: 32, height: 32 }]
+  );
+
+  chooseMapTileset('square', '');
+  artView.dispose();
 }
 
 finished = true;

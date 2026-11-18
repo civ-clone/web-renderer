@@ -47,7 +47,7 @@ import { t } from 'i18next';
  *  civ.one's own art since #1063), what each other set says of its import, such as whether its map art is complete
  *  once any is imported (#97), and the library of art and sound (#1063).
  */
-export const assetsRow = (): HTMLElement => {
+export const assetsRow = (inGame: boolean = false): HTMLElement => {
   const status = s(
       `<span class="status">${t('GameOptions.assets-checking')}</span>`
     ),
@@ -56,8 +56,9 @@ export const assetsRow = (): HTMLElement => {
       s(`<span>${t('GameOptions.assets')}</span>`),
       status,
       h(button(t('GameOptions.library')), {
-        // Over Options, which is modal here: a window that isn't would open behind it.
-        click: () => new LibraryWindow({ modal: true }),
+        // Over Options, which is modal before a game: a window that isn't would open behind it. During one, it opens
+        //  as Options does (#1118).
+        click: () => new LibraryWindow({ modal: !inGame }, { inGame }),
       })
     );
 
@@ -154,24 +155,25 @@ export const soundRows = (): HTMLElement[] => {
 
 /**
  * The map's zoom (#1063): a slider in tenths from the smallest of the game's set's scales to its largest, each set's
- *  kept apart (`zoomOption`), and what it's at.
+ *  kept apart (`zoomOption`), and what it's at. Other art chosen for the map while it's open (#1118) brings its own
+ *  range and zoom, until `stopOnClose`'s stop is called.
  */
-export const zoomRow = (portal?: IPortal | null): HTMLElement[] => {
-  const tileset = mapTileset(),
-    { min, max } = zoomRange(tileset),
-    option = zoomOption(tileset),
-    current = zoomFor(
-      tileset,
-      options.get(option, portal?.zoom() ?? defaultZoom(tileset))
-    ),
-    slider = s<HTMLInputElement>(
-      `<input type="range" min="${min}" max="${max}" step="${ZOOM_STEP}" value="${current}">`
+export const zoomRow = (
+  portal: IPortal | null | undefined,
+  stopOnClose: (stop: () => void) => void
+): HTMLElement[] => {
+  let tileset = mapTileset();
+
+  const slider = s<HTMLInputElement>(
+      `<input type="range" step="${ZOOM_STEP}">`
     ),
     // Hidden from a screen reader, which hears the slider's own `aria-valuetext`: inside the label, it would be part of
     //  the slider's name.
     shown = s<HTMLOutputElement>('<output aria-hidden="true"></output>'),
     // How far along the track the thumb is, 0 to 1, for the theme to fill it to (#739), and the zoom it's at.
     show = (zoom: number): void => {
+      const { min, max } = zoomRange(tileset);
+
       slider.style.setProperty(
         '--fill',
         String(max > min ? (zoom - min) / (max - min) : 1)
@@ -181,9 +183,39 @@ export const zoomRow = (portal?: IPortal | null): HTMLElement[] => {
       });
       // Read out as "1.4×" rather than "1.4".
       slider.setAttribute('aria-valuetext', shown.textContent);
+    },
+    // The set's range, and the zoom it's at.
+    follow = (): void => {
+      const { min, max } = zoomRange(tileset),
+        current = zoomFor(
+          tileset,
+          options.get(
+            zoomOption(tileset),
+            portal?.zoom() ?? defaultZoom(tileset)
+          )
+        );
+
+      // As attributes, the range's own, and the value as the slider's too, which one dragged no longer takes from its
+      //  attribute.
+      slider.setAttribute('min', String(min));
+      slider.setAttribute('max', String(max));
+      slider.setAttribute('value', String(current));
+      slider.value = String(current);
+
+      show(current);
     };
 
-  show(current);
+  follow();
+
+  stopOnClose(
+    options.onChange((key): void => {
+      if (key.startsWith('tileset.') && mapTileset().id !== tileset.id) {
+        tileset = mapTileset();
+
+        follow();
+      }
+    })
+  );
 
   return [
     s(
@@ -195,7 +227,7 @@ export const zoomRow = (portal?: IPortal | null): HTMLElement[] => {
           const zoom = zoomFor(tileset, Number(slider.value));
 
           show(zoom);
-          options.set(option, zoom);
+          options.set(zoomOption(tileset), zoom);
           portal?.setZoom(zoom);
         },
       }),
@@ -308,6 +340,9 @@ export class GameOptions extends Window {
   // the portal to apply them to, and the build options the transport to send them to the game on (#690, #691).
   //  From the main menu there's no game yet (#749): the map's options are kept for the next one.
   constructor(portal: IPortal | null, transport: Transport | null = null) {
+    // What stops listening once the window has closed: the zoom following the map's art (#1118).
+    const stops: Array<() => void> = [];
+
     // A checkbox for a build option the game's rules act on.
     const buildOption = (key: string, label: string): HTMLElement =>
       s(
@@ -371,7 +406,9 @@ export class GameOptions extends Window {
             });
           })()
         ),
-        ...zoomRow(portal),
+        ...zoomRow(portal, (stop): void => {
+          stops.push(stop);
+        }),
         s(
           `<label>${t('GameOptions.lock-vertical-edges')}</label>`,
           (() => {
@@ -487,11 +524,9 @@ export class GameOptions extends Window {
           'newCitiesBuildDefender',
           t('GameOptions.new-cities-build-defender')
         ),
-        // Whether the tileset's sprites are imported, and the library, which the main menus open too (#749, #1063).
-        //  Only before a game: an import reloads the page, which would lose the game in play.
-        ...(hasFeature('assetsInOptions') && portal === null
-          ? [assetsRow()]
-          : [])
+        // Whether the tileset's sprites are imported, and the library, which the main menus and the game's menu open
+        //  too (#749, #1063, #1118). During a game it imports nothing, as an import reloads the page.
+        ...(hasFeature('assetsInOptions') ? [assetsRow(portal !== null)] : [])
       ),
       // From the main menu it must be closed before a game can start: its Interface and the library reload the page,
       //  which they only do with no game to lose.
@@ -499,6 +534,8 @@ export class GameOptions extends Window {
     );
 
     this.addClass('game-options');
+
+    this.on('close', (): void => stops.forEach((stop) => stop()));
   }
 }
 

@@ -68,6 +68,9 @@ export class Overview extends Map {
   // the poles: the minimap always shows the world whole.
   override setScale(): void {}
 
+  // And the map's art (#1118): it draws the terrain's colours, not its sprites.
+  override retile(): void {}
+
   override setWrapVertical(): void {}
 
   // Deliberately ignores the portal's scale and tile size: the minimap is an

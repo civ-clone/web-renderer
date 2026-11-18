@@ -2280,7 +2280,13 @@ const run = async (): Promise<void> => {
         ]
       );
 
+      // Its sheet fetched first, as a game on the grid draws with it at once (#1118): here, at once.
+      const { loadHostedPack } = assetStore;
+
+      assetStore.loadHostedPack = async (): Promise<void> => {};
+
       pixelArtUse.click();
+      await settle();
 
       expect(
         "Use keeps the set as the grid's art, draws its maps with it, and marks it in use",
@@ -2310,6 +2316,7 @@ const run = async (): Promise<void> => {
       );
 
       pixelArtUse.click();
+      await settle();
 
       expect(
         'Use on the set in use does nothing',
@@ -2319,6 +2326,71 @@ const run = async (): Promise<void> => {
 
       chooseMapTileset('square', '');
       library.close();
+
+      // During a game (#1118): nothing is imported, as an import loads the page again, which says why; and a set whose
+      //  sheet can't be fetched isn't chosen, as the map would be drawn with sprites that aren't there, and says so.
+      {
+        const inGame = new LibraryWindow({}, { inGame: true });
+
+        await settle();
+
+        const note = inGame
+          .element()
+          .querySelector('.imports-in-game') as HTMLElement;
+
+        assetStore.loadHostedPack = async (): Promise<void> => {
+          throw new Error('offline');
+        };
+
+        (
+          entryOf(inGame, 'civ1-pixelart').entry.querySelector(
+            '.actions button'
+          ) as HTMLButtonElement
+        ).click();
+        await settle();
+
+        expect(
+          'in a game the imports are out of use, saying why, and art whose sheet fails to load is left unchosen',
+          [
+            entryOf(inGame, 'civ1').disabled,
+            note.hidden,
+            note.textContent,
+            gameOptions.get(mapTilesetOption('square'), ''),
+            entryOf(inGame, 'civ1-pixelart').status,
+          ],
+          [
+            true,
+            false,
+            'Art and sound are imported from the main menu, as importing loads the page again, which would end this game.',
+            '',
+            'Couldn’t be loaded',
+          ]
+        );
+
+        inGame.close();
+
+        const before = new LibraryWindow();
+
+        await settle();
+
+        expect(
+          'before a game the note is hidden',
+          (before.element().querySelector('.imports-in-game') as HTMLElement)
+            .hidden,
+          true
+        );
+
+        before.close();
+      }
+
+      assetStore.loadHostedPack = loadHostedPack;
+      // The failed fetch above is forgotten, as a later one that loads it would.
+      await ensureTilesetLoaded(
+        bundledTilesets().find(({ id }) => id === 'civ1-pixelart')!,
+        {
+          loadHostedPack: async (): Promise<void> => {},
+        } as unknown as typeof assetStore
+      );
 
       // The pixel art's sheet that couldn't be loaded: it says so, and can't be chosen.
       installTilesets({ 'civ1-pixelart': { complete: false, metadata: null } });

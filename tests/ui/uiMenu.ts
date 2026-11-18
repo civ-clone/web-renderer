@@ -915,6 +915,7 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
           ['Save Game', 'Shift+S', false],
           ['Load Game', null, false],
           ['Options', null, false],
+          ['Art and sound', null, false],
           ['City Status', 'F1', false],
           ['Military Report', 'F2', false],
           ['Intelligence Report', 'F3', false],

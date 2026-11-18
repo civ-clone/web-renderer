@@ -167,11 +167,13 @@ declare global {
     unitHalted: TransportData<{ target: string; unit: string }, never>;
     // `autosave` (#653), a new game's first turn or a later one: the file comes back compressed, on `autosaveGame`.
     // `details` (#749), what the save is of for the main menu to show, comes back with the file as it was sent.
+    // `handOver` (#1118), the game carried over a reload: the file comes back on `handOverGame`, and is kept nowhere.
     save: TransportData<
       null,
       {
         name: string;
         autosave?: 'start' | 'autosave';
+        handOver?: boolean;
         details?: SaveDetails;
       }
     >;
@@ -179,6 +181,8 @@ declare global {
       { name: string; data: string; details?: SaveDetails },
       never
     >;
+    // The game as it is, to be loaded again by the page that replaces this one (#1118): a new theme's interface art.
+    handOverGame: TransportData<{ data: string }, never>;
     // A save taken as a turn started (#653), gzipped in the worker where it can be, as the page would a download.
     autosaveGame: TransportData<
       {

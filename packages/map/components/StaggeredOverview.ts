@@ -61,6 +61,9 @@ export abstract class StaggeredOverview extends Map {
 
   override setScale(): void {}
 
+  // Nor the map's art (#1118): its bricks are the terrain's colours, not its sprites.
+  override retile(): void {}
+
   override setWrapVertical(): void {}
 
   // The overview's own brick, whatever the portal's scale and tile size: its grid's.

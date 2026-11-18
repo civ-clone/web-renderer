@@ -214,6 +214,17 @@ export class Map implements IMap {
   }
 
   /**
+   * Draw with the map's art as it is now (`tileset()`), its tiles `tileSize` native px across and down: the art was
+   *  changed during a game (#1118). Everything is drawn again, as the sprites are another set's even where the tiles
+   *  are the same size. Like `setScale`, it takes effect the next time the portal points the layer at a viewport.
+   */
+  retile(tileSize: Size): void {
+    this.#tileSize = { ...tileSize };
+    this.#projection = null;
+    this.#stale = true;
+  }
+
+  /**
    * Point this layer at a window on the world, resizing or scrolling it to
    * match. The portal calls this; nothing else should need to.
    */

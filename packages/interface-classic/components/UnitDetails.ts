@@ -3,6 +3,7 @@ import { TOptions, t } from 'i18next';
 import { Unit as UnitData } from '@civ-clone/ui-protocol/types';
 import { UnitPanelDeps } from '@civ-clone/ui-hud/components/unitPanel';
 import Unit from '@civ-clone/ui-hud/components/Unit';
+import { mapTileset } from '@civ-clone/ui-assets/lib/tilesets';
 import { openUnitSelection } from '@civ-clone/ui-city/components/choices';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import unitLabel from '@civ-clone/ui-hud/lib/unitLabel';
@@ -146,11 +147,13 @@ const tile = (unit: UnitData): HTMLElement => {
   return row;
 };
 
-// What the card shows, so a render that changes none of it leaves the card (and the focus in it) alone.
+// What the card shows, so a render that changes none of it leaves the card (and the focus in it) alone: the map's art
+//  too, which the unit is drawn with, and which can be chosen again during a game (#1118).
 const shown = (unit: UnitData | null): string =>
   unit === null
     ? ''
     : JSON.stringify([
+        mapTileset().id,
         unit.id,
         unit._,
         unit.busy?._,

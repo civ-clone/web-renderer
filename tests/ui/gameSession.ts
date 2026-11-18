@@ -12,6 +12,14 @@ import './lib/classicInterface';
 import './lib/grids';
 import './lib/artPacks';
 
+import {
+  canHandOverGame,
+  handOverGame,
+} from '@civ-clone/ui-client/lib/gameHandOver';
+import {
+  chooseMapTileset,
+  installTilesets,
+} from '@civ-clone/ui-assets/lib/tilesets';
 import { DataPatch } from '@civ-clone/ui-protocol/types';
 import i18next from 'i18next';
 import ActiveUnitController from '@civ-clone/ui-game/ActiveUnitController';
@@ -264,7 +272,10 @@ const run = async (): Promise<void> => {
     resources: {
       en: {
         translation: {
-          Game: { waiting: 'Waiting for the other civilizations' },
+          Game: {
+            waiting: 'Waiting for the other civilizations',
+            'carrying-over': 'Carrying the game over',
+          },
           GameDetails: { turn: 'Turn {{turn}}' },
           Welcome: {
             'you-have-risen': 'You have risen',
@@ -366,12 +377,14 @@ const run = async (): Promise<void> => {
       'unitHalted',
       'embassyEstablished',
       'investigateCity',
+      'handOverGame',
+      'saveFailed',
     ]
   );
   expect(
-    "the page's disposers stay first, then the render frame's, the state's, one per receiver and the unit panel's",
+    "the page's disposers stay first, then the render frame's, the state's, one per receiver, the unit panel's, and the map's art's and the hand-over's",
     transportDisposers.length,
-    1 + 3 + 11 + 1
+    1 + 3 + 13 + 1 + 2
   );
   expect('nothing went wrong starting', errors, []);
   expect('the game has started', gameStarted, true);
@@ -430,7 +443,84 @@ const run = async (): Promise<void> => {
     true
   );
 
+  // The map's art chosen again during the game (#1118): the map is drawn with it at once, and again as it goes back.
+  {
+    const { redrawArt } = MapView.prototype,
+      redrawn: string[] = [];
+
+    MapView.prototype.redrawArt = function (
+      this: MapView
+    ): ReturnType<typeof redrawArt> {
+      const result = redrawArt.call(this);
+
+      redrawn.push(result);
+
+      return result;
+    };
+
+    installTilesets({});
+    chooseMapTileset('square', 'civ1-pixelart');
+    // Not the grid's art: nothing to redraw.
+    options.set('autosave', '5');
+    chooseMapTileset('square', '');
+
+    MapView.prototype.redrawArt = redrawArt;
+    // Civ1's alone again, as the rest expects: no hex art to draw a hex world with.
+    installTilesets({
+      'civ1-pixelart': { complete: false, metadata: null },
+      'hex-pixelart': { complete: false, metadata: null },
+    });
+
+    expect(
+      "choosing the grid's art draws the map with it, and choosing back again",
+      redrawn,
+      ['redrawn', 'redrawn']
+    );
+  }
+
+  // The game carried over to a new page (#1118), for a theme's new interface art: saved for the page that replaces
+  //  this one, once at a time, and again once a save has failed.
+  {
+    const before = sent.length;
+
+    expect(
+      "a game of the player's own can be handed over, once at a time",
+      [canHandOverGame(), handOverGame(), handOverGame()],
+      [true, true, false]
+    );
+    expect(
+      "saved for the hand-over, not as a save of the player's",
+      sent.slice(before),
+      [['save', { name: 'hand-over', handOver: true }]]
+    );
+
+    const banner = (): string | null | undefined =>
+      elements.mapWrapper.querySelector('.waiting')?.textContent;
+
+    expect(
+      'and the game waits while it is, as anything done now would be lost with the page',
+      [banner(), handOverGame()],
+      ['Carrying the game over', false]
+    );
+
+    deliver('saveFailed', { message: 'full' });
+
+    expect(
+      'a save that failed hands the game back, to try again',
+      [banner(), handOverGame()],
+      ['', true]
+    );
+
+    deliver('saveFailed', { message: 'full' });
+  }
+
   deliver('turnEnded');
+
+  expect(
+    'nothing is handed over while the other civilizations move',
+    handOverGame(),
+    false
+  );
 
   expect(
     'turnEnded fills the waiting banner',
@@ -472,9 +562,12 @@ const run = async (): Promise<void> => {
       'unitHalted',
       'embassyEstablished',
       'investigateCity',
+      'handOverGame',
+      'saveFailed',
     ]
   );
   expect('the pending frame is cancelled', frames.size, 0);
+  expect('and there is no game to hand over', canHandOverGame(), false);
   expect("the map's tick is stopped", clearedIntervals.length > 0, true);
 
   console.error = consoleError;

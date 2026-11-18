@@ -1,6 +1,7 @@
 // Interface and Theme in Options (#735). A theme's colours apply as it's chosen. A theme drawing with other interface
-//  art (#1063), and an interface, load a new page from the main menu; during a game they wait, with a hint, as
-//  reloading would lose the game. Both
+//  art (#1063), and an interface, load a new page from the main menu. During a game an interface waits, with a hint, as
+//  reloading would lose the game; a theme with other art carries the game over to a new page (#1118), and waits with
+//  the hint only where it can't be now. Both
 //  show what's in use, and choosing drops the visit's `?interface=` or `?theme=`, which would otherwise outrank the
 //  choice at the next load, including through the leave guard. Options is modal before a game, so it can't reload one.
 
@@ -9,6 +10,7 @@ import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/artPacks';
 
+import { provideGameHandOver } from '@civ-clone/ui-client/lib/gameHandOver';
 import {
   applyUiTheme,
   currentUiTheme,
@@ -243,6 +245,49 @@ Object.assign(globalThis, {
       themeRows(true)[1]!.hidden,
       false
     );
+  }
+
+  // During a game that can be carried over to a new page (#1118), a theme with other art hands it over, saved and
+  //  loaded again, rather than waiting for the next load; where it can't be now (waiting for the turn), it waits.
+  {
+    applyUiTheme('slate', root);
+
+    let reloads = 0,
+      handOvers = 0,
+      canHandOver = true;
+
+    provideGameHandOver((): boolean => {
+      handOvers++;
+
+      return canHandOver;
+    });
+
+    const [row, hint] = themeRows(true, () => reloads++),
+      select = row.querySelector('select') as HTMLSelectElement;
+
+    choose(select, 'other-art-theme');
+
+    expect(
+      'a theme with other art hands the game over, with no hint and no reload of its own',
+      [currentUiTheme(root), handOvers, hint.hidden, reloads],
+      ['other-art-theme', 1, true, 0]
+    );
+
+    choose(select, 'civ1-classic');
+
+    expect("one with the page's art hands nothing over", handOvers, 1);
+
+    canHandOver = false;
+    choose(select, 'other-art-theme');
+
+    expect(
+      "where it can't be handed over now, the art waits, saying so",
+      [handOvers, hint.hidden, reloads],
+      [2, false, 0]
+    );
+
+    provideGameHandOver(null);
+    applyUiTheme('slate', root);
   }
 
   // Interface from the main menu: a new page at once.

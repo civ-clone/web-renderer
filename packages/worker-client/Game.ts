@@ -207,10 +207,12 @@ export class Game implements IGame {
   #saveReceived({
     name,
     autosave,
+    handOver = false,
     details,
   }: {
     name: string;
     autosave?: 'start' | 'autosave';
+    handOver?: boolean;
     details?: SaveDetails;
   }): void {
     let data: string;
@@ -245,6 +247,13 @@ export class Game implements IGame {
       }
 
       this.#transport.send('saveFailed', { message: describeError(error) });
+
+      return;
+    }
+
+    // For the page that replaces this one (#1118), not a save of the player's.
+    if (handOver && autosave === undefined) {
+      this.#transport.send('handOverGame', { data });
 
       return;
     }
