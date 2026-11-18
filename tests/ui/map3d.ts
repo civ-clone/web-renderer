@@ -45,6 +45,7 @@ import {
   prepareMap3D,
 } from '@civ-clone/ui-game/lib/map3d';
 import { Stage } from '@civ-clone/ui-map-3d/stage';
+import { TileMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
 import { setBuild } from '@civ-clone/ui-client/lib/build';
 import { sourcesUnder, specifiersOf } from './lib/imports';
 import { createRequire } from 'module';
@@ -157,11 +158,15 @@ const staged: string[] = [],
   // The land's chunks the stage was given, and where its camera looked last, apart from what's drawn.
   chunksSet = new Set<string>(),
   lookedAt: number[] = [],
+  // What's marked on each square, by `x,y`.
+  markers = new Map<string, TileMarker>(),
   fakeStage = (): Stage => ({
     render: () => void staged.push('render'),
     resize: (stageWidth, stageHeight, ratio) =>
       void staged.push(`resize ${stageWidth}×${stageHeight}@${ratio}`),
     setChunk: (i, j) => void chunksSet.add(`${i},${j}`),
+    setMarker: (key, at, marker) =>
+      void (marker === null ? markers.delete(key) : markers.set(key, marker)),
     view: (orbit, height) =>
       void lookedAt.splice(0, 3, orbit.focus[0], orbit.focus[1], height),
     stats: () => ({ drawCalls: 0, triangles: 0, geometries: 0 }),
@@ -575,6 +580,107 @@ expect(
   );
 
   staged.splice(0);
+
+  // A city and a stack on a square: marked, with the best defender on top, until `t` hides them, and the active unit
+  //  on top, marked as active, even hidden.
+  const owner = {
+      id: 'Player-1',
+      civilization: {
+        attributes: [{ name: 'colors', value: ['#aa0000', '#ffffff'] }],
+      },
+    },
+    town = tiles[2] as Tile,
+    townKey = `${town.x},${town.y}`,
+    warriors = {
+      id: 'Unit-W',
+      _: 'Warriors',
+      defence: { value: 1 },
+      player: owner,
+      busy: null,
+      tile: town,
+    },
+    phalanx = {
+      id: 'Unit-P',
+      _: 'Phalanx',
+      defence: { value: 2 },
+      player: owner,
+      busy: { _: 'Fortified' },
+      tile: town,
+    };
+
+  Object.assign(town, {
+    city: {
+      name: 'Roma',
+      growth: { size: 3 },
+      player: owner,
+      walled: true,
+      civilDisorderDeclared: false,
+    },
+    units: [warriors, phalanx],
+  });
+  view.queueTile(town);
+  view.releaseTiles();
+
+  const marked = (): unknown => {
+    const marker = markers.get(townKey);
+
+    return marker === undefined
+      ? null
+      : [
+          marker.city?.name ?? null,
+          marker.unit?.type ?? null,
+          marker.unit?.active ?? null,
+        ];
+  };
+
+  expect(
+    'a square with a city and a stack is marked: the city, its size, walls and colours, and its best defender with the stack’s size',
+    [markers.get(townKey)?.city, markers.get(townKey)?.unit],
+    [
+      {
+        name: 'Roma',
+        size: 3,
+        colours: ['#aa0000', '#ffffff'],
+        walled: true,
+        disorder: false,
+      },
+      {
+        type: 'Phalanx',
+        colours: ['#aa0000', '#ffffff'],
+        count: 2,
+        active: false,
+        busy: true,
+      },
+    ]
+  );
+
+  view.setActiveUnit(warriors as unknown as Unit);
+
+  const activeOnTop = marked();
+
+  view.toggleUnits();
+
+  const hiddenButActive = marked();
+
+  view.setActiveUnit(null);
+
+  const allHidden = marked();
+
+  view.toggleUnits();
+
+  expect(
+    'the active unit is on top of its stack; t hides the rest, but not the active unit; shown again, all are back',
+    [activeOnTop, hiddenButActive, allHidden, marked()],
+    [
+      ['Roma', 'Warriors', true],
+      [null, 'Warriors', true],
+      null,
+      ['Roma', 'Phalanx', false],
+    ]
+  );
+
+  staged.splice(0);
+
   view.flush();
 
   expect(
@@ -642,6 +748,7 @@ expect(
   );
 
   // Taken down with the game.
+  staged.splice(0);
   view.dispose();
 
   expect('dispose lets the stage go', staged.splice(0), ['dispose']);

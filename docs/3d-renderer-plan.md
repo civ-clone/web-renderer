@@ -202,6 +202,18 @@ Building another world from the form starts it in the middle again.
 
 ### 1.3 Picking and input
 
+**First parts done:**
+- **Picking's maths:** `packages/map-3d/camera/pick.ts`. A ray from the screen is stepped through the band of heights
+  the land can be in, and halved down to where it first meets the land, or the sea's surface over land below it.
+  Tested at every yaw and pitch over a known height function (`tests/ui/pick.ts`), with a ridge in the way, and the sea.
+- **Markers:** `packages/map-3d/markers`. A city is a cluster of buildings, more as it grows, with its owner's colour on
+  their roofs, a wall if it's walled, and its name and size over it ("!" in disorder). A unit is a pawn in its owner's
+  colours, the active unit if it's in the stack or else the best defender, with a pennant giving the stack's size, and
+  a ring under the active unit. `t` hides all but the active unit. Colours are the civilization's `colors` attribute.
+  The debug page puts seeded cities and units on its world.
+- **Still to do:** clicks, long presses and right-clicks through the 2D map's own handling, hover tooltips, choosing
+  a square for a long-range order, `isVisible` with the covered rectangles, and waiting for the next turn.
+
 - **What:**
   - a ray to what's shown, then to a square: the land, or the water's surface where the land is below it (spec §9.2);
   - clicks, long presses and target picking;

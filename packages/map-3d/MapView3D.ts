@@ -31,6 +31,7 @@ import {
 } from './camera/orbit';
 import prefersReducedMotion from '@civ-clone/ui-map/lib/reducedMotion';
 import CameraInput from './camera/CameraInput';
+import markerFor from './markers/markerFor';
 
 // How long, in ms, each frame may go on building the land's chunks while any wait. A chunk is built whole, once a frame
 //  has begun one: one takes 17–25 ms, so a frame builds one, and more only where they're quicker.
@@ -63,6 +64,8 @@ export class MapView3D implements MapRenderer {
   #input: CameraInput;
   #distance: MapView3DDeps['cameraDistance'];
   #keptDistance: number | null;
+  // The squares marked now, by `x,y`, each with what it was marked with, so a square marked the same is left alone.
+  #marked = new Map<string, string>();
   // A frame asked for to draw in, if one is.
   #frame: number | null = null;
   // Keyed by the square, as the 2D map's: a tile waits in `#incomingTiles` until the world has it (`releaseTiles`).
@@ -116,6 +119,7 @@ export class MapView3D implements MapRenderer {
     }
 
     this.#land.queueAll(...this.#focus());
+    this.#markAll();
 
     this.portal.on('activate-unit', (unit) => deps.activateUnit(unit));
 
@@ -265,9 +269,19 @@ export class MapView3D implements MapRenderer {
     }
   }
 
+  /** Marks `unit` as the one awaiting orders, and the one before as not. */
   setActiveUnit(unit: Unit | null, pendingTile?: Coordinate | null): void {
+    const before = this.#activeUnit?.tile;
+
     this.#activeUnit = unit;
     this.#pendingTile = pendingTile ?? null;
+
+    [before, unit?.tile].forEach((tile) => {
+      if (tile) {
+        this.#mark(tile.x, tile.y);
+      }
+    });
+    this.#draw();
   }
 
   setWaiting(waiting: boolean): void {
@@ -281,7 +295,11 @@ export class MapView3D implements MapRenderer {
   showActiveUnit(changed: Tile[]): void {
     void changed;
 
-    this.#unitsShown = true;
+    if (!this.#unitsShown) {
+      this.#unitsShown = true;
+      this.#markAll();
+      this.#draw();
+    }
   }
 
   /** Whether the units, the yields, and waiting for the next turn are shown, as asked. */
@@ -297,8 +315,11 @@ export class MapView3D implements MapRenderer {
     return this.#tilesToDraw.size;
   }
 
+  /** Hides the units, cities and their names, but the unit awaiting orders, or shows them again (`t`). */
   toggleUnits(): void {
     this.#unitsShown = !this.#unitsShown;
+    this.#markAll();
+    this.#draw();
   }
 
   toggleYields(): void {
@@ -409,9 +430,10 @@ export class MapView3D implements MapRenderer {
     return true;
   }
 
-  // The tiles released, their squares' land queued to be built again. The world's terrain is read again even with
-  //  none released when its tiles have been replaced, as a whole new world may have none: not otherwise, as reading
-  //  it all takes milliseconds.
+  // The tiles released: the land round any whose terrain changed queued to be built again, and each marked again. The
+  //  world's terrain is read again even with none released when its tiles have been replaced, as a whole new world
+  //  may have none, and every square marked before is marked again: not otherwise, as reading it all takes
+  //  milliseconds.
   #takeTiles(): void {
     const squares = [...this.#tilesToDraw.values()].map(
         ({ x, y }): [number, number] => [x, y]
@@ -424,6 +446,57 @@ export class MapView3D implements MapRenderer {
     this.#worldTileCount = tiles.length;
     this.#tilesToDraw.clear();
     this.#land.changed(squares, ...this.#focus(), replaced);
+    squares.forEach(([x, y]) => this.#mark(x, y));
+
+    if (replaced) {
+      this.#marked.forEach((_, key) => {
+        const [x, y] = key.split(',').map(Number) as [number, number];
+
+        this.#mark(x, y);
+      });
+    }
+  }
+
+  // What's on the square at (`x`, `y`), marked on the land at its middle, or nothing.
+  #mark(x: number, y: number): void {
+    const key = `${x},${y}`,
+      marker = markerFor(
+        this.world.get(x, y),
+        this.#activeUnit?.id ?? null,
+        this.#unitsShown
+      );
+
+    const [u, v] = this.#land.layout.centre(x, y),
+      at: [number, number, number] = [
+        u,
+        Math.max(0, this.#land.heightAt(u, v)),
+        v,
+      ],
+      signature = marker === null ? null : JSON.stringify([marker, at]);
+
+    if (signature === (this.#marked.get(key) ?? null)) {
+      return;
+    }
+
+    this.#stage.setMarker(key, at, marker);
+
+    if (signature === null) {
+      this.#marked.delete(key);
+    } else {
+      this.#marked.set(key, signature);
+    }
+  }
+
+  // Every square the world has, and every one marked before.
+  #markAll(): void {
+    const squares = new Set(this.#marked.keys());
+
+    this.world.tiles().forEach(({ x, y }) => squares.add(`${x},${y}`));
+    squares.forEach((key) => {
+      const [x, y] = key.split(',').map(Number) as [number, number];
+
+      this.#mark(x, y);
+    });
   }
 
   // A frame: the tiles released taken, as many chunks built as the budget allows (every one, where there are no

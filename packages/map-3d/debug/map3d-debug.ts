@@ -13,6 +13,14 @@ import Transport from '@civ-clone/ui-client/Transport';
 import World from '@civ-clone/ui-map/components/World';
 import generateWorld from './generateWorld';
 import pageOptions from './pageOptions';
+import populate from './populate';
+
+// The tiles, with the made-up cities and units on them.
+const populated = (tiles: PlayerTile[], seed: number): PlayerTile[] => {
+  populate(tiles, seed);
+
+  return tiles;
+};
 
 // A square as the client gets it: only what the 3D map reads is filled in.
 const tileAt = (x: number, y: number, terrain: string): PlayerTile => {
@@ -60,8 +68,9 @@ const start = (script: Map3DScript): void => {
       width: options.width,
       height: options.height,
       topologyId: options.topologyId,
-      tiles: terrain.flatMap((row, y) =>
-        row.map((name, x) => tileAt(x, y, name))
+      tiles: populated(
+        terrain.flatMap((row, y) => row.map((name, x) => tileAt(x, y, name))),
+        options.seed
       ),
     }),
     view = script.createMapView3D({

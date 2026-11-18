@@ -17,12 +17,15 @@ import {
   HemisphereLight,
   Mesh,
   MeshStandardMaterial,
+  Object3D,
   PerspectiveCamera,
   SRGBColorSpace,
   Scene,
   WebGLRenderer,
 } from 'three';
 import { ChunkMesh } from './terrain/chunks';
+import { MarkerKit, drawMarker } from './markers/drawMarker';
+import { TileMarker } from './markers/markerFor';
 import { FIELD_OF_VIEW, Orbit, eye, sightFor } from './camera/orbit';
 
 /** What the stage has drawn, for the debug overlay. */
@@ -39,6 +42,15 @@ export interface Stage {
   resize(width: number, height: number, pixelRatio: number): void;
   /** The land's chunk `i` across and `j` down, drawn at every copy of the world: one drawn before is replaced. */
   setChunk(i: number, j: number, mesh: ChunkMesh): void;
+  /**
+   * What's marked on the square `key` (`x,y`), standing at `at` (`u`, height, `v`), drawn at every copy of the world:
+   *  one marked before is replaced, and nothing takes it away.
+   */
+  setMarker(
+    key: string,
+    at: readonly [number, number, number],
+    marker: TileMarker | null
+  ): void;
   /** The camera, round its focus raised to `height`, the land's there. */
   view(orbit: Orbit, height: number): void;
   stats(): StageStats;
@@ -48,6 +60,13 @@ export interface Stage {
 export type StageOptions = {
   // How far along the world repeats, across and down (`null` down for a world that doesn't wrap over the poles).
   period: { u: number; v: number | null };
+};
+
+// Something drawn at every copy of the world in sight: where it lies, how to make another of it, and those drawn now.
+type Placed = {
+  at: readonly [number, number, number];
+  make: () => Object3D;
+  drawn: Object3D[];
 };
 
 export type StageFactory = (
@@ -109,11 +128,12 @@ export const createStage: StageFactory = (canvas, { period }) => {
       vertexColors: true,
     }),
     sun = new DirectionalLight(SUN, 2.6),
-    // Each chunk's geometry and where it lies, by `i,j`, and the meshes that draw it at the world's copies in sight.
-    chunks = new Map<
-      string,
-      { geometry: BufferGeometry; u: number; v: number; meshes: Mesh[] }
-    >(),
+    // What's drawn at every copy of the world in sight: the land's chunks by `i,j`, and the squares' markers by `x,y`.
+    //  Each has where it lies, how to make one copy of it, and the copies drawn now.
+    chunks = new Map<string, Placed & { geometry: BufferGeometry }>(),
+    markers = new Map<string, Placed>(),
+    markersGroup = new Group(),
+    kit = new MarkerKit(),
     fog = new Fog(SKY, 30, 110);
 
   // The copies of the world drawn now, and their key, to tell when they change.
@@ -129,19 +149,24 @@ export const createStage: StageFactory = (canvas, { period }) => {
   scene.fog = fog;
   scene.add(new HemisphereLight(SKY_LIGHT, GROUND_LIGHT, 0.9));
   scene.add(land);
+  scene.add(markersGroup);
 
   // From the south-east and well up, so slopes facing it are lit and the far sides of ridges fall into shade.
   sun.position.set(30, 40, 20);
   scene.add(sun);
   scene.add(sun.target);
 
-  // A chunk's meshes, one for each copy of the world drawn now.
-  const meshesFor = (geometry: BufferGeometry, u: number, v: number): Mesh[] =>
+  // A thing's copies, one for each copy of the world drawn now, in `parent`.
+  const copiesOf = (placed: Placed, parent: Group): Object3D[] =>
     copies.map(([offsetU, offsetV]) => {
-      const drawn = new Mesh(geometry, material);
+      const drawn = placed.make();
 
-      drawn.position.set(u + offsetU, 0, v + offsetV);
-      land.add(drawn);
+      drawn.position.set(
+        placed.at[0] + offsetU,
+        placed.at[1],
+        placed.at[2] + offsetV
+      );
+      parent.add(drawn);
 
       return drawn;
     });
@@ -170,8 +195,12 @@ export const createStage: StageFactory = (canvas, { period }) => {
       copies = inSight;
       copiesKey = key;
       chunks.forEach((chunk) => {
-        chunk.meshes.forEach((drawn) => land.remove(drawn));
-        chunk.meshes = meshesFor(chunk.geometry, chunk.u, chunk.v);
+        chunk.drawn.forEach((drawn) => land.remove(drawn));
+        chunk.drawn = copiesOf(chunk, land);
+      });
+      markers.forEach((marker) => {
+        marker.drawn.forEach((drawn) => markersGroup.remove(drawn));
+        marker.drawn = copiesOf(marker, markersGroup);
       });
     }
   };
@@ -198,16 +227,40 @@ export const createStage: StageFactory = (canvas, { period }) => {
       const old = chunks.get(key);
 
       if (old !== undefined) {
-        old.meshes.forEach((drawn) => land.remove(drawn));
+        old.drawn.forEach((drawn) => land.remove(drawn));
         old.geometry.dispose();
       }
 
-      chunks.set(key, {
+      const chunk: Placed & { geometry: BufferGeometry } = {
         geometry,
-        u: mesh.u,
-        v: mesh.v,
-        meshes: meshesFor(geometry, mesh.u, mesh.v),
-      });
+        at: [mesh.u, 0, mesh.v],
+        make: () => new Mesh(geometry, material),
+        drawn: [],
+      };
+
+      chunk.drawn = copiesOf(chunk, land);
+      chunks.set(key, chunk);
+    },
+    setMarker: (key, at, marker): void => {
+      const old = markers.get(key);
+
+      // Its geometries and materials are the kit's, shared by every marker.
+      old?.drawn.forEach((drawn) => markersGroup.remove(drawn));
+      markers.delete(key);
+
+      if (marker === null) {
+        return;
+      }
+
+      const original = drawMarker(kit, marker),
+        placed: Placed = {
+          at,
+          make: () => original.clone(),
+          drawn: [],
+        };
+
+      placed.drawn = copiesOf(placed, markersGroup);
+      markers.set(key, placed);
     },
     view,
     stats: (): StageStats => ({
@@ -218,6 +271,8 @@ export const createStage: StageFactory = (canvas, { period }) => {
     dispose: (): void => {
       chunks.forEach(({ geometry }) => geometry.dispose());
       chunks.clear();
+      markers.clear();
+      kit.dispose();
       material.dispose();
       renderer.dispose();
     },
