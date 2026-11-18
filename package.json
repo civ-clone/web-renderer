@@ -39,6 +39,7 @@
     "test:citizens": "node tools/run-suite.js ui citizens",
     "test:client-actions-state": "node tools/run-suite.js engine clientActionsState",
     "test:client-battles": "node tools/run-suite.js engine clientBattles",
+    "test:client-map-events": "node tools/run-suite.js engine clientMapEvents",
     "test:client-city-news": "node tools/run-suite.js engine clientCityNews",
     "test:client-notifications": "node tools/run-suite.js engine clientNotifications",
     "test:client-cheats": "node tools/run-suite.js engine clientCheats",

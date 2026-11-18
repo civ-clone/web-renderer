@@ -52,6 +52,7 @@ import registerIncidentOffers from './Client/incidentOffers';
 import registerRevolutionOffers from './Client/revolutionOffers';
 import ChoicePrompt from './Client/ChoicePrompt';
 import registerBattleEvents from './Client/battleEvents';
+import registerMapEvents from './Client/mapEvents';
 import registerDiplomatEvents from './Client/diplomatEvents';
 import registerObserveCity from './Client/observeCity';
 import TurnHandover, {
@@ -161,7 +162,8 @@ export class DataTransferClient extends Client implements IClient {
     // In this order, which is the order of the receivers and the engine listeners: the cheats and the lists the cheat
     //  menu asks for (`Client/cheats.ts`); what the UI asks for (`Client/requests.ts`); the talks' `unit:moved` before
     //  the patches', which flushes (`Client/Talks.ts`); a GoTo that stopped next to a choice
-    //  (`Client/TurnHandover.ts`); what each engine event changes of what the player is sent
+    //  (`Client/TurnHandover.ts`); a move or a battle as it happens (`Client/mapEvents.ts`); what each engine event
+    //  changes of what the player is sent
     //  (`Client/events/patchEvents.ts`); a Diplomat's embassy report and investigated city (`Client/diplomatEvents.ts`);
     //  how the game ends for us (`Client/gameEnd.ts`); and what the player is told of, last, so that what an event
     //  changes is queued before the player is told of it (`Client/notifications/registerNotifications.ts`).
@@ -204,6 +206,9 @@ export class DataTransferClient extends Client implements IClient {
       );
     }
 
+    // A move or a battle the player sees, as it happens (`Client/mapEvents.ts`): before the patches', which flush on
+    //  `unit:moved`, so it reaches the page before the squares it changes. A watcher sees them too.
+    this.#disposers.push(registerMapEvents(engineInstance, this.#context));
     this.#disposers.push(registerPatchEvents(engineInstance, this.#context));
 
     // A Diplomat's report opens a window on the page: not for a watcher, who opens a city of their own accord instead

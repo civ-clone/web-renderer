@@ -11,7 +11,8 @@
 //    automation's client and sends the turn and the whole player in one patch, without a hand-over;
 //  - whether notifications are held reads the hand-over and automation as each is given.
 // Then, through the client: after `setAutomationEnabled` toggles, the engine listeners the client registered (the
-//  halted GoTo, the talks' and the patches' `unit:moved`) and `chooseFromList` read automation as it is now.
+//  halted GoTo, the talks' and the patches' `unit:moved`, with the map's between them) and `chooseFromList` read
+//  automation as it is now.
 
 import ActionsState from '@civ-clone/ui-worker-client/Client/ActionsState';
 import { ActiveUnit } from '@civ-clone/civ1-unit/PlayerActions';
@@ -594,12 +595,13 @@ const throughTheClient = async (): Promise<void> => {
         .filter(([name]) => name === event)
         .map(([, listener]) => listener),
     [halted] = listenersFor('unit:halted'),
-    [talksMoved, patchesMoved] = listenersFor('unit:moved');
+    // The talks', then the map's (`Client/mapEvents.ts`, which reads no automation), then the patches'.
+    [talksMoved, , patchesMoved] = listenersFor('unit:moved');
 
   expect(
-    'the client registers one unit:halted and two unit:moved listeners',
+    "the client registers one unit:halted and three unit:moved listeners: the talks', the map's and the patches'",
     [listenersFor('unit:halted').length, listenersFor('unit:moved').length],
-    [1, 2]
+    [1, 3]
   );
 
   const neighbour: any = {

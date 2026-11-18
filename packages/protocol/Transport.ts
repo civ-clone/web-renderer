@@ -17,6 +17,7 @@ import {
 import { RequirementData } from './requirements';
 import { CivilopediaEntry, UnavailableBuildItem } from './civilopedia';
 import type { BattleSound } from './battles';
+import type { MapEvent } from './mapEvents';
 import type { QueueEdit } from './cityBuild';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import {
@@ -122,6 +123,9 @@ declare global {
     civilizations: TransportData<CivilizationOption[], null>;
     // A battle the player sees or fights (#126): what it sounds like, for the page to play.
     battle: TransportData<BattleSound, never>;
+    // A move or a battle the player sees, as it happens, before the tile patches that show where things are after it
+    //  (docs/3d-renderer.md §8): for a map that shows it happening.
+    mapEvent: TransportData<MapEvent, never>;
     // The difficulty levels the rules offer, for the new game menu (#173).
     difficulties: TransportData<DifficultyOption[], null>;
     // The rule sets a new game can switch (#158): as they start, or as they are with some choices and a change made.
