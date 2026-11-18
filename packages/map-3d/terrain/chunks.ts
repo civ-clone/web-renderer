@@ -81,22 +81,27 @@ export const buildChunk = (
     ],
     // Heights one point further out on every side, for the normals at the chunk's border.
     across = stepsU + 3,
-    heights = new Float64Array(across * (stepsV + 3));
+    heights = new Float64Array(across * (stepsV + 3)),
+    points = (stepsU + 1) * (stepsV + 1),
+    colours = new Float32Array(points * 3);
 
+  // Each point sampled once: its height, and its colour if it's the chunk's own.
   for (let b = -1; b <= stepsV + 1; b++) {
     for (let a = -1; a <= stepsU + 1; a++) {
-      heights[(b + 1) * across + (a + 1)] = relief.height(
-        ...at(firstU + a, firstV + b)
-      );
+      const { height, colour } = relief.sample(...at(firstU + a, firstV + b));
+
+      heights[(b + 1) * across + (a + 1)] = height;
+
+      if (a >= 0 && a <= stepsU && b >= 0 && b <= stepsV) {
+        colours.set(colour, (b * (stepsU + 1) + a) * 3);
+      }
     }
   }
 
   const height = (a: number, b: number): number =>
       heights[(b + 1) * across + (a + 1)] ?? 0,
-    points = (stepsU + 1) * (stepsV + 1),
     positions = new Float32Array(points * 3),
     normals = new Float32Array(points * 3),
-    colours = new Float32Array(points * 3),
     [originU, originV] = at(firstU, firstV);
 
   for (let b = 0; b <= stepsV; b++) {
@@ -105,8 +110,7 @@ export const buildChunk = (
         [u, v] = at(firstU + a, firstV + b),
         slopeU = (height(a + 1, b) - height(a - 1, b)) / (2 * spacingU),
         slopeV = (height(a, b + 1) - height(a, b - 1)) / (2 * spacingV),
-        length = Math.hypot(slopeU, 1, slopeV),
-        { colour } = relief.sample(u, v);
+        length = Math.hypot(slopeU, 1, slopeV);
 
       positions[point * 3] = u - originU;
       positions[point * 3 + 1] = height(a, b);
@@ -115,10 +119,6 @@ export const buildChunk = (
       normals[point * 3] = -slopeU / length;
       normals[point * 3 + 1] = 1 / length;
       normals[point * 3 + 2] = -slopeV / length;
-
-      colours[point * 3] = colour[0];
-      colours[point * 3 + 1] = colour[1];
-      colours[point * 3 + 2] = colour[2];
     }
   }
 

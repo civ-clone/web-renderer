@@ -91,11 +91,12 @@ export const createRelief = ({
     ]),
     // A crest where the noise crosses 0, from -1 between them to 1 on them.
     ridged: Noise = (u, v) => 1 - 2 * Math.abs(ridges(u, v)),
-    noiseFor: { [shape in ReliefShape]: Noise | null } = {
+    // Which noise each shape rides on. Noise depends on the point alone, not the square, so each is taken once a point.
+    noiseFor: { [shape in ReliefShape]: 'rolling' | 'ridged' | null } = {
       flat: null,
-      rolling,
-      ridged,
-      peaked: ridged,
+      rolling: 'rolling',
+      ridged: 'ridged',
+      peaked: 'ridged',
     };
 
   // Every square's terrain, by its index on the world.
@@ -221,6 +222,15 @@ export const createRelief = ({
       return { height: 0, colour: linear(unknownTerrain.colour) };
     }
 
+    // Each noise at this point, once it's asked for.
+    let rollingHere: number | null = null,
+      ridgedHere: number | null = null;
+
+    const noiseHere = (which: 'rolling' | 'ridged'): number =>
+      which === 'rolling'
+        ? (rollingHere ??= rolling(u, v))
+        : (ridgedHere ??= ridged(u, v));
+
     let total = 0,
       blended = 0,
       peaks = 0,
@@ -252,7 +262,7 @@ export const createRelief = ({
 
       const { relief, colour } = square,
         noise = noiseFor[relief.shape],
-        rough = noise === null ? 0 : relief.roughness * noise(u, v);
+        rough = noise === null ? 0 : relief.roughness * noiseHere(noise);
 
       if (relief.shape === 'peaked') {
         blended += w * (relief.base * (1 - PEAK_SHARE) + rough * 0.5);
