@@ -76,6 +76,10 @@ If a later slice finds the patches already carry enough (a unit's id on both squ
 
 Split from 0.1, as its risk and its proof are different: the timing of events, not where calls go.
 
+**Done:** `packages/widgets/lib/mapGestures.ts`: `Press` (the drag threshold and release speed), `Glide`, `WheelTurn`
+and `Pinch`, each saying what to do in the page's px or zoom steps, with the zoom's step and range passed in, as the 3D
+camera's zoom is its own (1.2). `GamePortal` drives them; `tests/ui/mapGestures.ts` checks them on their own.
+
 - **What:** the input handling the 3D view will share is lifted out of `GamePortal` into a module of its own: the drag
   threshold, the glide, wheel steps, pinch and Safari's gestures.
 - **Proof that nothing changes:** the `mapNavigation` and `zoom` suites, and a mouse, a trackpad and Safari's pinch
