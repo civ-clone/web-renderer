@@ -1645,11 +1645,15 @@ const run = async (): Promise<void> => {
     expect(
       "the classic screen's map, shown at its own size, is drawn at the zoom down to a whole scale, not the map's scale above it",
       [
-        mapOf(classicCityLayout, 2, 1.4)[0],
-        mapOf(classicCityLayout, 3, 2.5)[0],
-        mapOf(classicCityLayout, 2, 2)[0],
+        mapOf(classicCityLayout, 2, 1.4),
+        mapOf(classicCityLayout, 3, 2.5),
+        mapOf(classicCityLayout, 2, 2),
       ],
-      [width, width * 2, width * 2]
+      [
+        [width, ''],
+        [width * 2, ''],
+        [width * 2, ''],
+      ]
     );
 
     expect(
