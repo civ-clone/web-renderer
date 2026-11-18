@@ -284,6 +284,32 @@ const drawCentred = (
   );
 };
 
+// Its drawing, what's drawn in it (`drawnArea`), enlarged or shrunk to fill most of the picture and centred: for a
+//  tileset whose sprites leave much of their tile empty, as Civ2's units and cities do in its 64 px tiles, which would
+//  otherwise be too small to make out on a button (#1053). Only for the game's own art: the theme's are drawn as ever.
+const drawFilled = (
+  context: CanvasRenderingContext2D,
+  image: CanvasImageSource,
+  pictureSize: number,
+  offset = 0
+): void => {
+  if (!isDrawable(image)) {
+    return;
+  }
+
+  const [left, top, width, height] = drawnArea(image),
+    fit = (pictureSize * 0.9) / Math.max(width, height, 1);
+
+  context.save();
+  context.translate(
+    Math.round((pictureSize - width * fit) / 2) + offset,
+    Math.round((pictureSize - height * fit) / 2) + offset
+  );
+  context.scale(fit, fit);
+  context.drawImage(image, -left, -top);
+  context.restore();
+};
+
 // Fitted into the middle of the picture: enlarged a whole number of times to most of it, or shrunk to fit it.
 const drawFitted = (
   context: CanvasRenderingContext2D,
@@ -359,6 +385,8 @@ export const drawUnitActionIcon = (
   const tileset = orderIconArt(),
     size = iconCanvasSize(canvas, tileset),
     stacked = layers.filter((layer) => layer.type === 'unit').length > 1,
+    // The game's own art (Civ2's) fills the picture with its units and cities, which leave much of its tiles empty.
+    fills = !hasInterfaceArt(tileset),
     pictureSize = iconPictureSize(tileset),
     // How many of the canvas's pixels make one of the picture's, for the marks; and one of the sprites', always whole.
     scale = size / iconSize,
@@ -414,19 +442,19 @@ export const drawUnitActionIcon = (
 
     if (layer.type === 'city' && tileset.cities.mode === 'styles') {
       // A city of the civilization's own style, the smallest (Civ2's), as the map draws one without its flag.
-      drawCentred(
-        context,
-        getPreloadedImage(
-          citySprite(tileset, {
-            player: { civilization: { _: layer.civilization ?? '' } } as any,
-            growth: { size: 1 } as any,
-          }),
-          tileset
-        ),
-        0,
-        spriteScale,
-        pictureSize
+      const city = getPreloadedImage(
+        citySprite(tileset, {
+          player: { civilization: { _: layer.civilization ?? '' } } as any,
+          growth: { size: 1 } as any,
+        }),
+        tileset
       );
+
+      if (fills) {
+        drawFilled(context, city, pictureSize);
+      } else {
+        drawCentred(context, city, 0, spriteScale, pictureSize);
+      }
 
       if (layer.text !== null) {
         mark(layer.text);
@@ -482,22 +510,21 @@ export const drawUnitActionIcon = (
 
     // Cargo is a stack, each unit a little further along than the last: two of the picture's pixels, in the sprites'
     //  own, so a larger tile's stack is spread as Civ1's is.
-    const offset = stacked ? (index * 2 * pictureSize) / iconSize : 0;
-
-    drawCentred(
-      context,
-      renderUnit(
+    const offset = stacked ? (index * 2 * pictureSize) / iconSize : 0,
+      unitPicture = renderUnit(
         {
           _: layer.unit._,
           player: layer.unit.player,
           improvements: layer.fortified ? [{ _: 'Fortified' } as any] : [],
         },
         tileset
-      ),
-      offset,
-      spriteScale,
-      pictureSize
-    );
+      );
+
+    if (fills) {
+      drawFilled(context, unitPicture, pictureSize, offset);
+    } else {
+      drawCentred(context, unitPicture, offset, spriteScale, pictureSize);
+    }
 
     if (layer.status) {
       mark(layer.status);
