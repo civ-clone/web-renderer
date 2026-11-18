@@ -35,7 +35,9 @@ const keyName = (key: string): string => (key === ' ' ? 'Space' : key);
 //  controller, which sends it and keeps the keys typed after it until it is answered (#543).
 export class UnitActions extends Element {
   #act: (unitId: string, unitAction: string, choice?: string) => void;
-  #canvases = new ScaledCanvases();
+  #canvases = new ScaledCanvases((canvas) =>
+    currentOrderIcons().canvasSize(canvas)
+  );
   #draw: (canvas: HTMLCanvasElement, layers: IconLayer[]) => void;
   #signature = '';
 

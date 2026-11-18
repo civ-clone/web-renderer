@@ -85,7 +85,9 @@ const groups: ActionGroup[] = ['orders', 'terrain', 'special'];
  */
 export class UnitCardActions extends Element {
   #act: (unitId: string, unitAction: string, choice?: string) => void;
-  #canvases = new ScaledCanvases();
+  #canvases = new ScaledCanvases((canvas) =>
+    currentOrderIcons().canvasSize(canvas)
+  );
   #draw: (canvas: HTMLCanvasElement, layers: IconLayer[]) => void;
   #signature = '';
   #unitId: string | null = null;

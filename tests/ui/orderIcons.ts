@@ -10,9 +10,14 @@ import './lib/artPacks';
 
 import {
   IconLayer,
+  drawUnitActionIcon,
   orderIconArt,
   unitActionIconLayers,
 } from '@civ-clone/ui-assets/lib/unitActionIcon';
+import classicManifest from '@civ-clone/ui-interface-classic/manifest.json';
+import modernManifest from '@civ-clone/ui-interface-modern/manifest.json';
+import { provideInterfaceArt } from '@civ-clone/ui-assets/lib/interfaceArt';
+import { setSprites } from '@civ-clone/ui-assets/lib/getPreloadedImage';
 import { Tile, Unit, UnitAction } from '@civ-clone/ui-protocol/types';
 import {
   applyInterface,
@@ -161,18 +166,116 @@ expect(
   [['city:Persian'], ['city:Persian'], ['interface:city/trade']]
 );
 
+// Drawn: Civ2's road halves laid where the tile is, so they meet across it, not each centred on itself.
+const calls: [string, ...unknown[]][] = [],
+  context = new Proxy({} as { [key: string]: unknown }, {
+    get: (target, name: string) =>
+      name in target
+        ? target[name]
+        : (...args: unknown[]) => calls.push([name, ...args]),
+    set: (target, name: string, value) => {
+      target[name] = value;
+
+      return true;
+    },
+  }),
+  canvas = {
+    width: 0,
+    height: 0,
+    clientWidth: 16,
+    getContext: () => context,
+  } as unknown as HTMLCanvasElement,
+  roadW = { width: 64, height: 32 },
+  roadE = { width: 64, height: 32 },
+  base = { width: 64, height: 32 };
+
+setSprites(
+  new Map<string, CanvasImageSource>([
+    ['./assets/civ2/terrain/grassland/base-0.png', base as any],
+    ['./assets/civ2/improvements/road/w.png', roadW as any],
+    ['./assets/civ2/improvements/road/e.png', roadE as any],
+  ])
+);
+drawUnitActionIcon(
+  canvas,
+  unitActionIconLayers(action('BuildRoad'), archers, null, 'S')
+);
+
+expect(
+  "Civ2's base and road halves, each laid where the tile is in the middle of the picture",
+  calls
+    .filter(([name]) => name === 'drawImage')
+    .map(([, image, x, y]) => [
+      image === base ? 'base' : image === roadW ? 'w' : 'e',
+      x,
+      y,
+    ]),
+  [
+    ['base', 0, 16],
+    ['w', 0, 16],
+    ['e', 0, 16],
+  ]
+);
+
+// The lost-city notice: our city, in our colours and our civilization's style.
+expect(
+  'the lost city is ours',
+  currentOrderIcons().lostCity(['#f00', '#0f0'], 'Persian'),
+  [
+    {
+      type: 'city',
+      text: null,
+      colours: ['#f00', '#0f0'],
+      civilization: 'Persian',
+    },
+  ]
+);
+
+// The pixel art as the theme's art, in a Civ1 game: its own names, as before.
+setRuleSetTileset(null);
+installTilesets({
+  civ1: { complete: false, metadata: null },
+  'civ1-pixelart': { complete: true, metadata: null },
+});
+provideInterfaceArt(() => ['civ1-pixelart']);
+
+expect(
+  "with the pixel art as the theme's, its names, as Civ1's were",
+  [orderIconArt().id, layersFor('BuildRoad'), layersFor('BuildIrrigation')],
+  [
+    'civ1-pixelart',
+    [
+      'terrain/land',
+      'terrain/grassland',
+      'improvements/road_w',
+      'improvements/road_e',
+    ],
+    ['terrain/land', 'terrain/grassland', 'improvements/irrigation'],
+  ]
+);
+
+provideInterfaceArt(() => []);
+
 // The slot: the manifests name `gameArt`, and another provider can be named instead.
+expect(
+  'both interfaces draw them with the game’s art',
+  [classicManifest.slots.orderIcons, modernManifest.slots.orderIcons],
+  ['gameArt', 'gameArt']
+);
+
 applyInterface(null, null);
 
 expect(
-  'both interfaces draw them with the game’s art',
-  [currentInterface().slots.orderIcons, currentOrderIcons().draw.name],
-  ['gameArt', 'drawUnitActionIcon']
+  'and the gameArt provider is the one drawn with',
+  currentOrderIcons().draw.name,
+  'drawUnitActionIcon'
 );
 
 const neutral = {
   layers: (): IconLayer[] => [{ type: 'image', path: 'neutral/order' }],
+  lostCity: (): IconLayer[] => [],
   draw: (): void => {},
+  canvasSize: (): number => 24,
 };
 
 orderIcons.provide('neutral', neutral);
@@ -184,9 +287,12 @@ registerInterface({
 applyInterface('neutral-test', null);
 
 expect(
-  'an interface naming other order icons draws with those',
-  currentOrderIcons().layers(action('Sleep'), archers, null, 'S'),
-  [{ type: 'image', path: 'neutral/order' }]
+  'an interface naming other order icons draws with those, at their own size',
+  [
+    currentOrderIcons().layers(action('Sleep'), archers, null, 'S'),
+    currentOrderIcons().canvasSize(canvas),
+  ],
+  [[{ type: 'image', path: 'neutral/order' }], 24]
 );
 
 finished = true;

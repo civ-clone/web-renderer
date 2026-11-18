@@ -66,7 +66,8 @@ export class Notice extends Action {
   }
 
   override build(): void {
-    const { colours, notification } = this.value() as unknown as NoticeData;
+    const { civilization, colours, notification } =
+      this.value() as unknown as NoticeData;
 
     // A city we've lost is one of our cities on the map, with no size (#420).
     if (cityNotices.includes(notification.key)) {
@@ -79,9 +80,12 @@ export class Notice extends Action {
       this.append(button);
 
       // Not in the page yet, so drawn for the 16px the stylesheet shows it at, on this screen.
-      currentOrderIcons().draw(button.querySelector('canvas')!, [
-        { type: 'city', text: null, colours },
-      ]);
+      const icons = currentOrderIcons();
+
+      icons.draw(
+        button.querySelector('canvas')!,
+        icons.lostCity(colours, civilization)
+      );
 
       return;
     }

@@ -429,13 +429,25 @@ export const drawUnitActionIcon = (
         return;
       }
 
-      drawCentred(
-        context,
-        getPreloadedImage(layer.path, tileset),
-        0,
-        spriteScale,
-        pictureSize
-      );
+      const sprite = getPreloadedImage(layer.path, tileset);
+
+      // The game's own art's map sprites (Civ2's terrain, roads and mines), each a whole tile, laid where the tile is in
+      //  the middle of the picture, so a road's halves meet across it; the theme's centred by what's drawn, as ever.
+      if (fills) {
+        if (isDrawable(sprite)) {
+          const [width, height] = imageSize(sprite);
+
+          context.drawImage(
+            sprite,
+            Math.round((pictureSize - width) / 2),
+            Math.round((pictureSize - height) / 2)
+          );
+        }
+
+        return;
+      }
+
+      drawCentred(context, sprite, 0, spriteScale, pictureSize);
 
       return;
     }

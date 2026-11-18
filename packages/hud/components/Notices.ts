@@ -6,6 +6,8 @@ export interface Notice {
   city: City | null;
   // Our civilization's colours, for a notice drawn as one of our cities (#420).
   colours: string[] | null;
+  // Our civilization, for a tileset that draws each one's cities in its own style (Civ2's, #1053).
+  civilization?: string;
   dismiss: () => void;
   notification: Notification;
 }
@@ -73,6 +75,7 @@ export class Notices {
           data.player.cities.find(
             (city) => city.id === notification.data?.city?.id
           ) ?? null,
+        civilization: data.player.civilization?._,
         colours:
           data.player.civilization?.attributes?.find(
             (attribute) => attribute.name === 'colors'

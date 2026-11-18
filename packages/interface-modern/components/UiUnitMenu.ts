@@ -2,11 +2,11 @@
 //  square it would act on, each order with the icon and key the unit card gives it (#743).
 
 import { Tile, Unit as UnitData } from '@civ-clone/ui-protocol/types';
+import { IconLayer } from '@civ-clone/ui-assets/lib/unitActionIcon';
 import {
-  IconLayer,
-  drawUnitActionIcon,
-} from '@civ-clone/ui-assets/lib/unitActionIcon';
-import { currentOrderIcons } from '@civ-clone/ui-assets/lib/orderIcons';
+  OrderIcons,
+  currentOrderIcons,
+} from '@civ-clone/ui-assets/lib/orderIcons';
 import { keyForAction, keyName } from '@civ-clone/ui-client/lib/unitActionKeys';
 import Transport from '@civ-clone/ui-client/Transport';
 import UiMenu from './UiMenu';
@@ -78,7 +78,7 @@ export const openUnitMenu = (
     draw = (canvas, layers) => currentOrderIcons().draw(canvas, layers),
   }: {
     pressed?: boolean;
-    draw?: typeof drawUnitActionIcon;
+    draw?: OrderIcons['draw'];
   } = {}
 ): UiMenu | null => {
   const { actions, direction } = unitMenuActions(tile, unit, transport);

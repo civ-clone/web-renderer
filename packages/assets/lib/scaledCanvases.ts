@@ -1,6 +1,7 @@
 import { iconCanvasSize } from './unitActionIcon';
 
 type Draw = (canvas: HTMLCanvasElement) => void;
+type Size = (canvas: HTMLCanvasElement) => number;
 
 /**
  * Canvases of unit action icons, each drawn for the size it's shown at (#352), and drawn again when that changes (#358):
@@ -14,7 +15,12 @@ export class ScaledCanvases {
       ? new ResizeObserver((): void => this.#redraw())
       : null;
 
-  constructor() {
+  // How many pixels across a canvas is drawn: the order icons' own (`OrderIcons.canvasSize`), as whoever draws them
+  //  says.
+  #size: Size;
+
+  constructor(size: Size = iconCanvasSize) {
+    this.#size = size;
     this.#watchRatio();
   }
 
@@ -31,11 +37,11 @@ export class ScaledCanvases {
     this.#drawn.clear();
   }
 
-  // Only those whose drawing no longer fits, by the size `drawUnitActionIcon` gives it: drawing one doesn't change what
+  // Only those whose drawing no longer fits, by the size it's drawn at (`#size`): drawing one doesn't change what
   //  it's shown at, so this settles.
   #redraw(): void {
     this.#drawn.forEach((draw, canvas) => {
-      if (canvas.width !== iconCanvasSize(canvas)) {
+      if (canvas.width !== this.#size(canvas)) {
         draw(canvas);
       }
     });
