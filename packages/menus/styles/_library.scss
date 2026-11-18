@@ -1,6 +1,8 @@
 // The library of art and sound (#1063): its sections, and each set's entry in them.
 .library {
   max-width: 36em;
+  // In from the window's edges as far as its header and footer are, rather than hard against them.
+  padding: 0.5em 0.75em;
 
   .storage-blocked {
     color: var(--ui-negative);
