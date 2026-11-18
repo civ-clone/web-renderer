@@ -56,11 +56,22 @@ export const loadMap3DScript = (
   timeout: number = LOAD_TIMEOUT
 ): Promise<CreateMapView3D> =>
   new Promise((resolve, reject) => {
+    // One that arrived after an earlier start had stopped waiting for it: not fetched again.
+    const arrived = (window as unknown as { [MAP3D_GLOBAL]?: Map3DScript })[
+      MAP3D_GLOBAL
+    ];
+
+    if (arrived !== undefined) {
+      resolve(arrived.createMapView3D);
+
+      return;
+    }
+
     const script = document.createElement('script'),
-      timer = window.setTimeout(
-        () => reject(new Error('dist/map3d.js took too long to fetch')),
-        timeout
-      );
+      timer = window.setTimeout(() => {
+        // Left to arrive, if it does, for the next start to find.
+        reject(new Error('dist/map3d.js took too long to fetch'));
+      }, timeout);
 
     script.src = `dist/map3d.js?v=${encodeURIComponent(build.version)}`;
     script.async = true;

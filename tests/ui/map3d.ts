@@ -299,6 +299,38 @@ expect(
 
   refused.dispose();
 
+  // And if the attempt took a WebGL context on the map's canvas, which then gives no 2D one, the 2D map gets a fresh
+  //  canvas in its place.
+  document.body.insertAdjacentHTML(
+    'beforeend',
+    '<div id="taken"><canvas width="320" height="200"></canvas></div>'
+  );
+
+  const taken = document.querySelector('#taken canvas') as HTMLCanvasElement;
+
+  Object.defineProperty(taken, 'getContext', {
+    value: (type: string) => (type === '2d' ? null : context()),
+  });
+  console.error = () => {};
+
+  const onFresh = makeMapView({ ...deps2D, mapPortal: taken }),
+    fresh2D = document.querySelector('#taken canvas') as HTMLCanvasElement;
+
+  console.error = error;
+
+  expect(
+    'a canvas a WebGL context was taken on is replaced, the same size, for the 2D map',
+    [
+      onFresh instanceof MapView2D,
+      taken.isConnected,
+      fresh2D !== taken,
+      [fresh2D.width, fresh2D.height],
+    ],
+    [true, false, true, [taken.width, taken.height]]
+  );
+
+  onFresh.dispose();
+
   // Asked for, with WebGL2: fetched once however many starts ask, and every game after is drawn in 3D.
   fresh();
 
@@ -549,6 +581,10 @@ expect(
     [0, ['dispose']]
   );
 
+  framed.portal.render();
+
+  expect('and nothing more is drawn', [frames.size, staged.splice(0)], [0, []]);
+
   delete (globalThis as any).requestAnimationFrame;
   delete (globalThis as any).cancelAnimationFrame;
 
@@ -575,6 +611,8 @@ expect(
     factory3D
   );
 
+  delete (window as any)[MAP3D_GLOBAL];
+
   const outcome = (promise: Promise<unknown>): Promise<string> =>
       promise.then(
         () => 'resolved',
@@ -582,7 +620,6 @@ expect(
       ),
     empty = loadMap3DScript();
 
-  delete (window as any)[MAP3D_GLOBAL];
   lastScript().dispatchEvent(new Event('load'));
 
   const failing = loadMap3DScript();
@@ -602,6 +639,20 @@ expect(
       'dist/map3d.js took too long to fetch',
     ]
   );
+
+  // One that arrived after a start stopped waiting for it is there for the next: not fetched again.
+  const tags = (): number => document.head.querySelectorAll('script').length,
+    tagsBefore = tags();
+
+  (window as any)[MAP3D_GLOBAL] = { createMapView3D: factory3D };
+
+  expect(
+    'a script that arrived late is taken as it is, with no second tag',
+    [await loadMap3DScript(), tags() - tagsBefore],
+    [factory3D, 0]
+  );
+
+  delete (window as any)[MAP3D_GLOBAL];
 
   // `dist/map3d.js`: three.js and the 3D map's own code, and from the rest only what has no state (the factory's name),
   //  so no registry or singleton the page's bundle has is bundled again with its own state.

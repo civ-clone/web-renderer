@@ -43,6 +43,7 @@ export class MapView3D implements MapRenderer {
   #size = '';
   #resizeHandler = (): void => this.#resize();
   #resizeObserver: ResizeObserver | null = null;
+  #disposed = false;
 
   constructor(deps: MapView3DDeps, stageFactory: StageFactory = createStage) {
     this.#canvas = deps.mapCanvas;
@@ -80,6 +81,7 @@ export class MapView3D implements MapRenderer {
   }
 
   dispose(): void {
+    this.#disposed = true;
     window.removeEventListener('resize', this.#resizeHandler);
     this.#resizeObserver?.disconnect();
 
@@ -194,6 +196,11 @@ export class MapView3D implements MapRenderer {
 
   // Drawn on the next frame, once however often it's asked for in one.
   #draw(): void {
+    // Taken down: nothing left to draw on.
+    if (this.#disposed) {
+      return;
+    }
+
     if (typeof requestAnimationFrame !== 'function') {
       this.#stage.render();
 
