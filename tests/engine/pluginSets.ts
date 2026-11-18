@@ -105,6 +105,15 @@ import Tile from '@civ-clone/core-world/Tile';
 import { civilWar } from '@civ-clone/base-civil-war/lib/civilWar';
 import { instance as engineInstance } from '@civ-clone/core-engine/Engine';
 import { launchRecord } from '@civ-clone/civ2-spaceship/lib/ship';
+import {
+  SHIP_AT_SEA,
+  countStep,
+  shipCount,
+} from '@civ-clone/civ2-barbarians/lib/ship';
+import { Trireme } from '@civ-clone/civ2-unit/Units';
+import Unit from '@civ-clone/core-unit/Unit';
+import isHuman from '@civ-clone/base-difficulty/lib/isHuman';
+import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
 import { shipFor } from '@civ-clone/civ2-spaceship/lib/newSpaceship';
 import { instance as spaceshipRegistryInstance } from '@civ-clone/core-spaceship/SpaceshipRegistry';
 
@@ -252,7 +261,8 @@ const CIV2_RULE_SETS = [
 
 // What a Civ2 endgame leaves in a save (M2e part 1), each as a game would come to have it: a computer player's ship
 //  built and launched, the barbarians' activity drawn, global warming under way, a civilization's comeback counted, and
-//  a civil war's rebels with a city of the loser's. Returns the rebels' civilization, to find them again after a load.
+//  a civil war's rebels with a city of the loser's; and from part 2, a ship's count of steps at sea (civ2-barbarians,
+//  which gives a barbarian ship up at 30). Returns the rebels' civilization, to find them again after a load.
 const civ2Endgame = (): string | null => {
   const computers = playerRegistryInstance
       .entries()
@@ -284,6 +294,29 @@ const civ2Endgame = (): string | null => {
   );
 
   recordUse(loser!.civilization().sourceClass() as never);
+
+  // A ship's count of steps at sea, on the person's ship: a barbarian ship of its own would give up as the barbarians'
+  //  next turn starts (no horde aboard), and a computer player's could be moved or lost while the loaded game plays on,
+  //  where the person's waits for orders. Its rules count only a barbarian ship's steps, so the count stays as saved.
+  const person = computers.find((player) =>
+      isHuman(player, clientRegistryInstance)
+    ),
+    shore = unitRegistryInstance
+      .getByPlayer(person!)[0]
+      ?.tile()
+      .getSurroundingArea(6)
+      .entries()
+      .find(
+        (tile: Tile) =>
+          tile.isWater() &&
+          tile.getNeighbours().some((neighbour: Tile) => neighbour.isLand())
+      );
+
+  if (shore) {
+    const ship = new Trireme(null, person!, shore, ruleRegistryInstance);
+
+    [1, 2, 3].forEach(() => countStep(defaultGame, ship));
+  }
 
   // A second city for the loser, a few squares from its first, which the rebels take.
   const [capital] = cityRegistryInstance.getByPlayer(loser!),
@@ -346,6 +379,22 @@ const civ2EndgameState = (rebelCivilization: string | null) => {
       pendingEffectRegistryInstance
         .getByHandler(CIVILIZATION_USES)[0]
         ?.data() ?? null,
+    // Each count at sea: its ship's type and owner, whether it is the ship the game has (not a copy left behind by the
+    //  load), and the count.
+    shipsAtSea: pendingEffectRegistryInstance
+      .getByHandler(SHIP_AT_SEA)
+      .map((record) => {
+        const ship = record.target() as Unit | null;
+
+        return ship === null
+          ? null
+          : {
+              type: typeNameOf(ship.sourceClass()),
+              human: isHuman(ship.player(), clientRegistryInstance),
+              registered: unitRegistryInstance.entries().includes(ship),
+              count: shipCount(defaultGame, ship),
+            };
+      }),
     ship:
       ship === undefined
         ? null
@@ -1381,7 +1430,7 @@ if (scenario !== null) {
     loadedEndgame = (civ2Loaded.protocol as any)?.endgame;
 
   expect(
-    'a civ2 game’s endgame is staged: a launched ship with every part counted, the barbarians’ level drawn, global warming, a comeback counted and a civil war’s rebels with a city (M2e part 1)',
+    'a civ2 game’s endgame is staged: a launched ship with every part counted, the barbarians’ level drawn, global warming, a comeback counted and a civil war’s rebels with a city (M2e part 1), and a ship’s count at sea (part 2)',
     [
       endgame?.ship?.layout,
       endgame?.ship?.parts,
@@ -1390,6 +1439,7 @@ if (scenario !== null) {
       endgame?.warming,
       endgame?.comebacks !== null,
       endgame?.rebels,
+      endgame?.shipsAtSea,
     ],
     [
       'SpaceshipLayout',
@@ -1399,6 +1449,7 @@ if (scenario !== null) {
       { level: 9, warmings: 1, turn: endgame?.warming?.turn },
       true,
       ['Breakaway'],
+      [{ type: 'Trireme', human: true, registered: true, count: 3 }],
     ]
   );
   // The loaded game plays on before it's read, and the warming level moves each turn toward what the pollution makes
@@ -1410,7 +1461,7 @@ if (scenario !== null) {
     };
 
   expect(
-    'and saved and loaded as it was: the New Game settings, the ship, the level drawn, the warmings, the comebacks and the rebels',
+    'and saved and loaded as it was: the New Game settings, the ship, the level drawn, the warmings, the comebacks, the rebels and the count at sea',
     settled(loadedEndgame),
     settled(endgame)
   );
