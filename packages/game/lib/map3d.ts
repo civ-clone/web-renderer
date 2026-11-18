@@ -243,6 +243,7 @@ export const makeMapView = (
       debug,
       lockVerticalEdges: deps.options.get('lockVerticalEdges', false),
       mapCanvas: deps.mapPortal,
+      minimapCanvas: deps.minimapCanvas,
       playerId: deps.playerId,
       squares: mapSquares,
       transport: deps.transport,

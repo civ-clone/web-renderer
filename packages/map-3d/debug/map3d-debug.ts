@@ -96,6 +96,7 @@ const start = (script: Map3DScript): void => {
       debug: true,
       lockVerticalEdges: true,
       mapCanvas: canvas,
+      minimapCanvas: document.querySelector<HTMLCanvasElement>('#minimap'),
       playerId: 'debug',
       // No game: a click centres the map on its square, as a click on a square with nothing to open does.
       squares: {

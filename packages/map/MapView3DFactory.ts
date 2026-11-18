@@ -66,6 +66,8 @@ export type MapView3DDeps = {
   lockVerticalEdges: boolean;
   // The canvas the map is drawn on, sized to its parent.
   mapCanvas: HTMLCanvasElement;
+  // The minimap's canvas, which the 3D map draws an overview of its own on, or nothing where there's none.
+  minimapCanvas: HTMLCanvasElement | null;
   playerId: string;
   // What a square does when clicked, held or right-clicked.
   squares: MapSquares;

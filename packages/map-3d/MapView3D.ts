@@ -26,7 +26,9 @@ import {
   TURN_STEP,
   between,
   defaultOrbit,
+  groundAt,
   settled,
+  sightFor,
   toScreen,
   zoomed,
 } from './camera/orbit';
@@ -34,6 +36,7 @@ import prefersReducedMotion from '@civ-clone/ui-map/lib/reducedMotion';
 import CameraInput from './camera/CameraInput';
 import markerFor from './markers/markerFor';
 import pickGround from './camera/pick';
+import Minimap3D from './minimap/Minimap3D';
 
 // How long, in ms, each frame may go on building the land's chunks while any wait. A chunk is built whole, once a frame
 //  has begun one: one takes 17–25 ms, so a frame builds one, and more only where they're quicker.
@@ -80,6 +83,9 @@ export class MapView3D implements MapRenderer {
   #squares: MapView3DDeps['squares'];
   #transport: MapView3DDeps['transport'];
   #picking: Picking | null = null;
+  // The minimap's overview, if there's a minimap, and whether the squares have changed since it was drawn.
+  #minimap: Minimap3D | null = null;
+  #minimapStale = true;
   // The squares marked now, by `x,y`, each with what it was marked with, so a square marked the same is left alone.
   #marked = new Map<string, string>();
   // A frame asked for to draw in, if one is.
@@ -126,6 +132,17 @@ export class MapView3D implements MapRenderer {
       changed: () => this.#draw(),
       visible: (x, y, margin) => this.#visible(x, y, margin),
     });
+    if (deps.minimapCanvas !== null) {
+      this.#minimap = new Minimap3D(
+        deps.minimapCanvas,
+        this.#land.layout,
+        deps.world,
+        this.#land.extentV(),
+        (u, v) =>
+          this.#moveTo({ ...(this.#glide?.to ?? this.#orbit), focus: [u, v] })
+      );
+    }
+
     this.#stage = stageFactory(deps.mapCanvas, {
       period: this.#land.layout.period(),
     });
@@ -218,6 +235,7 @@ export class MapView3D implements MapRenderer {
   dispose(): void {
     this.#disposed = true;
     this.#input.dispose();
+    this.#minimap?.dispose();
     window.removeEventListener('resize', this.#resizeHandler);
     this.#resizeObserver?.disconnect();
 
@@ -678,6 +696,10 @@ export class MapView3D implements MapRenderer {
     this.#land.changed(squares, ...this.#focus(), replaced);
     squares.forEach(([x, y]) => this.#mark(x, y));
 
+    if (squares.length > 0 || replaced) {
+      this.#minimapStale = true;
+    }
+
     if (replaced) {
       this.#marked.forEach((_, key) => {
         const [x, y] = key.split(',').map(Number) as [number, number];
@@ -751,6 +773,7 @@ export class MapView3D implements MapRenderer {
 
     this.#stage.view(this.#orbit, this.#lookHeight ?? 0);
     this.#stage.render();
+    this.#showMinimap();
     this.#keepDistance();
     this.#frameTime = performance.now() - started;
     this.#showStats();
@@ -758,6 +781,66 @@ export class MapView3D implements MapRenderer {
     if (this.#land.pending() > 0 || moving || rising) {
       this.#draw();
     }
+  }
+
+  // The minimap: its overview drawn again if the squares have changed, and the ground the camera sees over it.
+  #showMinimap(): void {
+    const minimap = this.#minimap;
+
+    if (minimap === null) {
+      return;
+    }
+
+    if (this.#minimapStale) {
+      this.#minimapStale = false;
+      minimap.redraw();
+    }
+
+    const active = this.#activeUnit?.tile ?? null;
+
+    minimap.show(
+      this.#patch(),
+      active === null ? null : { x: active.x, y: active.y }
+    );
+  }
+
+  // The ground the camera sees, as the corners of the screen meet it, at the height it looks at: where a corner is
+  //  above the horizon, as far as the haze lets it see along that edge.
+  #patch(): [number, number][] | null {
+    const width = this.#canvas.clientWidth,
+      height = this.#canvas.clientHeight;
+
+    if (width <= 0 || height <= 0) {
+      return null;
+    }
+
+    const aspect = width / height,
+      look = this.#lookHeight ?? 0,
+      far = sightFor(this.#orbit.distance).far,
+      [focusU, focusV] = this.#orbit.focus,
+      corner = (x: number, y: number): [number, number] | null => {
+        // Down the edge from the corner until it meets the ground.
+        for (let along = y; along >= -1; along -= 0.05) {
+          const ground = groundAt(this.#orbit, look, [x, along], aspect);
+
+          if (ground !== null) {
+            const reach = Math.hypot(ground[0] - focusU, ground[1] - focusV),
+              cut = reach > far ? far / reach : 1;
+
+            return [
+              focusU + (ground[0] - focusU) * cut,
+              focusV + (ground[1] - focusV) * cut,
+            ];
+          }
+        }
+
+        return null;
+      },
+      corners = [corner(-1, -1), corner(1, -1), corner(1, 1), corner(-1, 1)];
+
+    return corners.every((point) => point !== null)
+      ? (corners as [number, number][])
+      : null;
   }
 
   // The camera's distance kept, once a frame at most, when it's changed: not mid-glide, which only passes through.
