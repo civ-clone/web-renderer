@@ -262,6 +262,31 @@ gameOptions.onChange((key) => {
   }
 });
 
+// The hosted sets whose sheet the last try couldn't load, by id, with why (#1063): a map isn't drawn with one while it
+//  can't be, but with the next set ready for its grid (#1141).
+const unloadedSheets = new Map<string, string>();
+
+/**
+ * Notes that `id`'s sheet, a hosted set's, couldn't be loaded, and why, or, given null, that it has been: a map is drawn
+ *  with another set for its grid until it is (`mapTileset`).
+ */
+export const setSheetFailed = (id: string, reason: string | null): void => {
+  if (reason === null) {
+    if (unloadedSheets.delete(id)) {
+      settledMaps.clear();
+    }
+
+    return;
+  }
+
+  unloadedSheets.set(id, reason);
+  settledMaps.clear();
+};
+
+/** Why `id`'s sheet couldn't be loaded the last time it was tried, or null when it has been, or hasn't been tried. */
+export const sheetFailure = (id: string): string | null =>
+  unloadedSheets.get(id) ?? null;
+
 // The art the game's rule set names (`civ-clone.sets.<id>.tileset`, Civ2's), when the page knows it: see
 //  `setRuleSetTileset`.
 let ruleSetTileset: string | null = null;
@@ -290,17 +315,18 @@ export const chosenMapTileset = (
 };
 
 // The rule set's art for `topologyId`, or the installed set the player chose for it, or the one imported for it, or the
-//  one that ships with civ.one; or, with none installed, the bundled one.
+//  one that ships with civ.one, of those whose sheet hasn't failed to load (#1141); or, with none, the bundled one.
 const settleMapTileset = (
   topologyId: string
 ): TilesetDescriptor | undefined => {
   const installed = installedTilesets().filter(
-    ({ grid }) => grid === topologyId
-  );
+      ({ grid, id }) => grid === topologyId && !unloadedSheets.has(id)
+    ),
+    chosen = chosenMapTileset(topologyId);
 
   return (
     installed.find(({ id }) => id === ruleSetTileset) ??
-    chosenMapTileset(topologyId) ??
+    (chosen === null || unloadedSheets.has(chosen.id) ? null : chosen) ??
     installed.find((tileset) => !isHosted(tileset)) ??
     installed[0] ??
     bundledTilesets().find(({ grid }) => grid === topologyId)
@@ -311,7 +337,8 @@ const settleMapTileset = (
  * The tileset the map of a world on the `topologyId` grid is drawn with (#97, #1063): the art the game's rule set
  *  names (`setRuleSetTileset`), or the installed set for that grid that the player chose (`mapTilesetOption`), or,
  *  until they choose one, the one imported for it, and otherwise the one that ships with civ.one. So a player who has
- *  imported Civ1's art sees the square map drawn with it, as before. A hosted set's sprites are there once its sheet
+ *  imported Civ1's art sees the square map drawn with it, as before. A set whose sheet couldn't be loaded is passed
+ *  over (`setSheetFailed`) until it is, so the map falls back to the next (#1141). A hosted set's sprites are there once its sheet
  *  has loaded (`ensureTilesetLoaded`), which a game on its grid waits for. A grid with none installed is drawn with the
  *  bundled pack for it, its sprites missing, rather than another grid's: a game is only started or loaded on a grid
  *  with a pack installed (`drawnTopologies`). Throws for a grid no pack is for.

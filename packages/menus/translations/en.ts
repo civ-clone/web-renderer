@@ -197,6 +197,9 @@ i18next.addResources('en', 'default', {
   'LoadGame.load': 'Load',
   'LoadGame.load-save': 'Load {{- name}}',
   'LoadGame.title': '$t(GameMenu.load-game)',
+  'MapArt.fell-back':
+    '{{failed, list}} couldn’t be loaded ({{- reason}}), so the map is drawn with {{used}} instead.',
+  'MapArt.fell-back-title': 'Drawing with other art',
   'MandatorySelection.default-body': '$t(SelectionWindow.default-body)',
   'NewGameWindow.number-of-players': 'How many players?',
   'NewGameWindow.map-grid': 'Which map grid?',

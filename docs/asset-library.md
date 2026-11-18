@@ -89,10 +89,11 @@ with civ.one. [asset-system.md](asset-system.md) describes the system as it is t
        at once, but only a new page stacks them as it does. The game is carried over to one, as for a theme's new
        interface art (The interface's art), or, where it can't be now, the player is told it waits for the next load.
        No two sets on one grid differ so yet.
-   - So a sheet that fails to load as a game starts needn't stop it, which is still to do (#1141): the start stops
-     with a message today. The grid would fall back to another set that is ready, with a message saying why. Only a first
-     visit offline with nothing imported for that grid has no set to fall back to, and then the start stops with that
-     message.
+   - So a sheet that fails to load as a game starts or loads doesn't stop it (#1141). The grid falls back to the next
+     set ready for it (`ensureMapArt`), the player's choice kept, and a message says why. Each start tries the grid's
+     sets again. Only a first visit offline with nothing imported for that grid has no set to fall back to, and then
+     the start stops, saying why. A load stopped so is tried again by reloading, as the save waits until its load is
+     sent (#1114).
    - Why: the bundle stays small, a set can change without the code changing, and it works with storage blocked (5).
 4. **Migration: the map scale moves into the zoom.**
    - Imported sprites keep their keys (`spriteKey`: the set's storage prefix, name and extension), and the sound driver
@@ -180,8 +181,7 @@ window's own handling of the file goes, and the music reads the driver through t
     imported set's sprites come from IndexedDB.
   - The sprite lookups (`getPreloadedImage`) don't change.
   - A sheet that fails to load (offline on a first visit) is said so on its entry. The theme moves on to the next art
-    in its list, and the grid falls back as decision 3 says, once changing art in a game is proven;
-    until then the start stops with a message.
+    in its list, and the grid falls back as decision 3 says.
 - **Its own colours:**
   - `installTilesets` passes every pack but the interface's through `withImportedKeys`. For a set whose cities have an
     overlay (Civ2's flag), that takes the overlay's colour keys from what its import recorded, and leaves the set

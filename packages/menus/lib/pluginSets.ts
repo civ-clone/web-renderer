@@ -75,6 +75,33 @@ export const askGameChoices = async (
 ): Promise<GameChoices> =>
   gameChoices(await transport.request(new PluginSets(importedTilesets())));
 
+/**
+ * Has a saved game's map drawn with the art its rule set names (`setRuleSetTileset`), as a new game with it is
+ *  (`playGame`), before it loads (#1114): `pluginSet` is the set the save names, if any. Only a set whose own art the
+ *  player has imported names any (Civ2's), so the worker is asked only then. A worker that can't say leaves the map
+ *  drawn with the player's choice for its grid.
+ */
+export const followSavedRuleSet = async (
+  transport: Transport,
+  pluginSet: unknown
+): Promise<void> => {
+  setRuleSetTileset(null);
+
+  if (typeof pluginSet !== 'string' || !mayOfferOtherGames()) {
+    return;
+  }
+
+  try {
+    const { sets } = await transport.request(
+      new PluginSets(importedTilesets())
+    );
+
+    setRuleSetTileset(sets.find(({ id }) => id === pluginSet)?.tileset ?? null);
+  } catch (error) {
+    console.error(error);
+  }
+};
+
 /** A game's name, from the translations: its set's id where it has none. */
 export const gameName = (id: string): string =>
   t(`PluginSet.${id}`, { defaultValue: id });

@@ -8,7 +8,8 @@ import {
   downloadFile,
   saveFile,
   savedTopologyId,
-  takePendingSave,
+  discardPendingSave,
+  readPendingSave,
 } from '@civ-clone/ui-menus/lib/savedGame';
 import { keepSave } from '@civ-clone/ui-client/lib/browserSaves';
 import Notices from '@civ-clone/ui-hud/components/Notices';
@@ -24,7 +25,10 @@ import { setCursor, setTilesetSizes } from './app/assets';
 import installPacks, {
   ensureMapArt,
 } from '@civ-clone/ui-assets/lib/installPacks';
-import prepareMapArt from '@civ-clone/ui-menus/lib/mapArt';
+import prepareMapArt, {
+  sayMapArtFellBack,
+} from '@civ-clone/ui-menus/lib/mapArt';
+import { followSavedRuleSet } from '@civ-clone/ui-menus/lib/pluginSets';
 import { provideStartPreparation } from '@civ-clone/ui-client/lib/startPreparation';
 import setOptionDefaults from './app/options';
 import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
@@ -137,9 +141,10 @@ export class Renderer {
       const elements = appElements(),
         notifications = new Notifications(),
         notices = new Notices(),
-        // Taken, not read: one reload loads one save. Read here so the welcome
-        // window can be skipped — a loaded game is not a new one.
-        pendingLoad = await takePendingSave(),
+        // Read here so the welcome window can be skipped — a loaded game is
+        // not a new one — and forgotten once its load is sent, so a reload
+        // tries again a load that stopped before then (#1114).
+        pendingLoad = await readPendingSave(),
         pendingSave = pendingLoad === null ? null : pendingLoad.data,
         // The list, or the classic menu (#749).
         mainMenu = new (titleScreen.current())(
@@ -311,11 +316,16 @@ export class Renderer {
         // Evolution on the title menu, as the original's menu plays it, on until the game begins (#126).
         music.play(4);
       } else {
-        // The art the save's map is drawn with, fetched first if it has to be (#1063): without it, the start stops,
-        //  saying why.
-        await ensureMapArt(savedTopologyId(JSON.parse(pendingLoad.data)));
+        const save = JSON.parse(pendingLoad.data);
+
+        // The art the save's map is drawn with, its rule set's when that names some (#1114), fetched first if it has
+        //  to be (#1063), or another set ready for its grid, which is said, when it can't be (#1141). With none, the
+        //  start stops, saying why, and the save waits for a reload to try again.
+        await followSavedRuleSet(transport, save?.pluginSet);
+        sayMapArtFellBack(await ensureMapArt(savedTopologyId(save)));
 
         mainMenu.remove();
+        await discardPendingSave();
 
         // Marks a DevTools timeline or `performance.getEntriesByType('mark')` can read, for where a load's time goes
         //  (#325).

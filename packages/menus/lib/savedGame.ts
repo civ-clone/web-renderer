@@ -77,8 +77,11 @@ const pendingSaveStore = (): Store<PendingSave> => {
   return store;
 };
 
-/** Best-effort, and called from paths that are already reporting a failure. */
-const discardPendingSave = async (): Promise<void> => {
+/**
+ * Forgets the save waiting to be loaded (`readPendingSave`), once its load has been sent, so the next reload doesn't
+ *  load it again. Best-effort, and also called from paths that are already reporting a failure.
+ */
+export const discardPendingSave = async (): Promise<void> => {
   try {
     sessionStorage.removeItem(PENDING);
     sessionStorage.removeItem(PENDING_SEATS);
@@ -299,8 +302,12 @@ export const handOverSave = async (
   window.location.reload();
 };
 
-/** The save waiting to be loaded, with its seats, taken rather than read: one reload, one go. */
-export const takePendingSave = async (): Promise<PendingLoad | null> => {
+/**
+ * The save waiting to be loaded, with its seats. Left waiting until its load is sent (`discardPendingSave`), so that a
+ *  load that stops before then (its map's art couldn't be loaded, #1114) is tried again by reloading. One that can't be
+ *  read is forgotten.
+ */
+export const readPendingSave = async (): Promise<PendingLoad | null> => {
   // The marker first, and only then the store: it is what says the save
   // waiting on this origin is this tab's, and it means a page load that is not
   // a hand-over never opens the database at all.
@@ -321,7 +328,9 @@ export const takePendingSave = async (): Promise<PendingLoad | null> => {
     const data = (await pendingSaveStore().get(PENDING)) ?? null,
       seats = parseSeats(sessionStorage.getItem(PENDING_SEATS));
 
-    await discardPendingSave();
+    if (data === null) {
+      await discardPendingSave();
+    }
 
     return data === null ? null : { data, seats };
   } catch (error) {
@@ -333,6 +342,17 @@ export const takePendingSave = async (): Promise<PendingLoad | null> => {
 
     return null;
   }
+};
+
+/** The save waiting to be loaded, with its seats, taken rather than read (`readPendingSave`, then forgotten). */
+export const takePendingSave = async (): Promise<PendingLoad | null> => {
+  const pending = await readPendingSave();
+
+  if (pending !== null) {
+    await discardPendingSave();
+  }
+
+  return pending;
 };
 
 // The seats handed over, or none: anything else in the slot is not ours to read.

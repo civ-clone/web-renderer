@@ -35,6 +35,7 @@ import {
   chooseMapTileset,
   offerUnfinishedGrids,
   installTilesets,
+  installedTilesets,
   interfaceTileset,
   mapTileset,
   mapTilesetOption,
@@ -42,6 +43,7 @@ import {
   setRuleSetTileset,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import {
+  followSavedRuleSet,
   importedTilesets,
   mayOfferOtherGames,
 } from '@civ-clone/ui-menus/lib/pluginSets';
@@ -58,6 +60,7 @@ import civ2Json from '@civ-clone/ui-tileset-civ2/civ2.json';
 import getPreloadedImage from '@civ-clone/ui-assets/lib/getPreloadedImage';
 import installPacks, {
   ensureMapArt,
+  loadFailed,
 } from '@civ-clone/ui-assets/lib/installPacks';
 import prepareStart, {
   provideStartPreparation,
@@ -1260,9 +1263,36 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
     await installPacks(new AssetStore(civ1));
     keys = [];
 
-    // The start of a game waits for its map's art, through the page's preparation, and stops, saying why, without it.
+    // The start of a game waits for its map's art, through the page's preparation. A chosen set whose sheet can't be
+    //  fetched is passed over for another ready for the grid, which is said (#1141).
     provideStartPreparation(prepareMapArt);
     chooseMapTileset('square', 'civ1-pixelart');
+    offline = true;
+    logged.length = 0;
+
+    const fellBack = await prepareStart('square'),
+      fellBackSaid = (document as unknown as Document).body.textContent ?? '';
+
+    expect(
+      "a game whose chosen art can't be fetched starts with Civ1's, ready for its grid, and says why, keeping the choice",
+      [
+        fellBack,
+        mapTileset('square').id,
+        options.get(mapTilesetOption('square')),
+        loadFailed(pixelArt),
+        fellBackSaid.includes(
+          'Pixel art couldn’t be loaded (Failed to fetch'
+        ) && fellBackSaid.includes('so the map is drawn with Civilization'),
+      ],
+      [true, 'civ1', 'civ1-pixelart', true, true]
+    );
+
+    // With nothing else for the grid (nothing imported), the start stops, saying why.
+    (document as unknown as Document)
+      .querySelectorAll('dialog[open]')
+      .forEach((dialog) => dialog.removeAttribute('open'));
+    offline = false;
+    await installPacks(new AssetStore(civ1));
     offline = true;
     logged.length = 0;
 
@@ -1272,8 +1302,9 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
     fetched.length = 0;
 
     expect(
-      "a game whose art can't be fetched doesn't start, and the player is told why",
+      "a game whose art can't be fetched, with no other art ready for its grid, doesn't start, and the player is told why",
       [
+        ids(installedTilesets()).includes('civ1'),
         refused,
         logged.some((message) =>
           message.startsWith(
@@ -1284,7 +1315,7 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
           "Pixel art (civ1-pixelart) couldn't be loaded"
         ) ?? false,
       ],
-      [false, true, true]
+      [false, false, true, true]
     );
 
     expect(
@@ -1605,6 +1636,49 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
       mapTileset('staggered-iso').id,
       'hosted-iso'
     );
+
+    // A save is drawn with the art its rule set names too (#1114), as the worker says which that is.
+    {
+      const asked: unknown[] = [],
+        transport = {
+          request: async (request: { args: () => unknown[] }) => {
+            asked.push(request.args()[0]);
+
+            return {
+              sets: [
+                { id: 'civ1', tileset: null },
+                { id: 'civ2', tileset: 'civ2' },
+              ],
+              default: 'civ1',
+              chosen: null,
+            };
+          },
+        } as any;
+
+      await followSavedRuleSet(transport, 'civ2');
+
+      const civ2Save = mapTileset('staggered-iso').id;
+
+      await followSavedRuleSet(transport, 'civ1');
+
+      const civ1Save = mapTileset('staggered-iso').id;
+
+      await followSavedRuleSet(transport, undefined);
+
+      expect(
+        "a save with Civ2's rules is drawn with its art; one with rules that name none, or none, with the choice",
+        [civ2Save, civ1Save, mapTileset('staggered-iso').id, asked],
+        [
+          'civ2',
+          'hosted-iso',
+          'hosted-iso',
+          [
+            ['civ1', 'civ2'],
+            ['civ1', 'civ2'],
+          ],
+        ]
+      );
+    }
 
     options.set(mapTilesetOption('staggered-iso'), '');
 

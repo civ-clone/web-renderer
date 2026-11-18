@@ -10,8 +10,9 @@ import { t } from 'i18next';
 //
 // The interface's art, when it's a set that ships, has had its sheet fetched as the page started (`installPacks`), so
 //  installed means there to draw with. A map set that ships is installed as it's declared, and fetched as a game on
-//  its grid starts or loads (`ensureMapArt`): one that fails then stops that game, saying why, and the library says
-//  it couldn't be loaded (`loadFailed`).
+//  its grid starts or loads (`ensureMapArt`): one that fails then is passed over for another set ready for the grid,
+//  saying why, or stops that game when there's none (#1141), and the library says it couldn't be loaded
+//  (`loadFailed`).
 
 /** What there's no art for: the interface (`interfaceArt`), or a map on any grid (`supportedTopologies`). */
 export type MissingArt = 'interface' | 'map';
