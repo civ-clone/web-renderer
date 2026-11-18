@@ -24,6 +24,8 @@ import {
 } from '@civ-clone/ui-assets/lib/tilesets';
 import { AssetStore } from '@civ-clone/ui-assets/AssetStore';
 import { buildingSprite } from '@civ-clone/ui-assets/components/lib/buildingIcon';
+import * as Civ2CityImprovements from '@civ-clone/civ2-city-improvement/CityImprovements';
+import * as Civ2Wonders from '@civ-clone/civ2-wonder/Wonders';
 import civ2Json from '@civ-clone/ui-tileset-civ2/civ2.json';
 import { ensureMapArt } from '@civ-clone/ui-assets/lib/installPacks';
 import { groupIcons } from '@civ-clone/ui-assets/lib/groupIcons';
@@ -100,6 +102,15 @@ const run = async (): Promise<void> => {
     'and so is its happy citizen',
     interfaceSpriteKey('city/people_happy_m'),
     civ1Key('city/people_happy_m')
+  );
+
+  // A Civ1 game on Civ2's isometric map (M1): its rule set names no art, so Civ1's still.
+  setMapGrid('staggered-iso');
+
+  expect(
+    "a Civ1 game on Civ2's map has no art of its own",
+    [gameInterfaceArt(), from(groupIcons.Food)],
+    [null, ['civ1', civ1Key('city/food')]]
   );
 
   // A Civ2 game.
@@ -194,73 +205,18 @@ const run = async (): Promise<void> => {
   //  names, and Civ2's names one of its sprites (`validateDescriptor` checks the rest as it registers).
   const ui = (civ2Json as { names: { ui: { [name: string]: string } } }).names
       .ui,
+    // Capitalization is its own package's class, not among the rest (`Rules/City/capitalization`).
     civ2Buildings = [
-      'Palace',
-      'Barracks',
-      'Granary',
-      'Temple',
-      'Marketplace',
-      'Library',
-      'Courthouse',
-      'CityWalls',
-      'Aqueduct',
-      'Bank',
-      'Cathedral',
-      'University',
-      'MassTransit',
-      'Colosseum',
-      'Factory',
-      'ManufacturingPlant',
-      'SdiDefence',
-      'RecyclingCenter',
-      'PowerPlant',
-      'HydroPlant',
-      'NuclearPlant',
-      'StockExchange',
-      'SewerSystem',
-      'Supermarket',
-      'Superhighways',
-      'ResearchLab',
-      'SamMissileBattery',
-      'CoastalFortress',
-      'SolarPlant',
-      'Harbour',
-      'OffshorePlatform',
-      'Airport',
-      'PoliceStation',
-      'PortFacility',
+      ...Object.keys(Civ2CityImprovements),
       'Capitalization',
     ].map((_) => buildingSprite(_, false)),
-    civ2Wonders = [
-      'Pyramids',
-      'HangingGardens',
-      'Colossus',
-      'Lighthouse',
-      'GreatLibrary',
-      'Oracle',
-      'GreatWall',
-      'SunTzusWarAcademy',
-      'KingRichardsCrusade',
-      'MarcoPolosEmbassy',
-      'MichelangelosChapel',
-      'CopernicusObservatory',
-      'MagellansExpedition',
-      'ShakespearesTheatre',
-      'LeonardosWorkshop',
-      'JsBachsCathedral',
-      'IsaacNewtonsCollege',
-      'AdamSmithsTradingCompany',
-      'DarwinsVoyage',
-      'StatueOfLiberty',
-      'EiffelTower',
-      'WomensSuffrage',
-      'HooverDam',
-      'ManhattanProject',
-      'UnitedNations',
-      'ApolloProgram',
-      'SetiProgram',
-      'CureForCancer',
-    ].map((_) => buildingSprite(_, true));
+    civ2Wonders = Object.keys(Civ2Wonders).map((_) => buildingSprite(_, true));
+
+  expect(
+    "the engine's Civ2 improvements and Wonders, all of them",
+    [civ2Buildings.length, civ2Wonders.length],
+    [35, 28]
+  );
 
   expect(
     'every Civ2 improvement and Wonder has a picture of its own, unshared',
@@ -298,8 +254,12 @@ const run = async (): Promise<void> => {
   asked.length = 0;
   setRuleSetTileset(null);
   await ensureMapArt('square', store);
+  await ensureMapArt('staggered-iso', store);
 
-  expect("a Civ1 game's loads only its map's", asked, ['civ1']);
+  expect("a Civ1 game's loads only its map's, on Civ2's map too", asked, [
+    'civ1',
+    'civ2',
+  ]);
 
   finished = true;
 };

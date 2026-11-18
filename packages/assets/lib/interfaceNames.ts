@@ -95,7 +95,8 @@ export const optionalInterfaceNames: readonly string[] = [
   'wonders/cureforcancer',
   // Not Civ1's: it has no angry citizens.
   'city/people_angry_f',
-  'city/people_angry_m', // Not Civ1's either: Civ2's improvements and Wonders (#1052).
+  'city/people_angry_m',
+  // Not Civ1's either: Civ2's improvements and Wonders (#1052).
   'city-improvements/stockexchange',
   'city-improvements/sewersystem',
   'city-improvements/supermarket',

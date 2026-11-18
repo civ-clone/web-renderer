@@ -105,7 +105,11 @@ const corruptionURL = (path: string, width: number): Promise<string> => {
 export const corruptionIcon = (): HTMLElement => {
   const icon = s('<span class="yield-icon corruption-icon"></span>');
 
-  corruptionURL(interfaceSpriteKey(groupIcons.Trade), interfaceArt().ui.icon)
+  // The theme's Trade, whose shape `darkenTopArrow` is drawn for (#792), whatever the game's own art (#1054).
+  corruptionURL(
+    interfaceSpriteKey(groupIcons.Trade, interfaceArt()),
+    interfaceArt().ui.icon
+  )
     .then((url) => icon.append(s(`<img src="${url}" alt="">`)))
     // A tileset without the picture: the tooltip and the figures still say it.
     .catch(() => {});

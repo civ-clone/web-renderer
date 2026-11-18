@@ -5,6 +5,7 @@ import {
   isHosted,
   mapTileset,
   onTilesetsInstalled,
+  ruleSetMapTileset,
 } from './tilesets';
 import { hasPreloadedImage } from './getPreloadedImage';
 
@@ -99,27 +100,47 @@ export const interfaceSpriteName = (
     : name;
 };
 
-// The game's own art for the interface (#1052, #1054, #1165): the map's set, when it has no interface art of its own
-//  but names some of the interface's sprites as its own (`names.ui`), as Civ2's does with its icons and people. A
-//  sprite it names and the player has imported is drawn from it; another, from civ.one's own interface art (the pixel
-//  art, a hosted set) where that has it, and otherwise from the theme's (`interfaceArt`). Without such a set, as in
-//  every Civ1 game, the theme's art draws every sprite, as before.
+// The game's own art for the interface (#1052, #1054, #1165): the art the game's rule set names for its map (Civ2's),
+//  when it has no interface art of its own but names some of the interface's sprites as its own (`names.ui`), as
+//  Civ2's does with its icons and people. A sprite it names and the player has imported is drawn from it; another,
+//  from civ.one's own interface art (the pixel art, a hosted set) where that has it, and otherwise from the theme's
+//  (`interfaceArt`). Without such a set, as in every Civ1 game (on Civ2's isometric map too, whose rule set names no
+//  art), the theme's art draws every sprite, as before.
 
-/** The game's map's set, when it has interface sprites of its own without being interface art (Civ2's), or null. */
+/** Whether `tileset` names interface sprites of its own without being interface art, as Civ2's does. */
+export const hasOwnInterfaceSprites = (tileset: TilesetDescriptor): boolean =>
+  !hasInterfaceArt(tileset) && Object.keys(tileset.names.ui ?? {}).length > 0;
+
+/**
+ * The game's own interface art: the set its map is drawn with, when that is the art its rule set names
+ *  (`ruleSetMapTileset`, Civ2's) and has interface sprites of its own (`hasOwnInterfaceSprites`), or null.
+ */
 export const gameInterfaceArt = (): TilesetDescriptor | null => {
   const tileset = mapTileset();
 
-  return !hasInterfaceArt(tileset) &&
-    Object.keys(tileset.names.ui ?? {}).length > 0
+  return ruleSetMapTileset(tileset.grid) === tileset &&
+    hasOwnInterfaceSprites(tileset)
     ? tileset
     : null;
 };
 
-/** civ.one's own interface art (the pixel art): the installed hosted set with interface art, if one is. */
-export const ownInterfaceArt = (): TilesetDescriptor | null =>
-  installedTilesets().find(
+/**
+ * civ.one's own interface art (the pixel art): of the installed hosted sets with interface art, the first the theme
+ *  lists, or else the first on the square grid, if one is.
+ */
+export const ownInterfaceArt = (): TilesetDescriptor | null => {
+  const own = installedTilesets().filter(
     (tileset) => isHosted(tileset) && hasInterfaceArt(tileset)
-  ) ?? null;
+  );
+
+  return (
+    preferred()
+      .map((id) => own.find((tileset) => tileset.id === id))
+      .find((tileset) => tileset !== undefined) ??
+    own.find(({ grid }) => grid === 'square') ??
+    null
+  );
+};
 
 /** A sprite of the interface's: the set it's drawn from, and its key there. */
 export interface InterfaceSprite {

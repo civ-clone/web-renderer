@@ -17,7 +17,11 @@ import {
   setSheetFailed,
   sheetFailure,
 } from './tilesets';
-import { hasInterfaceArt, interfaceArt, ownInterfaceArt } from './interfaceArt';
+import {
+  hasOwnInterfaceSprites,
+  interfaceArt,
+  ownInterfaceArt,
+} from './interfaceArt';
 import { TilesetDescriptor, spriteKey } from '../tilesets/TilesetDescriptor';
 import { setSpriteAnchors } from './spriteAnchors';
 
@@ -69,7 +73,8 @@ export const ensureTilesetLoaded = async (
 };
 
 /**
- * For a map drawn with a set that has interface sprites of its own without being interface art (Civ2's), has civ.one's
+ * For a map drawn with the art its rule set names, when that has interface sprites of its own without being interface
+ *  art (Civ2's, `gameInterfaceArt`), has civ.one's
  *  own interface art (`ownInterfaceArt`, the pixel art) ready too, as the sprites that set hasn't got are drawn from it
  *  (`interfaceSprite`). Never rejects: without it, the theme's art draws them.
  */
@@ -81,8 +86,8 @@ const ensureFallbackInterfaceArt = async (
 
   if (
     own === null ||
-    hasInterfaceArt(tileset) ||
-    Object.keys(tileset.names.ui ?? {}).length === 0
+    ruleSetMapTileset(tileset.grid) !== tileset ||
+    !hasOwnInterfaceSprites(tileset)
   ) {
     return;
   }
