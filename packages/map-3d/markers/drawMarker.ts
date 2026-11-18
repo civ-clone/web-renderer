@@ -1,6 +1,6 @@
 // The 3D map's plain markers (docs/3d-renderer-plan.md 1.3), in three.js: a city as a cluster of low buildings with its
 //  owner's colour on their roofs, a wall round it if it's walled, and its name and size over it; a unit as a pawn in its
-//  owner's colours, with a pennant giving the stack's size and a ring under the active one. The model sets replace
+//  owner's colours, with a pennant giving the stack's size, and a ring under the active one and a pointer over it. The model sets replace
 //  them (M2, M4).
 //
 // Every marker shares its geometries and its materials, one for each colour, so hundreds cost little but their draw
@@ -41,6 +41,8 @@ export class MarkerKit {
     pole: new CylinderGeometry(0.006, 0.006, 0.2, 6),
     pennant: new BoxGeometry(0.11, 0.06, 0.006),
     ring: new TorusGeometry(0.16, 0.018, 8, 32),
+    // Points down at the unit awaiting orders, from over its head.
+    pointer: new ConeGeometry(0.09, 0.18, 4),
     building: new BoxGeometry(1, 1, 1),
     roof: new ConeGeometry(0.75, 0.5, 4),
     wall: new TorusGeometry(0.36, 0.025, 6, 24),
@@ -233,12 +235,16 @@ const drawUnit = (kit: MarkerKit, unit: UnitMarker): Group => {
     group.add(count);
   }
 
+  // The unit awaiting orders: a ring at its feet, and a pointer over its head, so it's found at any distance.
   if (unit.active) {
-    const halo = new Mesh(ring, kit.material(ACTIVE, true));
+    const halo = new Mesh(ring, kit.material(ACTIVE, true)),
+      over = new Mesh(kit.geometries.pointer, kit.material(ACTIVE, true));
 
     halo.rotation.x = Math.PI / 2;
     halo.position.y = 0.01;
-    group.add(halo);
+    over.rotation.x = Math.PI;
+    over.position.y = PAWN_HEIGHT + 0.22;
+    group.add(halo, over);
   }
 
   return group;
