@@ -50,6 +50,7 @@ import {
   installTilesets,
   mapTileset,
   mapTilesetOption,
+  setRuleSetTileset,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import { instance as gameOptions } from '@civ-clone/ui-platform/GameOptionsRegistry';
 import { ensureTilesetLoaded } from '@civ-clone/ui-assets/lib/installPacks';
@@ -2440,6 +2441,71 @@ const run = async (): Promise<void> => {
         );
 
         before.close();
+
+        // Only the latest Use for a grid is chosen (#1144): an earlier one whose sheet arrives later is left out.
+        const pixelUse = (window: LibraryWindow): HTMLButtonElement =>
+            entryOf(window, 'civ1-pixelart').entry.querySelector(
+              '.actions button'
+            ) as HTMLButtonElement,
+          first = new LibraryWindow({}, { inGame: true }),
+          second = new LibraryWindow({}, { inGame: true });
+        let release: () => void = () => {},
+          calls = 0;
+
+        await settle();
+
+        assetStore.loadHostedPack = (): Promise<void> =>
+          calls++ === 0
+            ? new Promise<void>((resolve) => {
+                release = resolve;
+              })
+            : Promise.resolve();
+
+        pixelUse(first).click();
+        pixelUse(second).click();
+        await settle();
+
+        const afterLater = gameOptions.get(mapTilesetOption('square'), '');
+
+        // Chosen back since, as the player might: the earlier Use mustn't undo it once its sheet arrives.
+        chooseMapTileset('square', '');
+        release();
+        await settle();
+
+        expect(
+          'a Use whose sheet arrives after a later Use for the grid is left unchosen',
+          [afterLater, gameOptions.get(mapTilesetOption('square'), '')],
+          ['civ1-pixelart', '']
+        );
+
+        first.close();
+        second.close();
+
+        // In a game whose rule set names its art for the grid, the others' Use is out of use, saying why (#1144).
+        setRuleSetTileset('civ1');
+
+        const ruled = new LibraryWindow({}, { inGame: true }),
+          unruled = new LibraryWindow();
+
+        await settle();
+
+        expect(
+          "in a game whose rules name the grid's art, other art's Use is out of use, saying why; not outside a game",
+          [
+            pixelUse(ruled).getAttribute('aria-disabled'),
+            pixelUse(ruled).title,
+            pixelUse(unruled).getAttribute('aria-disabled'),
+          ],
+          [
+            'true',
+            'This game’s rules draw square maps with Civilization, so other art for them can be chosen only outside this game.',
+            'false',
+          ]
+        );
+
+        ruled.close();
+        unruled.close();
+        setRuleSetTileset(null);
       }
 
       assetStore.loadHostedPack = loadHostedPack;

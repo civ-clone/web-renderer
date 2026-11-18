@@ -176,6 +176,9 @@ i18next.addResources('en', 'default', {
   'LibraryWindow.use-for-grid': 'Use for {{grid}} maps',
   'LibraryWindow.use-set-for-grid': 'Use {{name}} for {{grid}} maps',
   'LibraryWindow.in-use-for-grid': 'In use for {{grid}} maps',
+  // During a game whose rules name their own art for the grid (Civ2's), which outranks the player's choice (#1144).
+  'LibraryWindow.rule-set-art':
+    'This game’s rules draw {{grid}} maps with {{name}}, so other art for them can be chosen only outside this game.',
   // Whose interface art a theme draws with now (#1063): an imported set's by its game, one that ships with civ.one by
   //  its name, unless it has words of its own here.
   'LibraryWindow.theme-art.imported': 'Uses {{game}}’s art',

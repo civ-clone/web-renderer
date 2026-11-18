@@ -70,13 +70,19 @@ export const WorkerFailures = {
           reload();
         }),
         // A save the worker could not build, said as one the page could not write is (`bootstrap`'s `saveGame`), so
-        //  that it isn't missed (#581). The game goes on.
-        transport.receive('saveFailed', ({ message }): void =>
+        //  that it isn't missed (#581). The game goes on. One carrying the game over to a new page for new art says
+        //  that the art waits for the next load instead (#1144).
+        transport.receive('saveFailed', ({ message, handOver }): void =>
           alert(
-            t('SavedGame.could-not-write', {
-              error: message,
-              interpolation: { escapeValue: false },
-            })
+            t(
+              handOver === true
+                ? 'SavedGame.could-not-carry-over'
+                : 'SavedGame.could-not-write',
+              {
+                error: message,
+                interpolation: { escapeValue: false },
+              }
+            )
           )
         ),
       ];

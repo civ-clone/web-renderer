@@ -503,7 +503,16 @@ const run = async (): Promise<void> => {
       ['Carrying the game over', false]
     );
 
-    deliver('saveFailed', { message: 'full' });
+    // The player's own save failing while the hand-over's is on its way doesn't hand the game back.
+    deliver('saveFailed', { message: "the player's" });
+
+    expect(
+      "the player's own save failing leaves the hand-over waiting",
+      banner(),
+      'Carrying the game over'
+    );
+
+    deliver('saveFailed', { message: 'full', handOver: true });
 
     expect(
       'a save that failed hands the game back, to try again',
@@ -511,7 +520,68 @@ const run = async (): Promise<void> => {
       ['', true]
     );
 
-    deliver('saveFailed', { message: 'full' });
+    deliver('saveFailed', { message: 'full', handOver: true });
+  }
+
+  // Art whose units and cities stack the other way from the layers built needs a new page (#1144): the game is carried
+  //  over to one, or, where it can't be now, the player is told the art waits for the next load. The save comes back
+  //  on `handOverGame` to be handed over (`handOverSave`): where it can't be, that's said and the game goes on.
+  {
+    const { redrawArt } = MapView.prototype,
+      { alert } = window,
+      alerted: string[] = [],
+      banner = (): string | null | undefined =>
+        elements.mapWrapper.querySelector('.waiting')?.textContent,
+      before = sent.length;
+
+    MapView.prototype.redrawArt = (): ReturnType<typeof redrawArt> => 'reload';
+    window.alert = (message: string): void => {
+      alerted.push(message);
+    };
+
+    chooseMapTileset('square', 'civ1-pixelart');
+
+    const carried = sent.slice(before);
+
+    elements.notificationArea.textContent = '';
+    // Being carried over already: this one waits.
+    chooseMapTileset('square', '');
+
+    const said = elements.notificationArea.textContent;
+
+    // Storage that refuses: the stand-in's never answers.
+    const { indexedDB } = globalThis as { indexedDB?: unknown };
+
+    (globalThis as { indexedDB?: unknown }).indexedDB = {
+      open: (): never => {
+        throw new Error('blocked');
+      },
+    };
+
+    deliver('handOverGame', { data: 'a save' });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    (globalThis as { indexedDB?: unknown }).indexedDB = indexedDB;
+
+    // The refusal is logged as the game is handed back: expected here.
+    const logged = errors.splice(0);
+
+    expect(
+      "art that needs a new page carries the game over to one, and where it can't be now, says the art waits for the next load; a hand-over that can't be stored is said, and the game handed back",
+      [carried, said, alerted, logged.length, banner(), handOverGame()],
+      [
+        [['save', { name: 'hand-over', handOver: true }]],
+        'Game.art-next-load',
+        ['SavedGame.could-not-carry-over'],
+        1,
+        '',
+        true,
+      ]
+    );
+
+    deliver('saveFailed', { message: 'full', handOver: true });
+    MapView.prototype.redrawArt = redrawArt;
+    window.alert = alert;
   }
 
   deliver('turnEnded');

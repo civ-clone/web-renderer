@@ -246,7 +246,11 @@ export class Game implements IGame {
         return;
       }
 
-      this.#transport.send('saveFailed', { message: describeError(error) });
+      // A hand-over's says so (#1144): the game goes on, and the new art waits for the next load.
+      this.#transport.send('saveFailed', {
+        message: describeError(error),
+        ...(handOver ? { handOver: true } : {}),
+      });
 
       return;
     }

@@ -142,6 +142,38 @@ engine.on = on;
     [['saveFailed', { message: 'too big' }]]
   );
 
+  // One carrying the game over to a new page (#1118) says so when it fails (#1144), and comes back on `handOverGame`,
+  //  not as a save of the player's, when it doesn't.
+  sent.splice(0);
+  JSON.stringify = (() => {
+    throw new Error('too big');
+  }) as typeof JSON.stringify;
+
+  try {
+    receivers.get('save')!({ name: 'hand-over', handOver: true });
+  } finally {
+    JSON.stringify = stringify;
+  }
+
+  const failedHandOver = sent.splice(0);
+
+  receivers.get('save')!({ name: 'hand-over', handOver: true });
+
+  expect(
+    "a hand-over that can't be built says it was one; one that can comes back on handOverGame, and nothing else",
+    [
+      failedHandOver,
+      sent.map(([channel, data]) => [
+        channel,
+        typeof (data as { data?: unknown })?.data,
+      ]),
+    ],
+    [
+      [['saveFailed', { message: 'too big', handOver: true }]],
+      [['handOverGame', 'string']],
+    ]
+  );
+
   // A loaded game is never `start`ed, so `bindEvents` never runs for it: the sign of life is bound without it.
   sent.splice(0);
   [1, 2].forEach(() => turnStart.forEach((handler) => handler(null)));
