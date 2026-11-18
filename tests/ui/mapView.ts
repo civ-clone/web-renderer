@@ -557,6 +557,12 @@ expect('a unit picked on the map is handed on', activated, ['Unit-2']);
   ]);
   expect('each drawing the map and the minimap', counted(), [2, 2]);
 
+  unitsMode();
+
+  expect('and back', shown(), before);
+
+  unitsMode();
+
   // `t` still has the units shown: pressed now, it hides them (as they are), where it would show them had the view
   //  mode hidden them for it.
   mapView.toggleUnits();

@@ -237,8 +237,8 @@ layers [verified]. The game used a small part of it:
   - the portal's `setActiveUnit`, `isVisible`, `setCenter` and `render`;
   - the units and active-unit layers' `setActiveUnit`, `update`, `setVisible` and `render`.
 - **The portal, passed on:** the HUD (`Hud` takes `portal` and `world`), the unit panel, the city list, the game menu,
-  the cheats and the city openers all hold the game's portal. Between them they call `openCity`, `setCenter` and
-  `render` (`showCityOnMap.ts`, `CityStatus`, `UnitCard` and the reports, for example).
+  the cheats and the city openers all hold the game's portal. Between them they call `openCity` and `setCenter`
+  (`showCityOnMap.ts`, `CityStatus`, `UnitCard` and the reports, for example).
 - **The city screen:** it stays 2D, but sizes its own map from the game portal's `zoom()` and `nativeTileSize()`
   (`cityParts.ts`).
 
