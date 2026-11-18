@@ -5,9 +5,11 @@
 // Earth map for: Normal, Large and Huge.
 
 import worldSizes, {
+  customSizeProblem,
   defaultWorldSize,
   earthWorldSizes,
   playerCounts,
+  ruleWorldSizes,
 } from '@civ-clone/ui-client/lib/worldSizes';
 
 const failures: string[] = [];
@@ -101,6 +103,57 @@ expect(
   'Earth offers the size New Game selects',
   earthWorldSizes.includes(defaultWorldSize),
   true
+);
+
+// The rules' own sizes (#1175): offered as they come, or none, which leaves New Game offering the sizes above.
+expect(
+  "rules that offer no sizes (Civ1's), or an answer without them, leave New Game's own",
+  [
+    ruleWorldSizes(null),
+    ruleWorldSizes(undefined),
+    ruleWorldSizes({ sizes: [], custom: null }),
+    ruleWorldSizes({} as any),
+  ],
+  [null, null, null, null]
+);
+
+expect(
+  'rules that offer sizes have them offered, in their order, with their own civilizations and Earth',
+  ruleWorldSizes({
+    sizes: [
+      {
+        key: 'small',
+        topologyId: 'staggered-iso',
+        width: 40,
+        height: 50,
+        minPlayers: 3,
+        maxPlayers: 7,
+        players: 7,
+        earth: true,
+      },
+    ],
+    custom: null,
+  }),
+  [
+    {
+      key: 'small',
+      width: 40,
+      height: 50,
+      minPlayers: 3,
+      maxPlayers: 7,
+      players: 7,
+      earth: true,
+    },
+  ]
+);
+
+expect(
+  "a size typed in, without rules' bounds, is any whole size its grid can be",
+  [
+    customSizeProblem('square', '19', '1001'),
+    customSizeProblem('staggered-iso', '300', '300'),
+  ],
+  [null, null]
 );
 
 if (failures.length > 0) {

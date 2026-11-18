@@ -27,6 +27,7 @@
     "./Requests/RuleSets": "./Requests/RuleSets.ts",
     "./Requests/TopCities": "./Requests/TopCities.ts",
     "./Requests/Wonders": "./Requests/Wonders.ts",
+    "./Requests/WorldSizes": "./Requests/WorldSizes.ts",
     "./Transport": "./Transport.ts",
     "./battles": "./battles.ts",
     "./cityBuild": "./cityBuild.ts",

@@ -256,7 +256,9 @@ export class GameSetupWindow extends Window {
     [this.#widthInput, this.#heightInput].forEach((input) =>
       h(input, {
         input: () => {
-          input.setCustomValidity('');
+          // Either box can be what fixes a problem shown on the other (the squares in all, #1175).
+          this.#widthInput.setCustomValidity('');
+          this.#heightInput.setCustomValidity('');
 
           setup.setCustomSize(
             Number(this.#widthInput.value),
@@ -589,7 +591,7 @@ export class GameSetupWindow extends Window {
       const input =
         problem.field === 'width' ? this.#widthInput : this.#heightInput;
 
-      input.setCustomValidity(t(problem.message));
+      input.setCustomValidity(t(problem.message, problem.data ?? {}));
       input.reportValidity();
 
       return;

@@ -15,6 +15,7 @@ import {
   requestSetupData,
 } from '@civ-clone/ui-client/lib/gameSetup';
 import ChoosePluginSet from '@civ-clone/ui-protocol/Requests/ChoosePluginSet';
+import WorldSizes from '@civ-clone/ui-protocol/Requests/WorldSizes';
 import { TopologyId } from '@civ-clone/ui-client/lib/topologyFor';
 import Transport from '@civ-clone/ui-client/Transport';
 import { isReplaceable } from '@civ-clone/ui-client/ReplaceableTransport';
@@ -204,12 +205,18 @@ export const requestGameSetupData = async (
 
   await playGame(transport, id, choices);
 
-  const data = await requestSetupData(transport);
+  // The game's own world sizes (#1175), asked for only here, where there can be another game to play: the default's
+  //  rules (Civ1's) offer none.
+  const [data, worldSizes] = await Promise.all([
+    requestSetupData(transport),
+    transport.request(new WorldSizes()),
+  ]);
 
   return choices.games.length < 2
-    ? data
+    ? { ...data, worldSizes }
     : {
         ...data,
+        worldSizes,
         game: {
           id,
           games: choices.games.map(({ id }) => id),

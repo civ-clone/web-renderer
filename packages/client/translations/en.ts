@@ -129,12 +129,18 @@ i18next.addResources('en', 'default', {
   'City.Specialist.Entertainer': 'Entertainer',
   'City.Specialist.Scientist': 'Scientist',
   'City.Specialist.TaxCollector': 'Tax collector',
+  'CustomizeWorld.area-range':
+    'From {{min, number}} to {{max, number}} squares in all.',
   'CustomizeWorld.build': 'Build',
   'CustomizeWorld.even-height': 'This map grid needs an even height.',
+  'CustomizeWorld.height-range':
+    'From {{min, number}} to {{max, number}} squares down.',
   'CustomizeWorld.max-coverage': 'Max coverage',
   'CustomizeWorld.players': 'Players',
   'CustomizeWorld.title': 'Customize world',
   'CustomizeWorld.whole-number': 'A whole number, 1 or more.',
+  'CustomizeWorld.width-range':
+    'From {{min, number}} to {{max, number}} squares across.',
   'DifficultyWindow.level': '{{level}}',
   'DifficultyWindow.level_easiest': '{{level}} (easiest)',
   'DifficultyWindow.level_toughest': '{{level}} (toughest)',

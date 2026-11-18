@@ -191,6 +191,11 @@ const fakeWorkers = () => {
             load();
 
             return Promise.resolve({ sets: [], choices: [], problems: [] });
+          // Civ2's rules offer their own sizes, as civ2-world registers them (#1175); Civ1's offer none.
+          case 'worldSizes':
+            return Promise.resolve(
+              load() === 'civ2' ? civ2WorldSizes : { sizes: [], custom: null }
+            );
           default:
             return Promise.resolve({});
         }
@@ -202,6 +207,35 @@ const fakeWorkers = () => {
 
   return { log, transport, worker };
 };
+
+// The world sizes Civ2's rules offer (#1175): Small, Normal and Large, with 3 to 7 civilizations.
+const civ2Players = { minPlayers: 3, maxPlayers: 7, players: 7 },
+  civ2WorldSizes = {
+    sizes: (
+      [
+        ['small', 40, 50],
+        ['normal', 50, 80],
+        ['large', 75, 120],
+      ] as const
+    ).map(([key, width, height]) => ({
+      key,
+      topologyId: 'staggered-iso',
+      width,
+      height,
+      ...civ2Players,
+      earth: false,
+    })),
+    custom: {
+      topologyId: 'staggered-iso',
+      minWidth: 20,
+      maxWidth: 250,
+      minHeight: 20,
+      maxHeight: 250,
+      minArea: 1000,
+      maxArea: 10000,
+      ...civ2Players,
+    },
+  };
 
 const channels = (log: [string, unknown][]): string[] =>
   log.map(([channel]) => channel);
@@ -443,34 +477,71 @@ const civ2Metadata: PackMetadata = {
     await settle();
 
     expect(
-      'Civ2 is loaded in the worker, and played on the isometric grid: no grid question, its sizes',
-      [log.slice(1), worker.chosen, shown().title, shown().options[0]],
+      "Civ2 is loaded in the worker, and played on the isometric grid: no grid question, and Civ2's own sizes, from its rules, with Normal selected",
       [
-        [['choosePluginSet', 'civ2']],
+        log.slice(1),
+        worker.chosen,
+        shown().title,
+        shown().options,
+        latest().querySelector('option[selected]')?.getAttribute('value'),
+      ],
+      [
+        [
+          ['choosePluginSet', 'civ2'],
+          ['worldSizes', null],
+        ],
         'civ2',
         'How big a world?',
-        'Tiny (20 × 50)',
+        ['Small (40 × 50)', 'Normal (50 × 80)', 'Large (75 × 120)'],
+        'normal',
       ]
     );
 
-    choose('normal');
+    choose('large');
     await settle();
 
     expect('and the levels it offers are its six', shown().options.length, 6);
 
     choose('Prince');
     await settle();
+
+    expect(
+      'and from 3 to 7 civilizations, 7 selected',
+      [
+        shown().options,
+        latest().querySelector('option[selected]')?.getAttribute('value'),
+      ],
+      [
+        [
+          '7 civilizations',
+          '6 civilizations',
+          '5 civilizations',
+          '4 civilizations',
+          '3 civilizations',
+        ],
+        '7',
+      ]
+    );
+
     choose('3');
     await settle();
 
     expect(
-      'and the world goes to the engine on the isometric grid',
-      (
+      'and the world goes to the engine on the isometric grid, at the size chosen',
+      (({ topologyId, width, height, players }) => [
+        topologyId,
+        width,
+        height,
+        players,
+      ])(
         log.find(([channel]) => channel === 'setOptions')?.[1] as {
           topologyId: string;
+          width: number;
+          height: number;
+          players: number;
         }
-      ).topologyId,
-      'staggered-iso'
+      ),
+      ['staggered-iso', 75, 120, 3]
     );
 
     closeAll();
@@ -490,10 +561,28 @@ const civ2Metadata: PackMetadata = {
     await settle();
 
     expect(
-      'choosing Civilization after Civ2 replaces the worker, asks the new one nothing yet, and asks for the grid as before',
+      "choosing Civilization after Civ2 replaces the worker, asks the new one for its sizes, of which Civ1's rules have none, and asks for the grid as before",
       [log.slice(1), worker.chosen, shown().title],
-      [[['replace', 'civ2']], null, 'Which map grid?']
+      [
+        [
+          ['replace', 'civ2'],
+          ['worldSizes', null],
+        ],
+        'civ1-enhanced',
+        'Which map grid?',
+      ]
     );
+
+    choose('square');
+    await settle();
+
+    expect("and the sizes are Civ1's own, as always", shown().options, [
+      'Tiny (40 × 25)',
+      'Small (64 × 40)',
+      'Normal (80 × 50)',
+      'Large (104 × 65)',
+      'Huge (128 × 80)',
+    ]);
 
     closeAll();
 
@@ -560,13 +649,26 @@ const civ2Metadata: PackMetadata = {
       [true, false, 6]
     );
     expect(
-      `${name}: its map starts on the isometric grid's Normal size, which is what its inputs hold`,
+      `${name}: its sizes are Civ2's own, from its rules, starting on Normal, which is what its inputs hold`,
       [
+        Array.from(
+          element.querySelectorAll('select[name=map] option'),
+          (option) => [option.getAttribute('value'), text(option)]
+        ),
         (element.querySelector('select[name=map]') as HTMLSelectElement).value,
         (element.querySelector('input[name=width]') as HTMLInputElement).value,
         (element.querySelector('input[name=height]') as HTMLInputElement).value,
       ],
-      ['size:normal', '40', '100']
+      [
+        [
+          ['size:small', 'Small (40 × 50)'],
+          ['size:normal', 'Normal (50 × 80)'],
+          ['size:large', 'Large (75 × 120)'],
+        ],
+        'size:normal',
+        '50',
+        '80',
+      ]
     );
 
     // What each level means, in the modern form: the toughest is the last the rules send, whatever it's called.
@@ -808,6 +910,168 @@ const civ2Metadata: PackMetadata = {
     );
 
     closeAll();
+  }
+
+  // Civ2's rules' own sizes in the setup (#1175): what a size typed in may be, and how many civilizations it has room for.
+  {
+    const civilizations = [
+        'Babylonian',
+        'Roman',
+        'Zulu',
+        'Greek',
+        'Egyptian',
+        'Indian',
+        'Chinese',
+        'Mongol',
+        'Aztec',
+      ].map((name) => ({ name, leaders: [`${name}Leader`] })),
+      setup = new GameSetup({
+        aiClients: ['SimpleAIClient'],
+        civilizations,
+        difficulties: [],
+        existing: {},
+        worldSizes: civ2WorldSizes,
+      } as any);
+
+    expect(
+      "a setup for rules with their own sizes is on their grid, at Normal, with their 7 civilizations of the 9 there are, and doesn't offer Earth",
+      [
+        setup.fixedGrid(),
+        setup.topologyId,
+        setup.size?.key,
+        [setup.width, setup.height],
+        setup.seats.length,
+        setup.maxSeats(),
+        setup.maps().map(({ value }) => value),
+      ],
+      [
+        'staggered-iso',
+        'staggered-iso',
+        'normal',
+        [50, 80],
+        7,
+        7,
+        ['size:small', 'size:normal', 'size:large'],
+      ]
+    );
+
+    expect(
+      "a size typed in is held to the rules' bounds: 20 to 250 each way, 1,000 to 10,000 squares, an even height",
+      [
+        setup.problem('19', '80'),
+        setup.problem('251', '80'),
+        setup.problem('50', '18'),
+        setup.problem('50', '252'),
+        setup.problem('30', '30'),
+        setup.problem('100', '102'),
+        setup.problem('50', '81'),
+        setup.problem('20', '50'),
+        setup.problem('100', '100'),
+      ],
+      [
+        {
+          field: 'width',
+          message: 'CustomizeWorld.width-range',
+          data: { min: 20, max: 250 },
+        },
+        {
+          field: 'width',
+          message: 'CustomizeWorld.width-range',
+          data: { min: 20, max: 250 },
+        },
+        {
+          field: 'height',
+          message: 'CustomizeWorld.height-range',
+          data: { min: 20, max: 250 },
+        },
+        {
+          field: 'height',
+          message: 'CustomizeWorld.height-range',
+          data: { min: 20, max: 250 },
+        },
+        {
+          field: 'width',
+          message: 'CustomizeWorld.area-range',
+          data: { min: 1000, max: 10000 },
+        },
+        {
+          field: 'width',
+          message: 'CustomizeWorld.area-range',
+          data: { min: 1000, max: 10000 },
+        },
+        { field: 'height', message: 'CustomizeWorld.even-height' },
+        null,
+        null,
+      ]
+    );
+
+    expect(
+      'and says so in words',
+      [
+        i18next.t('CustomizeWorld.width-range', { min: 20, max: 250 }),
+        i18next.t('CustomizeWorld.area-range', { min: 1000, max: 10000 }),
+      ],
+      ['From 20 to 250 squares across.', 'From 1,000 to 10,000 squares in all.']
+    );
+
+    setup.setCustomSize(100, 60);
+
+    expect(
+      'a size typed in has room for the 7 civilizations the rules allow, not all 9',
+      [setup.size, setup.maxSeats(), setup.seats.length],
+      [null, 7, 7]
+    );
+
+    while (setup.canRemoveSeat()) {
+      setup.removeSeat(setup.seats.length - 1);
+    }
+
+    expect(
+      'and no fewer seats than the 3 civilizations the rules need at least',
+      [setup.seats.length, setup.minSeats()],
+      [3, 3]
+    );
+
+    expect(
+      'a size chosen is one of the rules’ own, by its key',
+      (setup.chooseMap('size:small'),
+      [setup.size?.key, setup.width, setup.height]),
+      ['small', 40, 50]
+    );
+  }
+
+  // Another game's seats, fewer than the rules here need (#1175): computer seats are added up to their fewest.
+  {
+    const setup = new GameSetup(
+      {
+        aiClients: ['SimpleAIClient'],
+        civilizations: ['Roman', 'Greek', 'Zulu', 'Aztec'].map((name) => ({
+          name,
+          leaders: [`${name}Leader`],
+        })),
+        difficulties: [],
+        existing: {},
+        worldSizes: civ2WorldSizes,
+      } as any,
+      { seats: [{ kind: 'human', name: 'Dom' }] }
+    );
+
+    expect(
+      "one carried seat, where the rules need three, gains two computer seats, and Civ1's rules still allow one",
+      [
+        setup.seats.map(({ kind, name }) => `${kind}:${name}`),
+        new GameSetup(
+          {
+            aiClients: ['SimpleAIClient'],
+            civilizations: [{ name: 'Roman', leaders: ['JuliusCaesar'] }],
+            difficulties: [],
+            existing: {},
+          } as any,
+          { seats: [{ kind: 'human', name: 'Dom' }] }
+        ).minSeats(),
+      ],
+      [['human:Dom', 'computer:', 'computer:'], 1]
+    );
   }
 
   // Another game's seats where this one has less room: the human's is kept.

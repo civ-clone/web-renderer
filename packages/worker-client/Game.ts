@@ -33,6 +33,7 @@ import {
   ruleSetsData,
 } from './lib/ruleSets';
 import civilopediaData from './lib/civilopedia';
+import worldSizesData from './lib/worldSizes';
 import { instance as aiClientRegistryInstance } from '@civ-clone/core-ai-client/AIClientRegistry';
 import { Seat, seatsFromOptions } from '@civ-clone/ui-protocol/lib/seats';
 import {
@@ -362,6 +363,12 @@ export class Game implements IGame {
           level: Level.level(),
         }))
       )
+    );
+
+    // The world sizes the rules offer (#1175), and what a size typed in may be: none from rules that leave them to the
+    //  page. Answered as `difficulties` is, with the plugins imported first.
+    answer(this.#transport, 'worldSizes', () =>
+      this.#load().then(() => worldSizesData())
     );
 
     // What the game setup (#604) offers: the civilizations and leaders still to be chosen, and the AI clients a computer

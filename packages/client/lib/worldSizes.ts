@@ -1,3 +1,7 @@
+import {
+  CustomWorldSizeOption,
+  WorldSizesAnswer,
+} from '@civ-clone/ui-protocol/Requests/WorldSizes';
 import topologyFor, { TopologyId } from './topologyFor';
 
 /**
@@ -108,14 +112,44 @@ export const worldSizesFor = (topologyId: TopologyId): WorldSize[] =>
       });
 
 /**
+ * The sizes the rules offer (#1175), as New Game offers its own, or `null` for rules that offer none (Civ1's), which
+ *  leave New Game offering `worldSizes`.
+ */
+export const ruleWorldSizes = (
+  answer: WorldSizesAnswer | null | undefined
+): WorldSize[] | null =>
+  !Array.isArray(answer?.sizes) || answer!.sizes.length === 0
+    ? null
+    : answer!.sizes.map(
+        ({ key, width, height, minPlayers, maxPlayers, players, earth }) => ({
+          key,
+          width,
+          height,
+          minPlayers,
+          maxPlayers,
+          players,
+          earth,
+        })
+      );
+
+/** A problem with a size typed in: the field to fix, and the message to show there, with what it needs to say. */
+export type CustomSizeProblem = {
+  field: 'height' | 'width';
+  message: string;
+  data?: { min: number; max: number };
+};
+
+/**
  * What is wrong with a world `width` by `height` on `topologyId`'s grid, as Customize World is given them: the field
- * to fix and the message to show there, or `null` for a size the world can be.
+ * to fix and the message to show there, or `null` for a size the world can be. `limits` are the rules' own bounds
+ * (#1175), Civ2's, when they have any.
  */
 export const customSizeProblem = (
   topologyId: TopologyId,
   width: string,
-  height: string
-): { field: 'height' | 'width'; message: string } | null => {
+  height: string,
+  limits: CustomWorldSizeOption | null = null
+): CustomSizeProblem | null => {
   const dimensions = { width: Number(width), height: Number(height) },
     notWhole = (['width', 'height'] as const).find(
       (field) => !Number.isInteger(dimensions[field]) || dimensions[field] < 1
@@ -130,6 +164,37 @@ export const customSizeProblem = (
   } catch {
     // Any whole size will do for a square world, so this is a staggered or hexagonal world with an odd height.
     return { field: 'height', message: 'CustomizeWorld.even-height' };
+  }
+
+  if (limits === null) {
+    return null;
+  }
+
+  const outside = (
+    [
+      ['width', dimensions.width, limits.minWidth, limits.maxWidth],
+      ['height', dimensions.height, limits.minHeight, limits.maxHeight],
+    ] as const
+  ).find(([, value, min, max]) => value < min || value > max);
+
+  if (outside !== undefined) {
+    const [field, , min, max] = outside;
+
+    return {
+      field,
+      message: `CustomizeWorld.${field}-range`,
+      data: { min, max },
+    };
+  }
+
+  const area = dimensions.width * dimensions.height;
+
+  if (area < limits.minArea || area > limits.maxArea) {
+    return {
+      field: 'width',
+      message: 'CustomizeWorld.area-range',
+      data: { min: limits.minArea, max: limits.maxArea },
+    };
   }
 
   return null;
