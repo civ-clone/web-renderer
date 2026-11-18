@@ -15,7 +15,11 @@ import {
   chunkGrid,
   chunksNear,
 } from '@civ-clone/ui-map-3d/terrain/chunks';
+import { Stage } from '@civ-clone/ui-map-3d/stage';
 import { TopologyId } from '@civ-clone/ui-protocol/topology';
+import { REACH } from '@civ-clone/ui-map-3d/terrain/kernel';
+import Land from '@civ-clone/ui-map-3d/Land';
+import World from '@civ-clone/ui-map/components/World';
 
 const failures: string[] = [];
 let checks = 0;
@@ -43,6 +47,8 @@ const sourceFor = (topology: Topology): ReliefSource => ({
   wrapsY: topology.wrapsY(),
   terrainAt: (x, y) =>
     terrains[(x * 3 + y * 5 + ((x * y) % 4)) % terrains.length],
+  waterAt: (x, y) =>
+    terrains[(x * 3 + y * 5 + ((x * y) % 4)) % terrains.length] === 'Ocean',
   neighbours: (x, y) =>
     topology
       .directions()
@@ -150,6 +156,284 @@ ids.forEach((topologyId) => {
       near.includes('2,2'),
     ],
     [true, true, true, false]
+  );
+
+  // Every chunk a square's surroundings overlap, worked out the long way: each chunk's own box against the square's.
+  //  One that only touches the reach's edge needn't be rebuilt (the kernel is 0 there), and may be either way.
+  const chunkU = grid.stepsU * grid.spacingU,
+    chunkV = grid.stepsV * grid.spacingV,
+    { u: periodU, v: periodV } = layout.period(),
+    overlapping = (
+      x: number,
+      y: number,
+      reach: number,
+      touching: boolean
+    ): string[] => {
+      const [u, v] = layout.centre(x, y),
+        found: string[] = [];
+
+      for (let i = 0; i < grid.chunksU; i++) {
+        for (let j = 0; j < grid.chunksV; j++) {
+          const meets = (
+            low: number,
+            span: number,
+            middle: number,
+            period: number | null
+          ): boolean =>
+            (period === null ? [0] : [-period, 0, period]).some((offset) =>
+              touching
+                ? low + offset <= middle + reach &&
+                  low + offset + span >= middle - reach
+                : low + offset < middle + reach &&
+                  low + offset + span > middle - reach
+            );
+
+          if (
+            meets(i * chunkU, chunkU, u, periodU) &&
+            meets(j * chunkV, chunkV, v, periodV)
+          ) {
+            found.push(`${i},${j}`);
+          }
+        }
+      }
+
+      return found.sort();
+    };
+
+  expect(
+    `${topologyId}: a change reaches every chunk within its reach on every side, and no others`,
+    [
+      [0, 0],
+      [3, 4],
+      [width - 1, height - 1],
+      [7, 2],
+    ].flatMap(([x, y]) =>
+      [0.5, 2, 3.7]
+        .map((reach) => ({
+          x,
+          y,
+          reach,
+          near: chunksNear(grid, layout, [[x!, y!]], reach)
+            .map(([i, j]) => `${i},${j}`)
+            .sort(),
+          within: overlapping(x!, y!, reach, false),
+          touching: overlapping(x!, y!, reach, true),
+        }))
+        .filter(
+          ({ near, within, touching }) =>
+            within.some((key) => !near.includes(key)) ||
+            near.some((key) => !touching.includes(key))
+        )
+    ),
+    []
+  );
+});
+
+// The land's own reach for a change: a square that changes rebuilds every chunk whose mesh it changes, and a patch that
+//  changes no terrain (a unit moving, a city growing) rebuilds none. On a world big enough for many chunks.
+ids.forEach((topologyId) => {
+  const landWidth = 64,
+    landHeight = 40,
+    terrainFor = (x: number, y: number): string =>
+      terrains[(x * 7 + y * 3 + ((x * y) % 5)) % terrains.length]!,
+    tiles = Array.from({ length: landWidth * landHeight }, (_, at) => {
+      const x = at % landWidth,
+        y = Math.floor(at / landWidth),
+        name = terrainFor(x, y);
+
+      return {
+        x,
+        y,
+        isWater: name === 'Ocean',
+        terrain: { _: name, __: [name], id: `${name}-${x}-${y}` },
+      };
+    }),
+    world = new World({
+      _: 'World',
+      __: ['World', 'DataObject'],
+      id: 'world',
+      width: landWidth,
+      height: landHeight,
+      topologyId,
+      tiles: tiles as never,
+    }),
+    meshes = (land: Land): Map<string, ChunkMesh> => {
+      const built = new Map<string, ChunkMesh>();
+
+      land.build(
+        {
+          setChunk: (i: number, j: number, mesh: ChunkMesh) =>
+            void built.set(`${i},${j}`, mesh),
+        } as unknown as Stage,
+        null
+      );
+
+      return built;
+    },
+    same = (a: ChunkMesh, b: ChunkMesh): boolean =>
+      a.positions.every((value, at) => value === b.positions[at]) &&
+      a.colours.every((value, at) => value === b.colours[at]),
+    land = new Land(world);
+
+  land.queueAll(0, 0);
+
+  const before = meshes(land);
+
+  land.changed([[20, 20]], 0, 0);
+
+  expect(
+    `${topologyId}: a patch that changes no terrain rebuilds nothing`,
+    land.pending(),
+    0
+  );
+
+  [
+    [20, 20, 'Mountains'],
+    [33, 11, 'Ocean'],
+    [12, 30, 'Grassland'],
+  ].forEach(([x, y, wanted]) => {
+    const tile = tiles.find((each) => each.x === x && each.y === y)!,
+      // Something other than it is.
+      name = tile.terrain._ === wanted ? 'Plains' : wanted;
+
+    tile.terrain = { _: name as string, __: [name as string], id: 'changed' };
+    tile.isWater = name === 'Ocean';
+
+    land.changed([[x as number, y as number]], 0, 0);
+
+    const rebuilt = meshes(land),
+      fresh = new Land(world);
+
+    fresh.queueAll(0, 0);
+
+    const after = meshes(fresh),
+      differ = [...after.keys()].filter(
+        (key) => !same(after.get(key)!, before.get(key)!)
+      );
+
+    expect(
+      `${topologyId}: ${name} at ${x},${y} rebuilds every chunk it changes, and not the whole world`,
+      [
+        differ.length > 0,
+        differ.filter((key) => !rebuilt.has(key)),
+        rebuilt.size < after.size,
+      ],
+      [true, [], true]
+    );
+
+    after.forEach((mesh, key) => before.set(key, mesh));
+  });
+});
+
+// Land rising from an empty sea, where the floor it moves is what reaches the next chunk: two squares out, the floor
+//  rises, and that square's kernel reaches over a chunk's border that the new land's own doesn't.
+ids.forEach((topologyId) => {
+  const seaWidth = 64,
+    seaHeight = 40,
+    tiles = Array.from({ length: seaWidth * seaHeight }, (_, at) => ({
+      x: at % seaWidth,
+      y: Math.floor(at / seaWidth),
+      isWater: true,
+      terrain: { _: 'Ocean', __: ['Ocean'], id: `Ocean-${at}` },
+    })),
+    world = new World({
+      _: 'World',
+      __: ['World', 'DataObject'],
+      id: 'sea',
+      width: seaWidth,
+      height: seaHeight,
+      topologyId,
+      tiles: tiles as never,
+    }),
+    topology = world.topology(),
+    layout = groundLayoutFor({
+      width: seaWidth,
+      height: seaHeight,
+      topologyId,
+      wrapsY: topology.wrapsY(),
+    }),
+    grid = chunkGrid(layout, seaHeight),
+    chunkU = grid.stepsU * grid.spacingU,
+    [cu, cv] = layout.centre(0, 0),
+    kernel =
+      REACH +
+      Math.max(
+        ...layout.outline(0, 0).map(([u, v]) => Math.hypot(u - cu, v - cv))
+      ),
+    neighbours = (x: number, y: number): [number, number][] =>
+      topology
+        .directions()
+        .map((direction) => topology.neighbour(x, y, direction))
+        .filter((square): square is [number, number] => square !== null),
+    row = 20,
+    // A square whose own reach (its kernel's, past its corner) stops short of the next chunk's border, but whose sea
+    //  two steps out, its floor raised, reaches over it.
+    // Away from the world's seam, so no neighbour is a world away.
+    chosen = Array.from({ length: seaWidth - 16 }, (_, x) => x + 8).find(
+      (x) => {
+        const [u] = layout.centre(x, row),
+          border = Math.ceil(u / chunkU) * chunkU;
+
+        return (
+          border - u > kernel + 0.05 &&
+          neighbours(x, row)
+            .flatMap(([nx, ny]) => neighbours(nx, ny))
+            .some(
+              ([fx, fy]) => layout.centre(fx, fy)[0] + REACH > border + 0.05
+            )
+        );
+      }
+    ),
+    meshes = (land: Land): Map<string, ChunkMesh> => {
+      const built = new Map<string, ChunkMesh>();
+
+      land.build(
+        {
+          setChunk: (i: number, j: number, mesh: ChunkMesh) =>
+            void built.set(`${i},${j}`, mesh),
+        } as unknown as Stage,
+        null
+      );
+
+      return built;
+    },
+    land = new Land(world);
+
+  land.queueAll(0, 0);
+
+  const before = meshes(land),
+    tile = tiles.find((each) => each.x === chosen && each.y === row)!;
+
+  tile.terrain = { _: 'Grassland', __: ['Grassland'], id: 'land' };
+  tile.isWater = false;
+  land.changed([[chosen!, row]], 0, 0);
+
+  const rebuilt = meshes(land),
+    fresh = new Land(world);
+
+  fresh.queueAll(0, 0);
+
+  const after = meshes(fresh),
+    differ = [...after.keys()].filter(
+      (key) =>
+        !after
+          .get(key)!
+          .positions.every(
+            (value, at) => value === before.get(key)!.positions[at]
+          )
+    ),
+    kernelOnly = chunksNear(grid, layout, [[chosen!, row]], kernel).map(
+      ([i, j]) => `${i},${j}`
+    );
+
+  expect(
+    `${topologyId}: land rising from the sea rebuilds the chunk past where its own kernel reaches, whose floor it raised`,
+    [
+      chosen !== undefined,
+      differ.some((key) => !kernelOnly.includes(key)),
+      differ.filter((key) => !rebuilt.has(key)),
+    ],
+    [true, true, []]
   );
 });
 

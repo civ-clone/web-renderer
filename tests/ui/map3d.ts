@@ -480,9 +480,20 @@ expect(
   view.releaseTiles();
 
   expect(
-    'released, they are taken on the next frame (at once, with no frames here), their land built again, and drawn',
-    [view.tilesPending(), chunksSet.size > 0, staged.splice(0)],
-    [0, true, ['render']]
+    'released, they are taken on the next frame (at once, with no frames here), and drawn: with no terrain changed, no land is built again',
+    [view.tilesPending(), chunksSet.size, staged.splice(0)],
+    [0, 0, ['render']]
+  );
+
+  // A tile whose terrain the patch changed: its land is built again.
+  (tiles[1] as { terrain: { _: string } }).terrain = { _: 'Mountains' };
+  view.queueTile(tiles[1]);
+  view.releaseTiles();
+
+  expect(
+    'a tile whose terrain changed has the land round it built again',
+    [chunksSet.size > 0, staged.splice(0)],
+    [true, ['render']]
   );
 
   view.flush();

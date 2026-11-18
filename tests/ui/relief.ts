@@ -57,6 +57,7 @@ const sourceFor = (
   height,
   wrapsY: topology.wrapsY(),
   terrainAt,
+  waterAt: (x, y) => terrainAt(x, y) === 'Ocean',
   neighbours: (x, y) =>
     topology
       .directions()
@@ -227,6 +228,32 @@ ids.forEach((topologyId) => {
         (middle(5, 5) - plain.height(...layout.centre(5, 5))) * 0.25
     ),
     true
+  );
+
+  // Just across each edge it shares, a tenth into the neighbour: its peak, weighted by the square of its weight, has
+  //  fallen to under a sixth of its height there. Weighted by its weight alone, or blended whole, it's twice that.
+  const [peakU, peakV] = layout.centre(5, 5),
+    peakLift = middle(5, 5) - plain.height(peakU, peakV),
+    acrossEdges = topology
+      .directions()
+      .map((direction) => topology.neighbour(5, 5, direction))
+      .filter((square): square is [number, number] => square !== null)
+      .map(([x, y]) => layout.centre(x, y))
+      .filter(([u, v]) => Math.abs(Math.hypot(u - peakU, v - peakV) - 1) < 1e-6)
+      .map(([u, v]): [number, number] => [
+        peakU + (u - peakU) * 0.6,
+        peakV + (v - peakV) * 0.6,
+      ]);
+
+  expect(
+    'just across the edges it shares, the peak has fallen away',
+    [
+      acrossEdges.length > 0,
+      acrossEdges.every(
+        ([u, v]) => lone.height(u, v) - plain.height(u, v) < peakLift / 6
+      ),
+    ],
+    [true, true]
   );
 
   const hidden = createRelief({

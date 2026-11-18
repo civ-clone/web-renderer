@@ -7,7 +7,7 @@
 // - **Peaks** (`peaked`) are weighted by the square of their weight, outside the blend, so a mountain's peak stays in
 //   its own square rather than lifting the plain beside it.
 // - **Noise** repeats over the world's period, so the wrap has no seam either.
-// - **The sea's floor** falls away from the shore, by how far a square is from land, walking the squares outwards from
+// - **The sea's floor,** under every square the engine says is water, falls away from the shore, by how far a square is from land, walking the squares outwards from
 //   it as far as `seaFloor.reach`.
 // - **A square never seen** is flat, at sea level, whatever is round it: the client is never told its terrain, and its
 //   neighbours' relief doesn't spill into it. The step at its edge is under cloud (§4.5).
@@ -34,6 +34,8 @@ export type ReliefSource = {
   // The terrain at (`x`, `y`), on the world (`x` from 0 to `width`, `y` from 0 to `height`): `Unknown` for a square
   //  never seen.
   terrainAt(x: number, y: number): string;
+  // Whether the square at (`x`, `y`) is water, as the engine says (`tile.isWater`): its floor is the sea's.
+  waterAt(x: number, y: number): boolean;
   // The squares next to (`x`, `y`), on the world, as the topology has them.
   neighbours(x: number, y: number): [number, number][];
 };
@@ -44,8 +46,8 @@ export type GroundSample = { height: number; colour: [number, number, number] };
 export interface ReliefMap {
   sample(u: number, v: number): GroundSample;
   height(u: number, v: number): number;
-  /** Reads every square's terrain again, after the world's tiles have changed. */
-  refresh(): void;
+  /** Reads every square's terrain again, after the world's tiles have changed: the squares whose terrain has. */
+  refresh(): [number, number][];
 }
 
 // How much of a peak's height is its own, weighted by the square of its weight: the rest is in the blend with its
@@ -100,8 +102,9 @@ export const createRelief = ({
       peaked: 'ridged',
     };
 
-  // Every square's terrain, by its index on the world.
-  let squares: Square[] = [];
+  // Every square's terrain, by its index on the world, and what it was read as, to tell which have changed since.
+  let squares: Square[] = [],
+    read: string[] = [];
 
   const index = (x: number, y: number): number | null => {
     const wrappedX = ((x % width) + width) % width;
@@ -117,12 +120,12 @@ export const createRelief = ({
 
   // How far each square is from land, in steps, walking out from every square of land at once: as far as the sea's
   //  floor goes on falling, past which every square is as deep.
-  const distancesFromLand = (names: string[]): number[] => {
+  const distancesFromLand = (land: boolean[]): number[] => {
     const distance = new Array<number>(width * height).fill(Infinity),
       queue: [number, number][] = [];
 
-    names.forEach((name, at) => {
-      if (name !== 'Ocean' && name !== 'Unknown') {
+    land.forEach((isLand, at) => {
+      if (isLand) {
         distance[at] = 0;
         queue.push([at % width, Math.floor(at / width)]);
       }
@@ -148,8 +151,9 @@ export const createRelief = ({
     return distance;
   };
 
-  const refresh = (): void => {
+  const refresh = (): [number, number][] => {
     const names: string[] = [],
+      water: boolean[] = [],
       entries: TerrainEntry[] = [];
 
     for (let y = 0; y < height; y++) {
@@ -157,16 +161,28 @@ export const createRelief = ({
         const name = source.terrainAt(x, y);
 
         names.push(name);
+        water.push(name !== 'Unknown' && source.waterAt(x, y));
         entries.push(terrainEntry(name));
       }
     }
 
-    const distance = distancesFromLand(names);
+    const distance = distancesFromLand(
+        names.map((name, at) => name !== 'Unknown' && !water[at])
+      ),
+      now = names.map((name, at) => `${name}${water[at] ? ' water' : ''}`),
+      changed: [number, number][] = [];
+
+    now.forEach((was, at) => {
+      if (read[at] !== was) {
+        changed.push([at % width, Math.floor(at / width)]);
+      }
+    });
+    read = now;
 
     squares = entries.map((entry, at) => {
       const unknown = entry === unknownTerrain;
 
-      if (names[at] !== 'Ocean') {
+      if (!water[at]) {
         return {
           relief: entry.relief,
           colour: linear(entry.colour),
@@ -187,6 +203,8 @@ export const createRelief = ({
         unknown,
       };
     });
+
+    return changed;
   };
 
   // The offsets from a square, by its row's parity, of every square whose middle can be within `REACH` of a point in

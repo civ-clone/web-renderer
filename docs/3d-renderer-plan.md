@@ -133,7 +133,9 @@ and a colour per terrain. It's built a few chunks a frame, from where the map is
 - **Tests:** `tests/ui/relief.ts` and `tests/ui/chunks.ts`.
 - **Colour:** one per terrain, blended by the same kernel as the height.
 - **Squares never seen:** flat at sea level and dark. The cloud over them is 1.4's.
-- **Speed:** an 80×50 world builds in 250–370 ms, 17–25 ms a chunk, at 10 ms of building a frame.
+- **Speed:** an 80×50 world builds in 250–370 ms, 17–25 ms a chunk. A frame builds chunks until 10 ms have gone, but
+  a chunk is built whole, so in practice a frame builds one: smaller chunks, or a chunk over several frames, are for
+  M6.
 - **`?debug=1`:** the stats overlay, and `window.civMap3DView` for the console.
 - **Moved to 1.1b:** fixed seeds and a world on any grid without a game. Saved camera positions wait for the camera (1.2).
 

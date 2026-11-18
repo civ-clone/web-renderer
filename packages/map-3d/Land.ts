@@ -2,8 +2,9 @@
 //  time and handed to the stage that draws them. The nearest to where the map is centred are built first, so the land under the camera
 //  is there at once and the rest follows over the next frames.
 //
-// A tile patch reads the world's terrain again and builds again only the chunks it can reach: the kernel's reach round
-//  each square changed, and as far again as the sea's floor is walked out from land.
+// A tile patch reads the world's terrain again, and builds again only the chunks round the squares whose terrain it
+//  changed: as far as the kernel reaches from each, and from each square of sea whose floor it moved. Most patches
+//  (a unit moving, a city growing) change no terrain, and build nothing.
 
 import groundLayoutFor, { GroundLayout } from './layouts';
 import { REACH } from './terrain/kernel';
@@ -41,6 +42,7 @@ export class Land {
         height,
         wrapsY,
         terrainAt: (x, y) => world.get(x, y).terrain._,
+        waterAt: (x, y) => world.get(x, y).isWater,
         neighbours: (x, y) =>
           topology
             .directions()
@@ -51,7 +53,8 @@ export class Land {
     this.#grid = chunkGrid(this.layout, height);
 
     // A square's furthest corner, and the furthest a neighbour's middle is: the kernel reaches a square's middle from
-    //  past its corner, and the sea's floor changes as far out as the walk goes, a neighbour at a time.
+    //  past its corner, and a square that becomes land or sea moves the sea's floor a step short of as far out as the
+    //  walk goes, a neighbour at a time: the floor that far out and beyond is as deep either way.
     const [cu, cv] = this.layout.centre(0, 0),
       corner = Math.max(
         ...this.layout.outline(0, 0).map(([u, v]) => Math.hypot(u - cu, v - cv))
@@ -67,7 +70,7 @@ export class Land {
           })
       );
 
-    this.#reach = REACH + corner + seaFloor.reach * step;
+    this.#reach = REACH + corner + (seaFloor.reach - 1) * step;
   }
 
   /** Where the world's copies lie, as offsets: itself, and its neighbours a period away each way it wraps. */
@@ -99,20 +102,35 @@ export class Land {
     this.#queue = this.#nearestFirst(all, u, v);
   }
 
-  /** The world's tiles at `squares` have changed: its terrain read again, and the chunks they reach queued first. */
+  /**
+   * The world's tiles at `squares` have changed: its terrain read again, and the chunks round any whose terrain has
+   *  changed queued with those waiting, the nearest to (`u`, `v`) first.
+   */
   changed(squares: [number, number][], u: number, v: number): void {
     if (squares.length === 0) {
       return;
     }
 
-    this.#relief.refresh();
+    const terrain = this.#relief.refresh();
 
-    const near = chunksNear(this.#grid, this.layout, squares, this.#reach).map(
-        ([i, j]) => `${i},${j}`
-      ),
-      rest = this.#queue.filter((key) => !near.includes(key));
+    if (terrain.length === 0) {
+      return;
+    }
 
-    this.#queue = [...this.#nearestFirst(near, u, v), ...rest];
+    const near = chunksNear(this.#grid, this.layout, terrain, this.#reach).map(
+      ([i, j]) => `${i},${j}`
+    );
+
+    this.#queue = this.#nearestFirst(
+      [...new Set([...this.#queue, ...near])],
+      u,
+      v
+    );
+  }
+
+  /** The chunks waiting, put in order again, the nearest to (`u`, `v`) first: the map has been centred elsewhere. */
+  refocus(u: number, v: number): void {
+    this.#queue = this.#nearestFirst(this.#queue, u, v);
   }
 
   /** How many chunks wait to be built. */

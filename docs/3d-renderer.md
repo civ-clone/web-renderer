@@ -411,7 +411,7 @@ blended across squares.
   - a roughness (how much noise rides on it);
   - a shape (`flat`, `rolling`, `ridged` or `peaked`).
 
-  Typical values, in world units: ocean −0.15, rising to −0.03 at the shore; plains 0.02; hills 0.12, rolling;
+  Typical values, in world units: ocean −0.15, rising to −0.03 at the shore; plains 0.02; hills 0.12, ridged;
   mountains 0.35, ridged and peaked.
 - **Blending:**
   - A point takes its square and that square's neighbours (from the topology), each weighted by a smooth kernel of its
@@ -449,8 +449,11 @@ blended across squares.
     index on the whole ground and chunks meet without a seam.
   - Normals come from the height function either side of a point, not from a chunk's triangles, so the light has no
     seam along chunks' borders either.
-  - A tile patch rebuilds every chunk within the kernel's reach of the square, plus as far as the sea floor's walk goes
-    (three squares), nearest the map's centre first. There's no colour-only update yet, and no level of detail.
+  - A tile patch rebuilds only round the squares whose terrain it changed: every chunk within the kernel's reach of
+    them, and of the sea within two squares, whose floor moves with them. Most patches (a unit moving, a city growing)
+    change no terrain and rebuild nothing. The chunks waiting are built nearest the map's centre first, and put in
+    order again when it moves. Water is the engine's (`tile.isWater`), not a terrain's name. There's no colour-only
+    update yet, and no level of detail.
   - Each chunk is drawn once for each copy of the world (§3.1): nine copies when the world wraps both ways.
 
 ### 4.3 Surface

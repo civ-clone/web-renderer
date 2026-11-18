@@ -21,7 +21,8 @@ import World from '@civ-clone/ui-map/components/World';
 import { Stage, StageFactory, createStage } from './stage';
 import Land from './Land';
 
-// How long, in ms, each frame may spend building the land's chunks while any wait.
+// How long, in ms, each frame may go on building the land's chunks while any wait. A chunk is built whole, once a frame
+//  has begun one: one takes 17–25 ms, so a frame builds one, and more only where they're quicker.
 const BUILD_BUDGET = 10;
 
 export class MapView3D implements MapRenderer {
@@ -34,6 +35,8 @@ export class MapView3D implements MapRenderer {
   // The `?debug=1` overlay: frame time, draw calls, triangles and chunks waiting (§12).
   #stats: HTMLElement | null = null;
   #frameTime = 0;
+  // Where the map was centred when the chunks waiting were last put in order, as `u,v`.
+  #focused = '';
   // A frame asked for to draw in, if one is.
   #frame: number | null = null;
   // Keyed by the square, as the 2D map's: a tile waits in `#incomingTiles` until the world has it (`releaseTiles`).
@@ -116,6 +119,13 @@ export class MapView3D implements MapRenderer {
     this.#frame = null;
     this.#stats?.remove();
     this.#stage.dispose();
+
+    const page = window as unknown as { civMap3DView?: MapView3D };
+
+    // Not kept for the console once taken down, with its land and world.
+    if (page.civMap3DView === this) {
+      delete page.civMap3DView;
+    }
   }
 
   endPicking(): void {}
@@ -249,6 +259,13 @@ export class MapView3D implements MapRenderer {
       [u, v] = this.#focus();
 
     this.#takeTiles();
+
+    // Centred elsewhere since: the chunks nearest the new centre are built first.
+    if (`${u},${v}` !== this.#focused) {
+      this.#focused = `${u},${v}`;
+      this.#land.refocus(u, v);
+    }
+
     this.#land.build(this.#stage, budget);
     // Over the sea, at the sea's surface.
     this.#stage.lookAt(u, v, Math.max(0, this.#land.heightAt(u, v)));
@@ -284,7 +301,7 @@ export class MapView3D implements MapRenderer {
     });
   }
 
-  // Over the map's top left corner, after the canvas so it's drawn over it.
+  // Over the map's bottom left corner, after the canvas so it's drawn over it.
   #statsOverlay(parent: HTMLElement): HTMLElement {
     const overlay = document.createElement('pre');
 
