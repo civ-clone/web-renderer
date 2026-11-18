@@ -2,8 +2,11 @@ import { TilesetDescriptor, spriteKey } from '../tilesets/TilesetDescriptor';
 import {
   installedTilesets,
   interfaceTileset,
+  isHosted,
+  mapTileset,
   onTilesetsInstalled,
 } from './tilesets';
+import { hasPreloadedImage } from './getPreloadedImage';
 
 // The interface's art (#1063): the icons, citizens, meters, cursors and textures every screen draws, and the map draws
 //  over its tiles. A theme names the tilesets it draws them with, in order (`UiTheme.art`), and the first one there is
@@ -96,10 +99,78 @@ export const interfaceSpriteName = (
     : name;
 };
 
-/** Where `tileset` keeps the interface's sprite `name` (`spriteKey`), by its own name for it (`interfaceSpriteName`). */
+// The game's own art for the interface (#1052, #1054, #1165): the map's set, when it has no interface art of its own
+//  but names some of the interface's sprites as its own (`names.ui`), as Civ2's does with its icons and people. A
+//  sprite it names and the player has imported is drawn from it; another, from civ.one's own interface art (the pixel
+//  art, a hosted set) where that has it, and otherwise from the theme's (`interfaceArt`). Without such a set, as in
+//  every Civ1 game, the theme's art draws every sprite, as before.
+
+/** The game's map's set, when it has interface sprites of its own without being interface art (Civ2's), or null. */
+export const gameInterfaceArt = (): TilesetDescriptor | null => {
+  const tileset = mapTileset();
+
+  return !hasInterfaceArt(tileset) &&
+    Object.keys(tileset.names.ui ?? {}).length > 0
+    ? tileset
+    : null;
+};
+
+/** civ.one's own interface art (the pixel art): the installed hosted set with interface art, if one is. */
+export const ownInterfaceArt = (): TilesetDescriptor | null =>
+  installedTilesets().find(
+    (tileset) => isHosted(tileset) && hasInterfaceArt(tileset)
+  ) ?? null;
+
+/** A sprite of the interface's: the set it's drawn from, and its key there. */
+export interface InterfaceSprite {
+  tileset: TilesetDescriptor;
+  key: string;
+}
+
+/**
+ * Where the interface's sprite `name` is drawn from: the game's own art (`gameInterfaceArt`) when that names it and it
+ *  has been imported; otherwise, in such a game, civ.one's own art (`ownInterfaceArt`) when that has it loaded; and
+ *  otherwise the theme's (`interfaceArt`), whether or not it has it.
+ */
+export const interfaceSprite = (name: string): InterfaceSprite => {
+  const theme = interfaceArt(),
+    game = gameInterfaceArt();
+
+  if (game !== null) {
+    const names = game.names.ui!;
+
+    if (Object.prototype.hasOwnProperty.call(names, name)) {
+      const own = names[name]!;
+
+      if (hasPreloadedImage(own, game)) {
+        return { tileset: game, key: spriteKey(game, own) };
+      }
+    }
+
+    const own = ownInterfaceArt();
+
+    if (own !== null && own !== theme) {
+      const ownName = interfaceSpriteName(name, own);
+
+      if (hasPreloadedImage(ownName, own)) {
+        return { tileset: own, key: spriteKey(own, ownName) };
+      }
+    }
+  }
+
+  return { tileset: theme, key: interfaceSpriteKey(name, theme) };
+};
+
+/**
+ * Where `tileset` keeps the interface's sprite `name` (`spriteKey`), by its own name for it (`interfaceSpriteName`).
+ *  Without `tileset`, where it's drawn from in the game being played (`interfaceSprite`).
+ */
 export const interfaceSpriteKey = (
   name: string,
-  tileset: TilesetDescriptor = interfaceArt()
-): string => spriteKey(tileset, interfaceSpriteName(name, tileset));
+  tileset?: TilesetDescriptor
+): string =>
+  tileset === undefined
+    ? interfaceSprite(name).key
+    : spriteKey(tileset, interfaceSpriteName(name, tileset));
 
 export default interfaceArt;

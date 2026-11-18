@@ -204,7 +204,7 @@ importers:
         version: https://codeload.github.com/civ-clone/civ1-world-civilizations/tar.gz/b07753c355fb801eaa262235db3315c2747fedd3
       '@civ-clone/civ2-asset-extractor':
         specifier: github:civ-clone/civ2-asset-extractor
-        version: https://codeload.github.com/civ-clone/civ2-asset-extractor/tar.gz/ce0d5ec9d31bcc985d117094f1690a385ddbb1b9
+        version: https://codeload.github.com/civ-clone/civ2-asset-extractor/tar.gz/6151b637edbdcdcba7096ac4772fcb6ae6af7ccc
       '@civ-clone/civ2-barbarians':
         specifier: github:civ-clone/civ2-barbarians
         version: https://codeload.github.com/civ-clone/civ2-barbarians/tar.gz/15ce50e4031ef9ab64b3214dc4575e35267ba1af
@@ -2617,9 +2617,9 @@ packages:
     resolution: {gitHosted: true, tarball: https://codeload.github.com/civ-clone/civ1-world/tar.gz/99dea2322d7b6d8b2dc30b73cf83acf00521502e}
     version: 0.1.12
 
-  '@civ-clone/civ2-asset-extractor@https://codeload.github.com/civ-clone/civ2-asset-extractor/tar.gz/ce0d5ec9d31bcc985d117094f1690a385ddbb1b9':
-    resolution: {gitHosted: true, tarball: https://codeload.github.com/civ-clone/civ2-asset-extractor/tar.gz/ce0d5ec9d31bcc985d117094f1690a385ddbb1b9}
-    version: 0.1.4
+  '@civ-clone/civ2-asset-extractor@https://codeload.github.com/civ-clone/civ2-asset-extractor/tar.gz/6151b637edbdcdcba7096ac4772fcb6ae6af7ccc':
+    resolution: {gitHosted: true, tarball: https://codeload.github.com/civ-clone/civ2-asset-extractor/tar.gz/6151b637edbdcdcba7096ac4772fcb6ae6af7ccc}
+    version: 0.1.5
     hasBin: true
 
   '@civ-clone/civ2-barbarians@https://codeload.github.com/civ-clone/civ2-barbarians/tar.gz/15ce50e4031ef9ab64b3214dc4575e35267ba1af':
@@ -7199,7 +7199,7 @@ snapshots:
       - encoding
       - supports-color
 
-  '@civ-clone/civ2-asset-extractor@https://codeload.github.com/civ-clone/civ2-asset-extractor/tar.gz/ce0d5ec9d31bcc985d117094f1690a385ddbb1b9': {}
+  '@civ-clone/civ2-asset-extractor@https://codeload.github.com/civ-clone/civ2-asset-extractor/tar.gz/6151b637edbdcdcba7096ac4772fcb6ae6af7ccc': {}
 
   '@civ-clone/civ2-barbarians@https://codeload.github.com/civ-clone/civ2-barbarians/tar.gz/15ce50e4031ef9ab64b3214dc4575e35267ba1af':
     dependencies:

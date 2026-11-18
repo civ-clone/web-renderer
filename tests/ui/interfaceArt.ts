@@ -292,12 +292,40 @@ provideInterfaceArt(() => []);
 }
 
 // The names: civ.one's, which begin as Civ1's interface art's, required and optional as Civ1's are, and add the angry
-//  citizens the city screen asks for (`citizenSpriteChoices`), which Civ1's art hasn't, as optional.
+//  citizens the city screen asks for (`citizenSpriteChoices`), which Civ1's art hasn't, and Civ2's improvements and
+//  Wonders (#1052), as optional.
 {
   const { assets } = civ1Json,
     isUi = (name: string): boolean =>
       assets.ui.some((prefix) => name.startsWith(prefix)),
-    angry = ['city/people_angry_f', 'city/people_angry_m'];
+    angry = ['city/people_angry_f', 'city/people_angry_m'],
+    civ2Buildings = [
+      ...[
+        'stockexchange',
+        'sewersystem',
+        'supermarket',
+        'superhighways',
+        'researchlab',
+        'sammissilebattery',
+        'coastalfortress',
+        'solarplant',
+        'harbour',
+        'offshoreplatform',
+        'airport',
+        'policestation',
+        'portfacility',
+        'capitalization',
+      ].map((name) => `city-improvements/${name}`),
+      ...[
+        'suntzuswaracademy',
+        'kingrichardscrusade',
+        'marcopolosembassy',
+        'leonardosworkshop',
+        'adamsmithstradingcompany',
+        'statueofliberty',
+        'eiffeltower',
+      ].map((name) => `wonders/${name}`),
+    ];
 
   expect(
     "the required names are Civ1's required interface art",
@@ -305,13 +333,13 @@ provideInterfaceArt(() => []);
     assets.required.filter(isUi)
   );
   expect(
-    "the optional names are Civ1's optional interface art, then the angry citizens",
+    "the optional names are Civ1's optional interface art, then the angry citizens, then Civ2's buildings",
     optionalInterfaceNames,
-    [...assets.optional.filter(isUi), ...angry]
+    [...assets.optional.filter(isUi), ...angry, ...civ2Buildings]
   );
   expect(
     "which Civ1's descriptor doesn't list",
-    angry.filter((name) =>
+    [...angry, ...civ2Buildings].filter((name) =>
       [...assets.required, ...assets.optional].includes(name)
     ),
     []
@@ -334,10 +362,9 @@ provideInterfaceArt(() => []);
     interfaceNames.map(({ name, required }) => [name, required]),
     [
       ...assets.required.filter(isUi).map((name) => [name, true]),
-      ...[...assets.optional.filter(isUi), ...angry].map((name) => [
-        name,
-        false,
-      ]),
+      ...[...assets.optional.filter(isUi), ...angry, ...civ2Buildings].map(
+        (name) => [name, false]
+      ),
     ]
   );
 }

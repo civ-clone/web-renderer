@@ -44,8 +44,8 @@ export const requiredInterfaceNames: readonly string[] = [
 
 /**
  * What it may leave out: the women specialists, which fall back to the men, the angry citizens, which fall back to the
- *  unhappy ones (`citizenSpriteChoices`), and the improvements' and Wonders' pictures, which the city screen goes
- *  without.
+ *  unhappy ones (`citizenSpriteChoices`), and the improvements' and Wonders' pictures, Civ1's and Civ2's, which the city
+ *  screen goes without.
  */
 export const optionalInterfaceNames: readonly string[] = [
   'city/people_tax_f',
@@ -95,7 +95,28 @@ export const optionalInterfaceNames: readonly string[] = [
   'wonders/cureforcancer',
   // Not Civ1's: it has no angry citizens.
   'city/people_angry_f',
-  'city/people_angry_m',
+  'city/people_angry_m', // Not Civ1's either: Civ2's improvements and Wonders (#1052).
+  'city-improvements/stockexchange',
+  'city-improvements/sewersystem',
+  'city-improvements/supermarket',
+  'city-improvements/superhighways',
+  'city-improvements/researchlab',
+  'city-improvements/sammissilebattery',
+  'city-improvements/coastalfortress',
+  'city-improvements/solarplant',
+  'city-improvements/harbour',
+  'city-improvements/offshoreplatform',
+  'city-improvements/airport',
+  'city-improvements/policestation',
+  'city-improvements/portfacility',
+  'city-improvements/capitalization',
+  'wonders/suntzuswaracademy',
+  'wonders/kingrichardscrusade',
+  'wonders/marcopolosembassy',
+  'wonders/leonardosworkshop',
+  'wonders/adamsmithstradingcompany',
+  'wonders/statueofliberty',
+  'wonders/eiffeltower',
 ];
 
 /** Every name the interface asks for, each marked required or optional. */

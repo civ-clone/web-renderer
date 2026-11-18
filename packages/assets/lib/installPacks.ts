@@ -17,7 +17,7 @@ import {
   setSheetFailed,
   sheetFailure,
 } from './tilesets';
-import { interfaceArt } from './interfaceArt';
+import { hasInterfaceArt, interfaceArt, ownInterfaceArt } from './interfaceArt';
 import { TilesetDescriptor, spriteKey } from '../tilesets/TilesetDescriptor';
 import { setSpriteAnchors } from './spriteAnchors';
 
@@ -66,6 +66,30 @@ export const ensureTilesetLoaded = async (
       `${tileset.name} (${tileset.id}) couldn't be loaded: ${reason}`
     );
   }
+};
+
+/**
+ * For a map drawn with a set that has interface sprites of its own without being interface art (Civ2's), has civ.one's
+ *  own interface art (`ownInterfaceArt`, the pixel art) ready too, as the sprites that set hasn't got are drawn from it
+ *  (`interfaceSprite`). Never rejects: without it, the theme's art draws them.
+ */
+const ensureFallbackInterfaceArt = async (
+  tileset: TilesetDescriptor,
+  store: AssetStore
+): Promise<void> => {
+  const own = ownInterfaceArt();
+
+  if (
+    own === null ||
+    hasInterfaceArt(tileset) ||
+    Object.keys(tileset.names.ui ?? {}).length === 0
+  ) {
+    return;
+  }
+
+  await ensureTilesetLoaded(own, store).catch((error) =>
+    console.error(`Could not load the ${own.id} set's sheet.`, error)
+  );
 };
 
 /** What a map on a grid is drawn with as a game starts or loads (`ensureMapArt`), and the art it fell back from. */
@@ -143,6 +167,8 @@ export const ensureMapArt = async (
     }
 
     if (await tried(tileset)) {
+      await ensureFallbackInterfaceArt(tileset, store);
+
       return { tileset, failed };
     }
   }

@@ -799,7 +799,7 @@ const run = async (): Promise<void> => {
       "and Civ2's and the music's, theirs",
       [instructions(civ2), instructions(sound)],
       [
-        'Upload TERRAIN1.GIF, TERRAIN2.GIF, UNITS.GIF, and CITIES.GIF from Civilization II to play on an isometric map (these will be stored locally). You can add them a few at a time. Add ICONS.GIF and PEOPLE.GIF too for Civilization II’s own food, shield and trade icons on that map, and its citizens in the city screen (optional).',
+        'Upload TERRAIN1.GIF, TERRAIN2.GIF, UNITS.GIF, and CITIES.GIF from Civilization II to play on an isometric map (these will be stored locally). You can add them a few at a time. Add ICONS.GIF and PEOPLE.GIF too for Civilization II’s own icons, pictures of improvements and Wonders, and citizens in its games (optional).',
         'Upload ASOUND.CVL from the original Civilization files for the music (it will be stored locally).',
       ]
     );
@@ -1541,17 +1541,19 @@ const run = async (): Promise<void> => {
     const iconsDone = await importWith([sheets['ICONS.GIF']!], true, false);
 
     expect(
-      "Civ2: ICONS.GIF on its own, not replacing, with the map's sprites in: its 12 icons are stored, and no record of anchors, as it has none to give",
+      "Civ2: ICONS.GIF on its own, not replacing, with the map's sprites in: its 86 icons, meters and pictures are stored, and no record of anchors, as it has none to give",
       [iconsDone, writtenNames().sort(), civ2Encoded],
       [
         'Done! Please reload the page to utilize the fresh assets.',
         [...icons].sort(),
-        12,
+        86,
       ]
     );
     expect(
       'Civ2: the icons are the 14 px ones and the small 10 px ones, by the names the yields take',
-      icons.map((name) => name.slice(civ2Pack.storage.prefix.length, -4)),
+      icons
+        .map((name) => name.slice(civ2Pack.storage.prefix.length, -4))
+        .filter((name) => /^icons\/(small\/)?[a-z]+$/.test(name)),
       [
         'icons/food',
         'icons/shield',
@@ -1822,9 +1824,11 @@ const run = async (): Promise<void> => {
       [
         civ2FilesToImport([], fullMetadata as any),
         civ2FilesToImport(civ2Required, null),
-        // Its icons, and its citizens (M2c, PEOPLE.GIF): optional too.
-        civ2Json.assets.optional.every(
-          (name) => name.startsWith('icons/') || name.startsWith('people/')
+        // Its icons and pictures (ICONS.GIF, #1052), and its citizens (M2c, PEOPLE.GIF): optional too.
+        civ2Json.assets.optional.every((name) =>
+          ['icons/', 'people/', 'buildings/', 'wonders/'].some((prefix) =>
+            name.startsWith(prefix)
+          )
         ),
       ],
       [[], ['TERRAIN1.GIF', 'TERRAIN2.GIF', 'UNITS.GIF', 'CITIES.GIF'], true]

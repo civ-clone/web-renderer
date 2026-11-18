@@ -7,10 +7,10 @@ i18next.addResources('en', 'default', {
   // Civilization II's sheets, for its isometric map, in its own import window (#1063).
   'TilesetCiv2.import':
     'Upload {{files, list}} from Civilization II to play on an isometric map (these will be stored locally). You can add them a few at a time.',
-  // Civilization II's sheets the isometric map can do without (#999): ICONS.GIF, its yield icons, and PEOPLE.GIF, its
-  //  citizens (M2c).
+  // Civilization II's sheets the isometric map can do without (#999): ICONS.GIF, its yield icons, meters and pictures of
+  //  improvements and Wonders (#1052, #1054), and PEOPLE.GIF, its citizens (M2c, #1165).
   'TilesetCiv2.import-icons':
-    'Add {{files, list}} too for Civilization II’s own food, shield and trade icons on that map, and its citizens in the city screen (optional).',
+    'Add {{files, list}} too for Civilization II’s own icons, pictures of improvements and Wonders, and citizens in its games (optional).',
   'TilesetCiv2.complete':
     'Civilization II’s map art is imported: new games can be played on the isometric map.',
   'TilesetCiv2.incomplete':
