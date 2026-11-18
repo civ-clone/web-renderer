@@ -46,8 +46,14 @@ export type GroundSample = { height: number; colour: [number, number, number] };
 export interface ReliefMap {
   sample(u: number, v: number): GroundSample;
   height(u: number, v: number): number;
-  /** Reads every square's terrain again, after the world's tiles have changed: the squares whose terrain has. */
-  refresh(): [number, number][];
+  /**
+   * Reads every square's terrain again, after the world's tiles have changed: the squares whose terrain has. Given
+   *  `released`, those alone are looked at first, and the rest read again only if one of them has changed, as most
+   *  changes (a unit moving, a city growing) change no terrain, and reading it all takes milliseconds.
+   */
+  refresh(
+    released?: readonly (readonly [number, number])[]
+  ): [number, number][];
 }
 
 // How much of a peak's height is its own, weighted by the square of its weight: the rest is in the blend with its
@@ -151,7 +157,31 @@ export const createRelief = ({
     return distance;
   };
 
-  const refresh = (): [number, number][] => {
+  // What the square at index `at` is read as: its terrain's name, and whether it's water.
+  const readAs = (x: number, y: number): string => {
+    const name = source.terrainAt(x, y);
+
+    return `${name}${
+      name !== 'Unknown' && source.waterAt(x, y) ? ' water' : ''
+    }`;
+  };
+
+  const refresh = (
+    released?: readonly (readonly [number, number])[]
+  ): [number, number][] => {
+    // Only these may have changed: none has, so nothing's to read again.
+    if (
+      released !== undefined &&
+      read.length > 0 &&
+      released.every(([x, y]) => {
+        const at = index(x, y);
+
+        return at === null || read[at] === readAs(x, y);
+      })
+    ) {
+      return [];
+    }
+
     const names: string[] = [],
       water: boolean[] = [],
       entries: TerrainEntry[] = [];

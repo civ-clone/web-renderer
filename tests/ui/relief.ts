@@ -269,6 +269,36 @@ ids.forEach((topologyId) => {
     [0, 0, 0]
   );
 
+  // Read again for squares released: only those, unless one of them has changed, when every square is.
+  let reads = 0,
+    changedTo = 'Plains';
+
+  const counted = createRelief({
+      layout,
+      source: sourceFor(topology, (x, y) => {
+        reads++;
+
+        return x === 2 && y === 3 ? changedTo : 'Grassland';
+      }),
+    }),
+    readAtFirst = reads;
+
+  reads = 0;
+
+  const unchanged = counted.refresh([[2, 3]]),
+    readForOne = reads;
+
+  changedTo = 'Hills';
+  reads = 0;
+
+  const readAfterChange = counted.refresh([[2, 3]]);
+
+  expect(
+    'squares released with their terrain unchanged are read alone; one changed, the whole world is read again',
+    [unchanged, readForOne < 5, readAfterChange, reads >= readAtFirst],
+    [[], true, [[2, 3]], true]
+  );
+
   // Water is what the engine says is water (`tile.isWater`), whatever the terrain's called: a lake among plains, the
   //  sea's floor beside the shore.
   const lake = createRelief({

@@ -125,7 +125,8 @@ export class Land {
       return;
     }
 
-    const terrain = this.#relief.refresh();
+    // The squares released alone, unless the world itself may have been replaced.
+    const terrain = this.#relief.refresh(always ? undefined : squares);
 
     if (terrain.length === 0) {
       return;
