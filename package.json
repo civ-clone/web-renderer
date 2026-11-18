@@ -143,6 +143,7 @@
     "test:map3d": "node tools/run-suite.js ui map3d",
     "test:ground-layouts": "node tools/run-suite.js ui groundLayouts",
     "test:relief": "node tools/run-suite.js ui relief",
+    "test:chunks": "node tools/run-suite.js ui chunks",
     "test:map-navigation": "node tools/run-suite.js ui mapNavigation",
     "test:projection": "node tools/run-suite.js ui projection",
     "test:iso-render-geometry": "node tools/run-suite.js ui isoRenderGeometry",
