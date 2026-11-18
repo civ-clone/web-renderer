@@ -140,20 +140,39 @@ ids.forEach((topologyId) => {
         }
 
         const step = Math.abs(
-          relief.height(...inside) - relief.height(...outside)
-        );
+            relief.height(...inside) - relief.height(...outside)
+          ),
+          // The colours too: blended sharper, but with no edge of their own.
+          inColour = relief.sample(...inside).colour,
+          outColour = relief.sample(...outside).colour,
+          shade = Math.max(
+            ...inColour.map((value, channel) =>
+              Math.abs(value - (outColour[channel] ?? 0))
+            )
+          );
 
-        if (step > 1e-6) {
-          steps.push(`${x},${y} ${index}@${along}: ${step}`);
+        if (step > 1e-6 || shade > 1e-5) {
+          steps.push(`${x},${y} ${index}@${along}: ${step} ${shade}`);
         }
       });
     });
   });
 
   expect(
-    `${topologyId}: no step across any edge or corner between squares seen`,
+    `${topologyId}: no step in height or colour across any edge or corner between squares seen`,
     steps.slice(0, 3),
     []
+  );
+
+  // Never seen: points on such squares are marked, for the cloud, and no others.
+  expect(
+    `${topologyId}: a point on a square never seen is marked unseen, and one on a square seen isn't`,
+    squares.every(([x, y]) => {
+      const [u, v] = layout.centre(x, y);
+
+      return relief.sample(u, v).unseen === unknown(x, y);
+    }),
+    true
   );
 
   // No seam where the world wraps: a point and its copy a period along have the same land.

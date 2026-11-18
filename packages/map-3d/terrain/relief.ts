@@ -10,7 +10,8 @@
 // - **The sea's floor,** under every square the engine says is water, falls away from the shore, by how far a square is from land, walking the squares outwards from
 //   it as far as `seaFloor.reach`.
 // - **A square never seen** is flat, at sea level, whatever is round it: the client is never told its terrain, and its
-//   neighbours' relief doesn't spill into it. The step at its edge is under cloud (§4.5).
+//   neighbours' relief doesn't spill into it. The step at its edge is mostly under cloud (§4.5): a hill or a mountain
+//   beside it stands through.
 //
 // Deterministic: the same squares always give the same land.
 
@@ -297,8 +298,11 @@ export const createRelief = ({
       for (let dx = -4; dx <= 4; dx++) {
         const [u, v] = layout.centre(dx, parity + dy);
 
-        // As far again as a peak or a colour wanders.
-        if (Math.hypot(u - cu, v - cv) < REACH + corner + WANDER + 1e-9) {
+        // As far again as a peak or a colour wanders: up to `WANDER` either way, so its diagonal.
+        if (
+          Math.hypot(u - cu, v - cv) <
+          REACH + corner + WANDER * Math.SQRT2 + 1e-9
+        ) {
           found.push([dx, dy]);
         }
       }

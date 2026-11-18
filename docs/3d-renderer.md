@@ -438,8 +438,8 @@ blended across squares.
   - The noise is gradient noise (Perlin's): value noise showed its lattice as lines across the sea.
   - Each peak stands off its square's middle by up to 0.22 either way, and is 0.75 to 1.25 times its terrain's height,
     both seeded from the square, so a range of mountains isn't a grid of cones (`peakOf`).
-  - A point's colour is blended more sharply than its height (each square's weight cubed), from a point up to 0.22
-    away, moved by noise, so terrains' edges wander rather than run along the squares' edges. This makes the land about
+  - A point's colour is blended more sharply than its height (each square's weight cubed), from a point moved by noise
+    up to 0.22 either way (0.31 at most), so terrains' edges wander rather than run along the squares' edges. This makes the land about
     twice as slow to build: 750 ms for an 80×50 world. Spreading a chunk over frames is for M6.
 
 ### 4.2 The mesh

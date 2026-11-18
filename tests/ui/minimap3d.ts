@@ -3,7 +3,8 @@
 //  - its overview: each seen square in its terrain's colour, none for squares never seen, and a dot for each city and
 //    each stack, in its owner's colour;
 //  - shown, it draws the overview, the unit awaiting orders, and the ground the camera sees at every copy it could show;
-//  - a click moves the camera to that point on the ground; taken down, it hears no more.
+//  - a click moves the camera to that point on the ground; taken down, it hears no more;
+//  - on a world that wraps over the poles, squares and the camera's patch are drawn a world up and down too.
 
 import { Tile } from '@civ-clone/ui-protocol/types';
 import { terrainEntry } from '@civ-clone/ui-models-builtin/terrain';
@@ -213,6 +214,63 @@ expect(
   [picked, shown.listeners.size],
   [[[width / 4, height / 2]], 0]
 );
+
+// A world that wraps over the poles.
+overviews.length = 0;
+
+const wrapping = fakeCanvas(),
+  wrappingMinimap = new Minimap3D(
+    wrapping.canvas,
+    groundLayoutFor({ width, height, topologyId: 'square', wrapsY: true }),
+    world,
+    height,
+    () => undefined
+  ),
+  wrappingOverview = overviews[0]!;
+
+wrappingMinimap.redraw();
+wrappingMinimap.show(
+  [
+    [1, 3],
+    [3, 3],
+    [3, 5],
+    [1, 5],
+  ],
+  null
+);
+
+expect(
+  'on a world that wraps over the poles, each seen square is drawn a world up too, and the camera’s patch, taken into the period, a world up and down as well as across',
+  [
+    wrappingOverview.drawn.filter(({ op }) => op === 'fill').length,
+    wrapping.drawn.filter(({ op }) => op === 'moveTo').map(({ args }) => args),
+  ],
+  [
+    (width - 1) * height * 4,
+    [-height, 0, height].flatMap((down) =>
+      [-width, 0, width].map((across) => [(1 + across) * 4, (3 + down) * 4])
+    ),
+  ]
+);
+
+// Far below the world, it is taken back into it.
+wrapping.drawn.length = 0;
+wrappingMinimap.show(
+  [
+    [1, 3 + height * 2],
+    [3, 3 + height * 2],
+    [3, 5 + height * 2],
+  ],
+  null
+);
+
+expect(
+  'a patch a world or two away is drawn where it would be in the first',
+  wrapping.drawn.find(({ op }) => op === 'moveTo')?.args,
+  [(1 - width) * 4, (3 - height) * 4]
+);
+
+wrappingMinimap.dispose();
 
 if (failures.length > 0) {
   process.stderr.write(

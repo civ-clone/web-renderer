@@ -229,6 +229,48 @@ ids.forEach((topologyId) => {
   );
 });
 
+// Each chunk marks its points on squares never seen, for the cloud: on the square grid, a square of them.
+{
+  const topology = topologyFor({ width, height, topologyId: 'square' }),
+    layout = groundLayoutFor({
+      width,
+      height,
+      topologyId: 'square',
+      wrapsY: topology.wrapsY(),
+    }),
+    relief = createRelief({
+      layout,
+      source: {
+        ...sourceFor(topology),
+        terrainAt: (x, y) => (x === 2 && y === 2 ? 'Unknown' : 'Grassland'),
+        waterAt: () => false,
+      },
+    }),
+    grid = chunkGrid(layout, height, { size: 4, perUnit: 4 }),
+    chunk = buildChunk(grid, relief, 0, 0),
+    across = grid.stepsU + 1,
+    marked = Array.from(chunk.unseen).flatMap((value, point) =>
+      value === 1
+        ? [
+            [
+              (point % across) * grid.spacingU,
+              Math.floor(point / across) * grid.spacingV,
+            ],
+          ]
+        : []
+    );
+
+  expect(
+    'a chunk marks the points on a square never seen, and only those',
+    [
+      marked.length > 0,
+      marked.every(([u, v]) => u! >= 2 && u! < 3 && v! >= 2 && v! < 3),
+      Array.from(chunk.unseen).every((value) => value === 0 || value === 1),
+    ],
+    [true, true, true]
+  );
+}
+
 // The land's own reach for a change: a square that changes rebuilds every chunk whose mesh it changes, and a patch that
 //  changes no terrain (a unit moving, a city growing) rebuilds none. On a world big enough for many chunks.
 ids.forEach((topologyId) => {

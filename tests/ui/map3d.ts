@@ -917,15 +917,49 @@ expect(
 
   restAt(box.width / 2, box.height / 2);
   tipper.setWaiting(true);
+  // Resting again while they move: still none.
+  restAt(box.width / 2 + 1, box.height / 2);
   await pause(450);
 
+  const whileWaiting = tooltips.splice(0);
+
+  tipper.setWaiting(false);
+  restAt(box.width / 2, box.height / 2);
+  await pause(450);
+
+  const reopened = tooltips.splice(0);
+
+  tipper.zoomBy(1);
+
+  const closedByZoom = tooltips.splice(0);
+
+  restAt(box.width / 2, box.height / 2);
+  await pause(450);
+  tooltips.splice(0);
+  tipper.dispose();
+
   expect(
-    'resting on a square opens its tooltip after a moment; a key closes it; while the other players move, none opens',
-    [waited, tipsOpened, closedByKey, tooltips],
-    [[], ['open 1,1'], ['open 1,1', 'closed'], []]
+    'resting on a square opens its tooltip after a moment; a key, a zoom and taking the map down close it; while the other players move, none opens',
+    [
+      waited,
+      tipsOpened,
+      closedByKey,
+      whileWaiting,
+      reopened,
+      closedByZoom,
+      tooltips,
+    ],
+    [
+      [],
+      ['open 1,1'],
+      ['open 1,1', 'closed'],
+      [],
+      ['open 1,1'],
+      ['closed'],
+      ['closed'],
+    ]
   );
 
-  tipper.dispose();
   ownBox.remove();
   staged.splice(0);
 

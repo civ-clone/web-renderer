@@ -72,7 +72,8 @@ export class Land {
       );
 
     // And as far again as a peak or a colour wanders from its square's middle.
-    this.#reach = REACH + corner + WANDER + (seaFloor.reach - 1) * step;
+    this.#reach =
+      REACH + corner + WANDER * Math.SQRT2 + (seaFloor.reach - 1) * step;
   }
 
   /** How the land's points lie on the ground, for the sea's surface to read their heights (`water.ts`). */

@@ -95,11 +95,20 @@ expect(
 
 // Over the right edge and the bottom: only the points on the ground are written.
 water.setChunk(chunk(7.5, 3.5, () => 0.25));
+// Over the right edge in the middle rows: the points past it aren't written into the next row's start.
+water.setChunk(chunk(7.5, 1.5, () => 0.35));
 
 expect(
-  'points past the ground’s edges are left out',
-  [near(water.height(15, 7), 0.25), water.height(14, 7), water.height(15, 6)],
-  [true, 0, 0]
+  'points past the ground’s edges are left out, and none wraps into the next row',
+  [
+    near(water.height(15, 7), 0.25),
+    water.height(14, 7),
+    water.height(15, 6),
+    near(water.height(15, 4), 0.35),
+    water.height(0, 4),
+    water.height(1, 5),
+  ],
+  [true, 0, 0, true, 0, 0]
 );
 
 water.follow(10, 20, 300, new Vector3(3, 4, 0));

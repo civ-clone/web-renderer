@@ -32,6 +32,8 @@ export class Minimap3D {
   // How far the ground runs across and down.
   #across: number;
   #down: number;
+  // How far down the ground repeats, where the world wraps over the poles.
+  #periodV: number | null;
   // The overview without the camera's patch, drawn when squares change.
   #overview: HTMLCanvasElement;
   // Where each square is drawn: where it is, a world to the left, and a world up where the world wraps over the poles.
@@ -61,6 +63,8 @@ export class Minimap3D {
     this.#overview = document.createElement('canvas');
 
     const { v: periodV } = layout.period();
+
+    this.#periodV = periodV;
 
     this.#copies = [
       [0, 0],
@@ -208,24 +212,31 @@ export class Minimap3D {
     context.strokeStyle = '#ffffff';
     context.lineWidth = 1;
 
-    // Taken into the world's period, and drawn at each copy that could show on the overview.
-    const left = Math.min(...patch.map(([u]) => u)),
-      shift = -this.#across * Math.floor(left / this.#across);
+    // Taken into the world's period, and drawn at each copy that could show on the overview: across, and down too where
+    //  the world wraps over the poles.
+    const periodV = this.#periodV,
+      left = Math.min(...patch.map(([u]) => u)),
+      top = Math.min(...patch.map(([, v]) => v)),
+      shift = -this.#across * Math.floor(left / this.#across),
+      shiftV = periodV === null ? 0 : -periodV * Math.floor(top / periodV),
+      downs = periodV === null ? [0] : [-periodV, 0, periodV];
 
-    [-this.#across, 0, this.#across].forEach((copy) => {
-      context.beginPath();
-      patch.forEach(([u, v], index) => {
-        const [px, py] = this.#px(u + shift + copy, v);
+    downs.forEach((down) =>
+      [-this.#across, 0, this.#across].forEach((copy) => {
+        context.beginPath();
+        patch.forEach(([u, v], index) => {
+          const [px, py] = this.#px(u + shift + copy, v + shiftV + down);
 
-        if (index === 0) {
-          context.moveTo(px, py);
-        } else {
-          context.lineTo(px, py);
-        }
-      });
-      context.closePath();
-      context.stroke();
-    });
+          if (index === 0) {
+            context.moveTo(px, py);
+          } else {
+            context.lineTo(px, py);
+          }
+        });
+        context.closePath();
+        context.stroke();
+      })
+    );
   }
 }
 

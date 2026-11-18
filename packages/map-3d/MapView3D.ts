@@ -55,6 +55,9 @@ type Hover = {
   key: string;
   x: number;
   y: number;
+  // Where the mouse is on the canvas, and on the page.
+  canvasX: number;
+  canvasY: number;
   clientX: number;
   clientY: number;
   timer: number | null;
@@ -479,6 +482,7 @@ export class MapView3D implements MapRenderer {
 
   /** Brings the camera `steps` nearer, or further away for fewer than none, about the point it looks at. */
   zoomBy(steps: number): void {
+    this.#endHover();
     this.#orbit = zoomed(this.#orbit, steps);
 
     // Both ends of a glide, so it carries on at the new distance rather than easing back to the old one.
@@ -664,7 +668,12 @@ export class MapView3D implements MapRenderer {
 
     // Still the same square: wait on, or leave it open.
     if (current !== null && current.key === key) {
-      Object.assign(current, { clientX: at.clientX, clientY: at.clientY });
+      Object.assign(current, {
+        canvasX: at.x,
+        canvasY: at.y,
+        clientX: at.clientX,
+        clientY: at.clientY,
+      });
 
       return;
     }
@@ -675,6 +684,8 @@ export class MapView3D implements MapRenderer {
       key,
       x: tile.x,
       y: tile.y,
+      canvasX: at.x,
+      canvasY: at.y,
       clientX: at.clientX,
       clientY: at.clientY,
       timer: null,
@@ -691,18 +702,33 @@ export class MapView3D implements MapRenderer {
     document.addEventListener('keydown', this.#endHover, true);
   }
 
-  // The tooltip for the square the mouse rests on, as it is now, over the mouse.
+  // The tooltip for the square the mouse rests on, as it is now, over the mouse: or none, if a window has opened over
+  //  the map since, or the square under the mouse is another now, or it has nothing to say any more.
   #showHover(hover: Hover): void {
-    hover.open = this.#squares.tooltip(
-      this.#canvas,
-      this.world.get(hover.x, hover.y),
-      this.#playerId,
-      {
-        left: hover.clientX - 10,
-        top: hover.clientY - 10,
-        bottom: hover.clientY + 10,
-      }
-    );
+    const over =
+        typeof document.elementFromPoint !== 'function' ||
+        document.elementFromPoint(hover.clientX, hover.clientY) ===
+          this.#canvas,
+      under = over ? this.#tileAt(hover.canvasX, hover.canvasY) : null;
+
+    if (under === null || `${under.x},${under.y}` !== hover.key) {
+      this.#endHover();
+
+      return;
+    }
+
+    const opened = this.#squares.tooltip(this.#canvas, under, this.#playerId, {
+      left: hover.clientX - 10,
+      top: hover.clientY - 10,
+      bottom: hover.clientY + 10,
+    });
+
+    // Open before, with nothing to say now: it goes.
+    if (!opened && hover.open) {
+      this.#squares.endTooltip(this.#canvas);
+    }
+
+    hover.open = opened;
   }
 
   // The point on the ground the camera looks at.
@@ -772,6 +798,9 @@ export class MapView3D implements MapRenderer {
   // The camera glides to `target`, or is put there at once where there are no frames to glide over, or the player
   //  has asked for less motion.
   #moveTo(target: Orbit): void {
+    // The square under the mouse is about to move away.
+    this.#endHover();
+
     if (typeof requestAnimationFrame !== 'function' || prefersReducedMotion()) {
       this.#glide = null;
       this.#orbit = this.#settle(target);

@@ -7,7 +7,8 @@
 //  world does, so the surface needs no copies: it's one square of water as wide as the camera sees, under the camera.
 //
 // The same texture says which points are on squares never seen: no water is drawn there, and cloud covers them (§4.5),
-//  a soft layer above the highest land, thinning over a short edge, broken up by noise.
+//  a soft layer just over the low land round them (a hill or mountain beside them may stand through it), thinning over
+//  a short edge, broken up by noise that repeats as the world does.
 
 import {
   ClampToEdgeWrapping,
@@ -241,6 +242,9 @@ const cloudFragmentShader = /* glsl */ `
 uniform sampler2D ground;
 uniform vec2 cell;
 uniform vec2 size;
+// How far the ground runs across and down, and whether it wraps down.
+uniform vec2 extent;
+uniform bool wrapsV;
 
 varying vec3 vWorld;
 
@@ -249,14 +253,18 @@ float lattice(vec2 point) {
   return fract(sin(dot(point, vec2(127.1, 311.7))) * 43758.5453);
 }
 
-float noise(vec2 point) {
+// Noise that repeats as the world does: \`cells\` lattice cells across and down it, taken round at its edges, so the
+//  cloud looks the same wherever the camera crosses the world's wrap.
+float noise(vec2 point, vec2 cells) {
   vec2 corner = floor(point),
     along = fract(point),
-    eased = along * along * (3.0 - 2.0 * along);
+    eased = along * along * (3.0 - 2.0 * along),
+    first = mod(corner, cells),
+    next = mod(corner + 1.0, cells);
 
   return mix(
-    mix(lattice(corner), lattice(corner + vec2(1.0, 0.0)), eased.x),
-    mix(lattice(corner + vec2(0.0, 1.0)), lattice(corner + vec2(1.0, 1.0)), eased.x),
+    mix(lattice(first), lattice(vec2(next.x, first.y)), eased.x),
+    mix(lattice(vec2(first.x, next.y)), lattice(next), eased.x),
     eased.y
   );
 }
@@ -266,6 +274,11 @@ float unseenAt(vec2 point) {
 }
 
 void main() {
+  // Past the poles of a world that doesn't wrap over them: no cloud, as there's nothing to have seen.
+  if (!wrapsV && (vWorld.z < 0.0 || vWorld.z > extent.y)) {
+    discard;
+  }
+
   // Softened over a short edge: how much of the ground round here has never been seen.
   float unseen = 0.0;
 
@@ -277,7 +290,11 @@ void main() {
 
   unseen /= 9.0;
 
-  float puff = noise(vWorld.xz * 1.4) * 0.6 + noise(vWorld.xz * 3.7) * 0.4,
+  vec2 coarse = max(vec2(1.0), floor(extent * 1.4 + 0.5)),
+    fine = max(vec2(1.0), floor(extent * 3.7 + 0.5));
+  float puff =
+      noise(vWorld.xz / extent * coarse, coarse) * 0.6 +
+      noise(vWorld.xz / extent * fine, fine) * 0.4,
     alpha = smoothstep(0.3, 0.7, unseen + (puff - 0.5) * 0.45);
 
   if (alpha <= 0.0) {
@@ -307,6 +324,8 @@ export class Clouds {
           ground: { value: null },
           cell: { value: new Vector2() },
           size: { value: new Vector2() },
+          extent: { value: new Vector2() },
+          wrapsV: { value: false },
         },
       ]),
       vertexShader,
@@ -319,6 +338,11 @@ export class Clouds {
     material.uniforms['ground']!.value = texture;
     material.uniforms['cell']!.value.set(ground.spacingU, ground.spacingV);
     material.uniforms['size']!.value.set(ground.columns, ground.rows);
+    material.uniforms['extent']!.value.set(
+      ground.columns * ground.spacingU,
+      ground.rows * ground.spacingV
+    );
+    material.uniforms['wrapsV']!.value = ground.wrapsV;
 
     this.mesh = new Mesh(new PlaneGeometry(1, 1), material);
     this.mesh.rotation.x = -Math.PI / 2;
