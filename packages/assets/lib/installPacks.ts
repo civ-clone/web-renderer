@@ -144,11 +144,7 @@ export const ensureMapArt = async (
     }
 
     if (await tried(tileset)) {
-      // Only those passed over for another: one tried again as the page's start failed, and drawn now, isn't.
-      return {
-        tileset,
-        failed: failed.filter((entry) => entry.tileset.id !== tileset.id),
-      };
+      return { tileset, failed };
     }
   }
 };

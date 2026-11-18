@@ -65,7 +65,9 @@ import installPacks, {
 import prepareStart, {
   provideStartPreparation,
 } from '@civ-clone/ui-client/lib/startPreparation';
-import prepareMapArt from '@civ-clone/ui-menus/lib/mapArt';
+import prepareMapArt, {
+  prepareSavedMapArt,
+} from '@civ-clone/ui-menus/lib/mapArt';
 import { askPlayerCount } from '@civ-clone/ui-menus/components/newGame';
 import { GameSetup } from '@civ-clone/ui-client/lib/gameSetup';
 import i18next from 'i18next';
@@ -1287,6 +1289,26 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
       [true, 'civ1', 'civ1-pixelart', true, true]
     );
 
+    // A saved game loading (bootstrap's load path) does the same: drawn with Civ1's, which is said (#1114, #1141).
+    const openDialogs = (): number =>
+        (document as unknown as Document).querySelectorAll('dialog[open]')
+          .length,
+      dialogsBefore = openDialogs(),
+      squareSave = {
+        entities: [{ type: 'World', state: { _topologyId: 'square' } }],
+      },
+      loading = await prepareSavedMapArt({} as any, squareSave);
+
+    expect(
+      "a save loading whose chosen art can't be fetched loads with Civ1's, saying why",
+      [
+        loading.tileset.id,
+        loading.failed.map(({ tileset }) => tileset.id),
+        openDialogs() - dialogsBefore,
+      ],
+      ['civ1', ['civ1-pixelart'], 1]
+    );
+
     // A choice whose sheet failed as the page started, and was left uninstalled, is tried again as a game starts:
     //  said while it still fails, and installed again and drawn with once it loads.
     keys = civ1Keys;
@@ -1348,7 +1370,13 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
     offline = true;
     logged.length = 0;
 
-    const refused = await prepareStart('square');
+    const refused = await prepareStart('square'),
+      loadRefused = await prepareSavedMapArt({} as any, {
+        entities: [{ type: 'World', state: { _topologyId: 'square' } }],
+      }).then(
+        () => null,
+        (error: Error) => error.message
+      );
 
     offline = false;
     fetched.length = 0;
@@ -1368,6 +1396,11 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
         ) ?? false,
       ],
       [false, false, true, true]
+    );
+    expect(
+      'and a save loading on it stops too, saying why, for the page to say',
+      loadRefused,
+      "Pixel art (civ1-pixelart) couldn't be loaded: Failed to fetch"
     );
 
     expect(

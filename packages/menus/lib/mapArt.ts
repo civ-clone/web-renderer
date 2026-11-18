@@ -1,6 +1,8 @@
 import { MapArt, ensureMapArt } from '@civ-clone/ui-assets/lib/installPacks';
 import NotificationWindow from '@civ-clone/ui-component-window/NotificationWindow';
-import { gameFailed } from './pluginSets';
+import { followSavedRuleSet, gameFailed } from './pluginSets';
+import Transport from '@civ-clone/ui-client/Transport';
+import { savedTopologyId } from './savedGame';
 import { t } from 'i18next';
 
 /**
@@ -45,6 +47,24 @@ export const prepareMapArt = async (topologyId: string): Promise<boolean> => {
   sayMapArtFellBack(art);
 
   return true;
+};
+
+/**
+ * Has the art a saved game's map is drawn with ready before it loads (#1114, #1141): its rule set's art, when that
+ *  names some (`followSavedRuleSet`), or the player's for its grid, fetched if it has to be, or another set ready for
+ *  the grid, which the player is told of. Rejects, saying why, when there's none: the load stops.
+ */
+export const prepareSavedMapArt = async (
+  transport: Transport,
+  save: Parameters<typeof savedTopologyId>[0] & { pluginSet?: unknown }
+): Promise<MapArt> => {
+  await followSavedRuleSet(transport, save.pluginSet);
+
+  const art = await ensureMapArt(savedTopologyId(save));
+
+  sayMapArtFellBack(art);
+
+  return art;
 };
 
 export default prepareMapArt;

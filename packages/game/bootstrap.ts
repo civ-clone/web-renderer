@@ -7,7 +7,6 @@ import titleScreen from '@civ-clone/ui-menus/components/titleScreen';
 import {
   downloadFile,
   saveFile,
-  savedTopologyId,
   discardPendingSave,
   readPendingSave,
 } from '@civ-clone/ui-menus/lib/savedGame';
@@ -22,13 +21,10 @@ import parseBooleanParam from '@civ-clone/ui-client/lib/parseBooleanParam';
 import appElements from './app/elements';
 import initI18n from './app/i18n';
 import { setCursor, setTilesetSizes } from './app/assets';
-import installPacks, {
-  ensureMapArt,
-} from '@civ-clone/ui-assets/lib/installPacks';
+import installPacks from '@civ-clone/ui-assets/lib/installPacks';
 import prepareMapArt, {
-  sayMapArtFellBack,
+  prepareSavedMapArt,
 } from '@civ-clone/ui-menus/lib/mapArt';
-import { followSavedRuleSet } from '@civ-clone/ui-menus/lib/pluginSets';
 import { provideStartPreparation } from '@civ-clone/ui-client/lib/startPreparation';
 import setOptionDefaults from './app/options';
 import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
@@ -329,8 +325,7 @@ export class Renderer {
         // The art the save's map is drawn with, its rule set's when that names some (#1114), fetched first if it has
         //  to be (#1063), or another set ready for its grid, which is said, when it can't be (#1141). With none, the
         //  start stops, saying why, and the save waits for a reload to try again, or is left for the menu.
-        await followSavedRuleSet(transport, save?.pluginSet);
-        sayMapArtFellBack(await ensureMapArt(savedTopologyId(save)));
+        await prepareSavedMapArt(transport, save);
 
         await discardPendingSave();
         loadWaiting = false;
