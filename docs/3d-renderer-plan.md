@@ -179,6 +179,22 @@ cities.
 
 ### 2.0 Licence survey (in parallel with M1)
 
+**Done:** [3d-art-survey.md](3d-art-survey.md). Animals, ships, tanks, ground textures and temperate plants are well
+covered. Many Wonders have real-monument scans. The gaps:
+- realistic soldiers that come with their own clips. The route is CC BY soldiers retargeted with CC0 and CC BY motion
+  data;
+- archers, paratroopers and civilians in period dress;
+- a catapult;
+- Wonders: 9 of Civ1's 21 have no candidate, and 13 of Civ2's 28.
+
+Three sources needed a decision, and I've allowed all three, each credited:
+- CMU's motion capture and NASA's models, whose terms are permissive but not CC0 or CC BY;
+- a CC0 aircraft series, much of it made with AI.
+
+Some CivFanatics modellers are leads that need written permission: their models can be tried locally, but aren't
+committed or deployed until I have it. Before use, check whether the soldiers' rigs embed
+Epic's UE4 skeleton or only match its bone names.
+
 - **What:** realistic (D2), not stylised, CC0 and CC BY glTF models for people, animals, ships, vehicles and aircraft,
   with rigs and the clips the spec names, and for Wonders and landmark buildings. Also textures and plants.
 - **Where to look:**
