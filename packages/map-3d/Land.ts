@@ -1,6 +1,6 @@
 // The land on the 3D map (docs/3d-renderer.md §4): the world's layout, its relief, and its chunks, built a few at a
-//  time and handed to the stage that draws them. The nearest to where the map is centred are built first, so the land under the camera
-//  is there at once and the rest follows over the next frames.
+//  time and handed to the stage that draws them. The nearest to where the map is centred are built first, so the land
+//  under the camera is there at once and the rest follows over the next frames.
 //
 // A tile patch reads the world's terrain again, and builds again only the chunks round the squares whose terrain it
 //  changed: as far as the kernel reaches from each, and from each square of sea whose floor it moved. Most patches

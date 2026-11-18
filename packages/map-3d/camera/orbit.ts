@@ -251,8 +251,8 @@ export const panned = (
 };
 
 /**
- * `orbit` with its yaw within a turn, and its focus kept on the world: taken round its period where it wraps (`u` across, and `v` down where
- *  that's a number), and kept between 0 and `extentV` down where it doesn't.
+ * `orbit` with its yaw within a turn, and its focus kept on the world: taken round its period where it wraps (`u`
+ *  across, and `v` down where that's a number), and kept between 0 and `extentV` down where it doesn't.
  */
 export const settled = (
   orbit: Orbit,

@@ -122,7 +122,8 @@ const start: Orbit = {
   height = 0.1;
 
 let orbit: Orbit = start,
-  menuOnRightClick = false;
+  menuOnRightClick = false,
+  menuOpen = false;
 
 // What presses that don't move did: clicks, and menus held (`hold`) or right-clicked (`right`), where they were; and
 //  where the mouse rested, or `none`.
@@ -145,6 +146,7 @@ const presses: string[] = [],
         return true;
       },
       menuOnRightClick: () => menuOnRightClick,
+      menuOpen: () => menuOpen,
       hover: (at) => void hovers.push(at === null ? 'none' : `${at.x},${at.y}`),
     }
   ),
@@ -239,6 +241,17 @@ expect(
   'a right-click is the unit’s menu where the interface says, and not the browser’s; elsewhere it’s left to the browser',
   [browsers, presses.splice(0), prevented],
   [[[], false], ['right 50,60'], true]
+);
+
+// A touch's `contextmenu` after the hold that opened a menu: that menu stays.
+menuOpen = true;
+fire('contextmenu', { clientX: 50, clientY: 60 });
+menuOpen = false;
+
+expect(
+  'one arriving over a menu already open leaves it',
+  presses.splice(0),
+  []
 );
 
 // A drag: the ground under the pointer stays under it.

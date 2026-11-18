@@ -175,6 +175,13 @@ export class MapView3D implements MapRenderer {
       changed: () => this.#draw(),
       visible: (x, y, margin) => this.#visible(x, y, margin),
     });
+
+    this.#stage = stageFactory(deps.mapCanvas, {
+      period: this.#land.layout.period(),
+      ground: this.#land.ground(),
+    });
+
+    // After the stage: one that can't be made leaves no minimap behind it.
     if (deps.minimapCanvas !== null) {
       this.#minimap = new Minimap3D(
         deps.minimapCanvas,
@@ -185,11 +192,6 @@ export class MapView3D implements MapRenderer {
           this.#moveTo({ ...(this.#glide?.to ?? this.#orbit), focus: [u, v] })
       );
     }
-
-    this.#stage = stageFactory(deps.mapCanvas, {
-      period: this.#land.layout.period(),
-      ground: this.#land.ground(),
-    });
 
     if (deps.debug && deps.mapCanvas.parentElement) {
       this.#stats = this.#statsOverlay(deps.mapCanvas.parentElement);
@@ -217,6 +219,7 @@ export class MapView3D implements MapRenderer {
         menu: (x, y, clientX, clientY, pressed) =>
           this.#menu(x, y, clientX, clientY, pressed),
         menuOnRightClick: () => this.#squares.menuOnRightClick(),
+        menuOpen: () => this.#squares.menuOpen(),
         hover: (at) => this.#hovered(at),
       }
     );
@@ -499,7 +502,7 @@ export class MapView3D implements MapRenderer {
     }
 
     const [u, v] = this.#land.layout.centre(x, y),
-      { u: periodU, v: periodV } = this.#land.layout.period(),
+      { u: periodU, v: periodV } = this.#period(),
       [focusU, focusV] = this.#orbit.focus,
       nearest = (value: number, focus: number, period: number | null) =>
         period === null
@@ -574,7 +577,7 @@ export class MapView3D implements MapRenderer {
     const [tileX, tileY] = this.#land.layout.tileAt(...ground),
       worldWidth = this.world.width(),
       worldHeight = this.world.height(),
-      wrapsY = this.#land.layout.period().v !== null;
+      wrapsY = this.#period().v !== null;
 
     if (!wrapsY && (tileY < 0 || tileY >= worldHeight)) {
       return null;
@@ -732,7 +735,7 @@ export class MapView3D implements MapRenderer {
         ...(this.#glide?.to ?? this.#orbit),
         focus: [u, v],
       },
-      { u: periodU, v: periodV } = this.#land.layout.period(),
+      { u: periodU, v: periodV } = this.#period(),
       short = (delta: number, period: number | null): number =>
         period === null ? delta : delta - period * Math.round(delta / period),
       [fromU, fromV] = this.#orbit.focus,
@@ -753,15 +756,17 @@ export class MapView3D implements MapRenderer {
   // The camera kept on the world, round its period, or within its rows where it doesn't wrap over the poles or the
   //  player stops it at them; and its pitch and distance within their ranges.
   #settle(orbit: Orbit): Orbit {
+    return settled(clampOrbit(orbit), this.#period(), this.#land.extentV());
+  }
+
+  // How far along the world repeats as the camera goes round it: across, and down unless it doesn't wrap over the poles
+  //  or the player stops the camera at them (`lockVerticalEdges`).
+  #period(): { u: number; v: number | null } {
     const period = this.#land.layout.period(),
       // Before the portal's made, as the view starts, as it started.
       locked = this.portal?.lockVerticalEdges() ?? this.#lockAtStart;
 
-    return settled(
-      clampOrbit(orbit),
-      locked ? { u: period.u, v: null } : period,
-      this.#land.extentV()
-    );
+    return locked ? { u: period.u, v: null } : period;
   }
 
   // The camera glides to `target`, or is put there at once where there are no frames to glide over, or the player
@@ -790,7 +795,7 @@ export class MapView3D implements MapRenderer {
     const t = Math.min(1, (now - glide.started) / GLIDE);
 
     this.#orbit = this.#settle(
-      between(glide.from, glide.to, t, this.#land.layout.period())
+      between(glide.from, glide.to, t, this.#period())
     );
 
     if (t >= 1) {

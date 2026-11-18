@@ -118,8 +118,9 @@ export const copiesNear = (
   );
 };
 
-// The sun's shadow map's size, in texels a side.
-const SHADOW_MAP = 2048;
+// The sun's shadow map's size, in texels a side, and how far the sun is from what it lights (its offset below).
+const SHADOW_MAP = 2048,
+  SUN_DISTANCE = Math.hypot(30, 40, 20);
 
 export const createStage: StageFactory = (canvas, { period, ground }) => {
   const renderer = new WebGLRenderer({ antialias: true, canvas }),
@@ -148,7 +149,10 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
 
   // The copies of the world drawn now, and their key, to tell when they change.
   let copies: [number, number][] = [[0, 0]],
-    copiesKey = '0,0';
+    copiesKey = '0,0',
+    // The markers', fewer: past about twice the camera's distance they're too small and hazy to matter.
+    markerCopies: [number, number][] = [[0, 0]],
+    markerCopiesKey = '0,0';
 
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = ACESFilmicToneMapping;
@@ -176,8 +180,12 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
   scene.add(sun.target);
 
   // A thing's copies, one for each copy of the world drawn now, in `parent`.
-  const copiesOf = (placed: Placed, parent: Group): Object3D[] =>
-    copies.map(([offsetU, offsetV]) => {
+  const copiesOf = (
+    placed: Placed,
+    parent: Group,
+    at: [number, number][] = copies
+  ): Object3D[] =>
+    at.map(([offsetU, offsetV]) => {
       const drawn = placed.make();
 
       drawn.position.set(
@@ -213,8 +221,9 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
     shadow.right = reach;
     shadow.top = reach;
     shadow.bottom = -reach;
-    shadow.near = 1;
-    shadow.far = 120;
+    // As deep as it's wide, round the focus, the sun being as far from it as its offset is long.
+    shadow.near = Math.max(0.5, SUN_DISTANCE - reach * 1.6);
+    shadow.far = SUN_DISTANCE + reach * 1.6;
     shadow.updateProjectionMatrix();
 
     // The sea's surface under the camera, as far as it sees.
@@ -226,9 +235,16 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
     );
     clouds.follow(u, v, far * 2.2);
 
-    // The copies of the world the haze doesn't hide: when they change, every chunk is drawn at the new ones.
+    // The copies of the world the haze doesn't hide: when they change, every chunk is drawn at the new ones. And the
+    //  markers', nearer.
     const inSight = copiesNear(orbit.focus, far, period),
-      key = inSight.join(';');
+      key = inSight.join(';'),
+      markersInSight = copiesNear(
+        orbit.focus,
+        Math.min(far, orbit.distance * 2.2),
+        period
+      ),
+      markersKey = markersInSight.join(';');
 
     if (key !== copiesKey) {
       copies = inSight;
@@ -237,9 +253,14 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
         chunk.drawn.forEach((drawn) => land.remove(drawn));
         chunk.drawn = copiesOf(chunk, land);
       });
+    }
+
+    if (markersKey !== markerCopiesKey) {
+      markerCopies = markersInSight;
+      markerCopiesKey = markersKey;
       markers.forEach((marker) => {
         marker.drawn.forEach((drawn) => markersGroup.remove(drawn));
-        marker.drawn = copiesOf(marker, markersGroup);
+        marker.drawn = copiesOf(marker, markersGroup, markerCopies);
       });
     }
   };
@@ -312,7 +333,7 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
         drawn: [],
       };
 
-      placed.drawn = copiesOf(placed, markersGroup);
+      placed.drawn = copiesOf(placed, markersGroup, markerCopies);
       markers.set(key, placed);
     },
     view,

@@ -261,6 +261,12 @@ Building another world from the form starts it in the middle again.
 
 ### 1.5 The minimap's view outline
 
+**Done:** `packages/map-3d/minimap/Minimap3D.ts`, the 3D map's own overview on the page's minimap canvas, drawn on the
+ground rather than the grid: each square is its outline (`GroundLayout`) in its terrain's colour, so one overview serves
+every grid. Dots for cities and stacks in their owners' colours, the unit awaiting orders, and the four-sided patch of
+ground the camera sees at each copy the overview shows. A click moves the camera there. Drawn again only when squares
+change, and its patch each frame the camera moves. Tested by `tests/ui/minimap3d.ts`.
+
 - **What:**
   - the 3D view keeps a 2D overview of its own, fed the same tile updates as its map;
   - the minimap marks the four-sided patch of ground the camera sees, in place of the box it works out today (the

@@ -80,7 +80,7 @@ const misses = orbits.flatMap((orbit) =>
       return picked === wanted ? [] : [{ orbit, point, picked, wanted }];
     }
 
-    return Math.hypot(picked[0] - wanted[0], picked[1] - wanted[1]) < 0.01
+    return Math.hypot(picked[0] - wanted[0], picked[1] - wanted[1]) < 0.002
       ? []
       : [{ orbit, point, picked, wanted }];
   })
@@ -112,25 +112,30 @@ expect(
   true
 );
 
-// A ridge across the view, low down the screen: a ray that would meet the plain beyond it meets the ridge first.
+// A narrow ridge across the view, a little wider than a step, low down the screen: rays that would meet the plain
+//  beyond it meet the ridge first, however narrow it is, wherever the steps fall.
 const ridge = (u: number, v: number): number =>
-    Math.abs(v - 20) < 0.3 ? 0.6 : 0.05,
+    Math.abs(v - 20) < 0.025 ? 0.6 : 0.05,
   facingNorth: Orbit = {
     focus: [10, 17],
     yaw: 0,
     pitch: degrees(30),
     distance: 12,
   },
-  overRidge = pickGround(facingNorth, 0, [0, -0.3], aspect, ridge),
-  plain = groundAt(facingNorth, 0, [0, -0.3], aspect, 0.05);
+  rays = [-0.3, -0.33, -0.36, -0.39, -0.42];
 
 expect(
-  'a ridge in the way is picked, not the plain behind it',
-  [
-    overRidge !== null && Math.abs(overRidge[1] - 20) <= 0.3 + 1e-3,
-    plain !== null && plain[1] < 19.7,
-  ],
-  [true, true]
+  'a narrow ridge in the way is picked, not the plain behind it, by every ray over it',
+  rays.map((y) => {
+    const picked = pickGround(facingNorth, 0, [0, y], aspect, ridge),
+      plain = groundAt(facingNorth, 0, [0, y], aspect, 0.05);
+
+    return [
+      picked !== null && Math.abs(picked[1] - 20) <= 0.025 + 1e-3,
+      plain !== null && plain[1] < 19.975,
+    ];
+  }),
+  rays.map(() => [true, true])
 );
 
 expect(

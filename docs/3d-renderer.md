@@ -342,7 +342,8 @@ As built in slice 0.2:
 - **Tests** (`tests/ui/map3d.ts`):
   - one bundles `map3d.js` and fails if it takes in anything from the other packages but the factory's name;
   - another fails if anything outside `packages/map-3d` imports three.js or that package.
-- **Until later slices:** the minimap stays empty (1.5), and a long-range order's square can't be picked (1.3).
+- **Since:** the minimap shows the 3D map's own overview (1.5), and a long-range order's square is picked on the 3D map
+  (1.3).
 - **Sizes**, minified: `map3d.js` is 556 KB (140 KB gzipped), and `frontend.js` grew by 1.7 KB (0.8 KB gzipped).
 
 ---

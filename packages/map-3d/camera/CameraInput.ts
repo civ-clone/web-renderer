@@ -26,8 +26,9 @@ export type CameraPresses = {
     clientY: number,
     pressed: boolean
   ): boolean;
-  // Whether a right-click opens the menu, in place of the browser's own.
+  // Whether a right-click opens the menu, in place of the browser's own; and whether a menu is open already.
   menuOnRightClick(): boolean;
+  menuOpen(): boolean;
   // The mouse moved over the map with no button held, while it's still: or it left the map, or a press or a glide
   //  began, where nothing's hovered (`null`).
   hover(
@@ -283,12 +284,19 @@ export class CameraInput {
     }
 
     event.preventDefault();
-    this.#stopHold();
-    this.#press = null;
+
+    // One a held press has already opened: a touch's `contextmenu` arrives after the hold that opened it.
+    if (this.#presses.menuOpen()) {
+      return;
+    }
 
     const [x, y] = this.#at(event);
 
-    this.#presses.menu(x, y, event.clientX, event.clientY, false);
+    // A menu, and then the press isn't a click; with none to open, the press is left as it was, a tap or a drag.
+    if (this.#presses.menu(x, y, event.clientX, event.clientY, false)) {
+      this.#stopHold();
+      this.#press = null;
+    }
   }
 
   #move(event: PointerEvent): void {

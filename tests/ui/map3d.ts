@@ -28,7 +28,11 @@ import {
 } from '@civ-clone/ui-map/MapView3DFactory';
 import MapView2D from '@civ-clone/ui-game/MapView2D';
 import MapView3D from '@civ-clone/ui-map-3d/MapView3D';
-import { DISTANCE_MAX, ZOOM_STEP } from '@civ-clone/ui-map-3d/camera/orbit';
+import {
+  DISTANCE_MAX,
+  DISTANCE_MIN,
+  ZOOM_STEP,
+} from '@civ-clone/ui-map-3d/camera/orbit';
 import { instance as optionsRegistry } from '@civ-clone/ui-platform/GameOptionsRegistry';
 import Transport from '@civ-clone/ui-client/Transport';
 import World from '@civ-clone/ui-map/components/World';
@@ -514,6 +518,28 @@ expect(
     'the square it looks at is on the screen; not with a margin wider than the screen, nor under what floats over the map',
     [...onScreen, covered, view.portal.isVisible(1, 1)],
     [true, false, false, true]
+  );
+
+  // Close up, looking north, and a square in from the edges: the squares two along to the east and two down to the
+  //  south are past the screen's right and bottom edges, the nearer copy of them either way round the world; the one
+  //  looked at isn't.
+  const before = view.orbit();
+
+  view.setOrbit({ ...before, yaw: 0, distance: DISTANCE_MIN });
+
+  const closeUp = [
+    view.portal.isVisible(1, 1, 1),
+    view.portal.isVisible(3, 1, 1),
+    view.portal.isVisible(1, 3, 1),
+  ];
+
+  view.setOrbit(before);
+  staged.splice(0);
+
+  expect(
+    'close up, squares past the screen’s right and bottom edges are off it',
+    closeUp,
+    [true, false, false]
   );
   expect(
     'every chunk of the land was built as it started',
@@ -1128,6 +1154,23 @@ expect(
     },
     lockedAt = beyond(locked);
 
+  // A glide from the top row to the bottom goes down the world, not over the pole it's stopped at: on the clock run by
+  //  hand again.
+  Object.defineProperty(performance, 'now', {
+    value: () => now,
+    configurable: true,
+  });
+  locked.centre(tiles[2] as Tile);
+  locked.centre(tiles[14] as Tile);
+  runFrames();
+  Object.defineProperty(performance, 'now', {
+    value: realNow,
+    configurable: true,
+  });
+
+  const glidedTo = locked.orbit().focus,
+    bottom = locked.land().layout.centre(2, 3);
+
   locked.dispose();
   kept.lockVerticalEdges = false;
 
@@ -1137,9 +1180,13 @@ expect(
   wrapping.dispose();
 
   expect(
-    'stopped at the poles, the camera stays at the world’s last row; otherwise it goes round',
-    [lockedAt === locked.land().extentV(), wrappedAt < locked.land().extentV()],
-    [true, true]
+    'stopped at the poles, the camera stays at the world’s last row, and glides down the world to a square; otherwise it goes round',
+    [
+      lockedAt === locked.land().extentV(),
+      glidedTo,
+      wrappedAt < locked.land().extentV(),
+    ],
+    [true, bottom, true]
   );
 
   delete (globalThis as any).requestAnimationFrame;

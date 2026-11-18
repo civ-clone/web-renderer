@@ -63,12 +63,16 @@ const takesEnter = (target: EventTarget | null): boolean =>
   turnKeys: { [key: string]: number } = { '[': -1, ']': 1 },
   NORTH_KEY = '\\',
   // And the same keys where they are on a US keyboard, for layouts that type them only with AltGr or Option, which the
-  //  game leaves to the browser: none types a letter there, so none is a unit's order.
+  //  game leaves to the browser: only where what they type there is none of the game's own keys. A German keyboard
+  //  types ü, + and # on them, and + is the trade rates'.
   turnCodes: { [code: string]: number | 'north' } = {
     BracketLeft: -1,
     BracketRight: 1,
     Backslash: 'north',
-  };
+  },
+  // What a key types that's the game's own whatever key types it: a letter or digit (a unit's order, a report), or the
+  //  trade rates' `+` and `-`.
+  gameKey = (key: string): boolean => /^[a-z0-9+\-=]$/i.test(key);
 
 export type InputControllerDeps = {
   // The primary actions' area, whose first button Tab focuses.
@@ -359,7 +363,9 @@ export class InputController {
 
     // Once for each press: held down, it would spin.
     const turn =
-      key === NORTH_KEY ? 'north' : turnKeys[key] ?? turnCodes[event.code];
+      key === NORTH_KEY
+        ? 'north'
+        : turnKeys[key] ?? (gameKey(key) ? undefined : turnCodes[event.code]);
 
     if (
       turn !== undefined &&

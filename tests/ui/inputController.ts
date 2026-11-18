@@ -695,6 +695,8 @@ const run = async (): Promise<void> => {
     .forEach((dialog) => dialog.remove());
 
   for (const init of [
+    // A German keyboard's +, where a US keyboard's ] is, which turns a 3D map: here it's the trade rates'.
+    { code: 'BracketRight', key: '+' },
     { code: 'Minus', key: '-' },
     { code: 'NumpadAdd', key: '+', location: 3 },
     { code: 'NumpadSubtract', key: '-', location: 3 },

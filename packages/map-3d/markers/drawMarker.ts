@@ -1,10 +1,12 @@
 // The 3D map's plain markers (docs/3d-renderer-plan.md 1.3), in three.js: a city as a cluster of low buildings with its
 //  owner's colour on their roofs, a wall round it if it's walled, and its name and size over it; a unit as a pawn in its
-//  owner's colours, with a pennant giving the stack's size, and a ring under the active one and a pointer over it. The model sets replace
-//  them (M2, M4).
+//  owner's colours, with a pennant giving the stack's size, and a ring under the active one and a pointer over it.
+//  The model sets replace them (M2, M4).
 //
-// Every marker shares its geometries and its materials, one for each colour, so hundreds cost little but their draw
-//  calls. Names are sprites drawn on a canvas, the same size on the screen however far away.
+// Every marker shares its geometries and its materials, one for each colour, but each part is a mesh of its own, so
+//  each is a draw call, at every copy of the world near enough to show: hundreds of markers cost thousands of draw calls
+//  (#1204, for M6's instancing). Names are sprites drawn on a canvas, the same size on the screen however far away;
+//  each name, size and state drawn is kept until the map is taken down.
 
 import {
   BoxGeometry,
