@@ -14,7 +14,8 @@
     "talks": "meetingWindow",
     "mapMenus": "shared",
     "turnControls": "nextTurn",
-    "windowChrome": "framed"
+    "windowChrome": "framed",
+    "orderIcons": "gameArt"
   },
   "features": ["assetsInOptions", "squareTooltips"],
   "formerly": ["new"]

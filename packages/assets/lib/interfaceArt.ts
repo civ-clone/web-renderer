@@ -224,8 +224,8 @@ onPreloadedImagesChanged(() => {
  * Runs `refresh` whenever the sprites drawn from change, for as long as `element` is around, in a game with interface
  *  art of its own (`gameInterfaceArt`, a Civ2 game): as a sheet a sprite falls back to arrives (the pixel art,
  *  `startFallbackInterfaceArt`), so a picture already drawn takes the sprite `interfaceSprite` now says. `refresh`
- *  resolves its sprites again, and draws only the ones that changed. Nothing in a game without such art, whose
- *  pictures always resolve to the theme's.
+ *  resolves its sprites again and draws them, or only the ones that changed, as it likes. Nothing in a game without
+ *  such art, whose pictures always resolve to the theme's.
  */
 export const followInterfaceArt = (
   element: Element,

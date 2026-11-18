@@ -1,8 +1,5 @@
-import {
-  IconLayer,
-  drawUnitActionIcon,
-  unitActionIconLayers,
-} from '@civ-clone/ui-assets/lib/unitActionIcon';
+import { IconLayer } from '@civ-clone/ui-assets/lib/unitActionIcon';
+import { currentOrderIcons } from '@civ-clone/ui-assets/lib/orderIcons';
 import { TOptions, t } from 'i18next';
 import { Tile, Unit, UnitAction } from '@civ-clone/ui-protocol/types';
 import { Element, s } from '@dom111/element';
@@ -88,7 +85,9 @@ const groups: ActionGroup[] = ['orders', 'terrain', 'special'];
  */
 export class UnitCardActions extends Element {
   #act: (unitId: string, unitAction: string, choice?: string) => void;
-  #canvases = new ScaledCanvases();
+  #canvases = new ScaledCanvases((canvas) =>
+    currentOrderIcons().canvasSize(canvas)
+  );
   #draw: (canvas: HTMLCanvasElement, layers: IconLayer[]) => void;
   #signature = '';
   #unitId: string | null = null;
@@ -96,10 +95,10 @@ export class UnitCardActions extends Element {
   constructor(
     container: HTMLElement,
     act: (unitId: string, unitAction: string, choice?: string) => void,
-    draw: (
-      canvas: HTMLCanvasElement,
-      layers: IconLayer[]
-    ) => void = drawUnitActionIcon
+    draw: (canvas: HTMLCanvasElement, layers: IconLayer[]) => void = (
+      canvas,
+      layers
+    ) => currentOrderIcons().draw(canvas, layers)
   ) {
     super(container);
 
@@ -116,7 +115,7 @@ export class UnitCardActions extends Element {
         unit === null
           ? []
           : actions.map((action) =>
-              unitActionIconLayers(
+              currentOrderIcons().layers(
                 action,
                 unit,
                 tile,

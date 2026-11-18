@@ -84,7 +84,7 @@ expect(
   [[['city', 'S']], [['unit', null]], [['city', null]]]
 );
 expect('FoundCity shows an empty city', layersFor('FoundCity'), [
-  { type: 'city', text: null, colours: null },
+  { type: 'city', text: null, colours: null, civilization: 'Roman' },
 ]);
 expect(
   'JoinCity shows the city one larger',
@@ -92,7 +92,7 @@ expect(
     city: { growth: { size: 4 } },
     units: [],
   } as unknown as Tile),
-  [{ type: 'city', text: '5', colours: null }]
+  [{ type: 'city', text: '5', colours: null, civilization: 'Roman' }]
 );
 expect(
   'ClearJungle shows the terrain the engine said it leaves',

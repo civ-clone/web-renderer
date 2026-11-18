@@ -2,10 +2,12 @@
 //  square it would act on, each order with the icon and key the unit card gives it (#743).
 
 import { Tile, Unit as UnitData } from '@civ-clone/ui-protocol/types';
+import { IconLayer } from '@civ-clone/ui-assets/lib/unitActionIcon';
+import { followInterfaceArt } from '@civ-clone/ui-assets/lib/interfaceArt';
 import {
-  drawUnitActionIcon,
-  unitActionIconLayers,
-} from '@civ-clone/ui-assets/lib/unitActionIcon';
+  OrderIcons,
+  currentOrderIcons,
+} from '@civ-clone/ui-assets/lib/orderIcons';
 import { keyForAction, keyName } from '@civ-clone/ui-client/lib/unitActionKeys';
 import Transport from '@civ-clone/ui-client/Transport';
 import UiMenu from './UiMenu';
@@ -74,10 +76,10 @@ export const openUnitMenu = (
   transport: Transport,
   {
     pressed = false,
-    draw = drawUnitActionIcon,
+    draw = (canvas, layers) => currentOrderIcons().draw(canvas, layers),
   }: {
     pressed?: boolean;
-    draw?: typeof drawUnitActionIcon;
+    draw?: OrderIcons['draw'];
   } = {}
 ): UiMenu | null => {
   const { actions, direction } = unitMenuActions(tile, unit, transport);
@@ -88,7 +90,7 @@ export const openUnitMenu = (
 
   const ownSquare = tile === unit.tile,
     farSquare = !ownSquare && direction === null,
-    icons: [HTMLCanvasElement, ReturnType<typeof unitActionIconLayers>][] = [],
+    icons: [HTMLCanvasElement, IconLayer[]][] = [],
     menu = new UiMenu({
       label: text('UnitMenu.label', { unit: unitName(unit) }),
       anchor: { point: { x, y } },
@@ -105,7 +107,7 @@ export const openUnitMenu = (
             canvas.width = canvas.height = 16;
             icons.push([
               canvas,
-              unitActionIconLayers(
+              currentOrderIcons().layers(
                 action,
                 unit,
                 unit.tile,
@@ -128,7 +130,11 @@ export const openUnitMenu = (
     });
 
   // Drawn once they're in the page, at the size it shows them (#352).
-  icons.forEach(([canvas, layers]) => draw(canvas, layers));
+  icons.forEach(([canvas, layers]) => {
+    draw(canvas, layers);
+    // Again as the sprites change, in a game with art of its own (`followInterfaceArt`).
+    followInterfaceArt(canvas, () => draw(canvas, layers));
+  });
 
   return menu;
 };

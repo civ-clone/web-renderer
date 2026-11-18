@@ -1,26 +1,83 @@
 import { Tile, Unit, UnitAction } from '@civ-clone/ui-protocol/types';
 import getPreloadedImage from './getPreloadedImage';
 import { imageSize, isDrawable } from './imageSize';
-import { Colouring, TilesetDescriptor } from '../tilesets/TilesetDescriptor';
-import { interfaceArt, interfaceSpriteName } from './interfaceArt';
+import {
+  Colouring,
+  TilesetDescriptor,
+  expandName,
+} from '../tilesets/TilesetDescriptor';
+import {
+  gameInterfaceArt,
+  hasInterfaceArt,
+  interfaceArt,
+  interfaceSprite,
+  interfaceSpriteName,
+} from './interfaceArt';
+import citySprite from './citySprite';
 import replaceColours from './replaceColours';
 import renderUnit, { replacementColours } from './renderUnit';
 
 // What a unit action's button shows (#348), as layers drawn one over another. `unitActionIconLayers` decides it from
 //  the action alone, so it can be checked without a canvas; `drawUnitActionIcon` paints it.
 export type IconLayer =
-  | { type: 'image'; path: string }
+  // A sprite of the art the icons are drawn with (`terrain/land`), or, `interface`, one of the interface's own
+  //  (`city/trade`), drawn from wherever the game's interface art takes it (`interfaceSprite`).
+  | { type: 'image'; path: string; interface?: boolean }
   | { type: 'unit'; unit: Unit; fortified: boolean; status: string }
-  | { type: 'city'; text: string | null; colours: string[] | null };
+  | {
+      type: 'city';
+      text: string | null;
+      colours: string[] | null;
+      // Whose city, by civilization, for a tileset that draws each one's in its own style (Civ2's).
+      civilization?: string;
+    };
 
 export const iconSize = 16;
 
-// A neutral square for the improvements to be shown on: nothing about the terrain they would really go on.
-const square = (...paths: string[]): IconLayer[] =>
-  ['terrain/land', 'terrain/grassland', ...paths].map((path) => ({
-    type: 'image',
-    path,
-  }));
+/**
+ * The art the order icons are drawn with (#1053): the game's own (`gameInterfaceArt`, Civ2's in a Civ2 game), whose
+ *  units every unit there is has a sprite in, or else the theme's (`interfaceArt`), as every Civ1 game has.
+ */
+export const orderIconArt = (): TilesetDescriptor =>
+  gameInterfaceArt() ?? interfaceArt();
+
+const image = (path: string): IconLayer => ({ type: 'image', path });
+
+// A square of `terrain`, as the map draws it (`Landscape`): the land beneath, a sprite per terrain or one under all of
+//  it, and the terrain's own sprite over that unless the tileset draws none there, split so a layer can go between.
+const ground = (
+  tileset: TilesetDescriptor,
+  terrain: string
+): { base: IconLayer; over: IconLayer[] } => {
+  const { base, terrain: family } = tileset.families,
+    word = (name: string): string =>
+      tileset.names.terrain[name] ?? name.toLowerCase(),
+    under = base.under?.[terrain] ?? terrain,
+    isolated =
+      typeof family.isolated === 'string' &&
+      !(family.skip ?? []).includes(terrain)
+        ? expandName(family.isolated, { terrain: word(terrain) })
+        : null;
+
+  return {
+    base: image(expandName(base.land, { terrain: word(under) })),
+    over: isolated === null ? [] : [image(isolated)],
+  };
+};
+
+// A neutral square for the improvements to be shown on, Grassland: nothing about the terrain they would really go on.
+const square = (
+  tileset: TilesetDescriptor,
+  ...paths: string[]
+): IconLayer[] => {
+  const { base, over } = ground(tileset, 'Grassland');
+
+  return [base, ...over, ...paths.map(image)];
+};
+
+// A road or railroad across the square, west to east, by the tileset's own names.
+const across = (sprite: string): string[] =>
+  ['w', 'e'].map((dir) => expandName(sprite, { dir }));
 
 // The civilization's colours: the first is what a city is drawn on, the second its outline.
 const civilizationColours = (unit: Unit): string[] | null =>
@@ -49,16 +106,24 @@ export const unitActionIconLayers = (
   unit: Unit,
   tile: Tile | null,
   status: string,
-  tileset: TilesetDescriptor = interfaceArt()
+  tileset: TilesetDescriptor = orderIconArt()
 ): IconLayer[] => {
-  const fallback = [unitLayer(unit, status)];
+  const fallback = [unitLayer(unit, status)],
+    { families } = tileset;
 
   switch (action._) {
     case 'Fortify':
       return [unitLayer(unit, status, true)];
 
     case 'FoundCity':
-      return [{ type: 'city', text: null, colours: civilizationColours(unit) }];
+      return [
+        {
+          type: 'city',
+          text: null,
+          colours: civilizationColours(unit),
+          civilization: unit.player?.civilization?._,
+        },
+      ];
 
     case 'JoinCity':
       return [
@@ -66,13 +131,19 @@ export const unitActionIconLayers = (
           type: 'city',
           text: String((tile?.city?.growth.size ?? 0) + 1),
           colours: civilizationColours(unit),
+          civilization: unit.player?.civilization?._,
         },
       ];
 
     case 'SetHomeCity':
       // The city, marked as the unit's own, so it isn't mistaken for No orders.
       return [
-        { type: 'city', text: status, colours: civilizationColours(unit) },
+        {
+          type: 'city',
+          text: status,
+          colours: civilizationColours(unit),
+          civilization: unit.player?.civilization?._,
+        },
       ];
 
     case 'ClearForest':
@@ -80,38 +151,39 @@ export const unitActionIconLayers = (
     case 'ClearSwamp':
     case 'PlantForest':
       // Sent by the engine, which is what knows what the action leaves.
-      return action.result
-        ? [
-            { type: 'image', path: 'terrain/land' },
-            { type: 'image', path: `terrain/${action.result.toLowerCase()}` },
-          ]
-        : fallback;
+      if (!action.result) {
+        return fallback;
+      }
+
+      const { base, over } = ground(tileset, action.result);
+
+      return [base, ...over];
 
     case 'BuildIrrigation': {
       // As the map draws it (`Landscape`): beneath the terrain, or over it when the tileset says so.
-      const { sprite, overTerrain } = tileset.families.irrigation,
-        irrigation: IconLayer = { type: 'image', path: sprite },
-        grassland: IconLayer = { type: 'image', path: 'terrain/grassland' };
+      const { sprite, overTerrain } = families.irrigation,
+        irrigation = image(sprite),
+        { base, over } = ground(tileset, 'Grassland');
 
       return [
-        { type: 'image', path: 'terrain/land' },
-        ...(overTerrain ? [grassland, irrigation] : [irrigation, grassland]),
+        base,
+        ...(overTerrain ? [...over, irrigation] : [irrigation, ...over]),
       ];
     }
 
     case 'BuildMine':
-      return square('improvements/mine');
+      return square(tileset, families.mine.sprite);
 
     case 'CleanPollution':
-      return square('improvements/pollution');
+      return square(tileset, families.pollution.sprite);
 
     case 'BuildRoad':
     case 'RoadTo':
-      return square('improvements/road_w', 'improvements/road_e');
+      return square(tileset, ...across(families.road.sprite));
 
     case 'BuildRailroad':
     case 'RailroadTo':
-      return square('improvements/railroad_w', 'improvements/railroad_e');
+      return square(tileset, ...across(families.railroad.sprite));
 
     case 'Unload': {
       // The units aboard are not sent with the transport, so these are the stowed units on its tile.
@@ -125,7 +197,7 @@ export const unitActionIconLayers = (
     }
 
     case 'EstablishTradeRoute':
-      return [{ type: 'image', path: 'city/trade' }];
+      return [{ type: 'image', path: 'city/trade', interface: true }];
 
     default:
       return fallback;
@@ -212,6 +284,59 @@ const drawCentred = (
   );
 };
 
+// Its drawing, what's drawn in it (`drawnArea`), enlarged or shrunk to fill most of the picture and centred: for a
+//  tileset whose sprites leave much of their tile empty, as Civ2's units and cities do in its 64 px tiles, which would
+//  otherwise be too small to make out on a button (#1053). Only for the game's own art: the theme's are drawn as ever.
+const drawFilled = (
+  context: CanvasRenderingContext2D,
+  image: CanvasImageSource,
+  pictureSize: number,
+  offset = 0
+): void => {
+  if (!isDrawable(image)) {
+    return;
+  }
+
+  const [left, top, width, height] = drawnArea(image),
+    fit = (pictureSize * 0.9) / Math.max(width, height, 1);
+
+  context.save();
+  context.translate(
+    Math.round((pictureSize - width * fit) / 2) + offset,
+    Math.round((pictureSize - height * fit) / 2) + offset
+  );
+  context.scale(fit, fit);
+  context.drawImage(image, -left, -top);
+  context.restore();
+};
+
+// Fitted into the middle of the picture: enlarged a whole number of times to most of it, or shrunk to fit it.
+const drawFitted = (
+  context: CanvasRenderingContext2D,
+  image: CanvasImageSource,
+  pictureSize: number
+): void => {
+  if (!isDrawable(image)) {
+    return;
+  }
+
+  const [width, height] = imageSize(image),
+    largest = Math.max(width, height, 1),
+    fit =
+      largest <= pictureSize
+        ? Math.max(1, Math.floor((pictureSize * 0.75) / largest))
+        : pictureSize / largest;
+
+  context.save();
+  context.translate(
+    Math.round((pictureSize - width * fit) / 2),
+    Math.round((pictureSize - height * fit) / 2)
+  );
+  context.scale(fit, fit);
+  context.drawImage(image, 0, 0);
+  context.restore();
+};
+
 // Offset as the map's unit and city labels are, a pixel of the picture apart.
 const drawMark = (context: CanvasRenderingContext2D, text: string): void => {
   context.font = 'bold 8px sans-serif';
@@ -224,7 +349,7 @@ const drawMark = (context: CanvasRenderingContext2D, text: string): void => {
 
 // The sprites' own tile, which may be larger than the picture (the pixel art's 32 px): the picture is fitted into it.
 export const iconPictureSize = (
-  tileset: TilesetDescriptor = interfaceArt()
+  tileset: TilesetDescriptor = orderIconArt()
 ): number => Math.max(iconSize, tileset.tile.width);
 
 /**
@@ -235,7 +360,7 @@ export const iconPictureSize = (
  */
 export const iconCanvasSize = (
   canvas: HTMLCanvasElement,
-  tileset: TilesetDescriptor = interfaceArt()
+  tileset: TilesetDescriptor = orderIconArt()
 ): number => {
   const pictureSize = iconPictureSize(tileset),
     shown =
@@ -255,10 +380,13 @@ export const drawUnitActionIcon = (
     return;
   }
 
-  // The interface's own art (#1063): a button's picture is the same whatever pack the map is drawn with.
-  const tileset = interfaceArt(),
+  // The interface's own art (#1063), or the game's own (#1053): a button's picture is the same whatever pack the map
+  //  is drawn with, unless the game's rule set brings art of its own (Civ2's).
+  const tileset = orderIconArt(),
     size = iconCanvasSize(canvas, tileset),
     stacked = layers.filter((layer) => layer.type === 'unit').length > 1,
+    // The game's own art (Civ2's) fills the picture with its units and cities, which leave much of its tiles empty.
+    fills = !hasInterfaceArt(tileset),
     pictureSize = iconPictureSize(tileset),
     // How many of the canvas's pixels make one of the picture's, for the marks; and one of the sprites', always whole.
     scale = size / iconSize,
@@ -281,15 +409,68 @@ export const drawUnitActionIcon = (
 
   layers.forEach((layer, index) => {
     if (layer.type === 'image') {
-      // An interface sprite (`city/trade`) by the art's own name for it; a map sprite (`terrain/land`) isn't in
-      //  `names.ui`, so keeps its name.
-      drawCentred(
-        context,
-        getPreloadedImage(interfaceSpriteName(layer.path, tileset), tileset),
-        0,
-        spriteScale,
-        pictureSize
+      // One of the interface's sprites (`city/trade`), from wherever the game takes it (`interfaceSprite`), fitted into
+      //  the picture; or a sprite of the art the icons are drawn with (`terrain/land`), by its own name.
+      if (layer.interface) {
+        const from = interfaceSprite(layer.path).tileset,
+          picture = getPreloadedImage(
+            interfaceSpriteName(layer.path, from),
+            from
+          );
+
+        // The theme's own sprite, as it always was; another set's, enlarged a whole number of times to most of the
+        //  picture, as a Civ2 icon is far smaller than its 64 px tile.
+        if (from === tileset && hasInterfaceArt(tileset)) {
+          drawCentred(context, picture, 0, spriteScale, pictureSize);
+        } else {
+          drawFitted(context, picture, pictureSize);
+        }
+
+        return;
+      }
+
+      const sprite = getPreloadedImage(layer.path, tileset);
+
+      // The game's own art's map sprites (Civ2's terrain, roads and mines), each a whole tile, laid where the tile is in
+      //  the middle of the picture, so a road's halves meet across it; the theme's centred by what's drawn, as ever.
+      if (fills) {
+        if (isDrawable(sprite)) {
+          const [width, height] = imageSize(sprite);
+
+          context.drawImage(
+            sprite,
+            Math.round((pictureSize - width) / 2),
+            Math.round((pictureSize - height) / 2)
+          );
+        }
+
+        return;
+      }
+
+      drawCentred(context, sprite, 0, spriteScale, pictureSize);
+
+      return;
+    }
+
+    if (layer.type === 'city' && tileset.cities.mode === 'styles') {
+      // A city of the civilization's own style, the smallest (Civ2's), as the map draws one without its flag.
+      const city = getPreloadedImage(
+        citySprite(tileset, {
+          player: { civilization: { _: layer.civilization ?? '' } } as any,
+          growth: { size: 1 } as any,
+        }),
+        tileset
       );
+
+      if (fills) {
+        drawFilled(context, city, pictureSize);
+      } else {
+        drawCentred(context, city, 0, spriteScale, pictureSize);
+      }
+
+      if (layer.text !== null) {
+        mark(layer.text);
+      }
 
       return;
     }
@@ -341,22 +522,21 @@ export const drawUnitActionIcon = (
 
     // Cargo is a stack, each unit a little further along than the last: two of the picture's pixels, in the sprites'
     //  own, so a larger tile's stack is spread as Civ1's is.
-    const offset = stacked ? (index * 2 * pictureSize) / iconSize : 0;
-
-    drawCentred(
-      context,
-      renderUnit(
+    const offset = stacked ? (index * 2 * pictureSize) / iconSize : 0,
+      unitPicture = renderUnit(
         {
           _: layer.unit._,
           player: layer.unit.player,
           improvements: layer.fortified ? [{ _: 'Fortified' } as any] : [],
         },
         tileset
-      ),
-      offset,
-      spriteScale,
-      pictureSize
-    );
+      );
+
+    if (fills) {
+      drawFilled(context, unitPicture, pictureSize, offset);
+    } else {
+      drawCentred(context, unitPicture, offset, spriteScale, pictureSize);
+    }
 
     if (layer.status) {
       mark(layer.status);

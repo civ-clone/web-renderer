@@ -6,12 +6,15 @@ import MapPortal from '@civ-clone/ui-map/MapPortal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { heldNoticeData } from '@civ-clone/ui-client/components/lib/cityBuild';
-import { drawUnitActionIcon } from '@civ-clone/ui-assets/lib/unitActionIcon';
+import { currentOrderIcons } from '@civ-clone/ui-assets/lib/orderIcons';
 import { s } from '@dom111/element';
 import showCityAction from '../lib/showCityAction';
 import showCityOnMapAction from '../lib/showCityOnMap';
 import { t } from 'i18next';
-import { interfaceSpriteKey } from '@civ-clone/ui-assets/lib/interfaceArt';
+import {
+  followInterfaceArt,
+  interfaceSpriteKey,
+} from '@civ-clone/ui-assets/lib/interfaceArt';
 
 const cityNotices = [
   'City.abandoned',
@@ -66,7 +69,8 @@ export class Notice extends Action {
   }
 
   override build(): void {
-    const { colours, notification } = this.value() as unknown as NoticeData;
+    const { civilization, colours, notification } =
+      this.value() as unknown as NoticeData;
 
     // A city we've lost is one of our cities on the map, with no size (#420).
     if (cityNotices.includes(notification.key)) {
@@ -79,9 +83,14 @@ export class Notice extends Action {
       this.append(button);
 
       // Not in the page yet, so drawn for the 16px the stylesheet shows it at, on this screen.
-      drawUnitActionIcon(button.querySelector('canvas')!, [
-        { type: 'city', text: null, colours },
-      ]);
+      const icons = currentOrderIcons(),
+        canvas = button.querySelector('canvas')!,
+        drawCity = (): void =>
+          icons.draw(canvas, icons.lostCity(colours, civilization));
+
+      drawCity();
+      // Again as the sprites change, in a game with art of its own (`followInterfaceArt`).
+      followInterfaceArt(canvas, drawCity);
 
       return;
     }
