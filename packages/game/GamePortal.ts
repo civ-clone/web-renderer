@@ -580,8 +580,11 @@ export class GamePortal extends Portal {
       asked = this.#zoomAsked(tileset);
 
     if (phase === 'start') {
-      // Held still where the fingers are, which a glide would carry off.
+      // Held still where the fingers are, which a glide would carry off. On a touch screen, the pinch is the first
+      //  finger's too: it no longer drags the map, or clicks, or opens a unit's menu as it's held.
       this.stopGlide();
+      this.#drag = null;
+      this.clearTimeout();
       this.#gesture = { from: asked, tileset, at: event.timeStamp };
 
       return;

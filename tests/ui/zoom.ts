@@ -786,7 +786,7 @@ const run = async (): Promise<void> => {
 
     setOptionDefaults();
 
-    const { portal, canvas } = gameMap('square', 1.5),
+    const { portal, canvas, clicked } = gameMap('square', 1.5),
       zoomed: number[] = [],
       anchors: unknown[] = [],
       setZoom = portal.setZoom.bind(portal);
@@ -1084,6 +1084,20 @@ const run = async (): Promise<void> => {
         return null;
       }),
       [null, [2.1], 2.1]
+    );
+
+    expect(
+      "a pinch on a touch screen is the first finger's too: let go, it isn't a click on the map",
+      (() => {
+        clicked.length = 0;
+        pointer(canvas, 'pointerdown', 100, 100);
+        pinch('gesturestart', 1);
+        pinch('gestureend', 1);
+        pointer(canvas, 'pointerup', 100, 100);
+
+        return [...clicked];
+      })(),
+      []
     );
 
     turned(() => portal.zoomBy(-50));
