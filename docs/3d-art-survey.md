@@ -60,6 +60,10 @@ Animals come rigged and animated already.
 
 ## 1. Units (people)
 
+**Decided, 2026-11-18:** the clips are retargeted onto the soldiers in Blender, by scripts run without its window. A first
+test passed: a clip baked onto a skeleton with other bones' names and another scale, exported as glTF, and played by
+three.js. The real soldiers' rest poses aren't tried yet.
+
 | # | Name | For | Author | Licence as stated | Attribution to show | Rigged / animated | Format | Polygons / textures | Look | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 1 | [MakeHuman (bundled assets) / MPFB 2 for Blender](https://github.com/makehumancommunity/makehuman/blob/master/LICENSE.md) | Generic body for every person unit | MakeHuman team | "released under CC0 1.0 Universal" ([CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)) | None required | Rigged generic human body (bundled skeletons, poses, expressions); no locomotion or combat clips | Exports FBX, DAE, OBJ, MHX2; MPFB 2 works inside Blender, then export glTF | Not stated on the licence page | Not seen in this survey (check skins and clothes) | LICENSE.md: base mesh, proxies, targets, textures, clothes, poses "have been released under CC0 1.0 Universal". On exports: "there is no limitation on what you can do with this combined output". Community assets on the MakeHuman asset site carry their own licences, so check each one. This is the CC0 body to retarget the clips below onto. |
@@ -188,6 +192,10 @@ Cross-references:
 
 ## Needs written permission
 
+**Decided, 2026-11-18:** where a model here is good, it can be tried in the 3D map as a test, behind a model list that
+makes it easy to swap out. Until I have the author's permission, which I'll ask for myself, it stays on my own machine:
+never committed or deployed.
+
 | Author | Thread or page | What to ask |
 |---|---|---|
 | Snafusmith (CivFanatics) | A lead only. Deliverator's [Moar Units – All 3D Unit Assets](https://forums.civfanatics.com/resources/moar-units-all-3d-unit-assets.26487) reportedly credits his Civ5 AH-64 Apache. Web search points to his threads, which I didn't read: [T-72 (5 skins)](https://forums.civfanatics.com/threads/civ5-soviet-modern-armor-t-72-5-skins.480570), [WW1 Tank Pack](https://forums.civfanatics.com/threads/civ5-ww1-tank-pack-8-tanks.574961) and a Flak 88 | Search results say he built his Civ5 rigs from a template by danrell, adding and renaming bones "to match what was in civ5". So only static meshes and textures could pass. Ask for CC BY 4.0, or permission to host them publicly outside Civ modding. Ask him to confirm the meshes and textures are his own. A Steam comment says he's no longer active |
@@ -209,6 +217,12 @@ The site blocks plain HTTP fetches, so I read these through a summarising fetch 
 - **sman1975** reportedly gives blanket permission to use anything in his mods, but that covers his own Civ5 mods, not other modellers' art.
 
 ## Needs a decision (permissive terms that aren't CC0 or CC BY, or made with AI)
+
+**Decided, 2026-11-18:** all three below may be used, each credited in the art credits list:
+- **CMU's motion capture:** credited to the CMU Graphics Lab, as the database asks.
+- **NASA's models:** acknowledging NASA as the source, with no NASA insignia or logotype, and each model's origin checked
+  first, as some come from other firms.
+- **mgg8's aircraft,** those made with AI assistance included: credited, and checked for markings that are wrong.
 
 - **[CMU Graphics Lab Motion Capture Database](http://mocap.cs.cmu.edu/).** The home page says "This dataset of motions is free for all uses." The FAQ says "The motion capture data may be copied, modified, or redistributed without permission." That is a clear written permission to redistribute, but not CC0, CC BY or a public-domain dedication, so it fails the strict bar. It's worth deciding on because it could fill attack and death clips. I did not check which fighting takes it holds.
 - **mgg8's CC0 aircraft** on Sketchfab (about 100, from the P-51D to the F-35B and a V-1). The licence is clear, but several say they were "Created in Blender with AI assistance", which the bar treats as needing a decision, as other AI-made uploads are unverified below. The Spitfire in table 5 says only "Created procedurally in Blender".
