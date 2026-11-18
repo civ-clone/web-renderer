@@ -50,3 +50,11 @@ i18next.addResources('en', 'ruleset', {
   'civ2-enhanced.pollution-score.description':
     'In the original, every civilization loses the same points for all the pollution in the world, except what lies around computer players’ cities.',
 });
+
+// civ2-enhanced's spaceship rule set (M2e part 2, #1008), off to start with.
+i18next.addResources('en', 'ruleset', {
+  'civ2-enhanced.computer-launch-wait.name':
+    'Above King, a computer player holds its spaceship back while a rival computer player’s ship would arrive first',
+  'civ2-enhanced.computer-launch-wait.description':
+    'The original means its computer players to wait like this, but a slip in the game compares their arrival with a ship that never flies, so none of them ever waits.',
+});
