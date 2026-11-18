@@ -6,7 +6,7 @@
 //  load puts it back, and that the civilopedia stops saying a unit goes obsolete in a game where it doesn't. And, with
 //  sets of its own in rules of its own (#954), that what is wrong with the sets goes to the page with each answer, and
 //  that a game is not started or loaded under sets with a problem that blocks. With the plugins again, the enhanced
-//  rules (`civ1-enhanced`, #954, #959, #960): where play departs from the original, each of the seventeen a set that a
+//  rules (`civ1-enhanced`, #954, #959, #960): where play departs from the original, each of the eighteen a set that a
 //  game can switch back, as it starts (all but the seven new variants on, which is play as it has been: the Hydro Plant
 //  on its own square, SDI Defense sparing its city, defectors staying veteran, fixed research costs, ages, research
 //  cost by age, the barbarians' activity), switched, started, saved and loaded. The barbarians' activity (#1008) is a
@@ -41,6 +41,7 @@ import {
   HYDRO_PLANT_SITE,
   OBSOLETE_BUILDS,
   POLLUTION_IN_EVERY_CITY,
+  RAILROADS_IN_CITIES,
   SDI_DEFENSE_SPARES_CITIES,
   SETTLERS_WAIT_FOR_SIZE_TWO,
   STARTING_ADVANCES_COUNT,
@@ -62,6 +63,7 @@ import {
   LAND_UPRISING_RULE,
   POLLUTION_RULE,
   RAIDERS_ONLY_RULE,
+  RAILROAD_IN_CITIES_RULE,
   RANSOM_RULE,
   REVALIDATE_BUILDS_RULE,
   SETTLERS_WAIT_RULE,
@@ -72,6 +74,8 @@ import {
 import {
   CHIEFTAIN_SETTLERS_RULE as CIV1_CHIEFTAIN_SETTLERS_RULE,
   HALVE_CITIES_RULE as CIV1_HALVE_CITIES_RULE,
+  NO_RAILROAD_IN_CITIES_RULE as CIV1_NO_RAILROAD_IN_CITIES_RULE,
+  RAILROAD_MOVEMENT_RULE as CIV1_RAILROAD_MOVEMENT_RULE,
   START_AFRESH_RULE as CIV1_START_AFRESH_RULE,
   STEAL_RULE as CIV1_STEAL_RULE,
 } from '@civ-clone/civ1-unit/RuleIds';
@@ -406,6 +410,13 @@ const check = async (): Promise<void> => {
       ],
       // #1008: a rule added to Civ1's, answering civ1-barbarians' activity level with the level chosen beneath it.
       [BARBARIAN_ACTIVITY, BARBARIAN_ACTIVITY_RULE, null],
+      // #1029: today's railroads, on to start with, in place of v474.05's refusal of a city's Railroad and its
+      //  movement; the city's rule stands for both of its own.
+      [
+        RAILROADS_IN_CITIES,
+        RAILROAD_IN_CITIES_RULE,
+        [CIV1_NO_RAILROAD_IN_CITIES_RULE, CIV1_RAILROAD_MOVEMENT_RULE],
+      ],
     ],
     // The new variants, each off to start with.
     startsOff = [
@@ -451,7 +462,7 @@ const check = async (): Promise<void> => {
     asStarted = ruleSetsData(null);
 
   expect(
-    'the enhanced rules are a set the setup is told of, mixed: the seven new variants off, the other ten on, as the game has been played; nothing is chosen, and nothing is wrong',
+    'the enhanced rules are a set the setup is told of, mixed: the seven new variants off, the other eleven on, as the game has been played; nothing is chosen, and nothing is wrong',
     [enhanced(asStarted.sets), asStarted.choices, asStarted.problems],
     [['set', 'mixed', true, drawn(asPlayed)], [], []]
   );
@@ -667,6 +678,7 @@ const check = async (): Promise<void> => {
       { id: SDI_DEFENSE_SPARES_CITIES, value: true },
       { id: SETTLERS_WAIT_FOR_SIZE_TWO, value: false },
       { id: STARTING_ADVANCES_COUNT, value: false },
+      { id: RAILROADS_IN_CITIES, value: false },
     ],
     enhancedOn = [HYDRO_PLANT_SITE, OBSOLETE_BUILDS, SDI_DEFENSE_SPARES_CITIES];
 

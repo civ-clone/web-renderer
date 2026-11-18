@@ -114,7 +114,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1190,
+        "total": 1193,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -140,6 +140,7 @@
           "BuildingCancelled": 2,
           "BuildingComplete": 11,
           "BuildingHeld": 1,
+          "BuildOnCitySquare": 2,
           "BuildPriority": 18,
           "BuildWeight": 2,
           "Built": 12,
@@ -187,7 +188,7 @@
           "MilitaryStrength": 1,
           "MilitaryUnhappinessTolerance": 2,
           "Moved": 15,
-          "MovementCost": 18,
+          "MovementCost": 19,
           "Obsolete": 1,
           "OverseasSettlers": 1,
           "Pacified": 3,
@@ -374,7 +375,7 @@
       "randomCalls": 8643,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1190,
+        "total": 1193,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -400,6 +401,7 @@
           "BuildingCancelled": 2,
           "BuildingComplete": 11,
           "BuildingHeld": 1,
+          "BuildOnCitySquare": 2,
           "BuildPriority": 18,
           "BuildWeight": 2,
           "Built": 12,
@@ -447,7 +449,7 @@
           "MilitaryStrength": 1,
           "MilitaryUnhappinessTolerance": 2,
           "Moved": 15,
-          "MovementCost": 18,
+          "MovementCost": 19,
           "Obsolete": 1,
           "OverseasSettlers": 1,
           "Pacified": 3,
@@ -827,7 +829,7 @@
       "randomCalls": 8902,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1190,
+        "total": 1193,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -853,6 +855,7 @@
           "BuildingCancelled": 2,
           "BuildingComplete": 11,
           "BuildingHeld": 1,
+          "BuildOnCitySquare": 2,
           "BuildPriority": 18,
           "BuildWeight": 2,
           "Built": 12,
@@ -900,7 +903,7 @@
           "MilitaryStrength": 1,
           "MilitaryUnhappinessTolerance": 2,
           "Moved": 15,
-          "MovementCost": 18,
+          "MovementCost": 19,
           "Obsolete": 1,
           "OverseasSettlers": 1,
           "Pacified": 3,

@@ -583,3 +583,19 @@ at turns 1, 10 and 50 rise from 1184 to 1190 (`Activity` 0 → 1,
 The checksums (`99a58e61 / e7ec61bb / 781cb858`), state counts, DTO hashes and
 random-call counts are unchanged. So are the 16 seeds (1–8, 41–48) at 150
 turns, with the set off and with it switched on at Active, v474.05's numbers.
+
+## Accepted change: rule counts, railroads and cities (#1029)
+
+civ1-unit 0.1.47 follows v474.05: Settlers build no Railroad on a city's square,
+and a land unit moves for nothing from a square with a Railroad and a Road to
+one with a Road. The refusal is a new `BuildOnCitySquare` rule. civ1-enhanced
+0.1.13's `railroads-in-cities` set, on to start with, supersedes both of
+civ1-unit's rules with today's: a city may have a Railroad, and a unit moves
+for nothing only between two Railroads. So the rule totals at turns 1, 10 and
+50 rise from 1190 to 1193 (`BuildOnCitySquare` 0 → 2, `MovementCost` 18 → 19),
+and nothing else in the fixture changes.
+
+The checksums (`99a58e61 / e7ec61bb / 781cb858`), state counts, DTO hashes and
+random-call counts are unchanged, as the set is on. With the set off (`--set
+civ1`), 8 seeds played to turn 500 end clean, with up to 348 Railroads a
+game and none built on a city's square.
