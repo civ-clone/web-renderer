@@ -29,7 +29,7 @@ import { ChunkMesh } from './terrain/chunks';
 import { MarkerKit, drawMarker } from './markers/drawMarker';
 import { TileMarker } from './markers/markerFor';
 import { FIELD_OF_VIEW, Orbit, eye, sightFor } from './camera/orbit';
-import Water, { Ground } from './water';
+import Water, { Clouds, Ground } from './water';
 
 /** What the stage has drawn, for the debug overlay. */
 export type StageStats = {
@@ -143,6 +143,7 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
     markersGroup = new Group(),
     kit = new MarkerKit(),
     water = new Water(ground, new Color(SKY)),
+    clouds = new Clouds(water.texture(), ground),
     fog = new Fog(SKY, 30, 110);
 
   // The copies of the world drawn now, and their key, to tell when they change.
@@ -162,6 +163,7 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
   scene.add(land);
   scene.add(markersGroup);
   scene.add(water.mesh);
+  scene.add(clouds.mesh);
 
   // From the south-east and well up, so slopes facing it are lit and the far sides of ridges fall into shade.
   sun.position.set(30, 40, 20);
@@ -222,6 +224,7 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
       far * 2.2,
       sun.position.clone().sub(sun.target.position)
     );
+    clouds.follow(u, v, far * 2.2);
 
     // The copies of the world the haze doesn't hide: when they change, every chunk is drawn at the new ones.
     const inSight = copiesNear(orbit.focus, far, period),
@@ -324,6 +327,7 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
       markers.clear();
       kit.dispose();
       water.dispose();
+      clouds.dispose();
       material.dispose();
       renderer.dispose();
     },

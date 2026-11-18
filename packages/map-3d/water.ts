@@ -5,6 +5,9 @@
 // How deep the water is comes from the land's own heights: each chunk, as it's built, writes its points' heights into a
 //  texture the size of the ground (`Ground`), which the surface reads where it's drawn. The texture repeats as the
 //  world does, so the surface needs no copies: it's one square of water as wide as the camera sees, under the camera.
+//
+// The same texture says which points are on squares never seen: no water is drawn there, and cloud covers them (§4.5),
+//  a soft layer above the highest land, thinning over a short edge, broken up by noise.
 
 import {
   ClampToEdgeWrapping,
@@ -15,7 +18,7 @@ import {
   LinearFilter,
   Mesh,
   PlaneGeometry,
-  RedFormat,
+  RGFormat,
   RepeatWrapping,
   ShaderMaterial,
   UniformsLib,
@@ -75,10 +78,11 @@ varying vec3 vWorld;
 void main() {
   // The land's height here, from its points, each a texel's middle.
   vec2 uv = (vWorld.xz / cell + 0.5) / size;
-  float depth = -texture2D(ground, uv).r;
+  vec4 here = texture2D(ground, uv);
+  float depth = -here.r;
 
-  // The land is above the water here: none to draw.
-  if (depth <= 0.0) {
+  // The land is above the water here, or it's never been seen: none to draw.
+  if (depth <= 0.0 || here.g > 0.01) {
     discard;
   }
 
@@ -112,15 +116,20 @@ export class Water {
 
   constructor(ground: Ground, sky: Color) {
     this.#ground = ground;
-    // Half floats, which every WebGL2 can filter: at sea level, -0.2 to 1, they're good to a thousandth.
-    this.#heights = new Uint16Array(ground.columns * ground.rows).fill(
-      DataUtils.toHalfFloat(0)
-    );
+    // Half floats, which every WebGL2 can filter: at sea level, -0.2 to 1, they're good to a thousandth. Two a point:
+    //  its height, and whether it's never been seen, which nothing has been yet.
+    this.#heights = new Uint16Array(ground.columns * ground.rows * 2);
+
+    for (let at = 0; at < this.#heights.length; at += 2) {
+      this.#heights[at] = DataUtils.toHalfFloat(0);
+      this.#heights[at + 1] = DataUtils.toHalfFloat(1);
+    }
+
     this.#texture = new DataTexture(
       this.#heights,
       ground.columns,
       ground.rows,
-      RedFormat,
+      RGFormat,
       HalfFloatType
     );
     this.#texture.wrapS = RepeatWrapping;
@@ -176,9 +185,12 @@ export class Water {
           Math.round((mesh.positions[point * 3 + 2] ?? 0) / spacingV);
 
       if (column >= 0 && column < columns && row >= 0 && row < rows) {
-        this.#heights[row * columns + column] = DataUtils.toHalfFloat(
+        const at = (row * columns + column) * 2;
+
+        this.#heights[at] = DataUtils.toHalfFloat(
           mesh.positions[point * 3 + 1] ?? 0
         );
+        this.#heights[at + 1] = DataUtils.toHalfFloat(mesh.unseen[point] ?? 0);
       }
     }
 
@@ -188,8 +200,22 @@ export class Water {
   /** The land's height the surface reads at the ground's point `column` across and `row` down. */
   height(column: number, row: number): number {
     return DataUtils.fromHalfFloat(
-      this.#heights[row * this.#ground.columns + column] ?? 0
+      this.#heights[(row * this.#ground.columns + column) * 2] ?? 0
     );
+  }
+
+  /** Whether the ground's point `column` across and `row` down is on a square never seen, as the cloud reads it. */
+  unseen(column: number, row: number): boolean {
+    return (
+      DataUtils.fromHalfFloat(
+        this.#heights[(row * this.#ground.columns + column) * 2 + 1] ?? 0
+      ) > 0.5
+    );
+  }
+
+  /** The texture the land's heights and unseen points are in, for the cloud. */
+  texture(): DataTexture {
+    return this.#texture;
   }
 
   /** The surface under the camera, round (`u`, `v`), `across` wide, and the sun's direction for its glint. */
@@ -207,3 +233,107 @@ export class Water {
 }
 
 export default Water;
+
+const cloudFragmentShader = /* glsl */ `
+#include <common>
+#include <fog_pars_fragment>
+
+uniform sampler2D ground;
+uniform vec2 cell;
+uniform vec2 size;
+
+varying vec3 vWorld;
+
+// Value noise, from a hash of the lattice's corners.
+float lattice(vec2 point) {
+  return fract(sin(dot(point, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+float noise(vec2 point) {
+  vec2 corner = floor(point),
+    along = fract(point),
+    eased = along * along * (3.0 - 2.0 * along);
+
+  return mix(
+    mix(lattice(corner), lattice(corner + vec2(1.0, 0.0)), eased.x),
+    mix(lattice(corner + vec2(0.0, 1.0)), lattice(corner + vec2(1.0, 1.0)), eased.x),
+    eased.y
+  );
+}
+
+float unseenAt(vec2 point) {
+  return texture2D(ground, (point / cell + 0.5) / size).g;
+}
+
+void main() {
+  // Softened over a short edge: how much of the ground round here has never been seen.
+  float unseen = 0.0;
+
+  for (int i = -1; i <= 1; i++) {
+    for (int j = -1; j <= 1; j++) {
+      unseen += unseenAt(vWorld.xz + vec2(float(i), float(j)) * 0.18);
+    }
+  }
+
+  unseen /= 9.0;
+
+  float puff = noise(vWorld.xz * 1.4) * 0.6 + noise(vWorld.xz * 3.7) * 0.4,
+    alpha = smoothstep(0.3, 0.7, unseen + (puff - 0.5) * 0.45);
+
+  if (alpha <= 0.0) {
+    discard;
+  }
+
+  gl_FragColor = vec4(mix(vec3(0.62, 0.67, 0.74), vec3(0.94, 0.95, 0.97), puff), alpha);
+
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+  #include <fog_fragment>
+}
+`;
+
+/** How high the cloud over the squares never seen floats, in world units: over the land round them. */
+export const CLOUD_HEIGHT = 0.18;
+
+/** The cloud over the squares never seen (§4.5), reading where they are from the water's texture. */
+export class Clouds {
+  readonly mesh: Mesh<PlaneGeometry, ShaderMaterial>;
+
+  constructor(texture: DataTexture, ground: Ground) {
+    const material = new ShaderMaterial({
+      uniforms: UniformsUtils.merge([
+        UniformsLib.fog,
+        {
+          ground: { value: null },
+          cell: { value: new Vector2() },
+          size: { value: new Vector2() },
+        },
+      ]),
+      vertexShader,
+      fragmentShader: cloudFragmentShader,
+      fog: true,
+      transparent: true,
+      depthWrite: false,
+    });
+
+    material.uniforms['ground']!.value = texture;
+    material.uniforms['cell']!.value.set(ground.spacingU, ground.spacingV);
+    material.uniforms['size']!.value.set(ground.columns, ground.rows);
+
+    this.mesh = new Mesh(new PlaneGeometry(1, 1), material);
+    this.mesh.rotation.x = -Math.PI / 2;
+    // Over the land and the sea, which it's drawn after.
+    this.mesh.renderOrder = 2;
+  }
+
+  /** The cloud under the camera, round (`u`, `v`), `across` wide. */
+  follow(u: number, v: number, across: number): void {
+    this.mesh.position.set(u, CLOUD_HEIGHT, v);
+    this.mesh.scale.set(across, across, 1);
+  }
+
+  dispose(): void {
+    this.mesh.geometry.dispose();
+    this.mesh.material.dispose();
+  }
+}

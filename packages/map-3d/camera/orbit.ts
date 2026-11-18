@@ -301,6 +301,6 @@ export const between = (
 
 /** How far the camera sees before the haze hides everything, for an orbit `distance` from its focus. */
 export const sightFor = (distance: number): { near: number; far: number } => ({
-  near: distance * 1.3,
-  far: distance * 5,
+  near: distance * 1.2,
+  far: distance * 3.5,
 });

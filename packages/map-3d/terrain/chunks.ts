@@ -29,6 +29,8 @@ export type ChunkMesh = {
   positions: Float32Array;
   normals: Float32Array;
   colours: Float32Array;
+  // 1 at each point on a square never seen, and 0 elsewhere, for the cloud over them.
+  unseen: Float32Array;
   indices: Uint32Array;
 };
 
@@ -83,17 +85,20 @@ export const buildChunk = (
     across = stepsU + 3,
     heights = new Float64Array(across * (stepsV + 3)),
     points = (stepsU + 1) * (stepsV + 1),
-    colours = new Float32Array(points * 3);
+    colours = new Float32Array(points * 3),
+    unseen = new Float32Array(points);
 
   // Each point sampled once: its height, and its colour if it's the chunk's own.
   for (let b = -1; b <= stepsV + 1; b++) {
     for (let a = -1; a <= stepsU + 1; a++) {
-      const { height, colour } = relief.sample(...at(firstU + a, firstV + b));
+      const sampled = relief.sample(...at(firstU + a, firstV + b)),
+        { height, colour } = sampled;
 
       heights[(b + 1) * across + (a + 1)] = height;
 
       if (a >= 0 && a <= stepsU && b >= 0 && b <= stepsV) {
         colours.set(colour, (b * (stepsU + 1) + a) * 3);
+        unseen[b * (stepsU + 1) + a] = sampled.unseen ? 1 : 0;
       }
     }
   }
@@ -140,7 +145,15 @@ export const buildChunk = (
     }
   }
 
-  return { u: originU, v: originV, positions, normals, colours, indices };
+  return {
+    u: originU,
+    v: originV,
+    positions,
+    normals,
+    colours,
+    unseen,
+    indices,
+  };
 };
 
 /**

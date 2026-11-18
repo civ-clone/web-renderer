@@ -41,7 +41,12 @@ export type ReliefSource = {
 };
 
 /** A point's height, in world units, and its colour, as linear red, green and blue from 0 to 1. */
-export type GroundSample = { height: number; colour: [number, number, number] };
+export type GroundSample = {
+  height: number;
+  colour: [number, number, number];
+  // Whether the point is on a square never seen, which cloud covers.
+  unseen: boolean;
+};
 
 export interface ReliefMap {
   sample(u: number, v: number): GroundSample;
@@ -311,7 +316,7 @@ export const createRelief = ({
 
     // Never seen, or off a world that doesn't wrap over the poles: flat, at sea level.
     if (ownSquare === null || ownSquare.unknown) {
-      return { height: 0, colour: linear(unknownTerrain.colour) };
+      return { height: 0, colour: linear(unknownTerrain.colour), unseen: true };
     }
 
     // Each noise at this point, once it's asked for.
@@ -392,6 +397,7 @@ export const createRelief = ({
         shades > 0
           ? [red / shades, green / shades, blue / shades]
           : ownSquare.colour,
+      unseen: false,
     };
   };
 

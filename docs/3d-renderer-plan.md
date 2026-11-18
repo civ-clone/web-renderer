@@ -237,8 +237,13 @@ Building another world from the form starts it in the middle again.
   meets the land, the sky in it at a low angle, and the sun's glint.
 - **Shadows:** the sun casts one shadow map, fitted round the camera's focus as it moves and zooms. The land shadows
   itself, and markers cast shadows on it.
+- **Cloud** over the squares never seen (§4.5): a layer just over the land, reading which points are unseen from the
+  same texture, softened over a short edge and broken up by noise. No water is drawn under it.
 - **Still to do:** the sky and its environment map, waves (they need frames all the time: for the quality presets,
-  M6), lakes at their own height, and cloud over the squares never seen (§4.5).
+  M6), lakes at their own height, and the cloud clearing as squares are seen (it goes at once).
+- **Cost:** at the default distance, about 1,500 draw calls and 3 million triangles a frame on an 80×50 world, more
+  zoomed out: each marker is several meshes, and the land and markers are drawn at every copy in sight, and again
+  for the shadows. Instancing the markers and coarser distant chunks are for M6.
 
 - **What:**
   - the sea surface with depth tint and shore foam;

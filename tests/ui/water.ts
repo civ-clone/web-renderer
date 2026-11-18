@@ -50,6 +50,10 @@ const ground = {
       positions,
       normals: new Float32Array(27),
       colours: new Float32Array(27),
+      // The middle point alone on a square never seen.
+      unseen: new Float32Array(9)
+        .fill(0)
+        .map((_, point) => (point === 4 ? 1 : 0)),
       indices: new Uint32Array(0),
     };
   },
@@ -72,6 +76,11 @@ expect(
     )
   ),
   [true, true, true, true, true, true, true, true, true]
+);
+expect(
+  'with which of them are on squares never seen, for the cloud; nothing is seen before it’s built',
+  [water.unseen(5, 3), water.unseen(4, 2), water.unseen(0, 0)],
+  [true, false, true]
 );
 expect(
   'and nothing round it',
