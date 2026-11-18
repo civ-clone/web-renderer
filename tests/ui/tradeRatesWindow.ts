@@ -470,11 +470,20 @@ const liveAndCancel = async (): Promise<void> => {
   move(ending.element(), 0, 30);
   await wait(tradeRatesDelay + 50);
 
-  const heldWhileEnding = sent.length - beforeEnding;
+  const heldWhileEnding = sent.length - beforeEnding,
+    endingNote = ending
+      .element()
+      .querySelector('.adjust-trade-rates-held') as HTMLElement,
+    noteBeforeTurnEnded = !endingNote.hidden;
 
-  // Accepted: the answer, then `turnEnded`.
-  setTradeRatesEndingTurn(false);
+  // Accepted: `GameSession` leaves the ending as it is, and `turnEnded` follows.
   setTradeRatesWaiting(true);
+
+  expect(
+    'the note shows while the move is held, and goes as the turn ends',
+    [noteBeforeTurnEnded, endingNote.hidden, endingNote.textContent],
+    [true, true, '']
+  );
   await wait(tradeRatesDelay + 50);
 
   expect(
@@ -502,6 +511,8 @@ const liveAndCancel = async (): Promise<void> => {
   heldShown.push(!heldNote.hidden);
   move(refused.element(), 0, 30);
   heldShown.push(!heldNote.hidden);
+
+  const heldText = heldNote.textContent;
   await wait(tradeRatesDelay + 50);
 
   const whileAwaiting = sent.length - beforeRefused;
@@ -512,7 +523,7 @@ const liveAndCancel = async (): Promise<void> => {
 
   expect(
     'a move held for End Turn’s answer is said, until the answer comes (#1183)',
-    [heldShown, heldNote.textContent],
+    [heldShown, heldText],
     [
       [false, true, false],
       'Ending your turn: these rates are applied only if it goes on.',

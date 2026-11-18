@@ -577,11 +577,16 @@ export const openTradeRates = (
     );
 
   waitingNote.textContent = text('Game.waiting');
-  heldNote.textContent = text('Actions.AdjustTradeRates.held');
   rateRows.after(waitingNote, heldNote);
 
   showHeld = (): void => {
-    heldNote.hidden = !(endingTurn && !waitingForTurn && !same(values(), sent));
+    // Only rates that can be set, which those that can't come to 100 under their maximums can't.
+    const held =
+      endingTurn && !waitingForTurn && sendable() && !same(values(), sent);
+
+    // The text is put in as it shows, as a screen reader says a status when its text changes, not when it's unhidden.
+    heldNote.hidden = !held;
+    heldNote.textContent = held ? text('Actions.AdjustTradeRates.held') : '';
   };
 
   showWaiting = (): void => {
