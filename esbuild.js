@@ -11,6 +11,9 @@
         'src/js/frontend.ts',
         // Its own file, for `audioWorklet.addModule()` (#126): dist/musicWorklet.js.
         'packages/audio/musicWorklet.ts',
+        // The 3D map (docs/3d-renderer.md §2.4): dist/map3d.js, fetched the first time a game starts in 3D, so the 2D
+        //  map's players never download three.js.
+        'packages/map-3d/map3d.ts',
       ],
       bundle: true,
       keepNames: true,

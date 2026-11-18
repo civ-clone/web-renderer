@@ -1,0 +1,240 @@
+// The 3D map (`MapRenderer`, docs/3d-renderer.md §2.1), behind `?3d=1` until it shows everything the 2D map does (§11).
+//
+// This is slice 0.2's: an empty, lit scene where the map was, so that a game runs under it, with every window working
+//  and its tile patches taken. What it shows comes slice by slice:
+//  - the land in 1.1;
+//  - the camera, centring and zoom in 1.2;
+//  - picking squares, hovering and hiding the units in 1.3.
+//  - the minimap's view of it in 1.5: it's left empty until then.
+// Until then, what the game asks of it is kept or let go as below, and a long-range order's square can't be picked: the
+//  order is given up, as if the player had.
+//
+// Reaches beyond its canvas in one place, as the 2D map does: the `window` `resize` handler and an observer of the
+//  canvas's parent, which size the canvas to it.
+
+import { Coordinate, Tile, Unit } from '@civ-clone/ui-protocol/types';
+import { MapEvent } from '@civ-clone/ui-protocol/mapEvents';
+import { MapView3DDeps } from '@civ-clone/ui-map/MapView3DFactory';
+import MapPortal3D from './MapPortal3D';
+import MapRenderer from '@civ-clone/ui-map/MapRenderer';
+import World from '@civ-clone/ui-map/components/World';
+import { Stage, StageFactory, createStage } from './stage';
+
+export class MapView3D implements MapRenderer {
+  readonly portal: MapPortal3D;
+  readonly world: World;
+
+  #canvas: HTMLCanvasElement;
+  #stage: Stage;
+  // A frame asked for to draw in, if one is.
+  #frame: number | null = null;
+  // Keyed by the square, as the 2D map's: a tile waits in `#incomingTiles` until the world has it (`releaseTiles`).
+  #incomingTiles = new Map<string, Tile>();
+  #tilesToDraw = new Map<string, Tile>();
+  #activeUnit: Unit | null = null;
+  #pendingTile: Coordinate | null = null;
+  #unitsShown = true;
+  #yieldsShown = false;
+  #waiting = false;
+  // The 2D art the city screen and windows draw with, as it was when last asked.
+  #art: MapView3DDeps['art'];
+  #artId: string;
+  // The canvas's box and the screen's pixels per px it was last sized to, as `width×height@ratio`.
+  #size = '';
+  #resizeHandler = (): void => this.#resize();
+  #resizeObserver: ResizeObserver | null = null;
+  #disposed = false;
+
+  constructor(deps: MapView3DDeps, stageFactory: StageFactory = createStage) {
+    this.#canvas = deps.mapCanvas;
+    this.#art = deps.art;
+    this.#artId = deps.art.id();
+    this.world = deps.world;
+    this.portal = new MapPortal3D(deps, () => this.#draw());
+    this.#stage = stageFactory(deps.mapCanvas);
+
+    this.portal.on('activate-unit', (unit) => deps.activateUnit(unit));
+
+    window.addEventListener('resize', this.#resizeHandler);
+
+    // Not everywhere the map is built has one (the tests' DOM doesn't).
+    if (typeof ResizeObserver !== 'undefined' && deps.mapCanvas.parentElement) {
+      this.#resizeObserver = new ResizeObserver(this.#resizeHandler);
+      this.#resizeObserver.observe(deps.mapCanvas.parentElement);
+    }
+
+    this.#resize();
+  }
+
+  /** The unit active now, and where it's drawn while its move is answered. */
+  activeUnit(): { unit: Unit | null; pendingTile: Coordinate | null } {
+    return { unit: this.#activeUnit, pendingTile: this.#pendingTile };
+  }
+
+  centre(tile: Tile): void {
+    this.portal.setCenter(tile.x, tile.y);
+  }
+
+  /** Nothing to flip yet: the stress runner's view modes are the 2D map's layers. */
+  debugViewModes(): (() => void)[] {
+    return [];
+  }
+
+  dispose(): void {
+    this.#disposed = true;
+    window.removeEventListener('resize', this.#resizeHandler);
+    this.#resizeObserver?.disconnect();
+
+    if (this.#frame !== null && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(this.#frame);
+    }
+
+    this.#frame = null;
+    this.#stage.dispose();
+  }
+
+  endPicking(): void {}
+
+  /** The tiles released so far are taken, and the map drawn. */
+  flush(): void {
+    this.#tilesToDraw.clear();
+    this.#draw();
+  }
+
+  /** Nothing is animated yet (slice 2.3). */
+  mapEvent(event: MapEvent): void {
+    void event;
+  }
+
+  /** Nothing floats over anything to keep the active unit out from under yet (slice 1.2). */
+  measureCovered(): void {}
+
+  /** No square can be picked yet (slice 1.3): the order is given up, as if the player had. */
+  pickTile(
+    accept: (tile: Tile) => boolean,
+    onPick: (tile: Tile) => void,
+    prompt: string
+  ): void {
+    void [accept, onPick, prompt];
+  }
+
+  picking(): boolean {
+    return false;
+  }
+
+  queueTile(tile: Tile): void {
+    this.#incomingTiles.set(`${tile.x},${tile.y}`, tile);
+  }
+
+  /**
+   * The 3D map isn't drawn with the 2D art, but the unit panel and windows are, so another set chosen mid-game (#1118)
+   *  is `redrawn`, for the game to draw them again with it.
+   */
+  redrawArt(): 'redrawn' | 'unchanged' {
+    const id = this.#art.id();
+
+    if (id === this.#artId) {
+      return 'unchanged';
+    }
+
+    this.#artId = id;
+
+    return 'redrawn';
+  }
+
+  releaseTiles(): void {
+    this.#incomingTiles.forEach((tile, key) =>
+      this.#tilesToDraw.set(key, tile)
+    );
+    this.#incomingTiles.clear();
+  }
+
+  setActiveUnit(unit: Unit | null, pendingTile?: Coordinate | null): void {
+    this.#activeUnit = unit;
+    this.#pendingTile = pendingTile ?? null;
+  }
+
+  setWaiting(waiting: boolean): void {
+    this.#waiting = waiting;
+  }
+
+  /**
+   * Brings the units back if they were hidden (`t`), as the 2D map does for a unit to give orders to. The squares it
+   *  changed are drawn with the units (slice 2.1).
+   */
+  showActiveUnit(changed: Tile[]): void {
+    void changed;
+
+    this.#unitsShown = true;
+  }
+
+  /** Whether the units, the yields, and waiting for the next turn are shown, as asked. */
+  shown(): { units: boolean; yields: boolean; waiting: boolean } {
+    return {
+      units: this.#unitsShown,
+      yields: this.#yieldsShown,
+      waiting: this.#waiting,
+    };
+  }
+
+  tilesPending(): number {
+    return this.#tilesToDraw.size;
+  }
+
+  toggleUnits(): void {
+    this.#unitsShown = !this.#unitsShown;
+  }
+
+  toggleYields(): void {
+    this.#yieldsShown = !this.#yieldsShown;
+  }
+
+  /** The camera's zoom is slice 1.2's. */
+  zoomBy(steps: number): void {
+    void steps;
+  }
+
+  // Drawn on the next frame, once however often it's asked for in one.
+  #draw(): void {
+    // Taken down: nothing left to draw on.
+    if (this.#disposed) {
+      return;
+    }
+
+    if (typeof requestAnimationFrame !== 'function') {
+      this.#stage.render();
+
+      return;
+    }
+
+    if (this.#frame !== null) {
+      return;
+    }
+
+    this.#frame = requestAnimationFrame(() => {
+      this.#frame = null;
+      this.#stage.render();
+    });
+  }
+
+  // Sized to its parent's box, only when that or the screen's pixels have changed: sizing a canvas clears it, even to
+  //  the size it has (as `MapView2D#resize` says). Drawn at once, so a resize never shows a cleared canvas for a frame.
+  //  A box with no size yet (a layout not settled) is left until it has one.
+  #resize(): void {
+    const parent = this.#canvas.parentElement,
+      width = parent?.offsetWidth ?? 0,
+      height = parent?.offsetHeight ?? 0,
+      ratio = window.devicePixelRatio || 1,
+      size = `${width}×${height}@${ratio}`;
+
+    if (width === 0 || height === 0 || size === this.#size) {
+      return;
+    }
+
+    this.#size = size;
+    this.#stage.resize(width, height, ratio);
+    this.#stage.render();
+  }
+}
+
+export default MapView3D;

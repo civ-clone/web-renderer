@@ -1,0 +1,16 @@
+{
+  "name": "@civ-clone/ui-map-3d",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The 3D map (docs/3d-renderer.md): a script of its own, dist/map3d.js, which the page fetches the first time a game starts in 3D. Behind ?3d=1 until it shows everything the 2D map does.",
+  "license": "MIT",
+  "dependencies": {
+    "@civ-clone/ui-client": "workspace:*",
+    "@civ-clone/ui-map": "workspace:*",
+    "@civ-clone/ui-protocol": "workspace:*"
+  },
+  "peerDependencies": {
+    "@dom111/typed-event-emitter": "^0.1.2",
+    "three": "0.187.0"
+  }
+}

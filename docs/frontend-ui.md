@@ -29,7 +29,8 @@ rest for each game.
 
 1. Read query parameters (`?debug=1` turns on local-player automation and the UI
    stress runner, see [`ui-stress-harness.md`](ui-stress-harness.md); `?cheat=1`
-   shows the cheat menu items).
+   shows the cheat menu items; `?3d=1` draws the game on the 3D map, not yet
+   offered, see [`3d-renderer.md`](3d-renderer.md) §2.4).
 2. Decode the tileset's sprites (`assetStore.load()`, #730), so nothing is drawn
    before they are there, then verify assets via `assetStore.hasAllAssets()` and
    configure cursor.

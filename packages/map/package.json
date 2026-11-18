@@ -35,7 +35,8 @@
     "./lib/supportedTopologies": "./lib/supportedTopologies.ts",
     "./lib/viewport": "./lib/viewport.ts",
     "./MapPortal": "./MapPortal.ts",
-    "./MapRenderer": "./MapRenderer.ts"
+    "./MapRenderer": "./MapRenderer.ts",
+    "./MapView3DFactory": "./MapView3DFactory.ts"
   },
   "peerDependencies": {
     "@civ-clone/core-registry": "^0.1.6",
