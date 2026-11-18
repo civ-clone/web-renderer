@@ -607,8 +607,9 @@ expect(
 
   expect(
     'loaded, it gives the factory it put on the page',
-    await loaded,
-    factory3D
+    // By identity: `expect` compares by JSON, which a function has none of.
+    (await loaded) === factory3D,
+    true
   );
 
   delete (window as any)[MAP3D_GLOBAL];
@@ -648,8 +649,8 @@ expect(
 
   expect(
     'a script that arrived late is taken as it is, with no second tag',
-    [await loadMap3DScript(), tags() - tagsBefore],
-    [factory3D, 0]
+    [(await loadMap3DScript()) === factory3D, tags() - tagsBefore],
+    [true, 0]
   );
 
   delete (window as any)[MAP3D_GLOBAL];
