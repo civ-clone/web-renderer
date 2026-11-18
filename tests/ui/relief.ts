@@ -10,6 +10,8 @@ import topologyFor, { Topology } from '@civ-clone/ui-client/lib/topologyFor';
 import groundLayoutFor, { GroundLayout } from '@civ-clone/ui-map-3d/layouts';
 import createRelief, {
   ReliefSource,
+  WANDER,
+  peakOf,
 } from '@civ-clone/ui-map-3d/terrain/relief';
 import { TopologyId } from '@civ-clone/ui-protocol/topology';
 
@@ -203,17 +205,64 @@ ids.forEach((topologyId) => {
       topologyId: 'square',
       wrapsY: true,
     }),
+    // A seed whose peak at (5, 5) stands at its square's middle, at its terrain's height, near enough: the peak's fall
+    //  measured from the middle, as if it didn't wander.
+    still =
+      Array.from({ length: 2000 }, (_, n) => n + 1).find((seed) => {
+        const { u, v, scale } = peakOf(5, 5, seed);
+
+        return Math.hypot(u, v) < 0.02 && Math.abs(scale - 1) < 0.05;
+      }) ?? 1,
     lone = createRelief({
       layout,
+      seed: still,
       source: sourceFor(topology, (x, y) =>
         x === 5 && y === 5 ? 'Mountains' : 'Grassland'
       ),
     }),
     plain = createRelief({
       layout,
+      seed: still,
       source: sourceFor(topology, () => 'Grassland'),
     }),
     middle = (x: number, y: number) => lone.height(...layout.centre(x, y));
+
+  // Elsewhere, peaks wander off their squares' middles, by as much as `WANDER`, and some are taller than others.
+  const wandering = Array.from({ length: 25 }, (_, n) =>
+      peakOf(n % 5, Math.floor(n / 5), 1)
+    ),
+    [peakX, peakY] = layout.centre(5, 5),
+    { u: offU, v: offV } = peakOf(5, 5, 1),
+    wanders = createRelief({
+      layout,
+      source: sourceFor(topology, (x, y) =>
+        x === 5 && y === 5 ? 'Mountains' : 'Grassland'
+      ),
+    }),
+    // The highest point of the square, sampled a twentieth apart.
+    highest = Array.from({ length: 21 * 21 }, (_, n) => [
+      peakX - 0.5 + (n % 21) / 20,
+      peakY - 0.5 + Math.floor(n / 21) / 20,
+    ]).reduce((best, point) =>
+      wanders.height(point[0]!, point[1]!) > wanders.height(best[0]!, best[1]!)
+        ? point
+        : best
+    );
+
+  expect(
+    'peaks wander off their squares’ middles, as far as WANDER, each its own, and a mountain is highest near its peak',
+    [
+      still !== 1,
+      wandering.every(
+        ({ u, v }) => Math.abs(u) <= WANDER && Math.abs(v) <= WANDER
+      ),
+      new Set(wandering.map(({ u, v }) => `${u},${v}`)).size,
+      new Set(wandering.map(({ scale }) => scale.toFixed(3))).size > 20,
+      Math.hypot(highest[0]! - (peakX + offU), highest[1]! - (peakY + offV)) <
+        0.12,
+    ],
+    [true, true, 25, true, true]
+  );
 
   expect(
     'a mountain stands well above its plain at its middle',

@@ -8,7 +8,7 @@
 
 import groundLayoutFor, { GroundLayout } from './layouts';
 import { REACH } from './terrain/kernel';
-import createRelief, { ReliefMap } from './terrain/relief';
+import createRelief, { ReliefMap, WANDER } from './terrain/relief';
 import { ChunkGrid, buildChunk, chunkGrid, chunksNear } from './terrain/chunks';
 import { Stage } from './stage';
 import { Ground } from './water';
@@ -71,7 +71,8 @@ export class Land {
           })
       );
 
-    this.#reach = REACH + corner + (seaFloor.reach - 1) * step;
+    // And as far again as a peak or a colour wanders from its square's middle.
+    this.#reach = REACH + corner + WANDER + (seaFloor.reach - 1) * step;
   }
 
   /** How the land's points lie on the ground, for the sea's surface to read their heights (`water.ts`). */
