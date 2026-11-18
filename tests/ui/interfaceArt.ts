@@ -156,7 +156,8 @@ expect(
 );
 
 // Without Civ1's sprites (#1063), the pixel art, which ships with civ.one, has interface art and is installed as it's
-//  declared; and with neither, Civ1's as before, whose sprites the game can't start without.
+//  declared; without the square pixel art's sheet, the hexagonal one's, which has the same interface art and whose grid
+//  is offered (#1122); and with none, Civ1's as before, whose sprites the game can't start without.
 {
   installTilesets({ civ1: { complete: false, metadata: null } });
 
@@ -176,7 +177,19 @@ expect(
   });
 
   expect(
-    "and without its sheet either, Civ1's",
+    "without its sheet either, the hexagonal pixel art's",
+    id(interfaceArt(uiThemeArt('slate'))),
+    'hex-pixelart'
+  );
+
+  installTilesets({
+    civ1: { complete: false, metadata: null },
+    'civ1-pixelart': { complete: false, metadata: null },
+    'hex-pixelart': { complete: false, metadata: null },
+  });
+
+  expect(
+    "and without that sheet either, Civ1's",
     id(interfaceArt(uiThemeArt('slate'))),
     'civ1'
   );

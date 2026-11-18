@@ -29,8 +29,7 @@ export const pixelArtTileset = registerHosted(descriptor);
 
 /**
  * The pixel art's hexagonal tileset (`hex-pixelart`), the hex map's. Its cities' rims are an overlay in its own key
- *  colours, which it keeps: a hosted set has no import to have recorded others (`installTilesets`). New games offer its
- *  grid only on a page loaded with `?hex=1` for now (`offerUnfinishedGrids`).
+ *  colours, which it keeps: a hosted set has no import to have recorded others (`installTilesets`).
  */
 export const hexPixelArtTileset = registerHosted(hexDescriptor);
 

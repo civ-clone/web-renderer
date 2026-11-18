@@ -1,6 +1,5 @@
 import { TilesetDescriptor, spriteKey } from '../tilesets/TilesetDescriptor';
 import {
-  hiddenGrids,
   installedTilesets,
   interfaceTileset,
   onTilesetsInstalled,
@@ -46,12 +45,10 @@ export const hasInterfaceArt = ({
 }: Pick<TilesetDescriptor, 'assets'>): boolean => ui.length > 0;
 
 // The first of `art` that is installed and has interface art; or, for a theme that names none that is (an unknown
-//  theme, or one with no list), the first installed set that has some, such as the pixel art with nothing imported,
-//  but not one for a grid new games don't offer yet (`hiddenGrids`: the hexagonal pixel art without `?hex=1`), whose
-//  sheet would be fetched for nothing; or Civ1's, which isn't installed either then.
+//  theme, or one with no list), the first installed set that has some, such as the pixel art with nothing imported;
+//  or Civ1's, which isn't installed either then.
 const resolve = (art: readonly string[]): TilesetDescriptor => {
-  const installed = installedTilesets(),
-    hidden = hiddenGrids();
+  const installed = installedTilesets();
 
   for (const id of art) {
     const tileset = installed.find((tileset) => tileset.id === id);
@@ -61,11 +58,7 @@ const resolve = (art: readonly string[]): TilesetDescriptor => {
     }
   }
 
-  return (
-    installed.find(
-      (tileset) => hasInterfaceArt(tileset) && !hidden.includes(tileset.grid)
-    ) ?? interfaceTileset()
-  );
+  return installed.find(hasInterfaceArt) ?? interfaceTileset();
 };
 
 /**

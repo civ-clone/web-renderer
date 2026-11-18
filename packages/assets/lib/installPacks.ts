@@ -5,7 +5,6 @@ import {
   bundledTilesets,
   chooseMapTileset,
   chosenMapTileset,
-  hiddenGrids,
   hostedSheet,
   installTilesets,
   installedTilesets,
@@ -188,15 +187,14 @@ const spritesLoaded = async (
   ).every(Boolean);
 
 // The hosted sets the page draws from as it starts, of those installed: the interface's art when it is one, as the
-//  theme's sets before it aren't there, and a set the player chose for a grid's maps, but a grid new games don't
-//  offer (`hiddenGrids`). Not the ones a game's map might be drawn with: those are fetched as that game starts
-//  (`ensureMapArt`).
+//  theme's sets before it aren't there, and the set the player chose for each grid's maps. Not the ones a game's map
+//  might be drawn with: those are fetched as that game starts (`ensureMapArt`).
 const drawnAtStart = (): TilesetDescriptor[] =>
   [
     interfaceArt(),
-    ...[...new Set(bundledTilesets().map(({ grid }) => grid))]
-      .filter((grid) => !hiddenGrids().includes(grid))
-      .map((grid) => chosenMapTileset(grid)),
+    ...[...new Set(bundledTilesets().map(({ grid }) => grid))].map((grid) =>
+      chosenMapTileset(grid)
+    ),
   ].filter(
     (tileset, index, all): tileset is TilesetDescriptor =>
       tileset !== null && isHosted(tileset) && all.indexOf(tileset) === index
