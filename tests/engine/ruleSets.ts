@@ -55,6 +55,7 @@ import {
   AGE_BY_TIER_RULE,
   BARBARIAN_ACTIVITY_RULE,
   RATE_MULTIPLIER_BY_AGE_RULE,
+  CATCH_UP_FROM_RENAISSANCE_RULE,
   CLEAR_CAPTURED_BUILD_RULE,
   EVERY_ADVANCE_COUNT_RULE,
   HALVE_CITIES_RULE,
@@ -64,6 +65,7 @@ import {
   POLLUTION_RULE,
   RAIDERS_ONLY_RULE,
   RAILROAD_IN_CITIES_RULE,
+  RAILROAD_ON_BOTH_SQUARES_RULE,
   RANSOM_RULE,
   REVALIDATE_BUILDS_RULE,
   SETTLERS_WAIT_RULE,
@@ -372,7 +374,7 @@ const check = async (): Promise<void> => {
       ? originals
       : [originals];
 
-  const sets: [string, string, string | string[] | null][] = [
+  const sets: [string, string | string[], string | string[] | null][] = [
       [HYDRO_PLANT_SITE, HYDRO_PLANT_SITE_RULE, CIV1_HYDRO_PLANT_SITE_RULE],
       [BARBARIAN_LEADER_RANSOM, RANSOM_RULE, CIV1_RANSOM_RULE],
       [OBSOLETE_BUILDS, REVALIDATE_BUILDS_RULE, null],
@@ -396,10 +398,10 @@ const check = async (): Promise<void> => {
       [FIXED_RESEARCH_COSTS, TIERED_COST_RULE, CIV1_COST_RULE],
       // #1076: rules added to Civ1's, so nothing to replace; one of them stands for the rest.
       [AGES, AGE_BY_TIER_RULE, null],
-      // #1077: two rules, each in place of one of civ1-science's; the multiplier stands for both of its own.
+      // #1077: two rules, each in place of one of civ1-science's.
       [
         RESEARCH_COST_BY_AGE,
-        RATE_MULTIPLIER_BY_AGE_RULE,
+        [RATE_MULTIPLIER_BY_AGE_RULE, CATCH_UP_FROM_RENAISSANCE_RULE],
         [CIV1_RATE_MULTIPLIER_RULE, CIV1_CATCH_UP_RULE],
       ],
       // #973: today's count, on to start with, in place of v474.05's of only the advances gained in play.
@@ -411,10 +413,10 @@ const check = async (): Promise<void> => {
       // #1008: a rule added to Civ1's, answering civ1-barbarians' activity level with the level chosen beneath it.
       [BARBARIAN_ACTIVITY, BARBARIAN_ACTIVITY_RULE, null],
       // #1029: today's railroads, on to start with, in place of v474.05's refusal of a city's Railroad and its
-      //  movement; the city's rule stands for both of its own.
+      //  movement.
       [
         RAILROADS_IN_CITIES,
-        RAILROAD_IN_CITIES_RULE,
+        [RAILROAD_IN_CITIES_RULE, RAILROAD_ON_BOTH_SQUARES_RULE],
         [CIV1_NO_RAILROAD_IN_CITIES_RULE, CIV1_RAILROAD_MOVEMENT_RULE],
       ],
     ],
@@ -430,11 +432,11 @@ const check = async (): Promise<void> => {
     ],
     // As the game has been played: every one on but the new variants.
     asPlayed = sets.map(([id]) => id).filter((id) => !startsOff.includes(id)),
-    // Which of the rules they switch run, enhanced and original.
+    // Which of the rules they switch run, enhanced and original (a set may have more than one of each).
     running = (): string[] =>
       sets
         .flatMap(([, enhanced, originals]) => [
-          enhanced,
+          ...originalsOf(enhanced),
           ...originalsOf(originals),
         ])
         .filter(
@@ -444,7 +446,7 @@ const check = async (): Promise<void> => {
     // Which of them should run with `on` the sets in force: each one's enhanced rule, or else its original.
     inForce = (on: string[]): string[] =>
       sets.flatMap(([id, enhanced, originals]) =>
-        on.includes(id) ? [enhanced] : originalsOf(originals)
+        on.includes(id) ? originalsOf(enhanced) : originalsOf(originals)
       ),
     // How the setup should draw each set with `on` the sets in force.
     drawn = (on: string[]): string[] =>

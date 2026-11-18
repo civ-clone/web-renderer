@@ -73,8 +73,7 @@ i18next.addResources('en', 'ruleset', {
   'civ1-enhanced.starting-advances-count.description':
     'Every advance a civilization knows counts toward the cost of its next one, its power ranking and its chance of pollution, including those it starts the game with, or inherits when it comes back. In the original, only the advances gained once the game is under way count, so those a civilization starts with don’t make its research dearer.',
   // #1029
-  'civ1-enhanced.railroads-in-cities.name':
-    'Cities can have a Railroad',
+  'civ1-enhanced.railroads-in-cities.name': 'Cities can have a Railroad',
   'civ1-enhanced.railroads-in-cities.description':
     'Settlers can build a Railroad on a city’s square, and a unit moves along a railroad for free only between two squares that both have one. In the original, a city can’t have a Railroad, and a unit leaving a railroad moves for free onto any square with a road, so a train enters a city for free and leaves it for a road move.',
   // #1008: the set, and the choice of level beneath it. The levels and the choice share their names with Civilization

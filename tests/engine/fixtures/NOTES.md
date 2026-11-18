@@ -596,6 +596,9 @@ for nothing only between two Railroads. So the rule totals at turns 1, 10 and
 and nothing else in the fixture changes.
 
 The checksums (`99a58e61 / e7ec61bb / 781cb858`), state counts, DTO hashes and
-random-call counts are unchanged, as the set is on. With the set off (`--set
-civ1`), 8 seeds played to turn 500 end clean, with up to 348 Railroads a
-game and none built on a city's square.
+random-call counts are unchanged, as the set is on. No one knows Railroad by
+turn 50, so these turns can't show the railroad's movement: the set's movement
+rule has the criteria of civ1-unit 0.1.46's exactly (a land unit's move, a
+Railroad on both squares, no cost). With the set off (`--set civ1`), 8 seeds
+played to turn 500 end clean, with up to 348 Railroads a game and none built on
+a city's square.
