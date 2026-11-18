@@ -243,7 +243,34 @@ const run = async (): Promise<void> => {
 
   classic.close();
 
+  // A city under rules that work happiness out in stages (Civ2's): the stages are the Happiness report's, as Civ1's
+  //  happiness is, so neither screen shows them (#1166).
+  const staged = (id: string): CityData =>
+      cityData(id, 'Persepolis', {
+        citizens: {
+          moods: ['happy', 'content'],
+          causes: [],
+          stages: [{ name: 'base', happy: 1, unhappy: 0, angry: 0 }],
+        },
+      }),
+    stagesShown = (screen: { element(): HTMLElement }): number =>
+      screen.element().querySelectorAll('.happiness-stages, details').length,
+    classicStaged = openCity(staged('City-S1'), portal, transport),
+    classicStagesShown = stagesShown(classicStaged);
+
+  classicStaged.close();
   applyInterface('modern', null);
+
+  const modernStaged = openCity(staged('City-S2'), portal, transport),
+    modernStagesShown = stagesShown(modernStaged);
+
+  modernStaged.close();
+
+  expect(
+    "neither screen shows a city's stages of happiness",
+    [classicStagesShown, modernStagesShown],
+    [0, 0]
+  );
 
   const owner = { ...player, cities: [] as CityData[] },
     [first, second] = [

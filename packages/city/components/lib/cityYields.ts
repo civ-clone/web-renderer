@@ -278,19 +278,6 @@ export const renderHappinessStages = (city: CityData): HTMLElement | null => {
   );
 };
 
-/** The stages under a heading that opens them, for a city screen: empty under rules without stages. */
-export const renderHappinessPanel = (city: CityData): HTMLElement | string => {
-  const stages = renderHappinessStages(city);
-
-  return stages === null
-    ? ''
-    : s(
-        '<details class="happiness-stages-panel"></details>',
-        s('<summary></summary>', t('City.Happiness.title')),
-        stages
-      );
-};
-
 /**
  * Citizens from counts rather than a city's yields, for a report that is sent the counts (the Top Cities report, #124):
  * the happy, content and unhappy workers, then the specialists.

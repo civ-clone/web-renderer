@@ -24,7 +24,6 @@ import {
 import {
   growthTurns,
   renderFigures,
-  renderHappinessPanel,
   renderPopulation,
   turnsText,
   yieldIcon,
@@ -134,12 +133,7 @@ const renderHeader = (
     ),
     s(
       '<div class="ui-city-citizens"></div>',
-      renderPopulation(
-        city,
-        undefined,
-        readOnly ? undefined : changeSpecialist
-      ),
-      renderHappinessPanel(city)
+      renderPopulation(city, undefined, readOnly ? undefined : changeSpecialist)
     )
   );
 };

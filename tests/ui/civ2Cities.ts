@@ -3,7 +3,8 @@
 // - an angry citizen is drawn with its own face, the interface's unhappy one where there's no angry face (marked so it
 //   reads apart), and said as angry; with Civ2's people imported, a city's citizens are its era's, men and women in
 //   turn;
-// - the stages of happiness (`citizens.stages`) are a row of faces each, under their names, and a Civ1 city has none;
+// - the stages of happiness (`citizens.stages`) are a row of faces each, under their names, and a Civ1 city has none
+//   (the Happiness report shows them, not the city screen, #1166);
 // - the build list warns of the shields a change would lose (`progressAfterChange`), counts the turns from what would
 //   be left, and shows Capitalization's gold per turn (`goldPerTurn`) in place of its cost and turns, in both
 //   interfaces; the city screen says the gold of a city building it;
@@ -32,7 +33,6 @@ import {
   peopleFaces,
 } from '@civ-clone/ui-client/lib/citizens';
 import {
-  renderHappinessPanel,
   renderHappinessStages,
   renderPopulation,
   stageMoods,
@@ -203,14 +203,9 @@ const run = async (): Promise<void> => {
     ]
   );
   expect(
-    "a city without stages (Civ1's) has none, and its screen nothing more",
-    [
-      renderHappinessStages(
-        city({ citizens: { moods: ['happy'], causes: [] } })
-      ),
-      renderHappinessPanel(city()),
-    ],
-    [null, '']
+    "a city without stages (Civ1's) has none",
+    renderHappinessStages(city({ citizens: { moods: ['happy'], causes: [] } })),
+    null
   );
 
   // The build list: the change penalty and Capitalization.
