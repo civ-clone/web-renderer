@@ -1,9 +1,9 @@
-// The game's own interface art (#1052, #1054, #1165): in a game whose map is drawn with a set that names interface
-//  sprites of its own without being interface art (Civ2's), each sprite the interface asks for is drawn from that set
-//  when the player has imported it; one it lacks, from civ.one's own art (the pixel art) once that has loaded; and
-//  otherwise from the theme's, Civ1's. A Civ1 game draws everything from the theme's art, as before, even with Civ2's
-//  imported. Civ2's set is ready with the pixel art as its game starts (`ensureMapArt`), and its descriptor maps every
-//  Civ2 improvement and Wonder.
+// The game's own interface art (#1052, #1054, #1165): in a game whose rule set names art for its map that names
+//  interface sprites of its own without being interface art (Civ2's), each sprite the interface asks for is drawn from
+//  that set when the player has imported it; one it lacks, from civ.one's own art (the pixel art) once that has loaded;
+//  and otherwise from the theme's, Civ1's. A Civ1 game draws everything from the theme's art, as before, even with
+//  Civ2's imported or on Civ2's map. A Civ2 game's start fetches the pixel art without waiting for it (`ensureMapArt`),
+//  and Civ2's descriptor maps every Civ2 improvement and Wonder.
 
 // Must stay first: `AssetStore` opens its database as it loads, and `Window` reads `document.body`.
 import './lib/dom';
@@ -253,7 +253,19 @@ const run = async (): Promise<void> => {
     'civ1-pixelart',
   ]);
 
-  // A pixel art sheet that can't be fetched holds nothing up, and isn't marked as failed for the square maps.
+  // A pixel art sheet that never comes holds nothing up.
+  const never = {
+    loadHostedPack: ({ id }: { id: string }) =>
+      id === 'civ1-pixelart' ? new Promise(() => {}) : Promise.resolve(),
+  } as unknown as AssetStore;
+
+  expect(
+    "a Civ2 game starts while the pixel art's sheet is still coming",
+    (await ensureMapArt('staggered-iso', never)).tileset.id,
+    'civ2'
+  );
+
+  // One that can't be fetched isn't marked as failed for the square maps.
   const failing = {
     loadHostedPack: ({ id }: { id: string }) =>
       id === 'civ1-pixelart'

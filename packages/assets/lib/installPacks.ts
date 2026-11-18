@@ -95,6 +95,8 @@ const startFallbackInterfaceArt = (
 
   store
     .loadHostedPack(packFor(own))
+    // Loaded: whatever an earlier try said, it's there now.
+    .then(() => setSheetFailed(own.id, null))
     .catch((error) =>
       console.error(`Could not load the ${own.id} set's sheet.`, error)
     );
