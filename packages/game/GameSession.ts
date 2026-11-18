@@ -5,6 +5,7 @@ import { t } from 'i18next';
 import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
 import openCity from '@civ-clone/ui-city/components/openCity';
 import CitiesList from '@civ-clone/ui-hud/components/CitiesList';
+import { tradeRatesOpen } from '@civ-clone/ui-hud/components/Actions/AdjustTradeRates';
 import { redrawWindowUnits } from '@civ-clone/ui-hud/components/Unit';
 import GameMenu from '@civ-clone/ui-menus/components/GameMenu';
 import { GameMenuItem } from '@civ-clone/ui-menus/components/mapMenus';
@@ -548,6 +549,15 @@ export class GameSession {
     transportDisposers.push((): void =>
       document.removeEventListener('endturn', endTurnListener)
     );
+
+    // The trade rates window holds the turn while it's open (#1058): closed untouched, nothing comes back from the
+    //  engine to look again, so its close does.
+    const tradeRatesClosed = (): void => this.#autoEndTurn();
+
+    document.addEventListener('traderatesclosed', tradeRatesClosed);
+    transportDisposers.push((): void =>
+      document.removeEventListener('traderatesclosed', tradeRatesClosed)
+    );
   }
 
   // After each update, and when a notification is dismissed (#416): ends the turn if there's nothing left to do.
@@ -559,6 +569,8 @@ export class GameSession {
 
     if (
       !this.#endTurnSent &&
+      // Not while the trade rates are being tried out: moving them can clear the disorder that held the turn (#1058).
+      !tradeRatesOpen() &&
       shouldAutoEndTurn(data.player, options, gameState.waiting(), (action) =>
         dismissals.has(actionKey(action), Number(data.turn?.value ?? 0))
       )

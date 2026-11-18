@@ -55,6 +55,24 @@ export const refreshTradeRates = (
   }
 };
 
+declare global {
+  interface DocumentEventMap {
+    traderatesclosed: CustomEvent<void>;
+  }
+}
+
+/**
+ * Whether an Adjust trade rates window is open: the turn isn't ended for the player while it is, as its rates are being
+ *  tried out live, and moving them can clear the civil disorder that was all that held the turn back (#1058). Its close
+ *  says `traderatesclosed` on the document, for the turn to be looked at again.
+ */
+export const tradeRatesOpen = (): boolean =>
+  open !== null && open.element().isConnected;
+
+// A window taken off the page without being closed (a game torn down, say): its End Turn listener and pending send go
+//  with it.
+let disposeOpen: (() => void) | null = null;
+
 const rateName = (rate: string): string =>
   text(`${rate}.name`, { defaultValue: rate, ns: 'trade' });
 
@@ -71,6 +89,10 @@ export const openTradeRates = (
   transport: Transport,
   player: Player | null = latestPlayer
 ): Window => {
+  if (open !== null && !open.element().isConnected) {
+    disposeOpen?.();
+  }
+
   if (open !== null && open.element().isConnected) {
     refreshOpen?.(tradeRates, player ?? latestPlayer!);
     open.element().focus();
@@ -321,6 +343,9 @@ export const openTradeRates = (
 
   refreshOpen = (rates: PlayerTradeRates, player: Player | null): void => {
     current = rates;
+    // What the engine holds is what was sent: a send that never arrived (made while the other civilizations moved, when
+    //  the game takes no actions) is then sent again by the next move, or OK.
+    sent = rates.all.map((rate): [string, number] => [rate._, rate.value]);
     sliders.forEach((slider) =>
       slider.setMax(rates.maxRates?.[slider.key()] ?? 100)
     );
@@ -337,8 +362,32 @@ export const openTradeRates = (
 
   document.addEventListener('beforeendturn', settle);
 
+  disposeOpen = (): void => {
+    document.removeEventListener('beforeendturn', settle);
+
+    if (pending !== null) {
+      clearTimeout(pending);
+      pending = null;
+    }
+
+    if (open === window) {
+      open = null;
+      refreshOpen = null;
+      disposeOpen = null;
+    }
+  };
+
   window.on('close', () => {
     document.removeEventListener('beforeendturn', settle);
+
+    if (open === window) {
+      disposeOpen = null;
+    }
+
+    // Once it's settled, below, the turn may be ended for the player again.
+    queueMicrotask(() =>
+      document.dispatchEvent(new CustomEvent('traderatesclosed'))
+    );
 
     if (open === window) {
       open = null;

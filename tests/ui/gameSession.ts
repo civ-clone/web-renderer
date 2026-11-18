@@ -383,9 +383,9 @@ const run = async (): Promise<void> => {
     ]
   );
   expect(
-    "the page's disposers stay first, then the render frame's, the state's, one per receiver, the unit panel's, and the map's art's and the hand-over's",
+    "the page's disposers stay first, then the render frame's, the state's, one per receiver, the unit panel's, and the map's art's and the hand-over's, and the trade rates window's close (#1058)",
     transportDisposers.length,
-    1 + 3 + 14 + 1 + 2
+    1 + 3 + 14 + 1 + 2 + 1
   );
   expect('nothing went wrong starting', errors, []);
   expect('the game has started', gameStarted, true);

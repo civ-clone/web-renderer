@@ -24,6 +24,14 @@ const template = (label: string, value: number): HTMLElement => {
   lock.setAttribute('aria-label', t('LockedSlider.lock-rate', { label }));
   lock.title = t('LockedSlider.lock-title');
 
+  // What the lock does, for a screen reader, which the title alone doesn't reach on every device.
+  const description = s('<span class="visually-hidden"></span>');
+
+  description.id = `${name.id}-lock`;
+  description.textContent = lock.title;
+  lock.setAttribute('aria-describedby', description.id);
+  row.append(description);
+
   return row;
 };
 

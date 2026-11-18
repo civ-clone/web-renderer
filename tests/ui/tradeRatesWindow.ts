@@ -13,6 +13,7 @@ import {
   openTradeRates,
   refreshTradeRates,
   tradeRatesDelay,
+  tradeRatesOpen,
 } from '@civ-clone/ui-hud/components/Actions/AdjustTradeRates';
 import { Player, PlayerTradeRates } from '@civ-clone/ui-protocol/types';
 import Transport from '@civ-clone/ui-client/Transport';
@@ -223,6 +224,67 @@ const liveAndCancel = async (): Promise<void> => {
     'OK sends the rates at once, and only once',
     [sent.length - count, sent.at(-1)?.[1].value.at(-1)],
     [1, ['Research', 80]]
+  );
+
+  // A send the game never took (made while the other civilizations moved): the engine's rates come back unchanged, and
+  //  OK sends the rates on screen again rather than taking them as sent.
+  const dropped = openTradeRates(plain([40, 0, 60]), transport);
+
+  move(dropped.element(), 0, 70);
+  await wait(tradeRatesDelay + 50);
+
+  const afterDropped = sent.length;
+
+  refreshTradeRates(plain([40, 0, 60]), playerWith(25, 8, true));
+  ok(dropped.element()).click();
+
+  expect(
+    'OK sends rates again that the engine never took',
+    [
+      sent.length - afterDropped,
+      sent.at(-1)?.[1].value.find(([rate]: [string]) => rate === 'Tax'),
+    ],
+    [1, ['Tax', 70]]
+  );
+
+  // The turn isn't ended for the player while it's open, and its close says so, for the turn to be looked at again.
+  await wait(0);
+
+  let closedEvents = 0;
+  const countClosed = () => closedEvents++;
+
+  document.addEventListener('traderatesclosed', countClosed);
+
+  const holding = openTradeRates(plain([40, 0, 60]), transport),
+    openWhileShown = tradeRatesOpen();
+
+  holding.close();
+  await wait(0);
+
+  expect(
+    'open, it holds the turn; closed, it lets go and says so',
+    [openWhileShown, tradeRatesOpen(), closedEvents],
+    [true, false, 1]
+  );
+
+  document.removeEventListener('traderatesclosed', countClosed);
+
+  // A window taken off the page without being closed: its End Turn listener goes with it when the next one opens.
+  const removed = openTradeRates(plain([40, 0, 60]), transport);
+
+  move(removed.element(), 0, 10);
+  removed.element().remove();
+
+  const beforeRemoved = sent.length,
+    next = openTradeRates(plain([40, 0, 60]), transport);
+
+  beforeEndTurn();
+  await wait(tradeRatesDelay + 50);
+
+  expect(
+    'a window removed without closing sends nothing more, and a new one opens',
+    [sent.length - beforeRemoved, next !== removed],
+    [0, true]
   );
 
   // The turn ends with it open, a move still pending: what's on screen is sent at once, ahead of End Turn, and kept.
