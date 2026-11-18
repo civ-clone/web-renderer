@@ -13,6 +13,7 @@ import {
   openTradeRates,
   refreshTradeRates,
   tradeRatesDelay,
+  setTradeRatesEndingTurn,
   setTradeRatesWaiting,
   tradeRatesAnswered,
   tradeRatesOpen,
@@ -21,6 +22,12 @@ import {
 import { Player, PlayerTradeRates } from '@civ-clone/ui-protocol/types';
 import Transport from '@civ-clone/ui-client/Transport';
 import { beforeEndTurn } from '@civ-clone/ui-client/lib/endTurn';
+
+// End Turn sent, as `GameSession` says it: the window settles first, then holds its moves until the answer.
+const endTurnSent = (): void => {
+  beforeEndTurn();
+  setTradeRatesEndingTurn(true);
+};
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 
@@ -399,60 +406,449 @@ const liveAndCancel = async (): Promise<void> => {
     [0, true]
   );
 
-  // Waiting for the other civilizations, the game takes no actions: the window says so, and its rates and OK can't be
-  //  used until the turn comes back.
+  // The turn ends with a move still pending: it isn't sent once the wait starts, and the window closes with the turn.
   answerAll();
 
-  const waiting = openTradeRates(plain([40, 0, 60]), transport),
-    okButton = ok(waiting.element()),
-    waitingNote = waiting
-      .element()
-      .querySelector('.adjust-trade-rates-waiting') as HTMLElement;
+  const closing = openTradeRates(plain([40, 0, 60]), transport);
 
-  // A move made just before the wait isn't sent once it starts, nor is Cancel's revert while it lasts.
-  move(waiting.element(), 0, 45);
+  move(closing.element(), 0, 45);
 
   const beforeWaiting = sent.length;
 
   setTradeRatesWaiting(true);
   await wait(tradeRatesDelay + 50);
 
+  // Waiting for the other civilizations, the game takes no actions: a window opened now says so, and its rates and OK
+  //  can't be used until the turn comes back.
+  const waiting = openTradeRates(plain([40, 0, 60]), transport),
+    okButton = ok(waiting.element()),
+    waitingNote = waiting
+      .element()
+      .querySelector('.adjust-trade-rates-waiting') as HTMLElement;
+
   const whileWaiting = [okButton.disabled, waitingNote.hidden],
-    sentWhileWaiting = sent.length - beforeWaiting;
+    sentWhileWaiting = sent.length - beforeWaiting,
+    closedWithTurn = closing.element().isConnected;
 
   setTradeRatesWaiting(false);
 
   expect(
     'while waiting, nothing is sent, OK is disabled and the window says why; at the turn, both are back',
-    [sentWhileWaiting, whileWaiting, [okButton.disabled, waitingNote.hidden]],
-    [0, [true, false], [false, true]]
+    [
+      closedWithTurn,
+      sentWhileWaiting,
+      whileWaiting,
+      [okButton.disabled, waitingNote.hidden],
+    ],
+    [false, 0, [true, false], [false, true]]
   );
 
   waiting.close();
   await wait(0);
 
-  // The turn ends with it open, a move still pending: what's on screen is sent at once, ahead of End Turn, and kept.
+  // The turn ends with it open, a move still pending: what's on screen is sent at once, ahead of End Turn, and the
+  //  window stays open until the turn has ended, when it closes keeping them (#1169).
   answerAll();
 
   const ending = openTradeRates(plain([40, 0, 60]), transport),
     beforeEnding = sent.length;
 
   move(ending.element(), 0, 20);
-  beforeEndTurn();
+  endTurnSent();
 
   expect(
-    'as the turn ends, the pending rates are sent at once and the window closes, keeping them',
+    'as End Turn is sent, the pending rates go at once, and the window stays open',
     [
       ending.element().isConnected,
       sent.length - beforeEnding,
       sent.at(-1)?.[1].value.find(([rate]: [string]) => rate === 'Tax'),
     ],
-    [false, 1, ['Tax', 20]]
+    [true, 1, ['Tax', 20]]
   );
+
+  // Moved before End Turn is answered: held, not sent after it.
+  move(ending.element(), 0, 30);
+  await wait(tradeRatesDelay + 50);
+
+  const heldWhileEnding = sent.length - beforeEnding;
+
+  // Accepted: the answer, then `turnEnded`.
+  setTradeRatesEndingTurn(false);
+  setTradeRatesWaiting(true);
+  await wait(tradeRatesDelay + 50);
+
+  expect(
+    'once the turn has ended, it closes, and the move held is dropped with the turn',
+    [heldWhileEnding, ending.element().isConnected, sent.length - beforeEnding],
+    [1, false, 1]
+  );
+
+  setTradeRatesWaiting(false);
+  answerAll();
+
+  // An End Turn refused (talks open, #491): the window is still open, Cancel still puts back the rates it opened with,
+  //  and a move made while the answer was awaited is sent once it comes.
+  const refused = openTradeRates(plain([40, 0, 60]), transport),
+    beforeRefused = sent.length;
+
+  move(refused.element(), 0, 20);
+  endTurnSent();
+  move(refused.element(), 0, 30);
+  await wait(tradeRatesDelay + 50);
+
+  const whileAwaiting = sent.length - beforeRefused;
+
+  setTradeRatesEndingTurn(false);
+  await wait(tradeRatesDelay + 50);
+
+  const afterRefusal = sent
+    .at(-1)?.[1]
+    .value.find(([rate]: [string]) => rate === 'Tax');
+
+  cancel(refused.element()).click();
+
+  expect(
+    'refused, the window stays, sends what it held, and Cancel puts back its opening rates',
+    [
+      whileAwaiting,
+      afterRefusal,
+      sent.length - beforeRefused,
+      sent.at(-1)?.[1].value.find(([rate]: [string]) => rate === 'Tax'),
+    ],
+    [1, ['Tax', 30], 3, ['Tax', 40]]
+  );
+
+  answerAll();
+  await wait(0);
+
+  // Closed while End Turn's answer is awaited: what it leaves goes once the answer comes, if the turn goes on.
+  const closedEnding = openTradeRates(plain([40, 0, 60]), transport),
+    beforeClosedEnding = sent.length;
+
+  endTurnSent();
+  move(closedEnding.element(), 0, 10);
+  ok(closedEnding.element()).click();
+
+  const heldOk = sent.length - beforeClosedEnding;
+
+  setTradeRatesEndingTurn(false);
+
+  expect(
+    'OK before End Turn is answered sends the rates once it is, if the turn goes on',
+    [
+      heldOk,
+      sent.length - beforeClosedEnding,
+      sent.at(-1)?.[1].value.find(([rate]: [string]) => rate === 'Tax'),
+    ],
+    [0, 1, ['Tax', 10]]
+  );
+
+  answerAll();
+  await wait(0);
+
+  // Closed while End Turn's answer is awaited, and the turn ends: nothing is sent after it.
+  const closedAccepted = openTradeRates(plain([40, 0, 60]), transport),
+    beforeClosedAccepted = sent.length;
+
+  endTurnSent();
+  move(closedAccepted.element(), 0, 10);
+  ok(closedAccepted.element()).click();
+  // Accepted: `GameSession` leaves the ending as it is, and `turnEnded` follows.
+  setTradeRatesWaiting(true);
+  setTradeRatesWaiting(false);
+  await wait(tradeRatesDelay + 50);
+
+  expect(
+    'closed before an End Turn that ends the turn, nothing is sent after it',
+    sent.length - beforeClosedAccepted,
+    0
+  );
+
+  await wait(0);
+
+  // Opened again while End Turn's answer is awaited, after one was closed with OK: it starts from the rates OK left,
+  //  and, still open when End Turn is refused, sends them.
+  const firstEnding = openTradeRates(plain([40, 0, 60]), transport);
+
+  endTurnSent();
+  move(firstEnding.element(), 0, 10);
+  ok(firstEnding.element()).click();
+
+  const secondEnding = openTradeRates(plain([40, 0, 60]), transport),
+    secondEndingShows = Number(
+      (
+        secondEnding
+          .element()
+          .querySelector('input[type="number"]') as HTMLInputElement
+      ).value
+    ),
+    beforeSecondEnding = sent.length;
+
+  setTradeRatesEndingTurn(false);
+  await wait(tradeRatesDelay + 50);
+
+  expect(
+    'reopened before End Turn is refused, it shows the rates OK left, and sends them once',
+    [
+      secondEndingShows,
+      sent.length - beforeSecondEnding,
+      sent.at(-1)?.[1].value.find(([rate]: [string]) => rate === 'Tax'),
+    ],
+    [10, 1, ['Tax', 10]]
+  );
+
+  ok(secondEnding.element()).click();
+  answerAll();
+  await wait(0);
+
+  // Opened between End Turn and `turnEnded`: a move is held, not sent after End Turn.
+  endTurnSent();
+
+  const gap = openTradeRates(plain([10, 0, 90]), transport),
+    beforeGap = sent.length;
+
+  move(gap.element(), 0, 50);
+  await wait(tradeRatesDelay + 50);
+
+  const sentInGap = sent.length - beforeGap;
+
+  setTradeRatesEndingTurn(false);
+  setTradeRatesWaiting(true);
+  setTradeRatesWaiting(false);
+
+  expect(
+    'a window opened while End Turn is on its way holds its moves, and closes as the turn ends',
+    [sentInGap, gap.element().isConnected, sent.length - beforeGap],
+    [0, false, 0]
+  );
+
+  await wait(0);
+
+  // Cancel during a hand-over: the game keeps no actions then, so the rates it opened with are put back if it's handed
+  //  back, and a move dropped as the hand-over began is sent again.
+  answerAll();
+
+  const carried = openTradeRates(plain([10, 0, 90]), transport),
+    beforeCarried = sent.length;
+
+  move(carried.element(), 0, 50);
+  setTradeRatesWaiting(true, false);
+  await wait(tradeRatesDelay + 50);
+
+  const sentCarrying = sent.length - beforeCarried;
+
+  setTradeRatesWaiting(false, false);
+  await wait(tradeRatesDelay + 50);
+
+  const resent = sent
+    .at(-1)?.[1]
+    .value.find(([rate]: [string]) => rate === 'Tax');
+
+  setTradeRatesWaiting(true, false);
+  cancel(carried.element()).click();
+
+  const sentOnCancel = sent.length - beforeCarried;
+
+  setTradeRatesWaiting(false, false);
+
+  expect(
+    'a move dropped by a hand-over goes once handed back, and Cancel during one is carried out after',
+    [
+      sentCarrying,
+      resent,
+      sentOnCancel,
+      sent.length - beforeCarried,
+      sent.at(-1)?.[1].value.find(([rate]: [string]) => rate === 'Tax'),
+    ],
+    [0, ['Tax', 50], 1, 2, ['Tax', 10]]
+  );
+
+  answerAll();
+  await wait(0);
+
+  // Opened again during the hand-over, after one was cancelled: it starts from the rates the first put back, takes over
+  //  sending them, and its own Cancel leaves them to go once it's handed back, once.
+  const firstCarried = openTradeRates(plain([50, 0, 50]), transport);
+
+  move(firstCarried.element(), 0, 70);
+  await wait(tradeRatesDelay + 50);
+  answerAll();
+  setTradeRatesWaiting(true, false);
+  cancel(firstCarried.element()).click();
+
+  const secondCarried = openTradeRates(plain([70, 0, 30]), transport),
+    secondShows = Array.from(
+      secondCarried.element().querySelectorAll('input[type="number"]')
+    ).map((input) => Number((input as HTMLInputElement).value)),
+    beforeSecond = sent.length;
+
+  cancel(secondCarried.element()).click();
+  setTradeRatesWaiting(false, false);
+
+  expect(
+    'reopened during a hand-over, it starts from the rates to be put back, and they go once',
+    [
+      secondShows,
+      sent.length - beforeSecond,
+      sent.at(-1)?.[1].value.find(([rate]: [string]) => rate === 'Tax'),
+    ],
+    [[50, 0, 50], 1, ['Tax', 50]]
+  );
+
+  answerAll();
+  await wait(0);
+
+  const tax = (element: HTMLElement): number =>
+      Number(
+        (element.querySelector('input[type="number"]') as HTMLInputElement)
+          .value
+      ),
+    numbers = (element: HTMLElement): number[] =>
+      Array.from(element.querySelectorAll('input[type="number"]')).map(
+        (input) => Number((input as HTMLInputElement).value)
+      );
+
+  // The title bar's × puts back the rates it opened with, as Cancel does.
+  const crossed = openTradeRates(plain([40, 0, 60]), transport);
+
+  move(crossed.element(), 0, 80);
+  await wait(tradeRatesDelay + 50);
+  (crossed.element().querySelector('.close') as HTMLButtonElement).click();
+
+  expect(
+    'the × button puts back the rates it opened with',
+    [
+      crossed.element().isConnected,
+      sent.at(-1)?.[1].value.find(([rate]: [string]) => rate === 'Tax'),
+    ],
+    [false, ['Tax', 40]]
+  );
+
+  answerAll();
+  await wait(0);
+
+  // Rates the engine set itself while the window is open (a change of government): taken, and Cancel leaves them.
+  const reset = openTradeRates(plain([40, 0, 60]), transport),
+    beforeReset = sent.length;
+
+  refreshTradeRates(plain([30, 0, 70]), null);
+
+  const adopted = numbers(reset.element());
+
+  cancel(reset.element()).click();
+
+  expect(
+    'rates the engine set are taken, and Cancel doesn’t send the old ones over them (#1169)',
+    [adopted, sent.length - beforeReset],
+    [[30, 0, 70], 0]
+  );
+
+  await wait(0);
+
+  // A refresh while a move is still to be sent: the move isn't overwritten, and goes as it was.
+  const racing = openTradeRates(plain([30, 0, 70]), transport),
+    beforeRacing = sent.length;
+
+  move(racing.element(), 0, 60);
+  refreshTradeRates(plain([20, 0, 80]), null);
+
+  const shownAfterRefresh = tax(racing.element());
 
   await wait(tradeRatesDelay + 50);
 
-  expect('and nothing follows it', sent.length - beforeEnding, 1);
+  expect(
+    'a refresh while a move is pending leaves the move, and it is sent',
+    [
+      shownAfterRefresh,
+      sent.length - beforeRacing,
+      sent.at(-1)?.[1].value.find(([rate]: [string]) => rate === 'Tax'),
+    ],
+    [60, 1, ['Tax', 60]]
+  );
+
+  ok(racing.element()).click();
+  answerAll();
+  await wait(0);
+
+  // Taken off the page with a move pending, and nothing opened after: the move isn't sent.
+  const lost = openTradeRates(plain([60, 0, 40]), transport),
+    beforeLost = sent.length;
+
+  move(lost.element(), 0, 20);
+  lost.element().remove();
+  await wait(tradeRatesDelay + 50);
+
+  expect(
+    'a window taken off the page with a move pending sends nothing, and no longer holds the turn',
+    [sent.length - beforeLost, tradeRatesOpen()],
+    [0, false]
+  );
+
+  // The padlock: a locked rate stays where it is as another moves.
+  const padlocked = openTradeRates(plain([60, 20, 20]), transport),
+    locks = (): boolean[] =>
+      Array.from(
+        padlocked.element().querySelectorAll('.locked-slider-lock')
+      ).map((lock) => lock.getAttribute('aria-pressed') === 'true');
+
+  (
+    padlocked
+      .element()
+      .querySelectorAll('.locked-slider-lock')[1] as HTMLButtonElement
+  ).click();
+  move(padlocked.element(), 0, 50);
+
+  const lockedMove = [numbers(padlocked.element()), locks()];
+
+  // Both others locked, and a new maximum pulling tax down: the rates can only come to 100 by moving them, so they're
+  //  unlocked as they move.
+  (
+    padlocked
+      .element()
+      .querySelectorAll('.locked-slider-lock')[2] as HTMLButtonElement
+  ).click();
+  await wait(tradeRatesDelay + 50);
+  answerAll();
+  refreshTradeRates(
+    {
+      ...plain([50, 20, 30]),
+      maxRates: { Tax: 30, Luxuries: 100, Research: 100 },
+    } as unknown as PlayerTradeRates,
+    null
+  );
+
+  expect(
+    'a locked rate holds as another moves, and is unlocked when it has to move',
+    [lockedMove, numbers(padlocked.element()), locks()],
+    [
+      [
+        [50, 20, 30],
+        [false, true, false],
+      ],
+      [30, 30, 40],
+      [false, false, false],
+    ]
+  );
+
+  padlocked.close();
+  answerAll();
+  await wait(0);
+
+  // Under maximums that can't come to 100, OK leaves the rates as they were.
+  const capped = openTradeRates(rates([40, 30, 30], 40), transport),
+    beforeCapped = sent.length;
+
+  refreshTradeRates(rates([40, 30, 30], 30), null);
+  ok(capped.element()).click();
+
+  expect(
+    'OK with rates that can’t come to 100 under their maximums sends nothing',
+    sent.length - beforeCapped,
+    0
+  );
+
+  answerAll();
+  await wait(0);
 };
 
 const run = async (): Promise<void> => {
@@ -509,6 +905,14 @@ const run = async (): Promise<void> => {
   );
 
   refreshTradeRates(rates([40, 0, 60], 60));
+
+  expect(
+    'with nothing of its own on the way, it takes the rates the engine set (#1169)',
+    values(),
+    [40, 0, 60]
+  );
+
+  move(element, 1, 30);
   ok(element).click();
 
   const [[, action]] = sent as [string, any][];

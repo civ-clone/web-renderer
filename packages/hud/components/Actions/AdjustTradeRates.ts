@@ -93,7 +93,22 @@ export const tradeRatesAnswered = (): boolean => {
 // Whether the game is waiting for the other civilizations, when it takes no actions: the window shows the rates, but
 //  can't change them until the turn comes back (#1058).
 let waitingForTurn = false,
-  showWaiting: (() => void) | null = null;
+  // Whether the wait is the game being carried over to new art, rather than the turn changing hands.
+  carryingOver = false,
+  // Whether End Turn has been sent and not yet answered: rates sent now would go after it, and be dropped if the turn
+  //  ends, so the window holds them until the answer says whether it has (#1169).
+  endingTurn = false,
+  showWaiting: (() => void) | null = null,
+  // Sends what the open window holds that it couldn't while the game was waiting or the turn was ending.
+  resumeOpen: (() => void) | null = null,
+  // Closes the open window with its rates kept, as the turn ends.
+  closeOpenKept: (() => void) | null = null,
+  // A window closed during a hand-over: the rates it leaves, sent if the game is handed back (#1169).
+  afterCarryOver: (() => void) | null = null,
+  // A window closed before End Turn's answer: the rates it leaves, sent once the answer comes.
+  afterEndTurn: (() => void) | null = null,
+  // The rates `afterCarryOver` or `afterEndTurn` will send, for a window opened before they go to start from.
+  queuedRates: [string, number][] | null = null;
 
 /** Said by the game as the turn ends and starts again, for an open window to stop or start taking changes. */
 export const setTradeRatesWaiting = (
@@ -102,14 +117,64 @@ export const setTradeRatesWaiting = (
   turnChanging: boolean = true
 ): void => {
   waitingForTurn = waiting;
+  carryingOver = waiting && !turnChanging;
 
-  // Rates sent before the turn changed hands are answered, or will never be: none is outstanding into the next.
+  // Rates sent before the turn changed hands are answered, or will never be: none is outstanding into the next, and
+  //  End Turn has been answered too.
   if (turnChanging) {
     unanswered = 0;
     inFlight = null;
+    endingTurn = false;
+    afterCarryOver = null;
+    afterEndTurn = null;
+    queuedRates = null;
   }
 
   showWaiting?.();
+
+  // The turn has ended: the rates on screen were the turn's, sent ahead of End Turn, so the window closes with them
+  //  kept, and Cancel can't put back rates for a turn that's gone.
+  if (waiting && turnChanging) {
+    closeOpenKept?.();
+  }
+
+  if (waiting) {
+    return;
+  }
+
+  // Handed back after a hand-over that didn't happen: a Cancel made during it is carried out now.
+  if (!turnChanging && afterCarryOver !== null) {
+    const restore = afterCarryOver;
+
+    afterCarryOver = null;
+    queuedRates = null;
+    restore();
+  }
+
+  resumeOpen?.();
+};
+
+/**
+ * Said by the game as End Turn is sent (`true`) and answered (`false`). Until the answer, an open window holds the rates
+ *  it's moved to; once it comes, they're sent if the turn goes on (an End Turn refused while talks are open, #491), and
+ *  dropped as the turn ends if it doesn't (#1169).
+ */
+export const setTradeRatesEndingTurn = (ending: boolean): void => {
+  endingTurn = ending;
+
+  if (ending) {
+    return;
+  }
+
+  if (afterEndTurn !== null) {
+    const leave = afterEndTurn;
+
+    afterEndTurn = null;
+    queuedRates = null;
+    leave();
+  }
+
+  resumeOpen?.();
 };
 
 /** The game is going: an open window closes without sending, and nothing it held carries over (#1058). */
@@ -119,8 +184,15 @@ export const disposeTradeRates = (): void => {
   open = null;
   refreshOpen = null;
   showWaiting = null;
+  resumeOpen = null;
+  closeOpenKept = null;
+  afterCarryOver = null;
+  afterEndTurn = null;
+  queuedRates = null;
   latestPlayer = null;
   waitingForTurn = false;
+  carryingOver = false;
+  endingTurn = false;
   unanswered = 0;
   inFlight = null;
 };
@@ -193,17 +265,32 @@ export const openTradeRates = (
     // The rates the window opened with, which Cancel puts back, and the empire as it was then, to compare against.
     // The rates the engine holds, as the player last saw them.
     held = tradeRates.all.map((rate): [string, number] => [rate._, rate.value]),
-    opening = unanswered > 0 && inFlight !== null ? inFlight : held,
     openingValue = (rate: string): number =>
       opening.find(([key]) => key === rate)?.[1] ?? 0,
     before = player === null ? null : empireTotals(player);
+
+  // Rates a window closed during a wait left to be sent: this one takes them over, starting from them and sending them
+  //  itself when the wait is over, so its own close, which replaces them, can't send rates behind its back (#1169).
+  const queued = queuedRates;
+
+  if (queued !== null) {
+    afterCarryOver = null;
+    afterEndTurn = null;
+    queuedRates = null;
+  }
+
+  // The rates the window opened with, which Cancel puts back: those still to be sent, or those last sent if they're
+  //  still to be answered.
+  let opening =
+    queued ?? (unanswered > 0 && inFlight !== null ? inFlight : held);
 
   // The rates as they were last sent, for the caps.
   let current = tradeRates,
     // What was last sent, and what the engine last said it holds: a send is skipped only when the rates match both, so
     //  neither a send that never arrived nor a refresh that arrives before a later send's answer can leave the engine on
     //  rates the window doesn't show. A send now and then that wasn't needed does no harm.
-    sent = opening,
+    // Rates taken over from a window closed during a wait haven't been sent: the engine still holds its own.
+    sent = queued === null ? opening : held,
     engine = held,
     pending: ReturnType<typeof setTimeout> | null = null,
     kept = false,
@@ -219,8 +306,13 @@ export const openTradeRates = (
       ),
     // Whether it sent anything.
     send = (value: [string, number][]): boolean => {
-      // The game takes no actions while waiting, or keeps none (a game being carried over): nothing is sent.
-      if (waitingForTurn || (same(value, sent) && same(value, engine))) {
+      // The game takes no actions while waiting, or keeps none (a game being carried over), and drops those that follow
+      //  an End Turn that ends the turn: nothing is sent.
+      if (
+        waitingForTurn ||
+        endingTurn ||
+        (same(value, sent) && same(value, engine))
+      ) {
         return false;
       }
 
@@ -254,7 +346,18 @@ export const openTradeRates = (
         clearTimeout(pending);
       }
 
-      pending = setTimeout(flush, tradeRatesDelay);
+      pending = setTimeout(() => {
+        pending = null;
+
+        // Taken off the page without being closed: what it held goes with it.
+        if (!window.element().isConnected) {
+          disposeOpen?.();
+
+          return;
+        }
+
+        flush();
+      }, tradeRatesDelay);
     },
     showSplit = (): void =>
       ordered.forEach((rate, index) => {
@@ -418,16 +521,32 @@ export const openTradeRates = (
     sliders.forEach((slider) =>
       slider.setMax(rates.maxRates?.[slider.key()] ?? 100)
     );
+
+    // Rates the engine set itself (a change of government resetting them, say), with nothing of the window's on its way
+    //  to it: the window takes them, and Cancel puts them back rather than the ones they replaced (#1169).
+    if (
+      unanswered === 0 &&
+      pending === null &&
+      !endingTurn &&
+      !waitingForTurn &&
+      !same(engine, sent)
+    ) {
+      sliderGroup.setValues(engine);
+      showSplit();
+      sent = engine;
+      opening = engine;
+    }
+
     refreshing = false;
     notes.replaceChildren(...limitNotes(rates));
     showEffect(player);
   };
 
-  // The turn is ending with the window open: the rates on screen are the turn's, so they're kept, and what's pending is
-  //  sent now, ahead of End Turn, which would otherwise leave it, or a later Cancel, to arrive after the turn had gone.
+  // End Turn is being sent with the window open: what's pending is sent now, ahead of it, which would otherwise leave it
+  //  to arrive after the turn had gone. The window stays open: if the turn ends, it closes with the rates kept
+  //  (`closeOpenKept`), and if End Turn is refused, Cancel can still put back the rates it opened with (#1169).
   const settle = (): void => {
-    kept = true;
-    window.close();
+    flush();
   };
 
   document.addEventListener('beforeendturn', settle);
@@ -475,6 +594,18 @@ export const openTradeRates = (
 
   showWaiting();
 
+  // Moves held while the game waited or the turn was ending are sent once it no longer is.
+  resumeOpen = (): void => {
+    if (!waitingForTurn && !endingTurn && !same(values(), sent)) {
+      schedule();
+    }
+  };
+
+  closeOpenKept = (): void => {
+    kept = true;
+    window.close();
+  };
+
   disposeOpen = (): void => {
     document.removeEventListener('beforeendturn', settle);
 
@@ -488,6 +619,8 @@ export const openTradeRates = (
       refreshOpen = null;
       disposeOpen = null;
       showWaiting = null;
+      resumeOpen = null;
+      closeOpenKept = null;
     }
   };
 
@@ -495,30 +628,46 @@ export const openTradeRates = (
     document.removeEventListener('beforeendturn', settle);
 
     if (open === window) {
-      disposeOpen = null;
-      showWaiting = null;
-    }
-
-    if (open === window) {
       open = null;
       refreshOpen = null;
+      disposeOpen = null;
+      showWaiting = null;
+      resumeOpen = null;
+      closeOpenKept = null;
     }
 
-    if (kept) {
-      flush();
-    } else {
-      if (pending !== null) {
-        clearTimeout(pending);
-        pending = null;
-      }
+    if (pending !== null) {
+      clearTimeout(pending);
+      pending = null;
+    }
 
-      // Put back the rates it opened with, unless a new government's maximums leave them out of reach.
-      if (
-        opening.every(
+    // OK keeps the rates on screen, if they can be set; Cancel puts back the rates it opened with, unless a new
+    //  government's maximums leave them out of reach.
+    const final = kept
+      ? sendable()
+        ? values()
+        : null
+      : opening.every(
           ([rate, value]) => value <= (current.maxRates?.[rate] ?? 100)
         )
-      ) {
-        send(opening);
+      ? opening
+      : null;
+
+    if (final !== null) {
+      if (carryingOver) {
+        // The game keeps no actions while it's being carried over: they're sent if it's handed back instead.
+        queuedRates = final;
+        afterCarryOver = (): void => {
+          send(final);
+        };
+      } else if (endingTurn) {
+        // End Turn's answer is still to come: they're sent if it's refused, and dropped with the turn if it isn't.
+        queuedRates = final;
+        afterEndTurn = (): void => {
+          send(final);
+        };
+      } else {
+        send(final);
       }
     }
 

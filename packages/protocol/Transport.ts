@@ -66,6 +66,9 @@ export type TransportHandledAction = {
   id?: string;
   unitAction?: string;
   target?: string;
+  // An `EndTurn` that ended the turn: `turnEnded` follows at once. Unset when it was refused (#491) and the turn goes on,
+  //  so the page can tell which as the answer comes (#1169).
+  turnEnded?: boolean;
 };
 
 type TransportPlayerAction = {

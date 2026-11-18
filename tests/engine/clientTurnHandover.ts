@@ -64,6 +64,8 @@ process.on('exit', (code: number): void => {
 let tick = 0,
   pumping = false;
 const events: string[] = [];
+// Each `actionHandled` as it was sent.
+const handled: any[] = [];
 const record = (name: string) =>
   events.push(pumping ? `${name}@${tick}` : name);
 const pump = (): void => {
@@ -109,6 +111,10 @@ const transport: any = {
   },
   receiveOnce: () => () => false,
   send: (channel: string, data: any): void => {
+    if (channel === 'actionHandled') {
+      handled.push(data);
+    }
+
     // A patch that can't be posted, once (#470).
     if (channel === 'gameDataPatch' && failNextPatch) {
       failNextPatch = false;
@@ -379,6 +385,14 @@ const run = async (): Promise<void> => {
     'actionHandled@2',
     'turnEnded@2',
   ]);
+  expect(
+    "the answers say which ended the turn, for the page's trade rates window (#1169)",
+    handled.slice(-2).map(({ name, turnEnded }) => [name, turnEnded ?? false]),
+    [
+      ['ActiveUnit', false],
+      ['EndTurn', true],
+    ]
+  );
   expect('no longer handed over', turnHandover.handedOver, false);
   expect('the turn is not over before 10 ms', firstOver, false);
   await wait(20);

@@ -93,6 +93,22 @@ export class LockedSliderGroup {
     }
   }
 
+  /**
+   * Sets each slider named in `values` to its value as it stands, without rebalancing the others: the rates as the
+   *  engine holds them, which already come to 100 (#1169).
+   */
+  setValues(values: [string, number][]): void {
+    this.#rebalancing = true;
+
+    try {
+      values.forEach(([key, value]) =>
+        this.#sliders.find((slider) => slider.key() === key)?.set(String(value))
+      );
+    } finally {
+      this.#rebalancing = false;
+    }
+  }
+
   /** Whether the rates come to 100, as the engine needs them to. */
   balanced(): boolean {
     return this.total() === 100;
