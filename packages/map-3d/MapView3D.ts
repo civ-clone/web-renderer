@@ -18,7 +18,7 @@ import { MapView3DDeps } from '@civ-clone/ui-map/MapView3DFactory';
 import MapPortal3D from './MapPortal3D';
 import MapRenderer from '@civ-clone/ui-map/MapRenderer';
 import World from '@civ-clone/ui-map/components/World';
-import { Stage, StageFactory, createStage } from './stage';
+import { SIGHT, Stage, StageFactory, createStage } from './stage';
 import Land from './Land';
 
 // How long, in ms, each frame may go on building the land's chunks while any wait. A chunk is built whole, once a frame
@@ -70,7 +70,7 @@ export class MapView3D implements MapRenderer {
     this.#worldTiles = deps.world.tiles();
     this.#worldTileCount = this.#worldTiles.length;
     this.#stage = stageFactory(deps.mapCanvas, {
-      copies: this.#land.copies(),
+      copies: this.#land.copies(SIGHT),
     });
 
     if (deps.debug && deps.mapCanvas.parentElement) {

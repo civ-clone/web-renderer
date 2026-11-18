@@ -73,13 +73,32 @@ export class Land {
     this.#reach = REACH + corner + (seaFloor.reach - 1) * step;
   }
 
-  /** Where the world's copies lie, as offsets: itself, and its neighbours a period away each way it wraps. */
-  copies(): [number, number][] {
+  /**
+   * Where the world's copies lie, as offsets: itself, and as many more a period away each way it wraps as the camera
+   *  can see `sight` across from anywhere on it, so a small world doesn't end inside the view.
+   */
+  copies(sight: number): [number, number][] {
     const { u, v } = this.layout.period(),
-      down = v === null ? [0] : [-v, 0, v];
+      along = (period: number | null): number[] => {
+        if (period === null) {
+          return [0];
+        }
 
-    return [-u, 0, u].flatMap((across) =>
-      down.map((offset): [number, number] => [across, offset])
+        const offsets: number[] = [];
+
+        for (
+          let k = Math.floor(-sight / period);
+          k <= Math.floor((period + sight) / period);
+          k++
+        ) {
+          offsets.push(k * period);
+        }
+
+        return offsets;
+      };
+
+    return along(u).flatMap((across) =>
+      along(v).map((offset): [number, number] => [across, offset])
     );
   }
 

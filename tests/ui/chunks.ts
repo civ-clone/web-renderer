@@ -326,6 +326,47 @@ ids.forEach((topologyId) => {
   });
 });
 
+// The world's copies: on a world smaller than the camera sees, as many as it sees from anywhere on the world.
+{
+  const small = new World({
+      _: 'World',
+      __: ['World', 'DataObject'],
+      id: 'small',
+      width: 16,
+      height: 12,
+      topologyId: 'square',
+      tiles: [],
+    }),
+    land = new Land(small),
+    { u: periodU, v: periodV } = land.layout.period(),
+    sight = 110,
+    copies = land.copies(sight),
+    // Whether a point lies on one of the copies.
+    covered = (u: number, v: number): boolean =>
+      copies.some(
+        ([across, down]) =>
+          u >= across &&
+          u <= across + periodU &&
+          (periodV === null || (v >= down && v <= down + periodV))
+      );
+
+  expect(
+    'on a small world, the copies drawn cover all the camera can see from anywhere on it',
+    [
+      [0, 0],
+      [periodU, periodV ?? 0],
+      [periodU / 2, 0],
+    ].every(([u, v]) =>
+      Array.from({ length: 21 }, (_, n) => n / 10 - 1).every((du) =>
+        Array.from({ length: 21 }, (_, n) => n / 10 - 1).every((dv) =>
+          covered(u! + du * sight, v! + dv * sight)
+        )
+      )
+    ),
+    true
+  );
+}
+
 // Land rising from an empty sea, where the floor it moves is what reaches the next chunk: two squares out, the floor
 //  rises, and that square's kernel reaches over a chunk's border that the new land's own doesn't.
 ids.forEach((topologyId) => {

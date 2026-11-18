@@ -63,6 +63,9 @@ const SKY = 0x9fb3c4,
   CAMERA_BACK = 16,
   CAMERA_UP = 16;
 
+/** How far the camera sees: the haze hides everything past it. */
+export const SIGHT = 110;
+
 export const createStage: StageFactory = (canvas, { copies }) => {
   const renderer = new WebGLRenderer({ antialias: true, canvas }),
     scene = new Scene(),
@@ -81,7 +84,7 @@ export const createStage: StageFactory = (canvas, { copies }) => {
 
   scene.background = new Color(SKY);
   // Haze into the distance (§9.3), so the land fades into the sky rather than ending at an edge.
-  scene.fog = new Fog(SKY, 30, 110);
+  scene.fog = new Fog(SKY, 30, SIGHT);
   scene.add(new HemisphereLight(SKY_LIGHT, GROUND_LIGHT, 0.9));
   scene.add(land);
 
