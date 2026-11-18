@@ -1495,17 +1495,20 @@ if (scenario !== null) {
     [true, true]
   );
 
-  // The file itself holds the count, under its ship's id, whatever becomes of the ship once the loaded game plays on.
+  // The file itself holds the count, its target the ship, whatever becomes of the ship once the loaded game plays on.
   const atSeaId = endgame?.shipsAtSea?.[0]?.id,
-    savedFile = readFileSync(civ2Path, 'utf8');
+    savedAtSea = (
+      JSON.parse(readFileSync(civ2Path, 'utf8')).entities as {
+        state: { _handler?: string; _target?: { $ref?: string }; _data?: any };
+      }[]
+    )
+      .filter(({ state }) => state._handler === 'civ2-barbarians:ship-at-sea')
+      .map(({ state }) => [state._target?.$ref === atSeaId, state._data]);
 
   expect(
-    'and its save holds the count at sea under its ship’s id',
-    [
-      savedFile.split('civ2-barbarians:ship-at-sea').length - 1 > 0,
-      typeof atSeaId === 'string' && savedFile.includes(atSeaId),
-    ],
-    [true, true]
+    'and its save holds the count at sea, its target the ship',
+    savedAtSea,
+    [[true, { count: '3', acted: '1' }]]
   );
 
   finished = true;
