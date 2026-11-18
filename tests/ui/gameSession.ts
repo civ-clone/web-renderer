@@ -906,6 +906,53 @@ const run = async (): Promise<void> => {
 
   expect('once they are answered, the turn is ended', endTurns(), 5);
 
+  // That End Turn is on its way: a trade rates window opened now holds its moves rather than send them after it, and
+  //  sends them once End Turn is refused and the turn goes on (#1169).
+  const rateSends = (): number =>
+      sent.filter(
+        ([name, data]) =>
+          name === 'action' && (data as any)?.name === 'AdjustTradeRates'
+      ).length,
+    rateSendsBefore = rateSends(),
+    gapWindow = openTradeRates(
+      {
+        id: 'PlayerTradeRates-1',
+        all: [
+          { _: 'Tax', value: 40 },
+          { _: 'Luxuries', value: 20 },
+          { _: 'Research', value: 40 },
+        ],
+      } as unknown as PlayerTradeRates,
+      transport
+    ),
+    gapTax = gapWindow
+      .element()
+      .querySelector('input[type="number"]') as HTMLInputElement;
+
+  gapTax.value = '10';
+  gapTax.dispatchEvent(new Event('input'));
+  await new Promise((resolve) => setTimeout(resolve, 250));
+
+  const heldWhileEnding = rateSends() - rateSendsBefore;
+
+  deliver('actionHandled', { name: 'EndTurn' });
+  await new Promise((resolve) => setTimeout(resolve, 250));
+
+  expect(
+    'a window opened while End Turn is on its way holds its moves, and sends them once it is refused',
+    [heldWhileEnding, rateSends() - rateSendsBefore],
+    [0, 1]
+  );
+
+  // Tidied away for what follows.
+  deliver('gameDataPatch', []);
+  deliver('actionHandled', { name: 'AdjustTradeRates' });
+  (
+    gapWindow.element().querySelector('footer .btn-primary') as HTMLElement
+  ).click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  deliver('turnEnded');
+
   options.set('autoEndOfTurn', false);
 
   // A watcher's notices (#607, #613): no End Turn clears them, so a turn's are kept until the turn after it has come,

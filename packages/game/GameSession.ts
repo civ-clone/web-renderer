@@ -7,6 +7,7 @@ import openCity from '@civ-clone/ui-city/components/openCity';
 import CitiesList from '@civ-clone/ui-hud/components/CitiesList';
 import {
   disposeTradeRates,
+  setTradeRatesEndingTurn,
   setTradeRatesWaiting,
   tradeRatesAnswered,
   tradeRatesSettling,
@@ -545,6 +546,8 @@ export class GameSession {
 
     const endTurnListener = (): void => {
       this.#endTurnSent = true;
+      // The trade rates window holds its changes until End Turn is answered (#1169).
+      setTradeRatesEndingTurn(true);
     };
 
     document.addEventListener('endturn', endTurnListener);
@@ -588,6 +591,8 @@ export class GameSession {
       transport.send('action', {
         name: 'EndTurn',
       });
+
+      setTradeRatesEndingTurn(true);
     }
   }
 
@@ -798,6 +803,8 @@ export class GameSession {
     //  Turn may be sent again.
     if (action.name === 'EndTurn') {
       this.#endTurnSent = false;
+      // Refused, the trade rates window sends what it held; accepted, `turnEnded` follows, and it's dropped (#1169).
+      setTradeRatesEndingTurn(false);
     }
 
     // The last trade rates answered, their patch already in: the turn may be ended on the figures they give (#1058).
@@ -834,6 +841,7 @@ export class GameSession {
     //  (#151).
     this.#endTurnSent = false;
 
+    setTradeRatesEndingTurn(false);
     setTradeRatesWaiting(false);
 
     // Nor is any unit's order sent while waiting: the keys are free for the new turn (#543).
