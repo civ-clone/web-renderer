@@ -1,6 +1,9 @@
 // The library of art and sound (#1063): its sections, and each set's entry in them.
 .library {
   max-width: 36em;
+  // In from the window's edges as far as its header and footer are, which also clears a scroll bar drawn over the
+  //  body's edge.
+  padding: 0.5em 0.75em;
 
   .storage-blocked {
     color: var(--ui-negative);
@@ -40,8 +43,6 @@
     flex-wrap: wrap;
     gap: 0.5em;
     justify-content: space-between;
-    // Clear of the window's scroll bar, which some chromes draw over the body's edge.
-    padding-right: 0.5em;
   }
 
   .status[data-state='ready'] {
@@ -67,7 +68,5 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.5em;
-    // Clear of the window's scroll bar, as the head is.
-    padding-right: 0.5em;
   }
 }
