@@ -38,6 +38,8 @@ import Notices from '@civ-clone/ui-hud/components/Notices';
 import Notifications from '@civ-clone/ui-hud/components/Notifications';
 import NotificationBar from '@civ-clone/ui-game/app/NotificationBar';
 import Transport from '@civ-clone/ui-client/Transport';
+import { PlayerTradeRates } from '@civ-clone/ui-protocol/types';
+import { openTradeRates } from '@civ-clone/ui-hud/components/Actions/AdjustTradeRates';
 import appElements from '@civ-clone/ui-game/app/elements';
 import { applyInterface } from '@civ-clone/ui-platform/lib/interfaceMode';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
@@ -383,9 +385,9 @@ const run = async (): Promise<void> => {
     ]
   );
   expect(
-    "the page's disposers stay first, then the render frame's, the state's, one per receiver, the unit panel's, and the map's art's and the hand-over's",
+    "the page's disposers stay first, then the render frame's, the state's, one per receiver, the unit panel's, and the map's art's and the hand-over's, and the trade rates window's close (#1058)",
     transportDisposers.length,
-    1 + 3 + 14 + 1 + 2
+    1 + 3 + 14 + 1 + 2 + 1
   );
   expect('nothing went wrong starting', errors, []);
   expect('the game has started', gameStarted, true);
@@ -857,6 +859,51 @@ const run = async (): Promise<void> => {
     endTurns(),
     4
   );
+
+  // The trade rates window holds the turn while it's open, and while rates it sent are unanswered: the figures until the
+  //  answer are from before them, and moving them may have cleared the disorder that held the turn (#1058).
+  deliver('turnEnded');
+
+  const ratesWindow = openTradeRates(
+    {
+      id: 'PlayerTradeRates-1',
+      all: [
+        { _: 'Tax', value: 40 },
+        { _: 'Luxuries', value: 0 },
+        { _: 'Research', value: 60 },
+      ],
+    } as unknown as PlayerTradeRates,
+    transport
+  );
+
+  deliver('turnStarted');
+
+  expect('not while the trade rates window is open', endTurns(), 4);
+
+  const luxuries = ratesWindow
+    .element()
+    .querySelectorAll('input[type="number"]')[1] as HTMLInputElement;
+
+  luxuries.value = '20';
+  luxuries.dispatchEvent(new Event('input'));
+  (
+    ratesWindow.element().querySelector('footer .btn-primary') as HTMLElement
+  ).click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  expect(
+    'nor once it closes, while the rates it sent are unanswered',
+    endTurns(),
+    4
+  );
+
+  deliver('gameDataPatch', []);
+
+  expect('nor on a patch before their answer', endTurns(), 4);
+
+  deliver('actionHandled', { name: 'AdjustTradeRates' });
+
+  expect('once they are answered, the turn is ended', endTurns(), 5);
 
   options.set('autoEndOfTurn', false);
 

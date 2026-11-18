@@ -6,7 +6,10 @@ i18next.addResources('en', 'default', {
   'Generic.close': 'Close',
   'Generic.ok': 'OK',
   'ChoiceWindow.choose': 'Choose',
-  'LockedSlider.lock': 'Lock',
+  // The padlock by each rate (#1058): its name for a screen reader, and its tooltip.
+  'LockedSlider.lock-rate': 'Lock {{- label}}',
+  'LockedSlider.lock-title':
+    'Lock this rate: it stays where it is while you move the others.',
   // A rate's maximum under the government (Civ2's), beside its name.
   'LockedSlider.max': '(at most {{max}}%)',
   'ReportTable.total': 'Total',

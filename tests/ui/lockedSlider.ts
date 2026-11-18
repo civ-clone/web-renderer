@@ -120,7 +120,7 @@ const tradeRates = (...values: number[]) => {
   expect('a negative value is set to 0', slider.value(), 0);
 }
 
-// Each input says which rate it is: the legend alone leaves a screen reader with "slider, 50" (#857).
+// Each input says which rate it is: the row's name alone leaves a screen reader with "slider, 50" (#857).
 {
   const slider = new LockedSlider('tax', 50, 'Tax "rate" & more');
 
@@ -171,7 +171,9 @@ const tradeRates = (...values: number[]) => {
   expect(
     'and the maximum is said beside the rate’s name, and the number box stops at it',
     [
-      sliders[0]!.element().querySelector('legend .locked-slider-max') !== null,
+      sliders[0]!
+        .element()
+        .querySelector('.locked-slider-name .locked-slider-max') !== null,
       numberBox(sliders[0]!).getAttribute('max'),
     ],
     [true, '60']
@@ -188,12 +190,11 @@ const tradeRates = (...values: number[]) => {
   new LockedSliderGroup(...sliders);
 
   [0, 1].forEach((index) => {
-    const lock = sliders[index]!
-      .element()
-      .querySelector('input[type="checkbox"]') as HTMLInputElement;
+    const lock = sliders[index]!.element().querySelector(
+      '.locked-slider-lock'
+    ) as HTMLButtonElement;
 
-    lock.checked = true;
-    lock.dispatchEvent(new Event('input'));
+    lock.click();
   });
 
   type(sliders[2]!, '60');
@@ -217,8 +218,67 @@ const tradeRates = (...values: number[]) => {
 
   expect(
     'without a maximum, nothing is said',
-    [slider.element().querySelector('legend .locked-slider-max'), slider.max()],
+    [
+      slider.element().querySelector('.locked-slider-name .locked-slider-max'),
+      slider.max(),
+    ],
     [null, 100]
+  );
+}
+
+// A rate moved takes what it's moved to, the others giving it up in turn while they have some to give: one already at 0
+//  doesn't hold it back (#1058).
+{
+  const sliders = tradeRates(40, 0, 60);
+
+  type(sliders[0]!, '70');
+
+  expect(
+    'tax moved to 70 gets 70, from research',
+    values(sliders),
+    [70, 0, 30]
+  );
+
+  type(sliders[2]!, '100');
+
+  expect('research moved to 100 gets it all', values(sliders), [0, 0, 100]);
+}
+
+// The lock is a toggle button named after its rate (#1058): pressed, it holds the slider and the number box, and the
+//  others take the change.
+{
+  const sliders = tradeRates(30, 30, 40),
+    lock = sliders[1]!
+      .element()
+      .querySelector('.locked-slider-lock') as HTMLButtonElement;
+
+  lock.click();
+
+  expect(
+    'pressed, it says so and disables its rate',
+    [
+      lock.getAttribute('aria-pressed'),
+      sliders[1]!.isLocked(),
+      (
+        sliders[1]!
+          .element()
+          .querySelector('input[type="range"]') as HTMLInputElement
+      ).disabled,
+    ],
+    ['true', true, true]
+  );
+
+  type(sliders[0]!, '50');
+
+  expect('the locked rate stays where it is', values(sliders), [50, 30, 20]);
+
+  lock.click();
+
+  expect('pressed again, it lets go', sliders[1]!.isLocked(), false);
+  expect(
+    'it has a name of its own for a screen reader',
+    lock.hasAttribute('aria-label'),
+    true
   );
 }
 

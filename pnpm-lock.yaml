@@ -739,6 +739,9 @@ importers:
       '@civ-clone/ui-client':
         specifier: workspace:*
         version: link:../client
+      '@civ-clone/ui-component-button':
+        specifier: workspace:*
+        version: link:../component-button
       '@civ-clone/ui-component-choice-window':
         specifier: workspace:*
         version: link:../component-choice-window

@@ -3,12 +3,14 @@
 //  through the active unit's `pressKey`; Escape blurs; Tab focuses the first action; `c`/`w`/`t`/`y`; Shift+5 then
 //  Shift+6 turns the cheats on; a leader screen opens, its key going on through the handler as any other, but not over
 //  a modal window; `?` opens the Civilopedia, once; `+` and `-` open the trade rates window, once, when the engine
-//  offers it; `z` and `x` zoom the map (#1101), but not over a modal window or into a field; Shift+S saves, but not over a
-//  modal window; and `dispose` removes the listener. Driven with stub dependencies.
+//  offers it (closed untouched, it sends nothing); `z` and `x` zoom the map (#1101), but not over a modal window or
+//  into a field; Shift+S saves, but not over a modal window; and `dispose` removes the listener. Driven with stub
+//  dependencies.
 
 // Must stay first: it gives the controller a `document`.
 import './lib/dom';
 import './lib/interfaces';
+import './lib/artPacks';
 
 import { GameData, Tile, Unit } from '@civ-clone/ui-protocol/types';
 import i18next from 'i18next';
@@ -682,13 +684,11 @@ const run = async (): Promise<void> => {
     ) as HTMLButtonElement | null
   )?.click();
 
+  // Closed without moving a rate, it leaves them as they are (#1058).
   expect(
-    'closing it sends the rates',
-    [
-      tradeRatesWindows(),
-      sent.map(([name, data]) => [name, (data as { id: string }).id]),
-    ],
-    [0, [['action', 'trade-rates-1']]]
+    'closing it untouched sends nothing',
+    [tradeRatesWindows(), sent.length],
+    [0, 0]
   );
 
   document

@@ -48,6 +48,10 @@ const glyphs = {
   'stat-fuel': '<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>',
   // Feather's flag, by a city in civil disorder in a report (#744).
   flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>',
+  // Feather's lock and unlock, for a trade rate held where it is while the others move (#1058).
+  lock: '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  unlock:
+    '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>',
   // Feather's map pin, by a square's coordinates.
   location:
     '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',

@@ -5,6 +5,12 @@ import { t } from 'i18next';
 import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
 import openCity from '@civ-clone/ui-city/components/openCity';
 import CitiesList from '@civ-clone/ui-hud/components/CitiesList';
+import {
+  disposeTradeRates,
+  setTradeRatesWaiting,
+  tradeRatesAnswered,
+  tradeRatesSettling,
+} from '@civ-clone/ui-hud/components/Actions/AdjustTradeRates';
 import { redrawWindowUnits } from '@civ-clone/ui-hud/components/Unit';
 import GameMenu from '@civ-clone/ui-menus/components/GameMenu';
 import { GameMenuItem } from '@civ-clone/ui-menus/components/mapMenus';
@@ -38,6 +44,7 @@ import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry'
 import Dismissals from '@civ-clone/ui-client/lib/dismissals';
 import { actionKey } from '@civ-clone/ui-client/lib/nextTurnQueue';
 import shouldAutoEndTurn from '@civ-clone/ui-client/lib/autoEndTurn';
+import { beforeEndTurn } from '@civ-clone/ui-client/lib/endTurn';
 import { instance as dataChanges } from '@civ-clone/ui-client/lib/DataChanges';
 import ActiveUnitController from './ActiveUnitController';
 import MapView from './MapView';
@@ -547,6 +554,16 @@ export class GameSession {
     transportDisposers.push((): void =>
       document.removeEventListener('endturn', endTurnListener)
     );
+
+    // The trade rates window holds the turn while it's open (#1058): closed untouched, nothing comes back from the
+    //  engine to look again, so its close does.
+    const tradeRatesClosed = (): void => this.#autoEndTurn();
+
+    document.addEventListener('traderatesclosed', tradeRatesClosed);
+    transportDisposers.push((): void => {
+      document.removeEventListener('traderatesclosed', tradeRatesClosed);
+      disposeTradeRates();
+    });
   }
 
   // After each update, and when a notification is dismissed (#416): ends the turn if there's nothing left to do.
@@ -558,13 +575,19 @@ export class GameSession {
 
     if (
       !this.#endTurnSent &&
+      // Not while the trade rates are being tried out, or their answer is on its way: moving them can clear the disorder
+      //  that held the turn, and the figures until the answer are from before them (#1058).
+      !tradeRatesSettling() &&
       shouldAutoEndTurn(data.player, options, gameState.waiting(), (action) =>
         dismissals.has(actionKey(action), Number(data.turn?.value ?? 0))
       )
     ) {
       this.#endTurnSent = true;
 
-      // Not `endTurn()`: a turn nobody played should not clear the notices waiting to be read.
+      // Not `endTurn()`: a turn nobody played should not clear the notices waiting to be read. But whatever is open
+      //  settles first, as it does for the player's own End Turn.
+      beforeEndTurn();
+
       transport.send('action', {
         name: 'EndTurn',
       });
@@ -780,11 +803,22 @@ export class GameSession {
       this.#endTurnSent = false;
     }
 
+    // The last trade rates answered, their patch already in: the turn may be ended on the figures they give (#1058).
+    if (
+      action.name === 'AdjustTradeRates' &&
+      tradeRatesAnswered() &&
+      !tradeRatesSettling()
+    ) {
+      this.#autoEndTurn();
+    }
+
     this.#unitController!.actionHandled(action);
   }
 
   #turnEnded(): void {
     this.#gameState.setWaiting(true);
+    // The game takes no actions until the turn comes back: an open trade rates window can't change the rates (#1058).
+    setTradeRatesWaiting(true);
     this.#mapView.portal.setWaiting(true);
     this.#waitingBanner.textContent = t(
       this.#observing ? 'Observer.watching' : 'Game.waiting'
@@ -802,6 +836,8 @@ export class GameSession {
     // A new turn: an End Turn sent before it was handed over is never answered, as the worker wasn't listening
     //  (#151).
     this.#endTurnSent = false;
+
+    setTradeRatesWaiting(false);
 
     // Nor is any unit's order sent while waiting: the keys are free for the new turn (#543).
     this.#unitController!.turnStarted();
@@ -953,6 +989,7 @@ export class GameSession {
 
       this.#gameState.setWaiting(false);
       this.#mapView.portal.setWaiting(false);
+      setTradeRatesWaiting(false, false);
       this.#waitingBanner.textContent = '';
 
       this.#gameState.update();
@@ -967,6 +1004,8 @@ export class GameSession {
 
       this.#gameState.setWaiting(true);
       this.#mapView.portal.setWaiting(true);
+      // Rates changed now would be lost with the game carried over (#1058).
+      setTradeRatesWaiting(true, false);
       this.#waitingBanner.textContent = t('Game.carrying-over');
 
       transport.send('save', {

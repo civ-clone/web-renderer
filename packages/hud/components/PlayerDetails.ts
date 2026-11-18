@@ -1,5 +1,4 @@
 import {
-  City,
   Player,
   PlayerGovernment,
   PlayerTradeRates,
@@ -7,18 +6,16 @@ import {
 import { Element, s } from '@dom111/element';
 import Transport from '@civ-clone/ui-client/Transport';
 import { confirmRevolution } from './Actions/Revolution';
-import isAnarchy from '@civ-clone/ui-client/lib/government';
 import { titledLeader } from '@civ-clone/ui-client/lib/relations';
 import {
   openTradeRates,
   refreshTradeRates,
   tradeRatesKey,
 } from './Actions/AdjustTradeRates';
-import { reduceKnownYields } from '@civ-clone/ui-client/lib/yieldMap';
+import { empireTotals, rateClasses, ratePosition } from '../lib/empire';
 import { researchingName } from '@civ-clone/ui-client/lib/advances';
 import { TOptions, t } from 'i18next';
 import {
-  turnsLeft,
   turnsText,
   yieldData,
   yieldIcon,
@@ -33,16 +30,6 @@ import tooltip from '@civ-clone/ui-component-tooltip/Tooltip';
 //  `&amp;` or `&#39;` (#704).
 const text = (key: string, options: TOptions = {}): string =>
   t(key, { ...options, interpolation: { escapeValue: false } });
-
-// Each trade rate's colour in the tax bar (`--panel-*` tokens), in Civ1's order, whatever order they arrive in.
-const rateClasses: { [key: string]: string } = {
-    Tax: 'tax',
-    Luxuries: 'luxury',
-    Research: 'science',
-  },
-  rateOrder = Object.keys(rateClasses),
-  ratePosition = (rate: string): number =>
-    rateOrder.includes(rate) ? rateOrder.indexOf(rate) : rateOrder.length;
 
 // An item that opens a report when clicked, when there is one to open (#698), or a plain item: a stat pill (#742).
 const reportStat = (
@@ -115,29 +102,13 @@ export class PlayerDetails extends Element {
         (treasury) => treasury.yield._ === 'Gold'
       );
 
-    const [totalGold, totalResearch] = cities.reduce(
-        ([totalGold, totalResearch], city: City): [number, number] => {
-          // TODO: There must be a way to specify that the return array has the same number of elements as the arguments...
-          const [cityGold, cityResearch] = reduceKnownYields(
-            city.yields,
-            'Gold',
-            'Research'
-          );
-
-          return [totalGold + cityGold, totalResearch + cityResearch];
-        },
-        [0, 0]
-      ),
-      anarchy = isAnarchy(this.#player),
-      // As the Science report counts it: done this turn when progress already covers the cost (#704).
-      researchTurns = turnsLeft(
-        research,
-        cities.flatMap((city) => city.yields),
-        'Research'
-      ),
-      researchContext = `${research.researching ? '' : 'not'}researching${
-        anarchy ? '-anarchy' : ''
-      }`,
+    const {
+        anarchy,
+        gold: totalGold,
+        research: totalResearch,
+        researchContext,
+        researchTurns,
+      } = empireTotals(this.#player),
       heading = s('<h3 class="nation"></h3>');
 
     heading.textContent = text('PlayerDetails.header', {
@@ -382,7 +353,7 @@ export class PlayerDetails extends Element {
     );
 
     // An Adjust trade rates window open across a change (of government, say) takes the rates' new limits (M2d).
-    refreshTradeRates(tradeRates);
+    refreshTradeRates(tradeRates, this.#player);
 
     return button;
   }
