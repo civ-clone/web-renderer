@@ -938,6 +938,7 @@ const run = async (): Promise<void> => {
       yieldOf('Gold', 3),
       yieldOf('Gold', -1),
       yieldOf('Research', 3),
+      yieldOf('Research', -3),
     ] as CityData['yields'];
     (city as { pollution?: number }).pollution = 4;
 
@@ -1003,6 +1004,11 @@ const run = async (): Promise<void> => {
       'what is made and the signed spare, or just what is made when none is used',
       [figures(rows[1]), figures(rows[2]), figures(rows[4])],
       [['total 6', 'net +4'], ['net 8'], ['total 3', 'net +2']]
+    );
+    expect(
+      'nothing spare is signed too (#1223), so it reads "3 +0", not "3 0"',
+      figures(rows[5]),
+      ['total 3', 'net +0']
     );
     expect(
       'a tick for each one, at this size',

@@ -112,8 +112,10 @@ const renderYieldRow = (
       }<span class="net${
         deficit > 0 ? ' negative' : ''
       }">${localeProvider.number(
+        // Signed beside a total, nothing left too (#1223): "4 +0", not "4 0", which reads as forty. A zero is always
+        //  formatted as 0, so never -0 (#816).
         deficit > 0 ? -deficit : free,
-        used + deficit > 0 ? { signDisplay: 'exceptZero' } : {}
+        used + deficit > 0 ? { signDisplay: 'always' } : {}
       )}</span></span>`
     )
   );

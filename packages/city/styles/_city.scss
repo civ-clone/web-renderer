@@ -33,12 +33,13 @@
     display: flex;
 
     .citizen {
-      // The tileset's step between citizens (#729): less than their width, so they overlap.
-      max-width: var(--tileset-citizen-step);
+      // The step between citizens (#729), of the set their faces come from (#1221): less than their width, so they
+      //  overlap.
+      max-width: var(--citizen-step, var(--tileset-citizen-step));
       min-width: 0;
 
       img {
-        width: var(--tileset-citizen-width);
+        width: var(--citizen-width, var(--tileset-citizen-width));
         image-rendering: pixelated;
       }
 
@@ -455,11 +456,11 @@
     display: flex;
 
     .citizen {
-      max-width: var(--tileset-citizen-step);
+      max-width: var(--citizen-step, var(--tileset-citizen-step));
       min-width: 0;
 
       img {
-        width: var(--tileset-citizen-width);
+        width: var(--citizen-width, var(--tileset-citizen-width));
         image-rendering: pixelated;
       }
     }

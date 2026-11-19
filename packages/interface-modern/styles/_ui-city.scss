@@ -1,7 +1,7 @@
 // The city screen under the new interface (#746): a window over the map, a strip across the top for the size, growth
-//  and citizens, three columns (what the city makes, its map, what it's building and has built) that share what
-//  height the window has and scroll on their own, and a strip along the bottom for its units. The bars, citizens and
-//  figures are drawn as the classic screen draws them (`city-parts`). Everything from the theme's tokens.
+//  and citizens, then three columns (what the city makes and its units, its map, what it's building and has built)
+//  that share what height the window has and scroll on their own. The bars, citizens and figures are drawn as the
+//  classic screen draws them (`city-parts`). Everything from the theme's tokens.
 .window.ui-city-window > .body {
   display: flex;
   flex-direction: column;
@@ -83,10 +83,10 @@
   }
 
   .population .citizen {
-    max-width: calc(var(--tileset-citizen-step) * 2);
+    max-width: calc(var(--citizen-step, var(--tileset-citizen-step)) * 2);
 
     img {
-      width: calc(var(--tileset-citizen-width) * 2);
+      width: calc(var(--citizen-width, var(--tileset-citizen-width)) * 2);
     }
   }
 }
@@ -117,10 +117,14 @@
   }
 }
 
+// The map's column as wide as the map, up to what the other two leave at their narrowest (#1224).
 .ui-city-columns {
   display: grid;
   gap: 1rem;
-  grid-template-columns: minmax(14rem, 1fr) auto minmax(13rem, 1fr);
+  grid-template-columns: minmax(14rem, 1fr) minmax(0, max-content) minmax(
+      13rem,
+      1fr
+    );
   min-height: 0;
 }
 
@@ -133,11 +137,15 @@
   overflow-y: auto;
 }
 
-// The map at twice its size, its squares kept sharp.
+// The map at the map's zoom, its squares kept sharp. Taller than the columns' height, in a wide but short window at a
+//  high zoom, it scrolls as they do, from its top, rather than its last squares being cut off out of reach.
 .ui-city-centre {
+  align-items: flex-start;
   display: flex;
   justify-content: center;
+  min-height: 0;
   min-width: 0;
+  overflow: auto;
 
   canvas {
     image-rendering: pixelated;
@@ -337,13 +345,11 @@
   gap: 0.5rem;
 }
 
-// The units in the city and those it supports, side by side.
+// The units in the city, then those it supports, under the yields (#1224).
 .ui-city-units-strip {
-  border-top: 1px solid var(--ui-line);
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1.5rem;
-  padding-top: 0.5rem;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .ui-city-units {
@@ -353,7 +359,11 @@
   min-height: 2rem;
 }
 
+// On the window's own ground, as the supported units are, rather than the browser's button (#1224).
 .ui-city-unit {
+  background: none;
+  border: 0;
+  border-radius: var(--ui-radius-control);
   line-height: 0;
   padding: 0;
 
@@ -364,6 +374,14 @@
 
   &:focus-visible {
     outline: var(--ui-focus-outline);
+  }
+}
+
+button.ui-city-unit {
+  cursor: pointer;
+
+  &:hover {
+    background: var(--ui-table-hover);
   }
 }
 
@@ -394,14 +412,17 @@
     flex: 1 1 12rem;
   }
 
+  // The rest kept at least as wide as its narrowest, however large the map is drawn.
   .ui-city-columns {
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, max-content) minmax(14rem, 1fr);
   }
 
+  // The window scrolls instead.
   .ui-city-centre {
     align-self: start;
     grid-column: 1;
     grid-row: 1 / span 2;
+    overflow: visible;
   }
 
   .ui-city-left,
