@@ -24,12 +24,7 @@ import {
   toScreen,
   zoomed,
 } from '@civ-clone/ui-map-3d/camera/orbit';
-import {
-  SLIDE,
-  carrySlide,
-  copiesNear,
-  slideOffset,
-} from '@civ-clone/ui-map-3d/stage';
+import { SLIDE, copiesNear, slideOffset } from '@civ-clone/ui-map-3d/stage';
 
 const failures: string[] = [];
 let checks = 0;
@@ -352,24 +347,21 @@ expect(
   ]
 );
 
-// A unit's slide: all the way from where it started at first, eased, and none once it's there. Carried on by a marker
-//  made again on another place mid-slide, it's drawn where it was.
+// A unit's slide: all the way from where it started at first, eased in and out (a quarter of the time in, less than a
+//  quarter of the way), and none once it's there.
 {
-  const slide = { from: [2, 0, -1] as [number, number, number], started: 100 },
-    carried = carrySlide(slide, [10, 0, 10], [10.5, 0.1, 10]),
-    halfway = slideOffset(slide, 100 + SLIDE / 2);
+  const slide = { from: [2, 0, -1] as [number, number, number], started: 100 };
 
   expect(
-    'a slide starts where it set off, eases, ends in place, and carried on mid-slide it goes on from where it was',
+    'a slide starts where it set off, eases in and out, and ends in place',
     [
       slideOffset(slide, 100),
-      halfway?.map((n) => Math.round(n * 1000)),
+      slideOffset(slide, 100 + SLIDE / 4)?.map((n) => Math.round(n * 1000)),
+      slideOffset(slide, 100 + SLIDE / 2)?.map((n) => Math.round(n * 1000)),
       slideOffset(slide, 100 + SLIDE),
       slideOffset(undefined, 100),
-      [10.5 + carried.from[0], 0.1 + carried.from[1], 10 + carried.from[2]],
-      carried.started,
     ],
-    [[2, 0, -1], [1000, 0, -500], null, null, [12, 0, 9], 100]
+    [[2, 0, -1], [1688, 0, -844], [1000, 0, -500], null, null]
   );
 }
 

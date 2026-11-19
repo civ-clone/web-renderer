@@ -91,8 +91,8 @@ export type StageOptions = {
   ground: Ground;
 };
 
-// Something drawn at every copy of the world in sight: where it lies, how to make another of it, and those drawn now.
-type Placed = {
+/** Something drawn at every copy of the world in sight: where it lies, how to make another of it, and those drawn now. */
+export type Placed = {
   at: readonly [number, number, number];
   make: () => Object3D;
   drawn: Object3D[];
@@ -122,28 +122,73 @@ export const slideOffset = (
     : [slide.from[0] * left, slide.from[1] * left, slide.from[2] * left];
 };
 
-/**
- * A slide carried on by a unit whose marker's made again mid-slide: from where it started, as it was, but to where it
- *  stands now, `to`, having stood at `was`, so it goes on from where it's drawn.
- */
-export const carrySlide = (
-  slide: Slide,
-  was: readonly [number, number, number],
-  to: readonly [number, number, number]
-): Slide => ({
-  from: [
-    was[0] + slide.from[0] - to[0],
-    was[1] + slide.from[1] - to[1],
-    was[2] + slide.from[2] - to[2],
-  ],
-  started: slide.started,
-});
-
 // Where a marker's unit stands: its place, and its part's from there.
 const unitStands = (placed: Placed): [number, number, number] => {
   const [du, dy, dv] = placed.unit?.at ?? [0, 0, 0];
 
   return [placed.at[0] + du, placed.at[1] + dy, placed.at[2] + dv];
+};
+
+/** Where a marker's unit is drawn at `now`, sliding or standing in its place (or the marker's place, with none). */
+export const unitDrawnAt = (
+  placed: Placed,
+  now: number
+): [number, number, number] => {
+  const [standU, standY, standV] = unitStands(placed),
+    [du, dy, dv] = slideOffset(placed.slide, now) ?? [0, 0, 0];
+
+  return [standU + du, standY + dy, standV + dv];
+};
+
+/**
+ * The slide a marker made again carries on from the one it replaces, `old`, with the same unit on top still sliding
+ *  at `now`: a slide of its own from where that unit's drawn, so it goes on from there without a jump. None otherwise.
+ */
+export const carriedSlide = (
+  old: Placed | undefined,
+  placed: Placed,
+  now: number
+): Slide | undefined => {
+  if (
+    old?.slide === undefined ||
+    old.unit === undefined ||
+    old.unit.id !== placed.unit?.id ||
+    slideOffset(old.slide, now) === null
+  ) {
+    return undefined;
+  }
+
+  const drawn = unitDrawnAt(old, now),
+    stands = unitStands(placed);
+
+  return {
+    from: [drawn[0] - stands[0], drawn[1] - stands[1], drawn[2] - stands[2]],
+    started: now,
+  };
+};
+
+/**
+ * A sliding marker's unit moved along at `now` in each of its copies, its city staying put; put in its place once
+ *  it's there, and its slide ended. Whether it's still sliding.
+ */
+export const slideAlong = (placed: Placed, now: number): boolean => {
+  if (placed.slide === undefined) {
+    return false;
+  }
+
+  const offset = slideOffset(placed.slide, now),
+    [du, dy, dv] = offset ?? [0, 0, 0],
+    [atU, atY, atV] = placed.unit?.at ?? [0, 0, 0];
+
+  if (offset === null) {
+    delete placed.slide;
+  }
+
+  placed.drawn.forEach((drawn) =>
+    drawn.getObjectByName(UNIT_PART)?.position.set(atU + du, atY + dy, atV + dv)
+  );
+
+  return offset !== null;
 };
 
 /** How long a marker takes to slide to its place, in ms: a unit's step. */
@@ -267,6 +312,8 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
     extent = ground.rows * ground.spacingV,
     poles = polesAt(extent),
     markers = new Map<string, Placed>(),
+    // The markers whose units are sliding, by key.
+    sliding = new Set<string>(),
     markersGroup = new Group(),
     kit = new MarkerKit(),
     water = new Water(ground, new Color(SKY)),
@@ -318,8 +365,6 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
     at.map(([offsetU, offsetV]) => {
       const drawn = placed.make();
 
-      // Which copy of the world it is, for a slide to move it from.
-      drawn.userData['copy'] = [offsetU, offsetV];
       drawn.position.set(
         placed.at[0] + offsetU,
         placed.at[1],
@@ -340,28 +385,14 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
       overlayCopies(copies, overlay.span, extent, period.v, stopped)
     );
 
-  // Each sliding unit moved along in every copy of its marker, its city staying put, and those that have arrived put in
-  //  their place.
+  // Each sliding unit moved along in every copy of its marker, and those that have arrived put in their place.
   const slideMarkers = (now: number): void =>
-    markers.forEach((placed) => {
-      if (placed.slide === undefined) {
-        return;
+    sliding.forEach((key) => {
+      const placed = markers.get(key);
+
+      if (placed === undefined || !slideAlong(placed, now)) {
+        sliding.delete(key);
       }
-
-      const offset = slideOffset(placed.slide, now);
-
-      if (offset === null) {
-        delete placed.slide;
-      }
-
-      const [du, dy, dv] = offset ?? [0, 0, 0],
-        [atU, atY, atV] = placed.unit?.at ?? [0, 0, 0];
-
-      placed.drawn.forEach((drawn) =>
-        drawn
-          .getObjectByName(UNIT_PART)
-          ?.position.set(atU + du, atY + dy, atV + dv)
-      );
     });
 
   const view = (
@@ -575,23 +606,19 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
       };
 
       // The same unit on top, mid-slide: it slides on from where it's drawn.
-      if (
-        old?.slide !== undefined &&
-        old.unit !== undefined &&
-        old.unit.id === placed.unit?.id
-      ) {
-        placed.slide = carrySlide(
-          old.slide,
-          unitStands(old),
-          unitStands(placed)
-        );
+      const now = performance.now(),
+        carried = carriedSlide(old, placed, now);
+
+      if (carried !== undefined) {
+        placed.slide = carried;
       }
 
       placed.drawn = copiesOf(placed, markersGroup, markerCopies);
       markers.set(key, placed);
 
       if (placed.slide !== undefined) {
-        slideMarkers(performance.now());
+        sliding.add(key);
+        slideAlong(placed, now);
       }
     },
     slideMarker: (key, from): void => {
@@ -607,24 +634,17 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
         from: [from[0] - standU, from[1] - standY, from[2] - standV],
         started: performance.now(),
       };
-      slideMarkers(placed.slide.started);
+      sliding.add(key);
+      slideAlong(placed, placed.slide.started);
     },
     markerAt: (key): [number, number, number] | null => {
       const placed = markers.get(key);
 
-      if (placed === undefined) {
-        return null;
-      }
-
-      const [standU, standY, standV] = unitStands(placed),
-        [du, dy, dv] = slideOffset(placed.slide, performance.now()) ?? [
-          0, 0, 0,
-        ];
-
-      return [standU + du, standY + dy, standV + dv];
+      return placed === undefined
+        ? null
+        : unitDrawnAt(placed, performance.now());
     },
-    sliding: (): boolean =>
-      [...markers.values()].some((placed) => placed.slide !== undefined),
+    sliding: (): boolean => sliding.size > 0,
     view,
     stats: (): StageStats => ({
       drawCalls: renderer.info.render.calls,

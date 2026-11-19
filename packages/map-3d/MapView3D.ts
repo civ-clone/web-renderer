@@ -98,12 +98,14 @@ export class MapView3D implements MapRenderer {
   #focused = '';
   // The camera now, the one it's gliding to, if it is, and the height it looks at, following the land's.
   #orbit: Orbit;
-  // A glide: where from and to, when it started, and how far it turns, as asked, the way asked.
+  // A glide: where from and to, when it started, how far it turns, as asked, the way asked, and how much of the way
+  //  the camera was last drawn, eased.
   #glide: {
     from: Orbit;
     to: Orbit;
     started: number | null;
     turn: number;
+    drawn: number;
   } | null = null;
   #lookHeight: number | null = null;
   // The mouse, the wheel and touch moving the camera; and where its distance is kept, and what was kept last.
@@ -329,11 +331,11 @@ export class MapView3D implements MapRenderer {
   }
 
   // What's still to turn of the glide under way, the way it was asked, from the camera as it was last drawn, which a
-  //  new glide starts from: none without one.
+  //  new glide starts from: none without one. Not from the yaw drawn, which is kept within a turn.
   #turnLeft(): number {
     const glide = this.#glide;
 
-    return glide === null ? 0 : glide.from.yaw + glide.turn - this.#orbit.yaw;
+    return glide === null ? 0 : glide.turn * (1 - glide.drawn);
   }
 
   /** Nothing to flip yet: the stress runner's view modes are the 2D map's layers. */
@@ -949,7 +951,13 @@ export class MapView3D implements MapRenderer {
       this.#glide = null;
       this.#orbit = this.#settle(target);
     } else {
-      this.#glide = { from: this.#orbit, to: target, started: null, turn };
+      this.#glide = {
+        from: this.#orbit,
+        to: target,
+        started: null,
+        turn,
+        drawn: 0,
+      };
     }
 
     this.#draw();
@@ -967,6 +975,7 @@ export class MapView3D implements MapRenderer {
 
     const t = Math.min(1, (now - glide.started) / GLIDE);
 
+    glide.drawn = t * t * (3 - 2 * t);
     this.#orbit = this.#settle(
       between(glide.from, glide.to, t, this.#period(), glide.turn)
     );
@@ -1063,14 +1072,15 @@ export class MapView3D implements MapRenderer {
       ],
       signature = marker === null ? null : JSON.stringify([marker, at]);
 
-    if (signature === (this.#marked.get(key) ?? null)) {
-      return;
+    const changed = signature !== (this.#marked.get(key) ?? null);
+
+    if (changed) {
+      this.#stage.setMarker(key, at, marker);
     }
 
-    this.#stage.setMarker(key, at, marker);
-
-    // Units bound here that have arrived: the one on top slides from where it set off; one under another doesn't, and
-    //  won't later. One that's taken too long to arrive doesn't either.
+    // Units bound here that have arrived: the one on top slides from where it set off, if it's drawn anew; one under
+    //  another doesn't, nor one not shown (units hidden), and none of them will later. One that's taken too long to
+    //  arrive doesn't either.
     const now = performance.now(),
       here = new Set(
         (this.world.get(x, y)?.units ?? []).map((unit) => unit.id)
@@ -1089,10 +1099,14 @@ export class MapView3D implements MapRenderer {
 
       this.#slides.delete(id);
 
-      if (marker?.unit?.id === id) {
+      if (changed && marker?.unit?.id === id) {
         this.#stage.slideMarker(key, slide.from);
       }
     });
+
+    if (!changed) {
+      return;
+    }
 
     if (signature === null) {
       this.#marked.delete(key);

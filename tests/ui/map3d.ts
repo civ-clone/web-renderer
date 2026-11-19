@@ -1496,21 +1496,89 @@ expect(
 
   repatched([1, 2, []], [3, 1, []]);
 
-  // A second turn pressed between frames, mid-glide: the camera ends two eighths round exactly, not short of it.
+  // A unit moving while units are hidden (`t`) doesn't slide, nor when they're shown again; nor one whose patch comes
+  //  after its slide's been given up.
+  slid.length = 0;
+  glider.toggleUnits();
+  stepped(walker, [1, 2], [2, 2]);
+  repatched([2, 2, [walker]]);
+  glider.toggleUnits();
+  runFrames();
+
+  const whileHidden = slid.splice(0);
+
+  stepped(walker, [2, 2], [3, 2]);
+  now += 2500;
+  repatched([2, 2, []], [3, 2, [walker]]);
+
+  expect(
+    'a unit moving while units are hidden doesn’t slide, nor once they’re shown; nor one whose patch comes too late',
+    [whileHidden, slid.splice(0)],
+    [[], []]
+  );
+
+  repatched([3, 2, []]);
+
+  // Turns, frame by frame: how far the camera turns in all, the way it turns, each frame's step taken the short way.
+  const turnedFrameByFrame = (between: () => void): number => {
+    let turned = 0,
+      last = glider.orbit().yaw;
+    const step = (): void => {
+      const yaw = glider.orbit().yaw;
+
+      turned += shortWay(yaw - last);
+      last = yaw;
+    };
+
+    for (let frame = 0; frame < 3 && runFrames(1) > 0; frame++) {
+      step();
+    }
+
+    between();
+
+    while (runFrames(1) > 0) {
+      step();
+    }
+
+    return Math.round((turned / (Math.PI / 4)) * 1000) / 1000;
+  };
+  const shortWay = (delta: number): number =>
+    delta - Math.PI * 2 * Math.round(delta / (Math.PI * 2));
+
+  // A second turn pressed between frames, mid-glide: the camera ends two eighths round exactly, not short of it, nor a
+  //  whole turn past it; anticlockwise from north too, crossing it as it goes. And centred on a square mid-turn, it
+  //  finishes the turn under way, no more.
   {
     const eighth = Math.PI / 4;
 
     glider.setOrbit({ ...glider.orbit(), yaw: 0 });
     glider.turnBy(1);
-    runFrames(3);
-    now += 8;
-    glider.turnBy(1);
-    runFrames();
+
+    const clockwise = turnedFrameByFrame(() => {
+      now += 8;
+      glider.turnBy(1);
+    });
+    const endedAt = Math.round((glider.orbit().yaw - eighth * 2) * 1e6);
+
+    glider.setOrbit({ ...glider.orbit(), yaw: 0 });
+    glider.turnBy(-1);
+
+    const anticlockwise = turnedFrameByFrame(() => {
+      now += 8;
+      glider.turnBy(-1);
+    });
+
+    glider.setOrbit({ ...glider.orbit(), yaw: 0 });
+    glider.turnBy(-1);
+
+    const thenCentred = turnedFrameByFrame(() =>
+      glider.centre(tiles[2 * 4 + 2] as Tile)
+    );
 
     expect(
-      'a second turn pressed between frames ends two eighths round exactly',
-      Math.round((glider.orbit().yaw - eighth * 2) * 1e6),
-      0
+      'a second turn pressed between frames ends two eighths round exactly, either way, across north; centred mid-turn, the turn ends as it would',
+      [endedAt, clockwise, anticlockwise, thenCentred],
+      [0, 2, -2, -1]
     );
   }
 
