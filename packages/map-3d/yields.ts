@@ -17,60 +17,48 @@ export type YieldIcon = { _: string; x: number; y: number; size: number };
 export const SMALLEST_ICON = 8,
   ICONS_FILL = 0.9;
 
-// Where `count` icons `size` across go along a stretch `length` long from `start`: a block centred on it, each `size`
-//  apart or closer, so the block fits where an icon does.
-const centred = (
-  start: number,
-  length: number,
-  count: number,
-  size: number
-): ((index: number) => number) => {
-  const step =
-      count > 1
-        ? Math.max(0, Math.min(size, (length - size) / (count - 1)))
-        : 0,
-    first = start + (length - ((count - 1) * step + size)) / 2;
-
-  return (index) => Math.round(first + index * step);
-};
-
 /**
- * Where a square's `yields` go on the screen, over its middle at (`x`, `y`) in px, its box looking `across` px wide and
- *  `down` px tall there: two rows of icons in it, no bigger than `biggest`. None where it yields nothing, or looks too
- *  small for them to be read.
+ * Where a square's `yields` go on the screen, over its middle at (`x`, `y`) in px, its box looking there like a
+ *  parallelogram with half-sides `across` and `away` in px (from its middle to the middle of its sides): two rows of
+ *  icons, upright, as big as fits inside it, no bigger than `biggest`. None where it yields nothing, or looks too small
+ *  for them to be read.
  */
 export const yieldIconsAt = (
   yields: Pick<Yield<string>, '_' | 'value'>[],
   [x, y]: readonly [number, number],
-  [across, down]: readonly [number, number],
+  [[acrossX, acrossY], [awayX, awayY]]: readonly [
+    readonly [number, number],
+    readonly [number, number]
+  ],
   biggest: number
 ): YieldIcon[] => {
   const { columns, icons } = tileYieldGrid(yields),
-    width = across * ICONS_FILL,
-    height = down * ICONS_FILL,
-    size = Math.min(biggest, Math.floor(height / 2), Math.floor(width / 2));
+    across = Math.min(columns, icons.length),
+    down = Math.ceil(icons.length / columns),
+    // A block w by h, centred, fits inside the parallelogram while its corners do: |s|, |t| ≤ 1, where a corner is
+    //  s × across + t × away. As big as that allows, with a little room round it.
+    area = Math.abs(acrossX * awayY - acrossY * awayX),
+    size = Math.floor(
+      Math.min(
+        biggest,
+        (ICONS_FILL * 2 * area) /
+          (across * Math.abs(awayY) + down * Math.abs(awayX) || Infinity),
+        (ICONS_FILL * 2 * area) /
+          (across * Math.abs(acrossY) + down * Math.abs(acrossX) || Infinity)
+      )
+    );
 
-  if (icons.length === 0 || size < SMALLEST_ICON) {
+  if (icons.length === 0 || !(size >= SMALLEST_ICON)) {
     return [];
   }
 
-  const along = centred(
-      x - width / 2,
-      width,
-      Math.min(columns, icons.length),
-      size
-    ),
-    upward = centred(
-      y - height / 2,
-      height,
-      Math.ceil(icons.length / columns),
-      size
-    );
+  const left = Math.round(x - (across * size) / 2),
+    top = Math.round(y - (down * size) / 2);
 
   return icons.map(({ _, column, row }) => ({
     _,
-    x: along(column),
-    y: upward(row),
+    x: left + column * size,
+    y: top + row * size,
     size,
   }));
 };
@@ -92,8 +80,8 @@ export const sizeOf = (image: CanvasImageSource): [number, number] => {
 
 /**
  * Draws `icons` on a canvas `width` × `height` in the page's px, `ratio` device px to each: cleared first, each icon the
- *  image `iconFor` gives, keeping its shape, centred in its box. At a whole number of device px to each of its own, it's
- *  drawn crisp, as the 2D map draws pixel art; otherwise it's smoothed, so its pixels don't come out uneven.
+ *  image `iconFor` gives, keeping its shape, centred in its box. Drawn crisp, as the 2D map draws pixel art, at any
+ *  scale of the device's; smoothed only when it's smaller on the device than its own, so its pixels don't drop out.
  */
 export const drawYields = (
   context: Pick<
@@ -120,8 +108,7 @@ export const drawYields = (
       drawnHeight = imageHeight * scale,
       onDevice = scale * ratio;
 
-    context.imageSmoothingEnabled =
-      onDevice < 1 || Math.abs(onDevice - Math.round(onDevice)) > 1e-6;
+    context.imageSmoothingEnabled = onDevice < 1;
     context.drawImage(
       image,
       x + (size - drawnWidth) / 2,

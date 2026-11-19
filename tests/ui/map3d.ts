@@ -1600,17 +1600,52 @@ expect(
       { _: 'Production', value: 1 },
       { _: 'Trade', value: 1 },
     ],
-    foreshortened = yieldIconsAt(fourYields, [100, 100], [64, 20], 16);
+    // A square's box on the screen, from its middle to its sides' middles: upright, `w` wide and `h` tall.
+    upright = (w: number, h: number): [[number, number], [number, number]] => [
+      [w / 2, 0],
+      [0, h / 2],
+    ],
+    foreshortened = yieldIconsAt(fourYields, [100, 100], upright(64, 20), 16),
+    // Turned and leaning, as a square off the screen's middle at a low angle looks.
+    leaning: [[number, number], [number, number]] = [
+      [30, 9],
+      [-14, 11],
+    ],
+    leant = yieldIconsAt(fourYields, [100, 100], leaning, 16),
+    // Whether a point is inside the leaning box: as s × across + t × away, |s| and |t| no more than 1.
+    insideLeaning = ([px, py]: [number, number]): boolean => {
+      const [[ax, ay], [wx, wy]] = leaning,
+        area = ax * wy - ay * wx,
+        [dx, dy] = [px - 100, py - 100];
+
+      return (
+        Math.abs((dx * wy - dy * wx) / area) <= 1 &&
+        Math.abs((ax * dy - ay * dx) / area) <= 1
+      );
+    };
 
   expect(
-    'a square’s yields are laid out in two rows centred over its middle, as big as the square allows across and up the screen, no bigger than the icons, and none too small to read or with nothing',
+    'a square’s yields are laid out in two rows centred over its middle, as big as fits inside the square as it looks, turned and leaning too, no bigger than the icons, and none too small to read or with nothing',
     [
-      yieldIconsAt(fourYields, [100, 100], [64, 64], 16),
+      yieldIconsAt(fourYields, [100, 100], upright(64, 64), 16),
       foreshortened.map(({ y, size }) => [y, size]),
-      yieldIconsAt([{ _: 'Food', value: 2 }], [100, 100], [10, 10], 16),
-      yieldIconsAt([], [100, 100], [64, 64], 16),
-      yieldIconsAt([{ _: 'Food', value: 1 }], [100, 100], [200, 200], 14)[0]
-        ?.size,
+      leant.length === 4 &&
+        leant.every(({ x, y, size }) =>
+          [
+            [x, y],
+            [x + size, y],
+            [x, y + size],
+            [x + size, y + size],
+          ].every((corner) => insideLeaning(corner as [number, number]))
+        ),
+      yieldIconsAt([{ _: 'Food', value: 2 }], [100, 100], upright(10, 10), 16),
+      yieldIconsAt([], [100, 100], upright(64, 64), 16),
+      yieldIconsAt(
+        [{ _: 'Food', value: 1 }],
+        [100, 100],
+        upright(200, 200),
+        14
+      )[0]?.size,
     ],
     [
       [
@@ -1625,6 +1660,7 @@ expect(
         [100, 9],
         [100, 9],
       ],
+      true,
       [],
       [],
       14,
@@ -1669,15 +1705,15 @@ expect(
     );
 
     expect(
-      'yields are drawn on a cleared canvas, each icon crisp at a whole number of device px to its own and smoothed otherwise, keeping its shape, and none without art',
+      'yields are drawn on a cleared canvas, each icon crisp at any size of its own or bigger on the device and smoothed smaller, keeping its shape, and none without art',
       drawn,
       [
         ['setTransform', 2, 0, 0, 2, 0, 0],
         ['clearRect', 0, 0, 300, 200],
-        // Twice its own on a screen of two device px to each, and its own; then 18 device px for 14.
+        // Twice its own on a screen of two device px to each, its own, and 18 device px for 14: crisp.
         ['drawImage', 'food', 10, 20, 14, 14, false],
         ['drawImage', 'food', 30, 20, 7, 7, false],
-        ['drawImage', 'food', 50, 20, 9, 9, true],
+        ['drawImage', 'food', 50, 20, 9, 9, false],
         ['drawImage', 'shield', 10, 43.5, 14, 7, false],
         ['drawImage', 'trade', 30, 40, 14, 14, false],
       ]
@@ -1769,6 +1805,63 @@ expect(
     });
     glider.releaseTiles();
     runFrames();
+  }
+
+  // Every square yielding, the camera turned an eighth and low over the land, as the isometric view is: each square's
+  //  icons stay inside it, so no two squares' blocks overlap.
+  {
+    const orbitWas = glider.orbit();
+
+    tiles.forEach((tile) => {
+      tile.yields = fourYields as unknown as Tile['yields'];
+      glider.queueTile(tile);
+    });
+    glider.releaseTiles();
+    glider.toggleYields();
+    glider.setOrbit({
+      ...glider.orbit(),
+      yaw: Math.PI / 4,
+      pitch: Math.PI / 6,
+      distance: 8,
+    });
+    runFrames();
+
+    const turnedIcons = glider.yieldIcons(),
+      boxes = Array.from({ length: turnedIcons.length / 4 }, (_, index) => {
+        const block = turnedIcons.slice(index * 4, index * 4 + 4);
+
+        return [
+          Math.min(...block.map(({ x }) => x)),
+          Math.min(...block.map(({ y }) => y)),
+          Math.max(...block.map(({ x, size }) => x + size)),
+          Math.max(...block.map(({ y, size }) => y + size)),
+        ];
+      }),
+      overlapping = boxes.filter((a, index) =>
+        boxes.some(
+          (b, other) =>
+            other > index &&
+            a[0]! < b[2]! &&
+            b[0]! < a[2]! &&
+            a[1]! < b[3]! &&
+            b[1]! < a[3]!
+        )
+      ).length;
+
+    glider.toggleYields();
+    glider.setOrbit(orbitWas);
+    tiles.forEach((tile) => {
+      tile.yields = [] as unknown as Tile['yields'];
+      glider.queueTile(tile);
+    });
+    glider.releaseTiles();
+    runFrames();
+
+    expect(
+      'turned an eighth and low over the land, every square’s yields stay inside it: no two squares’ blocks overlap',
+      [boxes.length > 8, overlapping],
+      [true, 0]
+    );
   }
 
   // Five quick turns clockwise, before a frame's drawn: the camera turns clockwise all the way, five eighths of a turn,

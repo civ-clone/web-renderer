@@ -61,6 +61,9 @@ const shortTurn = (delta: number): number =>
 // How long the camera takes to glide to a square it's centred on, or to turn, in ms.
 const GLIDE = 350;
 
+// How many squares' yields are drawn at most, the nearest: all of them at the default view on a big screen.
+export const YIELD_SQUARES = 1500;
+
 // How long the camera's distance stays the same before it's kept, in ms: a pinch or a zoom changes it every frame.
 const KEEP_DISTANCE_AFTER = 500;
 
@@ -709,13 +712,6 @@ export class MapView3D implements MapRenderer {
         ((x + 1) / 2) * width,
         ((1 - y) / 2) * height,
       ],
-      apart = (a: [number, number] | null, b: [number, number] | null) =>
-        a === null || b === null
-          ? 0
-          : Math.hypot(
-              ((a[0] - b[0]) * width) / 2,
-              ((a[1] - b[1]) * height) / 2
-            ),
       { u: periodU } = this.#land.layout.period(),
       extentV = this.#land.extentV(),
       // The copies of the world any of which is near enough the camera: the rest are all too deep for icons, or off the
@@ -746,6 +742,18 @@ export class MapView3D implements MapRenderer {
       return icons;
     }
 
+    // Every square near enough, at each copy, by the cheap tests, at the height the camera looks at: not too far, too
+    //  deep, behind, or well off the screen; and with yields.
+    const nearby: {
+      tile: Tile;
+      u: number;
+      v: number;
+      atU: number;
+      atV: number;
+      depth: number;
+      yields: ReturnType<typeof squareYields>;
+    }[] = [];
+
     this.world.tiles().forEach((tile) => {
       const [u, v] = this.#land.layout.centre(tile.x, tile.y);
       let yields: ReturnType<typeof squareYields> | null = null;
@@ -756,7 +764,6 @@ export class MapView3D implements MapRenderer {
           du = atU - from[0],
           dv = atV - from[2];
 
-        // Cheap tests first, at the height the camera looks at: too far, too deep, behind, or well off the screen.
         if (du * du + dv * dv + overSquared > reachSquared) {
           return;
         }
@@ -773,10 +780,18 @@ export class MapView3D implements MapRenderer {
 
         yields ??= squareYields(tile, squareCity(tile));
 
-        if (yields.length === 0) {
-          return;
+        if (yields.length > 0) {
+          nearby.push({ tile, u, v, atU, atV, depth, yields });
         }
+      });
+    });
 
+    // The nearest of them, as many as are worth drawing a frame: zoomed out on a big screen, thousands more would be
+    //  too small to tell apart, and each a draw.
+    nearby
+      .sort((a, b) => a.depth - b.depth)
+      .slice(0, YIELD_SQUARES)
+      .forEach(({ tile, u, v, atU, atV, yields }) => {
         const up = this.#heightOf(tile.x, tile.y, u, v);
 
         if (depthOf(atU, up, atV) > deepest) {
@@ -789,22 +804,20 @@ export class MapView3D implements MapRenderer {
           return;
         }
 
-        const point = (along: number, [du, dv]: [number, number]) =>
-          project([atU + du * along, up, atV + dv * along]);
+        // The square's box on the screen: from its middle to the middle of a side, across and away, in px.
+        const [x, y] = toPx(middle),
+          half = ([du, dv]: [number, number]): [number, number] => {
+            const side = project([atU + du * inner, up, atV + dv * inner]);
+
+            return side === null
+              ? [0, 0]
+              : [toPx(side)[0] - x, toPx(side)[1] - y];
+          };
 
         icons.push(
-          ...yieldIconsAt(
-            yields,
-            toPx(middle),
-            [
-              apart(point(inner, across), point(-inner, across)),
-              apart(point(inner, away), point(-inner, away)),
-            ],
-            biggest
-          )
+          ...yieldIconsAt(yields, [x, y], [half(across), half(away)], biggest)
         );
       });
-    });
 
     return icons;
   }
