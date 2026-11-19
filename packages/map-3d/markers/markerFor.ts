@@ -35,6 +35,9 @@ export type UnitMarker = {
   health: number | null;
   // The letter for what it's busy with, as the 2D map writes it over the unit, or nothing.
   status: string | null;
+  // Which way it faces on the ground, turned from south (`+v`) towards east (`+u`), in radians: the way it last moved,
+  //  or last attacked, as the page saw it. South when it hasn't been seen to.
+  facing: number;
 };
 
 export type TileMarker = {
@@ -95,7 +98,8 @@ export const markerFor = (
   tile: Pick<Tile, 'city' | 'units'>,
   activeUnitId: string | null,
   shown: boolean,
-  words: MarkerWords = {}
+  words: MarkerWords = {},
+  facingOf: (unit: Unit) => number = () => 0
 ): TileMarker | null => {
   const units = tile.units ?? [],
     top = unitOnTop(units, activeUnitId),
@@ -125,6 +129,7 @@ export const markerFor = (
             veteran: (top.improvements ?? []).some(({ _ }) => _ === 'Veteran'),
             health: healthOf(top),
             status: (top.busy ? words.unitStatus?.(top) : null) || null,
+            facing: facingOf(top),
           }
         : null;
 

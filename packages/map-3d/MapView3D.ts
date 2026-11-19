@@ -108,6 +108,8 @@ export class MapView3D implements MapRenderer {
   #squares: MapView3DDeps['squares'];
   // How the page words markers: cities' names, and busy units' letters.
   #words: MarkerWords;
+  // Which way each unit faces, by its id: the way the map events last saw it move, or attack.
+  #facings = new Map<string, number>();
   #transport: MapView3DDeps['transport'];
   #picking: Picking | null = null;
   // The square the mouse rests on, waiting to show its tooltip or showing it, and whose tooltips they'd be.
@@ -346,9 +348,39 @@ export class MapView3D implements MapRenderer {
     this.#draw();
   }
 
-  /** Nothing is animated yet (slice 2.3). */
+  /**
+   * A unit moved, or fought: it faces the way it went, or the way it attacked, and a defender faces its attacker. The
+   *  patches that follow draw it there. Nothing is animated yet (slice 2.3).
+   */
   mapEvent(event: MapEvent): void {
-    void event;
+    if (event.kind === 'moved') {
+      this.#face(event.unit.id, event.from, event.to);
+
+      return;
+    }
+
+    this.#face(event.attacker.id, event.attacker.tile, event.defender.tile);
+    this.#face(event.defender.id, event.defender.tile, event.attacker.tile);
+  }
+
+  // The unit `id` faces from the square `from` towards `to`, the short way round the world, and is marked again.
+  #face(id: string, from: Coordinate, to: Coordinate): void {
+    const [fromU, fromV] = this.#land.layout.centre(from.x, from.y),
+      [toU, toV] = this.#land.layout.centre(to.x, to.y),
+      { u: periodU, v: periodV } = this.#land.layout.period(),
+      short = (delta: number, period: number | null): number =>
+        period === null ? delta : delta - period * Math.round(delta / period),
+      du = short(toU - fromU, periodU),
+      dv = short(toV - fromV, periodV);
+
+    if (du === 0 && dv === 0) {
+      return;
+    }
+
+    // Rounded, so a marker's drawn again only for a turn that shows.
+    this.#facings.set(id, Math.round(Math.atan2(du, dv) * 1000) / 1000);
+    [from, to].forEach(({ x, y }) => this.#mark(x, y));
+    this.#draw();
   }
 
   /**
@@ -926,7 +958,8 @@ export class MapView3D implements MapRenderer {
         this.world.get(x, y),
         this.#activeUnit?.id ?? null,
         this.#unitsShown,
-        this.#words
+        this.#words,
+        (unit) => this.#facings.get(unit.id) ?? 0
       );
 
     const [u, v] = this.#land.layout.centre(x, y),

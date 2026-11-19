@@ -332,8 +332,9 @@ Epic's UE4 skeleton or only match its bone names.
     fortified. Its flag flies over it, with the stack's size, the 2D map's letter for what it's busy with, a veteran's
     star, and a bar for its hit points when it's hurt.
   - The debug page lays out every unit type with `?gallery=1`.
-- **Still to do in 2.1:** the `models` manifest kind and its validator; the ring following the marker option; facing
-  the way a unit last moved (needs P2).
+- **Facing:** a unit faces the way it last moved, or attacked, from the map's events (P2), and a defender faces its
+  attacker.
+- **Still to do in 2.1:** the `models` manifest kind and its validator; the ring following the marker option.
 
 ### 2.2 glTF and skeletal animation
 

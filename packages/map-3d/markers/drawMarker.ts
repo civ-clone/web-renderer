@@ -392,6 +392,8 @@ const drawUnit = (
   const figures = new Mesh(figure, kit.figureMaterial);
 
   figures.scale.setScalar(FIGURE_SCALE);
+  // Facing the way it last went: its figures face south, unturned.
+  figures.rotation.y = unit.facing;
   group.add(place(figures, 0, lift, 0));
 
   // Fortified: behind a low wall.

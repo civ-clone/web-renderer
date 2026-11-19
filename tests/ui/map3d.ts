@@ -768,6 +768,8 @@ expect(
         health: 0.6,
         // The page's letter for Fortified, in the locale.
         status: 'Fd',
+        // Not seen to move yet: facing south.
+        facing: 0,
       },
     ]
   );
@@ -796,6 +798,68 @@ expect(
       [romaName, 'Phalanx', false],
     ]
   );
+
+  // The map's events: a unit faces the way it last moved, the short way round the world, and the way it attacked, and a
+  //  defender faces its attacker. The town is at (2, 0), on a world 4 across that wraps.
+  const facing = (): number | undefined => markers.get(townKey)?.unit?.facing,
+    step = (from: [number, number], to: [number, number]) =>
+      view.mapEvent({
+        kind: 'moved',
+        unit: {
+          id: 'Unit-P',
+          type: 'Phalanx',
+          player: 'Player-1',
+          tile: { x: from[0], y: from[1] },
+        },
+        from: { x: from[0], y: from[1] },
+        to: { x: to[0], y: to[1] },
+      }),
+    round = (angle: number | undefined): number =>
+      Math.round((angle ?? NaN) * 100) / 100,
+    faced: number[] = [],
+    // As the patch that follows a move does: the town's square released, and drawn.
+    patched = (): void => {
+      view.queueTile(town);
+      view.releaseTiles();
+      view.flush();
+    };
+
+  step([1, 0], [2, 0]);
+  faced.push(round(facing()));
+  step([3, 0], [2, 0]);
+  faced.push(round(facing()));
+  // Over the seam, from the last square to the first, going east the short way; and down and to the east.
+  step([3, 0], [0, 0]);
+  patched();
+  faced.push(round(facing()));
+  step([1, 0], [2, 1]);
+  patched();
+  faced.push(round(facing()));
+  view.mapEvent({
+    kind: 'battle',
+    attacker: {
+      id: 'Unit-P',
+      type: 'Phalanx',
+      player: 'Player-1',
+      tile: { x: 2, y: 0 },
+    },
+    defender: {
+      id: 'Unit-Rival',
+      type: 'Warriors',
+      player: 'Player-2',
+      tile: { x: 2, y: 1 },
+    },
+    winner: 'attacker',
+  });
+  faced.push(round(facing()));
+
+  expect('a unit faces the way it last moved, and the way it attacked', faced, [
+    round(Math.PI / 2),
+    round(-Math.PI / 2),
+    round(Math.PI / 2),
+    round(Math.PI / 4),
+    0,
+  ]);
 
   expect(
     'a city is named as the page names it, or by its own name where the page gives none',

@@ -289,6 +289,7 @@ const unit = (type: string, more: Partial<UnitMarker> = {}): UnitMarker => ({
     veteran: false,
     health: null,
     status: null,
+    facing: 0,
     ...more,
   }),
   drawn = (marker: UnitMarker): Object3D[] => {
@@ -343,6 +344,12 @@ expect(
     soldiers.length,
   ],
   [true, true, true, true, true, 3]
+);
+
+expect(
+  'its figures face the way it last went',
+  figureOf(drawn(unit('Spearman', { facing: 1.25 })))?.rotation.y,
+  1.25
 );
 
 const trireme = drawn(unit('Trireme'));
