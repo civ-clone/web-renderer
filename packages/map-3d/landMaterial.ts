@@ -9,6 +9,7 @@
 //  where a point is on the ground, not on its chunk, so chunks' borders have no seam either.
 
 import {
+  Color,
   DataArrayTexture,
   LinearFilter,
   LinearMipmapLinearFilter,
@@ -19,11 +20,12 @@ import {
   UnsignedByteType,
   Vector2,
 } from 'three';
-import { SURFACES } from '@civ-clone/ui-models-builtin/terrain';
+import { SURFACES, terrainEntry } from '@civ-clone/ui-models-builtin/terrain';
 import surfaceTextures, {
   SURFACE_SIZE,
   SURFACE_TILE,
 } from './terrain/surfaces';
+import { coverGlsl } from './terrain/cover';
 
 /**
  * How far across and down the ground each surface's texture reaches before it repeats: about `SURFACE_TILE`, as many
@@ -39,24 +41,32 @@ export const surfaceTile = (period: {
     : period.v / Math.max(1, Math.round(period.v / SURFACE_TILE)),
 ];
 
-// Each surface's detail, sampled from its layer, weighted by how much of that surface the ground is.
+// Each surface's detail, sampled from its layer, weighted by how much of that surface the ground is; each kept, for
+//  rock and snow to be drawn where they lie whatever the ground's surface.
 const layers = SURFACES.map(
   (_, layer) =>
-    `surface += vSurfaces${layer < 4 ? 'A' : 'B'}.${
+    `vec4 surface${layer} = texture(surfaceDetail, vec3(surfaceAt, ${layer}.0));
+  surface += vSurfaces${layer < 4 ? 'A' : 'B'}.${
       'xyzw'[layer % 4]
-    } * texture(surfaceDetail, vec3(surfaceAt, ${layer}.0));`
-).join('\n');
+    } * surface${layer};`
+).join('\n  ');
 
 // The surfaces' detail, made once for the page: it's the same for every world.
 let surfacesMade: Uint8Array | null = null;
 
 const made = (): Uint8Array => (surfacesMade ??= surfaceTextures());
 
-/** The land's material, and the texture of its surfaces' detail, for a world repeating every `period`. */
-export const landMaterial = (period: {
-  u: number;
-  v: number | null;
-}): { material: MeshStandardMaterial; detail: DataArrayTexture } => {
+/**
+ * The land's material, and the texture of its surfaces' detail, for a world repeating every `period`, whose ground
+ *  runs `extent` down from pole to pole.
+ */
+export const landMaterial = (
+  period: {
+    u: number;
+    v: number | null;
+  },
+  extent: number
+): { material: MeshStandardMaterial; detail: DataArrayTexture } => {
   const detail = new DataArrayTexture(
       made(),
       SURFACE_SIZE,
@@ -85,24 +95,44 @@ export const landMaterial = (period: {
   material.onBeforeCompile = (shader) => {
     shader.uniforms['surfaceDetail'] = { value: detail };
     shader.uniforms['surfaceTile'] = { value: new Vector2(tileU, tileV) };
+    shader.uniforms['groundExtent'] = { value: extent };
+    // Bare rock as mountains are, and snow as glaciers.
+    shader.uniforms['rockColour'] = {
+      value: new Color(terrainEntry('Mountains').colour),
+    };
+    shader.uniforms['snowColour'] = {
+      value: new Color(terrainEntry('Glacier').colour),
+    };
     shader.vertexShader = `attribute vec4 surfacesA;
 attribute vec4 surfacesB;
+attribute float shore;
 varying vec4 vSurfacesA;
 varying vec4 vSurfacesB;
 varying vec2 vGround;
+varying float vHeight;
+varying float vShore;
 ${shader.vertexShader.replace(
   '#include <begin_vertex>',
   `#include <begin_vertex>
   vSurfacesA = surfacesA;
   vSurfacesB = surfacesB;
-  // Where it is on the ground, at this copy of the world: east and south.
-  vGround = (modelMatrix * vec4(transformed, 1.0)).xz;`
+  vShore = shore;
+  // Where it is on the ground, at this copy of the world: east and south; and how high.
+  vec4 groundAt = modelMatrix * vec4(transformed, 1.0);
+  vGround = groundAt.xz;
+  vHeight = groundAt.y;`
 )}`;
     shader.fragmentShader = `uniform highp sampler2DArray surfaceDetail;
 uniform vec2 surfaceTile;
+uniform float groundExtent;
+uniform vec3 rockColour;
+uniform vec3 snowColour;
 varying vec4 vSurfacesA;
 varying vec4 vSurfacesB;
 varying vec2 vGround;
+varying float vHeight;
+varying float vShore;
+${coverGlsl}
 ${shader.fragmentShader
   .replace(
     '#include <color_fragment>',
@@ -114,12 +144,26 @@ ${shader.fragmentShader
   ${layers}
   // Fading to none (the colour alone) as the ground nears a square never seen, whose points have no surface.
   surface = surface / max(surfaceTotal, 1.0) + max(0.0, 1.0 - surfaceTotal) * vec4(0.5, 0.5, 0.5, roughness);
-  diffuseColor.rgb *= 0.5 + surface.r;`
+  // Where the land lies (\`terrain/cover.ts\`): bare rock where it's steep, snow high up, wet at the waterline. Not on a
+  //  square never seen, whose ground is the cloud's.
+  vec3 groundNormal = transformDirectionByInverseViewMatrix(normalize(vNormal), viewMatrix);
+  float seen = min(surfaceTotal, 1.0);
+  float rockShare = coverRock(groundNormal.y) * seen;
+  // How far from the equator, the same at every copy of the world above or below.
+  float snowShare = coverSnow(vHeight, groundNormal.y, coverLatitude(vGround.y, groundExtent)) * seen;
+  float wetShare = coverWet(vHeight, vShore) * seen;
+  diffuseColor.rgb = mix(diffuseColor.rgb, rockColour, rockShare);
+  surface = mix(surface, surface${SURFACES.indexOf('rock')}, rockShare);
+  diffuseColor.rgb = mix(diffuseColor.rgb, snowColour, snowShare);
+  surface = mix(surface, surface${SURFACES.indexOf('snow')}, snowShare);
+  diffuseColor.rgb *= 0.5 + surface.r;
+  // Wet: darker, and shinier.
+  diffuseColor.rgb *= 1.0 - 0.3 * wetShare;`
   )
   .replace(
     '#include <roughnessmap_fragment>',
     `#include <roughnessmap_fragment>
-  roughnessFactor = surface.a;`
+  roughnessFactor = mix(surface.a, 0.3, wetShare);`
   )
   .replace(
     '#include <normal_fragment_maps>',
@@ -129,7 +173,7 @@ ${shader.fragmentShader
   normal = normalize(normal + surfaceTilt - dot(surfaceTilt, normal) * normal);`
   )}`;
   };
-  material.customProgramCacheKey = () => 'land-surfaces';
+  material.customProgramCacheKey = () => 'land-surfaces-cover';
 
   return { material, detail };
 };
