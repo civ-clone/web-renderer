@@ -101,7 +101,6 @@ const HEIGHT_EASE = 0.25;
 // How long the mouse rests on a square before its tooltip opens, as on the 2D map.
 const HOVER_DELAY = 400;
 
-// The square the mouse rests on: where the mouse is on the page, the timer before its tooltip opens, and whether it has.
 // What was on a square attacked as a battle there came (`MapView3D#fight`): its city and units, and whether the
 //  battle's patch has been released for it since, the page's world as it is after the battle there.
 type Before = {
@@ -115,6 +114,7 @@ type Before = {
   patched: boolean;
 };
 
+// The square the mouse rests on: where the mouse is on the page, the timer before its tooltip opens, and whether it has.
 type Hover = {
   key: string;
   x: number;

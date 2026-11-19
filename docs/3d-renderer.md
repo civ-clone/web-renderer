@@ -944,7 +944,8 @@ mapEvent:
     units: a unit attacking again, or attacked as it lunges (a counterattack as the player ends the turn just after
     attacking), stands on its square till its last is over. Others are fought at once, several at a square together, as
     a rival's attacks on a city come: the square's shown as it was till the first blow, and what fell in each fades
-    alone. A unit's battles more than two seconds behind are over at once, the last fought, as the queue skips to the
+    alone. None starts before one that came before it at its square, as when that one's attacker walks there first, so
+    blows there fall in the order the battles came. A unit's battles more than two seconds behind are over at once, the last fought, as the queue skips to the
     end above. An attacker attacking again is drawn once, in the battle it's fighting.
   - **As a rival's turn sends them:** the page's world is rebuilt, and the tiles released, once a frame while waiting for
     the turn (`GameState`), so a rival's step and its attack, an attack and its step after, or two attacks, can come

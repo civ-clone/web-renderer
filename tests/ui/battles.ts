@@ -2,7 +2,10 @@
 //  - the attacker gathers pace to the edge between the squares, where the blow falls; won, it goes back to where it
 //    stood, and the loser fades where it stood; lost, it fades at the edge;
 //  - each blow is told once, and each battle's end once, the fighters drawn till then;
-//  - battles sharing a unit or a square wait for the one before to be over; others are fought at once;
+//  - a battle waits for those whose attacker is one of its units to be over, and starts no sooner than those before it
+//    at its square whose blow is still to fall; others are fought at once, several at a square together;
+//  - a unit's battles go on till the last it attacks in is over; an attacker's drawn once, in each battle in turn; one
+//    walking there is fought once it's there; those waiting for one ended at once start as soon as they can;
 //  - the square attacked awaits the first blow still to fall there;
 //  - battles ended at once have their blows told, those not told already, and are over.
 
@@ -231,6 +234,30 @@ const battleOf = (
       apart.start,
     ],
     [0, 10, battleEnds(first), battleEnds(third), 27, 30]
+  );
+
+  // Blows at a square fall in the order the battles came: one that came after another there whose attacker's still
+  //  walking to it starts no sooner than that one; once a square's blows have fallen, the next there is fought at once.
+  const ordered = new Battles(),
+    walkingFirst = ordered.add(battleOf('a', 'd', true), 0, pace, 300),
+    straightAfter = ordered.add(
+      battleOf('b', 'e', true, [2, 0], [1, 0]),
+      10,
+      pace
+    );
+
+  ordered.at(blowAt(walkingFirst));
+
+  const afterBlows = ordered.add(
+    battleOf('c', 'f', true, [1, 1], [1, 0]),
+    blowAt(walkingFirst) + 10,
+    pace
+  );
+
+  expect(
+    'blows at a square fall in the order the battles came; once they have, the next there is fought at once',
+    [walkingFirst.start, straightAfter.start, afterBlows.start],
+    [300, 300, blowAt(walkingFirst) + 10]
   );
 
   // How long the battles a unit attacks in go on, for the view to bound them.

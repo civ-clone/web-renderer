@@ -4010,9 +4010,72 @@ expect(
   const fromTheDark = outOfTheDarkAttack(false, []),
     movesHidden = outOfTheDarkAttack(true, [raider]);
 
+  // The view's frame before the world's rebuilt, as on the page, where the view asks for its frame first: nothing of the
+  //  attacker drawn yet, the square attacked as it was; drawn once the world has it.
+  repatched([0, 1, []], [1, 1, []], [2, 1, [mine]]);
+  walkersSet.length = 0;
+  stepped(raider, [0, 1], [1, 1], 'Player-2');
+  glider.queueTile(square(0, 1));
+  glider.queueTile(square(1, 1));
+  fought(raider, [1, 1], mine, [2, 1], 'attacker', rivals);
+  glider.queueTile(square(1, 1));
+  glider.queueTile(square(2, 1));
+  runFrames(1);
+
+  const frameFirst: unknown[] = [fighters(), unitOn(2, 1)];
+
+  burstThen([0, 1, []], [1, 1, [raider]], [2, 1, []]);
+  runFrames(1);
+  frameFirst.push(fighters(), unitOn(2, 1));
+  runFrames();
+  repatched([1, 1, []]);
+
+  // A rival's step and attack on a city, and another rival's attack on it straight from beside it, in one burst: the
+  //  second's blow falls with the first's, once the first's attacker's walked there, each defender falling once.
+  const holders = [1, 2, 3].map((n) => unitOf(`Unit-Q${n}`, 4 - n));
+
+  repatched(
+    [0, 1, [raider]],
+    [1, 1, []],
+    [3, 1, [otherRaider]],
+    [2, 1, holders]
+  );
+  walkersSet.length = 0;
+  stepped(raider, [0, 1], [1, 1], 'Player-2');
+  glider.queueTile(square(0, 1));
+  glider.queueTile(square(1, 1));
+  fought(raider, [1, 1], holders[0]!, [2, 1], 'attacker', rivals);
+  glider.queueTile(square(1, 1));
+  glider.queueTile(square(2, 1));
+  fought(otherRaider, [3, 1], holders[1]!, [2, 1], 'attacker', rivals);
+  glider.queueTile(square(3, 1));
+  glider.queueTile(square(2, 1));
+  burstThen([0, 1, []], [1, 1, [raider]], [2, 1, [holders[2]!]]);
+
+  const inOrder: unknown[] = [];
+  const fallenSoFar = new Set<string>();
+
+  for (let frame = 0; frame < 80 && walkers.size + frames.size > 0; frame++) {
+    runFrames(1);
+
+    const fallen = fighters().filter(([id]) => id === 'battle-fallen');
+
+    fallen.forEach(([, unit, count]) => fallenSoFar.add(`${unit}×${count}`));
+
+    if (fallen.length > 0 && inOrder.length === 0) {
+      inOrder.push(
+        unitOn(2, 1),
+        fallen.map(([, unit]) => unit)
+      );
+    }
+  }
+
+  inOrder.push([...fallenSoFar], unitOn(1, 1), unitOn(2, 1), unitOn(3, 1));
+  repatched([1, 1, []], [3, 1, []], [2, 1, []]);
+
   expect(
-    'a rival’s attack and its step onto the square it emptied, in one burst: the battle’s shown, and it’s on its new square once it’s over; one stepping out of the dark and attacking, or with others’ moves not shown, is drawn fighting once the page has it',
-    [movedIn, fromTheDark, movesHidden],
+    'a rival’s attack and its step onto the square it emptied, in one burst: the battle’s shown, and it’s on its new square once it’s over; one stepping out of the dark and attacking, or with others’ moves not shown, is drawn fighting once the page has it, not before; a walk-then-attack and a direct attack on one square fall together, each defender once',
+    [movedIn, fromTheDark, movesHidden, frameFirst, inOrder],
     [
       [
         [
@@ -4044,6 +4107,15 @@ expect(
         ],
         ['Unit-X', 1],
         null,
+      ],
+      [[], ['Unit-M', 1], [['battle', 'Unit-X', 1, 1]], ['Unit-M', 1]],
+      [
+        ['Unit-Q3', 1],
+        ['Unit-Q1', 'Unit-Q2'],
+        ['Unit-Q1×1', 'Unit-Q2×1'],
+        ['Unit-X', 1],
+        ['Unit-Q3', 1],
+        ['Unit-Y', 1],
       ],
     ]
   );

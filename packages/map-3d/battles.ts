@@ -7,8 +7,9 @@
 // - Lost, it fades away at the edge.
 // - A battle waits for those whose attacker is one of its units, as one figure can't lunge twice at once: a unit
 //   attacking again, or attacked as it lunges. Others are fought at once, several at a square together, as a rival's
-//   attacks on a city come. One can wait for its attacker to get there, walking. Those ended at once, those waiting for
-//   them go on as soon as they can.
+//   attacks on a city come, though never before one that came before it there: blows at a square fall in the order the
+//   battles came. One can wait for its attacker to get there, walking. Those ended at once, those waiting for them go on
+//   as soon as they can.
 // - An attacker's drawn once, in the first battle it's in: one attacking again stands in the next battle only once the
 //   last's over.
 //
@@ -277,14 +278,19 @@ export class Battles {
     return this.endWhere(() => true, now);
   }
 
-  // When a battle starts, no sooner than `soonest`, after each of `before` it waits for.
+  // When a battle starts, no sooner than `soonest`, after each of `before` it waits for; and no sooner than those
+  //  before it at the square it attacks (one whose blow's fallen started before now), so blows there fall in the order
+  //  the battles came, as what each is fought on is what the last left.
   #startOf(of: BattleOf, before: Battle[], soonest: number): number {
-    return before
-      .filter((battle) => waitsFor(battle, of))
-      .reduce(
-        (latest, battle) => Math.max(latest, battleEnds(battle)),
-        soonest
-      );
+    return before.reduce(
+      (latest, battle) =>
+        waitsFor(battle, of)
+          ? Math.max(latest, battleEnds(battle))
+          : sameSquare(battle.defenderSquare, of.defenderSquare)
+          ? Math.max(latest, battle.start)
+          : latest,
+      soonest
+    );
   }
 
   // Battles over, taken off.
