@@ -45,9 +45,9 @@ export type CustomiseHandler = (pluginSet?: string) => void;
 
 /**
  * Which game (#668): civ.one's own, or another game's rules (Civ2's), drawn with that game's art where the player has
- *  imported it and otherwise with civ.one's isometric pixel art. With only one game to play, nothing is asked. The worker plays the
- *  game chosen from then on, a new worker if it had another loaded already, and `onChoose` is told the grid that game
- *  is played on, or null for one on any.
+ *  imported it and otherwise with civ.one's isometric pixel art. With only one game to play, nothing is asked. The
+ *  worker plays the game chosen from then on, a new worker if it had another loaded already, and `onChoose` is told the
+ *  grid that game is played on, or null for one on any.
  */
 export const askGame = (
   transport: Transport,

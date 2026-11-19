@@ -635,11 +635,17 @@ const play = (name: string, path: string): void => {
     }
 
     if (name === 'civ2') {
-      // What the page asks before New Game (#668): which sets, with no art beyond Civ1's and with Civ2's. Neither
-      //  loads anything.
+      // What the page asks before New Game (#668): which sets, with no art beyond Civ1's, with Civ2's, and with only
+      //  the pixel art that ships. None loads anything.
       const protocol: { [request: string]: unknown } = {
         withoutArt: await ask('pluginSets', ['civ1']),
         withArt: await ask('pluginSets', ['civ1', 'civ2']),
+        withPixelArt: await ask('pluginSets', [
+          'civ1-pixelart',
+          'hex-pixelart',
+          'iso-pixelart',
+        ]),
+        withBoth: await ask('pluginSets', ['iso-pixelart', 'civ2']),
       };
 
       protocol.loadedRules = ruleRegistryInstance.entries().length;
@@ -1376,8 +1382,8 @@ if (scenario !== null) {
     [false, true, true, false]
   );
 
-  // Civ2, chosen in New Game (#668): offered only to a page with Civ2's art, played on the isometric grid, saved as
-  //  civ2 and loaded as civ2 by a worker whose default is civ1-enhanced.
+  // Civ2, chosen in New Game (#668): offered only to a page with Civ2's art or the isometric pixel art, played on the
+  //  isometric grid, saved as civ2 and loaded as civ2 by a worker whose default is civ1-enhanced.
   const civ2Path = join(directory, 'civ2.json'),
     civ2Game = run('civ2', civ2Path),
     protocol = civ2Game.protocol as any,
@@ -1385,13 +1391,15 @@ if (scenario !== null) {
       answer?.sets?.map(({ id, tileset }: any) => [id, tileset]);
 
   expect(
-    'asked which sets there are, the worker offers civ2 only to a page with Civ2’s art, and has loaded none',
+    'asked which sets there are, the worker offers civ2 only to a page with Civ2’s art or the isometric pixel art, and has loaded none',
     [
       sets(protocol.withoutArt),
       protocol.withoutArt.default,
       protocol.withoutArt.chosen,
       sets(protocol.withArt),
       protocol.withArt.chosen,
+      sets(protocol.withPixelArt),
+      sets(protocol.withBoth),
     ],
     [
       [
@@ -1407,6 +1415,18 @@ if (scenario !== null) {
         ['civ2-enhanced', 'civ2'],
       ],
       null,
+      [
+        ['civ1', null],
+        ['civ1-enhanced', null],
+        ['civ2', 'iso-pixelart'],
+        ['civ2-enhanced', 'iso-pixelart'],
+      ],
+      [
+        ['civ1', null],
+        ['civ1-enhanced', null],
+        ['civ2', 'civ2'],
+        ['civ2-enhanced', 'civ2'],
+      ],
     ]
   );
   expect(

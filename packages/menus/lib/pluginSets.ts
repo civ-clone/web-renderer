@@ -83,12 +83,14 @@ export const askGameChoices = async (
  *  (`playGame`), before it loads (#1114): `pluginSet` is the set the save names, if any. The worker is asked with the
  *  art here, and names the first of the set's own it has (Civ2's, or else the isometric pixel art). Asking loads
  *  nothing. A save whose rules need art none of which is here is refused, saying which to import, as the worker says
- *  when asked as if every pack that can be imported had been. A worker that can't say leaves the map drawn with the
- *  player's choice for its grid.
+ *  when asked as if every pack that can be imported had been: unless `retry`, given, installs some of it first, as
+ *  `prepareSavedMapArt` has it try again the sheets of the art that ships which failed as the page started, and the
+ *  worker is asked again. A worker that can't say leaves the map drawn with the player's choice for its grid.
  */
 export const followSavedRuleSet = async (
   transport: Transport,
-  pluginSet: unknown
+  pluginSet: unknown,
+  retry?: () => Promise<unknown>
 ): Promise<void> => {
   setRuleSetTileset(null);
 
@@ -98,10 +100,24 @@ export const followSavedRuleSet = async (
 
   let here: PluginSetOption | undefined, tileset: string | null;
 
+  const ask = async (): Promise<PluginSetOption | undefined> =>
+    (await transport.request(new PluginSets(presentTilesets()))).sets.find(
+      ({ id }) => id === pluginSet
+    );
+
   try {
-    here = (
-      await transport.request(new PluginSets(presentTilesets()))
-    ).sets.find(({ id }) => id === pluginSet);
+    here = await ask();
+
+    // None of its art here: the art that ships tried again, when it's to be, and the worker asked again if any is now.
+    if (here === undefined && retry !== undefined) {
+      const before = presentTilesets().join();
+
+      await retry();
+
+      if (presentTilesets().join() !== before) {
+        here = await ask();
+      }
+    }
 
     // None of its art here, or a set never offered: which art it would be drawn with, were it imported.
     tileset =

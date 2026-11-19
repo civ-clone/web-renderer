@@ -255,10 +255,10 @@ has the design.
   (`supportedTopologies`), and say why not otherwise (`packages/menus/lib/playable.ts`): a first visit offline with
   nothing imported.
 - **The map's art per grid.** `mapTileset(grid)` draws a grid's maps with the art the game's rule set names, as New
-  Game learns it (`setRuleSetTileset`, from `playGame`: Civ2's, or the isometric pixel art without it), then the installed set the player chose for the grid
-  (the option `tileset.<grid>`, `chooseMapTileset`), or, unchosen, the one imported for it, or the one that ships;
-  settled once per grid until the installed sets, the options (`GameOptionsRegistry.onChange`) or the rule set's art
-  change. Each hosted set has its zoom (`zoom.<id>`) like the others.
+  Game learns it (`setRuleSetTileset`, from `playGame`: Civ2's, or the isometric pixel art without it), then the
+  installed set the player chose for the grid (the option `tileset.<grid>`, `chooseMapTileset`), or, unchosen, the one
+  imported for it, or the one that ships; settled once per grid until the installed sets, the options
+  (`GameOptionsRegistry.onChange`) or the rule set's art change. Each hosted set has its zoom (`zoom.<id>`) like the others.
 - **Which games there are.** New Game asks the worker for other games once any set beyond the interface's is
   installed, hosted ones included (`mayOfferOtherGames`, `presentTilesets`): Civ2's rules are drawn with Civ2's art
   where it's imported, and otherwise with the isometric pixel art, so they're offered with nothing imported.

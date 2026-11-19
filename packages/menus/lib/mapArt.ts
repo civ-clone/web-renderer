@@ -56,9 +56,9 @@ export const prepareMapArt = async (topologyId: string): Promise<boolean> => {
 /**
  * Has the art a saved game's map is drawn with ready before it loads (#1114, #1141): its rule set's art, when that
  *  names some (`followSavedRuleSet`), or the player's for its grid, fetched if it has to be, or another set ready for
- *  the grid, which the player is told of. Rejects, saying why, when there's none: the load stops. The grid's hosted
- *  sets whose sheets failed as the page started are tried again first, so a save whose rules are drawn with one (Civ2's,
- *  with the isometric pixel art) isn't refused for want of it once it can be loaded again.
+ *  the grid, which the player is told of. Rejects, saying why, when there's none: the load stops. A save whose rules
+ *  have none of their art here tries the grid's hosted sets whose sheets failed as the page started again before it's
+ *  refused, so one drawn with such a set (Civ2's, with the isometric pixel art) loads once it can be loaded again.
  */
 export const prepareSavedMapArt = async (
   transport: Transport,
@@ -66,8 +66,9 @@ export const prepareSavedMapArt = async (
 ): Promise<MapArt> => {
   const topologyId = savedTopologyId(save);
 
-  await retryHostedTilesets(topologyId);
-  await followSavedRuleSet(transport, save.pluginSet);
+  await followSavedRuleSet(transport, save.pluginSet, () =>
+    retryHostedTilesets(topologyId)
+  );
 
   const art = await ensureMapArt(topologyId);
 
