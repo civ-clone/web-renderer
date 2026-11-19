@@ -49,11 +49,21 @@ import {
   loadMap3DScript,
   makeMapView,
   map3dAsked,
+  yieldIconFrom,
   prepareMap3D,
 } from '@civ-clone/ui-game/lib/map3d';
 import { Stage } from '@civ-clone/ui-map-3d/stage';
 import { movingKeys } from '@civ-clone/ui-client/lib/unitActionKeys';
 import { YieldMesh, yieldIconSize } from '@civ-clone/ui-map-3d/yields';
+import { setSprites } from '@civ-clone/ui-assets/lib/getPreloadedImage';
+import {
+  interfaceArt,
+  interfaceSpriteName,
+} from '@civ-clone/ui-assets/lib/interfaceArt';
+import {
+  TilesetDescriptor,
+  spriteKey,
+} from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import markerFor, { TileMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
 import { OverlayMesh } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
 import { Color } from 'three';
@@ -261,6 +271,49 @@ const activated: string[] = [],
 // Civ1's art for the square grid, which the pixel art can be chosen over mid-game.
 installTilesets({});
 chooseMapTileset('square', '');
+
+// The icon for a yield, as the 2D map picks it: the map's pack's own, where it has one and it's imported, the
+//  interface's otherwise, and nothing where neither is.
+{
+  const pack = {
+      ...mapTileset(),
+      storage: { prefix: './pack/', ext: '.png' },
+      yields: { names: { Food: 'grain' }, sprite: 'yields/{yield}' },
+    } as unknown as TilesetDescriptor,
+    packFood = { pack: 'food' } as unknown as CanvasImageSource,
+    interfaceFood = { interface: 'food' } as unknown as CanvasImageSource,
+    interfaceKey = spriteKey(
+      interfaceArt(),
+      interfaceSpriteName('city/food', interfaceArt())
+    ),
+    iconOf = yieldIconFrom(() => pack),
+    picked = (sprites: [string, CanvasImageSource][]) => {
+      setSprites(new Map(sprites));
+
+      const icon = iconOf('Food');
+
+      return icon === packFood
+        ? 'pack'
+        : icon === interfaceFood
+        ? 'interface'
+        : icon;
+    };
+
+  expect(
+    "a yield's icon is the map's pack's own where it has one and it's imported, the interface's otherwise, and nothing where neither is",
+    [
+      picked([
+        ['./pack/yields/grain.png', packFood],
+        [interfaceKey, interfaceFood],
+      ]),
+      picked([[interfaceKey, interfaceFood]]),
+      picked([]),
+    ],
+    ['pack', 'interface', null]
+  );
+
+  setSprites(new Map());
+}
 
 // The query string.
 
@@ -1372,6 +1425,55 @@ expect(
         terrain: { _: 'Grassland', features: [] },
       });
       view.queueTile(tiles[10]!);
+    }
+
+    // Other art chosen for the map mid-game (#1118): the yields' icons are its pack's own, where it has them, so they're
+    //  given to the stage again.
+    view.toggleYields();
+    view.flush();
+    yieldsSet.splice(0);
+    chooseMapTileset('square', 'civ1-pixelart');
+    view.redrawArt();
+    view.flush();
+
+    const givenForArt = yieldsSet.splice(0).length;
+
+    chooseMapTileset('square', '');
+    view.redrawArt();
+    view.toggleYields();
+
+    expect(
+      'other art chosen for the map gives the yields to the stage again, from its pack',
+      givenForArt,
+      1
+    );
+
+    // The page's art changed (an import, or other art chosen): the yields' icons drawn again from it. Listened to only
+    //  while there's a map.
+    {
+      const listening = new Set<() => void>(),
+        artChanged = (changed: () => void): (() => void) => {
+          listening.add(changed);
+
+          return (): void => void listening.delete(changed);
+        },
+        drawn = new MapView3D({ ...given!, artChanged }, fakeStage);
+
+      drawn.toggleYields();
+      drawn.flush();
+      yieldsSet.splice(0);
+      listening.forEach((changed) => changed());
+
+      const redrawn = yieldsSet.splice(0).length,
+        whileShown = listening.size;
+
+      drawn.dispose();
+
+      expect(
+        "when the page's art changes, the yields are given to the stage again, and nothing's listening once the map's taken down",
+        [redrawn, whileShown, listening.size],
+        [1, 1, 0]
+      );
     }
 
     tiles.forEach((tile) =>

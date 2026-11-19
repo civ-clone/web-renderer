@@ -35,11 +35,16 @@ import { unitStatus } from '@civ-clone/ui-assets/lib/renderUnit';
 import {
   getPreloadedImage,
   hasPreloadedImage,
+  onPreloadedImagesChanged,
 } from '@civ-clone/ui-assets/lib/getPreloadedImage';
 import {
   interfaceArt,
   interfaceSpriteName,
 } from '@civ-clone/ui-assets/lib/interfaceArt';
+import {
+  TilesetDescriptor,
+  expandName,
+} from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import MapView2D, { MapView2DDeps } from '../MapView2D';
 import mapSquares from './mapSquares';
 import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
@@ -190,14 +195,29 @@ export const forgetMap3D = (): void => {
   say = sayMap3DFellBack;
 };
 
-// The interface's icon for a yield, as the 2D map draws it over a square with `y` (`Yields`), or nothing where the
-//  interface's art hasn't been loaded with one.
-const yieldIcon = (name: string): CanvasImageSource | null => {
-  const art = interfaceArt(),
-    path = interfaceSpriteName(`city/${name.toLowerCase()}`, art);
+/**
+ * The icon for a yield, as the 2D map draws it over a square with `y` (`Yields`): the map's pack's own, where it has one
+ *  and it's imported, or the interface's, or nothing where neither has been loaded.
+ */
+export const yieldIconFrom =
+  (tileset: () => TilesetDescriptor) =>
+  (name: string): CanvasImageSource | null => {
+    const set = tileset(),
+      word = set.yields?.names[name];
 
-  return hasPreloadedImage(path, art) ? getPreloadedImage(path, art) : null;
-};
+    if (word !== undefined) {
+      const path = expandName(set.yields!.sprite, { yield: word });
+
+      if (hasPreloadedImage(path, set)) {
+        return getPreloadedImage(path, set);
+      }
+    }
+
+    const art = interfaceArt(),
+      path = interfaceSpriteName(`city/${name.toLowerCase()}`, art);
+
+    return hasPreloadedImage(path, art) ? getPreloadedImage(path, art) : null;
+  };
 
 // A canvas that a WebGL context has been taken on can't give a 2D one: one in its place, the same size, for the 2D map.
 const canvasFor2D = (canvas: HTMLCanvasElement): HTMLCanvasElement => {
@@ -285,7 +305,8 @@ export const makeMapView = (
       },
       unitStatus,
       world,
-      yieldIcon,
+      yieldIcon: yieldIconFrom(tileset),
+      artChanged: onPreloadedImagesChanged,
     });
   } catch (error) {
     console.error(error);

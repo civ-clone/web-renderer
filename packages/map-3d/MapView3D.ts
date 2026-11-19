@@ -190,6 +190,8 @@ export class MapView3D implements MapRenderer {
   >();
   // How wide a circle fits inside a square, in the world's units: what a square's yields are fitted in.
   #inner: number;
+  // What stops the page telling of its art changing, which the yields' icons are drawn from.
+  #stopArtChanged: () => void = (): void => {};
   #waiting = false;
   // The 2D art the city screen and windows draw with, as it was when last asked.
   #art: MapView3DDeps['art'];
@@ -306,6 +308,14 @@ export class MapView3D implements MapRenderer {
           this.#draw();
         }
       }) ?? ((): void => {});
+    // And the yields' icons drawn again from the page's art when it changes.
+    this.#stopArtChanged =
+      deps.artChanged?.((): void => {
+        if (!this.#disposed) {
+          this.#yieldsStale = true;
+          this.#draw();
+        }
+      }) ?? ((): void => {});
   }
 
   /** The land, for the `?debug=1` console. */
@@ -392,6 +402,7 @@ export class MapView3D implements MapRenderer {
     this.#keepDistance(true);
     this.#disposed = true;
     this.#stopUnitSize();
+    this.#stopArtChanged();
     this.#endHover();
     this.#input.dispose();
     this.#minimap?.dispose();
@@ -587,6 +598,8 @@ export class MapView3D implements MapRenderer {
     }
 
     this.#artId = id;
+    // The yields' icons are the map's pack's own, where it has them.
+    this.#yieldsStale = true;
 
     return 'redrawn';
   }
