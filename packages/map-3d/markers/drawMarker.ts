@@ -469,6 +469,9 @@ const drawUnit = (
   return group;
 };
 
+/** The name of a marker's unit's part, which slides as the unit steps onto its square, its city staying put. */
+export const UNIT_PART = 'unit';
+
 /**
  * A square's markers, standing on the ground at its middle: its city, and the unit on top of its stack in front of its
  *  buildings, its flag over the city's name, from the same point, so the two never cross however the camera's turned.
@@ -493,6 +496,7 @@ export const drawMarker = (kit: MarkerKit, marker: TileMarker): Group => {
             }
       );
 
+    pawn.name = UNIT_PART;
     pawn.position.z = inFront;
     group.add(pawn);
   }

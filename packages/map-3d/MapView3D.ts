@@ -123,11 +123,12 @@ export class MapView3D implements MapRenderer {
   #words: MarkerWords;
   // Which way each unit faces, by its id: the way the map events last saw it move, or attack.
   #facings = new Map<string, number>();
-  // Units that have moved, by their id, and where they were drawn as they set off: the patch that follows draws them
-  //  on their new square, from where they slide. Kept a moment only, for a patch that doesn't come.
+  // Units that have moved, by their id: where they were drawn as they set off, and the square they're bound for (`x,y`).
+  //  The patch that draws them there has them slide from where they set off, if they're on top there. Kept a moment
+  //  only, for a patch that doesn't come.
   #slides = new Map<
     string,
-    { from: [number, number, number]; until: number }
+    { from: [number, number, number]; to: string; until: number }
   >();
   #transport: MapView3DDeps['transport'];
   #picking: Picking | null = null;
@@ -327,21 +328,12 @@ export class MapView3D implements MapRenderer {
     );
   }
 
-  // What's still to turn of the glide under way, the way it was asked: none without one.
+  // What's still to turn of the glide under way, the way it was asked, from the camera as it was last drawn, which a
+  //  new glide starts from: none without one.
   #turnLeft(): number {
     const glide = this.#glide;
 
-    if (glide === null) {
-      return 0;
-    }
-
-    const t =
-        glide.started === null
-          ? 0
-          : Math.min(1, (performance.now() - glide.started) / GLIDE),
-      eased = t * t * (3 - 2 * t);
-
-    return glide.turn * (1 - eased);
+    return glide === null ? 0 : glide.from.yaw + glide.turn - this.#orbit.yaw;
   }
 
   /** Nothing to flip yet: the stress runner's view modes are the 2D map's layers. */
@@ -395,7 +387,7 @@ export class MapView3D implements MapRenderer {
 
   /**
    * A unit moved, or fought: it faces the way it went, or the way it attacked, and a defender faces its attacker. The
-   *  patches that follow draw it there. Nothing is animated yet (slice 2.3).
+   *  patch that follows a move draws it on its new square, where it slides in from where it set off.
    */
   mapEvent(event: MapEvent): void {
     if (event.kind === 'moved') {
@@ -410,10 +402,12 @@ export class MapView3D implements MapRenderer {
   }
 
   // The unit `id` sets off from the square `from` for `to`: where it's drawn now, sliding there still or standing on its
-  //  square, taken to the copy of the world nearest `to`, so it slides the short way. Not where there are no frames to
+  //  square, taken to the copy of the world nearest `to`, so it slides the short way. Moving on again before it's been
+  //  drawn on the square it was bound for, it sets off from where it's still drawn. Not where there are no frames to
   //  slide over, or the player has asked for less motion.
   #setOff(id: string, from: Coordinate, to: Coordinate): void {
-    const now = performance.now();
+    const now = performance.now(),
+      pending = this.#slides.get(id);
 
     this.#slides.forEach(({ until }, unit) => {
       if (until < now) {
@@ -430,9 +424,14 @@ export class MapView3D implements MapRenderer {
       { u: periodU, v: periodV } = this.#land.layout.period(),
       short = (delta: number, period: number | null): number =>
         period === null ? delta : delta - period * Math.round(delta / period),
-      [drawnU, drawnY, drawnV] = this.#stage.markerAt(
-        `${from.x},${from.y}`
-      ) ?? [fromU, Math.max(0, this.#land.heightAt(fromU, fromV)), fromV];
+      [drawnU, drawnY, drawnV] = (pending !== undefined && pending.until >= now
+        ? pending.from
+        : null) ??
+        this.#stage.markerAt(`${from.x},${from.y}`) ?? [
+          fromU,
+          Math.max(0, this.#land.surfaceAt(fromU, fromV)),
+          fromV,
+        ];
 
     this.#slides.set(id, {
       from: [
@@ -440,6 +439,7 @@ export class MapView3D implements MapRenderer {
         drawnY,
         toV + short(drawnV - toV, periodV),
       ],
+      to: `${to.x},${to.y}`,
       until: now + 2000,
     });
   }
@@ -1069,16 +1069,30 @@ export class MapView3D implements MapRenderer {
 
     this.#stage.setMarker(key, at, marker);
 
-    // The unit on top has just stepped here: it slides from where it set off.
-    const slide =
-      marker?.unit === null || marker === null
-        ? undefined
-        : this.#slides.get(marker.unit.id);
+    // Units bound here that have arrived: the one on top slides from where it set off; one under another doesn't, and
+    //  won't later. One that's taken too long to arrive doesn't either.
+    const now = performance.now(),
+      here = new Set(
+        (this.world.get(x, y)?.units ?? []).map((unit) => unit.id)
+      );
 
-    if (slide !== undefined && marker?.unit) {
-      this.#slides.delete(marker.unit.id);
-      this.#stage.slideMarker(key, slide.from);
-    }
+    this.#slides.forEach((slide, id) => {
+      if (slide.until < now) {
+        this.#slides.delete(id);
+
+        return;
+      }
+
+      if (slide.to !== key || !here.has(id)) {
+        return;
+      }
+
+      this.#slides.delete(id);
+
+      if (marker?.unit?.id === id) {
+        this.#stage.slideMarker(key, slide.from);
+      }
+    });
 
     if (signature === null) {
       this.#marked.delete(key);

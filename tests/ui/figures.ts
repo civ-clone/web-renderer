@@ -25,7 +25,11 @@ import {
   unitLook,
   unitTable,
 } from '@civ-clone/ui-models-builtin/units';
-import { MarkerKit, drawMarker } from '@civ-clone/ui-map-3d/markers/drawMarker';
+import {
+  MarkerKit,
+  UNIT_PART,
+  drawMarker,
+} from '@civ-clone/ui-map-3d/markers/drawMarker';
 import Water, { Clouds } from '@civ-clone/ui-map-3d/water';
 import {
   Part,
@@ -483,6 +487,19 @@ const garrisoned = drawMarker(kit, {
     unit: unit('Spearman', { count: 2, active: true, health: 0.5 }),
   }),
   inCity: Object3D[] = [];
+
+// Its unit's part, which slides as the unit steps onto the square, the city staying put: named, in front of the city.
+expect(
+  'in a city, the unit is a part of its own, in front of the buildings, which slides alone',
+  [
+    garrisoned.getObjectByName(UNIT_PART)?.position.z,
+    garrisoned.children.filter((child) => child.name === UNIT_PART).length,
+    drawMarker(kit, { city: null, unit: unit('Spearman') }).getObjectByName(
+      UNIT_PART
+    )?.position.z,
+  ],
+  [0.26, 1, 0]
+);
 
 garrisoned.updateMatrixWorld(true);
 garrisoned.traverse((object) => void inCity.push(object));

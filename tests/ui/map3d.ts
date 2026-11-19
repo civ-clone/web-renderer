@@ -178,8 +178,11 @@ const staged: string[] = [],
   overlaysSet = new Map<string, OverlayMesh | null>(),
   // Each marker slid into its place, and where from: `x,y`, then `u`, height and `v`, to two places.
   slid: (string | number)[][] = [],
-  // What's marked on each square, by `x,y`.
+  // How many more frames the last slide takes: a slide's frames are drawn until it's done.
+  slideFrames = { left: 0 },
+  // What's marked on each square, by `x,y`, and where it stands.
   markers = new Map<string, TileMarker>(),
+  markedAt = new Map<string, readonly [number, number, number]>(),
   fakeStage = (): Stage => ({
     render: () => void staged.push('render'),
     resize: (stageWidth, stageHeight, ratio) =>
@@ -189,12 +192,28 @@ const staged: string[] = [],
       chunkBuilds.push(`${i},${j}`);
     },
     setOverlay: (i, j, mesh) => void overlaysSet.set(`${i},${j}`, mesh),
-    setMarker: (key, at, marker) =>
-      void (marker === null ? markers.delete(key) : markers.set(key, marker)),
-    slideMarker: (key, from) =>
-      void slid.push([key, ...from.map((n) => Math.round(n * 100) / 100)]),
-    markerAt: () => null,
-    sliding: () => false,
+    setMarker: (key, at, marker) => {
+      if (marker === null) {
+        markers.delete(key);
+        markedAt.delete(key);
+
+        return;
+      }
+
+      markers.set(key, marker);
+      markedAt.set(key, at);
+    },
+    slideMarker: (key, from) => {
+      slid.push([key, ...from.map((n) => Math.round(n * 100) / 100)]);
+      slideFrames.left = 6;
+    },
+    // Where each marker stands: none slides here.
+    markerAt: (key) => {
+      const at = markedAt.get(key);
+
+      return at === undefined ? null : [...at];
+    },
+    sliding: () => slideFrames.left-- > 0,
     view: (orbit, height, period) => {
       lookedAt.splice(0, 3, orbit.focus[0], orbit.focus[1], height);
       seenDown.push(period?.v);
@@ -1361,68 +1380,139 @@ expect(
     [middleOf(tiles[1 * 4 + 1] as Tile), true, false, true, false]
   );
 
-  // A unit stepping onto a square slides there from where it set off; over the world's seam, from the copy of its old
-  //  square beside its new one; and not where the player has asked for less motion.
+  // A unit stepping onto a square slides there from where it was drawn as it set off, once the patch that follows its
+  //  move draws it there, as the engine tells them: its move, then its patch.
   const groundAt = (x: number, y: number): number[] => {
       const [u, v] = middleOf(tiles[y * 4 + x] as Tile);
 
-      return [u, Math.max(0, glider.land().heightAt(u, v)), v].map(
+      return [u, Math.max(0, glider.land().surfaceAt(u, v)), v].map(
         (n) => Math.round(n * 100) / 100
       );
     },
-    stepped = (id: string, from: [number, number], to: [number, number]) =>
+    unitOf = (id: string, defence: number) =>
+      ({
+        id,
+        _: 'Phalanx',
+        defence: { value: defence },
+        busy: null,
+        player: { civilization: { attributes: [] } },
+      } as unknown as Tile['units'][number]),
+    walker = unitOf('Unit-A', 1),
+    guard = unitOf('Unit-B', 5),
+    // The engine's patch: who's on each square now.
+    repatched = (...squares: [number, number, Tile['units'][number][]][]) => {
+      squares.forEach(([x, y, units]) => {
+        const tile = tiles[y * 4 + x] as Tile;
+
+        tile.units = units as Tile['units'];
+        glider.queueTile(tile);
+      });
+      glider.releaseTiles();
+
+      return runFrames();
+    },
+    stepped = (
+      unit: Tile['units'][number],
+      from: [number, number],
+      to: [number, number]
+    ) =>
       glider.mapEvent({
         kind: 'moved',
         unit: {
-          id,
+          id: unit.id,
           type: 'Phalanx',
           player: 'Player-1',
           tile: { x: from[0], y: from[1] },
         },
         from: { x: from[0], y: from[1] },
         to: { x: to[0], y: to[1] },
-      }),
-    corner = tiles[0] as Tile;
+      });
 
+  repatched([0, 3, [walker]]);
   slid.length = 0;
-  stepped('Unit-P', [1, 0], [2, 0]);
+
+  // A first step east: it turns to face the way it goes, marked again where it stands, and slides only once it's on
+  //  the square it went to.
+  stepped(walker, [0, 3], [1, 3]);
   runFrames();
 
-  corner.units = [
-    {
-      id: 'Unit-S',
-      _: 'Phalanx',
-      defence: { value: 1 },
-      busy: null,
-      player: { civilization: { attributes: [] } },
-    },
-  ] as unknown as Tile['units'];
-  glider.queueTile(corner);
-  glider.releaseTiles();
-  runFrames();
-  stepped('Unit-S', [3, 0], [0, 0]);
-  runFrames();
+  const beforeThePatch = slid.splice(0);
 
-  const steps = slid.splice(0);
+  const slideDrawn = repatched([0, 3, []], [1, 3, [walker]]),
+    firstStep = slid.splice(0);
 
+  // Two steps before a patch: from where it's still drawn, both squares.
+  stepped(walker, [1, 3], [2, 3]);
+  stepped(walker, [2, 3], [2, 2]);
+  repatched([1, 3, []], [2, 2, [walker]]);
+
+  const twoSteps = slid.splice(0);
+
+  // Onto a square under a stronger unit, not on top: no slide, nor later, when the stronger one goes and it's on top.
+  repatched([3, 2, [guard]]);
+  slid.length = 0;
+  stepped(walker, [2, 2], [3, 2]);
+  repatched([2, 2, []], [3, 2, [guard, walker]]);
+  stepped(guard, [3, 2], [3, 1]);
+  repatched([3, 2, [walker]], [3, 1, [guard]]);
+
+  const underneath = slid.splice(0);
+
+  // Over the world's seam, from the copy of its old square beside its new one.
+  stepped(walker, [3, 2], [0, 2]);
+  repatched([3, 2, []], [0, 2, [walker]]);
+
+  const overTheSeam = slid.splice(0);
+
+  // Not where the player has asked for less motion.
   Object.assign(window, {
     matchMedia: (query: string) => ({ matches: query.includes('reduce') }),
   });
-  stepped('Unit-P', [3, 0], [2, 0]);
-  runFrames();
+  stepped(walker, [0, 2], [1, 2]);
+  repatched([0, 2, []], [1, 2, [walker]]);
   delete (window as { matchMedia?: unknown }).matchMedia;
 
   expect(
-    'a unit stepping onto a square slides there from where it set off, over the seam from beside it, and not asked for less motion',
-    [steps, slid.splice(0)],
+    'a unit slides onto a square once the patch draws it there, from where it was drawn as it set off, with frames till it’s there: turned on a first step, across two steps, over the seam from beside it; not onto a square under another unit, then or later; and not asked for less motion',
     [
-      [
-        ['2,0', ...groundAt(1, 0)],
-        ['0,0', -0.5, ...groundAt(3, 0).slice(1)],
-      ],
+      beforeThePatch,
+      firstStep,
+      slideDrawn >= 6,
+      twoSteps,
+      underneath,
+      overTheSeam,
+      slid.splice(0),
+    ],
+    [
+      [],
+      [['1,3', ...groundAt(0, 3)]],
+      true,
+      [['2,2', ...groundAt(1, 3)]],
+      [['3,1', ...groundAt(3, 2)]],
+      [['0,2', -0.5, ...groundAt(3, 2).slice(1)]],
       [],
     ]
   );
+
+  repatched([1, 2, []], [3, 1, []]);
+
+  // A second turn pressed between frames, mid-glide: the camera ends two eighths round exactly, not short of it.
+  {
+    const eighth = Math.PI / 4;
+
+    glider.setOrbit({ ...glider.orbit(), yaw: 0 });
+    glider.turnBy(1);
+    runFrames(3);
+    now += 8;
+    glider.turnBy(1);
+    runFrames();
+
+    expect(
+      'a second turn pressed between frames ends two eighths round exactly',
+      Math.round((glider.orbit().yaw - eighth * 2) * 1e6),
+      0
+    );
+  }
 
   // Five quick turns clockwise, before a frame's drawn: the camera turns clockwise all the way, five eighths of a turn,
   //  never back the short way round. Then north, the short way from there.
