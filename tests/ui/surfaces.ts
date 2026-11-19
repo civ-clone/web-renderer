@@ -31,7 +31,7 @@ const expect = (description: string, actual: unknown, expected: unknown) => {
   }
 };
 
-// Small, so the suite's quick: the recipes scale with the size.
+// Small, so the suite's quick: the recipes scale with the size, their bumps as steep.
 const size = 64,
   made = surfaceTextures(size),
   again = surfaceTextures(size),
@@ -179,6 +179,55 @@ expect(
   [[], [], true]
 );
 
+// How rough each surface is, on average: snow and mud shinier, rock a little. And their bumps as steep made small as
+//  made at the usual size: the spread of each surface's tilt within two fifths of the usual's. Not closer, as the
+//  finest bumps (grass's, a couple of texels across made small) are too fine to measure alike; unscaled, they'd be
+//  twice as steep.
+{
+  const shipped = surfaceTextures(),
+    spread = (data: Uint8Array, side: number, layer: number): number => {
+      let total = 0,
+        squares = 0;
+
+      for (let at = 0; at < side * side; at++) {
+        const value = data[layer * side * side * 4 + at * 4 + 1] ?? 0;
+
+        total += value;
+        squares += value * value;
+      }
+
+      const mean = total / (side * side);
+
+      return Math.sqrt(squares / (side * side) - mean * mean);
+    },
+    rough = SURFACES.map((_, layer) => {
+      let total = 0;
+
+      for (let at = 0; at < SURFACE_SIZE * SURFACE_SIZE; at++) {
+        total +=
+          shipped[layer * SURFACE_SIZE * SURFACE_SIZE * 4 + at * 4 + 3] ?? 0;
+      }
+
+      return (
+        Math.round((total / (SURFACE_SIZE * SURFACE_SIZE) / 255) * 100) / 100
+      );
+    });
+
+  expect(
+    'each surface is as rough as it should be, on average; and its bumps are as steep made small as at the usual size',
+    [
+      rough,
+      SURFACES.filter((_, layer) => {
+        const small = spread(made, size, layer),
+          usual = spread(shipped, SURFACE_SIZE, layer);
+
+        return Math.abs(small - usual) > usual * 0.4;
+      }),
+    ],
+    [[0.9, 0.92, 0.88, 0.75, 0.55, 0.9, 0.65, 0.9], []]
+  );
+}
+
 // Its repeat fits the period: a whole number of times across, and down where the world wraps over the poles; about
 //  `SURFACE_TILE`.
 expect(
@@ -195,7 +244,8 @@ expect(
     return [
       whole(period.u / tileU),
       period.v === null ? tileV === SURFACE_TILE : whole(period.v / tileV),
-      Math.abs(tileU - SURFACE_TILE) < SURFACE_TILE * 0.05,
+      Math.abs(tileU - SURFACE_TILE) < SURFACE_TILE * 0.05 &&
+        Math.abs(tileV - SURFACE_TILE) < SURFACE_TILE * 0.05,
     ];
   }),
   [

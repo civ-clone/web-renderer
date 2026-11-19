@@ -59,6 +59,7 @@ export const seaFloor = { shore: -0.03, deep: -0.15, reach: 3 } as const;
 export const unknownTerrain: TerrainEntry = {
   relief: { base: 0, roughness: 0, shape: 'flat' },
   colour: '#1b1f24',
+  // Never drawn: a square never seen has no surface, and lends none to its neighbours.
   surface: 'grass',
 };
 

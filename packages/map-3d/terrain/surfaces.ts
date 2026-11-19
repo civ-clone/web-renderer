@@ -24,6 +24,8 @@ export const SURFACE_TILE = 0.5;
 type Makers = {
   noise: (cell: number, salt: number) => Noise;
   wave: (across: number, down: number) => Noise;
+  // `count` texels at the usual size, at this size.
+  texels: (count: number) => number;
 };
 
 type Recipe = {
@@ -63,21 +65,21 @@ const recipes: { [surface in Surface]: Recipe } = {
   },
   // Ripples blown across it, a little wandering.
   sand: {
-    grain: ({ noise, wave }) => {
+    grain: ({ noise, wave, texels }) => {
       const ripples = wave(7, 3),
         wander = noise(64, 9),
         drift = noise(32, 10);
 
       // The ripples' phase moved by the wander, a little: as a wave's, it can't break the tiling.
       return (x, y) =>
-        0.7 * ripples(x + 6 * wander(x, y), y) + 0.3 * drift(x, y);
+        0.7 * ripples(x + texels(6) * wander(x, y), y) + 0.3 * drift(x, y);
     },
     shade: 0.12,
-    bumps: ({ noise, wave }) => {
+    bumps: ({ noise, wave, texels }) => {
       const ripples = wave(7, 3),
         wander = noise(64, 9);
 
-      return (x, y) => ripples(x + 6 * wander(x, y), y);
+      return (x, y) => ripples(x + texels(6) * wander(x, y), y);
     },
     steep: 1.5,
     rough: 0.88,
@@ -160,7 +162,11 @@ export const surfaceTextures = (
         (across: number, down: number): Noise =>
         (x, y) =>
           Math.sin((2 * Math.PI * (across * x + down * y)) / size),
-      makers = { noise, wave },
+      makers = {
+        noise,
+        wave,
+        texels: (count: number) => (count * size) / SURFACE_SIZE,
+      },
       grain = recipe.grain(makers),
       bumps = recipe.bumps(makers),
       offset = layer * size * size * 4,
@@ -192,9 +198,12 @@ export const surfaceTextures = (
       for (let x = 0; x < size; x++) {
         const at = offset + (y * size + x) * 4,
           here = (grains[y * size + x] ?? 0) - mean,
-          // The bumps' slope, from either side, round the texture's edge.
-          across = (height(x + 1, y) - height(x - 1, y)) / 2,
-          down = (height(x, y + 1) - height(x, y - 1)) / 2;
+          // The bumps' slope, from either side, round the texture's edge: per texel at the usual size, so they're as
+          //  steep at any size.
+          across =
+            ((height(x + 1, y) - height(x - 1, y)) / 2) * (size / SURFACE_SIZE),
+          down =
+            ((height(x, y + 1) - height(x, y - 1)) / 2) * (size / SURFACE_SIZE);
 
         data[at] = byte(recipe.shade * here + 0.5);
         data[at + 1] = byte(

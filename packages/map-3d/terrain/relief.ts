@@ -720,8 +720,9 @@ export const createRelief = ({
       blended = 0,
       peaks = 0,
       shades = 0,
-      // Each surface's share, weighed as the colour is.
+      // Each surface's share, weighed as the colour is, but of squares seen alone: a square never seen has none.
       surfaces = SURFACES.map(() => 0),
+      surfaced = 0,
       red = 0,
       green = 0,
       blue = 0;
@@ -776,7 +777,12 @@ export const createRelief = ({
       }
 
       shades += shade;
-      surfaces[surface] = (surfaces[surface] ?? 0) + shade;
+
+      if (!square.unknown) {
+        surfaces[surface] = (surfaces[surface] ?? 0) + shade;
+        surfaced += shade;
+      }
+
       red += shade * colour[0];
       green += shade * colour[1];
       blue += shade * colour[2];
@@ -836,8 +842,8 @@ export const createRelief = ({
           ? [red / shades, green / shades, blue / shades]
           : ownSquare.colour,
       surfaces:
-        shades > 0
-          ? surfaces.map((share) => share / shades)
+        surfaced > 0
+          ? surfaces.map((share) => share / surfaced)
           : SURFACES.map((_, at) => (at === ownSquare.surface ? 1 : 0)),
       unseen: false,
     };

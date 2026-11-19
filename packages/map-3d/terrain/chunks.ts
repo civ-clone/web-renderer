@@ -105,12 +105,10 @@ export const buildChunk = (
         const point = b * (stepsU + 1) + a;
 
         colours.set(colour, point * 3);
-        sampled.surfaces.forEach((share, surface) =>
-          (surface < 4 ? surfacesA : surfacesB).set(
-            [Math.round(share * 255)],
-            point * 4 + (surface % 4)
-          )
-        );
+        sampled.surfaces.forEach((share, surface) => {
+          (surface < 4 ? surfacesA : surfacesB)[point * 4 + (surface % 4)] =
+            Math.round(share * 255);
+        });
         unseen[point] = sampled.unseen ? 1 : 0;
       }
     }

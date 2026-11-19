@@ -446,6 +446,39 @@ ids.forEach((topologyId) => {
     [true, 'sand']
   );
 
+  // Beside a square never seen: none of its surface. A square of arctic beside one, every way the grid has: snow, all
+  //  through it, to its edge.
+  const edging = topology
+    .directions()
+    .map((direction) => {
+      const [dx, dy] = topology.offset(direction, 5, 5),
+        beside = createRelief({
+          layout,
+          source: sourceFor(topology, (x, y) =>
+            x === 5 + dx && y === 5 + dy ? 'Unknown' : 'Arctic'
+          ),
+        }),
+        [cu, cv] = layout.centre(5, 5),
+        [nu, nv] = layout.centre(5 + dx, 5 + dy);
+
+      // Along the way to it, to just short of the edge.
+      return [0, 0.2, 0.35, 0.45, 0.49].every((along) => {
+        const { surfaces } = beside.sample(
+          cu + (nu - cu) * along,
+          cv + (nv - cv) * along
+        );
+
+        return surfaces[SURFACES.indexOf('snow')] === 1;
+      });
+    })
+    .every(Boolean);
+
+  expect(
+    'a square of arctic beside one never seen is snow all through, to its edge: the square never seen lends it no surface',
+    edging,
+    true
+  );
+
   // Land in the first three columns, sea beyond.
   const coast = createRelief({
       layout,

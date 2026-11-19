@@ -505,12 +505,14 @@ blended across squares.
     from noise that repeats with it, so it tiles. Each texel says how much the land's colour is scaled (by 1 on
     average), which way its bumps tilt the ground, and how rough it is. Grass has patches and blades; plains dry grass
     and soil; sand ripples; rock cracks; snow soft drifts; forest floor leaf litter; mud wet patches, shinier; tundra
-    lichen. All eight take about 70 ms to make, once, when the map's made.
+    lichen. All eight take about 70 ms to make, once for the page. Their bumps are as steep made at any size.
   - **Drawn** (`packages/map-3d/landMaterial.ts`): three.js's standard material, its colour the land's at each point,
     with the surfaces' detail sampled from a texture array, by where the point is on the ground, and blended by their
     weights. Each texture repeats every half a square or so, as many whole times as fit the world's period, so every
-    copy of the world has the same detail and neither its seam nor a chunk's border has one. Far off, the detail's
-    smaller copies even out to the colour alone. A square never seen has none.
+    copy of the world has the same detail and neither its seam nor a chunk's border has one. The bumps tilt the light
+    along the ground's own slope. Far off, the detail's smaller copies even out to the colour, and each surface's own
+    roughness: snow and mud shinier than before, rock a little, where all land was as rough. A square never seen has
+    no surface, and lends none to its neighbours; the detail fades out towards it.
   - **Cost:** making the noise's slopes from a table rather than a sine and cosine each made the land quicker to build
     (about 520 ms for the debug world rather than 595), more than paying for the weights. Each point of the land
     samples all eight textures, so their smaller copies are chosen alike where surfaces meet.

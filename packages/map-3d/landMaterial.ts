@@ -1,7 +1,8 @@
 // What the land's drawn with (docs/3d-renderer.md §4.3): three.js's standard material, its colour the land's at each
 //  point, with each surface's detail (`terrain/surfaces.ts`) drawn over it, blended by how much of each surface the
 //  ground is there (`ChunkMesh#surfacesA` and `surfacesB`). The detail lightens and darkens the colour, tilts the light
-//  with its bumps, and sets how rough the ground is. Far off, the detail's smaller copies even out to the colour alone.
+//  with its bumps, and sets how rough the ground is. Far off, the detail's smaller copies even out to the colour, and
+//  each surface's own roughness (snow and mud shinier, rock a little): before, all land was as rough.
 //
 // Each surface's texture reaches about `SURFACE_TILE` across the ground before repeating, as many whole times as fit
 //  the world's period, across and down, so each copy of the world has the same detail and the seam none. It's laid by
@@ -46,13 +47,18 @@ const layers = SURFACES.map(
     } * texture(surfaceDetail, vec3(surfaceAt, ${layer}.0));`
 ).join('\n');
 
+// The surfaces' detail, made once for the page: it's the same for every world.
+let surfacesMade: Uint8Array | null = null;
+
+const made = (): Uint8Array => (surfacesMade ??= surfaceTextures());
+
 /** The land's material, and the texture of its surfaces' detail, for a world repeating every `period`. */
 export const landMaterial = (period: {
   u: number;
   v: number | null;
 }): { material: MeshStandardMaterial; detail: DataArrayTexture } => {
   const detail = new DataArrayTexture(
-      surfaceTextures(),
+      made(),
       SURFACE_SIZE,
       SURFACE_SIZE,
       SURFACES.length
@@ -105,7 +111,8 @@ ${shader.fragmentShader
   vec4 surface = vec4(0.0);
   ${layers}
   // None on a square never seen: the colour alone.
-  surface = surfaceTotal > 0.001 ? surface / surfaceTotal : vec4(0.5, 0.5, 0.5, roughness);
+  // Fading to none (the colour alone) as the ground nears a square never seen, whose points have no surface.
+  surface = surface / max(surfaceTotal, 1.0) + max(0.0, 1.0 - surfaceTotal) * vec4(0.5, 0.5, 0.5, roughness);
   diffuseColor.rgb *= 0.5 + surface.r;`
   )
   .replace(
@@ -116,8 +123,9 @@ ${shader.fragmentShader
   .replace(
     '#include <normal_fragment_maps>',
     `#include <normal_fragment_maps>
-  // The detail's bumps tilt the ground east and south, as the view sees it.
-  normal = normalize(normal + mat3(viewMatrix) * vec3(surface.g * 2.0 - 1.0, 0.0, surface.b * 2.0 - 1.0));`
+  // The detail's bumps tilt the ground east and south, as the view sees it, along the ground's own slope.
+  vec3 surfaceTilt = mat3(viewMatrix) * vec3(surface.g * 2.0 - 1.0, 0.0, surface.b * 2.0 - 1.0);
+  normal = normalize(normal + surfaceTilt - dot(surfaceTilt, normal) * normal);`
   )}`;
   };
   material.customProgramCacheKey = () => 'land-surfaces';
