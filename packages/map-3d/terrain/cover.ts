@@ -1,7 +1,7 @@
 // What covers the land beyond its surfaces (docs/3d-renderer.md §4.3), by where it lies, not what its squares are:
 //  - bare rock where the ground is steep;
 //  - snow high up, lower towards the poles, where the ground's level enough to hold it;
-//  - wet sand at the waterline, where the land comes down to water.
+//  - wet ground (darker, shinier, whatever its surface) at the waterline, where the land comes down to water.
 // Pure: each is a share from 0 to 1, as the land's shader works it out at every point it draws (`landMaterial.ts`),
 //  from the same numbers (`coverGlsl`), so the tests can say where each lies.
 
@@ -11,8 +11,9 @@ export const COVER = {
   //  (about 28°).
   rockFrom: 0.97,
   rockTo: 0.88,
-  // Snow from this height at the equator, and at the poles (a mountain's peak is about 0.33 to 0.41 high, so the
-  //  tallest are capped, more of them towards the poles); whole a little above.
+  // Snow from this height at the equator, and at the poles; whole a little above. A mountain's top is 0.32 to 0.47
+  //  high, about 0.40 for most, so about half the peaks near the equator have some snow and the tallest are capped,
+  //  more of them towards the poles.
   snowAtEquator: 0.4,
   snowAtPoles: 0.26,
   snowDeepens: 0.04,
@@ -31,6 +32,16 @@ const smooth = (from: number, to: number, value: number): number => {
   const t = Math.max(0, Math.min(1, (value - from) / (to - from)));
 
   return t * t * (3 - 2 * t);
+};
+
+/**
+ * How far a point is from the equator (0) to the poles (1), from how far down the ground it is (`v`), on a ground
+ *  `extent` from pole to pole: the same at every copy of the world, a period above or below.
+ */
+export const latitudeOf = (v: number, extent: number): number => {
+  const down = ((v % extent) + extent) % extent;
+
+  return Math.min(1, Math.abs((2 * down) / extent - 1));
 };
 
 /** How much of the ground is bare rock, by how upright its normal is (its `y`, 1 on level ground). */
@@ -65,6 +76,12 @@ const number = (value: number): string =>
 
 /** The same, in GLSL, for the land's shader. */
 export const coverGlsl = `
+float coverLatitude(float v, float extent) {
+  float down = mod(v, extent);
+
+  return min(1.0, abs(2.0 * down / extent - 1.0));
+}
+
 float coverRock(float upright) {
   return 1.0 - smoothstep(${number(COVER.rockTo)}, ${number(
   COVER.rockFrom

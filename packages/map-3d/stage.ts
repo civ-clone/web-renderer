@@ -546,7 +546,7 @@ export const createStage: StageFactory = (
         'surfacesB',
         new BufferAttribute(mesh.surfacesB, 4, true)
       );
-      // How much of what the ground's blended from is water, for wet sand at the waterline.
+      // How much of what the ground's blended from is water, for wet ground at the waterline.
       geometry.setAttribute('shore', new BufferAttribute(mesh.shore, 1, true));
       geometry.setIndex(new BufferAttribute(mesh.indices, 1));
       geometry.computeBoundingSphere();

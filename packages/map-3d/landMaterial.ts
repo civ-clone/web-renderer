@@ -20,13 +20,12 @@ import {
   UnsignedByteType,
   Vector2,
 } from 'three';
-import { SURFACES } from '@civ-clone/ui-models-builtin/terrain';
+import { SURFACES, terrainEntry } from '@civ-clone/ui-models-builtin/terrain';
 import surfaceTextures, {
   SURFACE_SIZE,
   SURFACE_TILE,
 } from './terrain/surfaces';
 import { coverGlsl } from './terrain/cover';
-import { terrainEntry } from '@civ-clone/ui-models-builtin/terrain';
 
 /**
  * How far across and down the ground each surface's texture reaches before it repeats: about `SURFACE_TILE`, as many
@@ -147,10 +146,11 @@ ${shader.fragmentShader
   surface = surface / max(surfaceTotal, 1.0) + max(0.0, 1.0 - surfaceTotal) * vec4(0.5, 0.5, 0.5, roughness);
   // Where the land lies (\`terrain/cover.ts\`): bare rock where it's steep, snow high up, wet at the waterline. Not on a
   //  square never seen, whose ground is the cloud's.
-  vec3 groundNormal = inverseTransformDirection(normalize(vNormal), viewMatrix);
+  vec3 groundNormal = transformDirectionByInverseViewMatrix(normalize(vNormal), viewMatrix);
   float seen = min(surfaceTotal, 1.0);
   float rockShare = coverRock(groundNormal.y) * seen;
-  float snowShare = coverSnow(vHeight, groundNormal.y, clamp(abs(2.0 * vGround.y / groundExtent - 1.0), 0.0, 1.0)) * seen;
+  // How far from the equator, the same at every copy of the world above or below.
+  float snowShare = coverSnow(vHeight, groundNormal.y, coverLatitude(vGround.y, groundExtent)) * seen;
   float wetShare = coverWet(vHeight, vShore) * seen;
   diffuseColor.rgb = mix(diffuseColor.rgb, rockColour, rockShare);
   surface = mix(surface, surface${SURFACES.indexOf('rock')}, rockShare);

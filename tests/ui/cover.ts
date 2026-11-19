@@ -6,10 +6,13 @@
 //    nowhere else; wet ground beside water alone, never on a swamp or a river inland, however low.
 
 import generateWorld from '@civ-clone/ui-map-3d/debug/generateWorld';
+import topologyFor from '@civ-clone/ui-client/lib/topologyFor';
+import groundLayoutFor from '@civ-clone/ui-map-3d/layouts';
 import createRelief from '@civ-clone/ui-map-3d/terrain/relief';
 import { buildChunk, chunkGrid } from '@civ-clone/ui-map-3d/terrain/chunks';
 import {
   COVER,
+  latitudeOf,
   rockness,
   snowiness,
   wetness,
@@ -70,6 +73,81 @@ expect(
   [0, 0, 1, 1, 0]
 );
 
+expect(
+  'latitude: 0 at the equator, 1 at the poles, the same a period on, above or below, as every copy of the world is',
+  [
+    latitudeOf(25, 50),
+    latitudeOf(0, 50),
+    latitudeOf(50, 50),
+    [12.5, 37.5, 3, 47].every(
+      (v) =>
+        latitudeOf(v, 50) === latitudeOf(v + 50, 50) &&
+        latitudeOf(v, 50) === latitudeOf(v - 50, 50) &&
+        latitudeOf(v, 50) === latitudeOf(v + 150, 50)
+    ),
+    latitudeOf(-25, 50),
+  ],
+  [0, 1, 1, true, 0]
+);
+
+// A swamp inland, far from water, as low as land goes: never wet. A sea beside a square never seen: all water, to its
+//  edge.
+{
+  const width = 12,
+    height = 10,
+    topology = topologyFor({ width, height, topologyId: 'square' }),
+    layout = groundLayoutFor({
+      width,
+      height,
+      topologyId: 'square',
+      wrapsY: topology.wrapsY(),
+    }),
+    reliefOf = (terrainAt: (x: number, y: number) => string) =>
+      createRelief({
+        layout,
+        source: {
+          width,
+          height,
+          wrapsY: topology.wrapsY(),
+          terrainAt,
+          waterAt: (x, y) => terrainAt(x, y) === 'Ocean',
+          neighbours: (x, y) =>
+            topology
+              .directions()
+              .map((direction) => topology.neighbour(x, y, direction))
+              .filter((square): square is [number, number] => square !== null),
+        },
+      }),
+    swampy = reliefOf((x, y) =>
+      x >= 4 && x <= 7 && y >= 3 && y <= 6 ? 'Swamp' : 'Grassland'
+    ),
+    frontier = reliefOf((x, y) =>
+      x === 6 && y === 5 ? 'Unknown' : x >= 4 ? 'Ocean' : 'Grassland'
+    ),
+    wetInland: number[] = [];
+
+  for (let at = 0; at < 400; at++) {
+    const u = 4 + (at % 20) / 5,
+      v = 3 + Math.floor(at / 20) / 5,
+      { height: up, shore } = swampy.sample(u, v);
+
+    if (wetness(up, shore) > 0) {
+      wetInland.push(at);
+    }
+  }
+
+  expect(
+    'a swamp inland, as low as land goes, is never wet; a sea beside a square never seen is all water to its edge',
+    [
+      wetInland.slice(0, 3),
+      [0, 0.2, 0.4, 0.49].every(
+        (along) => frontier.sample(5.5 + along, 5.5).shore === 1
+      ),
+    ],
+    [[], true]
+  );
+}
+
 // A generated world of each grid, its land as drawn: every point of every chunk, with the square it's on.
 (['square', 'staggered-iso', 'hex-odd-r'] as TopologyName[]).forEach(
   (topologyId) => {
@@ -125,7 +203,7 @@ expect(
             v = chunk.v + (chunk.positions[point * 3 + 2] ?? 0),
             up = chunk.positions[point * 3 + 1] ?? 0,
             upright = chunk.normals[point * 3 + 1] ?? 1,
-            latitude = Math.min(1, Math.abs((2 * v) / extent - 1)),
+            latitude = latitudeOf(v, extent),
             [x, y] = layout.tileAt(u, v),
             name = terrainAt(x, y),
             snow = snowiness(up, upright, latitude),

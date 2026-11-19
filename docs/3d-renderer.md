@@ -495,13 +495,16 @@ blended across squares.
   - snow above a height;
   - wet sand at the waterline.
 - **The built-in set** uses textures made by code. A hosted set can bring CC0 photographic textures (D3).
-- **As built (slice 3.1):** the surfaces' detail, blended, and rock, snow and wet sand by where the land lies.
+- **As built (slice 3.1):** the surfaces' detail, blended, and rock, snow and wet ground by where the land lies.
   - **By where it lies** (`packages/map-3d/terrain/cover.ts`, the same numbers in the land's shader):
     - **rock** where the ground's steep: from about 14° from level, whole by about 28°. So it's on mountains' flanks,
-      the steepest hills, and a mountain's foot where its slope reaches into a neighbour. The land's slopes reach about
-      35° at most, so a texture laid flat stretches by under 1.2 times there: rock isn't mapped from three sides yet;
-    - **snow** above a snowline, 0.40 high at the equator and 0.26 at the poles, on ground level enough to hold it, so
-      the tallest peaks are capped, more of them towards the poles;
+      the steepest hills, and a mountain's foot where its slope reaches into a neighbour. Mountains' sides reach about
+      43° at their steepest (37° for most of the steepest), hills about 35°, most under 13°. A texture laid flat
+      stretches 1.37 times at 43°: rock mapped from three sides would fix that, and is still to do;
+    - **snow** above a snowline, 0.40 high at the equator and 0.26 at the poles, on ground level enough to hold it. A
+      mountain's top is 0.32 to 0.47 high, about 0.40 for most, so about half the peaks near the equator have some
+      snow and the tallest are capped, more of them towards the poles. Its latitude is the same at every copy of the
+      world, above or below;
     - **wet**, darker and shinier, at the waterline, where water squares are part of what the ground's blended from
       (`GroundSample#shore`, carried by the mesh). Not by height alone: a swamp or a river inland, however low, stays
       dry.
