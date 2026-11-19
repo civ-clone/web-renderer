@@ -1015,7 +1015,7 @@ export class MapView3D implements MapRenderer {
 
     const rising = this.#followHeight(budget !== null);
 
-    this.#stage.view(this.#orbit, this.#lookHeight ?? 0);
+    this.#stage.view(this.#orbit, this.#lookHeight ?? 0, this.#period());
     this.#stage.render();
     this.#showMinimap();
     this.#keepDistance();

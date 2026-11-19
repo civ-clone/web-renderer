@@ -60,8 +60,15 @@ export interface Stage {
     at: readonly [number, number, number],
     marker: TileMarker | null
   ): void;
-  /** The camera, round its focus raised to `height`, the land's there. */
-  view(orbit: Orbit, height: number): void;
+  /**
+   * The camera, round its focus raised to `height`, the land's there; and the world drawn as far round as `period`
+   *  says, if the view's stopped at the poles, rather than as the world wraps.
+   */
+  view(
+    orbit: Orbit,
+    height: number,
+    period?: { u: number; v: number | null }
+  ): void;
   stats(): StageStats;
   dispose(): void;
 }
@@ -215,7 +222,11 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
       return drawn;
     });
 
-  const view = (orbit: Orbit, height: number): void => {
+  const view = (
+    orbit: Orbit,
+    height: number,
+    seen: { u: number; v: number | null } = period
+  ): void => {
     const [u, v] = orbit.focus,
       [x, y, z] = eye(orbit, height),
       { near, far } = sightFor(orbit.distance);
@@ -252,14 +263,18 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
     );
     clouds.follow(u, v, far * 2.2);
 
+    // Stopped at the poles: nothing past them, as the 2D map shows nothing past its locked edges.
+    water.pastThePoles(seen.v !== null);
+    clouds.pastThePoles(seen.v !== null);
+
     // The copies of the world the haze doesn't hide: when they change, every chunk is drawn at the new ones. And the
     //  markers', nearer.
-    const inSight = copiesNear(orbit.focus, far, period),
+    const inSight = copiesNear(orbit.focus, far, seen),
       key = inSight.join(';'),
       markersInSight = copiesNear(
         orbit.focus,
         Math.min(far, orbit.distance * 2.2),
-        period
+        seen
       ),
       markersKey = markersInSight.join(';');
 

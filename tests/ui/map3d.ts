@@ -168,6 +168,8 @@ const staged: string[] = [],
   // The land's chunks the stage was given, and where its camera looked last, apart from what's drawn.
   chunksSet = new Set<string>(),
   lookedAt: number[] = [],
+  // How far down the world the stage was asked to draw it round, each time it was asked for a view.
+  seenDown: (number | null | undefined)[] = [],
   // What's laid on the land of each chunk made since, by `i,j`: how many numbers its points take, or 0 for nothing.
   overlaysSet = new Map<string, number>(),
   // What's marked on each square, by `x,y`.
@@ -184,8 +186,10 @@ const staged: string[] = [],
       ),
     setMarker: (key, at, marker) =>
       void (marker === null ? markers.delete(key) : markers.set(key, marker)),
-    view: (orbit, height) =>
-      void lookedAt.splice(0, 3, orbit.focus[0], orbit.focus[1], height),
+    view: (orbit, height, period) => {
+      lookedAt.splice(0, 3, orbit.focus[0], orbit.focus[1], height);
+      seenDown.push(period?.v);
+    },
     stats: () => ({ drawCalls: 0, triangles: 0, geometries: 0 }),
     dispose: () => void staged.push('dispose'),
   });
@@ -1368,7 +1372,8 @@ expect(
   });
 
   const glidedTo = locked.orbit().focus,
-    bottom = locked.land().layout.centre(2, 3);
+    bottom = locked.land().layout.centre(2, 3),
+    lockedDown = seenDown[seenDown.length - 1];
 
   locked.dispose();
   kept.lockVerticalEdges = false;
@@ -1376,17 +1381,23 @@ expect(
   const wrapping = makeMapView(deps2D) as MapView3D,
     wrappedAt = beyond(wrapping);
 
+  runFrames();
+
+  const wrappingDown = seenDown[seenDown.length - 1];
+
   wrapping.dispose();
 
   expect(
-    'stopped at the poles, the camera stays at the world’s last row, looking at a square in it, and glides down the world to a square; otherwise it goes round',
+    'stopped at the poles, the camera stays at the world’s last row, looking at a square in it, glides down the world to a square, and nothing is drawn past them; otherwise it goes round, and so is the world drawn',
     [
       lockedAt === locked.land().extentV(),
       lockedCentre,
       glidedTo,
+      lockedDown,
       wrappedAt < locked.land().extentV(),
+      wrappingDown,
     ],
-    [true, { x: 1, y: 3 }, bottom, true]
+    [true, { x: 1, y: 3 }, bottom, null, true, 4]
   );
 
   delete (globalThis as any).requestAnimationFrame;

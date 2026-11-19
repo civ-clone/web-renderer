@@ -155,6 +155,27 @@ expect(
   [[4, false], [4, true], [4, false], [4, true], true, true]
 );
 
+// Stopped at the poles, a world that wraps over them draws neither past them; one that doesn't, never does.
+const stops = [wrapping, wrappingClouds, water].map((each) => {
+  each.pastThePoles(false);
+
+  const stopped = each.mesh.material.uniforms['wrapsV']!.value;
+
+  each.pastThePoles(true);
+
+  return [stopped, each.mesh.material.uniforms['wrapsV']!.value];
+});
+
+expect(
+  'stopped at the poles, the sea and the cloud of a world that wraps over them stop there too; free again, they go on',
+  stops,
+  [
+    [false, true],
+    [false, true],
+    [false, false],
+  ]
+);
+
 [wrapping, clouds, wrappingClouds].forEach((each) => each.dispose());
 water.dispose();
 

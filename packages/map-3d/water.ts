@@ -231,6 +231,14 @@ export class Water {
     return this.#texture;
   }
 
+  /**
+   * Whether it's drawn past the poles: only on a world that wraps over them, and not where the player has stopped the
+   *  map at them.
+   */
+  pastThePoles(shown: boolean): void {
+    this.mesh.material.uniforms['wrapsV']!.value = this.#ground.wrapsV && shown;
+  }
+
   /** The surface under the camera, round (`u`, `v`), `across` wide, and the sun's direction for its glint. */
   follow(u: number, v: number, across: number, sun: Vector3): void {
     this.mesh.position.set(u, 0, v);
@@ -327,8 +335,12 @@ export const CLOUD_HEIGHT = 0.18;
 /** The cloud over the squares never seen (§4.5), reading where they are from the water's texture. */
 export class Clouds {
   readonly mesh: Mesh<PlaneGeometry, ShaderMaterial>;
+  // Whether the world wraps over the poles.
+  #wrapsV: boolean;
 
   constructor(texture: DataTexture, ground: Ground) {
+    this.#wrapsV = ground.wrapsV;
+
     const material = new ShaderMaterial({
       uniforms: UniformsUtils.merge([
         UniformsLib.fog,
@@ -360,6 +372,11 @@ export class Clouds {
     this.mesh.rotation.x = -Math.PI / 2;
     // Over the land and the sea, which it's drawn after.
     this.mesh.renderOrder = 2;
+  }
+
+  /** Whether it's drawn past the poles: only on a world that wraps over them, and not where the map's stopped there. */
+  pastThePoles(shown: boolean): void {
+    this.mesh.material.uniforms['wrapsV']!.value = this.#wrapsV && shown;
   }
 
   /** The cloud under the camera, round (`u`, `v`), `across` wide. */
