@@ -63,6 +63,15 @@ export interface Stage {
     marker: TileMarker | null
   ): void;
   /**
+   * The marker `key` slides into its place from `from` (`u`, height, `v`), as a unit stepping onto its square does,
+   *  starting now.
+   */
+  slideMarker(key: string, from: readonly [number, number, number]): void;
+  /** Where the marker `key` is drawn now, sliding or not, or nothing where there's none. */
+  markerAt(key: string): [number, number, number] | null;
+  /** Whether any marker's sliding, for frames to be drawn until none is. */
+  sliding(): boolean;
+  /**
    * The camera, round its focus raised to `height`, the land's there; and the world drawn as far round as `period`
    *  says, if the view's stopped at the poles, rather than as the world wraps.
    */
@@ -87,7 +96,12 @@ type Placed = {
   at: readonly [number, number, number];
   make: () => Object3D;
   drawn: Object3D[];
+  // On its way from elsewhere (a unit moving): how far from `at` it started, and when.
+  slide?: { from: [number, number, number]; started: number };
 };
+
+/** How long a marker takes to slide to its place, in ms: a unit's step. */
+export const SLIDE = 260;
 
 export type StageFactory = (
   canvas: HTMLCanvasElement,
@@ -258,6 +272,8 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
     at.map(([offsetU, offsetV]) => {
       const drawn = placed.make();
 
+      // Which copy of the world it is, for a slide to move it from.
+      drawn.userData['copy'] = [offsetU, offsetV];
       drawn.position.set(
         placed.at[0] + offsetU,
         placed.at[1],
@@ -277,6 +293,53 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
       land,
       overlayCopies(copies, overlay.span, extent, period.v, stopped)
     );
+
+  // How far from its place a sliding marker is now, eased in and out; nothing once it's there.
+  const slideOffset = (
+    placed: Placed,
+    now: number
+  ): [number, number, number] | null => {
+    const slide = placed.slide;
+
+    if (slide === undefined) {
+      return null;
+    }
+
+    const t = Math.min(1, Math.max(0, (now - slide.started) / SLIDE)),
+      left = 1 - t * t * (3 - 2 * t);
+
+    return t >= 1
+      ? null
+      : [slide.from[0] * left, slide.from[1] * left, slide.from[2] * left];
+  };
+
+  // Each sliding marker's copies moved along, and those that have arrived put in their place.
+  const slideMarkers = (now: number): void =>
+    markers.forEach((placed) => {
+      if (placed.slide === undefined) {
+        return;
+      }
+
+      const offset = slideOffset(placed, now);
+
+      if (offset === null) {
+        delete placed.slide;
+      }
+
+      const [du, dy, dv] = offset ?? [0, 0, 0];
+
+      placed.drawn.forEach((drawn) => {
+        const [copyU, copyV] = (drawn.userData['copy'] as
+          | [number, number]
+          | undefined) ?? [0, 0];
+
+        drawn.position.set(
+          placed.at[0] + copyU + du,
+          placed.at[1] + dy,
+          placed.at[2] + copyV + dv
+        );
+      });
+    });
 
   const view = (
     orbit: Orbit,
@@ -361,6 +424,8 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
         marker.drawn = copiesOf(marker, markersGroup, markerCopies);
       });
     }
+
+    slideMarkers(performance.now());
   };
 
   return {
@@ -480,6 +545,36 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
       placed.drawn = copiesOf(placed, markersGroup, markerCopies);
       markers.set(key, placed);
     },
+    slideMarker: (key, from): void => {
+      const placed = markers.get(key);
+
+      if (placed === undefined) {
+        return;
+      }
+
+      placed.slide = {
+        from: [
+          from[0] - placed.at[0],
+          from[1] - placed.at[1],
+          from[2] - placed.at[2],
+        ],
+        started: performance.now(),
+      };
+      slideMarkers(placed.slide.started);
+    },
+    markerAt: (key): [number, number, number] | null => {
+      const placed = markers.get(key);
+
+      if (placed === undefined) {
+        return null;
+      }
+
+      const [du, dy, dv] = slideOffset(placed, performance.now()) ?? [0, 0, 0];
+
+      return [placed.at[0] + du, placed.at[1] + dy, placed.at[2] + dv];
+    },
+    sliding: (): boolean =>
+      [...markers.values()].some((placed) => placed.slide !== undefined),
     view,
     stats: (): StageStats => ({
       drawCalls: renderer.info.render.calls,

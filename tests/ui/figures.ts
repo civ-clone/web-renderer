@@ -279,6 +279,7 @@ expect(
 
 // A unit's marker, and what's in it.
 const unit = (type: string, more: Partial<UnitMarker> = {}): UnitMarker => ({
+    id: `Unit-${type}`,
     type,
     kinds: [],
     colours,

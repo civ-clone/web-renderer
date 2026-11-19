@@ -113,6 +113,12 @@ export class MapView3D implements MapRenderer {
   #words: MarkerWords;
   // Which way each unit faces, by its id: the way the map events last saw it move, or attack.
   #facings = new Map<string, number>();
+  // Units that have moved, by their id, and where they were drawn as they set off: the patch that follows draws them
+  //  on their new square, from where they slide. Kept a moment only, for a patch that doesn't come.
+  #slides = new Map<
+    string,
+    { from: [number, number, number]; until: number }
+  >();
   #transport: MapView3DDeps['transport'];
   #picking: Picking | null = null;
   // The square the mouse rests on, waiting to show its tooltip or showing it, and whose tooltips they'd be.
@@ -357,6 +363,7 @@ export class MapView3D implements MapRenderer {
    */
   mapEvent(event: MapEvent): void {
     if (event.kind === 'moved') {
+      this.#setOff(event.unit.id, event.from, event.to);
       this.#face(event.unit.id, event.from, event.to);
 
       return;
@@ -364,6 +371,41 @@ export class MapView3D implements MapRenderer {
 
     this.#face(event.attacker.id, event.attacker.tile, event.defender.tile);
     this.#face(event.defender.id, event.defender.tile, event.attacker.tile);
+  }
+
+  // The unit `id` sets off from the square `from` for `to`: where it's drawn now, sliding there still or standing on its
+  //  square, taken to the copy of the world nearest `to`, so it slides the short way. Not where there are no frames to
+  //  slide over, or the player has asked for less motion.
+  #setOff(id: string, from: Coordinate, to: Coordinate): void {
+    const now = performance.now();
+
+    this.#slides.forEach(({ until }, unit) => {
+      if (until < now) {
+        this.#slides.delete(unit);
+      }
+    });
+
+    if (typeof requestAnimationFrame !== 'function' || prefersReducedMotion()) {
+      return;
+    }
+
+    const [fromU, fromV] = this.#land.layout.centre(from.x, from.y),
+      [toU, toV] = this.#land.layout.centre(to.x, to.y),
+      { u: periodU, v: periodV } = this.#land.layout.period(),
+      short = (delta: number, period: number | null): number =>
+        period === null ? delta : delta - period * Math.round(delta / period),
+      [drawnU, drawnY, drawnV] = this.#stage.markerAt(
+        `${from.x},${from.y}`
+      ) ?? [fromU, Math.max(0, this.#land.heightAt(fromU, fromV)), fromV];
+
+    this.#slides.set(id, {
+      from: [
+        toU + short(drawnU - toU, periodU),
+        drawnY,
+        toV + short(drawnV - toV, periodV),
+      ],
+      until: now + 2000,
+    });
   }
 
   // The unit `id` faces from the square `from` towards `to`, the short way round the world, and is marked again.
@@ -986,6 +1028,17 @@ export class MapView3D implements MapRenderer {
 
     this.#stage.setMarker(key, at, marker);
 
+    // The unit on top has just stepped here: it slides from where it set off.
+    const slide =
+      marker?.unit === null || marker === null
+        ? undefined
+        : this.#slides.get(marker.unit.id);
+
+    if (slide !== undefined && marker?.unit) {
+      this.#slides.delete(marker.unit.id);
+      this.#stage.slideMarker(key, slide.from);
+    }
+
     if (signature === null) {
       this.#marked.delete(key);
     } else {
@@ -1035,6 +1088,7 @@ export class MapView3D implements MapRenderer {
     if (
       this.#land.pending() > 0 ||
       this.#land.overlaysPending() > 0 ||
+      this.#stage.sliding() ||
       moving ||
       rising
     ) {

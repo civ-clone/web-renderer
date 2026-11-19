@@ -19,6 +19,8 @@ export type CityMarker = {
 };
 
 export type UnitMarker = {
+  // The unit's own id, as the page has it: a unit moving slides from where it was drawn.
+  id: string;
   // The unit type's name, and the names of the kinds it's of (`Naval`, `Air`, …), as the engine sends them.
   type: string;
   kinds: readonly string[];
@@ -117,6 +119,7 @@ export const markerFor = (
     unit: UnitMarker | null =
       top !== null && (shown || active)
         ? {
+            id: top.id,
             type: top._,
             kinds: top.__ ?? [],
             colours: coloursOf(top.player),

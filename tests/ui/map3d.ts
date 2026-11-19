@@ -176,6 +176,8 @@ const staged: string[] = [],
   chunkBuilds: string[] = [],
   // What's laid on the land of each chunk made since, by `i,j`, or nothing.
   overlaysSet = new Map<string, OverlayMesh | null>(),
+  // Each marker slid into its place, and where from: `x,y`, then `u`, height and `v`, to two places.
+  slid: (string | number)[][] = [],
   // What's marked on each square, by `x,y`.
   markers = new Map<string, TileMarker>(),
   fakeStage = (): Stage => ({
@@ -189,6 +191,10 @@ const staged: string[] = [],
     setOverlay: (i, j, mesh) => void overlaysSet.set(`${i},${j}`, mesh),
     setMarker: (key, at, marker) =>
       void (marker === null ? markers.delete(key) : markers.set(key, marker)),
+    slideMarker: (key, from) =>
+      void slid.push([key, ...from.map((n) => Math.round(n * 100) / 100)]),
+    markerAt: () => null,
+    sliding: () => false,
     view: (orbit, height, period) => {
       lookedAt.splice(0, 3, orbit.focus[0], orbit.focus[1], height);
       seenDown.push(period?.v);
@@ -764,6 +770,7 @@ expect(
         disorder: false,
       },
       {
+        id: 'Unit-P',
         type: 'Phalanx',
         kinds: ['Fortifiable', 'Land', 'Unit'],
         colours: ['#aa0000', '#ffffff'],
@@ -1352,6 +1359,69 @@ expect(
     'mid-glide, what’s on the screen is what will be once the camera’s there; it’s moving until it is',
     [...midGlide, glider.moving()],
     [middleOf(tiles[1 * 4 + 1] as Tile), true, false, true, false]
+  );
+
+  // A unit stepping onto a square slides there from where it set off; over the world's seam, from the copy of its old
+  //  square beside its new one; and not where the player has asked for less motion.
+  const groundAt = (x: number, y: number): number[] => {
+      const [u, v] = middleOf(tiles[y * 4 + x] as Tile);
+
+      return [u, Math.max(0, glider.land().heightAt(u, v)), v].map(
+        (n) => Math.round(n * 100) / 100
+      );
+    },
+    stepped = (id: string, from: [number, number], to: [number, number]) =>
+      glider.mapEvent({
+        kind: 'moved',
+        unit: {
+          id,
+          type: 'Phalanx',
+          player: 'Player-1',
+          tile: { x: from[0], y: from[1] },
+        },
+        from: { x: from[0], y: from[1] },
+        to: { x: to[0], y: to[1] },
+      }),
+    corner = tiles[0] as Tile;
+
+  slid.length = 0;
+  stepped('Unit-P', [1, 0], [2, 0]);
+  runFrames();
+
+  corner.units = [
+    {
+      id: 'Unit-S',
+      _: 'Phalanx',
+      defence: { value: 1 },
+      busy: null,
+      player: { civilization: { attributes: [] } },
+    },
+  ] as unknown as Tile['units'];
+  glider.queueTile(corner);
+  glider.releaseTiles();
+  runFrames();
+  stepped('Unit-S', [3, 0], [0, 0]);
+  runFrames();
+
+  const steps = slid.splice(0);
+
+  Object.assign(window, {
+    matchMedia: (query: string) => ({ matches: query.includes('reduce') }),
+  });
+  stepped('Unit-P', [3, 0], [2, 0]);
+  runFrames();
+  delete (window as { matchMedia?: unknown }).matchMedia;
+
+  expect(
+    'a unit stepping onto a square slides there from where it set off, over the seam from beside it, and not asked for less motion',
+    [steps, slid.splice(0)],
+    [
+      [
+        ['2,0', ...groundAt(1, 0)],
+        ['0,0', -0.5, ...groundAt(3, 0).slice(1)],
+      ],
+      [],
+    ]
   );
 
   glider.dispose();
