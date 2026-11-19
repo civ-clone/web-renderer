@@ -2422,6 +2422,85 @@ expect(
   repatched([1, 3, []]);
   walkersSet.length = 0;
 
+  // With units and cities hidden (`t`), the active unit in a city stands at the square's middle, as it's drawn there,
+  //  and sets off from there.
+  const hiddenTown = tiles[1 * 4 + 1] as Tile,
+    [hiddenU, hiddenV] = middleOf(hiddenTown);
+
+  hiddenTown.city = {
+    id: 'City-H',
+    name: 'Hiddenton',
+    player: { civilization: { attributes: [] } },
+    originalPlayer: { civilization: { _: 'Romans' } },
+  } as unknown as Tile['city'];
+  repatched([1, 1, [walker]]);
+  glider.setActiveUnit({ ...walker, tile: hiddenTown } as unknown as Unit);
+  glider.toggleUnits();
+  walkersPlaced.clear();
+  stepped(walker, [1, 1], [2, 1]);
+  patch([1, 1, []], [2, 1, [walker]]);
+  runFrames(1);
+
+  const [hiddenFirst] = [...walkersPlaced.values()].map((frames) => frames[0]!),
+    fromHiddenCity = [
+      Math.abs(hiddenFirst![0]! - hiddenU) < 0.01,
+      Math.abs(hiddenFirst![2]! - hiddenV) < 0.01,
+    ];
+
+  runFrames();
+  glider.toggleUnits();
+  glider.setActiveUnit(null);
+  hiddenTown.city = null;
+  repatched([1, 1, []], [2, 1, []]);
+  walkersPlaced.clear();
+  walkersSet.length = 0;
+
+  // A rival walking, hurt in a battle on the way, as a patch has it: drawn hurt, walking on.
+  repatched([1, 1, [rival]]);
+  stepped(rival, [1, 1], [2, 1], 'Player-2');
+  patch([1, 1, []], [2, 1, [rival]]);
+  runFrames(1);
+  patch([
+    2,
+    1,
+    [{ ...rival, hitPoints: { current: 5, max: 10 } } as Tile['units'][number]],
+  ]);
+  runFrames(1);
+
+  const hurtWalking = [walkers.size, [...walkers.values()][0]?.unit?.health];
+
+  runFrames();
+  repatched([2, 1, []]);
+  walkersSet.length = 0;
+
+  // Less motion asked for mid-walk: the walk's over on the next frame, the unit on its square.
+  repatched([1, 1, [walker]]);
+  stepped(walker, [1, 1], [2, 1]);
+  patch([1, 1, []], [2, 1, [walker]]);
+  runFrames(1);
+  Object.assign(window, {
+    matchMedia: (query: string) => ({ matches: query.includes('reduce') }),
+  });
+  runFrames(1);
+
+  const lessMotionMidWalk = [walkers.size, unitOn(2, 1)];
+
+  delete (window as { matchMedia?: unknown }).matchMedia;
+  runFrames();
+  repatched([2, 1, []]);
+  walkersSet.length = 0;
+  walkersPlaced.clear();
+
+  expect(
+    'with units hidden, the active unit sets off from a city square’s middle, where it’s drawn; a walker hurt on the way is drawn hurt; less motion asked for mid-walk ends it on the next frame',
+    [fromHiddenCity, hurtWalking, lessMotionMidWalk],
+    [
+      [true, true],
+      [1, 0.5],
+      [0, ['Unit-A', 1]],
+    ]
+  );
+
   // A rival's unit stepping out of the dark, where the page doesn't have it: on its square at once, not walking.
   stepped(rival, [2, 2], [3, 2], 'Player-2');
   patch([3, 2, [rival]]);

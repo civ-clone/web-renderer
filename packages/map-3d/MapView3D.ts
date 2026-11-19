@@ -515,15 +515,13 @@ export class MapView3D implements MapRenderer {
   }
 
   // Where a unit stands on the square (`x`, `y`) as it's marked, on the land as it's drawn: at its middle, or in front
-  //  of its city's buildings. As a point to walk from or to, with how far above the land there that is, and the
-  //  square's middle, which it faces between, as a unit standing does.
+  //  of its city's buildings, where cities are shown. As a point to walk from or to, with how far above the land there
+  //  that is, and the square's middle, which it faces between, as a unit standing does.
   #standing({ x, y }: Coordinate): WalkPoint {
     const [u, v] = this.#land.layout.centre(x, y),
       stands = Math.max(0, this.#land.surfaceAt(u, v)),
-      at: [number, number] = [
-        u,
-        v + (this.world.get(x, y).city ? IN_FRONT_OF_CITY : 0),
-      ];
+      inCity = this.#unitsShown && this.world.get(x, y).city,
+      at: [number, number] = [u, v + (inCity ? IN_FRONT_OF_CITY : 0)];
 
     return {
       at,
@@ -545,6 +543,13 @@ export class MapView3D implements MapRenderer {
     this.#walks.dropped().forEach((id) => this.#takeAway(id));
 
     if (this.#walks.size() === 0) {
+      return;
+    }
+
+    // Less motion asked for mid-walk: every walk's over now.
+    if (prefersReducedMotion()) {
+      this.#walksEnded(this.#walks.endAll(now));
+
       return;
     }
 
@@ -1315,11 +1320,13 @@ export class MapView3D implements MapRenderer {
       //  then.
       walking = tile.units.filter(({ id }) => this.#leftOff(id));
 
-    walking.forEach(({ id }) => {
-      const held = this.#heldFor.get(id) ?? new Set<string>();
+    // Each drawn walking as the patch has it now, hurt in a battle say.
+    walking.forEach((unit) => {
+      const held = this.#heldFor.get(unit.id) ?? new Set<string>();
 
       held.add(key);
-      this.#heldFor.set(id, held);
+      this.#heldFor.set(unit.id, held);
+      this.#walkingUnits.set(unit.id, unit);
     });
 
     const marker = markerFor(

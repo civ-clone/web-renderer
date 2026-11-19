@@ -655,6 +655,51 @@ const point = (u: number, v: number, lift = 0): WalkPoint => ({
   );
 }
 
+// A GoTo's steps through a city, all at once: through the city square's middle, not in front of its buildings, and
+//  ending in front of the last one's.
+{
+  const walks = new Walks({ u: 10, v: null }),
+    city = (x: number): WalkPoint => ({
+      at: [x, 1.26],
+      lift: 0,
+      middle: [x, 1],
+    });
+
+  walks.step(
+    'goer',
+    { x: 0, y: 1 },
+    { x: 1, y: 1 },
+    point(0, 1),
+    city(1),
+    0,
+    pace
+  );
+  walks.step('goer', { x: 1, y: 1 }, { x: 2, y: 1 }, city(1), city(2), 1, pace);
+
+  const ends = walks.nextEnd() ?? 0;
+  let throughMiddle = false,
+    inFront = false,
+    last: readonly number[] = [];
+
+  for (let now = 1; now < ends; now++) {
+    const [walker] = walks.at(now).going;
+
+    if (walker === undefined) {
+      break;
+    }
+
+    throughMiddle ||= Math.hypot(walker.at[0] - 1, walker.at[1] - 1) < 0.01;
+    inFront ||= Math.hypot(walker.at[0] - 1, walker.at[1] - 1.26) < 0.01;
+    last = walker.at;
+  }
+
+  expect(
+    'a GoTo through a city goes through its square’s middle, not in front of its buildings, and ends in front of the last one’s',
+    [throughMiddle, inFront, last.map((n) => round(n, 1))],
+    [true, false, [2, 1.3]]
+  );
+}
+
 if (failures.length > 0) {
   process.stderr.write(
     `FAIL walks: ${

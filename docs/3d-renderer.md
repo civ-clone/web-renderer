@@ -868,8 +868,10 @@ mapEvent:
 
 **As built (slice 2.3, first part: walks)** (`packages/map-3d/walks.ts`, `MapView3D`):
 
-- **A walk** is a unit's steps, from where it stood (at its square's middle, or in front of its city's buildings) through
-  the middle of each square it steps onto, to where it'll stand on the last. It's drawn as a marker of its own, its
+- **A walk** is a unit's steps, from where it stood (at its square's middle, or in front of its city's buildings, where
+  cities are shown) through the middle of each square it steps onto, a city's too, to where it'll stand on the last. A
+  unit's drawn walking as the latest patch has it, hurt in a battle say. Less motion asked for mid-walk ends every walk
+  on the next frame. It's drawn as a marker of its own, its
   units alone, over the land at its feet, the short way round the world. Its figures face the way from one square's
   middle to the next, as a unit standing faces the way it last went, turning as it passes a square's middle, and from
   the way it faced when a step's joined. Its flag, ring and pointer go with it.

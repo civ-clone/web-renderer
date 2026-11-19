@@ -446,7 +446,20 @@ export class Walks {
       lastMiddle = last.middle ?? last.at,
       { along, speed } = motionAt(walk.motion, now),
       passed = Math.max(0, Math.floor(along) - 1),
-      facing = walk.points.length > 1 ? this.#walker(walk, now).facing : null;
+      facing = walk.points.length > 1 ? this.#walker(walk, now).facing : null,
+      end = walk.points.length - 1,
+      into = along - (end - 1);
+
+    // Where it was to stop is a square it passes through now: through its middle, not in front of a city there, where
+    //  that moves it no more than a hundredth of a square from where it's drawn, as when a GoTo's steps come together.
+    if (
+      last.middle !== undefined &&
+      into *
+        Math.hypot(last.middle[0] - last.at[0], last.middle[1] - last.at[1]) <
+        0.01
+    ) {
+      walk.points[end] = { at: last.middle, lift: 0, middle: last.middle };
+    }
 
     walk.points.splice(0, passed);
     walk.squares.splice(0, passed);
