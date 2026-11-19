@@ -1080,7 +1080,15 @@ export class MapView3D implements MapRenderer {
 
     // Units bound here that have arrived: the one on top slides from where it set off, if it's drawn anew; one under
     //  another doesn't, nor one not shown (units hidden), and none of them will later. One that's taken too long to
-    //  arrive doesn't either.
+    //  arrive doesn't either. Most squares are marked with no unit moving at all.
+    if (this.#slides.size === 0) {
+      if (changed) {
+        this.#remember(key, signature);
+      }
+
+      return;
+    }
+
     const now = performance.now(),
       here = new Set(
         (this.world.get(x, y)?.units ?? []).map((unit) => unit.id)
@@ -1104,10 +1112,13 @@ export class MapView3D implements MapRenderer {
       }
     });
 
-    if (!changed) {
-      return;
+    if (changed) {
+      this.#remember(key, signature);
     }
+  }
 
+  // What's marked on the square `key` now, to tell when it changes.
+  #remember(key: string, signature: string | null): void {
     if (signature === null) {
       this.#marked.delete(key);
     } else {

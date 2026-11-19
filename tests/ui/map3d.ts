@@ -183,6 +183,8 @@ const staged: string[] = [],
   // What's marked on each square, by `x,y`, and where it stands.
   markers = new Map<string, TileMarker>(),
   markedAt = new Map<string, readonly [number, number, number]>(),
+  // The units `markerAt` was asked after, in order.
+  askedAfter: string[] = [],
   fakeStage = (): Stage => ({
     render: () => void staged.push('render'),
     resize: (stageWidth, stageHeight, ratio) =>
@@ -207,8 +209,10 @@ const staged: string[] = [],
       slid.push([key, ...from.map((n) => Math.round(n * 100) / 100)]);
       slideFrames.left = 6;
     },
-    // Where each marker stands, for its own unit or another: none slides here.
-    markerAt: (key) => {
+    // Where each marker stands, for its own unit or another: none slides here. Which unit's asked after.
+    markerAt: (key, unit) => {
+      askedAfter.push(unit);
+
       const at = markedAt.get(key);
 
       return at === undefined ? null : [...at];
@@ -1430,13 +1434,15 @@ expect(
 
   repatched([0, 3, [walker]]);
   slid.length = 0;
+  askedAfter.length = 0;
 
   // A first step east: it turns to face the way it goes, marked again where it stands, and slides only once it's on
-  //  the square it went to.
+  //  the square it went to, from where the stage draws that unit.
   stepped(walker, [0, 3], [1, 3]);
   runFrames();
 
-  const beforeThePatch = slid.splice(0);
+  const beforeThePatch = slid.splice(0),
+    askedAfterIt = askedAfter.splice(0);
 
   const slideDrawn = repatched([0, 3, []], [1, 3, [walker]]),
     firstStep = slid.splice(0);
@@ -1476,6 +1482,7 @@ expect(
     'a unit slides onto a square once the patch draws it there, from where it was drawn as it set off, with frames till it’s there: turned on a first step, across two steps, over the seam from beside it; not onto a square under another unit, then or later; and not asked for less motion',
     [
       beforeThePatch,
+      askedAfterIt,
       firstStep,
       slideDrawn >= 6,
       twoSteps,
@@ -1485,6 +1492,7 @@ expect(
     ],
     [
       [],
+      ['Unit-A'],
       [['1,3', ...groundAt(0, 3)]],
       true,
       [['2,2', ...groundAt(1, 3)]],
@@ -1551,14 +1559,15 @@ expect(
   {
     const eighth = Math.PI / 4;
 
-    glider.setOrbit({ ...glider.orbit(), yaw: 0 });
+    // Clockwise from an eighth short of north, across it.
+    glider.setOrbit({ ...glider.orbit(), yaw: eighth * 7 });
     glider.turnBy(1);
 
     const clockwise = turnedFrameByFrame(() => {
       now += 8;
       glider.turnBy(1);
     });
-    const endedAt = Math.round((glider.orbit().yaw - eighth * 2) * 1e6);
+    const endedAt = Math.round((glider.orbit().yaw - eighth) * 1e6);
 
     glider.setOrbit({ ...glider.orbit(), yaw: 0 });
     glider.turnBy(-1);

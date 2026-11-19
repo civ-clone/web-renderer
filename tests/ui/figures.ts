@@ -560,11 +560,8 @@ expect(
     forItsUnit = unitOnMarkerAt(sliding, 'Unit-1', 1000 + SLIDE / 2),
     forAnother = unitOnMarkerAt(sliding, 'Unit-9', 1000 + SLIDE / 2),
     // Made again mid-slide, the same unit on top; then another unit; then once the slide's over.
-    again = placedAt(
-      [5, 0, 5],
-      drawMarker(kit, { city: null, unit: unit('Spearman') }),
-      'Unit-1'
-    ),
+    // A city's marker made again, its unit standing in front of the buildings, off the marker's place.
+    again = placedAt([5, 0, 5], walled, 'Unit-1'),
     carried = carriedSlide(sliding, again, 1000 + SLIDE / 2),
     other = carriedSlide(
       sliding,
