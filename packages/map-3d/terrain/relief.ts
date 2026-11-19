@@ -362,7 +362,18 @@ export const createRelief = ({
       ({ relief, unknown }, at) =>
         !unknown && !water[at] && relief.shape === 'peaked'
     );
-    [ridgesIn, madeFrom] = ranges();
+
+    // The ranges made again only when a square they join has changed, or one now joins them: a square of sea or plain
+    //  newly seen, the most common change, leaves them as they are.
+    if (
+      changed.some(([x, y]) => {
+        const at = y * width + x;
+
+        return ranged[at] === true || was[at] === true;
+      })
+    ) {
+      [ridgesIn, madeFrom] = ranges();
+    }
 
     changed.forEach(([x, y]) => {
       const at = y * width + x;
@@ -414,30 +425,55 @@ export const createRelief = ({
     return found;
   };
 
-  // The ways from the square at (`x`, `y`) to its neighbour at (`nx`, `ny`) on the world: to the nearest copy of it,
-  //  across the world's seam or over its poles if that's nearer, or to both, where two are as near (on a world two
-  //  squares across, or down).
+  // The ways from the square at (`x`, `y`) to its neighbour at (`nx`, `ny`) on the world: to the copy of it whose
+  //  middle is nearest, across the world's seam or over its poles if that's nearer, or to each that's as near (on a
+  //  world two squares across, or down). By its middle, not its index: on the staggered and hex grids, a row's
+  //  neighbours lie half a step aside.
   const stepsTo = (
     x: number,
     y: number,
     nx: number,
     ny: number
   ): [number, number][] => {
-    const nearest = (delta: number, period: number): number[] => {
+    // On a world six squares or more each way it wraps, a neighbour's nearest copy is the nearest by its index: it's
+    //  a step or two away one way, and four or more the other.
+    if (width >= 6 && (!wrapsY || height >= 6)) {
+      const nearest = (delta: number, period: number): number => {
+          const ahead = ((delta % period) + period) % period;
+
+          return ahead * 2 < period ? ahead : ahead - period;
+        },
+        dx = nearest(nx - x, width),
+        dy = wrapsY ? nearest(ny - y, height) : ny - y;
+
+      return dx === 0 && dy === 0 ? [] : [[dx, dy]];
+    }
+
+    // Each copy's way, one the near side of the world, one the far.
+    const copies = (delta: number, period: number): number[] => {
         const ahead = ((delta % period) + period) % period;
 
-        return ahead * 2 === period
-          ? [ahead, ahead - period]
-          : [ahead * 2 < period ? ahead : ahead - period];
+        return ahead === 0 ? [0] : [ahead, ahead - period];
       },
-      across = nearest(nx - x, width),
-      down = wrapsY ? nearest(ny - y, height) : [ny - y];
+      [cu, cv] = layout.centre(x, y),
+      ways = copies(nx - x, width).flatMap((dx) =>
+        (wrapsY ? copies(ny - y, height) : [ny - y]).flatMap(
+          (dy): [number, number, number][] => {
+            if (dx === 0 && dy === 0) {
+              return [];
+            }
 
-    return across.flatMap((dx) =>
-      down.flatMap((dy): [number, number][] =>
-        dx === 0 && dy === 0 ? [] : [[dx, dy]]
-      )
-    );
+            const [u, v] = layout.centre(x + dx, y + dy);
+
+            return [[dx, dy, Math.hypot(u - cu, v - cv)]];
+          }
+        )
+      ),
+      nearest = Math.min(...ways.map(([, , away]) => away));
+
+    return ways
+      .filter(([, , away]) => away <= nearest + 1e-9)
+      .map(([dx, dy]) => [dx, dy]);
   };
 
   // How far a square's furthest neighbour's middle is from its own, on a row of either parity.

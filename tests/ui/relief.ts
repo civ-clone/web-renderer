@@ -510,11 +510,16 @@ ids.forEach((topologyId) => {
   // Two mountains side by side, every way the grid has, at six places: the lowest saddle of them all, as a share of the
   //  lower peak, with ranges and without. Without, two peaks close enough already meet (on the hex grid, a third of
   //  the way up at the least, as its neighbours are nearest), and two further apart dip almost to the plain between
-  //  them; with ranges, the ridge holds the lowest of them up. And two mountains two steps apart aren't joined: the
-  //  land between them is as it is without ranges.
+  //  them; with ranges, the ridge holds the lowest of them up. Each way, from rows of each parity, at one place or
+  //  more, the ridge raises the saddle by a tenth of a peak at least: not at every one, as peaks that stand close
+  //  already meet over it. And two mountains two steps apart aren't joined: the land between them is as it is without
+  //  ranges.
   let withRanges = Infinity,
     withoutRanges = Infinity;
-  const apart: string[] = [];
+  const apart: string[] = [],
+    // How much the ridge raises the saddle, at most, at the six places, each way, from rows of each parity (on the
+    //  staggered and hex grids, a row's neighbours lie otherwise): a ridge each way the grid has, from every row.
+    risen = new Map<string, number>();
 
   [
     [2, 2],
@@ -542,10 +547,18 @@ ids.forEach((topologyId) => {
         joined = pair([x0! + dx, y0! + dy], true),
         lower = Math.min(lift(joined, a), lift(joined, b));
 
-      withRanges = Math.min(withRanges, saddle(joined, a, b) / lower);
-      withoutRanges = Math.min(
-        withoutRanges,
-        saddle(pair([x0! + dx, y0! + dy], false), a, b) / lower
+      const raised = saddle(joined, a, b) / lower,
+        bare = saddle(pair([x0! + dx, y0! + dy], false), a, b) / lower;
+
+      withRanges = Math.min(withRanges, raised);
+      withoutRanges = Math.min(withoutRanges, bare);
+      risen.set(
+        `${direction} from ${y0! & 1 ? 'odd' : 'even'} rows`,
+        Math.max(
+          risen.get(`${direction} from ${y0! & 1 ? 'odd' : 'even'} rows`) ??
+            -Infinity,
+          raised - bare
+        )
       );
 
       // Two steps apart: along the line between them, the land as it is without ranges.
@@ -568,9 +581,17 @@ ids.forEach((topologyId) => {
   );
 
   expect(
-    `${topologyId}: two mountains side by side, every way the grid has, are a range: with ranges, no saddle between them is under a quarter of the lower peak, and the lowest is a tenth of a peak higher than without; two steps apart, they're not joined`,
-    [withRanges >= 0.25, withRanges - withoutRanges >= 0.1, apart.slice(0, 3)],
-    [true, true, []]
+    `${topologyId}: two mountains side by side, every way the grid has, are a range: with ranges, no saddle between them is under a quarter of the lower peak, the lowest is a tenth of a peak higher than without, and each way the ridge raises a saddle; two steps apart, they're not joined`,
+    [
+      withRanges >= 0.25,
+      withRanges - withoutRanges >= 0.1,
+      [...risen.entries()]
+        .filter(([, rise]) => rise < 0.1)
+        .map(([direction, rise]) => `${direction} ${rise.toFixed(3)}`),
+      risen.size === topology.directions().length * 2,
+      apart.slice(0, 3),
+    ],
+    [true, true, [], true, []]
   );
 
   // A range along a row, across the world's seam, and down across its poles, a block of them, and a square never seen

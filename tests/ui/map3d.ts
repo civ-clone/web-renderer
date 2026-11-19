@@ -1000,9 +1000,11 @@ expect(
     1.25
   );
 
-  // A city and its units on a mountain, and a mountain made beside it, with only that square released: the range's
-  //  ridge between them rises under the city (or not, the way its peak stands), and the city's marked again on the
-  //  land as it's drawn now, not left buried or floating. Each neighbour in turn, till one moves the land under it.
+  // A city and its units on a mountain, and a mountain made beside it, with only that square released: the land under
+  //  the city moves, and the city's marked again on the land as it's drawn now, not left buried or floating. Here it's
+  //  the neighbour's own relief that moves it, by a little, as the city's middle lies behind its peak each way; a ridge
+  //  can move it by up to 0.04, and `relief` checks that it moves only the squares beside those `refresh` gives back.
+  //  Each neighbour that isn't a mountain already, in turn, till one moves the land under the city; then as it was.
   {
     const land = view.land(),
       [townU, townV] = land.layout.centre(town.x, town.y),
@@ -1038,25 +1040,30 @@ expect(
     let moved: boolean[] = [];
 
     for (const beside of neighbours) {
-      const before = ground();
+      const was = beside.terrain._,
+        before = ground();
+
+      if (was === 'Mountains') {
+        continue;
+      }
 
       raise(beside, 'Mountains');
 
       if (ground() !== before) {
         moved = [true, standing() === ground()];
-        raise(beside, 'Grassland');
+        raise(beside, was);
         moved.push(standing() === ground());
 
         break;
       }
 
-      raise(beside, 'Grassland');
+      raise(beside, was);
     }
 
     raise(town, 'Grassland');
 
     expect(
-      'a city on a mountain stands on the land as it is when a mountain beside it, the only square released, raises a ridge under it, and when that mountain goes again',
+      'a city on a mountain stands on the land as it is when a mountain made beside it, the only square released, moves the land under it, and when that mountain goes again',
       [onMountain, moved, standing() === ground()],
       [[true], [true, true, true], true]
     );

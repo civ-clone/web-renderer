@@ -449,12 +449,14 @@ blended across squares.
     - The crest falls from each peak and levels out at the saddle. Across it, the land falls away by the kernel squared,
       as it does from a peak, and past each peak the ridge is that peak exactly. The land is the highest of the ridges
       and the peaks there, never their sum, so a block of mountains is a massif and not a spike.
-    - Each ridge is made once a refresh, and listed under every square it reaches. A point reads only its own square's
-      list, and passes over a ridge whose reach it's outside.
-    - **Cost:** on a world with 7–12% of its squares mountains, as Civ1's are, building the land takes 1–14% longer,
-      and reading the terrain again 2–6 ms longer (to 5 ms on an 80×50 world, 12–15 ms on a 160×100 one). A world all
-      mountains is the worst case: its land takes about 2.5 times as long to build, and reading its terrain again
-      30 ms on an 80×50 world and 120 ms on a 160×100 one, rather than 3–10 ms.
+    - Each ridge is made by one end, and listed under every square it reaches. A point reads only its own square's
+      list, and passes over a ridge whose reach it's outside. The ridges are made again only when a square they join
+      changes, or one comes to join them: a square of sea or plain newly seen, the most common change, leaves them.
+    - **Cost:** on a world with 7–12% of its squares mountains, as Civ1's are, building the land takes 1–14% longer.
+      Reading the terrain again takes no longer, unless a mountain has changed: then 2–5 ms longer (to 5–6 ms on an
+      80×50 world, 13–15 ms on a 160×100 one). A world all mountains is the worst case: its land takes about 2.5 times
+      as long to build, and reading its terrain again after a mountain changes 30–40 ms on an 80×50 world and about
+      120 ms on a 160×100 one, rather than 3–10 ms.
     - A change to a mountain changes its neighbours' ridges, so `refresh` gives back the mountains joined to it, or
       that were, as well as the squares whose terrain changed. The land is rebuilt round them. What's marked on them
       and their neighbours (a unit, a city) is marked again on the land as it is now, and the yields over them laid
