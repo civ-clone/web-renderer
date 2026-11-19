@@ -1,5 +1,5 @@
 // What covers the land by where it lies (docs/3d-renderer.md §4.3, `terrain/cover.ts`): bare rock where it's steep,
-//  snow high up, wet sand at the waterline.
+//  snow high up, wet ground at the waterline.
 //  - Each rises from none to whole between its numbers, and not elsewhere.
 //  - On a generated world of each grid: snow lies on mountains alone, more towards the poles; rock on mountains'
 //    flanks and the steepest hills, and on the foot of a mountain or a hill where it reaches into a neighbour, but
