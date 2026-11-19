@@ -866,6 +866,37 @@ mapEvent:
 - **The game waits** for the queue to empty before it asks you for the next unit, so the next unit isn't picked while
   the last one is still walking.
 
+**As built (slice 2.3, first part: walks)** (`packages/map-3d/walks.ts`, `MapView3D`):
+
+- **A walk** is a unit's steps, from where it stood (at its square's middle, or in front of its city's buildings) through
+  the middle of each square it steps onto, to where it'll stand on the last. It's drawn as a marker of its own, its
+  units alone, over the land at its feet, the short way round the world, its figures turning as it passes a square's
+  middle. Its flag, ring and pointer go with it.
+- **Left off, not held:** rather than holding patches, a unit walking is left off every square it's on until its walk's
+  over, when those squares are marked again. Whatever else a patch changes (a city captured, the land) shows at once. A
+  unit that joins a stack under a stronger one walks there and disappears into it.
+- **Pace, by the clock:**
+  - It gets up to pace from standing and stops at its end. A step joined mid-walk goes on at the pace it's going, so a
+    GoTo's steps, which come all at once, and a unit moved again before it's arrived, are one walk.
+  - The player's own units take a quarter of a second a step; other players' units take half that.
+  - However many steps, what's left of a walk takes no more than 2 s, or 1 s for others' units: a railroad trip of a
+    hundred squares hurries, rather than queueing. It doesn't skip.
+  - By the clock, not by frames: with no frames for a while, as in a tab out of sight, the first frame drawn again ends
+    the walks that are over. A world replaced ends them all.
+- **Together:** units making the same step within 50 ms of each other walk as one, as a ship and what it carries do,
+  shown as a stack of them. One that doesn't step on stays bound where it was; one that steps elsewhere sets off from
+  where it's drawn.
+- **Not walked:**
+  - other players' units off the screen, unless they're walking already;
+  - a unit the page doesn't have where it set off from, as one stepping out of the dark;
+  - any unit, with reduced motion asked for, or no frames to draw.
+- **Every unit's walk plays at once,** not one queue: as each is left off the squares it's on, no two can disagree.
+- **Still to come:**
+  - the options (speed, others' moves);
+  - the game waiting for walks before the next unit (the camera and the ring only: the next unit is chosen as before);
+  - §6.4's paths: along roads, ships' wakes and aircraft's arcs (a walk goes straight between squares' middles now);
+  - battles (2.4).
+
 ---
 
 ## 9. Seeing it: camera, light, quality

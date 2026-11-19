@@ -192,15 +192,14 @@ const staged: string[] = [],
   chunkBuilds: string[] = [],
   // What's laid on the land of each chunk made since, by `i,j`, or nothing.
   overlaysSet = new Map<string, OverlayMesh | null>(),
-  // Each marker slid into its place, and where from: `x,y`, then `u`, height and `v`, to two places.
-  slid: (string | number)[][] = [],
-  // How many more frames the last slide takes: a slide's frames are drawn until it's done.
-  slideFrames = { left: 0 },
+  // Each walker drawn, by its walk's id, as it was last drawn; every one drawn, in order, and taken away (`null`); and
+  //  where each was put each frame: `u`, height and `v`, and the way it faced.
+  walkers = new Map<string, TileMarker>(),
+  walkersSet: [string, TileMarker | null][] = [],
+  walkersPlaced = new Map<string, number[][]>(),
   // What's marked on each square, by `x,y`, and where it stands.
   markers = new Map<string, TileMarker>(),
   markedAt = new Map<string, readonly [number, number, number]>(),
-  // The units `markerAt` was asked after, in order.
-  askedAfter: string[] = [],
   // What each square yields, each time the stage was given it.
   yieldsSet: (YieldMesh | null)[] = [],
   fakeStage = (): Stage => ({
@@ -223,19 +222,22 @@ const staged: string[] = [],
       markers.set(key, marker);
       markedAt.set(key, at);
     },
-    slideMarker: (key, from) => {
-      slid.push([key, ...from.map((n) => Math.round(n * 100) / 100)]);
-      slideFrames.left = 6;
-    },
-    // Where each marker stands, for its own unit or another: none slides here. Which unit's asked after.
-    markerAt: (key, unit) => {
-      askedAfter.push(unit);
+    setWalker: (id, marker) => {
+      walkersSet.push([id, marker]);
 
-      const at = markedAt.get(key);
+      if (marker === null) {
+        walkers.delete(id);
 
-      return at === undefined ? null : [...at];
+        return;
+      }
+
+      walkers.set(id, marker);
     },
-    sliding: () => slideFrames.left-- > 0,
+    placeWalker: (id, at, facing) =>
+      void walkersPlaced.set(id, [
+        ...(walkersPlaced.get(id) ?? []),
+        [...at, facing],
+      ]),
     setYields: (mesh) => void yieldsSet.push(mesh),
     view: (orbit, height, period) => {
       lookedAt.splice(0, 3, orbit.focus[0], orbit.focus[1], height);
@@ -2007,8 +2009,9 @@ expect(
     [middleOf(tiles[1 * 4 + 1] as Tile), true, false, true, false]
   );
 
-  // A unit stepping onto a square slides there from where it was drawn as it set off, once the patch that follows its
-  //  move draws it there, as the engine tells them: its move, then its patch.
+  // A unit stepping onto a square walks there (`walks.ts`), drawn on its own, from where it stood: off the square it set
+  //  off from at once, and onto the one it's bound for once it's there, as the engine tells them: its move, then its
+  //  patch.
   const groundAt = (x: number, y: number): number[] => {
       const [u, v] = middleOf(tiles[y * 4 + x] as Tile);
 
@@ -2016,18 +2019,19 @@ expect(
         (n) => Math.round(n * 100) / 100
       );
     },
-    unitOf = (id: string, defence: number) =>
+    unitOf = (id: string, defence: number, player = 'Player-1') =>
       ({
         id,
         _: 'Phalanx',
         defence: { value: defence },
         busy: null,
-        player: { civilization: { attributes: [] } },
+        player: { id: player, civilization: { attributes: [] } },
       } as unknown as Tile['units'][number]),
     walker = unitOf('Unit-A', 1),
     guard = unitOf('Unit-B', 5),
-    // The engine's patch: who's on each square now.
-    repatched = (...squares: [number, number, Tile['units'][number][]][]) => {
+    rival = unitOf('Unit-R', 1, 'Player-2'),
+    // The engine's patch: who's on each square now; drawn on the frames that follow, or not.
+    patch = (...squares: [number, number, Tile['units'][number][]][]) => {
       squares.forEach(([x, y, units]) => {
         const tile = tiles[y * 4 + x] as Tile;
 
@@ -2035,120 +2039,316 @@ expect(
         glider.queueTile(tile);
       });
       glider.releaseTiles();
+    },
+    repatched = (...squares: [number, number, Tile['units'][number][]][]) => {
+      patch(...squares);
 
       return runFrames();
     },
     stepped = (
       unit: Tile['units'][number],
       from: [number, number],
-      to: [number, number]
+      to: [number, number],
+      player = 'Player-1'
     ) =>
       glider.mapEvent({
         kind: 'moved',
         unit: {
           id: unit.id,
           type: 'Phalanx',
-          player: 'Player-1',
+          player,
           tile: { x: from[0], y: from[1] },
         },
         from: { x: from[0], y: from[1] },
         to: { x: to[0], y: to[1] },
-      });
+      }),
+    unitOn = (x: number, y: number) => {
+      const marker = markers.get(`${x},${y}`)?.unit;
+
+      return marker === undefined || marker === null
+        ? null
+        : [marker.id, marker.count];
+    },
+    // Every walker drawn since last asked: their ids, and the units on top of each, in order.
+    drawnWalkers = () => {
+      const set = walkersSet.splice(0);
+
+      return {
+        ids: [...new Set(set.map(([id]) => id))],
+        units: set.map(([, marker]) => marker?.unit?.id ?? null),
+      };
+    },
+    // Where each walker was put, frame by frame: `u`, height and `v`, and its facing, to two places.
+    placedSince = (): number[][][] => {
+      const placed = [...walkersPlaced.values()].map((frames) =>
+        frames.map((frame) => frame.map((n) => Math.round(n * 100) / 100))
+      );
+
+      walkersPlaced.clear();
+
+      return placed;
+    };
 
   repatched([0, 3, [walker]]);
-  slid.length = 0;
-  askedAfter.length = 0;
+  walkersSet.length = 0;
+  walkersPlaced.clear();
 
-  // A first step east: it turns to face the way it goes, marked again where it stands, and slides only once it's on
-  //  the square it went to, from where the stage draws that unit.
+  // A first step east: off the square it set off from at once; drawn walking, and not on the square it's bound for till
+  //  it's there, facing east; then there.
   stepped(walker, [0, 3], [1, 3]);
+
+  const leftAtOnce = unitOn(0, 3);
+
+  patch([0, 3, []], [1, 3, [walker]]);
+  runFrames(1);
+
+  const whileWalking = [unitOn(1, 3), [...walkers.values()][0]?.unit?.id];
+
   runFrames();
 
-  const beforeThePatch = slid.splice(0),
-    askedAfterIt = askedAfter.splice(0);
+  const firstStep = {
+      arrived: unitOn(1, 3),
+      walkers: drawnWalkers(),
+      placed: placedSince(),
+    },
+    [firstWay] = firstStep.placed;
 
-  const slideDrawn = repatched([0, 3, []], [1, 3, [walker]]),
-    firstStep = slid.splice(0);
-
-  // Two steps before a patch: from where it's still drawn, both squares.
+  // A GoTo's steps, as the engine sends them, each with its patch: one walk, through the middle of the square between.
   stepped(walker, [1, 3], [2, 3]);
+  patch([1, 3, []], [2, 3, [walker]]);
   stepped(walker, [2, 3], [2, 2]);
-  repatched([1, 3, []], [2, 2, [walker]]);
+  patch([2, 3, []], [2, 2, [walker]]);
+  runFrames(1);
 
-  const twoSteps = slid.splice(0);
+  const goToBetween = [unitOn(2, 3), unitOn(2, 2)];
 
-  // Onto a square under a stronger unit, not on top: no slide, nor later, when the stronger one goes and it's on top.
+  runFrames();
+
+  const goTo = {
+      arrived: [unitOn(2, 3), unitOn(2, 2)],
+      walkers: drawnWalkers(),
+      placed: placedSince(),
+    },
+    [goToWay] = goTo.placed,
+    middle = groundAt(2, 3);
+
+  // Onto a square under a stronger unit: it walks there, and joins the stack under it.
   repatched([3, 2, [guard]]);
-  slid.length = 0;
+  walkersSet.length = 0;
   stepped(walker, [2, 2], [3, 2]);
   repatched([2, 2, []], [3, 2, [guard, walker]]);
-  stepped(guard, [3, 2], [3, 1]);
-  repatched([3, 2, [walker]], [3, 1, [guard]]);
 
-  const underneath = slid.splice(0);
+  const underneath = { walkers: drawnWalkers(), arrived: unitOn(3, 2) };
 
-  // Over the world's seam, from the copy of its old square beside its new one.
+  walkersPlaced.clear();
+
+  // Over the world's seam, from the last column to the first: the short way, from beside the guard where it stood.
   stepped(walker, [3, 2], [0, 2]);
-  repatched([3, 2, []], [0, 2, [walker]]);
+  repatched([3, 2, [guard]], [0, 2, [walker]]);
 
-  const overTheSeam = slid.splice(0);
+  const [overTheSeam] = placedSince();
 
-  // Not where the player has asked for less motion.
+  expect(
+    'a unit stepping walks there, drawn on its own: off the square it set off from at once, not on the one it’s bound for till it’s there, facing the way it goes, from where it stood to where it stands; a GoTo’s steps one walk through the square between; under a stronger unit, it joins the stack; over the seam, the short way',
+    [
+      leftAtOnce,
+      whileWalking,
+      firstStep.arrived,
+      firstStep.walkers,
+      firstWay!.length > 5,
+      firstWay![0]!
+        .slice(0, 3)
+        .every((n, at) => Math.abs(n - groundAt(0, 3)[at]!) < 0.02),
+      firstWay!.at(-1)!.slice(0, 3),
+      firstWay!.every(([, , , facing]) => facing === 1.57),
+      firstWay!.every(
+        ([u, , v], at, way) =>
+          at === 0 || (u! >= way[at - 1]![0]! && v === groundAt(0, 3)[2])
+      ),
+      goToBetween,
+      goTo.arrived,
+      goTo.walkers.ids.length,
+      goToWay!.some(
+        ([u, , v]) =>
+          Math.abs(u! - middle[0]!) < 0.05 && Math.abs(v! - middle[2]!) < 0.05
+      ),
+      goToWay!.at(-1)!.slice(0, 3),
+      underneath,
+      overTheSeam!.every(([u]) => u! >= 3.4 || u! <= 0.6),
+      overTheSeam!.at(-1)!.slice(0, 3),
+    ],
+    [
+      null,
+      [null, 'Unit-A'],
+      ['Unit-A', 1],
+      { ids: ['walk-1'], units: ['Unit-A', null] },
+      true,
+      true,
+      groundAt(1, 3),
+      true,
+      true,
+      [null, null],
+      [null, ['Unit-A', 1]],
+      1,
+      true,
+      groundAt(2, 2),
+      {
+        walkers: { ids: ['walk-3'], units: ['Unit-A', null] },
+        arrived: ['Unit-B', 2],
+      },
+      true,
+      groundAt(0, 2),
+    ]
+  );
+
+  // Out of a city: from where it stood, in front of the buildings, at the height of the square's middle, where a unit in
+  //  a city stands, though the land in front lies a little higher or lower; to the middle of the square it's bound for.
+  const walled = tiles[1 * 4 + 1] as Tile,
+    [cityU, cityV] = middleOf(walled),
+    cityStands = Math.max(0, glider.land().surfaceAt(cityU, cityV)),
+    inFront = Math.max(0, glider.land().surfaceAt(cityU, cityV + 0.26));
+
+  walled.city = {
+    id: 'City-W',
+    name: 'Walkton',
+    player: { civilization: { attributes: [] } },
+    originalPlayer: { civilization: { _: 'Romans' } },
+  } as unknown as Tile['city'];
+  repatched([1, 1, [walker]]);
+  walkersPlaced.clear();
+  stepped(walker, [1, 1], [2, 1]);
+  repatched([1, 1, []], [2, 1, [walker]]);
+
+  const [outOfTown] = [...walkersPlaced.values()],
+    [firstU, firstY, firstV] = outOfTown![0]!;
+
+  walkersPlaced.clear();
+  walled.city = null;
+  repatched([1, 1, []], [2, 1, []]);
+
+  expect(
+    'out of a city, a unit sets off from in front of the buildings, at the height of the square’s middle, where it stood, though the land there lies higher or lower; and ends at the middle of the square it’s bound for',
+    [
+      Math.abs(cityStands - inFront) > 1e-5,
+      Math.abs(firstU! - cityU) < 0.01 &&
+        Math.abs(firstV! - (cityV + 0.26)) < 0.01,
+      Math.abs(firstY! - cityStands) < Math.abs(cityStands - inFront) / 2,
+      outOfTown!
+        .at(-1)!
+        .slice(0, 3)
+        .map((n) => Math.round(n * 100) / 100),
+    ],
+    [true, true, true, groundAt(2, 1)]
+  );
+
+  // A rival's unit walks twice as fast as the player's own.
+  const framesFor = (
+    unit: Tile['units'][number],
+    from: [number, number],
+    to: [number, number],
+    player: string
+  ): number => {
+    repatched([from[0], from[1], [unit]]);
+    stepped(unit, from, to, player);
+
+    const frames = repatched([from[0], from[1], []], [to[0], to[1], [unit]]);
+
+    repatched([to[0], to[1], []]);
+
+    return frames;
+  };
+
+  const ownFrames = framesFor(walker, [1, 1], [2, 1], 'Player-1'),
+    rivalFrames = framesFor(rival, [1, 1], [2, 1], 'Player-2');
+
+  expect(
+    'a rival’s unit walks twice as fast as the player’s own',
+    [rivalFrames < ownFrames * 0.7, rivalFrames > 2],
+    [true, true]
+  );
+
+  walkersSet.length = 0;
+  walkersPlaced.clear();
+
+  // Not where the player has asked for less motion: on its square at once, not drawn walking.
+  repatched([0, 2, [walker]]);
   Object.assign(window, {
     matchMedia: (query: string) => ({ matches: query.includes('reduce') }),
   });
   stepped(walker, [0, 2], [1, 2]);
-  repatched([0, 2, []], [1, 2, [walker]]);
+  patch([0, 2, []], [1, 2, [walker]]);
+  runFrames(1);
+
+  const lessMotion = [unitOn(1, 2), drawnWalkers()];
+
   delete (window as { matchMedia?: unknown }).matchMedia;
+  runFrames();
 
-  expect(
-    'a unit slides onto a square once the patch draws it there, from where it was drawn as it set off, with frames till it’s there: turned on a first step, across two steps, over the seam from beside it; not onto a square under another unit, then or later; and not asked for less motion',
-    [
-      beforeThePatch,
-      askedAfterIt,
-      firstStep,
-      slideDrawn >= 6,
-      twoSteps,
-      underneath,
-      overTheSeam,
-      slid.splice(0),
-    ],
-    [
-      [],
-      ['Unit-A'],
-      [['1,3', ...groundAt(0, 3)]],
-      true,
-      [['2,2', ...groundAt(1, 3)]],
-      [['3,1', ...groundAt(3, 2)]],
-      [['0,2', -0.5, ...groundAt(3, 2).slice(1)]],
-      [],
-    ]
-  );
-
-  repatched([1, 2, []], [3, 1, []]);
-
-  // A unit moving while units are hidden (`t`) doesn't slide, nor when they're shown again; nor one whose patch comes
-  //  after its slide's been given up.
-  slid.length = 0;
+  // Units hidden (`t`): it walks unseen, and shown again mid-walk, it's drawn walking, then where it's arrived.
   glider.toggleUnits();
   stepped(walker, [1, 2], [2, 2]);
-  repatched([2, 2, [walker]]);
+  patch([1, 2, []], [2, 2, [walker]]);
+  runFrames(2);
+
+  const hiddenWalking = drawnWalkers();
+
   glider.toggleUnits();
   runFrames();
 
-  const whileHidden = slid.splice(0);
+  const shown = drawnWalkers(),
+    shownAgain = [[shown.ids.length, shown.units], unitOn(2, 2)];
 
+  // The world replaced mid-walk: the walk's over, and the unit where the new world has it.
   stepped(walker, [2, 2], [3, 2]);
-  now += 2500;
-  repatched([2, 2, []], [3, 2, [walker]]);
+  patch([2, 2, []], [3, 2, [guard, walker]]);
+  runFrames(2);
+
+  const midWalk = unitOn(3, 2);
+
+  glider.world.setTiles([...glider.world.tiles()], true);
+  glider.flush();
+
+  const worldReplaced = [unitOn(3, 2), [...walkers.keys()]];
+
+  runFrames();
+  walkersSet.length = 0;
 
   expect(
-    'a unit moving while units are hidden doesn’t slide, nor once they’re shown; nor one whose patch comes too late',
-    [whileHidden, slid.splice(0)],
-    [[], []]
+    'asked for less motion, a unit’s on its square at once, not walking; with units hidden it walks unseen, and is drawn walking once shown; the world replaced mid-walk ends it, the unit where the world has it',
+    [lessMotion, hiddenWalking, shownAgain, midWalk, worldReplaced],
+    [
+      [['Unit-A', 1], { ids: [], units: [] }],
+      { ids: [], units: [] },
+      [
+        [1, ['Unit-A', null]],
+        ['Unit-A', 1],
+      ],
+      ['Unit-B', 1],
+      [['Unit-B', 2], []],
+    ]
   );
 
   repatched([3, 2, []]);
+
+  // With no frames for a while, as in a tab out of sight, the walk ends by the clock: the first frame drawn again has
+  //  the unit on its square, not walking.
+  repatched([1, 1, [walker]]);
+  walkersSet.length = 0;
+  stepped(walker, [1, 1], [2, 1]);
+  patch([1, 1, []], [2, 1, [walker]]);
+  now += 2000;
+  runFrames(1);
+
+  expect(
+    'with no frames for a while, a walk ends by the clock: the first frame drawn again has the unit on its square, not walking',
+    [unitOn(2, 1), drawnWalkers()],
+    [['Unit-A', 1], { ids: [], units: [] }]
+  );
+
+  runFrames();
+  repatched([2, 1, []]);
+  walkersSet.length = 0;
+  walkersPlaced.clear();
 
   // Turns, frame by frame: how far the camera turns in all, the way it turns, each frame's step taken the short way.
   const turnedFrameByFrame = (between: () => void): number => {

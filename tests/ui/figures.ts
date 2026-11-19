@@ -26,19 +26,13 @@ import {
   unitTable,
 } from '@civ-clone/ui-models-builtin/units';
 import {
+  FIGURES_PART,
+  IN_FRONT_OF_CITY,
   MarkerKit,
   UNIT_PART,
   drawMarker,
 } from '@civ-clone/ui-map-3d/markers/drawMarker';
 import Water, { Clouds } from '@civ-clone/ui-map-3d/water';
-import {
-  Placed,
-  SLIDE,
-  carriedSlide,
-  slideAlong,
-  unitDrawnAt,
-  unitOnMarkerAt,
-} from '@civ-clone/ui-map-3d/stage';
 import {
   Part,
   figureGeometry,
@@ -683,128 +677,37 @@ const garrisoned = drawMarker(kit, {
   }),
   inCity: Object3D[] = [];
 
-// Its unit's part, which slides as the unit steps onto the square, the city staying put: named, in front of the city.
+// Its unit's part: named, in front of the city, where a unit walking there arrives (`IN_FRONT_OF_CITY`); and its
+//  figures, a part of their own, turned the way it faces, which a walker turns as it goes.
+const facingEast = drawMarker(kit, {
+  city: null,
+  unit: unit('Spearman', { facing: Math.PI / 2 }),
+});
+
 expect(
-  'in a city, the unit is a part of its own, in front of the buildings, which slides alone',
+  'in a city, the unit is a part of its own, in front of the buildings, as far as a unit walking there arrives; its figures a part of their own, turned the way it faces, alone of all it has',
   [
     garrisoned.getObjectByName(UNIT_PART)?.position.z,
+    IN_FRONT_OF_CITY,
     garrisoned.children.filter((child) => child.name === UNIT_PART).length,
     drawMarker(kit, { city: null, unit: unit('Spearman') }).getObjectByName(
       UNIT_PART
     )?.position.z,
+    facingEast.getObjectByName(FIGURES_PART)?.rotation.y,
+    (() => {
+      const turned: string[] = [];
+
+      facingEast.traverse((part) => {
+        if (part.rotation.y !== 0) {
+          turned.push(part.name);
+        }
+      });
+
+      return turned;
+    })(),
   ],
-  [0.26, 1, 0]
+  [0.26, 0.26, 1, 0, Math.PI / 2, [FIGURES_PART]]
 );
-
-// The stage's slides, on markers as they're drawn: only the unit's part moves, in every copy, eased, and it's put in its
-//  place once there. A marker made again mid-slide with the same unit on top goes on from where it's drawn; one with
-//  another unit, or once the slide's over, doesn't.
-{
-  const placedAt = (
-      at: [number, number, number],
-      group: Group,
-      id: string | null
-    ): Placed => ({
-      at,
-      make: () => group.clone(),
-      drawn: [group.clone(), group.clone()],
-      ...(id === null
-        ? {}
-        : {
-            unit: {
-              id,
-              at: group.getObjectByName(UNIT_PART)!.position.toArray() as [
-                number,
-                number,
-                number
-              ],
-            },
-          }),
-    }),
-    partsAt = (placed: Placed, name: string): number[][] =>
-      placed.drawn.map((copy) =>
-        (copy.getObjectByName(name) ?? copy).position
-          .toArray()
-          .map((n) => Math.round(n * 1000) / 1000)
-      ),
-    cityOf = (group: Group): Object3D =>
-      group.children.find((child) => child.name !== UNIT_PART)!,
-    walled = drawMarker(kit, {
-      city: { name: 'Roma', size: 3, colours, walled: false, disorder: false },
-      unit: unit('Spearman'),
-    }),
-    sliding = placedAt([5, 0, 5], walled, 'Unit-1'),
-    cityAt = cityOf(sliding.drawn[0] as Group).position.toArray();
-
-  sliding.slide = { from: [-1, 0, 0], started: 1000 };
-
-  const atStart = (slideAlong(sliding, 1000), partsAt(sliding, UNIT_PART)),
-    quarter =
-      (slideAlong(sliding, 1000 + SLIDE / 4), partsAt(sliding, UNIT_PART)),
-    cityStill = cityOf(sliding.drawn[1] as Group).position.toArray(),
-    drawnMidway = unitDrawnAt(sliding, 1000 + SLIDE / 2),
-    // Asked after by its own unit, or by another under it, setting off from there.
-    forItsUnit = unitOnMarkerAt(sliding, 'Unit-1', 1000 + SLIDE / 2),
-    forAnother = unitOnMarkerAt(sliding, 'Unit-9', 1000 + SLIDE / 2),
-    // Made again mid-slide, the same unit on top; then another unit; then once the slide's over.
-    // A city's marker made again, its unit standing in front of the buildings, off the marker's place.
-    again = placedAt([5, 0, 5], walled, 'Unit-1'),
-    carried = carriedSlide(sliding, again, 1000 + SLIDE / 2),
-    other = carriedSlide(
-      sliding,
-      placedAt([5, 0, 5], walled, 'Unit-2'),
-      1000 + SLIDE / 2
-    ),
-    over = carriedSlide(sliding, again, 1000 + SLIDE),
-    stillGoing = slideAlong(sliding, 1000 + SLIDE / 2),
-    ended = slideAlong(sliding, 1000 + SLIDE),
-    atEnd = partsAt(sliding, UNIT_PART);
-
-  again.slide = carried;
-
-  expect(
-    'a slide moves only the unit’s part, in every copy, eased in and out, and puts it in its place at the end; made again mid-slide with the same unit, it goes on from where it’s drawn, but not for another unit, or once it’s over; a unit under the one sliding sets off from where the stack stands',
-    [
-      atStart,
-      // Smoothstep at a quarter: 0.15625 of the way.
-      quarter,
-      cityStill.join() === cityAt.join(),
-      [stillGoing, ended, sliding.slide === undefined],
-      atEnd,
-      carried !== undefined &&
-        unitDrawnAt(again, 1000 + SLIDE / 2)
-          .map((n) => Math.round(n * 1000))
-          .join() === drawnMidway.map((n) => Math.round(n * 1000)).join(),
-      carried?.started,
-      [other, over],
-      unitDrawnAt(placedAt([2, 0, 3], walled, null), 0),
-      forItsUnit.join() === drawnMidway.join(),
-      forAnother.map((n) => Math.round(n * 1000) / 1000),
-    ],
-    [
-      [
-        [-1, 0, 0.26],
-        [-1, 0, 0.26],
-      ],
-      [
-        [-0.844, 0, 0.26],
-        [-0.844, 0, 0.26],
-      ],
-      true,
-      [true, false, true],
-      [
-        [0, 0, 0.26],
-        [0, 0, 0.26],
-      ],
-      true,
-      1000 + SLIDE / 2,
-      [undefined, undefined],
-      [2, 0, 3],
-      true,
-      [5, 0, 5.26],
-    ]
-  );
-}
 
 garrisoned.updateMatrixWorld(true);
 garrisoned.traverse((object) => void inCity.push(object));

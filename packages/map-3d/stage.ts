@@ -29,7 +29,7 @@ import {
 } from 'three';
 import { ChunkMesh } from './terrain/chunks';
 import landMaterial from './landMaterial';
-import { MarkerKit, UNIT_PART, drawMarker } from './markers/drawMarker';
+import { FIGURES_PART, MarkerKit, drawMarker } from './markers/drawMarker';
 import { TileMarker } from './markers/markerFor';
 import { OverlayMesh } from './overlay/overlayMesh';
 import { FIELD_OF_VIEW, Orbit, eye, sightFor } from './camera/orbit';
@@ -66,17 +66,19 @@ export interface Stage {
     marker: TileMarker | null
   ): void;
   /**
-   * The unit on top of the marker `key` slides into its place from `from` (`u`, height, `v`), as a unit stepping onto
-   *  its square does, starting now; its city stays put. Made again mid-slide with the same unit on top, it slides on.
+   * A walk under way (`id`, `walks.ts`), drawn as `marker`, its units alone with no city: one drawn before for it is
+   *  replaced, and `null` takes it away.
    */
-  slideMarker(key: string, from: readonly [number, number, number]): void;
+  setWalker(id: string, marker: TileMarker | null): void;
   /**
-   * Where the unit `unit` is drawn on the marker `key` now: sliding there still, if it's the unit on top, or where the
-   *  square's stack stands, if it's under another; nothing with no marker.
+   * Where the walker `id` is now (`u`, height, `v`, on the world's own copy) and the way its figures face, drawn there at
+   *  every copy of the world in sight.
    */
-  markerAt(key: string, unit: string): [number, number, number] | null;
-  /** Whether any marker's sliding, for frames to be drawn until none is. */
-  sliding(): boolean;
+  placeWalker(
+    id: string,
+    at: readonly [number, number, number],
+    facing: number
+  ): void;
   /** What each square yields (`y`), drawn at every copy of the world in sight: what was drawn before is replaced. */
   setYields(mesh: YieldMesh | null): void;
   /**
@@ -109,114 +111,7 @@ export type Placed = {
   drawn: Object3D[];
   // A marker as drawn, which its copies are cloned from.
   original?: Object3D;
-  // A marker's unit on top: its id, and where its part stands from `at` (in front of a city's buildings).
-  unit?: { id: string; at: [number, number, number] };
-  // Its unit on its way from elsewhere: how far from where it stands it started, and when.
-  slide?: Slide;
 };
-
-/** A unit sliding onto its square: how far from where it stands it started (`u`, height, `v`), and when. */
-export type Slide = { from: [number, number, number]; started: number };
-
-/** How far from where it stands a sliding unit is at `now`, eased in and out; nothing once it's there. */
-export const slideOffset = (
-  slide: Slide | undefined,
-  now: number
-): [number, number, number] | null => {
-  if (slide === undefined) {
-    return null;
-  }
-
-  const t = Math.min(1, Math.max(0, (now - slide.started) / SLIDE)),
-    left = 1 - t * t * (3 - 2 * t);
-
-  return t >= 1
-    ? null
-    : [slide.from[0] * left, slide.from[1] * left, slide.from[2] * left];
-};
-
-// Where a marker's unit stands: its place, and its part's from there.
-const unitStands = (placed: Placed): [number, number, number] => {
-  const [du, dy, dv] = placed.unit?.at ?? [0, 0, 0];
-
-  return [placed.at[0] + du, placed.at[1] + dy, placed.at[2] + dv];
-};
-
-/**
- * Where the unit `unit` is drawn on a marker at `now`: sliding there still, if it's the marker's unit on top, or
- *  standing where the stack does, if it's under another.
- */
-export const unitOnMarkerAt = (
-  placed: Placed,
-  unit: string,
-  now: number
-): [number, number, number] =>
-  placed.unit?.id === unit ? unitDrawnAt(placed, now) : unitStands(placed);
-
-/** Where a marker's unit is drawn at `now`, sliding or standing in its place (or the marker's place, with none). */
-export const unitDrawnAt = (
-  placed: Placed,
-  now: number
-): [number, number, number] => {
-  const [standU, standY, standV] = unitStands(placed),
-    [du, dy, dv] = slideOffset(placed.slide, now) ?? [0, 0, 0];
-
-  return [standU + du, standY + dy, standV + dv];
-};
-
-/**
- * The slide a marker made again carries on from the one it replaces, `old`, with the same unit on top still sliding
- *  at `now`: a slide of its own from where that unit's drawn, so it goes on from there without a jump. None otherwise.
- */
-export const carriedSlide = (
-  old: Placed | undefined,
-  placed: Placed,
-  now: number
-): Slide | undefined => {
-  if (
-    old?.slide === undefined ||
-    old.unit === undefined ||
-    old.unit.id !== placed.unit?.id ||
-    slideOffset(old.slide, now) === null
-  ) {
-    return undefined;
-  }
-
-  const drawn = unitDrawnAt(old, now),
-    stands = unitStands(placed);
-
-  return {
-    from: [drawn[0] - stands[0], drawn[1] - stands[1], drawn[2] - stands[2]],
-    started: now,
-  };
-};
-
-/**
- * A sliding marker's unit moved along at `now` in each of its copies, its city staying put; put in its place once
- *  it's there, and its slide ended. Whether it's still sliding.
- */
-export const slideAlong = (placed: Placed, now: number): boolean => {
-  if (placed.slide === undefined) {
-    return false;
-  }
-
-  const offset = slideOffset(placed.slide, now),
-    [du, dy, dv] = offset ?? [0, 0, 0],
-    [atU, atY, atV] = placed.unit?.at ?? [0, 0, 0];
-
-  if (offset === null) {
-    delete placed.slide;
-  }
-
-  placed.drawn.forEach((drawn) =>
-    drawn.getObjectByName(UNIT_PART)?.position.set(atU + du, atY + dy, atV + dv)
-  );
-
-  return offset !== null;
-};
-
-/** How long a marker takes to slide to its place, in ms: a unit's step. */
-export const SLIDE = 260;
 
 export type StageFactory = (
   canvas: HTMLCanvasElement,
@@ -337,8 +232,9 @@ export const createStage: StageFactory = (
     extent = ground.rows * ground.spacingV,
     poles = polesAt(extent),
     markers = new Map<string, Placed>(),
-    // The markers whose units are sliding, by key.
-    sliding = new Set<string>(),
+    // The units walking, by their walk's id (`walks.ts`), each drawn as its own marker, with no city; and the way each
+    //  faces.
+    walkers = new Map<string, Placed & { facing: number }>(),
     markersGroup = new Group(),
     kit = new MarkerKit(),
     // What each square yields, over the land at every copy of the world, when they're shown.
@@ -416,15 +312,37 @@ export const createStage: StageFactory = (
       overlayCopies(copies, overlay.span, extent, period.v, stopped)
     );
 
-  // Each sliding unit moved along in every copy of its marker, and those that have arrived put in their place.
-  const slideMarkers = (now: number): void =>
-    sliding.forEach((key) => {
-      const placed = markers.get(key);
+  // A walker's copies turned the way it faces: only its figures turn, its flag over them as ever.
+  const face = (walker: Placed & { facing: number }): void =>
+    walker.drawn.forEach((drawn) => {
+      const figures = drawn.getObjectByName(FIGURES_PART);
 
-      if (placed === undefined || !slideAlong(placed, now)) {
-        sliding.delete(key);
+      if (figures !== undefined) {
+        figures.rotation.y = walker.facing;
       }
     });
+
+  // A marker's original, made from what it marks: casting shadows on the land, as the models will.
+  const markerOf = (marker: TileMarker): Object3D => {
+    const original = drawMarker(kit, marker);
+
+    original.traverse((object) => {
+      object.castShadow = object instanceof Mesh;
+    });
+
+    return original;
+  };
+
+  // Every city's size and name it has had would be kept otherwise.
+  const sweep = (): void => {
+    if (kit.sweepDue) {
+      kit.sweep(
+        [...markers.values(), ...walkers.values()].flatMap(({ original }) =>
+          original === undefined ? [] : [original]
+        )
+      );
+    }
+  };
 
   const view = (
     orbit: Orbit,
@@ -512,13 +430,12 @@ export const createStage: StageFactory = (
     if (markersKey !== markerCopiesKey) {
       markerCopies = markersInSight;
       markerCopiesKey = markersKey;
-      markers.forEach((marker) => {
+      [...markers.values(), ...walkers.values()].forEach((marker) => {
         marker.drawn.forEach((drawn) => markersGroup.remove(drawn));
         marker.drawn = copiesOf(marker, markersGroup, markerCopies);
       });
+      walkers.forEach(face);
     }
-
-    slideMarkers(performance.now());
   };
 
   return {
@@ -623,88 +540,66 @@ export const createStage: StageFactory = (
       overlays.set(key, overlay);
     },
     setMarker: (key, at, marker): void => {
-      const old = markers.get(key);
-
       // Its geometries and materials are the kit's, shared by every marker, and let go by the kit's sweep.
-      old?.drawn.forEach((drawn) => markersGroup.remove(drawn));
+      markers.get(key)?.drawn.forEach((drawn) => markersGroup.remove(drawn));
       markers.delete(key);
 
       if (marker === null) {
         return;
       }
 
-      const original = drawMarker(kit, marker),
-        pawn = original.getObjectByName(UNIT_PART);
-
-      // Markers cast shadows on the land, as the models will.
-      original.traverse((object) => {
-        object.castShadow = object instanceof Mesh;
-      });
-
-      const placed: Placed = {
-        at,
-        make: () => original.clone(),
-        drawn: [],
-        original,
-        ...(marker.unit === null || pawn === undefined
-          ? {}
-          : {
-              unit: {
-                id: marker.unit.id,
-                at: pawn.position.toArray() as [number, number, number],
-              },
-            }),
-      };
-
-      // The same unit on top, mid-slide: it slides on from where it's drawn.
-      const now = performance.now(),
-        carried = carriedSlide(old, placed, now);
-
-      if (carried !== undefined) {
-        placed.slide = carried;
-      }
+      const original = markerOf(marker),
+        placed: Placed = {
+          at,
+          make: () => original.clone(),
+          drawn: [],
+          original,
+        };
 
       placed.drawn = copiesOf(placed, markersGroup, markerCopies);
       markers.set(key, placed);
-
-      if (placed.slide !== undefined) {
-        sliding.add(key);
-        slideAlong(placed, now);
-      }
-
-      // Every city's size and name it has had would be kept otherwise.
-      if (kit.sweepDue) {
-        kit.sweep(
-          [...markers.values()].flatMap(({ original }) =>
-            original === undefined ? [] : [original]
-          )
-        );
-      }
+      sweep();
     },
-    slideMarker: (key, from): void => {
-      const placed = markers.get(key);
+    setWalker: (id, marker): void => {
+      const old = walkers.get(id);
 
-      if (placed === undefined) {
+      old?.drawn.forEach((drawn) => markersGroup.remove(drawn));
+      walkers.delete(id);
+
+      if (marker === null) {
         return;
       }
 
-      const [standU, standY, standV] = unitStands(placed);
+      const original = markerOf(marker),
+        walker: Placed & { facing: number } = {
+          at: old?.at ?? [0, 0, 0],
+          facing: old?.facing ?? marker.unit?.facing ?? 0,
+          make: () => original.clone(),
+          drawn: [],
+          original,
+        };
 
-      placed.slide = {
-        from: [from[0] - standU, from[1] - standY, from[2] - standV],
-        started: performance.now(),
-      };
-      sliding.add(key);
-      slideAlong(placed, placed.slide.started);
+      walker.drawn = copiesOf(walker, markersGroup, markerCopies);
+      face(walker);
+      walkers.set(id, walker);
+      sweep();
     },
-    markerAt: (key, unit): [number, number, number] | null => {
-      const placed = markers.get(key);
+    placeWalker: (id, at, facing): void => {
+      const walker = walkers.get(id);
 
-      return placed === undefined
-        ? null
-        : unitOnMarkerAt(placed, unit, performance.now());
+      if (walker === undefined) {
+        return;
+      }
+
+      walker.at = at;
+      walker.facing = facing;
+      walker.drawn.forEach((drawn, copy) => {
+        const [offsetU, offsetV] = markerCopies[copy] ?? [0, 0];
+
+        drawn.position.set(at[0] + offsetU, at[1], at[2] + offsetV);
+      });
+      face(walker);
     },
-    sliding: (): boolean => sliding.size > 0,
     setYields: (mesh): void => {
       yieldsPlaced?.drawn.forEach((drawn) => yieldsGroup.remove(drawn));
       yieldsPlaced = null;
@@ -730,6 +625,7 @@ export const createStage: StageFactory = (
       overlays.clear();
       overlayMaterial.dispose();
       markers.clear();
+      walkers.clear();
       kit.dispose();
       yields.dispose();
       water.dispose();

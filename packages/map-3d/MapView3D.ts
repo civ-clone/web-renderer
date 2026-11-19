@@ -4,14 +4,15 @@
 //  centred, and again where tile patches change it. The camera (slice 1.2) orbits a point on the ground: centring the
 //  map glides it there (at once the first time), the keys turn it and zoom it, the mouse, the wheel and touch move it,
 //  and its distance is kept as the 2D map's zoom is. Cities and units are marked on the land (1.3), a click, a press
-//  held and a right-click do what they do on the 2D map, and the minimap shows its own overview (1.5). Still to come:
-//  hovering's tooltips, waiting's cursor, and units moving and fighting (M2).
+//  held and a right-click do what they do on the 2D map, and the minimap shows its own overview (1.5). Units walk from
+//  square to square as the map's events say they've moved (2.3, `walks.ts`). Still to come: waiting's cursor, and
+//  units fighting (2.4).
 //
 // Reaches beyond its canvas where the 2D map does: the `window` `resize` handler and an observer of the canvas's
 //  parent, which size the canvas to it, and the minimap's canvas, which it draws its overview on.
 
 import { Coordinate, Tile, Unit } from '@civ-clone/ui-protocol/types';
-import { MapEvent } from '@civ-clone/ui-protocol/mapEvents';
+import { MapEvent, MapEventUnit } from '@civ-clone/ui-protocol/mapEvents';
 import { MapView3DDeps } from '@civ-clone/ui-map/MapView3DFactory';
 import MapPortal3D from './MapPortal3D';
 import MapRenderer from '@civ-clone/ui-map/MapRenderer';
@@ -34,7 +35,9 @@ import {
 } from './camera/orbit';
 import prefersReducedMotion from '@civ-clone/ui-map/lib/reducedMotion';
 import CameraInput from './camera/CameraInput';
-import markerFor, { MarkerWords } from './markers/markerFor';
+import markerFor, { MarkerWords, TileMarker } from './markers/markerFor';
+import { IN_FRONT_OF_CITY } from './markers/drawMarker';
+import Walks, { OWN_PACE, RIVALS_PACE, WalkPoint, Walker } from './walks';
 import pickGround from './camera/pick';
 import Minimap3D from './minimap/Minimap3D';
 import { LaidYields, innerOf, laidYields, yieldMesh } from './yields';
@@ -129,13 +132,15 @@ export class MapView3D implements MapRenderer {
   #words: MarkerWords;
   // Which way each unit faces, by its id: the way the map events last saw it move, or attack.
   #facings = new Map<string, number>();
-  // Units that have moved, by their id: where they were drawn as they set off, and the square they're bound for (`x,y`).
-  //  The patch that draws them there has them slide from where they set off, if they're on top there. Kept a moment
-  //  only, for a patch that doesn't come.
-  #slides = new Map<
-    string,
-    { from: [number, number, number]; to: string; until: number }
-  >();
+  // The units walking from square to square (`walks.ts`), each walk drawn as a walker of its own, its units left off
+  //  the squares they're on until it's over.
+  #walks: Walks;
+  // Each unit walking: as the page had it when it set off, to draw it from; and the squares marked without it since, to
+  //  mark again with it once it's there.
+  #walkingUnits = new Map<string, Unit>();
+  #heldFor = new Map<string, Set<string>>();
+  // What each walker was last drawn as.
+  #walkersDrawn = new Map<string, string>();
   #transport: MapView3DDeps['transport'];
   #picking: Picking | null = null;
   // The square the mouse rests on, waiting to show its tooltip or showing it, and whose tooltips they'd be.
@@ -211,6 +216,7 @@ export class MapView3D implements MapRenderer {
     this.#artId = deps.art.id();
     this.world = deps.world;
     this.#land = new Land(deps.world);
+    this.#walks = new Walks(this.#land.layout.period());
     this.#inner = innerOf(this.#land.layout, deps.world.topology());
     // Read just now, by the land.
     this.#worldTiles = deps.world.tiles();
@@ -401,6 +407,8 @@ export class MapView3D implements MapRenderer {
   dispose(): void {
     this.#keepDistance(true);
     this.#disposed = true;
+    this.#walks.endAll(0);
+
     this.#stopUnitSize();
     this.#stopArtChanged();
     this.#endHover();
@@ -445,12 +453,12 @@ export class MapView3D implements MapRenderer {
   }
 
   /**
-   * A unit moved, or fought: it faces the way it went, or the way it attacked, and a defender faces its attacker. The
-   *  patch that follows a move draws it on its new square, where it slides in from where it set off.
+   * A unit moved, or fought: it faces the way it went, or the way it attacked, and a defender faces its attacker. One
+   *  that moved walks there, from where it was drawn.
    */
   mapEvent(event: MapEvent): void {
     if (event.kind === 'moved') {
-      this.#setOff(event.unit.id, event.from, event.to);
+      this.#walk(event.unit, event.from, event.to);
       this.#face(event.unit.id, event.from, event.to);
 
       return;
@@ -460,47 +468,154 @@ export class MapView3D implements MapRenderer {
     this.#face(event.defender.id, event.defender.tile, event.attacker.tile);
   }
 
-  // The unit `id` sets off from the square `from` for `to`: where it's drawn now, sliding there still or standing on its
-  //  square, taken to the copy of the world nearest `to`, so it slides the short way. Moving on again before it's been
-  //  drawn on the square it was bound for, it sets off from where it's still drawn. Not where there are no frames to
-  //  slide over, or the player has asked for less motion.
-  #setOff(id: string, from: Coordinate, to: Coordinate): void {
-    const now = performance.now(),
-      pending = this.#slides.get(id);
-
-    this.#slides.forEach(({ until }, unit) => {
-      if (until < now) {
-        this.#slides.delete(unit);
-      }
-    });
-
+  // The unit `unit` steps from the square `from` to `to`: it walks there (`walks.ts`), drawn on its own, and is left off
+  //  the squares it's on till it's there. Not where there are no frames to walk it over, or the player has asked for
+  //  less motion; nor a rival's off the screen, unless it's walking already; nor one the page doesn't have where it set
+  //  off from, as one stepping out of the dark: those are drawn where the patch puts them, at once.
+  #walk(unit: MapEventUnit, from: Coordinate, to: Coordinate): void {
     if (typeof requestAnimationFrame !== 'function' || prefersReducedMotion()) {
       return;
     }
 
-    const [fromU, fromV] = this.#land.layout.centre(from.x, from.y),
-      [toU, toV] = this.#land.layout.centre(to.x, to.y),
-      { u: periodU, v: periodV } = this.#land.layout.period(),
-      short = (delta: number, period: number | null): number =>
-        period === null ? delta : delta - period * Math.round(delta / period),
-      [drawnU, drawnY, drawnV] = (pending !== undefined && pending.until >= now
-        ? pending.from
-        : null) ??
-        this.#stage.markerAt(`${from.x},${from.y}`, id) ?? [
-          fromU,
-          Math.max(0, this.#land.surfaceAt(fromU, fromV)),
-          fromV,
-        ];
+    const walking = this.#walks.walking(unit.id),
+      seen =
+        this.world.get(from.x, from.y).units.find(({ id }) => id === unit.id) ??
+        (walking ? this.#walkingUnits.get(unit.id) : undefined),
+      own = unit.player === this.#playerId;
 
-    this.#slides.set(id, {
-      from: [
-        toU + short(drawnU - toU, periodU),
-        drawnY,
-        toV + short(drawnV - toV, periodV),
-      ],
-      to: `${to.x},${to.y}`,
-      until: now + 2000,
+    if (
+      seen === undefined ||
+      (!own &&
+        !walking &&
+        !this.#visible(from.x, from.y, -0.5) &&
+        !this.#visible(to.x, to.y, -0.5))
+    ) {
+      return;
+    }
+
+    this.#walkingUnits.set(unit.id, seen);
+    this.#walks.step(
+      unit.id,
+      from,
+      to,
+      this.#standing(from),
+      this.#standing(to),
+      performance.now(),
+      own ? OWN_PACE : RIVALS_PACE
+    );
+    // Off the square it set off from, now.
+    this.#mark(from.x, from.y);
+    this.#draw();
+  }
+
+  // Where a unit stands on the square (`x`, `y`) as it's marked, on the land as it's drawn: at its middle, or in front
+  //  of its city's buildings. As a point to walk from or to, with how far above the land there that is.
+  #standing({ x, y }: Coordinate): WalkPoint {
+    const [u, v] = this.#land.layout.centre(x, y),
+      stands = Math.max(0, this.#land.surfaceAt(u, v)),
+      at: [number, number] = [
+        u,
+        v + (this.world.get(x, y).city ? IN_FRONT_OF_CITY : 0),
+      ];
+
+    return { at, lift: stands - Math.max(0, this.#land.surfaceAt(...at)) };
+  }
+
+  // The walkers where they are at `now`, each drawn as its units are now (active, shown or hidden, their size); those
+  //  that are there taken away, and the squares their units were left off marked again, with them. By the clock: with
+  //  no frames for a while, as in a tab out of sight, the first frame drawn again ends those that are over.
+  #placeWalkers(now: number): void {
+    if (this.#walks.size() === 0) {
+      return;
+    }
+
+    const { going, ended } = this.#walks.at(now),
+      { u: periodU, v: periodV } = this.#land.layout.period(),
+      within = (value: number, period: number | null): number =>
+        period === null ? value : ((value % period) + period) % period;
+
+    ended.forEach((walker) => this.#arrived(walker, true));
+    going.forEach((walker) => {
+      const marker = this.#walkerMarker(walker),
+        signature = marker === null ? null : JSON.stringify(marker);
+
+      if (signature !== (this.#walkersDrawn.get(walker.id) ?? null)) {
+        this.#stage.setWalker(walker.id, marker);
+
+        if (signature === null) {
+          this.#walkersDrawn.delete(walker.id);
+        } else {
+          this.#walkersDrawn.set(walker.id, signature);
+        }
+      }
+
+      if (marker === null) {
+        return;
+      }
+
+      const u = within(walker.at[0], periodU),
+        v = within(walker.at[1], periodV);
+
+      this.#stage.placeWalker(
+        walker.id,
+        [u, Math.max(0, this.#land.surfaceAt(u, v)) + walker.lift, v],
+        walker.facing
+      );
     });
+  }
+
+  // What a walker's drawn as: its units alone, as a square's marked, the one on top the active one or the best
+  //  defender; their figures turned as it goes, not as they last went. Nothing with its units hidden (`t`), unless
+  //  the active one's among them.
+  #walkerMarker(walker: Walker): TileMarker | null {
+    const units = walker.units.flatMap((id) => {
+      const unit = this.#walkingUnits.get(id);
+
+      return unit === undefined ? [] : [unit];
+    });
+
+    return markerFor(
+      { city: null, units },
+      this.#activeUnit?.id ?? null,
+      this.#unitsShown,
+      this.#words,
+      () => 0,
+      this.#unitSize
+    );
+  }
+
+  // A walker that's there, or stopped: taken away, and the squares its units were left off marked again with them, if
+  //  `mark`, unless they walk on.
+  #arrived(walker: Walker, mark: boolean): void {
+    if (this.#walkersDrawn.delete(walker.id)) {
+      this.#stage.setWalker(walker.id, null);
+    }
+
+    walker.units.forEach((unit) => {
+      if (this.#walks.walking(unit)) {
+        return;
+      }
+
+      const held = this.#heldFor.get(unit);
+
+      this.#walkingUnits.delete(unit);
+      this.#heldFor.delete(unit);
+
+      if (mark) {
+        held?.forEach((key) => {
+          const [x, y] = key.split(',').map(Number) as [number, number];
+
+          this.#mark(x, y);
+        });
+      }
+    });
+  }
+
+  // Every walk over now, wherever it's got to: as the world's replaced.
+  #endWalks(): void {
+    this.#walks
+      .endAll(performance.now())
+      .forEach((walker) => this.#arrived(walker, true));
   }
 
   // The unit `id` faces from the square `from` towards `to`, the short way round the world, and is marked again.
@@ -1087,6 +1202,12 @@ export class MapView3D implements MapRenderer {
     this.#worldTiles = tiles;
     this.#worldTileCount = tiles.length;
     this.#tilesToDraw.clear();
+
+    // Another world: no one's walking in it.
+    if (replaced) {
+      this.#endWalks();
+    }
+
     // The squares whose land changed, and those beside them, where their land meets: a range's ridge may rise or fall
     //  as far as that, under what stands there.
     const reshaped = this.#besides(
@@ -1135,14 +1256,30 @@ export class MapView3D implements MapRenderer {
   // What's on the square at (`x`, `y`), marked on the land at its middle, or nothing.
   #mark(x: number, y: number): void {
     const key = `${x},${y}`,
-      marker = markerFor(
-        this.world.get(x, y),
-        this.#activeUnit?.id ?? null,
-        this.#unitsShown,
-        this.#words,
-        (unit) => this.#facings.get(unit.id) ?? 0,
-        this.#unitSize
-      );
+      tile = this.world.get(x, y),
+      // Units walking here are drawn walking, not here, until they're there: marked again then.
+      walking = tile.units.filter(({ id }) => this.#walks.walking(id));
+
+    walking.forEach(({ id }) => {
+      const held = this.#heldFor.get(id) ?? new Set<string>();
+
+      held.add(key);
+      this.#heldFor.set(id, held);
+    });
+
+    const marker = markerFor(
+      walking.length === 0
+        ? tile
+        : {
+            city: tile.city,
+            units: tile.units.filter(({ id }) => !this.#walks.walking(id)),
+          },
+      this.#activeUnit?.id ?? null,
+      this.#unitsShown,
+      this.#words,
+      (unit) => this.#facings.get(unit.id) ?? 0,
+      this.#unitSize
+    );
 
     // On the land as it's drawn, as what's laid on it is, so a unit's stand stands over that.
     const [u, v] = this.#land.layout.centre(x, y),
@@ -1157,43 +1294,6 @@ export class MapView3D implements MapRenderer {
 
     if (changed) {
       this.#stage.setMarker(key, at, marker);
-    }
-
-    // Units bound here that have arrived: the one on top slides from where it set off, if it's drawn anew; one under
-    //  another doesn't, nor one not shown (units hidden), and none of them will later. One that's taken too long to
-    //  arrive doesn't either. Most squares are marked with no unit moving at all.
-    if (this.#slides.size === 0) {
-      if (changed) {
-        this.#remember(key, signature);
-      }
-
-      return;
-    }
-
-    const now = performance.now(),
-      here = new Set(
-        (this.world.get(x, y)?.units ?? []).map((unit) => unit.id)
-      );
-
-    this.#slides.forEach((slide, id) => {
-      if (slide.until < now) {
-        this.#slides.delete(id);
-
-        return;
-      }
-
-      if (slide.to !== key || !here.has(id)) {
-        return;
-      }
-
-      this.#slides.delete(id);
-
-      if (changed && marker?.unit?.id === id) {
-        this.#stage.slideMarker(key, slide.from);
-      }
-    });
-
-    if (changed) {
       this.#remember(key, signature);
     }
   }
@@ -1317,6 +1417,7 @@ export class MapView3D implements MapRenderer {
       [u, v] = this.#focus();
 
     this.#takeTiles();
+    this.#placeWalkers(started);
 
     // Centred elsewhere since: the chunks nearest the new centre are built first.
     if (`${u},${v}` !== this.#focused) {
@@ -1339,7 +1440,7 @@ export class MapView3D implements MapRenderer {
     if (
       this.#land.pending() > 0 ||
       this.#land.overlaysPending() > 0 ||
-      this.#stage.sliding() ||
+      this.#walks.size() > 0 ||
       moving ||
       rising
     ) {
