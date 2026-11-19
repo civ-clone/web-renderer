@@ -392,7 +392,9 @@ a block of them a massif, not a grid of cones. Hills already run into one anothe
 - jungle has broadleaf and palms, swamps reeds and dead trees, and grassland, plains, tundra and hills bushes, shrubs and scrub;
 - deserts and mountains get rocks, and deserts a cactus or two.
 
-Plants are scattered by seed, each where it has room. They stay clear of a unit's stand, roads, mines, huts and specials, and off a city's lot and cleared ground (fields, a fortress, an airbase). A tree is a handful of low-sided shapes. An all-forest chunk is about 43,000 triangles and 16 ms to lay. Still to do in 3.2: instancing, impostors at a distance, and wind.
+Plants are scattered by seed, each where it has room. They stay clear of a unit's stand, roads, mines, huts and specials, and off a city's lot and cleared ground (fields, a fortress, an airbase). A tree is a handful of low-sided shapes. Still to do in 3.2: instancing, impostors at a distance, and wind.
+
+**Woods: done.** Forest, jungle and swamp grow as one canopy across their squares, as Civ1's forests run together (spec §5.1): trees stand at the points of a lattice over the whole ground, whole across the edge to the same woods and thinning to a fringe at the edge to other ground, so a forest is a wood rather than a clump on each square. An all-forest chunk is 48,000–58,000 triangles and 35–50 ms to lay, a few squares a frame.
 
 **3.4, first part: done.** What's laid on the land is made by code (`packages/map-3d/overlay/`), one vertex-coloured mesh a chunk, so it costs a draw call a chunk:
 - roads and railroads are draped over the land, joined to their neighbours as the 2D map joins them, along the topology's directions, and at the nearest copy across the world's seams;

@@ -448,6 +448,7 @@ export class Land {
     //  a world that wraps over the poles): the chunk's drawn at every copy of the world, so its overlay lies where it
     //  is in each, a chunk's corner or not. Its neighbours as the nearest copy of each.
     const [u, v] = this.layout.centre(x, y);
+    const topology = this.#world.topology();
 
     return {
       overlay,
@@ -459,6 +460,17 @@ export class Land {
         heightAt: (pu, pv) => this.surfaceAt(pu, pv, heights),
         seed: Math.imul(x, 73856093) ^ Math.imul(y, 19349663),
         latitude: Math.min(1, Math.abs((2 * v) / this.extentV() - 1)),
+        outline: this.layout.outline(x, y),
+        owns: (pu, pv) => {
+          const [tx, ty] = this.layout.tileAt(pu, pv);
+
+          return tx === x && ty === y;
+        },
+        around: topology
+          .directions()
+          .filter((direction) => topology.neighbour(x, y, direction) !== null)
+          .map((direction) => topology.offset(direction, x, y)),
+        period: this.layout.period(),
       },
     };
   }
