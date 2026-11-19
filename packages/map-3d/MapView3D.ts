@@ -173,7 +173,7 @@ export class MapView3D implements MapRenderer {
   #unitsShown = true;
   // How big units are drawn, as the player chose (1 is life size), and what stops a change to it being told.
   #unitSize: number;
-  #stopUnitSize: () => void;
+  #stopUnitSize: () => void = (): void => {};
   #yieldsShown = false;
   #waiting = false;
   // The 2D art the city screen and windows draw with, as it was when last asked.
@@ -191,17 +191,6 @@ export class MapView3D implements MapRenderer {
     this.#art = deps.art;
     this.#words = { cityName: deps.cityName, unitStatus: deps.unitStatus };
     this.#unitSize = deps.unitSize?.get() ?? 1;
-    // Each marker drawn again at the size chosen, as Options changes it.
-    this.#stopUnitSize =
-      deps.unitSize?.onChange((): void => {
-        const size = deps.unitSize?.get() ?? 1;
-
-        if (size !== this.#unitSize && !this.#disposed) {
-          this.#unitSize = size;
-          this.#markAll();
-          this.#draw();
-        }
-      }) ?? ((): void => {});
     this.#artId = deps.art.id();
     this.world = deps.world;
     this.#land = new Land(deps.world);
@@ -231,6 +220,19 @@ export class MapView3D implements MapRenderer {
       period: this.#land.layout.period(),
       ground: this.#land.ground(),
     });
+
+    // After the stage, as what follows: one that can't be made leaves nothing listening to Options. Each marker drawn
+    //  again at the size chosen, as Options changes it.
+    this.#stopUnitSize =
+      deps.unitSize?.onChange((): void => {
+        const size = deps.unitSize?.get() ?? 1;
+
+        if (size !== this.#unitSize && !this.#disposed) {
+          this.#unitSize = size;
+          this.#markAll();
+          this.#draw();
+        }
+      }) ?? ((): void => {});
 
     // After the stage: one that can't be made leaves no minimap behind it.
     if (deps.minimapCanvas !== null) {

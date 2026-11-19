@@ -841,7 +841,13 @@ expect(
 
   // How big units are drawn, changed in Options as the game goes on: every square's unit drawn again at once, at the
   //  nearest size a player could choose, and life size again after.
-  const sizeDrawn = (): number | undefined => markers.get(townKey)?.unit?.size,
+  // Each change drawn at once, with no other reason for a frame: the map's idle.
+  staged.splice(0);
+
+  const sizeDrawn = (): [number | undefined, boolean] => [
+      markers.get(townKey)?.unit?.size,
+      staged.splice(0).includes('render'),
+    ],
     sizesDrawn = [sizeDrawn()];
 
   optionsRegistry.set(MAP3D_UNIT_SIZE_OPTION, 1.5);
@@ -854,10 +860,74 @@ expect(
   sizesDrawn.push(sizeDrawn());
 
   expect(
-    'units are drawn at the size chosen in Options as soon as it changes, the nearest a player could choose, or life size',
+    'units are drawn at the size chosen in Options as soon as it changes, and the map drawn, the nearest size a player could choose, or life size',
     sizesDrawn,
-    [1, 1.5, 1.5, 0.5, 1]
+    [
+      [1, false],
+      [1.5, true],
+      // As it was: nothing drawn.
+      [1.5, false],
+      [0.5, true],
+      [1, true],
+    ]
   );
+
+  // A size chosen before the game: its units are drawn at it from the start.
+  optionsRegistry.set(MAP3D_UNIT_SIZE_OPTION, 1.25);
+
+  const chosenBefore = makeMapView(deps2D) as MapView3D;
+
+  chosenBefore.queueTile(town);
+  chosenBefore.releaseTiles();
+
+  const sizeAtStart = markers.get(townKey)?.unit?.size;
+
+  chosenBefore.dispose();
+  optionsRegistry.set(MAP3D_UNIT_SIZE_OPTION, 1);
+  view.queueTile(town);
+  view.releaseTiles();
+  staged.splice(0);
+
+  expect(
+    'a size chosen before the game is the one its units are drawn at from the start',
+    sizeAtStart,
+    1.25
+  );
+
+  // Listened to only while there's a map: none once it's taken down, and none from one whose stage can't be made, the
+  //  game falling back to the 2D map.
+  {
+    const listening = new Set<() => void>(),
+      unitSize = {
+        get: (): number => 1,
+        onChange: (changed: () => void): (() => void) => {
+          listening.add(changed);
+
+          return (): void => void listening.delete(changed);
+        },
+      },
+      counted = new MapView3D({ ...given!, unitSize }, fakeStage),
+      whileShown = listening.size;
+
+    counted.dispose();
+
+    const afterwards = listening.size;
+    let refused = false;
+
+    try {
+      new MapView3D({ ...given!, unitSize }, () => {
+        throw new Error('WebGL2 refused');
+      });
+    } catch {
+      refused = true;
+    }
+
+    expect(
+      'it listens for a size chosen only while it is shown: not once taken down, nor from a map whose stage could not be made',
+      [whileShown, afterwards, refused, listening.size],
+      [1, 0, true, 0]
+    );
+  }
 
   // The map's events: a unit faces the way it last moved, the short way round the world, and the way it attacked, and a
   //  defender faces its attacker. The town is at (2, 0), on a world 4 across that wraps.

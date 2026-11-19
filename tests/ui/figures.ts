@@ -167,8 +167,9 @@ const faultsOf = (type: string, look: UnitLook): string[] => {
     faults.push(`${type}: not a colour and a normal for every point`);
   }
 
-  // Drawn as big as a player can choose: on its square, standing on it (a submarine a little under the water), no taller than
-  //  half a square and no more than a third of one from its middle, so it stays in its square in front of a city.
+  // Drawn as big as a player can choose: standing on its square (a submarine a little under the water), no taller than
+  //  0.6 of a square, and no more than 0.36 of one from its middle. In front of a city it stands 0.26 south of the
+  //  middle, so there the biggest reach a little past the square's edge.
   if (
     box === null ||
     box.min.y * DRAWN < -0.03 ||

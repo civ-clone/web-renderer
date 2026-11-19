@@ -754,6 +754,38 @@ const run = async (): Promise<void> => {
     );
 
     options.set(MAP3D_UNIT_SIZE_OPTION, 1);
+
+    // The Options window has it on a page that asked for the 3D map, and not on one that didn't.
+    const location = Object.getOwnPropertyDescriptor(globalThis, 'location'),
+      windowFor = (search: string): boolean => {
+        Object.defineProperty(globalThis, 'location', {
+          configurable: true,
+          value: { search },
+        });
+
+        const optionsWindow = new GameOptions(null),
+          found =
+            optionsWindow
+              .element()
+              .querySelector('input[type="range"][step="0.25"]') !== null;
+
+        optionsWindow.close();
+
+        return found;
+      },
+      inWindow = [windowFor('?3d=1'), windowFor('')];
+
+    if (location === undefined) {
+      delete (globalThis as { location?: unknown }).location;
+    } else {
+      Object.defineProperty(globalThis, 'location', location);
+    }
+
+    expect(
+      "the Options window has the 3D map's unit size where the page asked for the 3D map, and not otherwise",
+      inWindow,
+      [true, false]
+    );
   }
 
   // Zoomed about a point (#1101): the spot of the world under it stays there, within a whole scale and across one.

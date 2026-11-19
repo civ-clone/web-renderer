@@ -243,7 +243,7 @@ export const zoomRow = (
 };
 
 /**
- * How big the 3D map draws its units, under `?3d=1` only, while it's still being made (docs/3d-renderer.md §11): a
+ * How big the 3D map draws its units, under `?3d=1` only, while it's still being made (docs/3d-renderer.md §6.2): a
  *  slider from half life size to half as big again, and the size it's at. The map draws them again once it's let go.
  */
 export const unitSizeRow = (

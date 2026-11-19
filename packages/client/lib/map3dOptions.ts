@@ -1,4 +1,4 @@
-// What the 3D map is asked for with, and its options that the Options window shows (docs/3d-renderer.md §11), for the
+// What the 3D map is asked for with, and its options that the Options window shows (docs/3d-renderer.md §6.2), for the
 //  page and its menus alike. Imports nothing with state of its own.
 
 import parseBooleanParam from './parseBooleanParam';
@@ -24,5 +24,3 @@ export const unitSizeFor = (value: unknown): number =>
         )
       )
     : 1;
-
-export default map3dAsked;

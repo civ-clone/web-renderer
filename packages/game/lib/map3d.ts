@@ -256,7 +256,7 @@ export const makeMapView = (
       playerId: deps.playerId,
       squares: mapSquares,
       transport: deps.transport,
-      // An option of its own (docs/3d-renderer.md §11), changed in Options as the game goes on.
+      // An option of its own (docs/3d-renderer.md §6.2), changed in Options as the game goes on.
       unitSize: {
         get: (): number => unitSizeFor(options.get(MAP3D_UNIT_SIZE_OPTION, 1)),
         onChange: (changed: () => void): (() => void) =>
