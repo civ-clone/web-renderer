@@ -80,6 +80,9 @@ i18next.addResources('en', 'default', {
   'GameOptions.unit-marker-choice.both': 'Ring and blink',
   'GameOptions.unit-marker-choice.ring': 'Ring',
   'GameOptions.unit-marker-choice.theme': "The theme's way",
+  // How big the 3D map draws its units (`?3d=1`), and the size they're at: 1.25×.
+  'GameOptions.unit-size': 'Size of units on the 3D map',
+  'GameOptions.unit-size-value': '{{size}}×',
   // The map's zoom (#1063), and what it's at: 1.4×.
   'GameOptions.zoom': 'Zoom',
   'GameOptions.zoom-value': '{{zoom}}×',

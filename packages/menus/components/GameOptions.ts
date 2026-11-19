@@ -36,6 +36,12 @@ import {
   interfaceMode,
 } from '@civ-clone/ui-platform/lib/interfaceMode';
 import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
+import {
+  MAP3D_UNIT_SIZE_OPTION,
+  UNIT_SIZES,
+  map3dAsked,
+  unitSizeFor,
+} from '@civ-clone/ui-client/lib/map3dOptions';
 import { s } from '@dom111/element';
 import sendBuildPreferences from '@civ-clone/ui-client/lib/buildPreferences';
 import { soundChanged } from '@civ-clone/ui-assets/lib/soundGain';
@@ -237,6 +243,55 @@ export const zoomRow = (
 };
 
 /**
+ * How big the 3D map draws its units, under `?3d=1` only, while it's still being made (docs/3d-renderer.md §11): a
+ *  slider from half life size to half as big again, and the size it's at. The map draws them again once it's let go.
+ */
+export const unitSizeRow = (
+  search: string = globalThis.location?.search ?? ''
+): HTMLElement[] => {
+  if (!map3dAsked(search)) {
+    return [];
+  }
+
+  const slider = s<HTMLInputElement>(
+      `<input type="range" min="${UNIT_SIZES.min}" max="${UNIT_SIZES.max}" step="${UNIT_SIZES.step}">`
+    ),
+    // Hidden from a screen reader, which hears the slider's own `aria-valuetext`, as the zoom's is.
+    shown = s<HTMLOutputElement>('<output aria-hidden="true"></output>'),
+    show = (size: number): void => {
+      slider.style.setProperty(
+        '--fill',
+        String((size - UNIT_SIZES.min) / (UNIT_SIZES.max - UNIT_SIZES.min))
+      );
+      shown.textContent = t('GameOptions.unit-size-value', {
+        size: String(size),
+      });
+      slider.setAttribute('aria-valuetext', shown.textContent);
+    },
+    current = unitSizeFor(options.get(MAP3D_UNIT_SIZE_OPTION, 1));
+
+  slider.setAttribute('value', String(current));
+  slider.value = String(current);
+  show(current);
+
+  return [
+    s(
+      `<label>${t('GameOptions.unit-size')}</label>`,
+      h(slider, {
+        input: () => show(unitSizeFor(Number(slider.value))),
+        change: () => {
+          const size = unitSizeFor(Number(slider.value));
+
+          show(size);
+          options.set(MAP3D_UNIT_SIZE_OPTION, size);
+        },
+      }),
+      shown
+    ),
+  ];
+};
+
+/**
  * Interface (#735). Everything is put together for one interface as the page loads, so a change needs a new page: it
  *  loads at once from the main menu, and during a game the choice waits for the next load, with a hint saying so, as
  *  reloading would lose the game. Choosing also drops the visit's `?interface=`, which would otherwise outrank it.
@@ -409,6 +464,7 @@ export class GameOptions extends Window {
         ...zoomRow(portal, (stop): void => {
           stops.push(stop);
         }),
+        ...unitSizeRow(),
         s(
           `<label>${t('GameOptions.lock-vertical-edges')}</label>`,
           (() => {

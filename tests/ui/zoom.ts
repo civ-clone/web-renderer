@@ -23,7 +23,10 @@ import GameOptionsRegistry, {
   OptionStorage,
   instance as options,
 } from '@civ-clone/ui-platform/GameOptionsRegistry';
-import GameOptions from '@civ-clone/ui-menus/components/GameOptions';
+import GameOptions, {
+  unitSizeRow,
+} from '@civ-clone/ui-menus/components/GameOptions';
+import { MAP3D_UNIT_SIZE_OPTION } from '@civ-clone/ui-client/lib/map3dOptions';
 import GamePortal from '@civ-clone/ui-game/GamePortal';
 import MapPortal from '@civ-clone/ui-map/MapPortal';
 import { scaleOfZoom } from '@civ-clone/ui-map/components/Portal';
@@ -704,6 +707,53 @@ const run = async (): Promise<void> => {
     );
 
     optionsWindow.close();
+  }
+
+  // The size of the 3D map's units: only under `?3d=1`, from half life size to half as big again in quarters, at the
+  //  size kept, saying what it's at; let go, the size is kept, which the 3D map draws its units at.
+  {
+    const unitSizes = (search: string) =>
+        unitSizeRow(search).map(
+          (row) => row.querySelector('input') as HTMLInputElement
+        ),
+      [slider] = unitSizes('?3d=1'),
+      shown = () => slider?.parentElement?.querySelector('output')?.textContent,
+      atFirst = [
+        slider?.getAttribute('min'),
+        slider?.getAttribute('max'),
+        slider?.getAttribute('step'),
+        slider?.value,
+        shown(),
+      ];
+
+    slider!.value = '1.25';
+    slider!.dispatchEvent(new Event('input'));
+
+    const moving = [shown(), options.get(MAP3D_UNIT_SIZE_OPTION)];
+
+    slider!.dispatchEvent(new Event('change'));
+
+    expect(
+      "Options has the 3D map's unit size under ?3d=1 only, from half to half as big again in quarters, at life size, kept once it's let go",
+      [
+        unitSizes('').length,
+        unitSizes('?3d=0').length,
+        atFirst,
+        moving,
+        [shown(), options.get(MAP3D_UNIT_SIZE_OPTION)],
+        unitSizes('?3d=1')[0]?.value,
+      ],
+      [
+        0,
+        0,
+        ['0.5', '1.5', '0.25', '1', '1×'],
+        ['1.25×', 1],
+        ['1.25×', 1.25],
+        '1.25',
+      ]
+    );
+
+    options.set(MAP3D_UNIT_SIZE_OPTION, 1);
   }
 
   // Zoomed about a point (#1101): the spot of the world under it stays there, within a whole scale and across one.

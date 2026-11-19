@@ -42,6 +42,7 @@ import {
   mapTileset,
   zoomOption,
 } from '@civ-clone/ui-assets/lib/tilesets';
+import { MAP3D_UNIT_SIZE_OPTION } from '@civ-clone/ui-client/lib/map3dOptions';
 import {
   MAP3D_DISTANCE_OPTION,
   forgetMap3D,
@@ -807,6 +808,8 @@ expect(
         status: 'Fd',
         // Not seen to move yet: facing south.
         facing: 0,
+        // Life size, as no other size is chosen.
+        size: 1,
       },
     ]
   );
@@ -834,6 +837,26 @@ expect(
       null,
       [romaName, 'Phalanx', false],
     ]
+  );
+
+  // How big units are drawn, changed in Options as the game goes on: every square's unit drawn again at once, at the
+  //  nearest size a player could choose, and life size again after.
+  const sizeDrawn = (): number | undefined => markers.get(townKey)?.unit?.size,
+    sizesDrawn = [sizeDrawn()];
+
+  optionsRegistry.set(MAP3D_UNIT_SIZE_OPTION, 1.5);
+  sizesDrawn.push(sizeDrawn());
+  optionsRegistry.set(MAP3D_UNIT_SIZE_OPTION, 9);
+  sizesDrawn.push(sizeDrawn());
+  optionsRegistry.set(MAP3D_UNIT_SIZE_OPTION, 0.6);
+  sizesDrawn.push(sizeDrawn());
+  optionsRegistry.set(MAP3D_UNIT_SIZE_OPTION, 'big');
+  sizesDrawn.push(sizeDrawn());
+
+  expect(
+    'units are drawn at the size chosen in Options as soon as it changes, the nearest a player could choose, or life size',
+    sizesDrawn,
+    [1, 1.5, 1.5, 0.5, 1]
   );
 
   // The map's events: a unit faces the way it last moved, the short way round the world, and the way it attacked, and a
@@ -1240,6 +1263,18 @@ expect(
   view.dispose();
 
   expect('dispose lets the stage go', staged.splice(0), ['dispose']);
+
+  // Once taken down, a size chosen in Options draws nothing.
+  const markedWhenDown = JSON.stringify([...markers]);
+
+  optionsRegistry.set(MAP3D_UNIT_SIZE_OPTION, 1.5);
+
+  expect(
+    'nor is anything drawn again at a size chosen after',
+    [JSON.stringify([...markers]) === markedWhenDown, staged.splice(0)],
+    [true, []]
+  );
+  optionsRegistry.set(MAP3D_UNIT_SIZE_OPTION, 1);
 
   box.width = 900;
   window.dispatchEvent(new Event('resize'));

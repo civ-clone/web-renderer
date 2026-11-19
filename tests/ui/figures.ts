@@ -46,6 +46,7 @@ import {
   partMatrix,
 } from '@civ-clone/ui-map-3d/markers/figures';
 import { UnitMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
+import { UNIT_SIZES } from '@civ-clone/ui-client/lib/map3dOptions';
 import { landTypes, seaTypes } from '@civ-clone/ui-map-3d/debug/populate';
 
 const failures: string[] = [];
@@ -93,8 +94,8 @@ const ground = {
   wrapsV: false,
 };
 
-// How much bigger the map draws units than their figures are made.
-const DRAWN = 1.5;
+// The biggest the map draws units, as a player can choose: still within their squares.
+const DRAWN = UNIT_SIZES.max;
 
 const colours = ['#aa0000', '#ffffff'] as const,
   others = ['#0000aa', '#ffff00'] as const;
@@ -166,7 +167,7 @@ const faultsOf = (type: string, look: UnitLook): string[] => {
     faults.push(`${type}: not a colour and a normal for every point`);
   }
 
-  // Drawn half as big again: on its square, standing on it (a submarine a little under the water), no taller than
+  // Drawn as big as a player can choose: on its square, standing on it (a submarine a little under the water), no taller than
   //  half a square and no more than a third of one from its middle, so it stays in its square in front of a city.
   if (
     box === null ||
@@ -309,6 +310,7 @@ const unit = (type: string, more: Partial<UnitMarker> = {}): UnitMarker => ({
     health: null,
     status: null,
     facing: 0,
+    size: 1,
     ...more,
   }),
   drawn = (marker: UnitMarker): Object3D[] => {
@@ -354,15 +356,13 @@ const soldiers = drawn(unit('Spearman')),
   soldiersBox = soldiersFigure?.geometry.boundingBox;
 
 expect(
-  'a unit is one mesh, its figures half as big again on a stand on the ground, its owner’s flag over them, the same size on the screen however far away and never culled, and nothing else',
+  'a unit is one mesh, its figures life size on a stand on the ground, its owner’s flag over them, the same size on the screen however far away and never culled, and nothing else',
   [
     soldiersFigure?.geometry === kit.body(look('Spearman'), colours, false),
     pointsIn(soldiersFigure?.geometry) > pointsIn(spearmen),
     Math.round((soldiersBox?.min.y ?? 1) * 1000),
     Math.round(
-      ((soldiersBox?.max.y ?? 0) -
-        0.03 -
-        (spearmen.boundingBox?.max.y ?? 0) * 1.5) *
+      ((soldiersBox?.max.y ?? 0) - 0.03 - (spearmen.boundingBox?.max.y ?? 0)) *
         1000
     ),
     soldiersFlag?.material.sizeAttenuation === false &&
@@ -385,14 +385,45 @@ const tFigure = kit.figure(look('Trireme'), colours),
   tBody = figureOf(trireme)?.geometry;
 
 expect(
-  'a ship rides the water without a stand: only its figure, half as big again, on the water',
+  'a ship rides the water without a stand: only its figure, life size, on the water',
   [
     pointsIn(tBody) === pointsIn(tFigure),
     Math.round((tBody?.boundingBox?.min.y ?? 1) * 1000) ===
-      Math.round((tFigure.boundingBox?.min.y ?? 0) * 1.5 * 1000),
+      Math.round((tFigure.boundingBox?.min.y ?? 0) * 1000),
   ],
   [true, true]
 );
+
+// As big as the player chooses: the figures that many times life size, on the same stand, its flag over them, and a
+//  body made for each size.
+{
+  const big = drawn(unit('Spearman', { size: 1.5 })),
+    bigFigure = figureOf(big),
+    bigBox = bigFigure?.geometry.boundingBox,
+    bigShip = figureOf(drawn(unit('Trireme', { size: 0.5 })))?.geometry,
+    flagOf = (found: Object3D[]) =>
+      spriteOf(found, kit.plain(colours[0]))?.position.y ?? 0;
+
+  expect(
+    'a unit chosen bigger or smaller is drawn that many times life size on the same stand, its flag over it, a body for each size',
+    [
+      bigFigure?.geometry === kit.body(look('Spearman'), colours, false, 1.5),
+      bigFigure?.geometry !== soldiersFigure?.geometry,
+      Math.round((bigBox?.min.y ?? 1) * 1000),
+      Math.round(
+        ((bigBox?.max.y ?? 0) -
+          0.03 -
+          (spearmen.boundingBox?.max.y ?? 0) * 1.5) *
+          1000
+      ),
+      flagOf(big) > (bigBox?.max.y ?? Infinity),
+      flagOf(big) > flagOf(soldiers),
+      Math.round((bigShip?.boundingBox?.min.y ?? 1) * 1000) ===
+        Math.round((tFigure.boundingBox?.min.y ?? 0) * 0.5 * 1000),
+    ],
+    [true, true, 0, 0, true, true, true]
+  );
+}
 
 // A unit's body is made for each pair of colours, its stand in the second; a city's for each owner, its roofs in their
 //  first colour, and for each number of buildings, not each size.

@@ -83,6 +83,12 @@ export type MapView3DDeps = {
   // What a square does when clicked, held or right-clicked.
   squares: MapSquares;
   transport: Transport;
+  // How big units are drawn, as the player chose it (1 is life size), and what tells of a change, returning what stops
+  //  it. Life size where there's none.
+  unitSize?: {
+    get(): number;
+    onChange(changed: () => void): () => void;
+  };
   // The letter for what a busy unit is doing, as the 2D map writes it over the unit (the locale's), or nothing.
   unitStatus?: (unit: Unit) => string | null;
   // The player's world, made by the page, which tile patches are written to.
