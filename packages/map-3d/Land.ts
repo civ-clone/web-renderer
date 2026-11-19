@@ -327,7 +327,6 @@ export class Land {
   /** What's laid on the land of chunk `i` across and `j` down: its squares' roads, fields and the rest, or nothing. */
   overlayOf(i: number, j: number): OverlayMesh | null {
     const { stepsU, stepsV, spacingU, spacingV } = this.#grid,
-      { u: periodU, v: periodV } = this.layout.period(),
       squares = this.#chunksOfSquares().get(`${i},${j}`) ?? [],
       extentV = this.extentV(),
       // The land's heights at its points, each read once for the chunk.
@@ -341,22 +340,18 @@ export class Land {
           return [];
         }
 
-        // Its middle taken into the world's period, as its chunk is, and its neighbours with it, as they're the nearest.
+        // Where it is, as its marker is, even where that's at the world's edge (an odd row's last square, the last row
+        //  of a world that wraps over the poles): the chunk's drawn at every copy of the world, so its overlay lies
+        //  where it is in each, a chunk's corner or not. Its neighbours as the nearest copy of each.
         const [u, v] = this.layout.centre(x, y),
-          du = -periodU * Math.floor(u / periodU),
-          dv = periodV === null ? 0 : -periodV * Math.floor(v / periodV),
           place: OverlayPlace = {
-            centre: [u + du, v + dv],
-            toward: ([dx, dy]) => {
-              const [nu, nv] = this.layout.centre(x + dx, y + dy);
-
-              return [nu + du, nv + dv];
-            },
+            centre: [u, v],
+            toward: ([dx, dy]) => this.layout.centre(x + dx, y + dy),
             radius: this.#radius,
             inner: this.#inner,
             heightAt: (pu, pv) => this.surfaceAt(pu, pv, heights),
             seed: Math.imul(x, 73856093) ^ Math.imul(y, 19349663),
-            latitude: Math.min(1, Math.abs((2 * (v + dv)) / extentV - 1)),
+            latitude: Math.min(1, Math.abs((2 * v) / extentV - 1)),
           };
 
         return [{ overlay, place }];
@@ -372,19 +367,18 @@ export class Land {
     return this.#chunkOf(x, y);
   }
 
-  // The chunk the square at (`x`, `y`) has its middle in, by `i,j`.
+  // The chunk the square at (`x`, `y`) has its middle in, by `i,j`: one whose middle is on the world's edge (an odd
+  //  row's last square, the last row of a world that wraps over the poles) in the chunk beside it, not the first.
   #chunkOf(x: number, y: number): string {
     const { chunksU, chunksV, stepsU, stepsV, spacingU, spacingV } = this.#grid,
       [u, v] = this.layout.centre(x, y),
       i = Math.floor(u / (stepsU * spacingU)),
-      j = Math.floor(v / (stepsV * spacingV)),
-      wrapsV = this.layout.period().v !== null;
+      j = Math.floor(v / (stepsV * spacingV));
 
-    return `${((i % chunksU) + chunksU) % chunksU},${
-      wrapsV
-        ? ((j % chunksV) + chunksV) % chunksV
-        : Math.min(chunksV - 1, Math.max(0, j))
-    }`;
+    return `${Math.min(chunksU - 1, Math.max(0, i))},${Math.min(
+      chunksV - 1,
+      Math.max(0, j)
+    )}`;
   }
 
   // Each chunk's squares, by the chunk their middles are in: worked out once, as squares don't move.

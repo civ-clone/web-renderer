@@ -21,8 +21,10 @@ import {
   MeshStandardMaterial,
   Object3D,
   PerspectiveCamera,
+  Plane,
   SRGBColorSpace,
   Scene,
+  Vector3,
   WebGLRenderer,
 } from 'three';
 import { ChunkMesh } from './terrain/chunks';
@@ -163,7 +165,15 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
       polygonOffset: true,
       polygonOffsetFactor: -1,
       polygonOffsetUnits: -2,
+      // Its shadows clipped with it.
+      clipShadows: true,
     }),
+    // What's laid on the land stops where the land does past a pole the view's stopped at: the last row's fields and
+    //  roads on a staggered or hex world reach a little past it, where the land, the sea and the cloud stop.
+    poles = [
+      new Plane(new Vector3(0, 0, 1), 0),
+      new Plane(new Vector3(0, 0, -1), ground.rows * ground.spacingV),
+    ],
     markers = new Map<string, Placed>(),
     markersGroup = new Group(),
     kit = new MarkerKit(),
@@ -179,6 +189,8 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
     markerCopiesKey = '0,0';
 
   renderer.outputColorSpace = SRGBColorSpace;
+  // For what's laid on the land, to stop at a pole the view's stopped at.
+  renderer.localClippingEnabled = true;
   renderer.toneMapping = ACESFilmicToneMapping;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = PCFSoftShadowMap;
@@ -269,6 +281,7 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
     // Stopped at the poles: nothing past them, as the 2D map shows nothing past its locked edges.
     water.pastThePoles(seen.v !== null);
     clouds.pastThePoles(seen.v !== null);
+    overlayMaterial.clippingPlanes = seen.v === null ? poles : null;
 
     // The copies of the world the haze doesn't hide: when they change, every chunk is drawn at the new ones. And the
     //  markers', nearer.

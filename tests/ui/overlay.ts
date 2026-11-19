@@ -757,6 +757,28 @@ const landOf = (
   expect(`${topologyId}: a square’s fields lie inside it`, off.length, 0);
 });
 
+// On the grids that wrap over the poles, the last row's overlay lies where its square is, at the bottom of the world, as
+//  its marker does, not taken round to the top: with the poles locked, there's no copy to put it back.
+(['staggered-iso', 'hex-odd-r'] as TopologyId[]).forEach((topologyId) => {
+  const { land, laid, stage } = landOf(topologyId, 32, 16, (x, y) => ({
+      improvements: x === 9 && y === 15 ? ['Farmland'] : [],
+    })),
+    [, bottomRow] = land.layout.centre(9, 15);
+
+  land.queueAll(0, 0);
+  land.build(stage, null);
+
+  const rows = pointsOf(laid.get(land.overlayKeyOf(9, 15))!).map(
+    ([, , v]) => v
+  );
+
+  expect(
+    `${topologyId}: the last row’s overlay lies at the bottom, where its square is`,
+    [rows.length > 0, rows.every((v) => Math.abs(v - bottomRow) < 0.6)],
+    [true, true]
+  );
+});
+
 // What grows.
 const engineTerrains = new Set(Object.keys(Civ1Terrains));
 
