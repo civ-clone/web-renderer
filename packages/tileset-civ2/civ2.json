@@ -850,5 +850,11 @@
       "width": 0.5,
       "height": 0.625
     }
+  },
+  "ui": {
+    "citizen": {
+      "width": 15,
+      "step": 13
+    }
   }
 }

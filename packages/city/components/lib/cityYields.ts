@@ -17,6 +17,7 @@ import {
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import interfaceArt, {
   followInterfaceArt,
+  interfaceSprite,
   interfaceSpriteKey,
 } from '@civ-clone/ui-assets/lib/interfaceArt';
 import { installedTilesets } from '@civ-clone/ui-assets/lib/tilesets';
@@ -93,7 +94,8 @@ const renderCitizen = (
 
   // Drawn again when the sprites it would take change (`followInterfaceArt`), as the pixel art arrives in a Civ2 game.
   const draw = (): void => {
-    const interfaceKeys = sprites.map((sprite) => interfaceSpriteKey(sprite)),
+    const interfaceSprites = sprites.map((sprite) => interfaceSprite(sprite)),
+      interfaceKeys = interfaceSprites.map(({ key }) => key),
       keys = [...packKeys, ...interfaceKeys],
       signature = keys.join();
 
@@ -105,24 +107,33 @@ const renderCitizen = (
 
     assetStore
       .firstImported(keys)
-      .then((path) =>
-        assetStore
-          .shownAtURL(path, interfaceArt().ui.citizen.width)
-          .then((url) => {
-            if (shown !== signature) {
-              return;
-            }
+      .then((path) => {
+        // At the size of the set the face is drawn from (#1221): Civ2's people at Civ2's, not the interface's Civ1's.
+        //  The interface's art's where that set has gone since, as a pack removed while its faces are drawn.
+        const { width, step } = (
+          (packKeys.includes(path) ? peoplePack() : null) ??
+          interfaceSprites[interfaceKeys.indexOf(path)]?.tileset ??
+          interfaceArt()
+        ).ui.citizen;
 
-            citizen.classList.toggle(
-              'angry-fallback',
-              (sprites[0]?.includes('people_angry_') ?? false) &&
-                path !== interfaceKeys[0] &&
-                !packKeys.includes(path)
-            );
-            // Decorative: the population as a whole is summarised in words (#272).
-            citizen.replaceChildren(s(`<img src="${url}" alt="">`));
-          })
-      )
+        return assetStore.shownAtURL(path, width).then((url) => {
+          if (shown !== signature) {
+            return;
+          }
+
+          citizen.style.setProperty('--citizen-width', `${width}px`);
+          citizen.style.setProperty('--citizen-step', `${step}px`);
+
+          citizen.classList.toggle(
+            'angry-fallback',
+            (sprites[0]?.includes('people_angry_') ?? false) &&
+              path !== interfaceKeys[0] &&
+              !packKeys.includes(path)
+          );
+          // Decorative: the population as a whole is summarised in words (#272).
+          citizen.replaceChildren(s(`<img src="${url}" alt="">`));
+        });
+      })
       .catch((error) => console.error('Could not draw a citizen.', error));
   };
 

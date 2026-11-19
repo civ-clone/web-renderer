@@ -390,6 +390,26 @@ const run = async (): Promise<void> => {
     [pixelGold, true]
   );
 
+  // A face is shown at the size of the set it's drawn from (#1221): Civ1's pixel art at Civ1's, Civ2's at Civ2's.
+  const faceSize = () => [
+    (face as HTMLElement).style.getPropertyValue('--citizen-width'),
+    (face as HTMLElement).style.getPropertyValue('--citizen-step'),
+  ];
+
+  expect("the pixel art's face at Civ1's size", faceSize(), ['16px', '12px']);
+
+  const civ2Face = civ2Key('people/small/happy-male');
+
+  imported.add(civ2Face);
+  loaded(pixelGold, ...pixelFaces, civ2Face);
+  await settle();
+
+  expect(
+    "and Civ2's own, once imported, at Civ2's",
+    [src(face), ...faceSize()],
+    [civ2Face, '15px', '13px']
+  );
+
   // What's followed is let go once it's gone, and nothing is followed in a game without art of its own.
   const gc = runInNewContext('gc') as () => void,
     before = followerCount();

@@ -1,21 +1,32 @@
+// A unit a city supports, and what it costs the city (#1222): one cell, the unit's own box, with the costs in a row in
+//  its bottom-left corner, as the original drew them. Later in the page than the unit, so over it.
 .supported-unit {
-  position: relative;
+  display: inline-grid;
+  line-height: 0;
+  vertical-align: top;
 
-  .yield-icon {
-    position: absolute;
-    left: 2px;
-    bottom: 2px;
+  > canvas,
+  > .upkeep {
+    grid-area: 1 / 1;
+  }
 
-    &:nth-child(3) {
-      left: 8px;
+  > .upkeep {
+    align-self: end;
+    display: flex;
+    justify-self: start;
+    padding: 0 0 2px 2px;
+
+    &:empty {
+      display: none;
     }
 
-    &:nth-child(4) {
-      left: 14px;
-    }
+    // Overlapping, as the original's, so a costly unit's still fit its box.
+    .yield-icon {
+      padding: 0;
 
-    &:nth-child(5) {
-      left: 20px;
+      & + .yield-icon {
+        margin-left: calc(var(--tileset-icon) * -0.5);
+      }
     }
   }
 }

@@ -15,16 +15,20 @@ export class SupportedUnit extends Element {
       'MilitaryUnhappiness',
     ]
   ) {
+    // The unit, then what it costs the city in a row of its own over the unit's box, in its corner (#1222).
     super(
       s(
         '<span class="supported-unit"></span>',
         new Unit(unit),
-        ...city.yields
-          .filter((cityYield): cityYield is YieldWithUnit =>
-            yieldsToInclude.includes(cityYield._)
-          )
-          .filter((cityYield) => cityYield.unit.id === unit.id)
-          .flatMap((cityYield) => yieldImages(cityYield, true))
+        s(
+          '<span class="upkeep"></span>',
+          ...city.yields
+            .filter((cityYield): cityYield is YieldWithUnit =>
+              yieldsToInclude.includes(cityYield._)
+            )
+            .filter((cityYield) => cityYield.unit.id === unit.id)
+            .flatMap((cityYield) => yieldImages(cityYield, true))
+        )
       )
     );
   }

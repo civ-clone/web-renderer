@@ -54,8 +54,8 @@ import { t } from 'i18next';
 import unitLabel from '@civ-clone/ui-hud/lib/unitLabel';
 
 // The city screen under the new interface (#746): a window over the map, with a strip across the top for the city's
-//  size, growth and citizens, three columns below it (what the city makes, its map, what it's building and has built)
-//  and a strip along the bottom for its units, with the way to the other cities in the window's footer.
+//  size, growth and citizens, and three columns below it (what the city makes and its units, #1224, its map, what it's
+//  building and has built), with the way to the other cities in the window's footer.
 
 const section = (heading: string, ...content: (Node | string)[]): HTMLElement =>
   s(
@@ -518,9 +518,10 @@ const renderCityButtons = ({ step, rename }: CityScreenContext): HTMLElement =>
     })
   );
 
-// The city's map at twice the size it's drawn at (its canvas is drawn at the map's scale, the sharpest at its size),
-//  or a larger pack's at its own size (Civ2's, #97).
-const renderDoubledMap = (
+// The city's map at the map's zoom, so its squares are the size they are on the map (#1224), and never smaller than
+//  twice its size, or a larger pack's own size (Civ2's, #97), however far the map is zoomed out. Its canvas is drawn
+//  at the map's scale, the sharpest at its size. No wider than its column, which the stylesheet keeps.
+const renderCityMap = (
   city: CityData,
   { portal, transport, readOnly }: CityScreenContext
 ): Node => {
@@ -530,7 +531,9 @@ const renderDoubledMap = (
     tileset = mapTileset(city.player.world.topologyId);
 
   if (canvas !== null) {
-    canvas.style.width = `${(canvas.width / scale) * shownScale(2, tileset)}px`;
+    canvas.style.width = `${
+      (canvas.width / scale) * Math.max(portal.zoom(), shownScale(2, tileset))
+    }px`;
   }
 
   return map;
@@ -550,12 +553,10 @@ export const cityLayout: CityLayout = {
             t('CityWindow.yields'),
             renderYields(city, { labelled: true })
           ),
-          renderTradeRoutes(city)
+          renderTradeRoutes(city),
+          renderUnits(city, context)
         ),
-        s(
-          '<div class="ui-city-centre"></div>',
-          renderDoubledMap(city, context)
-        ),
+        s('<div class="ui-city-centre"></div>', renderCityMap(city, context)),
         s(
           '<div class="ui-city-right"></div>',
           renderProduction(city, context),
@@ -563,7 +564,6 @@ export const cityLayout: CityLayout = {
           renderWonders(city, context)
         )
       ),
-      renderUnits(city, context),
       context.readOnly ? '' : renderCityButtons(context)
     ),
   window: {

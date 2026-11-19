@@ -402,6 +402,15 @@ const run = async (): Promise<void> => {
   const portraits = qa('.ui-city-units-strip .ui-city-unit');
 
   expect(
+    'the units are under the yields, in the left column (#1224)',
+    [
+      q('.ui-city-left > .ui-city-units-strip') !== null,
+      q('.ui-city > .ui-city-units-strip'),
+    ],
+    [true, null]
+  );
+
+  expect(
     'the units in the city, named, the player’s own a button',
     Array.from(portraits).map((portrait) => [
       portrait.tagName.toLowerCase(),
@@ -524,6 +533,42 @@ const run = async (): Promise<void> => {
   );
 
   investigated.close();
+
+  // A supported unit's upkeep sits in its own box, with the unit (#1222): a row of its own beside the unit, one a unit.
+  const supported = unit('Unit-4', player),
+    supporting = openCity(
+      cityData('City-S', 'Lagash', {
+        units: [supported, unit('Unit-5', player)],
+        yields: [
+          {
+            _: 'UnitSupportProduction',
+            __: ['UnitSupportProduction', 'Yield'],
+            value: -1,
+            unit: supported,
+          },
+        ],
+      }),
+      portal,
+      transport
+    );
+
+  await settle();
+
+  expect(
+    'each supported unit holds its unit and its own upkeep, and only its own',
+    [...supporting.element().querySelectorAll('.supported-unit')].map(
+      (element) => [
+        [...element.children].map((child) => child.tagName.toLowerCase()),
+        element.querySelectorAll(':scope > .upkeep > .yield-icon').length,
+      ]
+    ),
+    [
+      [['canvas', 'span'], 1],
+      [['canvas', 'span'], 0],
+    ]
+  );
+
+  supporting.close();
 
   // A city with Wonders and no improvements lists them, saying it has no improvements; one with neither says only that.
   const listed = (wonders: string[]) => {
@@ -1684,11 +1729,16 @@ const run = async (): Promise<void> => {
     );
 
     expect(
-      "the modern screen's, sized by its own CSS, is drawn at the map's scale and shown the same size at any zoom",
-      [mapOf(modernCityLayout, 2, 1.4), mapOf(modernCityLayout, 3, 2.5)],
+      "the modern screen's is drawn at the map's scale and shown at its zoom (#1224), at least twice its size",
+      [
+        mapOf(modernCityLayout, 2, 1.4),
+        mapOf(modernCityLayout, 3, 2.5),
+        mapOf(modernCityLayout, 3, 3),
+      ],
       [
         [width * 2, shown],
-        [width * 3, shown],
+        [width * 3, `${width * 2.5}px`],
+        [width * 3, `${width * 3}px`],
       ]
     );
   }
