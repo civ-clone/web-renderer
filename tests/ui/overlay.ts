@@ -13,7 +13,7 @@
 
 import * as Civ1Features from '@civ-clone/civ1-world/TerrainFeatures';
 import * as Civ2Features from '@civ-clone/civ2-world/TerrainFeatures';
-import { Color } from 'three';
+import { Color, Vector3 } from 'three';
 import { Tile } from '@civ-clone/ui-protocol/types';
 import {
   specialLook,
@@ -29,7 +29,7 @@ import overlayMesh, {
   layOverlay,
   soup,
 } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
-import { Stage } from '@civ-clone/ui-map-3d/stage';
+import { Stage, overlayCopies, polesAt } from '@civ-clone/ui-map-3d/stage';
 import { TopologyId } from '@civ-clone/ui-protocol/topology';
 import Land from '@civ-clone/ui-map-3d/Land';
 import { ChunkMesh } from '@civ-clone/ui-map-3d/terrain/chunks';
@@ -382,17 +382,10 @@ expect(
   []
 );
 
-// On a square with a road through it east to west, a mine, Coal and a hut: none of them on the road, nor on each other,
-//  on 400 squares, as where they stand is seeded from the square.
-const crowded = overlayFor(
-    square(['Road', 'Mine'], {
-      terrain: 'Hills',
-      features: ['Coal'],
-      hut: true,
-    }),
-    [neighbour([1, 0], ['Road']), neighbour([-1, 0], ['Road'])]
-  )!,
-  segmentGap = (
+// What stands on a square (a mine, a special, a hut) keeps clear of the lines across it, its roads and a fortress's
+//  walls, by half a road's width and a little more than its room, and of each other and the unit's stand by their room,
+//  where there's room for it: on 400 squares each, as where they stand is seeded from the square.
+const segmentGap = (
     [u, v]: readonly [number, number],
     [a, b]: readonly [readonly [number, number], readonly [number, number]]
   ): number => {
@@ -409,29 +402,102 @@ const crowded = overlayFor(
 
     return Math.hypot(u - (a[0] + du * t), v - (a[1] + dv * t));
   },
-  clashes = Array.from({ length: 400 }, (_, at) => {
-    const { taken, lines } = layOverlay(
-        crowded,
-        place(at % 40, Math.floor(at / 40)),
-        soup()
-      ),
-      // The mine, the special and the hut: the first three taken, before what grows.
-      things = taken.slice(0, 3);
+  roadsTo = (offsets: [number, number][]): OverlayNeighbour[] =>
+    offsets.map((offset) => neighbour(offset, ['Road'])),
+  // Of the first `count` things that stand on `overlay`'s squares: the least they have to spare by the rule above, and
+  //  the least gap between one's middle and a line's, less its room.
+  spareOn = (
+    overlay: SquareOverlay,
+    count: number
+  ): { spare: number; offTheLines: number } => {
+    let spare = Infinity,
+      offTheLines = Infinity;
 
-    return things.some(
-      ([u, v, room], index) =>
-        lines.some((line) => segmentGap([u, v], line) < 0.035 + room * 0.5) ||
-        things.some(
-          ([ou, ov, other], otherIndex) =>
-            otherIndex > index && Math.hypot(u - ou, v - ov) < room + other
-        )
-    );
-  }).filter(Boolean).length;
+    for (let at = 0; at < 400; at++) {
+      const where = place(at % 40, Math.floor(at / 40)),
+        { taken, lines } = layOverlay(overlay, where, soup()),
+        things = taken.slice(0, count);
+
+      things.forEach(([u, v, room], index) => {
+        const [cu, cv] = where.centre,
+          gaps = lines.map((line) => segmentGap([u, v], line) - room);
+
+        offTheLines = Math.min(offTheLines, ...gaps);
+        spare = Math.min(
+          spare,
+          ...gaps.map((gap) => gap - 0.05),
+          Math.hypot(u - cu, v - cv) - 0.22 - room,
+          ...things
+            .filter((_, other) => other !== index)
+            .map(([ou, ov, other]) => Math.hypot(u - ou, v - ov) - room - other)
+        );
+      });
+    }
+
+    return { spare, offTheLines };
+  },
+  hillWith = (
+    improvements: string[],
+    hut: boolean
+  ): ReturnType<typeof square> =>
+    square(['Mine', ...improvements], {
+      terrain: 'Hills',
+      features: ['Coal'],
+      hut,
+    }),
+  roadAcross = spareOn(
+    overlayFor(
+      hillWith(['Road'], true),
+      roadsTo([
+        [1, 0],
+        [-1, 0],
+      ])
+    )!,
+    3
+  ),
+  fourWays = spareOn(
+    overlayFor(
+      hillWith(['Road'], true),
+      roadsTo([
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ])
+    )!,
+    3
+  ),
+  everyWay = spareOn(
+    overlayFor(
+      hillWith(['Road'], true),
+      roadsTo([
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+        [1, 1],
+        [1, -1],
+        [-1, 1],
+        [-1, -1],
+      ])
+    )!,
+    3
+  ),
+  walled = spareOn(overlayFor(hillWith(['Fortress'], false), [])!, 2);
 
 expect(
-  'a mine, a special and a hut stand off the road and apart, wherever the square',
-  clashes,
-  0
+  'a mine, a special and a hut keep clear of the road, of each other and of the stand, with a road across a square or four ways',
+  [roadAcross.spare >= 0, fourWays.spare >= 0],
+  [true, true]
+);
+
+// Where there isn't room, with roads all eight ways or inside a fortress's walls, each stands where it has the most:
+//  never more than a little inside its room of a road's or a wall's middle, where the first place it tried would stand
+//  on them.
+expect(
+  'with roads every way, or in a fortress, a mine, a special and a hut stand where they have most room, off the roads and walls',
+  [everyWay.offTheLines > -0.02, walled.offTheLines > -0.02],
+  [true, true]
 );
 
 const standing = overlayFor(
@@ -891,27 +957,214 @@ const landOf = (
   expect(`${topologyId}: a square’s fields lie inside it`, off.length, 0);
 });
 
-// On the grids that wrap over the poles, the last row's overlay lies where its square is, at the bottom of the world, as
-//  its marker does, not taken round to the top: with the poles locked, there's no copy to put it back.
+// On the grids whose edges cut squares (an odd row's last square, the last row of a world that wraps over the poles), a
+//  square's overlay lies where its square is, as its marker does, not taken round to the other side: with the poles
+//  stopped at, there'd be no copy there to bring it back.
 (['staggered-iso', 'hex-odd-r'] as TopologyId[]).forEach((topologyId) => {
-  const { land, laid, stage } = landOf(topologyId, 32, 16, (x, y) => ({
-      improvements: x === 9 && y === 15 ? ['Farmland'] : [],
-    })),
-    [, bottomRow] = land.layout.centre(9, 15);
+  const edges: [number, number][] = [
+      [9, 15],
+      [31, 15],
+      [31, 7],
+    ],
+    { land, laid, stage } = landOf(topologyId, 32, 16, (x, y) => ({
+      improvements: edges.some(([ex, ey]) => ex === x && ey === y)
+        ? ['Farmland']
+        : [],
+    }));
 
   land.queueAll(0, 0);
   land.build(stage, null);
 
-  const rows = pointsOf(laid.get(land.overlayKeyOf(9, 15))!).map(
-    ([, , v]) => v
-  );
-
   expect(
-    `${topologyId}: the last row’s overlay lies at the bottom, where its square is`,
-    [rows.length > 0, rows.every((v) => Math.abs(v - bottomRow) < 0.6)],
-    [true, true]
+    `${topologyId}: the overlay of a square on the world’s edge lies where its square is`,
+    edges.map(([x, y]) => {
+      const [cu, cv] = land.layout.centre(x, y),
+        points = pointsOf(laid.get(land.overlayKeyOf(x, y))!).filter(
+          ([u, , v]) => Math.hypot(u - cu, v - cv) < 0.6
+        );
+
+      return points.length > 0;
+    }),
+    edges.map(() => true)
   );
 });
+
+// A square changed while its chunk's overlay is being made, a square a frame: one the make has passed has it begun
+//  again; one it hasn't reached yet is read as it is when it gets there, without beginning again. Either way the chunk
+//  ends as making it in one go would, with nothing left to make.
+{
+  const width = 32,
+    height = 16,
+    remade = (change: [number, number]) => {
+      const { tiles, land, laid, stage } = landOf(
+          'square',
+          width,
+          height,
+          () => ({ terrain: 'Hills', improvements: ['Road'] })
+        ),
+        key = land.overlayKeyOf(0, 0),
+        build = ([x, y]: [number, number], improvement: string): void => {
+          (tiles[y * width + x]!.improvements as { _: string }[]).push({
+            _: improvement,
+          });
+          land.changed([[x, y]], 0, 0);
+        },
+        squares = tiles.filter(
+          ({ x, y }) => land.overlayKeyOf(x, y) === key
+        ).length;
+
+      land.queueAll(0, 0);
+      land.build(stage, null);
+      laid.clear();
+
+      // Its first square made, and no more.
+      build([0, 0], 'Mine');
+      land.build(stage, 0);
+      build(change, 'Irrigation');
+
+      let frames = 1;
+
+      while (!laid.has(key) && frames < 5000) {
+        land.build(stage, 0);
+        frames++;
+      }
+
+      const once = landOf('square', width, height, (x, y) => ({
+        terrain: 'Hills',
+        improvements: (
+          tiles[y * width + x]!.improvements as { _: string }[]
+        ).map(({ _ }) => _),
+      }));
+
+      once.land.queueAll(0, 0);
+      once.land.build(once.stage, null);
+
+      return [
+        land.overlayKeyOf(...change) === key,
+        frames - squares,
+        Array.from(laid.get(key)?.positions ?? []).join() ===
+          Array.from(once.laid.get(key)?.positions ?? []).join(),
+        land.overlaysPending(),
+      ];
+    },
+    // The chunk's last square, the last its make reaches.
+    last = (() => {
+      const { land } = landOf('square', width, height, () => ({}));
+      let found: [number, number] = [0, 0];
+
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          if (land.overlayKeyOf(x, y) === land.overlayKeyOf(0, 0)) {
+            found = [x, y];
+          }
+        }
+      }
+
+      return found;
+    })();
+
+  expect(
+    'a square changed mid-make: begun again if it was passed, not if it wasn’t reached; ending as made in one go',
+    [remade([0, 0]), remade(last)],
+    [
+      [true, 1, true, 0],
+      [true, 0, true, 0],
+    ]
+  );
+}
+
+// The poles' planes keep what lies between them, and what's laid past a pole is drawn a period round as well when
+//  they're stopped at, so on every grid that wraps over them, all that's laid on the first and last rows is drawn
+//  somewhere between them: where the land is theirs.
+expect(
+  'the poles’ planes keep what lies between them, and nothing past',
+  polesAt(10).map((plane) =>
+    [-0.01, 0.01, 9.99, 10.01].map(
+      (v) => plane.distanceToPoint(new Vector3(0, 0, v)) >= 0
+    )
+  ),
+  [
+    [false, true, true, true],
+    [true, true, true, false],
+  ]
+);
+
+expect(
+  'what reaches past a stopped pole is drawn a period round as well, and only then',
+  [
+    overlayCopies([[0, 0]], [1, 9], 10, 10, true),
+    overlayCopies([[0, 0]], [8, 10.4], 10, 10, true),
+    overlayCopies(
+      [
+        [0, 0],
+        [20, 0],
+      ],
+      [-0.4, 3],
+      10,
+      10,
+      true
+    ),
+    overlayCopies([[0, 0]], [8, 10.4], 10, 10, false),
+    overlayCopies([[0, 0]], [8, 10.4], 10, null, true),
+  ],
+  [
+    [[0, 0]],
+    [
+      [0, 0],
+      [0, -10],
+    ],
+    [
+      [0, 0],
+      [0, 10],
+      [20, 0],
+      [20, 10],
+    ],
+    [[0, 0]],
+    [[0, 0]],
+  ]
+);
+
+(['square', 'staggered-iso', 'hex-odd-r'] as TopologyId[]).forEach(
+  (topologyId) => {
+    const width = 32,
+      height = 16,
+      { land, laid, stage } = landOf(topologyId, width, height, (x, y) => ({
+        terrain: 'Hills',
+        improvements: y === 0 || y === height - 1 ? ['Farmland', 'Mine'] : [],
+      })),
+      extent = land.extentV(),
+      period = land.layout.period().v,
+      poles = polesAt(extent),
+      between = (u: number, y: number, v: number): boolean =>
+        poles.every(
+          (plane) => plane.distanceToPoint(new Vector3(u, y, v)) >= -1e-9
+        );
+
+    land.queueAll(0, 0);
+    land.build(stage, null);
+
+    const lost = [...laid.values()].flatMap((mesh) => {
+      if (mesh === null) {
+        return [];
+      }
+
+      const points = pointsOf(mesh),
+        rows = points.map(([, , v]) => v),
+        span: [number, number] = [Math.min(...rows), Math.max(...rows)],
+        drawnAt = overlayCopies([[0, 0]], span, extent, period, true);
+
+      return points.filter(
+        ([u, y, v]) => !drawnAt.some(([, dv]) => between(u, y, v + dv))
+      );
+    });
+
+    expect(
+      `${topologyId}: with the poles stopped at, all that’s laid on the first and last rows is drawn between them`,
+      [period !== null, lost.length],
+      [true, 0]
+    );
+  }
+);
 
 // What grows.
 const engineTerrains = new Set(Object.keys(Civ1Terrains));

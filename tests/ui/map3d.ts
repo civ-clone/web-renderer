@@ -52,7 +52,8 @@ import {
 } from '@civ-clone/ui-game/lib/map3d';
 import { Stage } from '@civ-clone/ui-map-3d/stage';
 import markerFor, { TileMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
-import overlayFor from '@civ-clone/ui-map-3d/overlay/overlayFor';
+import { OverlayMesh } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
+import { Color } from 'three';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { unitStatus } from '@civ-clone/ui-assets/lib/renderUnit';
 import { setBuild } from '@civ-clone/ui-client/lib/build';
@@ -173,8 +174,8 @@ const staged: string[] = [],
   seenDown: (number | null | undefined)[] = [],
   // Every chunk of land built, in order, again or not.
   chunkBuilds: string[] = [],
-  // What's laid on the land of each chunk made since, by `i,j`: how many numbers its points take, or 0 for nothing.
-  overlaysSet = new Map<string, number>(),
+  // What's laid on the land of each chunk made since, by `i,j`, or nothing.
+  overlaysSet = new Map<string, OverlayMesh | null>(),
   // What's marked on each square, by `x,y`.
   markers = new Map<string, TileMarker>(),
   fakeStage = (): Stage => ({
@@ -185,11 +186,7 @@ const staged: string[] = [],
       chunksSet.add(`${i},${j}`);
       chunkBuilds.push(`${i},${j}`);
     },
-    setOverlay: (i, j, mesh) =>
-      void overlaysSet.set(
-        `${i},${j}`,
-        mesh === null ? 0 : mesh.positions.length
-      ),
+    setOverlay: (i, j, mesh) => void overlaysSet.set(`${i},${j}`, mesh),
     setMarker: (key, at, marker) =>
       void (marker === null ? markers.delete(key) : markers.set(key, marker)),
     view: (orbit, height, period) => {
@@ -917,15 +914,51 @@ expect(
   view.releaseTiles();
   view.flush();
 
+  // The points laid within `reach` of a square's middle, and whether any is in `colour`.
+  const laidNear = (
+    tile: Tile,
+    reach: number
+  ): { points: number; coloured: (colour: string) => boolean } => {
+    const mesh = overlaysSet.get(view.land().overlayKeyOf(tile.x, tile.y)),
+      [cu, cv] = view.land().layout.centre(tile.x, tile.y),
+      near: number[] = [];
+
+    for (let at = 0; mesh && at < mesh.positions.length; at += 3) {
+      if (
+        Math.hypot(
+          mesh.positions[at]! + mesh.u - cu,
+          mesh.positions[at + 2]! + mesh.v - cv
+        ) < reach
+      ) {
+        near.push(at);
+      }
+    }
+
+    return {
+      points: near.length,
+      coloured: (colour) => {
+        const { r, g, b } = new Color(colour);
+
+        return near.some(
+          (at) =>
+            Math.abs(mesh!.colours[at]! - r) < 1e-4 &&
+            Math.abs(mesh!.colours[at + 1]! - g) < 1e-4 &&
+            Math.abs(mesh!.colours[at + 2]! - b) < 1e-4
+        );
+      },
+    };
+  };
+
   expect(
     'a road built: what’s laid on its chunk made again, with the road, and no land built; none on a city’s lot',
     [
-      (overlaysSet.get(view.land().overlayKeyOf(beside.x, beside.y)) ?? 0) > 0,
+      overlaysSet.has(view.land().overlayKeyOf(beside.x, beside.y)),
+      laidNear(beside, 0.3).coloured('#8c7a58'),
       view.land().overlaysPending(),
       chunkBuilds.length === landBuilt,
-      view.land().overlayOf(0, 0) !== null && overlayFor(town, []) === null,
+      laidNear(town, 0.3).points,
     ],
-    [true, 0, true, true]
+    [true, true, 0, true, 0]
   );
 
   staged.splice(0);

@@ -110,6 +110,12 @@ const SPOTS = {
   special: (index: number): [number, number] => [index + 1, 0.72],
 } as const;
 
+// What stands on a square keeps this far, and its room, from the middle of its lines (half a road's width, and a
+//  little), and from the middle of the square (the unit's stand, and a little); and how many angles round a claim tries.
+const LINE_CLEAR = 0.05,
+  STAND_CLEAR = 0.22,
+  CLAIM_ANGLES = 72;
+
 // A seeded fraction, the `n`th for a square's `seed`.
 const fraction = (seed: number, n: number): number => {
   let h = Math.imul(seed ^ Math.imul(n + 1, 0x9e3779b1), 0x85ebca6b);
@@ -362,49 +368,65 @@ class Layer {
   readonly lines: [readonly [number, number], readonly [number, number]][] = [];
   readonly taken: [number, number, number][] = [];
 
-  /** Whether (`u`, `v`) has `room` clear of the square's lines and of what stands there already. */
+  /**
+   * How much more than it needs something taking `room` at (`u`, `v`) has clear: of the square's lines, of what stands
+   *  there already, and of the unit's stand at its middle, the least of them. Less than none where it hasn't enough.
+   */
+  clearance(u: number, v: number, room: number): number {
+    const [cu, cv] = this.place.centre;
+    let least = Math.hypot(u - cu, v - cv) - STAND_CLEAR - room;
+
+    this.lines.forEach(([a, b]) => {
+      least = Math.min(least, distanceTo(u, v, a, b) - LINE_CLEAR - room);
+    });
+    this.taken.forEach(([tu, tv, other]) => {
+      least = Math.min(least, Math.hypot(u - tu, v - tv) - other - room);
+    });
+
+    return least;
+  }
+
+  /** Whether (`u`, `v`) has `room` clear of the square's lines, of what stands there already, and of the stand. */
   hasRoom(u: number, v: number, room: number): boolean {
-    return (
-      this.lines.every(([a, b]) => clearOf(u, v, a, b, 0.05 + room)) &&
-      this.taken.every(
-        ([tu, tv, other]) => Math.hypot(u - tu, v - tv) >= other + room
-      )
-    );
+    return this.clearance(u, v, room) >= 0;
   }
 
   /**
-   * A place for something taking `room`, `distance` of the square's reach from its middle (or a little nearer, if
-   *  that's full), at the first of 24 angles round from its `n`th seeded one with room for it (that one, if none has),
-   *  taken for it.
+   * A place for something taking `room`, about `distance` of the square's reach from its middle, taken for it: the
+   *  first with room for it of 72 angles round from its `n`th seeded one, at that distance, then a little nearer, then a
+   *  little further. Where none has room (a fortress's walls, or roads every way), the one with the most.
    */
   claim(n: number, distance: number, room: number): [number, number] {
     const first = fraction(this.place.seed, n) * Math.PI * 2,
-      [u, v] = this.place.centre,
-      around = (k: number, out: number): [number, number] => {
-        const angle = first + (k / 24) * Math.PI * 2;
+      [u, v] = this.place.centre;
+    let best: [number, number] = [u, v],
+      most = -Infinity;
 
-        return [
-          u + Math.cos(angle) * out * this.place.radius,
-          v + Math.sin(angle) * out * this.place.radius,
-        ];
-      };
-    let chosen: [number, number] | null = null;
+    for (const out of [distance, distance * 0.88, distance * 1.1]) {
+      for (let k = 0; k < CLAIM_ANGLES; k++) {
+        const angle = first + (k / CLAIM_ANGLES) * Math.PI * 2,
+          at: [number, number] = [
+            u + Math.cos(angle) * out * this.place.radius,
+            v + Math.sin(angle) * out * this.place.radius,
+          ],
+          clear = this.clearance(at[0], at[1], room);
 
-    for (const out of [distance, distance * 0.88]) {
-      for (let k = 0; k < 24 && chosen === null; k++) {
-        const at = around(k, out);
+        if (clear >= 0) {
+          this.taken.push([at[0], at[1], room]);
 
-        if (this.hasRoom(at[0], at[1], room)) {
-          chosen = at;
+          return at;
+        }
+
+        if (clear > most) {
+          best = at;
+          most = clear;
         }
       }
     }
 
-    const at = chosen ?? around(0, distance);
+    this.taken.push([best[0], best[1], room]);
 
-    this.taken.push([at[0], at[1], room]);
-
-    return at;
+    return best;
   }
 }
 
@@ -979,14 +1001,13 @@ const grow = (
   }
 };
 
-// Whether the point (`u`, `v`) is at least `away` from the line from `a` to `b`.
-const clearOf = (
+// How far the point (`u`, `v`) is from the line from `a` to `b`.
+const distanceTo = (
   u: number,
   v: number,
   a: readonly [number, number],
-  b: readonly [number, number],
-  away: number
-): boolean => {
+  b: readonly [number, number]
+): number => {
   const du = b[0] - a[0],
     dv = b[1] - a[1],
     length = du * du + dv * dv,
@@ -998,7 +1019,7 @@ const clearOf = (
             Math.min(1, ((u - a[0]) * du + (v - a[1]) * dv) / length)
           );
 
-  return Math.hypot(u - (a[0] + du * t), v - (a[1] + dv * t)) >= away;
+  return Math.hypot(u - (a[0] + du * t), v - (a[1] + dv * t));
 };
 
 // What grows on the square, each where it has room: clear of the unit's stand at its middle, its roads, its mine, hut
@@ -1010,11 +1031,7 @@ const plants = (layer: Layer, overlay: SquareOverlay): void => {
     return;
   }
 
-  const { centre, radius, seed, latitude } = layer.place,
-    // Clear of the unit's stand at the middle, too.
-    hasRoom = (u: number, v: number, room: number): boolean =>
-      Math.hypot(u - centre[0], v - centre[1]) >= 0.22 + room &&
-      layer.hasRoom(u, v, room);
+  const { centre, radius, seed, latitude } = layer.place;
 
   growth.plants.forEach((plant, which) => {
     for (let index = 0; index < plant.count; index++) {
@@ -1038,7 +1055,7 @@ const plants = (layer: Layer, overlay: SquareOverlay): void => {
           u = centre[0] + Math.cos(angle) * out,
           v = centre[1] + Math.sin(angle) * out;
 
-        if (hasRoom(u, v, room)) {
+        if (layer.hasRoom(u, v, room)) {
           grow(layer, plant, kind, u, v, size, angle);
           layer.taken.push([u, v, room]);
           break;

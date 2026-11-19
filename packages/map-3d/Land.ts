@@ -31,6 +31,16 @@ import overlayMesh, {
   soup,
 } from './overlay/overlayMesh';
 
+// A chunk's overlay being made a square at a time: which chunk, its squares, how many are made, what's laid so far,
+//  and the land's heights read for it.
+type Making = {
+  key: string;
+  squares: [number, number][];
+  done: number;
+  laid: Soup;
+  heights: Map<string, number>;
+};
+
 export class Land {
   readonly layout: GroundLayout;
   #relief: ReliefMap;
@@ -43,13 +53,7 @@ export class Land {
   // The chunks whose overlays are to be made again, and which squares' middles each has, worked out once.
   #overlaysDue = new Set<string>();
   // The chunk whose overlay's being made, a few squares a frame: which, its squares, how many are laid, and what so far.
-  #making: {
-    key: string;
-    squares: [number, number][];
-    done: number;
-    laid: Soup;
-    heights: Map<string, number>;
-  } | null = null;
+  #making: Making | null = null;
   #squaresByChunk: Map<string, [number, number][]> | null = null;
   // What was last laid on each square, by `x,y`, as `overlayFor` said: a chunk's made again only when one changes.
   #laid = new Map<string, string>();
@@ -242,8 +246,12 @@ export class Land {
     ).forEach(([x, y]) => {
       const chunk = this.#chunkOf(x, y);
 
-      // Its chunk's to be made again anyway: no need to look.
-      if (this.#overlaysDue.has(chunk)) {
+      // Its chunk's to be made again anyway, or it's being made and hasn't reached this square, which it'll read as it
+      //  is now: no need to look.
+      if (
+        this.#overlaysDue.has(chunk) ||
+        (this.#making?.key === chunk && !this.#reached(this.#making, x, y))
+      ) {
         return;
       }
 
@@ -285,7 +293,17 @@ export class Land {
 
   /** How many chunks wait to have what's laid on them made again, one being made among them. */
   overlaysPending(): number {
-    return this.#overlaysDue.size + (this.#making === null ? 0 : 1);
+    return (
+      this.#overlaysDue.size +
+      (this.#making === null || this.#overlaysDue.has(this.#making.key) ? 0 : 1)
+    );
+  }
+
+  // Whether the chunk being made has made the square at (`x`, `y`) yet.
+  #reached(making: Making, x: number, y: number): boolean {
+    return making.squares
+      .slice(0, making.done)
+      .some(([sx, sy]) => sx === x && sy === y);
   }
 
   /**
