@@ -23,27 +23,22 @@ import NotificationWindow from '@civ-clone/ui-component-window/NotificationWindo
 import { RequestFailed } from '@civ-clone/core-data-client/AbstractTransport';
 import { t } from 'i18next';
 
-// Which game a new game is (#668): civ.one's own rules, or another game's played with that game's art, which the
-//  player imports from their own copy (Civ2's). The worker says which sets there are; the page says which art it has,
-//  and offers a set that needs art only once that art is imported. With nothing more to offer than the default, New
-//  Game asks nothing more than it always has.
+// Which game a new game is (#668): civ.one's own rules, or another game's, drawn with that game's art where the player
+//  has imported it from their own copy (Civ2's), and otherwise with civ.one's own pixel art. The worker says which sets
+//  there are; the page says which art it has, and offers a set that needs art once some of it is there. With nothing
+//  more to offer than the default, New Game asks nothing more than it always has.
 
 /** The games New Game offers, and the set the worker has fixed already, if any. */
 export type GameChoices = {
-  /** The default set first, then each set whose own art the player has imported. One game means nothing to choose. */
+  /** The default set first, then each set with some of its art here. One game means nothing to choose. */
   games: PluginSetOption[];
   default: string;
   chosen: string | null;
 };
 
-/**
- * The ids of the art packs the player has imported, which a set that needs one is offered only with: not those that
- *  ship with civ.one (#1063), which are no game's own.
- */
-export const importedTilesets = (): string[] =>
-  installedTilesets()
-    .filter((tileset) => !isHosted(tileset))
-    .map(({ id }) => id);
+/** The ids of every art pack that is here: those imported, and those that ship with civ.one whose sheets have loaded. */
+export const presentTilesets = (): string[] =>
+  installedTilesets().map(({ id }) => id);
 
 /** The ids of every art pack that can be imported here, imported or not: not those that ship with civ.one. */
 export const importableTilesets = (): string[] =>
@@ -52,15 +47,13 @@ export const importableTilesets = (): string[] =>
     .map(({ id }) => id);
 
 /**
- * Whether there can be another game to offer: only once the player has imported art beyond the interface's, which every
- *  game has, as a game that needs art of its own needs it from another game (Civ2's). The art that ships with civ.one
- *  (#1063) is no game's own. Until then nothing is asked of the worker, and nothing has been chosen there, so New Game,
- *  Earth and the setup go on exactly as they always have.
+ * Whether there can be another game to offer: once there is art beyond the interface's, which every game has, as a
+ *  game that needs art of its own is drawn with another game's (Civ2's, imported) or civ.one's own isometric pixel art,
+ *  which ships with it (#1063). Until then, as on a first visit offline before any sheet has loaded, nothing is asked
+ *  of the worker, and nothing has been chosen there, so New Game, Earth and the setup go on as they always have.
  */
 export const mayOfferOtherGames = (): boolean =>
-  installedTilesets().some(
-    (tileset) => tileset.id !== interfaceTileset().id && !isHosted(tileset)
-  );
+  installedTilesets().some((tileset) => tileset.id !== interfaceTileset().id);
 
 /** What New Game offers, from the worker's answer: the default, then the sets drawn with art of their own. */
 export const gameChoices = ({
@@ -76,19 +69,19 @@ export const gameChoices = ({
   chosen,
 });
 
-/** Asks the worker which games there are, for the art imported here. Loads nothing. */
+/** Asks the worker which games there are, for the art here. Loads nothing. */
 export const askGameChoices = async (
   transport: Transport
 ): Promise<GameChoices> =>
-  gameChoices(await transport.request(new PluginSets(importedTilesets())));
+  gameChoices(await transport.request(new PluginSets(presentTilesets())));
 
 /**
  * Has a saved game's map drawn with the art its rule set names (`setRuleSetTileset`), as a new game with it is
- *  (`playGame`), before it loads (#1114): `pluginSet` is the set the save names, if any. The worker is asked as if
- *  every pack that can be imported had been, so it names the set's own art (Civ2's) whether or not it's here, and asking
- *  loads nothing. A save whose rules need art that isn't imported is refused, saying which to import: its grid may be
- *  drawn with civ.one's own art, which has none of its units (#97). A worker that can't say leaves the map drawn with
- *  the player's choice for its grid.
+ *  (`playGame`), before it loads (#1114): `pluginSet` is the set the save names, if any. The worker is asked with the
+ *  art here, and names the first of the set's own it has (Civ2's, or else the isometric pixel art). Asking loads
+ *  nothing. A save whose rules need art none of which is here is refused, saying which to import, as the worker says
+ *  when asked as if every pack that can be imported had been. A worker that can't say leaves the map drawn with the
+ *  player's choice for its grid.
  */
 export const followSavedRuleSet = async (
   transport: Transport,
@@ -100,21 +93,27 @@ export const followSavedRuleSet = async (
     return;
   }
 
-  let tileset: string | null;
+  let here: PluginSetOption | undefined, tileset: string | null;
 
   try {
-    const { sets } = await transport.request(
-      new PluginSets(importableTilesets())
-    );
+    here = (
+      await transport.request(new PluginSets(presentTilesets()))
+    ).sets.find(({ id }) => id === pluginSet);
 
-    tileset = sets.find(({ id }) => id === pluginSet)?.tileset ?? null;
+    // None of its art here, or a set never offered: which art it would be drawn with, were it imported.
+    tileset =
+      here !== undefined
+        ? here.tileset
+        : (
+            await transport.request(new PluginSets(importableTilesets()))
+          ).sets.find(({ id }) => id === pluginSet)?.tileset ?? null;
   } catch (error) {
     console.error(error);
 
     return;
   }
 
-  if (tileset !== null && !importedTilesets().includes(tileset)) {
+  if (here === undefined && tileset !== null) {
     throw new Error(
       t('SavedGame.needs-rules-art', {
         game: gameName(pluginSet),

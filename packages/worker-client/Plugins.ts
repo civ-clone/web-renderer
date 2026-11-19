@@ -11,16 +11,17 @@ export type PluginSet = {
   /** The set's plugins and their versions, which a game played with it saves, and a load checks against. */
   manifest: PluginManifest;
   /**
-   * A set a game can be played with, and a save can name, that the page doesn't offer, unless the player has imported
-   *  the art it names (`tileset`): civ.one's `civ2`, until Civ2's art is imported.
+   * A set a game can be played with, and a save can name, that the page doesn't offer unless one of the art packs it
+   *  names (`tilesets`) is installed.
    */
   hidden: boolean;
   /**
-   * The art pack its games are drawn with, by tileset id, which the player imports from their own copy of the game:
-   *  the page offers the set only once it is installed, and plays it on that pack's grid. Null for a set drawn with
-   *  whatever the player picks.
+   * The art packs its games are drawn with, by tileset id, in the order it prefers them: the first the page has is
+   *  the one it's drawn with, on that pack's grid. Civ2's are its own art, which the player imports from their own
+   *  copy, then civ.one's isometric pixel art. The page offers the set only once one of them is installed. Empty for a
+   *  set drawn with whatever the player picks.
    */
-  tileset: string | null;
+  tilesets: string[];
   /** Imports the set's plugins, which registers their rules: resolves once they are all in. Once is enough. */
   load: () => Promise<unknown>;
 };
@@ -47,8 +48,8 @@ export type PluginSetData = {
     rules: string;
     /** Not offered by the page (`civ-clone.sets.<id>.hidden`); offered when left out. */
     hidden?: boolean;
-    /** The art pack its games are drawn with (`civ-clone.sets.<id>.tileset`), when it has one of its own. */
-    tileset?: string | null;
+    /** The art packs its games are drawn with, in the order it prefers them (`civ-clone.sets.<id>.tileset`). */
+    tilesets?: string[];
     manifest: PluginManifest;
   }[];
   default: string;
@@ -62,14 +63,14 @@ export type PluginSetData = {
  */
 export const pluginsFrom = (data: PluginSetData): Plugins => ({
   sets: data.sets.map(
-    ({ id, plugins, rules, hidden, tileset, manifest }): PluginSet => {
+    ({ id, plugins, rules, hidden, tilesets, manifest }): PluginSet => {
       let loading: Promise<unknown> | null = null;
 
       return {
         id,
         manifest,
         hidden: hidden === true,
-        tileset: typeof tileset === 'string' ? tileset : null,
+        tilesets: Array.isArray(tilesets) ? [...tilesets] : [],
         load: (): Promise<unknown> => {
           if (loading === null) {
             loading = [...plugins, rules].reduce(
@@ -99,17 +100,27 @@ export const pluginsFrom = (data: PluginSetData): Plugins => ({
 });
 
 /**
- * Whether the page may offer `set` for a new game, given the art packs the player has imported (`tilesets`, by id): a
- *  set drawn with an art pack of its own once that pack is imported, and any other unless it's hidden.
+ * The art `set` is drawn with on a page with the art packs `tilesets` (by id): the first of its own that the page has,
+ *  or null for a set drawn with whatever the player picks, or one with none of its art there.
+ */
+export const drawnWith = (
+  { tilesets: own }: Pick<PluginSet, 'tilesets'>,
+  tilesets: string[] = []
+): string | null => own.find((id) => tilesets.includes(id)) ?? null;
+
+/**
+ * Whether the page may offer `set` for a new game, given the art packs it has installed (`tilesets`, by id): a set
+ *  drawn with art packs of its own once one of them is there, and any other unless it's hidden.
  */
 export const isOffered = (
-  { hidden, tileset }: Pick<PluginSet, 'hidden' | 'tileset'>,
+  set: Pick<PluginSet, 'hidden' | 'tilesets'>,
   tilesets: string[] = []
-): boolean => (tileset === null ? !hidden : tilesets.includes(tileset));
+): boolean =>
+  set.tilesets.length === 0 ? !set.hidden : drawnWith(set, tilesets) !== null;
 
 /**
  * The sets the page may offer for a new game, in their order: with no art packs named, every one that isn't hidden and
- *  needs no art of its own. Civ2's is offered only to a page that says Civ2's art is imported.
+ *  needs no art of its own. Civ2's is offered to a page that has Civ2's art or civ.one's isometric pixel art.
  */
 export const offeredSets = (
   plugins: Plugins,

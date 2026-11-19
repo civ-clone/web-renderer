@@ -1,7 +1,8 @@
-// Which game a new game is (#668): civ.one's own, or Civ2's rules drawn with Civ2's art, which the player imports from
-//  their own copy. Without that art New Game, Earth and the setup ask the worker nothing new and look exactly as they
-//  did; with it, New Game asks which game first, and Civ2's is played on the isometric grid, with no grid question and
-//  no Earth. A worker plays one set of plugins, so a game other than the one it has loaded gets a new worker
+// Which game a new game is (#668): civ.one's own, or Civ2's rules, drawn with Civ2's art where the player has imported
+//  it from their own copy, and otherwise with civ.one's isometric pixel art. With no art installed beyond the
+//  interface's New Game, Earth and the setup ask the worker nothing new and look exactly as they did; with the pixel art
+//  or Civ2's, New Game asks which game first, and Civ2's is played on the isometric grid, with no grid question and no
+//  Earth. A worker plays one set of plugins, so a game other than the one it has loaded gets a new worker
 //  (`ReplaceableTransport`), which everything listening goes on hearing from.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
@@ -28,7 +29,7 @@ import ReplaceableTransport from '@civ-clone/ui-client/ReplaceableTransport';
 import Request from '@civ-clone/core-data-client/Request';
 import Transport from '@civ-clone/ui-client/Transport';
 import i18next from 'i18next';
-import { installTilesets } from '@civ-clone/ui-assets/lib/tilesets';
+import { installTilesets, mapTileset } from '@civ-clone/ui-assets/lib/tilesets';
 import { mayOfferOtherGames } from '@civ-clone/ui-menus/lib/pluginSets';
 
 const failures: string[] = [];
@@ -121,10 +122,11 @@ const fakeWorkers = () => {
       // `choosePluginSet` waits on it, when given.
       hold: null as Promise<void> | null,
     },
+    // Each with its art in the order it prefers it, as civ.one's are: Civ2's own, then the isometric pixel art.
     sets = [
-      { id: 'civ1', tileset: null },
-      { id: 'civ1-enhanced', tileset: null },
-      { id: 'civ2', tileset: 'civ2' },
+      { id: 'civ1', tilesets: [] as string[] },
+      { id: 'civ1-enhanced', tilesets: [] as string[] },
+      { id: 'civ2', tilesets: ['civ2', 'iso-pixelart'] },
     ],
     levels = {
       'civ1-enhanced': ['Chieftain', 'Warlord', 'Prince', 'King', 'Emperor'],
@@ -149,11 +151,20 @@ const fakeWorkers = () => {
         switch (request.channel()) {
           case 'pluginSets':
             return Promise.resolve({
-              sets: sets.filter(
-                ({ id, tileset }) =>
-                  (tileset === null && id !== 'civ2') ||
-                  (args as string[]).includes(tileset!)
-              ),
+              sets: sets
+                .map(({ id, tilesets }) => ({
+                  id,
+                  tilesets,
+                  tileset:
+                    tilesets.find((tileset) =>
+                      (args as string[]).includes(tileset)
+                    ) ?? null,
+                }))
+                .filter(
+                  ({ tilesets, tileset }) =>
+                    tilesets.length === 0 || tileset !== null
+                )
+                .map(({ id, tileset }) => ({ id, tileset })),
               default: 'civ1-enhanced',
               chosen: worker.chosen,
             });
@@ -469,6 +480,64 @@ const civ2Metadata: PackMetadata = {
     closeAll();
   }
 
+  // With only civ.one's own art, the pixel art that ships with it: which game first, and Civ2's drawn with the
+  //  isometric pixel art.
+  installTilesets({});
+
+  {
+    const { log, transport, worker } = fakeWorkers();
+
+    expect(
+      'with the pixel art there may be another game',
+      mayOfferOtherGames(),
+      true
+    );
+
+    askNewGame(transport);
+    await settle();
+
+    expect(
+      'New Game asks which game first, asking with the pixel art there, and offers Civ2',
+      [log, shown()],
+      [
+        [
+          [
+            'pluginSets',
+            ['civ1', 'civ1-pixelart', 'hex-pixelart', 'iso-pixelart'],
+          ],
+        ],
+        {
+          title: 'Which game?',
+          options: ['Civilization', 'Civilization II (preview)'],
+        },
+      ]
+    );
+
+    choose('civ2');
+    await settle();
+
+    expect(
+      "Civ2 is loaded and played on the isometric grid, drawn with the isometric pixel art: no grid question, Civ2's own sizes",
+      [
+        log.slice(1),
+        worker.chosen,
+        mapTileset('staggered-iso').id,
+        shown().title,
+      ],
+      [
+        [
+          ['choosePluginSet', 'civ2'],
+          ['worldSizes', null],
+        ],
+        'civ2',
+        'iso-pixelart',
+        'How big a world?',
+      ]
+    );
+
+    closeAll();
+  }
+
   installTilesets({ civ2: { complete: true, metadata: civ2Metadata } });
 
   // With it: which game first.
@@ -484,7 +553,12 @@ const civ2Metadata: PackMetadata = {
       'New Game asks which game first, Civilization or Civilization II, a preview, after asking with the art imported',
       [log, shown()],
       [
-        [['pluginSets', ['civ1', 'civ2']]],
+        [
+          [
+            'pluginSets',
+            ['civ1', 'civ2', 'civ1-pixelart', 'hex-pixelart', 'iso-pixelart'],
+          ],
+        ],
         {
           title: 'Which game?',
           options: ['Civilization', 'Civilization II (preview)'],

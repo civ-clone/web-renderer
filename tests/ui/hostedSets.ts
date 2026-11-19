@@ -44,8 +44,8 @@ import {
 } from '@civ-clone/ui-assets/lib/tilesets';
 import {
   followSavedRuleSet,
-  importedTilesets,
   mayOfferOtherGames,
+  presentTilesets,
 } from '@civ-clone/ui-menus/lib/pluginSets';
 import interfaceArt, {
   interfaceSpriteKey,
@@ -427,7 +427,7 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
     );
   }
 
-  // The hexagonal pixel art as it is built (slice 4 of docs/asset-library.md): all 865 of its sprites, as its PNGs
+  // The hexagonal pixel art as it is built (slice 4 of docs/asset-library.md): all 902 of its sprites, as its PNGs
   //  have them.
   {
     const { sheet, index } = sheets['hex-pixelart']!,
@@ -460,7 +460,7 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
         ),
         listed.length,
       ],
-      [[...listed].sort(), [], 865]
+      [[...listed].sort(), [], 902]
     );
     expect(
       'and each is in the sheet as its own PNG has it, a hex tile 32 × 36',
@@ -1136,9 +1136,9 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
       ]
     );
     expect(
-      "nothing is asked of the worker for a game of another kind: the pixel art is no game's own",
-      [mayOfferOtherGames(), importedTilesets()],
-      [false, ['civ1']]
+      "the worker is asked for games of another kind, with every set here, as the isometric pixel art draws Civ2's rules",
+      [mayOfferOtherGames(), presentTilesets()],
+      [true, ['civ1', 'civ1-pixelart', 'hex-pixelart', 'iso-pixelart']]
     );
 
     await ensureMapArt('square', store);
@@ -1768,24 +1768,37 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
       'hosted-iso'
     );
 
-    // A save is drawn with the art its rule set names too (#1114), as the worker says which that is, asked with every
-    //  pack that can be imported (here Civ1's, Civ2's and the imported square set above), imported or not.
+    // A save is drawn with the art its rule set names too (#1114), as the worker says which that is: the first of the
+    //  set's own art it is asked with. Asked with the sets here first; when none of the set's art is here, again with
+    //  every pack that can be imported (here Civ1's, Civ2's and the imported square set above), to say which. The
+    //  worker here draws Civ2's rules with Civ2's art, or else the fixture's hosted-iso, standing in for the isometric
+    //  pixel art, whose sheet couldn't be fetched in this suite.
     {
       const asked: unknown[] = [],
-        transport = {
-          request: async (request: { args: () => unknown[] }) => {
-            asked.push(request.args()[0]);
+        worker = (civ2: string[]) =>
+          ({
+            request: async (request: { args: () => unknown[] }) => {
+              const tilesets = request.args()[0] as string[];
 
-            return {
-              sets: [
-                { id: 'civ1', tileset: null },
-                { id: 'civ2', tileset: 'civ2' },
-              ],
-              default: 'civ1',
-              chosen: null,
-            };
-          },
-        } as any;
+              asked.push(tilesets);
+
+              return {
+                sets: [
+                  { id: 'civ1', tileset: null },
+                  {
+                    id: 'civ2',
+                    tileset: civ2.find((id) => tilesets.includes(id)) ?? null,
+                  },
+                ].filter(
+                  ({ id, tileset }) => id === 'civ1' || tileset !== null
+                ),
+                default: 'civ1',
+                chosen: null,
+              };
+            },
+          } as any),
+        transport = worker(['civ2', 'hosted-iso']),
+        here = presentTilesets();
 
       await followSavedRuleSet(transport, 'civ2');
 
@@ -1798,47 +1811,45 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
       await followSavedRuleSet(transport, undefined);
 
       expect(
-        "a save with Civ2's rules is drawn with its art; one with rules that name none, or none, with the choice",
+        "a save with Civ2's rules is drawn with its art; one with rules that name none, or none, with the choice; each asked once, with the sets here",
         [civ2Save, civ1Save, mapTileset('staggered-iso').id, asked],
-        [
-          'civ2',
-          'hosted-iso',
-          'hosted-iso',
-          [
-            ['civ1', 'civ2', 'imported-square'],
-            ['civ1', 'civ2', 'imported-square'],
-          ],
-        ]
+        ['civ2', 'hosted-iso', 'hosted-iso', [here, here]]
       );
 
-      // Without Civ2's art, the isometric grid is still drawn, with the pixel art, which has none of Civ2's units: a
-      //  save with Civ2's rules is refused, naming the art to import, and the worker is still asked for every pack.
+      // Without Civ2's art, a save with Civ2's rules is drawn with civ.one's own isometric art in its place.
       installTilesets({ civ2: { complete: false, metadata: null } });
+      asked.length = 0;
 
-      const refused = await followSavedRuleSet(transport, 'civ2').then(
+      await followSavedRuleSet(transport, 'civ2');
+
+      expect(
+        "without Civ2's art, a save with Civ2's rules is drawn with the isometric art that ships, asking once",
+        [mapTileset('staggered-iso').id, asked.length],
+        ['hosted-iso', 1]
+      );
+
+      // And with none of its art here, it's refused, naming the art to import, as the worker says when asked with
+      //  every pack that can be imported; one with Civ1's is drawn as the player chose.
+      const imported = worker(['civ2']);
+
+      asked.length = 0;
+
+      const refused = await followSavedRuleSet(imported, 'civ2').then(
         () => '',
         (error: Error) => error.message
       );
 
-      await followSavedRuleSet(transport, 'civ1');
+      await followSavedRuleSet(imported, 'civ1');
 
       expect(
-        "without Civ2's art, a save with Civ2's rules is refused, naming Civ2's art, and one with Civ1's is drawn as the player chose",
+        "with none of its art here, a save with Civ2's rules is refused, naming Civ2's art, and one with Civ1's is drawn as the player chose",
         [
           /hasn’t been imported/.test(refused),
           refused.includes(civ2Json.name),
           mapTileset('staggered-iso').id,
-          asked.slice(-2),
+          asked.slice(1, 2),
         ],
-        [
-          true,
-          true,
-          'hosted-iso',
-          [
-            ['civ1', 'civ2', 'imported-square'],
-            ['civ1', 'civ2', 'imported-square'],
-          ],
-        ]
+        [true, true, 'hosted-iso', [['civ1', 'civ2', 'imported-square']]]
       );
 
       installTilesets(civ2Installed);
