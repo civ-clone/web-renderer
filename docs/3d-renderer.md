@@ -926,12 +926,12 @@ mapEvent:
     already.
   - Either chosen as walks go on: moving at once ends them all on the next frame, as less motion asked for does.
 - **Battles** (2.4, first part: `packages/map-3d/battles.ts`, `MapView3D`), by the clock, as walks are:
-  - **The fight:** the attacker sets off from where it stands towards the square it attacks, gathering pace, to the
-    edge between the two (`REACH`, 0.45 of the way between their middles), facing it: that's the blow, a fifth of a
-    second in. Won, it goes back to where it stood in under a third of a second; lost, it fades away at the edge. The
-    loser that stood fades away where it stood over 0.6 s, from the blow, as what was drawn there: the stack's size with
-    it, as a stack dies with its defender outside a city or fortress in Civ1; what's left there, as in a city, is shown
-    at once. The defender turns to face its attacker as the battle comes, as it did before. Walking quickly halves it all.
+  - **The fight:** the attacker sets off from where it stands towards the square it attacks, gathering pace, to the edge
+    between the two (`REACH`, 0.45 of the way between their middles), facing it: that's the blow, a fifth of a second
+    in. Won, it goes back to where it stood in under a third of a second; lost, it fades away at the edge. The loser
+    that stood fades away where it stood over 0.6 s, from the blow, as what was drawn there: the stack's size with it,
+    as a stack dies with its defender outside a city or fortress in Civ1; what's left there, as in a city, is shown at
+    once. The defender turns to face its attacker as the battle comes, as it did before. Walking quickly halves it all.
   - **Left off, as walks are:** the attacker's left off its square, drawn on its own (a walker with a battle's id), till
     it's back. The square attacked isn't held: it's drawn with what was on it as the battle came, till the blow, the
     battle's patch notwithstanding, its city too, and then as the patch has it. What's kept is copied, as the page fills
@@ -945,10 +945,11 @@ mapEvent:
     attacking), stands on its square till its last is over. Others are fought at once, several at a square together, as
     a rival's attacks on a city come: the square's shown as it was till the first blow, and what fell in each fades
     alone. None starts before one that came before it at its square, as when that one's attacker walks there first, so
-    blows there fall in the order the battles came. A unit's battles more than two seconds behind are over at once, the last fought, as the queue skips to the
-    end above. An attacker attacking again is drawn once, in the battle it's fighting.
-  - **As a rival's turn sends them:** the page's world is rebuilt, and the tiles released, once a frame while waiting for
-    the turn (`GameState`), so a rival's step and its attack, an attack and its step after, or two attacks, can come
+    blows there fall in the order the battles came. A unit's battles more than two seconds behind are over at once, the
+    last fought, as the queue skips to the end above. An attacker attacking again is drawn once, in the battle it's
+    fighting.
+  - **As a rival's turn sends them:** the page's world is rebuilt, and the tiles released, once a frame while waiting
+    for the turn (`GameState`), so a rival's step and its attack, an attack and its step after, or two attacks, can come
     before the world has the first's patch.
     - The attacker walking there: the battle's fought once it's there, its walk not cut short. One standing where it
       walked to, waiting for its step's patch, fights from there. One the page doesn't have there yet, stepping out of
@@ -959,7 +960,9 @@ mapEvent:
       its loser gone; once it has, on the world, as in the player's own turn.
   - **Ended at once:** the player's own unit stepping (attacking, then moving in), the defender stepping, a key or a
     press while the ring waits for the battle, moving at once or less motion chosen mid-battle: the blow falls, and it's
-    over, with nothing left to fade. Those waiting for it start as soon as they can.
+    over, with nothing left to fade. Those before it at its square whose blow's still to fall go with it, their blows
+    first, so blows there still fall in order; those waiting for it start as soon as they can. Blows at a square keep
+    their order whatever their paces, as when walking quickly's chosen between two attacks.
   - **The game waits:** the active unit attacking with its last move holds the ring and the camera till its battle's
     over, as its walk does; lost, till it's faded away.
   - **Not fought:** as walks aren't walked: with no frames, less motion asked for, or moving at once; two other players'

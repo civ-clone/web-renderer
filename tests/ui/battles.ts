@@ -260,6 +260,63 @@ const battleOf = (
     [300, 300, blowAt(walkingFirst) + 10]
   );
 
+  // Whatever their paces, as when the player chooses to walk quickly between two attacks: the blow of one at a quicker
+  //  pace falls no sooner than one before it there.
+  const paces = new Battles(),
+    atNormal = paces.add(battleOf('a', 'd', true), 0, pace),
+    atQuick = paces.add(
+      battleOf('b', 'e', true, [2, 0], [1, 0]),
+      50,
+      quickerBattle(pace)
+    );
+
+  expect(
+    'a battle at a quicker pace at a square strikes no sooner than one before it there',
+    [blowAt(atNormal), blowAt(atQuick)],
+    [200, 200]
+  );
+
+  // Ended at once, a battle takes those before it at its square with it, their blows first, as blows there fall in the
+  //  order the battles came; those before it at other squares, and those whose blow's fallen, go on.
+  const cutting = new Battles(),
+    struckThere = cutting.add(
+      battleOf('h', 'i', true, [1, 1], [1, 0]),
+      -250,
+      pace
+    ),
+    walkingThere = cutting.add(battleOf('a', 'd', true), 0, pace, 1000),
+    elsewhere = cutting.add(
+      battleOf('c', 'g', true, [3, 3], [2, 3]),
+      0,
+      pace,
+      1000
+    ),
+    besideIt = cutting.add(battleOf('b', 'e', true, [2, 0], [1, 0]), 0, pace);
+
+  cutting.at(5);
+
+  const cut = cutting.endWhere(({ id }) => id === besideIt.id, 10);
+
+  expect(
+    'ended at once, a battle takes those before it at its square with it, their blows first; those elsewhere, and one there whose blow’s fallen, go on',
+    [
+      cut.struck.map(({ id }) => id),
+      cut.ended.map(({ id }) => id),
+      cutting.size(),
+      cutting.attacking(elsewhere.attacker),
+      cutting.attacking(struckThere.attacker),
+      walkingThere.id,
+    ],
+    [
+      ['battle-2', 'battle-4'],
+      ['battle-2', 'battle-4'],
+      2,
+      true,
+      true,
+      'battle-2',
+    ]
+  );
+
   // How long the battles a unit attacks in go on, for the view to bound them.
   expect(
     'a unit’s battles are over when the last it attacks in is; one attacking in none has none',

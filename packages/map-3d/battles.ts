@@ -190,7 +190,7 @@ export class Battles {
     const battle: Battle = {
       ...of,
       id: `battle-${++this.#made}`,
-      start: this.#startOf(of, this.#battles, Math.max(now, notBefore)),
+      start: this.#startOf(of, pace, this.#battles, Math.max(now, notBefore)),
       notBefore,
       pace,
     };
@@ -233,7 +233,9 @@ export class Battles {
 
   /**
    * The battles `test` picks over at `now`, at once: the blow fallen in those it hadn't, told in `struck` as `at` tells
-   *  it, and each in `ended`. Those yet to start that were waiting for them start as soon as they can.
+   *  it, and each in `ended`. Those before them at the squares they attack go with them, their blows first, so blows
+   *  there still fall in the order the battles came. Those yet to start that were waiting for them start as soon as
+   *  they can.
    */
   endWhere(
     test: (battle: Battle) => boolean,
@@ -242,7 +244,17 @@ export class Battles {
     struck: Battle[];
     ended: Battle[];
   } {
-    const ended = this.#battles.filter(test),
+    const picked = this.#battles.filter(test),
+      ended = this.#battles.filter(
+        (battle, index) =>
+          picked.includes(battle) ||
+          (!this.#struck.has(battle.id) &&
+            picked.some(
+              (later) =>
+                this.#battles.indexOf(later) > index &&
+                sameSquare(later.defenderSquare, battle.defenderSquare)
+            ))
+      ),
       struck = ended.filter((battle) => !this.#struck.has(battle.id));
 
     struck.forEach((battle) => this.#struck.add(battle.id));
@@ -253,6 +265,7 @@ export class Battles {
         if (battle.start > now) {
           battle.start = this.#startOf(
             battle,
+            battle.pace,
             this.#battles.slice(0, index),
             Math.max(now, battle.notBefore)
           );
@@ -278,16 +291,21 @@ export class Battles {
     return this.endWhere(() => true, now);
   }
 
-  // When a battle starts, no sooner than `soonest`, after each of `before` it waits for; and no sooner than those
-  //  before it at the square it attacks (one whose blow's fallen started before now), so blows there fall in the order
-  //  the battles came, as what each is fought on is what the last left.
-  #startOf(of: BattleOf, before: Battle[], soonest: number): number {
+  // When a battle at `pace` starts, no sooner than `soonest`, after each of `before` it waits for; and with its blow no
+  //  sooner than those before it at the square it attacks (one whose blow's fallen, before now), so blows there fall in
+  //  the order the battles came, as what each is fought on is what the last left, whatever their paces.
+  #startOf(
+    of: BattleOf,
+    pace: BattlePace,
+    before: Battle[],
+    soonest: number
+  ): number {
     return before.reduce(
       (latest, battle) =>
         waitsFor(battle, of)
           ? Math.max(latest, battleEnds(battle))
           : sameSquare(battle.defenderSquare, of.defenderSquare)
-          ? Math.max(latest, battle.start)
+          ? Math.max(latest, blowAt(battle) - pace.reach)
           : latest,
       soonest
     );

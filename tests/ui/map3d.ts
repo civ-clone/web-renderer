@@ -4073,9 +4073,78 @@ expect(
   inOrder.push([...fallenSoFar], unitOn(1, 1), unitOn(2, 1), unitOn(3, 1));
   repatched([1, 1, []], [3, 1, []], [2, 1, []]);
 
+  // The same, but the second attacker attacks three times more elsewhere, its battles more than two seconds behind: its
+  //  first, at the city, is over at once, and the walking one's there with it, blows in order, each defender falling
+  //  once, unseen; the walking one walks on.
+  const spares = [
+    [3, 0],
+    [3, 2],
+    [2, 2],
+  ].map(([x, y], n) => [x!, y!, unitOf(`Unit-P${n}`, 1)] as const);
+
+  repatched(
+    [0, 1, [raider]],
+    [1, 1, []],
+    [3, 1, [otherRaider]],
+    [2, 1, holders],
+    ...spares.map(([x, y, unit]): [number, number, Tile['units'][number][]] => [
+      x,
+      y,
+      [unit],
+    ])
+  );
+  walkersSet.length = 0;
+  stepped(raider, [0, 1], [1, 1], 'Player-2');
+  glider.queueTile(square(0, 1));
+  glider.queueTile(square(1, 1));
+  fought(raider, [1, 1], holders[0]!, [2, 1], 'attacker', rivals);
+  glider.queueTile(square(1, 1));
+  glider.queueTile(square(2, 1));
+  fought(otherRaider, [3, 1], holders[1]!, [2, 1], 'attacker', rivals);
+  glider.queueTile(square(3, 1));
+  glider.queueTile(square(2, 1));
+  spares.forEach(([x, y, unit]) => {
+    fought(otherRaider, [3, 1], unit, [x, y], 'attacker', rivals);
+    glider.queueTile(square(3, 1));
+    glider.queueTile(square(x, y));
+  });
+  burstThen(
+    [0, 1, []],
+    [1, 1, [raider]],
+    [2, 1, [holders[2]!]],
+    ...spares.map(([x, y]): [number, number, Tile['units'][number][]] => [
+      x,
+      y,
+      [],
+    ])
+  );
+  runFrames(1);
+
+  const cutInOrder: unknown[] = [unitOn(2, 1), [...walkers.keys()].map(kind)];
+  const fallenAfterCut = new Set<string>();
+
+  for (let frame = 0; frame < 120 && walkers.size + frames.size > 0; frame++) {
+    runFrames(1);
+    fighters()
+      .filter(([id]) => id === 'battle-fallen')
+      .forEach(([, unit, count]) => fallenAfterCut.add(`${unit}×${count}`));
+  }
+
+  cutInOrder.push([...fallenAfterCut], unitOn(1, 1), unitOn(2, 1));
+  repatched(
+    [1, 1, []],
+    [3, 1, []],
+    [2, 1, []],
+    ...spares.map(([x, y]): [number, number, Tile['units'][number][]] => [
+      x,
+      y,
+      [],
+    ])
+  );
+
   expect(
-    'a rival’s attack and its step onto the square it emptied, in one burst: the battle’s shown, and it’s on its new square once it’s over; one stepping out of the dark and attacking, or with others’ moves not shown, is drawn fighting once the page has it, not before; a walk-then-attack and a direct attack on one square fall together, each defender once',
-    [movedIn, fromTheDark, movesHidden, frameFirst, inOrder],
+    'a rival’s attack and its step onto the square it emptied, in one burst: the battle’s shown, and it’s on its new square once it’s over; one stepping out of the dark and attacking, or with others’ moves not shown, is drawn fighting once the page has it, not before; a walk-then-attack and a direct attack on one square fall together, each defender once, and so when the second’s battles are too far behind and over at once',
+    [movedIn, fromTheDark, movesHidden, frameFirst, inOrder, cutInOrder],
     [
       [
         [
@@ -4116,6 +4185,13 @@ expect(
         ['Unit-X', 1],
         ['Unit-Q3', 1],
         ['Unit-Y', 1],
+      ],
+      [
+        ['Unit-Q3', 1],
+        ['walk', 'battle'],
+        ['Unit-P2×1'],
+        ['Unit-X', 1],
+        ['Unit-Q3', 1],
       ],
     ]
   );
