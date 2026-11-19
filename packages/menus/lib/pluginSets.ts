@@ -10,7 +10,9 @@ import {
   setRuleSetTileset,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import {
+  GameChoice,
   GameSetupPreset,
+  gameOf,
   SetupData,
   requestSetupData,
 } from '@civ-clone/ui-client/lib/gameSetup';
@@ -21,6 +23,7 @@ import Transport from '@civ-clone/ui-client/Transport';
 import { isReplaceable } from '@civ-clone/ui-client/ReplaceableTransport';
 import NotificationWindow from '@civ-clone/ui-component-window/NotificationWindow';
 import { RequestFailed } from '@civ-clone/core-data-client/AbstractTransport';
+import { gameName } from './gameNames';
 import { t } from 'i18next';
 
 // Which game a new game is (#668): civ.one's own rules, or another game's, drawn with that game's art where the player
@@ -32,6 +35,11 @@ import { t } from 'i18next';
 export type GameChoices = {
   /** The default set first, then each set with some of its art here. One game means nothing to choose. */
   games: PluginSetOption[];
+  /**
+   * Every set the worker offers, in its order: the games, and the original rules of a game that has them beside its
+   *  own (#1248), which the setup offers as that game's Original rules rather than as a game of its own.
+   */
+  sets: PluginSetOption[];
   default: string;
   chosen: string | null;
 };
@@ -58,19 +66,35 @@ export const importableTilesets = (): string[] =>
 export const mayOfferOtherGames = (): boolean =>
   installedTilesets().some((tileset) => tileset.id !== interfaceTileset().id);
 
-/** What New Game offers, from the worker's answer: the default, then the sets drawn with art of their own. */
+/**
+ * What New Game offers, from the worker's answer: the default, then the sets drawn with art of their own. A set that is
+ *  another's original rules (#1248) isn't a game of its own: it's offered beneath that game in the setup, so New Game
+ *  offers each game once, with its enhanced rules, as every new game has been played with (the first part of #1247).
+ */
 export const gameChoices = ({
   sets,
   default: defaultSet,
   chosen,
-}: PluginSetsAnswer): GameChoices => ({
-  games: [
-    ...sets.filter(({ id }) => id === defaultSet),
-    ...sets.filter(({ id, tileset }) => id !== defaultSet && tileset !== null),
-  ],
-  default: defaultSet,
-  chosen,
-});
+}: PluginSetsAnswer): GameChoices => {
+  const originals = new Set(
+      sets.flatMap(({ original }) =>
+        typeof original === 'string' ? [original] : []
+      )
+    ),
+    games = sets.filter(({ id }) => !originals.has(id) || id === defaultSet);
+
+  return {
+    sets,
+    games: [
+      ...games.filter(({ id }) => id === defaultSet),
+      ...games.filter(
+        ({ id, tileset }) => id !== defaultSet && tileset !== null
+      ),
+    ],
+    default: defaultSet,
+    chosen,
+  };
+};
 
 /** Asks the worker which games there are, for the art here. Loads nothing. */
 export const askGameChoices = async (
@@ -145,9 +169,8 @@ export const followSavedRuleSet = async (
   setRuleSetTileset(tileset);
 };
 
-/** A game's name, from the translations: its set's id where it has none. */
-export const gameName = (id: string): string =>
-  t(`PluginSet.${id}`, { defaultValue: id });
+// Named here too for what has always imported it from here.
+export { gameName };
 
 /**
  * The grid a game with `game` is played on: its art pack's, when it has one of its own (Civ2's isometric grid), or null
@@ -170,11 +193,12 @@ export const playGame = async (
   transport: Transport,
   id: string,
   choices: Pick<GameChoices, 'default' | 'chosen'> &
-    Partial<Pick<GameChoices, 'games'>>
+    Partial<Pick<GameChoices, 'games' | 'sets'>>
 ): Promise<void> => {
   // Its map drawn with the art its rule set names, when it names some (#1063, decision 2 of docs/asset-library.md).
   setRuleSetTileset(
-    choices.games?.find((game) => game.id === id)?.tileset ?? null
+    (choices.sets ?? choices.games)?.find((game) => game.id === id)?.tileset ??
+      null
   );
 
   if (
@@ -199,11 +223,59 @@ export const playGame = async (
   }
 };
 
-/** The game to preselect: the one chosen last on this page, while it is still one to choose, or the default. */
-export const preselectedGame = (choices: GameChoices, asked?: string): string =>
-  [asked, choices.chosen].find(
-    (id) => id != null && choices.games.some((game) => game.id === id)
-  ) ?? choices.default;
+/**
+ * The game to preselect: the one asked for, or the one chosen last on this page, while it is still one to choose, or
+ *  the default. Among New Game's games, a game's original rules (#1248) are that game, by the set it is offered as: a
+ *  save of Civ2's original rules, or its Original rules picked in the setup, starts New Game on Civilization II. The
+ *  setup, among every set, keeps the set itself.
+ */
+export const preselectedGame = (
+  choices: GameChoices,
+  asked?: string,
+  // What it may be: the games, as New Game asks, or every set, as the setup offers a game's original rules too.
+  among: PluginSetOption[] = choices.games
+): string =>
+  [asked, choices.chosen]
+    .flatMap((id) =>
+      id == null
+        ? []
+        : [
+            id,
+            ...choices.sets
+              .filter(({ original }) => original === id)
+              .map(({ id }) => id),
+          ]
+    )
+    .find((id) => among.some((game) => game.id === id)) ?? choices.default;
+
+/**
+ * The games the setup offers (#1248), from what the worker offers: each by the set its card plays (a game with
+ *  original rules beside its own, by its own), and each game's original rules by its set. A set that is a game's
+ *  original isn't a game of its own.
+ */
+export const setupGames = ({
+  games,
+  sets,
+}: Pick<GameChoices, 'games' | 'sets'>): Pick<
+  GameChoice,
+  'games' | 'originals'
+> => {
+  const originals: { [set: string]: string } = {};
+
+  sets.forEach(({ id, original }) => {
+    if (typeof original === 'string') {
+      originals[id] = original;
+    }
+  });
+
+  const isOriginal = (id: string): boolean =>
+    Object.values(originals).includes(id);
+
+  return {
+    games: games.map(({ id }) => id).filter((id) => !isOriginal(id)),
+    originals,
+  };
+};
 
 /**
  * What the game setup needs for the game `preset` names, or the one preselected (`preselectedGame`): the worker made
@@ -215,30 +287,34 @@ export const requestGameSetupData = async (
   preset: GameSetupPreset = {}
 ): Promise<SetupData> => {
   if (!mayOfferOtherGames()) {
-    return requestSetupData(transport);
+    return requestSetupData(transport, preset.ruleSetChoices);
   }
 
   const choices = await askGameChoices(transport),
-    id = preselectedGame(choices, preset.pluginSet);
+    id = preselectedGame(choices, preset.pluginSet, choices.sets);
 
   await playGame(transport, id, choices);
 
   // The game's own world sizes (#1175), asked for only here, where there can be another game to play: the default's
   //  rules (Civ1's) offer none.
   const [data, worldSizes] = await Promise.all([
-    requestSetupData(transport),
+    requestSetupData(transport, preset.ruleSetChoices),
     transport.request(new WorldSizes()),
   ]);
 
-  return choices.games.length < 2
+  const { games, originals } = setupGames(choices);
+
+  // One game, without original rules beside its own, is nothing to choose.
+  return games.length < 2 && originals[gameOf({ originals }, id)] === undefined
     ? { ...data, worldSizes }
     : {
         ...data,
         worldSizes,
         game: {
           id,
-          games: choices.games.map(({ id }) => id),
-          grid: gameGrid(choices.games.find((game) => game.id === id)),
+          games,
+          originals,
+          grid: gameGrid(choices.sets.find((game) => game.id === id)),
         },
       };
 };

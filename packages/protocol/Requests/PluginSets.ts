@@ -9,6 +9,12 @@ export type PluginSetOption = {
    *  grid. Null for a set drawn with whatever the player picks.
    */
   tileset: string | null;
+  /**
+   * The set offered beside it that plays the same game as the original plays it, when this one is that game with its
+   *  fixes (#1248): the setup offers the two as one game, with Original and Enhanced rules. Null, or left out by an
+   *  older worker, for a set that is a game of its own.
+   */
+  original?: string | null;
 };
 
 export type PluginSetsAnswer = {

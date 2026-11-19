@@ -18,7 +18,12 @@ import {
   RuleSetNode,
   RuleSetProblem,
 } from '@civ-clone/ui-protocol/Requests/RuleSets';
-import GameSetup from '@civ-clone/ui-client/lib/gameSetup';
+import GameSetup, {
+  GameChoice,
+  gameOf,
+} from '@civ-clone/ui-client/lib/gameSetup';
+import { gameTitle } from './gameNames';
+import { holdControls } from './setupControls';
 import Transport from '@civ-clone/ui-client/Transport';
 import i18next, { t } from 'i18next';
 
@@ -510,47 +515,258 @@ export const renderRuleSets = (
 };
 
 /**
+ * The game a setup is for (#1248), and how to set it up for another: another game, or the same game's other rules,
+ *  is another setup, on a worker loaded with that set, so `switchTo` is given the set it is played with.
+ */
+export type SetupGame = {
+  choice: GameChoice;
+  switchTo: (pluginSet: string, focus: RuleSwitch) => void;
+};
+
+/** The radio buttons a setup is switched with (#1248), by their group's name, for the keyboard to go back to. */
+export type RuleSwitch = 'rule-game' | 'rule-variant';
+
+/** Puts the keyboard on the checked radio button of the group `name` in `root`: a setup switched with it (#1248). */
+export const focusRuleSwitch = (root: Element, name: RuleSwitch): void =>
+  Array.from(root.querySelectorAll<HTMLInputElement>(`input[name="${name}"]`))
+    .find(({ checked }) => checked)
+    ?.focus();
+
+// A radio button and its label, as the setup's own controls are: the label first in the tree for a screen reader, the
+//  button inside it so the whole row is what's clicked.
+const radio = (
+  name: string,
+  value: string,
+  label: string,
+  checked: boolean,
+  className: string
+): [HTMLInputElement, HTMLLabelElement] => {
+  const control = document.createElement('input'),
+    wrapper = document.createElement('label');
+
+  control.type = 'radio';
+  control.name = name;
+  control.value = value;
+  control.checked = checked;
+  wrapper.className = className;
+  wrapper.append(control, text('span', `${className}-name`, label));
+
+  return [control, wrapper];
+};
+
+/**
+ * The games the setup offers, as a row of cards (#1248), then the chosen one's rules beneath: Original or Enhanced
+ *  where the game has both, the enhanced rules' own changes under Enhanced (`changes`, drawn into by the caller), and
+ *  the game's other sets after (`rest`). Picking another game, or the game's other rules, is `switchTo`.
+ */
+const renderGames = (
+  { choice, switchTo }: SetupGame,
+  changes: HTMLDetailsElement,
+  rest: HTMLElement
+): HTMLElement[] => {
+  const game = gameOf(choice, choice.id),
+    original = choice.originals[game],
+    cards = document.createElement('fieldset'),
+    rules = document.createElement('div'),
+    // A radio button that switches the setup once it's picked, and not as the setup draws it.
+    switching = (
+      control: HTMLInputElement,
+      pluginSet: string,
+      focus: RuleSwitch
+    ): void =>
+      control.addEventListener('change', (): void => {
+        if (control.checked && pluginSet !== choice.id) {
+          switchTo(pluginSet, focus);
+        }
+      });
+
+  cards.className = 'rule-game-cards';
+  cards.append(
+    text('legend', 'visually-hidden', t('GameSetup.game')),
+    ...choice.games.map((card) => {
+      const [control, label] = radio(
+        'rule-game',
+        card,
+        gameTitle(card),
+        card === game,
+        'rule-game-card'
+      );
+
+      switching(control, card, 'rule-game');
+      label.classList.toggle('chosen', card === game);
+
+      return label;
+    })
+  );
+
+  rules.className = 'rule-game-rules';
+
+  if (original !== undefined) {
+    const variants = document.createElement('fieldset');
+
+    variants.className = 'rule-variants';
+    variants.append(
+      text(
+        'legend',
+        'visually-hidden',
+        t('GameSetup.game-rules', {
+          game: gameTitle(game),
+          interpolation: { escapeValue: false },
+        })
+      ),
+      ...(
+        [
+          [original, 'original'],
+          [game, 'enhanced'],
+        ] as const
+      ).map(([pluginSet, variant]) => {
+        const row = document.createElement('div'),
+          [control, label] = radio(
+            'rule-variant',
+            pluginSet,
+            t(`GameSetup.rules-${variant}`),
+            choice.id === pluginSet,
+            'rule-variant'
+          ),
+          about = identified(
+            text(
+              'p',
+              'rule-set-description',
+              t(`GameSetup.rules-${variant}-description`)
+            )
+          );
+
+        control.setAttribute('aria-describedby', about.id);
+        switching(control, pluginSet, 'rule-variant');
+        row.className = 'rule-variant-row';
+        row.append(label, about);
+
+        // The enhanced rules' own changes, beneath it, while it is the rules chosen.
+        if (variant === 'enhanced' && choice.id === game) {
+          row.append(changes);
+        }
+
+        return row;
+      })
+    );
+    rules.append(variants);
+  }
+
+  rules.append(rest);
+
+  return [cards, rules];
+};
+
+/**
  * The setup's Rules section: what is wrong with the sets, then the sets, under a summary, open, redrawn from the
- *  worker's answer to each change, with `start` held while a problem that blocks stands (#954). Nothing when there
- *  are no rule sets to draw and nothing wrong with them.
+ *  worker's answer to each change, with `start` held while a problem that blocks stands (#954). With `game`, the games
+ *  to choose from first, as cards, and the chosen one's Original and Enhanced rules (#1248). Nothing when there is no
+ *  game to choose, no rule sets to draw, and nothing wrong with them.
  */
 export const ruleSetsSection = (
   setup: GameSetup,
   transport: Transport,
   className: string,
-  start: HTMLButtonElement
+  start: HTMLButtonElement,
+  game?: SetupGame
 ): HTMLDetailsElement | null => {
-  if (!hasRuleSets(setup.ruleSets) && setup.ruleSetProblems.length === 0) {
+  if (
+    game === undefined &&
+    !hasRuleSets(setup.ruleSets) &&
+    setup.ruleSetProblems.length === 0
+  ) {
     return null;
   }
 
-  const section = document.createElement('details'),
+  // The enhanced rules' own set, drawn beneath Enhanced rather than as a checkbox of its own: by the set's id, which
+  //  is the game's (`civ1-enhanced`). None while the original rules are chosen, or for a game without them.
+  const enhancedSet =
+      game !== undefined && game.choice.originals[game.choice.id] !== undefined
+        ? game.choice.id
+        : null,
+    section = document.createElement('details'),
     summary = document.createElement('summary'),
     // Kept from one answer to the next, so that a problem that comes or goes is said as it does.
     problems = document.createElement('div'),
+    // The enhanced rules' changes, folded beneath Enhanced: there are many, and the map and the seats come after.
+    changes = document.createElement('details'),
+    changesSummary = document.createElement('summary'),
+    enhanced = document.createElement('div'),
     holder = document.createElement('div'),
+    // Drawn again after a change answered while the setup switches (#1248): held, as the rest of the setup is.
     render = (): void => {
-      const drawn = renderRuleSetProblems(problems, setup.ruleSetProblems);
+      draw();
+
+      if (setup.switching) {
+        holdControls(section);
+      }
+    },
+    draw = (): void => {
+      const drawn = renderRuleSetProblems(problems, setup.ruleSetProblems),
+        change = (choice: RuleSetChoice): void => {
+          // Nothing while the setup switches to another game or rules (#1248): the worker is on its way to it.
+          if (setup.switching) {
+            render();
+
+            return;
+          }
+
+          // Drawn again however it went: a change that failed puts the controls back as the sets are.
+          void setup.changeRuleSet(transport, choice).finally(render);
+        },
+        own = setup.ruleSets.find(({ id }) => id === enhancedSet);
 
       holdStart(start, drawn, setup.starting());
+
+      if (own === undefined) {
+        renderRuleSets(holder, setup.ruleSets, change, drawn.marked);
+
+        return;
+      }
+
+      const shown = own.members.filter((member) => worthDrawing(member, own)),
+        within = new Set<string>(),
+        collect = (nodes: RuleSetNode[]): void =>
+          nodes.forEach(({ id, members }) => {
+            within.add(id);
+            collect(members);
+          });
+
+      collect(own.members);
+
+      // A change with some of what is beneath it on counts as on: it changes the game.
+      changesSummary.textContent = t('GameSetup.rules-changes', {
+        on: shown.filter(({ state }) => state !== 'off').length,
+        count: shown.length,
+      });
+
+      // Opened on a problem about something folded inside, for the player to see what it is about.
+      if ([...drawn.marked.keys()].some((id) => within.has(id))) {
+        changes.setAttribute('open', '');
+      }
+      renderRuleSets(enhanced, own.members, change, drawn.marked);
       renderRuleSets(
         holder,
-        setup.ruleSets,
-        (change: RuleSetChoice): void => {
-          // Drawn again however it went: a change that failed puts the controls back as the sets are.
-          void setup.changeRuleSet(transport, change).finally(render);
-        },
+        setup.ruleSets.filter((node) => node !== own),
+        change,
         drawn.marked
       );
     };
 
   problems.setAttribute('aria-live', 'polite');
+  enhanced.className = 'rule-variant-sets';
+  changes.className = 'rule-variant-changes';
+  changes.append(changesSummary, enhanced);
 
   section.className = className;
   // The attribute, which is all a parsed `<details open>` has.
   section.setAttribute('open', '');
   summary.textContent = t('GameSetup.rules');
-  section.append(summary, problems, holder);
+  section.append(
+    summary,
+    problems,
+    ...(game === undefined ? [holder] : renderGames(game, changes, holder))
+  );
 
   render();
 

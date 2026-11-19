@@ -101,6 +101,8 @@ i18next.addResources('en', 'default', {
   'GameSetup.game': 'Game',
   'GameSetup.game-failed': 'That game couldn’t be set up: {{- error}}',
   'GameSetup.game-failed-title': 'Couldn’t set up the game',
+  // The legend of a game's Original and Enhanced rules (#1248), read out by a screen reader.
+  'GameSetup.game-rules': '{{game}} rules',
   'GameSetup.difficulty': '$t(DifficultyWindow.title)',
   'GameSetup.grid': 'Map grid',
   'GameSetup.human': 'Human',
@@ -111,6 +113,17 @@ i18next.addResources('en', 'default', {
   'GameSetup.random': 'Random',
   'GameSetup.remove-seat': 'Remove this seat',
   'GameSetup.rules': 'Rules',
+  // A game's two sets of rules (#1248): the original game's own, or with civ.one's fixes and additions, each of which
+  //  is listed beneath it and can be switched off.
+  // How many of the enhanced rules' changes are on, folded beneath Enhanced rules.
+  'GameSetup.rules-changes':
+    'Changes from the original: {{on}} of {{count}} on',
+  'GameSetup.rules-enhanced': 'Enhanced rules',
+  'GameSetup.rules-enhanced-description':
+    'civ.one’s fixes and additions to the original, each of which can be switched off.',
+  'GameSetup.rules-original': 'Original rules',
+  'GameSetup.rules-original-description':
+    'The rules and civilizations as the original game has them.',
   'GameSetup.seat': '#',
   'GameSetup.seats': 'Seats',
   'GameSetup.start': 'Start',
@@ -225,10 +238,14 @@ i18next.addResources('en', 'default', {
     'Choose the civilizations, seats, rules and the exact world',
   // The games a new game can be (#668), by plugin set: titles, spelled as the games are in every English. Civ2's rules
   //  are a preview, and its saves may not load once more of them is in.
+  'PluginSet.civ1': 'Civilization, original rules',
   'PluginSet.civ1-enhanced': 'Civilization',
   'PluginSet.civ2': 'Civilization II (preview)',
   // Civ2's rules with the fixes of the original's slips, which a game can turn off one by one (M2d).
   'PluginSet.civ2-enhanced': 'Civilization II, enhanced (preview)',
+  // A game as the setup's cards name it (#1248), where its set's name says more than which game it is: its original
+  //  rules are chosen beneath it.
+  'PluginSetGame.civ2-enhanced': 'Civilization II (preview)',
   'ReleaseWindow.behind-the-scenes': 'Behind the scenes',
   'ReleaseWindow.external-changes': 'External changes',
   'ReleaseWindow.failed': 'The release notes could not be loaded.',

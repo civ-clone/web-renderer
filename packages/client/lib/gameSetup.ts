@@ -44,21 +44,50 @@ export type GameSetupPreset = {
   earth?: boolean;
   pluginSet?: string;
   /**
-   * The seats a setup for another game had (#668): who plays each, and a person's name. Their civilizations and AI
-   *  are that game's, so they are left to chance and the default here.
+   * The seats a setup for another game, or the same game's other rules, had (#668, #1248): who plays each, a person's
+   *  name, and each one's civilization, leader and AI, kept where this game has them, and otherwise left to chance and
+   *  the default.
    */
-  seats?: Pick<SeatState, 'kind' | 'name'>[];
+  seats?: (Pick<SeatState, 'kind' | 'name'> &
+    Partial<Pick<SeatState, 'civilization' | 'leader' | 'ai'>>)[];
+  /** The grid it was on (#1248), kept where this game has no grid of its own. */
+  topologyId?: TopologyId;
+  /** The map it had (`map()`), kept where this game offers it, and a custom size's width and height. */
+  map?: string;
+  width?: number;
+  height?: number;
+  /** The level chosen (#1248), kept where this game has it. */
+  difficulty?: string;
+  /** The Advanced section's land. */
+  land?: LandOptions;
+  /**
+   * The rule sets it had switched (#1248), sent with the first question about this game's: those it knows are made,
+   *  and the rest are kept for a setup after this one, so a change switched off under Enhanced is still off after a
+   *  look at Original.
+   */
+  ruleSetChoices?: RuleSetChoice[];
 };
 
 /** Which game the setup is for (#668), when there is more than one to choose from. */
 export type GameChoice = {
   /** The set chosen, which the worker has loaded, or will load first. */
   id: string;
-  /** Every set the setup offers, the default first. */
+  /**
+   * Every game the setup offers, the default first, each by the set its card plays: a game with original rules beside
+   *  its own (`originals`) by its own, its enhanced rules (#1248).
+   */
   games: string[];
+  /** The original rules of each game in `games` that has them, by the game's set: Civ1's `civ1` for `civ1-enhanced`. */
+  originals: { [set: string]: string };
   /** The only grid its games are played on, drawn with its own art (Civ2's), or null for any. */
   grid: TopologyId | null;
 };
+
+/** The game the set `id` is played as (#1248): itself, or the game whose original rules it is. */
+export const gameOf = (
+  { originals }: Pick<GameChoice, 'originals'>,
+  id: string
+): string => Object.keys(originals).find((set) => originals[set] === id) ?? id;
 
 export type SeatKind = 'human' | 'computer';
 
@@ -106,14 +135,20 @@ export const RANDOM = 'random';
 
 /** Asks the worker what there is to choose from. */
 export const requestSetupData = async (
-  transport: Transport
+  transport: Transport,
+  // The rule sets switched in a setup before this one (#1248): those the rules know are made.
+  ruleSetChoices: RuleSetChoice[] = []
 ): Promise<SetupData> => {
   const [civilizations, aiClients, difficulties, ruleSets, existing] =
     await Promise.all([
       transport.request(new Civilizations()),
       transport.request(new AIClients()),
       transport.request(new Difficulties()),
-      transport.request(new RuleSets()),
+      transport.request(
+        new RuleSets(
+          ruleSetChoices.length === 0 ? null : { choices: ruleSetChoices }
+        )
+      ),
       transport.request(
         new Options([
           'width',
@@ -154,6 +189,13 @@ export class GameSetup {
   // A change failed for a reason other than going unanswered (the player has been told of that, #470) since Start was
   //  pressed: the game doesn't start on choices that may not be the player's.
   #changeFailed: boolean = false;
+  /**
+   * A switch to another game, or this game's other rules, is under way (#1248): the setup is held, and nothing in it is
+   *  changed, as the worker it would reach is on its way to another game.
+   */
+  switching: boolean = false;
+  /** The setup's window has closed (#1248): a switch on its way opens nothing. */
+  closed: boolean = false;
   // From Start until the game goes ahead, or doesn't (#954): Start is held meanwhile.
   #starting: boolean = false;
   // The setup closed while a start waited on a change: nothing is sent.
@@ -183,11 +225,25 @@ export class GameSetup {
     }
 
     if (preset.earth && this.earthSizes().length > 0) {
-      const sizes = this.earthSizes();
+      const sizes = this.earthSizes(),
+        // The Earth a setup for another game had (#1248), by its width and height: the size of this game's Earth
+        //  nearest it in area, as the two games' Earths are sized differently.
+        area = (preset.width ?? 0) * (preset.height ?? 0),
+        nearest =
+          area > 0
+            ? [...sizes].sort(
+                (a, b) =>
+                  Math.abs(a.width * a.height - area) -
+                  Math.abs(b.width * b.height - area)
+              )[0]
+            : undefined;
 
       this.earth = true;
       this.size =
-        sizes.find(({ key }) => key === this.size?.key) ?? sizes[0] ?? null;
+        nearest ??
+        sizes.find(({ key }) => key === this.size?.key) ??
+        sizes[0] ??
+        null;
       this.width = this.size?.width ?? this.width;
       this.height = this.size?.height ?? this.height;
       this.topologyId = fixedGrid ?? 'square';
@@ -213,6 +269,45 @@ export class GameSetup {
       this.height = height;
     }
 
+    // A setup for another game, or the same game's other rules (#1248), keeps the grid the player chose (none is
+    //  carried from a game with a grid of its own), unless this game has a grid of its own or is on Earth, whose grid
+    //  is Earth's; the same size by name on it.
+    if (preset.topologyId !== undefined && fixedGrid === null && !this.earth) {
+      this.topologyId = preset.topologyId;
+      this.size =
+        this.sizesOn(this.topologyId).find(
+          (size) => size.key === this.size?.key
+        ) ?? this.size;
+      this.width = this.size?.width ?? this.width;
+      this.height = this.size?.height ?? this.height;
+    }
+
+    // And the map it had, where this game offers it: a size typed in only where this game has no grid of its own, as
+    //  Customize World's is; a size, or Earth's, by name. An Earth size this game hasn't is the size of its own Earth
+    //  nearest it in area (above), or a map of the sizes it has when it has no Earth.
+    if (preset.map === 'custom') {
+      if (fixedGrid === null && preset.width && preset.height) {
+        this.size = null;
+        this.earth = false;
+        this.width = preset.width;
+        this.height = preset.height;
+      }
+    } else if (
+      preset.map !== undefined &&
+      this.maps().some(({ value }) => value === preset.map)
+    ) {
+      const [kind, key] = preset.map.split(':');
+
+      this.earth = kind === 'earth';
+      this.size = this.sizes().find((size) => size.key === key) ?? this.size;
+      this.width = this.size?.width ?? this.width;
+      this.height = this.size?.height ?? this.height;
+
+      if (this.earth) {
+        this.topologyId = fixedGrid ?? 'square';
+      }
+    }
+
     this.seats = new Array(this.defaultSeatCount())
       .fill(0)
       .map((value: 0, index: number) =>
@@ -230,13 +325,89 @@ export class GameSetup {
           : carried.slice(0, room);
 
     if (kept.length > 0) {
-      this.seats = kept.map(({ kind, name }) => ({
-        ...this.#newSeat(kind),
-        name,
-      }));
+      this.seats = kept.map(({ kind, name, civilization, leader, ai }) => {
+        const seat = this.#newSeat(kind),
+          found = data.civilizations.find(
+            (option) => option.name === civilization
+          );
+
+        return {
+          ...seat,
+          name,
+          // A civilization this game has, and its leader where it has that one too.
+          civilization: found?.name ?? RANDOM,
+          leader:
+            found !== undefined && found.leaders.includes(leader ?? '')
+              ? leader!
+              : RANDOM,
+          ai: ai !== undefined && data.aiClients.includes(ai) ? ai : seat.ai,
+        };
+      });
     }
 
     this.#fillSeats();
+  }
+
+  /**
+   * Once every rule set switched so far has been answered (#1248): what `carried` keeps is then what the player has
+   *  switched, and not the answer before the last change. Never rejects.
+   */
+  async settled(): Promise<void> {
+    let pending: Promise<void>;
+
+    do {
+      pending = this.#ruleSetChange;
+
+      await pending;
+    } while (pending !== this.#ruleSetChange);
+  }
+
+  /**
+   * What a setup for another game, or the same game's other rules, keeps of this one (#1248), beside `preset`, the
+   *  preset this one was opened with: Earth, the grid, the map, the seats as they are, and the rule sets switched,
+   *  with those switched in a setup before this one that this game doesn't know.
+   */
+  carried(
+    preset: GameSetupPreset = {}
+  ): Pick<
+    GameSetupPreset,
+    | 'earth'
+    | 'seats'
+    | 'topologyId'
+    | 'map'
+    | 'width'
+    | 'height'
+    | 'ruleSetChoices'
+  > {
+    const known = new Set<string>(),
+      collect = (nodes: RuleSetNode[]): void =>
+        nodes.forEach(({ id, members }) => {
+          known.add(id);
+          collect(members);
+        });
+
+    collect(this.ruleSets);
+
+    return {
+      earth: this.earth,
+      seats: this.seats.map(({ kind, name, civilization, leader, ai }) => ({
+        kind,
+        name,
+        civilization,
+        leader,
+        ai,
+      })),
+      // Only a grid the player chose: one of the game's own (Civ2's) isn't the player's to carry to another game.
+      ...(this.fixedGrid() === null ? { topologyId: this.topologyId } : {}),
+      // Nor a size typed in on a grid of the game's own: its shape is that grid's (#1248).
+      ...(this.fixedGrid() !== null && this.size === null
+        ? {}
+        : { map: this.map(), width: this.width, height: this.height }),
+      ruleSetChoices: [
+        ...(preset.ruleSetChoices ?? []).filter(({ id }) => !known.has(id)),
+        ...this.ruleSetChoices,
+      ],
+    };
   }
 
   #newSeat(kind: SeatKind): SeatState {

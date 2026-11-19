@@ -9,7 +9,6 @@ import GameSetup, {
 import {
   cell,
   civilizationName,
-  gameSelect,
   holdControls,
   leaderName,
   option,
@@ -24,7 +23,11 @@ import {
   preselectedDifficulty,
 } from '@civ-clone/ui-client/lib/difficulty';
 import { elementId, h } from '@civ-clone/ui-widgets/lib/html';
-import { ruleSetsSection } from '@civ-clone/ui-menus/lib/ruleSetControls';
+import {
+  RuleSwitch,
+  focusRuleSwitch,
+  ruleSetsSection,
+} from '@civ-clone/ui-menus/lib/ruleSetControls';
 import startFromSetup, {
   cancelStartOnClose,
 } from '@civ-clone/ui-menus/lib/setupStart';
@@ -143,12 +146,14 @@ export class GameSetupForm extends Window {
     onFinished?: FinishedHandler,
     preset: GameSetupPreset = {}
   ): Promise<GameSetupForm> {
-    return new GameSetupForm(
+    const setup = new GameSetupForm(
       transport,
       await requestGameSetupData(transport, preset),
       onFinished,
       preset
     );
+
+    return setup;
   }
 
   /** The seats a game has, as the form holds them. */
@@ -167,6 +172,67 @@ export class GameSetupForm extends Window {
         click: () => this.#start(),
       }
     ));
+
+    // Which game (#668), and which of its rules (#1248), in the Rules section: another is another setup, with that
+    //  game's civilizations and levels, in this one's place.
+    const switchGame = (pluginSet: string, focus: RuleSwitch): void => {
+      // One switch at a time: a second change, or a start, while one is on its way would reach a worker part
+      //  way to another game.
+      if (this.#switching) {
+        return;
+      }
+
+      this.#switching = true;
+      this.#setup.switching = true;
+      holdControls(this.element());
+
+      // What the setup has been given, kept where the other game has it (#1248).
+      const [landCoverage, landSize, maxIterations] = this.#landInputs.map(
+        (input) => input.value
+      ) as [string, string, string];
+
+      // Opened once every rule set switched has been answered, for the rules to go with it as the player left them,
+      //  and the keyboard put back on the radio button it was switched with once this one has closed, which would
+      //  otherwise give it to the new window.
+      let opened: GameSetupForm | null = null;
+
+      // Nothing opens for a setup closed meanwhile (#1248): while its rule sets are answered, or the other is asked.
+      const open = (game: string): Promise<unknown> =>
+        this.#setup.closed
+          ? Promise.resolve()
+          : GameSetupForm.ask(this.#transport, this.#onFinished, {
+              ...preset,
+              advanced: advanced.open,
+              // On Earth, the other game's Earth, where it has one (#1176), and the rest as it is.
+              ...this.#setup.carried(preset),
+              difficulty: this.#difficultySelect.value,
+              land: { landCoverage, landSize, maxIterations },
+              pluginSet: game,
+            }).then((window) => {
+              if (this.#setup.closed) {
+                window.close();
+
+                return;
+              }
+
+              opened = window;
+            });
+
+      void this.#setup
+        .settled()
+        .then(() =>
+          this.#setup.closed
+            ? undefined
+            : switchSetupGame(open, data.game!.id, pluginSet, () =>
+                this.close()
+              )
+        )
+        .then(() => {
+          if (opened !== null) {
+            focusRuleSwitch(opened.element(), focus);
+          }
+        });
+    };
 
     const setup = this.#setup,
       data = setup.data,
@@ -188,7 +254,10 @@ export class GameSetupForm extends Window {
         setup,
         this.#transport,
         'ui-game-setup-rules rule-sets-section',
-        start
+        start,
+        data.game === undefined
+          ? undefined
+          : { choice: data.game, switchTo: switchGame }
       );
 
     table.className = 'ui-game-setup-seats';
@@ -227,7 +296,12 @@ export class GameSetupForm extends Window {
       'difficulty',
       difficultyLabels(data.difficulties).map(({ label, value }) =>
         option(value, label, {
-          selected: value === preselectedDifficulty(data.difficulties),
+          selected:
+            value ===
+            (preset.difficulty !== undefined &&
+            data.difficulties.some(({ name }) => name === preset.difficulty)
+              ? preset.difficulty
+              : preselectedDifficulty(data.difficulties)),
         })
       )
     );
@@ -237,17 +311,17 @@ export class GameSetupForm extends Window {
     this.#landInputs = [
       numberInput(
         'landCoverage',
-        data.existing.landCoverage ?? 0.4,
+        preset.land?.landCoverage ?? data.existing.landCoverage ?? 0.4,
         'step="0.01" min="0"'
       ),
       numberInput(
         'landSize',
-        data.existing.landSize ?? 0.2,
+        preset.land?.landSize ?? data.existing.landSize ?? 0.2,
         'step="0.01" min="0"'
       ),
       numberInput(
         'maxIterations',
-        data.existing.maxIterations ?? 20,
+        preset.land?.maxIterations ?? data.existing.maxIterations ?? 20,
         'step="1" min="1"'
       ),
     ];
@@ -332,48 +406,13 @@ export class GameSetupForm extends Window {
       )
     );
 
-    // Which game (#668), once there is more than one: another is another form, with that game's civilizations and
-    //  levels, in this one's place.
-    const games =
-      data.game === undefined
-        ? null
-        : gameSelect(data.game, (pluginSet) => {
-            // One switch at a time: a second change, or a start, while one is on its way would reach a worker part
-            //  way to another game.
-            if (this.#switching) {
-              return;
-            }
-
-            this.#switching = true;
-            holdControls(this.element());
-
-            const seats = this.#setup.seats.map(({ kind, name }) => ({
-              kind,
-              name,
-            }));
-
-            void switchSetupGame(
-              (game) =>
-                GameSetupForm.ask(this.#transport, this.#onFinished, {
-                  ...preset,
-                  advanced: advanced.open,
-                  // On Earth, the other game's Earth, where it has one (#1176).
-                  earth: this.#setup.earth,
-                  pluginSet: game,
-                  seats,
-                }),
-              data.game!.id,
-              pluginSet,
-              () => this.close()
-            );
-          });
-
     this.update(
       s(
         '<div class="ui-game-setup"></div>',
         s(
           '<section class="ui-game-setup-world"></section>',
-          ...(games === null ? [] : [field(t('GameSetup.game'), games)]),
+          // The game and its rules first (#1248): the world's sizes, levels and civilizations are that game's.
+          ...(rules === null ? [] : [rules]),
           ...(grids.length > 1
             ? [field(t('GameSetup.grid'), this.#gridSelect)]
             : []),
@@ -381,7 +420,6 @@ export class GameSetupForm extends Window {
           field(t('GameSetup.difficulty'), this.#difficultySelect, {
             hint: this.#difficultyHint,
           }),
-          ...(rules === null ? [] : [rules]),
           advanced
         ),
         s(

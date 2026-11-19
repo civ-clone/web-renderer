@@ -342,6 +342,7 @@
       },
       "civ1-enhanced": {
         "extends": "civ1",
+        "original": "civ1",
         "plugins": [
           "@civ-clone/civ1-enhanced"
         ]
@@ -387,6 +388,7 @@
       },
       "civ2-enhanced": {
         "extends": "civ2",
+        "original": "civ2",
         "hidden": true,
         "tileset": ["civ2", "iso-pixelart"],
         "plugins": [

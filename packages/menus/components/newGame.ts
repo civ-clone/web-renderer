@@ -28,11 +28,11 @@ import {
   askGameChoices,
   gameFailed,
   gameGrid,
-  gameName,
   mayOfferOtherGames,
   playGame,
   preselectedGame,
 } from '../lib/pluginSets';
+import { gameTitle } from '../lib/gameNames';
 
 // The questions New Game asks, each one answered before the next (#745): which game, once there is more than one to
 //  play (#668), which grid (#89), how big a world, the difficulty level (#173), then how many civilizations (#55).
@@ -79,7 +79,8 @@ export const askGame = (
 
       ask(
         t('NewGameWindow.game'),
-        choices.games.map(({ id }) => ({ label: gameName(id), value: id })),
+        // Each game by its card's title in the setup (#1248).
+        choices.games.map(({ id }) => ({ label: gameTitle(id), value: id })),
         preselectedGame(choices),
         play
       );
