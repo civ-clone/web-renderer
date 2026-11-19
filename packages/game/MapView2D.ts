@@ -467,6 +467,11 @@ export class MapView2D implements MapRenderer {
   /** The 2D map always looks north. */
   faceNorth(): void {}
 
+  /** The 2D map doesn't turn: the keys that move a unit are its own. */
+  heading(): null {
+    return null;
+  }
+
   /** The 2D map doesn't turn. */
   turnBy(steps: number): void {
     void steps;

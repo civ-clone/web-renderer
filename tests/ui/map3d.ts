@@ -52,6 +52,7 @@ import {
   prepareMap3D,
 } from '@civ-clone/ui-game/lib/map3d';
 import { Stage } from '@civ-clone/ui-map-3d/stage';
+import { movingKeys } from '@civ-clone/ui-client/lib/unitActionKeys';
 import markerFor, { TileMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
 import { OverlayMesh } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
 import { Color } from 'three';
@@ -631,6 +632,48 @@ expect(
     'the keys turn the camera an eighth of a turn either way, and back to north, and draw it',
     [turned, back, yawOf(), staged.splice(0)],
     [45, 315, 0, ['render', 'render', 'render']]
+  );
+
+  // How it's turned, for the keys that move a unit: the way it's turned to, and the way each of the grid's directions
+  //  points on the land. Turned a quarter clockwise, up moves a unit east.
+  view.turnBy(2);
+
+  const quarter = view.heading();
+
+  view.faceNorth();
+
+  const north = view.heading(),
+    pointing = Object.entries(quarter.directions)
+      .map(([direction, [u, v]]) => `${direction} ${u} ${v}`)
+      .sort();
+
+  staged.splice(0);
+
+  expect(
+    "its heading is the camera's turn, and each way the grid points on the land, so up moves a unit up the screen: north unturned, east turned a quarter clockwise",
+    [
+      Math.round((quarter.turn * 180) / Math.PI),
+      north.turn,
+      pointing,
+      movingKeys(view.world.topology(), north).ArrowUp,
+      movingKeys(view.world.topology(), quarter).ArrowUp,
+    ],
+    [
+      90,
+      0,
+      [
+        'e 1 0',
+        'n 0 -1',
+        'ne 1 -1',
+        'nw -1 -1',
+        's 0 1',
+        'se 1 1',
+        'sw -1 1',
+        'w -1 0',
+      ],
+      'n',
+      'e',
+    ]
   );
 
   view.zoomBy(2);
@@ -1709,6 +1752,24 @@ expect(
       Math.round(
         ((((to - from) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) * 1000
       ) / 1000;
+
+  // Mid-turn, the keys that move a unit follow the way it's turning to, not the way it's drawn so far: the player
+  //  pressed the turn before the arrow.
+  glider.setOrbit({ ...glider.orbit(), yaw: 0 });
+  glider.turnBy(2);
+  runFrames(2);
+
+  const midTurn = [
+    Math.round((glider.orbit().yaw * 180) / Math.PI) < 90,
+    Math.round((glider.heading().turn * 180) / Math.PI),
+  ];
+
+  runFrames();
+
+  expect("mid-turn, its heading is the way it's turning to", midTurn, [
+    true,
+    90,
+  ]);
 
   glider.setOrbit({ ...glider.orbit(), yaw: 0 });
 

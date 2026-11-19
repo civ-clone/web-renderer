@@ -10,6 +10,7 @@ import Transport from '@civ-clone/ui-client/Transport';
 import {
   directionKeys,
   keyToActionsMap,
+  movingKeys,
 } from '@civ-clone/ui-client/lib/unitActionKeys';
 import chooseActiveUnit from '@civ-clone/ui-client/lib/chooseActiveUnit';
 import UnitQueue from '@civ-clone/ui-client/lib/UnitQueue';
@@ -48,7 +49,9 @@ export type ActiveUnitPortal = Pick<
 export type ActiveUnitMap = Pick<
   MapRenderer,
   'setActiveUnit' | 'showActiveUnit'
->;
+> &
+  // How it's turned, which the keys that move a unit turn with: the 2D map's own keys where it doesn't say.
+  Partial<Pick<MapRenderer, 'heading'>>;
 
 export type ActiveUnitControllerDeps = {
   // Once a halted unit's window has closed, chosen or dismissed (#357).
@@ -424,15 +427,42 @@ export class ActiveUnitController {
   pressKey(key: string): boolean {
     const activeUnit = this.#activeUnit;
 
-    return !!(
-      activeUnit &&
-      (key in keyToActionsMap ||
-        key in directionKeys(this.#deps.world.topology())) &&
+    if (activeUnit === null) {
+      return false;
+    }
+
+    const topology = this.#deps.world.topology(),
+      // Which way it moves a unit is the way it points as the map's turned now, even when it's kept until a move's
+      //  answered and the map's turned since: kept as the map's own key for that way.
+      pressed = this.#unturned(key, topology);
+
+    return (
+      (pressed in keyToActionsMap || pressed in directionKeys(topology)) &&
       this.#pendingMove.press(
-        key,
+        pressed,
         hasUnitActions(activeUnit),
         (key) => this.#playUnitKey(key) !== null
       )
+    );
+  }
+
+  // A key that moves a unit, on a map turned as it says now (`MapRenderer#heading`), as the key that moves it the same
+  //  way on the map unturned (`turnedDirectionKeys`). Any other key, or any key on a map that doesn't turn, as it is.
+  #unturned(key: string, topology: Topology): string {
+    const heading = this.#deps.map.heading?.() ?? null,
+      direction =
+        heading === null ? undefined : movingKeys(topology, heading)[key];
+
+    if (direction === undefined) {
+      return key;
+    }
+
+    // Every way a grid has has a key of its own unturned; were one ever without, the key isn't taken, rather than
+    //  moving the unit some other way.
+    return (
+      Object.entries(directionKeys(topology)).find(
+        ([, way]) => way === direction
+      )?.[0] ?? ''
     );
   }
 

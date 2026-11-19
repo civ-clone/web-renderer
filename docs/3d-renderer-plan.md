@@ -183,6 +183,10 @@ Building another world from the form starts it in the middle again.
   - the haze, and how far the camera sees, follow its distance.
 - **Keys:** through `InputController`, as the zoom keys are. `[` and `]` turn the view an eighth of a turn, and `\`
   turns it back to north, or the keys where those are on a US keyboard, for layouts that type them with AltGr. `z` and `x` zoom. A 2D map ignores the turn keys.
+- **The keys that move a unit** turn with the camera (`MapRenderer#heading`, `turnedDirectionKeys` in
+  `packages/client/lib/unitActionKeys.ts`, the ways from `layouts/directions.ts`): each moves the unit to the neighbour
+  nearest the way it points, turned on the ground as the camera's turned to, mid-turn too. The 2D map has no heading,
+  so its keys are its own. Tested by `tests/ui/turnedKeys.ts` on all three grids at every 2.5° of turn.
 - **The mouse, the wheel and touch:** `packages/map-3d/camera/CameraInput.ts`, on the shared gestures (0.1b):
   - a drag keeps the ground under the pointer, and a flick glides on, unless the player asked for less motion;
   - the middle button, or the main one with Alt, turns and tilts; the right button is left to the unit's menu;

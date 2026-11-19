@@ -15,6 +15,8 @@ import { MapEvent } from '@civ-clone/ui-protocol/mapEvents';
 import { MapView3DDeps } from '@civ-clone/ui-map/MapView3DFactory';
 import MapPortal3D from './MapPortal3D';
 import MapRenderer from '@civ-clone/ui-map/MapRenderer';
+import type { MapHeading } from '@civ-clone/ui-client/lib/unitActionKeys';
+import groundDirections from './layouts/directions';
 import World from '@civ-clone/ui-map/components/World';
 import { Stage, StageFactory, createStage } from './stage';
 import Land from './Land';
@@ -337,6 +339,17 @@ export class MapView3D implements MapRenderer {
       { ...target, yaw: target.yaw + steps * TURN_STEP },
       this.#turnLeft() + steps * TURN_STEP
     );
+  }
+
+  /**
+   * How the camera's turned, for the keys that move a unit: the way it's turning to, mid-turn, and the way each of the
+   *  grid's directions points on the ground, from a square to its neighbour, as the land's laid out.
+   */
+  heading(): MapHeading {
+    return {
+      turn: (this.#glide?.to ?? this.#orbit).yaw,
+      directions: groundDirections(this.#land.layout, this.world.topology()),
+    };
   }
 
   /** Turns the view to look north, the short way round from where it faces now. */

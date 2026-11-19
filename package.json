@@ -71,6 +71,7 @@
     "test:interface-mode": "node tools/run-suite.js ui interfaceMode",
     "test:interface-manifests": "node tools/run-suite.js ui interfaceManifests",
     "test:packages": "node tools/run-suite.js ui packages",
+    "test:turned-keys": "node tools/run-suite.js ui turnedKeys",
     "test:window-chrome": "node tools/run-suite.js ui windowChrome",
     "test:button-variants": "node tools/button-variants.js",
     "test:theme-tokens": "node tools/theme-tokens.js",
