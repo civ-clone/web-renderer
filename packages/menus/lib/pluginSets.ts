@@ -36,7 +36,10 @@ export type GameChoices = {
   chosen: string | null;
 };
 
-/** The ids of every art pack that is here: those imported, and those that ship with civ.one whose sheets have loaded. */
+/**
+ * The ids of every art pack that is installed: those imported, and those that ship with civ.one, which are installed
+ *  until their sheet fails to load (`installPacks`), whether or not it has been fetched yet.
+ */
 export const presentTilesets = (): string[] =>
   installedTilesets().map(({ id }) => id);
 
@@ -49,8 +52,8 @@ export const importableTilesets = (): string[] =>
 /**
  * Whether there can be another game to offer: once there is art beyond the interface's, which every game has, as a
  *  game that needs art of its own is drawn with another game's (Civ2's, imported) or civ.one's own isometric pixel art,
- *  which ships with it (#1063). Until then, as on a first visit offline before any sheet has loaded, nothing is asked
- *  of the worker, and nothing has been chosen there, so New Game, Earth and the setup go on as they always have.
+ *  which ships with it (#1063). Until then, nothing is asked of the worker, and nothing has been chosen there, so New
+ *  Game, Earth and the setup go on as they always have.
  */
 export const mayOfferOtherGames = (): boolean =>
   installedTilesets().some((tileset) => tileset.id !== interfaceTileset().id);

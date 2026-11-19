@@ -1828,28 +1828,41 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
         ['hosted-iso', 1]
       );
 
-      // And with none of its art here, it's refused, naming the art to import, as the worker says when asked with
-      //  every pack that can be imported; one with Civ1's is drawn as the player chose.
-      const imported = worker(['civ2']);
-
+      // And with none of its art here, as when the isometric art that ships couldn't be loaded either, it's refused,
+      //  naming the art to import, as the worker says when asked again with every pack that can be imported. One with
+      //  Civ1's rules is asked once, and drawn as the player chose.
+      installTilesets({
+        civ2: { complete: false, metadata: null },
+        'hosted-iso': { complete: false, metadata: null },
+      });
       asked.length = 0;
 
-      const refused = await followSavedRuleSet(imported, 'civ2').then(
-        () => '',
-        (error: Error) => error.message
-      );
+      const without = presentTilesets(),
+        refused = await followSavedRuleSet(transport, 'civ2').then(
+          () => '',
+          (error: Error) => error.message
+        );
 
-      await followSavedRuleSet(imported, 'civ1');
+      installTilesets({ civ2: { complete: false, metadata: null } });
+
+      await followSavedRuleSet(transport, 'civ1');
 
       expect(
-        "with none of its art here, a save with Civ2's rules is refused, naming Civ2's art, and one with Civ1's is drawn as the player chose",
+        "with none of its art here, a save with Civ2's rules is refused, naming Civ2's art, after asking with the sets here and then every pack that can be imported; one with Civ1's is asked once and drawn as the player chose",
         [
+          without.includes('hosted-iso'),
           /hasn’t been imported/.test(refused),
           refused.includes(civ2Json.name),
           mapTileset('staggered-iso').id,
-          asked.slice(1, 2),
+          asked,
         ],
-        [true, true, 'hosted-iso', [['civ1', 'civ2', 'imported-square']]]
+        [
+          false,
+          true,
+          true,
+          'hosted-iso',
+          [without, ['civ1', 'civ2', 'imported-square'], presentTilesets()],
+        ]
       );
 
       installTilesets(civ2Installed);

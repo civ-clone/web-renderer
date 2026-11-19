@@ -6,9 +6,9 @@ import '@civ-clone/ui-tileset-civ2';
 import '@civ-clone/ui-tileset-pixelart';
 import './interfaces.ts';
 import '@civ-clone/ui-map-square';
-// Isometric is drawable, but offered only once an isometric tileset is installed, and none is yet (#97).
+// Isometric is drawable, and offered while an isometric tileset is installed: the pixel art's, or Civ2's (#97).
 import '@civ-clone/ui-map-isometric';
-// Hex is drawable too, and offered once a hex tileset is installed, which none is yet (#94).
+// Hex is drawable too, and offered while a hex tileset is installed: the pixel art's (#94).
 import '@civ-clone/ui-map-hex';
 import Renderer from '@civ-clone/ui-game/bootstrap';
 import ReplaceableTransport from '@civ-clone/ui-client/ReplaceableTransport';

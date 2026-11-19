@@ -165,8 +165,9 @@ staggered isometric grid, which `tileset-civ2` registers (`registerTileset(tiles
   the asset store made as the page loads (`assetStore`) asks for its tileset only when it is first used.
 - A save on a grid whose bundled pack isn't installed is refused naming the pack to import (`SavedGame.needs-import`,
   `tilesetToImport`), one imported rather than one that ships. Every grid has pixel art that ships, so a save loads
-  without Civ1's or Civ2's art, unless its rule set needs art of its own: a Civ2 game is refused without Civ2's
-  (`SavedGame.needs-rules-art`, `followSavedRuleSet`).
+  without Civ1's or Civ2's art. A Civ2 game is drawn with Civ2's art where it's imported, and otherwise with the
+  isometric pixel art (`followSavedRuleSet`); it's refused, naming Civ2's art (`SavedGame.needs-rules-art`), only when
+  neither is installed, as when the pixel art's sheet couldn't be loaded.
 
 ### Civ2's descriptor
 
@@ -254,12 +255,13 @@ has the design.
   (`supportedTopologies`), and say why not otherwise (`packages/menus/lib/playable.ts`): a first visit offline with
   nothing imported.
 - **The map's art per grid.** `mapTileset(grid)` draws a grid's maps with the art the game's rule set names, as New
-  Game learns it (`setRuleSetTileset`, from `playGame`: Civ2's), then the installed set the player chose for the grid
+  Game learns it (`setRuleSetTileset`, from `playGame`: Civ2's, or the isometric pixel art without it), then the installed set the player chose for the grid
   (the option `tileset.<grid>`, `chooseMapTileset`), or, unchosen, the one imported for it, or the one that ships;
   settled once per grid until the installed sets, the options (`GameOptionsRegistry.onChange`) or the rule set's art
   change. Each hosted set has its zoom (`zoom.<id>`) like the others.
-- **What isn't a game's.** New Game asks the worker for other games only once the player has imported art beyond
-  Civ1's (`mayOfferOtherGames`, `importedTilesets`): the hosted sets are no game's own.
+- **Which games there are.** New Game asks the worker for other games once any set beyond the interface's is
+  installed, hosted ones included (`mayOfferOtherGames`, `presentTilesets`): Civ2's rules are drawn with Civ2's art
+  where it's imported, and otherwise with the isometric pixel art, so they're offered with nothing imported.
 
 ## Sprite overlays
 

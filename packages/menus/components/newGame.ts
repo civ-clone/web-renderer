@@ -102,8 +102,8 @@ const ask = (
 
 /**
  * Which grid the map is on: square, isometric or hex (#89). The first question of New Game and Customize World, and
- *  fixed for the rest of the game. Only the grids that can be drawn are offered: square and hex with the pixel art that
- *  ships, and isometric once Civ2's art is imported (#97). Where only one can be, the question answers itself and is
+ *  fixed for the rest of the game. Only the grids that can be drawn are offered: square, isometric and hex, each with
+ *  the pixel art that ships (#97, #1063). Where only one can be, the question answers itself and is
  *  never shown (#148). Earth is on its game's own grid, or else square, so it never asks.
  */
 export const askMapGrid = (

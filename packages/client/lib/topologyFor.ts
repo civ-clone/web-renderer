@@ -11,8 +11,8 @@ import { Direction } from '@civ-clone/ui-protocol/topology';
 //
 // The world says which grid it is on (#89), and a world that does not (one sent by an older engine, or a save made
 //  before the grid was recorded) is square. Only worlds on a grid with an installed tileset can be started or
-//  loaded (see `supportedTopologies` and `drawnTopologies`): square, isometric once Civ2's art has been imported
-//  (#97), and hex, with the pixel art that ships (#1063).
+//  loaded (see `supportedTopologies` and `drawnTopologies`): square, isometric and hex, each with the pixel art that
+//  ships (#1063), or Civ1's or Civ2's art where it has been imported (#97).
 
 export type Topology = ITopology<Direction>;
 
