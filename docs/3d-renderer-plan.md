@@ -445,7 +445,7 @@ Still to do in 3.4: improvements as models from a hosted set, and Fortress and A
 as strategy maps show them, rather than on the screen:
 - **Laid out** as the 2D map lays them in its tile (`tileYieldGrid`: two rows, more columns the more there are), in a
   block that fits the circle inside the square, so it stays within the square from above however the camera's turned
-  (`packages/map-3d/yields.ts`). The lower the camera looks, the less tall the blocks stand (by the sine of its pitch),
+  (`packages/map-3d/yields.ts`). The lower the camera looks, the smaller the blocks are (by the sine of its pitch),
   so they still fit their squares.
 - **Drawn** as one instance each of a quad that faces the camera, upright on the screen, its size in the world's units,
   so the icons shrink with distance as the land does, down to dots far out, on every square in sight, at every copy of

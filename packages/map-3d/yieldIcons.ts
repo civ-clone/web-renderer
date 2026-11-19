@@ -64,7 +64,8 @@ const vertexShader = /* glsl */ `
 
     // Its cell in the atlas, the room round the icon left out: rows from the top, as the atlas is drawn.
     float column = mod(cell, cells.x);
-    float row = floor(cell / cells.x);
+    // Half a cell on, so rounding on the GPU doesn't put it a row out.
+    float row = floor((cell + 0.5) / cells.x);
     vec2 inCell = vec2(pad) + uv * (1.0 - 2.0 * pad);
 
     vUv = vec2((column + inCell.x) / cells.x, 1.0 - (row + 1.0 - inCell.y) / cells.y);
@@ -87,7 +88,8 @@ const fragmentShader = /* glsl */ `
       discard;
     }
 
-    gl_FragColor = vec4(colour.rgb, 1.0);
+    // Smaller, an icon's edge is its colour mixed with the clear, black, round it: that colour again, not darkened.
+    gl_FragColor = vec4(colour.rgb / max(colour.a, 1e-4), 1.0);
 
     #include <colorspace_fragment>
     #include <fog_fragment>
@@ -151,9 +153,8 @@ const imageSize = (image: CanvasImageSource): [number, number] => {
 export class YieldIcons {
   readonly material: ShaderMaterial;
   #geometry: InstancedBufferGeometry | null = null;
-  #quad = new PlaneGeometry(1, 1);
   #atlas: CanvasTexture | null = null;
-  // What the atlas was drawn of: the art, and the icons' names in their cells.
+  // What the atlas was drawn of: each icon's name and art, in their cells.
   #atlasKey = '';
   #iconFor: (name: string) => CanvasImageSource | null;
 
@@ -176,11 +177,10 @@ export class YieldIcons {
       fog: true,
       // Their own colours, as the interface draws them, not the scene's tone.
       toneMapped: false,
-      alphaToCoverage: true,
     });
   }
 
-  /** How far the icons lean back from upright, as the camera looks down from `pitch` radians: smaller as it's lower. */
+  /** How big the icons stand, as the camera looks down from `pitch` radians: smaller, keeping their shape, the lower it looks. */
   lean(pitch: number): void {
     this.material.uniforms['lean']!.value = Math.sin(pitch);
   }
@@ -198,9 +198,12 @@ export class YieldIcons {
 
     const geometry = new InstancedBufferGeometry();
 
-    geometry.index = this.#quad.index;
-    geometry.setAttribute('position', this.#quad.getAttribute('position'));
-    geometry.setAttribute('uv', this.#quad.getAttribute('uv'));
+    // A quad of its own: letting a geometry go lets go of all it holds.
+    const quad = new PlaneGeometry(1, 1);
+
+    geometry.index = quad.index;
+    geometry.setAttribute('position', quad.getAttribute('position'));
+    geometry.setAttribute('uv', quad.getAttribute('uv'));
     geometry.setAttribute(
       'anchor',
       new InstancedBufferAttribute(mesh.anchors, 3)
@@ -226,12 +229,31 @@ export class YieldIcons {
     return drawn;
   }
 
-  // The interface's icons, each in its cell, drawn again only when the art or the icons in it change.
+  // Each image a number of its own, for the atlas's key: 0 for none.
+  #imageIds = new WeakMap<object, number>();
+  #nextImageId = 1;
+
+  #imageId(image: CanvasImageSource | null): number {
+    if (image === null) {
+      return 0;
+    }
+
+    let id = this.#imageIds.get(image);
+
+    if (id === undefined) {
+      id = this.#nextImageId++;
+      this.#imageIds.set(image, id);
+    }
+
+    return id;
+  }
+
+  // The interface's icons, each in its cell, drawn again only when the icons in it, or their art, change.
   #drawAtlas(mesh: YieldMesh): void {
-    // Drawn again for an icon whose art has arrived since.
-    const key = `${mesh.art}|${mesh.names
-      .map((name) => `${name}${this.#iconFor(name) === null ? '?' : ''}`)
-      .join(',')}`;
+    // Drawn again for an icon whose art has arrived, or been replaced, since.
+    const key = mesh.names
+      .map((name) => `${name}:${this.#imageId(this.#iconFor(name))}`)
+      .join(',');
 
     if (key === this.#atlasKey && this.#atlas !== null) {
       return;
@@ -273,7 +295,6 @@ export class YieldIcons {
 
   dispose(): void {
     this.#geometry?.dispose();
-    this.#quad.dispose();
     this.#atlas?.dispose();
     this.material.dispose();
   }

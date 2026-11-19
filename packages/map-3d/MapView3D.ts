@@ -587,7 +587,6 @@ export class MapView3D implements MapRenderer {
     }
 
     this.#artId = id;
-    this.#yieldsStale = true;
 
     return 'redrawn';
   }
@@ -1075,9 +1074,10 @@ export class MapView3D implements MapRenderer {
     this.#worldTiles = tiles;
     this.#worldTileCount = tiles.length;
     this.#tilesToDraw.clear();
-    this.#land.changed(squares, ...this.#focus(), replaced);
+    const reshaped = this.#land.changed(squares, ...this.#focus(), replaced);
+
     squares.forEach(([x, y]) => this.#mark(x, y));
-    this.#yieldsChanged(squares, replaced);
+    this.#yieldsChanged(squares, reshaped);
 
     // The square an open tooltip is about has changed: it says what's there now.
     const hover = this.#hover;
@@ -1169,20 +1169,21 @@ export class MapView3D implements MapRenderer {
     }
   }
 
-  // Squares whose land or yields changed: their yields laid out again, and their neighbours', whose land meets theirs
-  //  and so may stand higher or lower. Every one, where the world's been replaced.
-  #yieldsChanged(squares: [number, number][], replaced: boolean): void {
-    if (replaced) {
-      this.#yieldsLaid.clear();
-    }
-
-    if (squares.length === 0 && !replaced) {
+  // Squares that changed (`squares`), their yields laid out again; and those whose land did (`reshaped`, which a world
+  //  replaced, by a square newly seen, say, may add to), with their neighbours', whose land meets theirs and so may
+  //  stand higher or lower. A tile replaced with yields of its own is told by them (`#showYields`).
+  #yieldsChanged(
+    squares: readonly (readonly [number, number])[],
+    reshaped: readonly (readonly [number, number])[]
+  ): void {
+    if (squares.length === 0 && reshaped.length === 0) {
       return;
     }
 
     const topology = this.world.topology();
 
-    squares.forEach(([x, y]) => {
+    squares.forEach(([x, y]) => this.#yieldsLaid.delete(`${x},${y}`));
+    reshaped.forEach(([x, y]) => {
       this.#yieldsLaid.delete(`${x},${y}`);
       topology.directions().forEach((direction) => {
         const next = topology.neighbour(x, y, direction);
@@ -1242,7 +1243,7 @@ export class MapView3D implements MapRenderer {
       }
     });
 
-    this.#stage.setYields(yieldMesh(squares, this.#artId));
+    this.#stage.setYields(yieldMesh(squares));
     this.#yieldsStale = false;
     this.#yieldsDrawn = true;
   }

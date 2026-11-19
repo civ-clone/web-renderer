@@ -23,7 +23,7 @@ export type YieldSlot = { _: string; right: number; up: number };
 /**
  * Every icon to draw, as the stage takes them: each one's square's middle (`u`, height, `v`, three to an icon), its
  *  place in its block (right and up, in icons, two to an icon), how big its icons are (in the world's units, one to an
- *  icon), and which of `names` it is (one to an icon). `art` is the interface art they're drawn from.
+ *  icon), and which of `names` it is (one to an icon).
  */
 export type YieldMesh = {
   count: number;
@@ -32,7 +32,6 @@ export type YieldMesh = {
   sizes: Float32Array;
   cells: Float32Array;
   names: string[];
-  art: string;
 };
 
 /** A square's icons, as `tileYieldGrid` lays them, centred on the block they make. */
@@ -100,11 +99,8 @@ export const laidYields = (
     : { at, size: yieldIconSize(columns, inner), slots };
 };
 
-/** Every icon of `squares`, laid out already, as the stage draws them, from the interface art `art`. */
-export const yieldMesh = (
-  squares: Iterable<LaidYields>,
-  art: string
-): YieldMesh => {
+/** Every icon of `squares`, laid out already, as the stage draws them. */
+export const yieldMesh = (squares: Iterable<LaidYields>): YieldMesh => {
   const laid = [...squares],
     count = laid.reduce((total, { slots }) => total + slots.length, 0),
     mesh: YieldMesh = {
@@ -114,7 +110,6 @@ export const yieldMesh = (
       sizes: new Float32Array(count),
       cells: new Float32Array(count),
       names: [],
-      art,
     },
     cells = new Map<string, number>();
   let index = 0;

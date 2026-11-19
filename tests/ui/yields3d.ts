@@ -198,8 +198,7 @@ grids.forEach((topologyId) => {
       laidYields({ at: [2.5, 0.1, 0.5], yields: yields(0, 0, 2) }, 1),
     ],
     mesh = yieldMesh(
-      laid.flatMap((square) => (square === null ? [] : [square])),
-      'civ1'
+      laid.flatMap((square) => (square === null ? [] : [square]))
     );
 
   expect(
@@ -212,7 +211,6 @@ grids.forEach((topologyId) => {
       [...mesh.anchors],
       [...mesh.slots],
       [...new Set(mesh.sizes)].map((size) => Math.round(size * 1000)),
-      mesh.art,
     ],
     [
       null,
@@ -224,7 +222,6 @@ grids.forEach((topologyId) => {
       ),
       [-0.5, 0, 0.5, 0, -0.5, 0, 0.5, 0],
       [Math.round(yieldIconSize(2, 1) * 1000)],
-      'civ1',
     ]
   );
 }

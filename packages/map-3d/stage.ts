@@ -506,7 +506,7 @@ export const createStage: StageFactory = (
       }
     }
 
-    // The yields' icons stand less tall, the lower the camera looks, so they still fit their squares.
+    // The yields' icons are smaller, the lower the camera looks, so they still fit their squares.
     yields.lean(orbit.pitch);
 
     if (markersKey !== markerCopiesKey) {

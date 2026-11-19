@@ -730,9 +730,10 @@ expect(
     land = view.land(),
     changed = land.changed.bind(land);
 
-  land.changed = (squares, u, v, always = false): void => {
+  land.changed = (squares, u, v, always = false): [number, number][] => {
     readAgain.push(always);
-    changed(squares, u, v, always);
+
+    return changed(squares, u, v, always);
   };
 
   view.flush();
@@ -1207,13 +1208,20 @@ expect(
 
     const changed = described(lastYields());
 
-    // Its city's figures for it changed, with no word of the square itself (Civ2's, `squareYields`): laid out again as
-    //  soon as anything's drawn again. And a square raised into hills stands its icons higher.
+    // Worked by a city whose figures for it are its own (Civ2's, `squareYields`), then changed with no word of the
+    //  square itself: laid out again the next time any square changes. And a square raised into mountains stands its
+    //  icons higher.
     const heightOf = (mesh: YieldMesh | null | undefined, icon: number) =>
-      mesh?.anchors[icon * 3 + 1] ?? -1;
+        mesh?.anchors[icon * 3 + 1] ?? -1,
+      city = {
+        squareYields: [{ x: 1, y: 1, yields: yieldsOf(1, 2) }],
+      };
 
-    // (3, 3), queued, is no neighbour of (1, 1), whose yields change unspoken of.
-    Object.assign(tiles[5]!, { yields: yieldsOf(3, 0) });
+    Object.assign(tiles[5]!, { workedBy: city, yields: yieldsOf(0, 0) });
+    view.queueTile(tiles[5]!);
+    view.releaseTiles();
+    // (3, 3), queued, is no neighbour of (1, 1).
+    city.squareYields = [{ x: 1, y: 1, yields: yieldsOf(3, 0) }];
     view.queueTile(tiles[15]!);
     view.releaseTiles();
 
@@ -1235,7 +1243,7 @@ expect(
     view.releaseTiles();
 
     expect(
-      "a square whose city's figures change is laid out again as soon as the yields are drawn again, and a square raised into mountains has its icons higher",
+      'a square worked by a city with figures of its own for it shows them, laid out again when they change with no word of the square, once any square changes; and a square raised into mountains has its icons higher',
       [
         unspoken?.count,
         unspoken?.cells.slice(3),
@@ -1244,7 +1252,7 @@ expect(
       ],
       [
         6,
-        // Three food, where it was a food and two trade.
+        // The city's three food, where its figure was a food and two trade, and the square's own none.
         [0, 0, 0],
         [
           [1.5, 1.5, -0.5, 0.5],
@@ -1294,17 +1302,82 @@ expect(
         1,
         6,
         [1.5, 1.5, -0.5, 0.5],
-        [6, null],
-        6,
+        [7, null],
+        7,
         6,
       ]
     );
 
-    Object.assign(tiles[0]!, { yields: [] });
-    Object.assign(tiles[5]!, { yields: [] });
-    view.queueTile(tiles[0]!);
-    view.queueTile(tiles[5]!);
-    view.toggleYields();
+    // What's laid out again, counted by the land's height read under it, with the yields hidden while the land changes
+    //  and then shown: every square, the first time; none, shown again with nothing changed; a square whose land
+    //  changed, and its eight neighbours; and for a square newly seen, the world handed over again, only that one.
+    {
+      const land = view.land(),
+        surfaceAt = land.surfaceAt.bind(land);
+      let read = 0;
+
+      land.surfaceAt = (...args: Parameters<typeof surfaceAt>): number => {
+        read++;
+
+        return surfaceAt(...args);
+      };
+
+      // Every square yields something, so each one's laid out.
+      tiles.forEach((tile) => Object.assign(tile, { yields: yieldsOf(1, 1) }));
+      view.toggleYields();
+      tiles.forEach((tile) => view.queueTile(tile));
+      view.releaseTiles();
+
+      const readWhenShown = (change: () => void): number => {
+        change();
+        view.releaseTiles();
+        read = 0;
+        view.toggleYields();
+
+        const count = read;
+
+        view.toggleYields();
+
+        return count;
+      };
+
+      const counts = [
+        readWhenShown(() => {}),
+        readWhenShown(() => {}),
+        readWhenShown(() => {
+          Object.assign(tiles[10]!, {
+            terrain: { _: 'Mountains', features: [] },
+          });
+          view.queueTile(tiles[10]!);
+        }),
+        readWhenShown(() => {
+          Object.assign(tiles[10]!, { yields: yieldsOf(2, 2) });
+          view.queueTile(tiles[10]!);
+        }),
+        readWhenShown(() => {
+          view.world.setTiles([...tiles], true);
+          view.queueTile(tiles[3]!);
+        }),
+      ];
+
+      land.surfaceAt = surfaceAt;
+
+      expect(
+        'laid out once and kept: every square the first time, none again with nothing changed, a square whose land changed and its neighbours, one whose yields changed, and a square newly seen, not the whole world again',
+        counts,
+        [16, 0, 9, 1, 1]
+      );
+
+      Object.assign(tiles[10]!, {
+        terrain: { _: 'Grassland', features: [] },
+      });
+      view.queueTile(tiles[10]!);
+    }
+
+    tiles.forEach((tile) =>
+      Object.assign(tile, { yields: [], workedBy: null })
+    );
+    tiles.forEach((tile) => view.queueTile(tile));
     view.releaseTiles();
   }
 
