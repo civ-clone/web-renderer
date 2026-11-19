@@ -53,6 +53,7 @@ import {
 } from '@civ-clone/ui-game/lib/map3d';
 import { Stage } from '@civ-clone/ui-map-3d/stage';
 import { movingKeys } from '@civ-clone/ui-client/lib/unitActionKeys';
+import { YieldMesh, yieldIconSize } from '@civ-clone/ui-map-3d/yields';
 import markerFor, { TileMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
 import { OverlayMesh } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
 import { Color } from 'three';
@@ -187,6 +188,8 @@ const staged: string[] = [],
   markedAt = new Map<string, readonly [number, number, number]>(),
   // The units `markerAt` was asked after, in order.
   askedAfter: string[] = [],
+  // What each square yields, each time the stage was given it.
+  yieldsSet: (YieldMesh | null)[] = [],
   fakeStage = (): Stage => ({
     render: () => void staged.push('render'),
     resize: (stageWidth, stageHeight, ratio) =>
@@ -220,6 +223,7 @@ const staged: string[] = [],
       return at === undefined ? null : [...at];
     },
     sliding: () => slideFrames.left-- > 0,
+    setYields: (mesh) => void yieldsSet.push(mesh),
     view: (orbit, height, period) => {
       lookedAt.splice(0, 3, orbit.focus[0], orbit.focus[1], height);
       seenDown.push(period?.v);
@@ -1153,6 +1157,157 @@ expect(
     ['Unit-1', { x: 1, y: 0 }, { units: false, yields: true, waiting: true }]
   );
 
+  // What each square yields, while `y` shows them: given to the stage as icons standing over each square's middle,
+  //  laid out as the 2D map lays them, and taken away when they're hidden. A square's laid out again when it changes.
+  {
+    const yieldsOf = (food: number, trade: number) => [
+        { _: 'Food', value: food },
+        { _: 'Trade', value: trade },
+      ],
+      lastYields = (): YieldMesh | null | undefined =>
+        yieldsSet[yieldsSet.length - 1],
+      described = (mesh: YieldMesh | null | undefined) =>
+        mesh === null || mesh === undefined
+          ? mesh
+          : {
+              count: mesh.count,
+              names: mesh.names,
+              cells: [...mesh.cells],
+              // Where each stands on the ground (u, v), and its place in its block, across and up.
+              at: Array.from({ length: mesh.count }, (_, index) => [
+                mesh.anchors[index * 3],
+                mesh.anchors[index * 3 + 2],
+                mesh.slots[index * 2],
+                mesh.slots[index * 2 + 1],
+              ]),
+              sizes: [...new Set(mesh.sizes)].map(
+                (size) => Math.round(size * 1000) / 1000
+              ),
+            };
+
+    Object.assign(tiles[0]!, { yields: yieldsOf(2, 1) });
+    Object.assign(tiles[5]!, { yields: yieldsOf(1, 0) });
+    yieldsSet.splice(0);
+    view.queueTile(tiles[0]!);
+    view.queueTile(tiles[5]!);
+    view.releaseTiles();
+
+    const shown = described(lastYields()),
+      setWhenShown = yieldsSet.length;
+
+    // Nothing changed: nothing given again.
+    view.flush();
+
+    const unchanged = yieldsSet.length;
+
+    // Square (1, 1) yields more trade now.
+    Object.assign(tiles[5]!, { yields: yieldsOf(1, 2) });
+    view.queueTile(tiles[5]!);
+    view.releaseTiles();
+
+    const changed = described(lastYields());
+
+    // Its city's figures for it changed, with no word of the square itself (Civ2's, `squareYields`): laid out again as
+    //  soon as anything's drawn again. And a square raised into hills stands its icons higher.
+    const heightOf = (mesh: YieldMesh | null | undefined, icon: number) =>
+      mesh?.anchors[icon * 3 + 1] ?? -1;
+
+    // (3, 3), queued, is no neighbour of (1, 1), whose yields change unspoken of.
+    Object.assign(tiles[5]!, { yields: yieldsOf(3, 0) });
+    view.queueTile(tiles[15]!);
+    view.releaseTiles();
+
+    const unspoken = described(lastYields()),
+      flatHeight = heightOf(lastYields(), 0);
+
+    Object.assign(tiles[0]!, {
+      terrain: { _: 'Mountains', features: [] },
+    });
+    view.queueTile(tiles[0]!);
+    view.releaseTiles();
+
+    const raised = heightOf(lastYields(), 0);
+
+    Object.assign(tiles[0]!, {
+      terrain: { _: 'Grassland', features: [] },
+    });
+    view.queueTile(tiles[0]!);
+    view.releaseTiles();
+
+    expect(
+      "a square whose city's figures change is laid out again as soon as the yields are drawn again, and a square raised into mountains has its icons higher",
+      [
+        unspoken?.count,
+        unspoken?.cells.slice(3),
+        unspoken?.at.slice(3),
+        raised > flatHeight + 0.1,
+      ],
+      [
+        6,
+        // Three food, where it was a food and two trade.
+        [0, 0, 0],
+        [
+          [1.5, 1.5, -0.5, 0.5],
+          [1.5, 1.5, 0.5, 0.5],
+          [1.5, 1.5, -0.5, -0.5],
+        ],
+        true,
+      ]
+    );
+
+    view.toggleYields();
+
+    const hidden = [yieldsSet.length, lastYields()];
+
+    view.flush();
+
+    const stillHidden = yieldsSet.length;
+
+    view.toggleYields();
+
+    expect(
+      'shown, each square’s yields are icons over its middle, as the 2D map lays them out, the same size on a square, made again only for a square that changes, and taken away when hidden',
+      [
+        shown,
+        setWhenShown,
+        unchanged,
+        changed?.count,
+        changed?.at[3],
+        hidden,
+        stillHidden,
+        described(lastYields())?.count,
+      ],
+      [
+        {
+          count: 4,
+          names: ['Food', 'Trade'],
+          cells: [0, 0, 1, 0],
+          at: [
+            [0.5, 0.5, -0.5, 0.5],
+            [0.5, 0.5, 0.5, 0.5],
+            [0.5, 0.5, -0.5, -0.5],
+            [1.5, 1.5, 0, 0],
+          ],
+          sizes: [Math.round(yieldIconSize(2, 1) * 1000) / 1000],
+        },
+        1,
+        1,
+        6,
+        [1.5, 1.5, -0.5, 0.5],
+        [6, null],
+        6,
+        6,
+      ]
+    );
+
+    Object.assign(tiles[0]!, { yields: [] });
+    Object.assign(tiles[5]!, { yields: [] });
+    view.queueTile(tiles[0]!);
+    view.queueTile(tiles[5]!);
+    view.toggleYields();
+    view.releaseTiles();
+  }
+
   view.showActiveUnit([]);
 
   expect(
@@ -2033,9 +2188,11 @@ expect(
     );
 
   expect(
-    'map3d.js bundles three.js, its own code, the built-in model set, the emitter, and from the rest only the factory’s name, reduced motion and the shared gestures',
+    'map3d.js bundles three.js, its own code, the built-in model set, the emitter, and from the rest only the factory’s name, reduced motion, the shared gestures and the yields’ layout, none with state of its own',
     others.sort(),
     [
+      'packages/client/lib/instanceOf.ts',
+      'packages/client/lib/yieldMap.ts',
       'packages/map/MapView3DFactory.ts',
       'packages/map/lib/reducedMotion.ts',
       'packages/widgets/lib/drag.ts',

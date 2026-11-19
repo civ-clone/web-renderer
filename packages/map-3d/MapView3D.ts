@@ -37,6 +37,8 @@ import CameraInput from './camera/CameraInput';
 import markerFor, { MarkerWords } from './markers/markerFor';
 import pickGround from './camera/pick';
 import Minimap3D from './minimap/Minimap3D';
+import { LaidYields, innerOf, laidYields, yieldMesh } from './yields';
+import { squareCity, squareYields } from '@civ-clone/ui-client/lib/yieldMap';
 
 // How long, in ms, each frame may go on building the land's chunks while any wait. A chunk is built whole, once a frame
 //  has begun one: one takes 17–25 ms, so a frame builds one, and more only where they're quicker.
@@ -177,6 +179,17 @@ export class MapView3D implements MapRenderer {
   #unitSize: number;
   #stopUnitSize: () => void = (): void => {};
   #yieldsShown = false;
+  // Whether the yields drawn are out of date (`#showYields`), and whether any are drawn.
+  #yieldsStale = true;
+  #yieldsDrawn = false;
+  // Each square's yields laid out, by `x,y`, or nothing where it yields nothing, and the yields they're of: kept until
+  //  its land changes or it yields something else (its city's figures, which change with the city).
+  #yieldsLaid = new Map<
+    string,
+    { of: readonly unknown[]; laid: LaidYields | null }
+  >();
+  // How wide a circle fits inside a square, in the world's units: what a square's yields are fitted in.
+  #inner: number;
   #waiting = false;
   // The 2D art the city screen and windows draw with, as it was when last asked.
   #art: MapView3DDeps['art'];
@@ -196,6 +209,7 @@ export class MapView3D implements MapRenderer {
     this.#artId = deps.art.id();
     this.world = deps.world;
     this.#land = new Land(deps.world);
+    this.#inner = innerOf(this.#land.layout, deps.world.topology());
     // Read just now, by the land.
     this.#worldTiles = deps.world.tiles();
     this.#worldTileCount = this.#worldTiles.length;
@@ -221,6 +235,7 @@ export class MapView3D implements MapRenderer {
     this.#stage = stageFactory(deps.mapCanvas, {
       period: this.#land.layout.period(),
       ground: this.#land.ground(),
+      yieldIcon: deps.yieldIcon,
     });
 
     // After the stage: one that can't be made leaves no minimap behind it.
@@ -572,6 +587,7 @@ export class MapView3D implements MapRenderer {
     }
 
     this.#artId = id;
+    this.#yieldsStale = true;
 
     return 'redrawn';
   }
@@ -646,8 +662,11 @@ export class MapView3D implements MapRenderer {
     this.#draw();
   }
 
+  /** Shows or hides what each square yields (`y`), over the squares in the world. */
   toggleYields(): void {
     this.#yieldsShown = !this.#yieldsShown;
+    this.#yieldsStale = true;
+    this.#draw();
   }
 
   /** Brings the camera `steps` nearer, or further away for fewer than none, about the point it looks at. */
@@ -1058,6 +1077,7 @@ export class MapView3D implements MapRenderer {
     this.#tilesToDraw.clear();
     this.#land.changed(squares, ...this.#focus(), replaced);
     squares.forEach(([x, y]) => this.#mark(x, y));
+    this.#yieldsChanged(squares, replaced);
 
     // The square an open tooltip is about has changed: it says what's there now.
     const hover = this.#hover;
@@ -1149,6 +1169,84 @@ export class MapView3D implements MapRenderer {
     }
   }
 
+  // Squares whose land or yields changed: their yields laid out again, and their neighbours', whose land meets theirs
+  //  and so may stand higher or lower. Every one, where the world's been replaced.
+  #yieldsChanged(squares: [number, number][], replaced: boolean): void {
+    if (replaced) {
+      this.#yieldsLaid.clear();
+    }
+
+    if (squares.length === 0 && !replaced) {
+      return;
+    }
+
+    const topology = this.world.topology();
+
+    squares.forEach(([x, y]) => {
+      this.#yieldsLaid.delete(`${x},${y}`);
+      topology.directions().forEach((direction) => {
+        const next = topology.neighbour(x, y, direction);
+
+        if (next !== null) {
+          this.#yieldsLaid.delete(`${next[0]},${next[1]}`);
+        }
+      });
+    });
+    this.#yieldsStale = true;
+  }
+
+  // What each square yields, drawn again on the stage if it's out of date and shown, and taken away once it's hidden.
+  #showYields(): void {
+    if (!this.#yieldsShown) {
+      if (this.#yieldsDrawn) {
+        this.#stage.setYields(null);
+        this.#yieldsDrawn = false;
+      }
+
+      return;
+    }
+
+    if (!this.#yieldsStale && this.#yieldsDrawn) {
+      return;
+    }
+
+    const squares: LaidYields[] = [];
+
+    this.world.tiles().forEach((tile) => {
+      const key = `${tile.x},${tile.y}`,
+        yields = squareYields(tile, squareCity(tile));
+      let kept = this.#yieldsLaid.get(key);
+
+      if (kept === undefined || kept.of !== yields) {
+        const [u, v] = this.#land.layout.centre(tile.x, tile.y);
+
+        // On the land as it's drawn, as markers stand, and on the sea where it's lower.
+        kept = {
+          of: yields,
+          laid:
+            yields.length === 0
+              ? null
+              : laidYields(
+                  {
+                    at: [u, Math.max(0, this.#land.surfaceAt(u, v)), v],
+                    yields,
+                  },
+                  this.#inner
+                ),
+        };
+        this.#yieldsLaid.set(key, kept);
+      }
+
+      if (kept.laid !== null) {
+        squares.push(kept.laid);
+      }
+    });
+
+    this.#stage.setYields(yieldMesh(squares, this.#artId));
+    this.#yieldsStale = false;
+    this.#yieldsDrawn = true;
+  }
+
   // What's marked on the square `key` now, to tell when it changes.
   #remember(key: string, signature: string | null): void {
     if (signature === null) {
@@ -1190,6 +1288,7 @@ export class MapView3D implements MapRenderer {
 
     const rising = this.#followHeight(budget !== null);
 
+    this.#showYields();
     this.#stage.view(this.#orbit, this.#lookHeight ?? 0, this.#period());
     this.#stage.render();
     this.#showMinimap();
