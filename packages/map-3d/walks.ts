@@ -282,13 +282,16 @@ export class Walks {
     const ownId = this.#walkOf.get(unit),
       own = ownId === undefined ? undefined : this.#walks.get(ownId),
       drawn = own === undefined ? setOff : this.#drawn(own, now),
-      // Another walk that's just made this step, drawn where this unit is: it rides along with it, as what a ship
-      //  carries does, stepping after the ship.
+      // Another walk that's just made this step, drawn where this unit was as it made it: it rides along with it, as
+      //  what a ship carries does, stepping after the ship.
       riding = [...this.#walks.values()].find(
         (walk) =>
           walk !== own &&
           this.#justMade(walk, from, to, now) &&
-          this.#beside(this.#drawn(walk, now), drawn)
+          this.#beside(
+            this.#drawn(walk, walk.stepped),
+            own === undefined ? setOff : this.#drawn(own, walk.stepped)
+          )
       );
 
     if (riding !== undefined) {

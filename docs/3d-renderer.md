@@ -879,8 +879,10 @@ mapEvent:
   over, when those squares are marked again. Whatever else a patch changes (a city captured, the land) shows at once. A
   unit that joins a stack under a stronger one walks there and disappears into it.
 - **Waiting for its patch:** a walk over before the patch that moves its unit has come, as when meeting a leader holds
-  the patches until it's answered, stands where it ended, its unit still left off the squares, until the patch takes
-  the unit from where it set off. It needs no frames meanwhile.
+  the patches until it's answered, stands where it ended, its unit still left off the squares, until the patches take
+  the unit from where it was: where it set off, or any square of the walk, as a GoTo's steps' patches are all held
+  together. It needs no frames meanwhile, and is drawn again as its units are (hidden, ringed, their size). Stepping
+  on meanwhile, the unit walks on from where it stands.
 - **Pace, by the clock:**
   - It gets up to pace from standing and stops at its end. A step joined mid-walk goes on at the pace it's going, so a
     GoTo's steps, which come all at once, and a unit moved again before it's arrived, are one walk.
@@ -890,9 +892,9 @@ mapEvent:
   - By the clock, not by frames: with no frames for a while, as in a tab out of sight, the first frame drawn again ends
     the walks that are over. A walk lets go of the squares it's passed as it goes on.
   - The world's tiles replaced, as by a square newly seen, which happens on most steps into the unknown, ends none of
-    them; it ends those waiting for their patch, which comes with it.
-- **Together:** units making the same step within 50 ms of each other, drawn at the same place, walk as one, as a ship
-  and what it carries do, shown as a stack of them.
+    them.
+- **Together:** units making the same step within 50 ms of each other, drawn at the same place as it was made, walk as
+  one, as a ship and what it carries do, shown as a stack of them.
   - One that doesn't step on stays bound where it was.
   - One that steps on from where the walk's bound, ashore say, goes on along the way it came, from where it is.
   - One that steps from elsewhere sets off from where it's drawn, and a walk it was alone in is taken away.

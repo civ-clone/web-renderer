@@ -487,7 +487,7 @@ export class MapView3D implements MapRenderer {
     const walking = this.#walks.walking(unit.id),
       seen =
         this.world.get(from.x, from.y).units.find(({ id }) => id === unit.id) ??
-        (walking ? this.#walkingUnits.get(unit.id) : undefined),
+        (this.#leftOff(unit.id) ? this.#walkingUnits.get(unit.id) : undefined),
       own = unit.player === this.#playerId;
 
     if (
@@ -501,6 +501,7 @@ export class MapView3D implements MapRenderer {
     }
 
     this.#walkingUnits.set(unit.id, seen);
+    this.#stepsOn(unit.id);
     this.#walks.step(
       unit.id,
       from,
@@ -530,6 +531,31 @@ export class MapView3D implements MapRenderer {
     };
   }
 
+  // A unit waiting for its patch steps on: it walks on from where it stands, and the walk that waited goes on waiting
+  //  without it, or is taken away, left with no one.
+  #stepsOn(unit: string): void {
+    if (!this.#unpatchedUnits.delete(unit)) {
+      return;
+    }
+
+    this.#unpatched.forEach((walker, id) => {
+      const units = walker.units.filter((other) => other !== unit);
+
+      if (units.length === walker.units.length) {
+        return;
+      }
+
+      if (units.length === 0) {
+        this.#unpatched.delete(id);
+        this.#takeAway(id);
+
+        return;
+      }
+
+      this.#unpatched.set(id, { ...walker, units });
+    });
+  }
+
   // Whether a unit's left off the squares it's on: walking, or waiting for its patch.
   #leftOff(unit: string): boolean {
     return this.#walks.walking(unit) || this.#unpatchedUnits.has(unit);
@@ -541,6 +567,8 @@ export class MapView3D implements MapRenderer {
   //  over.
   #placeWalkers(now: number): void {
     this.#walks.dropped().forEach((id) => this.#takeAway(id));
+    // Those waiting for their patch, as their units are now: hidden, ringed, their size.
+    this.#unpatched.forEach((walker) => this.#drawWalker(walker));
 
     if (this.#walks.size() === 0) {
       return;
@@ -618,13 +646,27 @@ export class MapView3D implements MapRenderer {
     );
   }
 
-  // Whether a walker's units are still where they set off from, as the patch that moves them hasn't come: any of them
-  //  still on the square its last step left, and not on the one it's bound for.
-  #awaitsPatch({ units, before, to }: Walker): boolean {
-    const on = ({ x, y }: { x: number; y: number }, unit: string): boolean =>
-      this.world.get(x, y).units.some(({ id }) => id === unit);
+  // Whether a walker's units are still where they were, as the patches that move them haven't come: any of them not on
+  //  the square it's bound for, but still on one it's walked from (where it set off, the square its last step left, or
+  //  any it's been left off since), as the patches for a GoTo's steps are all held together.
+  #awaitsPatch({ units, from, before, to }: Walker): boolean {
+    const on = (x: number, y: number, unit: string): boolean =>
+        this.world.get(x, y).units.some(({ id }) => id === unit),
+      bound = `${to.x},${to.y}`;
 
-    return units.some((unit) => on(before, unit) && !on(to, unit));
+    return units.some(
+      (unit) =>
+        !on(to.x, to.y, unit) &&
+        [
+          `${from.x},${from.y}`,
+          `${before.x},${before.y}`,
+          ...(this.#heldFor.get(unit) ?? []),
+        ].some((key) => {
+          const [x, y] = key.split(',').map(Number) as [number, number];
+
+          return key !== bound && on(x, y, unit);
+        })
+    );
   }
 
   // Walkers that are there, or stopped: those whose patch hasn't come stand where they ended till it does; the rest are
@@ -662,15 +704,14 @@ export class MapView3D implements MapRenderer {
     });
   }
 
-  // The walks waiting for their patch, now that tiles have come: over, if their units have gone from where they set off,
-  //  or every one of them, with the world replaced, as by a square newly seen, which comes with a patch.
-  #patched(replaced: boolean): void {
+  // The walks waiting for their patch, now that tiles have come: over, if their units have gone from where they were.
+  #patched(): void {
     if (this.#unpatched.size === 0) {
       return;
     }
 
     const over = [...this.#unpatched.values()].filter(
-      (walker) => replaced || !this.#awaitsPatch(walker)
+      (walker) => !this.#awaitsPatch(walker)
     );
 
     over.forEach((walker) => this.#unpatched.delete(walker.id));
@@ -1308,7 +1349,7 @@ export class MapView3D implements MapRenderer {
 
     // Walks that were waiting for their patch, over if it's come.
     if (squares.length > 0 || replaced) {
-      this.#patched(replaced);
+      this.#patched();
     }
   }
 

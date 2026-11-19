@@ -2401,6 +2401,40 @@ expect(
     ]
   );
 
+  // A GoTo of two steps whose patches are all held, as meeting a leader holds them: it stands where it ended, not back
+  //  where it set off. Units hidden meanwhile, it's hidden too; shown again, it's back. Stepping on before the patches
+  //  come, it walks on from where it stands, drawn once; and it's on its square once they've come.
+  repatched([0, 2, [walker]], [1, 2, []], [2, 2, []]);
+  walkersSet.length = 0;
+  stepped(walker, [0, 2], [1, 2]);
+  stepped(walker, [1, 2], [2, 2]);
+  runFrames();
+
+  const heldGoTo: unknown[] = [unitOn(0, 2), unitOn(2, 2), walkers.size];
+
+  glider.toggleUnits();
+  runFrames();
+  heldGoTo.push(walkers.size);
+  glider.toggleUnits();
+  runFrames();
+  heldGoTo.push(walkers.size);
+  stepped(walker, [2, 2], [3, 2]);
+  runFrames(1);
+  heldGoTo.push(walkers.size, [...walkers.values()][0]?.unit?.id);
+  runFrames();
+  patch([0, 2, []], [3, 2, [walker]]);
+  runFrames();
+  heldGoTo.push(unitOn(0, 2), unitOn(3, 2), walkers.size);
+  repatched([3, 2, []]);
+  walkersSet.length = 0;
+  walkersPlaced.clear();
+
+  expect(
+    'a GoTo whose patches are all held stands where it ended, not back where it set off, hidden with units hidden; stepping on, it walks on, drawn once; on its square once the patches come',
+    heldGoTo,
+    [null, null, 1, 0, 1, 1, 'Unit-A', null, ['Unit-A', 1], 0]
+  );
+
   // Drawn walking as the unit's drawn standing: the active one with its ring, at the size the player chose.
   repatched([1, 2, []], [0, 3, [walker]]);
   glider.setActiveUnit({ ...walker, tile: tiles[3 * 4] } as unknown as Unit);

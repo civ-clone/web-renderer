@@ -700,6 +700,73 @@ const point = (u: number, v: number, lift = 0): WalkPoint => ({
   );
 }
 
+// A rival's ship and its cargo: the cargo's step comes 40 ms after the ship's, at others' quicker pace, the ship well on
+//  its way: it rides along, as it was where the ship was as the ship stepped.
+{
+  const walks = new Walks({ u: 10, v: null }),
+    quick: Pace = { step: 125, ramp: 50, most: 1000 },
+    ship = walks.step(
+      'ship',
+      { x: 0, y: 1 },
+      { x: 1, y: 1 },
+      point(0, 1),
+      point(1, 1),
+      0,
+      quick
+    ),
+    cargo = walks.step(
+      'cargo',
+      { x: 0, y: 1 },
+      { x: 1, y: 1 },
+      point(0, 1),
+      point(1, 1),
+      40,
+      quick
+    );
+
+  expect(
+    'a rival’s cargo stepping 40 ms after its ship, the ship on its way, rides along',
+    cargo === ship,
+    true
+  );
+}
+
+// A step joined while walking into a city, before it's there: it goes on from where it is, with no jump, though the
+//  city's square is then one it passes.
+{
+  const walks = new Walks({ u: 10, v: null });
+
+  walks.step(
+    'goer',
+    { x: 0, y: 1 },
+    { x: 1, y: 1 },
+    point(0, 1),
+    { at: [1, 1.26], lift: 0, middle: [1, 1] },
+    0,
+    pace
+  );
+
+  const before = walks.at(150).going[0]!.at;
+
+  walks.step(
+    'goer',
+    { x: 1, y: 1 },
+    { x: 2, y: 1 },
+    point(9, 9),
+    point(2, 1),
+    150,
+    pace
+  );
+
+  const after = walks.at(150).going[0]!.at;
+
+  expect(
+    'a step joined while walking into a city, before it’s there, goes on from where it is, with no jump',
+    Math.hypot(after[0] - before[0], after[1] - before[1]) < 1e-9,
+    true
+  );
+}
+
 if (failures.length > 0) {
   process.stderr.write(
     `FAIL walks: ${
