@@ -43,6 +43,10 @@ const BUILD_BUDGET = 10;
 // How many units' facings are kept at most.
 const FACINGS_KEPT = 4000;
 
+// `delta` radians taken the short way round: between half a turn either way.
+const shortTurn = (delta: number): number =>
+  delta - Math.PI * 2 * Math.round(delta / (Math.PI * 2));
+
 // How long the camera takes to glide to a square it's centred on, or to turn, in ms.
 const GLIDE = 350;
 
@@ -94,7 +98,13 @@ export class MapView3D implements MapRenderer {
   #focused = '';
   // The camera now, the one it's gliding to, if it is, and the height it looks at, following the land's.
   #orbit: Orbit;
-  #glide: { from: Orbit; to: Orbit; started: number | null } | null = null;
+  // A glide: where from and to, when it started, and how far it turns, as asked, the way asked.
+  #glide: {
+    from: Orbit;
+    to: Orbit;
+    started: number | null;
+    turn: number;
+  } | null = null;
   #lookHeight: number | null = null;
   // The mouse, the wheel and touch moving the camera; and where its distance is kept, and what was kept last.
   #input: CameraInput;
@@ -296,16 +306,42 @@ export class MapView3D implements MapRenderer {
     this.portal.setCenter(tile.x, tile.y);
   }
 
-  /** Turns the view `steps` eighths of a turn: clockwise seen from above, or the other way for fewer than none. */
+  /**
+   * Turns the view `steps` eighths of a turn: clockwise seen from above, or the other way for fewer than none. Pressed
+   *  again before it's done, it turns on the same way, however far: never back the short way round.
+   */
   turnBy(steps: number): void {
     const target = this.#glide?.to ?? this.#orbit;
 
-    this.#moveTo({ ...target, yaw: target.yaw + steps * TURN_STEP });
+    this.#moveTo(
+      { ...target, yaw: target.yaw + steps * TURN_STEP },
+      this.#turnLeft() + steps * TURN_STEP
+    );
   }
 
-  /** Turns the view to look north, the short way round. */
+  /** Turns the view to look north, the short way round from where it faces now. */
   faceNorth(): void {
-    this.#moveTo({ ...(this.#glide?.to ?? this.#orbit), yaw: 0 });
+    this.#moveTo(
+      { ...(this.#glide?.to ?? this.#orbit), yaw: 0 },
+      shortTurn(-this.#orbit.yaw)
+    );
+  }
+
+  // What's still to turn of the glide under way, the way it was asked: none without one.
+  #turnLeft(): number {
+    const glide = this.#glide;
+
+    if (glide === null) {
+      return 0;
+    }
+
+    const t =
+        glide.started === null
+          ? 0
+          : Math.min(1, (performance.now() - glide.started) / GLIDE),
+      eased = t * t * (3 - 2 * t);
+
+    return glide.turn * (1 - eased);
   }
 
   /** Nothing to flip yet: the stress runner's view modes are the 2D map's layers. */
@@ -898,9 +934,14 @@ export class MapView3D implements MapRenderer {
     return locked ? { u: period.u, v: null } : period;
   }
 
-  // The camera glides to `target`, or is put there at once where there are no frames to glide over, or the player
-  //  has asked for less motion.
-  #moveTo(target: Orbit): void {
+  // The camera glides to `target`, turning by `turn` on the way (by default, what's left of a turn under way, then the
+  //  short way to `target`'s yaw), or is put there at once where there are no frames to glide over, or the player has
+  //  asked for less motion.
+  #moveTo(
+    target: Orbit,
+    turn = this.#turnLeft() +
+      shortTurn(target.yaw - (this.#glide?.to ?? this.#orbit).yaw)
+  ): void {
     // The square under the mouse is about to move away.
     this.#endHover();
 
@@ -908,7 +949,7 @@ export class MapView3D implements MapRenderer {
       this.#glide = null;
       this.#orbit = this.#settle(target);
     } else {
-      this.#glide = { from: this.#orbit, to: target, started: null };
+      this.#glide = { from: this.#orbit, to: target, started: null, turn };
     }
 
     this.#draw();
@@ -927,7 +968,7 @@ export class MapView3D implements MapRenderer {
     const t = Math.min(1, (now - glide.started) / GLIDE);
 
     this.#orbit = this.#settle(
-      between(glide.from, glide.to, t, this.#period())
+      between(glide.from, glide.to, t, this.#period(), glide.turn)
     );
 
     if (t >= 1) {

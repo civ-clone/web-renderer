@@ -326,6 +326,27 @@ expect(
   ]
 );
 
+// A turn given exactly: halfway along, half of it, however far and whichever way, not the short way round.
+const turnedFrom: Orbit = { focus: [0, 0], yaw: 0, pitch: 1, distance: 10 },
+  turnedTo: Orbit = { ...turnedFrom, yaw: (Math.PI * 5) / 4 };
+
+expect(
+  'a glide given its turn turns by it exactly, the long way if asked; without, the short way',
+  [
+    Math.round(
+      between(turnedFrom, turnedTo, 0.5, { u: 10, v: null }, (Math.PI * 5) / 4)
+        .yaw * 1000
+    ),
+    Math.round(
+      between(turnedFrom, turnedTo, 0.5, { u: 10, v: null }).yaw * 1000
+    ),
+  ],
+  [
+    Math.round(((Math.PI * 5) / 8) * 1000),
+    Math.round((-(Math.PI * 3) / 8) * 1000),
+  ]
+);
+
 if (failures.length > 0) {
   process.stderr.write(
     `FAIL orbit: ${

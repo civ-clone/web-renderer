@@ -275,17 +275,18 @@ export const settled = (
 
 /**
  * The orbit part of the way, `t` from 0 to 1, from `from` to `to`: the focus the short way round the world's period,
- *  and the yaw the short way round.
+ *  and the yaw the short way round, or by `turn` exactly where it's given (more than half a turn, or the long way).
  */
 export const between = (
   from: Orbit,
   to: Orbit,
   t: number,
-  period: { u: number; v: number | null }
+  period: { u: number; v: number | null },
+  turn?: number
 ): Orbit => {
   const short = (delta: number, span: number | null): number =>
       span === null ? delta : delta - span * Math.round(delta / span),
-    turn = Math.PI * 2,
+    whole = Math.PI * 2,
     eased = t * t * (3 - 2 * t);
 
   return {
@@ -293,7 +294,7 @@ export const between = (
       from.focus[0] + short(to.focus[0] - from.focus[0], period.u) * eased,
       from.focus[1] + short(to.focus[1] - from.focus[1], period.v) * eased,
     ],
-    yaw: from.yaw + short(to.yaw - from.yaw, turn) * eased,
+    yaw: from.yaw + (turn ?? short(to.yaw - from.yaw, whole)) * eased,
     pitch: from.pitch + (to.pitch - from.pitch) * eased,
     distance: from.distance + (to.distance - from.distance) * eased,
   };

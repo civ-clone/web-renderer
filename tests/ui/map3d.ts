@@ -1424,6 +1424,51 @@ expect(
     ]
   );
 
+  // Five quick turns clockwise, before a frame's drawn: the camera turns clockwise all the way, five eighths of a turn,
+  //  never back the short way round. Then north, the short way from there.
+  const turn = Math.PI / 4,
+    toTurn = (angle: number): number =>
+      Math.round(
+        (((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) * 1000
+      ) / 1000,
+    clockwise = (from: number, to: number): number =>
+      Math.round(
+        ((((to - from) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) * 1000
+      ) / 1000;
+
+  glider.setOrbit({ ...glider.orbit(), yaw: 0 });
+
+  const startYaw = glider.orbit().yaw;
+
+  [1, 2, 3, 4, 5].forEach(() => glider.turnBy(1));
+  runFrames(4);
+
+  const turning = clockwise(startYaw, glider.orbit().yaw);
+
+  runFrames();
+
+  const turnedTo = toTurn(glider.orbit().yaw);
+
+  glider.faceNorth();
+  runFrames(4);
+
+  const northward = glider.orbit().yaw;
+
+  runFrames();
+
+  expect(
+    'five quick turns turn the camera clockwise all the way, five eighths round; north then the short way',
+    [
+      turning > 0 && turning < Math.PI,
+      turnedTo,
+      // From five eighths round, north is three eighths on, clockwise.
+      clockwise(turn * 5, northward) > 0 &&
+        clockwise(turn * 5, northward) < Math.PI,
+      toTurn(glider.orbit().yaw),
+    ],
+    [true, toTurn(turn * 5), true, 0]
+  );
+
   glider.dispose();
   Object.defineProperty(performance, 'now', {
     value: realNow,
