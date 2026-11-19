@@ -2403,7 +2403,8 @@ expect(
 
   // A GoTo of two steps whose patches are all held, as meeting a leader holds them: it stands where it ended, not back
   //  where it set off. Units hidden meanwhile, it's hidden too; shown again, it's back. Stepping on before the patches
-  //  come, it walks on from where it stands, drawn once; and it's on its square once they've come.
+  //  come, it walks on from where it stands: the walk that waited taken away, another walking, drawn once, not back
+  //  where it set off when that's over; and it's on its square once the patches have come.
   repatched([0, 2, [walker]], [1, 2, []], [2, 2, []]);
   walkersSet.length = 0;
   stepped(walker, [0, 2], [1, 2]);
@@ -2418,10 +2419,20 @@ expect(
   glider.toggleUnits();
   runFrames();
   heldGoTo.push(walkers.size);
+  walkersSet.length = 0;
   stepped(walker, [2, 2], [3, 2]);
   runFrames(1);
   heldGoTo.push(walkers.size, [...walkers.values()][0]?.unit?.id);
+
+  // The walk that waited taken off the stage, and another drawn walking.
+  const steppedOn = walkersSet.splice(0);
+
+  heldGoTo.push(
+    steppedOn.filter(([, marker]) => marker === null).length,
+    new Set(steppedOn.map(([id]) => id)).size
+  );
   runFrames();
+  heldGoTo.push(unitOn(0, 2), walkers.size);
   patch([0, 2, []], [3, 2, [walker]]);
   runFrames();
   heldGoTo.push(unitOn(0, 2), unitOn(3, 2), walkers.size);
@@ -2430,9 +2441,82 @@ expect(
   walkersPlaced.clear();
 
   expect(
-    'a GoTo whose patches are all held stands where it ended, not back where it set off, hidden with units hidden; stepping on, it walks on, drawn once; on its square once the patches come',
+    'a GoTo whose patches are all held stands where it ended, not back where it set off, hidden with units hidden; stepping on, it walks on, the walk that waited taken away, drawn once, waiting again where it walked to; on its square once the patches come',
     heldGoTo,
-    [null, null, 1, 0, 1, 1, 'Unit-A', null, ['Unit-A', 1], 0]
+    [null, null, 1, 0, 1, 1, 'Unit-A', 1, 2, null, 1, null, ['Unit-A', 1], 0]
+  );
+
+  // The patches it waited for put the unit elsewhere, as talks sending it home do: there, and walking no more. Held
+  //  for one step, put on another square; held for two, put back where it set off; and, not held, moved elsewhere
+  //  mid-walk, as a spy's escape does.
+  const putElsewhere = (
+    steps: [number, number][],
+    held: boolean,
+    to: [number, number]
+  ): unknown[] => {
+    repatched([steps[0]![0], steps[0]![1], [walker]]);
+    walkersSet.length = 0;
+    steps.slice(1).forEach((square, at) => {
+      stepped(walker, steps[at]!, square);
+
+      if (!held) {
+        patch([...steps[at]!, []], [...square, [walker]]);
+      }
+    });
+    runFrames(held ? 300 : 2);
+    patch(
+      ...steps.map(([x, y]): [number, number, Tile['units'][number][]] => [
+        x,
+        y,
+        [],
+      ]),
+      [to[0], to[1], [walker]]
+    );
+    runFrames();
+
+    const found = [unitOn(...to), walkers.size];
+
+    repatched([to[0], to[1], []]);
+    walkersSet.length = 0;
+    walkersPlaced.clear();
+
+    return found;
+  };
+
+  expect(
+    'the patches it waited for put the unit elsewhere, or back where it set off, or a patch moves it mid-walk: it’s there, walking no more',
+    [
+      putElsewhere(
+        [
+          [0, 2],
+          [1, 2],
+        ],
+        true,
+        [3, 3]
+      ),
+      putElsewhere(
+        [
+          [0, 2],
+          [1, 2],
+          [2, 2],
+        ],
+        true,
+        [0, 2]
+      ),
+      putElsewhere(
+        [
+          [0, 2],
+          [1, 2],
+        ],
+        false,
+        [3, 3]
+      ),
+    ],
+    [
+      [['Unit-A', 1], 0],
+      [['Unit-A', 1], 0],
+      [['Unit-A', 1], 0],
+    ]
   );
 
   // Drawn walking as the unit's drawn standing: the active one with its ring, at the size the player chose.

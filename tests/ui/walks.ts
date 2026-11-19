@@ -724,10 +724,50 @@ const point = (u: number, v: number, lift = 0): WalkPoint => ({
       quick
     );
 
+  // A GoTo's second step together, then a third step taken while the ship's under way at full pace, the cargo 40 ms
+  //  behind it again.
+  walks.step(
+    'ship',
+    { x: 1, y: 1 },
+    { x: 2, y: 1 },
+    point(9, 9),
+    point(2, 1),
+    41,
+    quick
+  );
+  walks.step(
+    'cargo',
+    { x: 1, y: 1 },
+    { x: 2, y: 1 },
+    point(9, 9),
+    point(2, 1),
+    42,
+    quick
+  );
+
+  const shipOn = walks.step(
+      'ship',
+      { x: 2, y: 1 },
+      { x: 3, y: 1 },
+      point(9, 9),
+      point(3, 1),
+      150,
+      quick
+    ),
+    cargoOn = walks.step(
+      'cargo',
+      { x: 2, y: 1 },
+      { x: 3, y: 1 },
+      point(9, 9),
+      point(3, 1),
+      190,
+      quick
+    );
+
   expect(
-    'a rival’s cargo stepping 40 ms after its ship, the ship on its way, rides along',
-    cargo === ship,
-    true
+    'a rival’s cargo stepping 40 ms after its ship, the ship on its way, rides along; and again on the next step',
+    [cargo === ship, cargoOn === shipOn],
+    [true, true]
   );
 }
 
