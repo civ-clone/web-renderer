@@ -53,7 +53,10 @@ import {
 import { Stage } from '@civ-clone/ui-map-3d/stage';
 import markerFor, { TileMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
+import { unitStatus } from '@civ-clone/ui-assets/lib/renderUnit';
 import { setBuild } from '@civ-clone/ui-client/lib/build';
+import i18next from 'i18next';
+import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import { sourcesUnder, specifiersOf } from './lib/imports';
 import { createRequire } from 'module';
 import { join } from 'path';
@@ -405,9 +408,10 @@ expect(
     shown2D()
   );
   expect(
-    'it is given the page’s names for cities, as its other maps and windows give them',
+    'it is given the page’s names for cities and letters for busy units, as its other maps and windows give them',
     // By identity: `expect` compares by JSON, which a function has none of.
-    (given as MapView3DDeps | null)?.cityName === cityName,
+    (given as MapView3DDeps | null)?.cityName === cityName &&
+      (given as MapView3DDeps | null)?.unitStatus === unitStatus,
     true
   );
   expect('at the zoom kept', sizes(view.portal)[0], 2.6);
@@ -669,6 +673,11 @@ expect(
 
   staged.splice(0);
 
+  // The page's words from here on: a city's name in the locale, and a busy unit's letter.
+  await i18next.init({ ...i18nOptions, lng: 'en' });
+  i18next.addResource('en', 'city', 'Romans.Roma.name', 'Rome');
+  i18next.addResource('en', 'unit', 'Busy.Fortified.icon', 'Fd');
+
   // A city and a stack on a square: marked, with the best defender on top, until `t` hides them, and the active unit
   //  on top, marked as active, even hidden.
   const owner = {
@@ -690,9 +699,12 @@ expect(
     phalanx = {
       id: 'Unit-P',
       _: 'Phalanx',
+      __: ['Fortifiable', 'Land', 'Unit'],
       defence: { value: 2 },
       player: owner,
       busy: { _: 'Fortified' },
+      improvements: [{ _: 'Fortified' }, { _: 'Veteran' }],
+      hitPoints: { current: 6, max: 10 },
       tile: town,
     };
 
@@ -704,8 +716,8 @@ expect(
       walled: true,
       civilDisorderDeclared: false,
     },
-    // As the page names it.
-    romaName = cityName(roma as unknown as City);
+    // As the page names it, in the locale.
+    romaName = 'Rome';
 
   Object.assign(town, {
     city: roma,
@@ -727,7 +739,7 @@ expect(
   };
 
   expect(
-    'a square with a city and a stack is marked: the city, its size, walls and colours, and its best defender with the stack’s size',
+    'a square with a city and a stack is marked: the city, its size, walls and colours, and its best defender with the stack’s size, its kinds, what its flag shows (fortified, a veteran, hurt, and the page’s letter for what it’s busy with)',
     [markers.get(townKey)?.city, markers.get(townKey)?.unit],
     [
       {
@@ -739,10 +751,16 @@ expect(
       },
       {
         type: 'Phalanx',
+        kinds: ['Fortifiable', 'Land', 'Unit'],
         colours: ['#aa0000', '#ffffff'],
         count: 2,
         active: false,
         busy: true,
+        fortified: true,
+        veteran: true,
+        health: 0.6,
+        // The page's letter for Fortified, in the locale.
+        status: 'Fd',
       },
     ]
   );

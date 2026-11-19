@@ -83,6 +83,8 @@ export type MapView3DDeps = {
   // What a square does when clicked, held or right-clicked.
   squares: MapSquares;
   transport: Transport;
+  // The letter for what a busy unit is doing, as the 2D map writes it over the unit (the locale's), or nothing.
+  unitStatus?: (unit: Unit) => string | null;
   // The player's world, made by the page, which tile patches are written to.
   world: World;
 };

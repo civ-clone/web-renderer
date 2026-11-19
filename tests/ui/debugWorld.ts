@@ -2,6 +2,8 @@
 //  - its made-up world: the same for the same options, a Civ1 world's terrains and share of land, ice at the poles,
 //    rivers, and as much seen as asked, on every grid;
 //  - its options, from its address;
+//  - its gallery: every unit type the built-in set names, once each, nearest the middle first, ships at sea and the rest
+//    on land, never on squares unseen, and no cities;
 //  - the land built over it, every chunk once, and the nearest to where the map is centred first, after it moves too.
 
 import { ChunkMesh } from '@civ-clone/ui-map-3d/terrain/chunks';
@@ -12,6 +14,9 @@ import Land from '@civ-clone/ui-map-3d/Land';
 import World from '@civ-clone/ui-map/components/World';
 import generateWorld from '@civ-clone/ui-map-3d/debug/generateWorld';
 import pageOptions from '@civ-clone/ui-map-3d/debug/pageOptions';
+import populate, { gallery } from '@civ-clone/ui-map-3d/debug/populate';
+import { unitTable } from '@civ-clone/ui-models-builtin/units';
+import { Tile } from '@civ-clone/ui-protocol/types';
 
 const failures: string[] = [];
 let checks = 0;
@@ -132,6 +137,7 @@ expect(
     height: 50,
     seed: 1,
     seen: 1,
+    gallery: false,
     distance: null,
     x: 40,
     y: 25,
@@ -140,7 +146,7 @@ expect(
 expect(
   'each as asked',
   pageOptions(
-    '?grid=hex-odd-r&width=40&height=30&seed=9&seen=0.5&distance=12.5&x=3&y=4'
+    '?grid=hex-odd-r&width=40&height=30&seed=9&seen=0.5&distance=12.5&x=3&y=4&gallery=1'
   ),
   {
     topologyId: 'hex-odd-r',
@@ -148,6 +154,7 @@ expect(
     height: 30,
     seed: 9,
     seen: 0.5,
+    gallery: true,
     distance: 12.5,
     x: 3,
     y: 4,
@@ -162,6 +169,7 @@ expect(
     height: 160,
     seed: 1,
     seen: 1,
+    gallery: false,
     distance: null,
     x: 0,
     y: 80,
@@ -267,6 +275,82 @@ grids.forEach((topologyId) => {
 
   built.length = 0;
 });
+
+// The gallery, on 20 by 10 squares: three rows of sea at the top, with the squares nearest the middle never seen, and
+//  land.
+const shelf = Array.from({ length: 200 }, (_, index) => {
+    const x = index % 20,
+      y = Math.floor(index / 20),
+      terrain =
+        y < 3 && x >= 8 && x <= 12 ? 'Unknown' : y < 3 ? 'Ocean' : 'Grassland';
+
+    return {
+      x,
+      y,
+      terrain: { _: terrain },
+      isLand: terrain === 'Grassland',
+      city: { name: 'Gone' },
+      units: [],
+    } as unknown as Tile;
+  }),
+  placed = (): [string, Tile][] =>
+    shelf.flatMap((tile) =>
+      (tile.units ?? []).map((unit): [string, Tile] => [unit._, tile])
+    );
+
+gallery(shelf, 10, 6);
+
+const laidOut = placed();
+
+expect(
+  'its gallery: every unit type once, ships at sea, the rest on land, none unseen, no cities, the nearest the middle first',
+  [
+    laidOut.map(([type]) => type).sort(),
+    laidOut
+      .filter(([type, tile]) =>
+        unitTable[type]!.shape === 'ship'
+          ? tile.isLand || tile.terrain._ !== 'Ocean'
+          : !tile.isLand
+      )
+      .map(([type]) => type),
+    shelf.filter((tile) => tile.city !== null).length,
+    shelf[6 * 20 + 10]!.units[0]?._,
+  ],
+  [Object.keys(unitTable).sort(), [], 0, Object.keys(unitTable)[0]]
+);
+
+// Its seeded cities, units and ships: none on squares never seen, on a world mostly unseen.
+const mostlyUnseen = Array.from({ length: 4000 }, (_, index) => {
+  const x = index % 80,
+    y = Math.floor(index / 80),
+    terrain = x < 60 ? 'Unknown' : y % 2 === 0 ? 'Ocean' : 'Grassland';
+
+  return {
+    x,
+    y,
+    terrain: { _: terrain },
+    isLand: terrain === 'Grassland',
+    city: null,
+    units: [],
+  } as unknown as Tile;
+});
+
+populate(mostlyUnseen, 3);
+
+expect(
+  'its seeded cities, units and ships are only on squares that have been seen',
+  [
+    mostlyUnseen.some(
+      (tile) => tile.terrain._ !== 'Unknown' && (tile.units ?? []).length > 0
+    ),
+    mostlyUnseen.filter(
+      (tile) =>
+        tile.terrain._ === 'Unknown' &&
+        (tile.city !== null || (tile.units ?? []).length > 0)
+    ).length,
+  ],
+  [true, 0]
+);
 
 if (failures.length > 0) {
   process.stderr.write(

@@ -1,5 +1,5 @@
-// What the 3D map marks on a square (docs/3d-renderer-plan.md 1.3): its city and the unit on top of its stack, as plain
-//  markers until the model sets draw them (M2, M4). Pure: the stage draws what this says.
+// What the 3D map marks on a square (docs/3d-renderer-plan.md 1.3, 2.1): its city and the unit on top of its stack, with
+//  what the unit's flag shows (spec §6.3). Pure: the stage draws what this says.
 //
 // The unit on top is the one the 2D map draws there: the active unit if it's in the stack, or else the one with the best
 //  defence, as the engine sends it. Hidden (`t`), only the active unit is marked, as on the 2D map.
@@ -19,14 +19,22 @@ export type CityMarker = {
 };
 
 export type UnitMarker = {
-  // The unit type's name, as the engine sends it.
+  // The unit type's name, and the names of the kinds it's of (`Naval`, `Air`, …), as the engine sends them.
   type: string;
+  kinds: readonly string[];
   colours: MarkerColours;
   // How many units are in the stack.
   count: number;
   active: boolean;
   // Fortified, sleeping or at work: the engine's own word for what it's doing.
   busy: boolean;
+  // What the engine says of it: `Fortified` and `Veteran` among its improvements.
+  fortified: boolean;
+  veteran: boolean;
+  // Its hit points as a fraction of its most, where the rules have them (Civ2) and it's hurt; `null` otherwise.
+  health: number | null;
+  // The letter for what it's busy with, as the 2D map writes it over the unit, or nothing.
+  status: string | null;
 };
 
 export type TileMarker = {
@@ -63,9 +71,20 @@ export const unitOnTop = (
   )[0] ??
   null;
 
-/** How the page words what markers show, as its other maps and windows do: a city's name. */
+/**
+ * How the page words what markers show, as its other maps and windows do: a city's name, and the letter for what a
+ *  busy unit's doing.
+ */
 export type MarkerWords = {
   cityName?: (city: City) => string;
+  unitStatus?: (unit: Unit) => string | null;
+};
+
+// A unit's hit points as a fraction of its most, when it has lost some.
+const healthOf = (unit: Unit): number | null => {
+  const { current, max } = unit.hitPoints ?? { current: 0, max: 0 };
+
+  return max > 0 && current < max ? Math.max(0, current / max) : null;
 };
 
 /**
@@ -95,10 +114,17 @@ export const markerFor = (
       top !== null && (shown || active)
         ? {
             type: top._,
+            kinds: top.__ ?? [],
             colours: coloursOf(top.player),
             count: units.length,
             active,
             busy: top.busy !== null && top.busy !== undefined,
+            fortified: (top.improvements ?? []).some(
+              ({ _ }) => _ === 'Fortified'
+            ),
+            veteran: (top.improvements ?? []).some(({ _ }) => _ === 'Veteran'),
+            health: healthOf(top),
+            status: (top.busy ? words.unitStatus?.(top) : null) || null,
           }
         : null;
 
