@@ -19,8 +19,8 @@ export interface MapRenderer {
   /** Centres the map on `tile` and draws it. */
   centre(tile: Tile): void;
   /**
-   * How the map's turned, which the keys that move a unit turn with, so up is still up the screen: the way it's turning
-   *  to, mid-turn. `null` for a map that doesn't turn.
+   * How the map's turned, which the keys that move a unit turn with, so up moves a unit the way the camera faces: the
+   *  way it's turning to, mid-turn. `null` for a map that doesn't turn.
    */
   heading(): MapHeading | null;
   /**

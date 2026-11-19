@@ -1,5 +1,6 @@
-// The keys that move a unit turn with a map that turns (the 3D map's camera), so up is still up the screen: on each
-//  grid, unturned they're the 2D map's own, and turned each points the way it says on the screen.
+// The keys that move a unit turn with a map that turns (the 3D map's camera), so up moves a unit the way the camera
+//  faces: on each grid, unturned they're the 2D map's own, and turned each moves it the way it points, turned with the
+//  camera on the ground.
 
 import { document } from './lib/dom';
 import './lib/interfaces';
@@ -211,7 +212,7 @@ grids.forEach(([topologyId, width, height]) => {
   }
 
   expect(
-    `${topologyId}: turned any way, each key moves a unit to a neighbour that's that way on the screen, each that moved one still does, and every way has a key`,
+    `${topologyId}: turned any way, each key moves a unit to the neighbour nearest its way as the camera faces, near what it looks from overhead, each that moved one still does, and every way has a key`,
     faults,
     []
   );
@@ -426,9 +427,13 @@ grids.forEach(([topologyId, width, height]) => {
     const whileAnswered = sent.splice(0);
 
     // Back to north before the answer, where down is south, and there's nothing to the south.
-    heading.now = null;
+    heading.now = { ...quarter, turn: 0 };
     settlers.tile = tiles[2]!;
-    controller.actionHandled(messages[0]!);
+
+    // Only once the move's been sent: otherwise there's nothing to answer, and the check below says so.
+    if (messages[0] !== undefined) {
+      controller.actionHandled(messages[0]);
+    }
 
     expect(
       'a key kept while a move is answered moves the unit the way it pointed when it was pressed, though the camera has turned since',
@@ -458,7 +463,7 @@ grids.forEach(([topologyId, width, height]) => {
   };
 
   expect(
-    'on the hex grid, up is taken and moves a unit only once the map is turned to a neighbour up the screen: up and right, not right',
+    'on the hex grid, up is taken and moves a unit only once the map is turned so a neighbour is ahead of the camera: up and right, not right',
     [hexUnturned, press(turned, 'ArrowUp')],
     [
       [false, []],

@@ -425,14 +425,18 @@ export class ActiveUnitController {
    * (#326, #543). `false` when it is not a unit key, or there is no active unit.
    */
   pressKey(key: string): boolean {
-    const activeUnit = this.#activeUnit,
-      topology = this.#deps.world.topology(),
+    const activeUnit = this.#activeUnit;
+
+    if (activeUnit === null) {
+      return false;
+    }
+
+    const topology = this.#deps.world.topology(),
       // Which way it moves a unit is the way it points as the map's turned now, even when it's kept until a move's
       //  answered and the map's turned since: kept as the map's own key for that way.
       pressed = this.#unturned(key, topology);
 
-    return !!(
-      activeUnit &&
+    return (
       (pressed in keyToActionsMap || pressed in directionKeys(topology)) &&
       this.#pendingMove.press(
         pressed,
@@ -453,10 +457,12 @@ export class ActiveUnitController {
       return key;
     }
 
+    // Every way a grid has has a key of its own unturned; were one ever without, the key isn't taken, rather than
+    //  moving the unit some other way.
     return (
       Object.entries(directionKeys(topology)).find(
         ([, way]) => way === direction
-      )?.[0] ?? key
+      )?.[0] ?? ''
     );
   }
 
