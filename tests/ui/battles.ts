@@ -254,6 +254,35 @@ const battleOf = (
       ['b', [2, 0], 1],
     ]
   );
+
+  // One attacker attacking again before its first battle's over: drawn once, lunging in the first; standing in the
+  //  second only once the first's over.
+  const twice = new Battles(),
+    firstOfTwo = twice.add(battleOf('a', 'd', true), 0, pace);
+
+  twice.add(battleOf('a', 'e', true, [0, 0], [0, 1]), 50, pace);
+
+  const drawnTwice = (now: number) =>
+    twice
+      .at(now)
+      .going.filter(({ fallen }) => !fallen)
+      .map(({ battle, unit }) => [battle, unit]);
+
+  expect(
+    'an attacker attacking again is drawn once, in the battle it’s fighting, then in the next',
+    [drawnTwice(100), drawnTwice(battleEnds(firstOfTwo) + 10)],
+    [[['battle-1', 'a']], [['battle-2', 'a']]]
+  );
+
+  // Walking there: fought no sooner than it's there.
+  const walking = new Battles(),
+    walkedTo = walking.add(battleOf('a', 'd', true), 0, pace, 300);
+
+  expect(
+    'a battle whose attacker’s walking there starts once it’s there',
+    [walkedTo.start, walkedTo.notBefore, battleAt(walkedTo, 200).reach],
+    [300, 300, 0]
+  );
 }
 
 {
@@ -266,8 +295,9 @@ const battleOf = (
   battles.at(250);
   battles.add(battleOf('g', 'h', true, [3, 0], [3, 1]), 240, pace);
 
-  const ended = battles.endWhere(({ attacker }) =>
-    ['a', 'g'].includes(attacker)
+  const ended = battles.endWhere(
+    ({ attacker }) => ['a', 'g'].includes(attacker),
+    250
   );
 
   expect(
@@ -283,12 +313,37 @@ const battleOf = (
     [['g'], ['a', 'g'], 2, false, true, ['battle-1', 'battle-2', 'battle-3']]
   );
 
-  const all = battles.endAll();
+  const all = battles.endAll(260);
 
   expect(
     'ending them all at once ends the rest, their blows told already not told again',
     [all.struck.length, all.ended.length, battles.size()],
     [0, 2, 0]
+  );
+
+  // Ended at once, those waiting for them start as soon as they can: now, or once another they wait for is over, or once
+  //  their attacker's there.
+  const queue = new Battles(),
+    cut = queue.add(battleOf('a', 'd', true), 0, pace),
+    afterCut = queue.add(battleOf('b', 'd', true, [2, 0], [1, 0]), 0, pace),
+    afterBoth = queue.add(battleOf('c', 'd', true, [1, 1], [1, 0]), 0, pace),
+    walkingTo = queue.add(
+      battleOf('e', 'f', true, [3, 3], [2, 3]),
+      0,
+      pace,
+      2000
+    ),
+    before = [afterCut.start, afterBoth.start];
+
+  queue.endWhere(({ id }) => id === cut.id, 100);
+
+  expect(
+    'ended at once, the battles waiting for it start as soon as they can, one after another; one waiting for its attacker still waits',
+    [before, [afterCut.start, afterBoth.start, walkingTo.start]],
+    [
+      [battleEnds(cut), battleEnds(cut) + 800],
+      [100, 900, 2000],
+    ]
   );
 }
 

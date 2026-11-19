@@ -6,7 +6,10 @@
 // - Won, it goes back to where it stood, and the loser fades away where it stood.
 // - Lost, it fades away at the edge.
 // - Battles that share a unit or a square play one after another, in the order they came: the square attacked shows how
-//   the last battle there left it before the next is fought.
+//   the last battle there left it before the next is fought. One can wait for its attacker to get there, walking. Those
+//   ended at once, those waiting for them go on as soon as they can.
+// - An attacker's drawn once, in the first battle it's in: one attacking again stands in the next battle only once the
+//   last's over.
 //
 // Where a fighter is is on the ground (`u`, `v`), with a `lift`, as a walker's is.
 
@@ -58,6 +61,8 @@ export type BattleOf = {
 export type Battle = BattleOf & {
   id: string;
   start: number;
+  // Fought no sooner than this, as when its attacker's walking there.
+  notBefore: number;
   pace: BattlePace;
 };
 
@@ -178,14 +183,22 @@ export class Battles {
   }
 
   /**
-   * A battle at `now`, at `pace`: fought at once, or, sharing a unit or a square with one that isn't over, once that
-   *  one is.
+   * A battle at `now`, at `pace`: fought at once, or no sooner than `notBefore`, as when its attacker's walking there,
+   *  or, sharing a unit or a square with one that isn't over, once that one is.
    */
-  add(of: BattleOf, now: number, pace: BattlePace): Battle {
-    const start = this.#battles
-        .filter((battle) => touching(battle, of))
-        .reduce((latest, battle) => Math.max(latest, battleEnds(battle)), now),
-      battle: Battle = { ...of, id: `battle-${++this.#made}`, start, pace };
+  add(
+    of: BattleOf,
+    now: number,
+    pace: BattlePace,
+    notBefore: number = now
+  ): Battle {
+    const battle: Battle = {
+      ...of,
+      id: `battle-${++this.#made}`,
+      start: this.#startOf(of, this.#battles, Math.max(now, notBefore)),
+      notBefore,
+      pace,
+    };
 
     this.#battles.push(battle);
 
@@ -199,7 +212,9 @@ export class Battles {
   at(now: number): { going: Fighter[]; struck: Battle[]; ended: Battle[] } {
     const going: Fighter[] = [],
       struck: Battle[] = [],
-      ended: Battle[] = [];
+      ended: Battle[] = [],
+      // The attackers drawn: each once, in the first battle it's in.
+      drawn = new Set<string>();
 
     this.#battles.forEach((battle) => {
       if (now >= blowAt(battle) && !this.#struck.has(battle.id)) {
@@ -213,7 +228,7 @@ export class Battles {
         return;
       }
 
-      going.push(...this.#fighters(battle, now));
+      going.push(...this.#fighters(battle, now, drawn));
     });
 
     this.#take(ended);
@@ -222,10 +237,13 @@ export class Battles {
   }
 
   /**
-   * The battles `test` picks over now, at once: the blow fallen in those it hadn't, told in `struck` as `at` tells it,
-   *  and each in `ended`.
+   * The battles `test` picks over at `now`, at once: the blow fallen in those it hadn't, told in `struck` as `at` tells
+   *  it, and each in `ended`. Those yet to start that were waiting for them start as soon as they can.
    */
-  endWhere(test: (battle: Battle) => boolean): {
+  endWhere(
+    test: (battle: Battle) => boolean,
+    now: number
+  ): {
     struck: Battle[];
     ended: Battle[];
   } {
@@ -235,12 +253,34 @@ export class Battles {
     struck.forEach((battle) => this.#struck.add(battle.id));
     this.#take(ended);
 
+    if (ended.length > 0) {
+      this.#battles.forEach((battle, index) => {
+        if (battle.start > now) {
+          battle.start = this.#startOf(
+            battle,
+            this.#battles.slice(0, index),
+            Math.max(now, battle.notBefore)
+          );
+        }
+      });
+    }
+
     return { struck, ended };
   }
 
-  /** Every battle over now, at once, as `endWhere` has them. */
-  endAll(): { struck: Battle[]; ended: Battle[] } {
-    return this.endWhere(() => true);
+  /** Every battle over at `now`, at once, as `endWhere` has them. */
+  endAll(now: number): { struck: Battle[]; ended: Battle[] } {
+    return this.endWhere(() => true, now);
+  }
+
+  // When a battle starts, no sooner than `soonest`, after each of `before` it shares a unit or a square with.
+  #startOf(of: BattleOf, before: Battle[], soonest: number): number {
+    return before
+      .filter((battle) => touching(battle, of))
+      .reduce(
+        (latest, battle) => Math.max(latest, battleEnds(battle)),
+        soonest
+      );
   }
 
   // Battles over, taken off.
@@ -253,14 +293,17 @@ export class Battles {
     ended.forEach((battle) => this.#struck.delete(battle.id));
   }
 
-  // What's drawn of `battle` at `now`: the attacker, unless it's gone; and the loser where it fell, from the blow till
-  //  it's gone.
-  #fighters(battle: Battle, now: number): Fighter[] {
+  // What's drawn of `battle` at `now`: the attacker, unless it's gone, or drawn already (`drawn`) in a battle before; and
+  //  the loser where it fell, from the blow till it's gone.
+  #fighters(battle: Battle, now: number, drawn: Set<string>): Fighter[] {
     const { reach, attacker, fallen } = battleAt(battle, now),
       { from, edge, fallsAt } = battle,
-      fighters: Fighter[] = [];
+      fighters: Fighter[] = [],
+      first = !drawn.has(battle.attacker);
 
-    if (attacker > 0) {
+    drawn.add(battle.attacker);
+
+    if (attacker > 0 && first) {
       fighters.push({
         id: battle.id,
         battle: battle.id,

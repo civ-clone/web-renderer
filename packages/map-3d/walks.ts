@@ -371,6 +371,14 @@ export class Walks {
     return this.#dropped.splice(0);
   }
 
+  /** When the walk `unit` is in ends, or nothing if it isn't walking. */
+  endsAt(unit: string): number | null {
+    const id = this.#walkOf.get(unit),
+      walk = id === undefined ? undefined : this.#walks.get(id);
+
+    return walk === undefined ? null : motionEnds(walk.motion);
+  }
+
   /** When the next walk under way ends, or nothing with none. */
   nextEnd(): number | null {
     let soonest: number | null = null;

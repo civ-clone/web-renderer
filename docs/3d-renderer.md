@@ -934,16 +934,23 @@ mapEvent:
     at once. The defender turns to face its attacker as the battle comes, as it did before. Walking quickly halves it all.
   - **Left off, as walks are:** the attacker's left off its square, drawn on its own (a walker with a battle's id), till
     it's back. The square attacked isn't held: it's drawn with what was on it as the battle came, till the blow, the
-    battle's patch notwithstanding, and then as the patch has it.
+    battle's patch notwithstanding, its city too, and then as the patch has it.
   - **Waiting for its patch:** the battle's patch, both squares, comes just after the event, as a step's does. If it's
     held, as meeting a leader holds patches, the winner stands where it stood once the battle's over, and the loser's
     left off, till it comes.
   - **One after another:** a battle sharing a unit or a square with one that isn't over starts once it is, as a rival's
     attacks on one square come all at once; the square's shown as it was before each till that one's blow, and what
-    fell in each fades alone. Others are fought at the same time.
+    fell in each fades alone. Others are fought at the same time. An attacker attacking again is drawn once, in the
+    battle it's fighting.
+  - **Together, as a rival's turn sends them:** the page's world is rebuilt, and the tiles released, once a frame while
+    waiting for the turn (`GameState`), so a rival's step and its attack, or two attacks, can come before the world has
+    the first's patch. The attacker walking there, the battle's fought once it's there: its walk isn't cut short, and
+    it's taken from its walk where the world hasn't it there yet; one standing where it walked to, waiting for its
+    step's patch, fights from there. A second attack on a square whose first battle's patch the world hasn't taken is
+    fought on what the first left, its loser gone; once it has, on the world, as in the player's own turn.
   - **Ended at once:** the attacker or the defender stepping (a unit attacking, then moving in), a key or a press while
     the ring waits for the battle, moving at once or less motion chosen mid-battle: the blow falls, and it's over, with
-    nothing left to fade. Walking as a battle comes, either's walk's over at once, and it's fought from their squares.
+    nothing left to fade. Those waiting for it start as soon as they can.
   - **The game waits:** the active unit attacking with its last move holds the ring and the camera till its battle's
     over, as its walk does; lost, till it's faded away.
   - **Not fought:** as walks aren't walked: with no frames, less motion asked for, or moving at once; two other players'

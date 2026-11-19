@@ -3445,8 +3445,9 @@ expect(
   runFrames();
   repatched([1, 1, []]);
 
-  // The attacker walking as it attacks: its walk's over at once, and it lunges from its square. A step mid-battle ends
-  //  the battle at once, and it walks on from its square.
+  // The attacker walking as it attacks, as a step and an attack come together: it walks there, and then lunges from its
+  //  square, the square attacked shown as it was till the blow. A step mid-battle ends the battle at once, and it walks
+  //  on from its square.
   repatched([0, 1, [walker]], [2, 1, [rival]]);
   walkersSet.length = 0;
   walkersPlaced.clear();
@@ -3455,14 +3456,32 @@ expect(
   runFrames(3);
   fought(walker, [1, 1], rival, [2, 1], 'attacker');
 
-  const walkedThenFought: unknown[] = [walkers.size, unitOn(1, 1)];
+  const walkedThenFought: unknown[] = [
+    [...walkers.keys()].map(kind),
+    unitOn(1, 1),
+  ];
 
   patch([1, 1, [walker]], [2, 1, []]);
+  runFrames(1);
+  walkedThenFought.push([...walkers.keys()].map(kind), unitOn(2, 1));
+
+  for (
+    let frame = 0;
+    frame < 60 && [...walkers.keys()].some((id) => kind(id) === 'walk');
+    frame++
+  ) {
+    runFrames(1);
+  }
+
   runFrames(1);
 
   const lunging = [...walkers.keys()];
 
-  walkedThenFought.push(lunging.map(kind), setOffFrom(lunging[0]!, 1, 1));
+  walkedThenFought.push(
+    lunging.map(kind),
+    setOffFrom(lunging[0]!, 1, 1),
+    unitOn(2, 1)
+  );
   runFrames(3);
   walkersPlaced.clear();
   stepped(walker, [1, 1], [2, 1]);
@@ -3482,11 +3501,19 @@ expect(
   walkersPlaced.clear();
 
   expect(
-    'moving at once chosen mid-battle ends it on the next frame; walking as it attacks, its walk’s over and it lunges from its square; a step mid-battle ends the battle, and it walks from its square',
+    'moving at once chosen mid-battle ends it on the next frame; walking as it attacks, it walks there, then lunges from its square, the square attacked as it was; a step mid-battle ends the battle, and it walks from its square',
     [offMidBattle, walkedThenFought, steppedMidBattle],
     [
       [0, ['Unit-A', 1], null],
-      [0, null, ['battle'], true],
+      [
+        ['walk'],
+        null,
+        ['walk'],
+        ['Unit-R', 1],
+        ['battle'],
+        true,
+        ['Unit-R', 1],
+      ],
       [0, null, ['walk'], true, ['Unit-A', 1], 0],
     ]
   );
@@ -3648,6 +3675,271 @@ expect(
       ],
       [['Unit-A', 1], null, ['Unit-B', 1], 0],
       [['Unit-A', 1], null, [], 0],
+    ]
+  );
+
+  // As a rival's turn sends them, the page's world rebuilt and the tiles released once a frame (`GameState`): a rival's
+  //  step and its attack in one burst walk there, then fight; two attacks on one square in one burst, the second on what
+  //  the first left; and one unit attacking twice is drawn once.
+  const square = (x: number, y: number) => tiles[y * 4 + x] as Tile,
+    raider = unitOf('Unit-X', 1, 'Player-2'),
+    otherRaider = unitOf('Unit-Y', 1, 'Player-2'),
+    mine = unitOf('Unit-M', 1),
+    rivals: [string, string] = ['Player-2', 'Player-1'];
+
+  repatched([0, 1, [raider]], [1, 1, []], [2, 1, [mine]]);
+  walkersSet.length = 0;
+  walkersPlaced.clear();
+  stepped(raider, [0, 1], [1, 1], 'Player-2');
+  glider.queueTile(square(0, 1));
+  glider.queueTile(square(1, 1));
+  fought(raider, [1, 1], mine, [2, 1], 'attacker', rivals);
+  glider.queueTile(square(1, 1));
+  glider.queueTile(square(2, 1));
+  // The next frame: the world rebuilt, and the tiles released.
+  square(0, 1).units = [] as Tile['units'];
+  square(1, 1).units = [raider] as Tile['units'];
+  square(2, 1).units = [] as Tile['units'];
+  glider.releaseTiles();
+  runFrames(1);
+
+  const burst: unknown[] = [[...walkers.keys()].map(kind), unitOn(2, 1)];
+
+  for (
+    let frame = 0;
+    frame < 60 && [...walkers.keys()].some((id) => kind(id) === 'walk');
+    frame++
+  ) {
+    runFrames(1);
+  }
+
+  runFrames(1);
+  burst.push([...walkers.keys()].map(kind), unitOn(2, 1));
+  runFrames(13);
+  burst.push(fighters(), unitOn(2, 1));
+  runFrames();
+  burst.push(unitOn(1, 1), unitOn(2, 1), walkers.size);
+  repatched([1, 1, []]);
+
+  // Two attacks in one burst on a square three of mine hold, as in a city, each killing one.
+  const best = unitOf('Unit-M1', 5),
+    next = unitOf('Unit-M2', 3),
+    last = unitOf('Unit-M3', 1);
+
+  repatched(
+    [1, 1, [raider]],
+    [3, 1, [otherRaider]],
+    [2, 1, [best, next, last]]
+  );
+  walkersSet.length = 0;
+  fought(raider, [1, 1], best, [2, 1], 'attacker', rivals);
+  glider.queueTile(square(1, 1));
+  glider.queueTile(square(2, 1));
+  fought(otherRaider, [3, 1], next, [2, 1], 'attacker', rivals);
+  glider.queueTile(square(3, 1));
+  glider.queueTile(square(2, 1));
+  square(2, 1).units = [last] as Tile['units'];
+  glider.releaseTiles();
+  runFrames(1);
+
+  const twoInABurst: unknown[] = [unitOn(2, 1)];
+
+  runFrames(12);
+  twoInABurst.push(unitOn(2, 1), fighters());
+  runFrames(50);
+  twoInABurst.push(unitOn(2, 1), fighters());
+  runFrames();
+  twoInABurst.push(unitOn(2, 1), walkers.size);
+  repatched([1, 1, []], [3, 1, []], [2, 1, []]);
+
+  // One unit attacking twice, its second attack before its first battle's over.
+  const knight = unitOf('Unit-K', 1),
+    firstFoe = unitOf('Unit-F1', 1, 'Player-2'),
+    secondFoe = unitOf('Unit-F2', 1, 'Player-2');
+
+  repatched([1, 1, [knight]], [2, 1, [firstFoe, secondFoe]]);
+  walkersSet.length = 0;
+  fought(knight, [1, 1], firstFoe, [2, 1], 'attacker');
+  patch([1, 1, [knight]], [2, 1, [secondFoe]]);
+  runFrames(3);
+  fought(knight, [1, 1], secondFoe, [2, 1], 'attacker');
+  patch([1, 1, [knight]], [2, 1, []]);
+  runFrames(1);
+
+  const attackedTwice: unknown[] = [fighters()];
+
+  runFrames(60);
+  attackedTwice.push(fighters());
+  runFrames();
+  attackedTwice.push(unitOn(1, 1), unitOn(2, 1), walkers.size);
+  repatched([1, 1, []]);
+
+  expect(
+    'a rival’s step and attack in one burst: it walks there, then lunges, the square attacked as it was till the blow; two attacks in one burst on one square, each on what the last left, what fell in each fading alone; a unit attacking twice is drawn once, in each battle in turn',
+    [burst, twoInABurst, attackedTwice],
+    [
+      [
+        ['walk'],
+        ['Unit-M', 1],
+        ['battle'],
+        ['Unit-M', 1],
+        [
+          ['battle', 'Unit-X', 1, 1],
+          ['battle-fallen', 'Unit-M', 1, 1],
+        ],
+        null,
+        ['Unit-X', 1],
+        null,
+        0,
+      ],
+      [
+        ['Unit-M1', 3],
+        ['Unit-M2', 2],
+        [
+          ['battle', 'Unit-X', 1, 1],
+          ['battle', 'Unit-Y', 1, 1],
+          ['battle-fallen', 'Unit-M1', 1, 1],
+        ],
+        ['Unit-M3', 1],
+        [
+          ['battle', 'Unit-Y', 1, 1],
+          ['battle-fallen', 'Unit-M2', 1, 1],
+        ],
+        ['Unit-M3', 1],
+        0,
+      ],
+      [
+        [['battle', 'Unit-K', 1, 1]],
+        [
+          ['battle', 'Unit-K', 1, 1],
+          ['battle-fallen', 'Unit-F2', 1, 1],
+        ],
+        ['Unit-K', 1],
+        null,
+        0,
+      ],
+    ]
+  );
+
+  // Patches held, as meeting a leader holds them: one standing where it walked to, waiting for its step's patch, fights
+  //  from there, drawn once; and one walking there as it attacks, its battle's patch held, is drawn once, fighting, once
+  //  it's there.
+  const fightingKinds = () =>
+    [...walkers.keys()].map(kind).filter((id) => id !== 'battle-fallen');
+
+  repatched([0, 1, [walker]], [2, 1, [rival]]);
+  walkersSet.length = 0;
+  stepped(walker, [0, 1], [1, 1]);
+  runFrames();
+
+  const heldStep: unknown[] = [fightingKinds()];
+
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  runFrames(1);
+  heldStep.push(fightingKinds());
+  patch([0, 1, []], [1, 1, [walker]], [2, 1, []]);
+  runFrames();
+  heldStep.push(unitOn(1, 1), unitOn(2, 1), walkers.size);
+
+  repatched([0, 1, [walker]], [2, 1, [rival]]);
+  walkersSet.length = 0;
+  stepped(walker, [0, 1], [1, 1]);
+  patch([0, 1, []], [1, 1, [walker]]);
+  runFrames(2);
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  runFrames(22);
+
+  const heldBattle: unknown[] = [fightingKinds()];
+
+  patch([1, 1, [walker]], [2, 1, []]);
+  runFrames();
+  heldBattle.push(unitOn(1, 1), unitOn(2, 1), walkers.size);
+  repatched([1, 1, []]);
+
+  expect(
+    'patches held: one standing where it walked to fights from there, drawn once; one walking there as it attacks, its battle’s patch held, is drawn once, fighting, once it’s there',
+    [heldStep, heldBattle],
+    [
+      [['walk'], ['battle'], ['Unit-A', 1], null, 0],
+      [['battle'], ['Unit-A', 1], null, 0],
+    ]
+  );
+
+  // In the player's own turn, the world's patched before the next attack: a defender hurt in the first battle, as under
+  //  Civ2's rounds, is hurt as the second battle there finds it, shown so from the first blow.
+  repatched([1, 1, [walker]], [3, 1, [guard]], [2, 1, [rival]]);
+  fought(walker, [1, 1], rival, [2, 1], 'defender');
+  patch(
+    [1, 1, []],
+    [
+      2,
+      1,
+      [
+        {
+          ...rival,
+          hitPoints: { current: 5, max: 10 },
+        } as Tile['units'][number],
+      ],
+    ]
+  );
+  fought(guard, [3, 1], rival, [2, 1], 'attacker');
+  patch([3, 1, [guard]], [2, 1, []]);
+  runFrames(1);
+
+  const hurtBetween = [markers.get('2,1')?.unit?.health];
+
+  runFrames(12);
+  hurtBetween.push(markers.get('2,1')?.unit?.health);
+  runFrames();
+  repatched([3, 1, []]);
+
+  expect(
+    'in the player’s own turn, a second attack on a square finds it as the first’s patch left it: its defender hurt, shown so from the first blow',
+    hurtBetween,
+    [null, 0.5]
+  );
+
+  // Walking quickly, the blow falls in half the time. And the square attacked shows its city as it was till the blow, as
+  //  its units are: a city shrunk by the battle shows its new size then.
+  optionsRegistry.set(MAP3D_WALKS_OPTION, 'fast');
+  square(2, 1).city = {
+    id: 'City-B',
+    name: 'Battleton',
+    player: { civilization: { attributes: [] } },
+    originalPlayer: { civilization: { _: 'Romans' } },
+    growth: { size: 3 },
+  } as unknown as Tile['city'];
+  repatched([1, 1, [walker]], [2, 1, [rival]]);
+  walkersSet.length = 0;
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  square(2, 1).city = {
+    ...square(2, 1).city,
+    growth: { size: 2 },
+  } as unknown as Tile['city'];
+  patch([1, 1, [walker]], [2, 1, []]);
+  runFrames(1);
+
+  const cityBefore = [markers.get('2,1')?.city?.size, unitOn(2, 1)];
+
+  runFrames(6);
+
+  const quickBlow = [
+    markers.get('2,1')?.city?.size,
+    unitOn(2, 1),
+    fighters().map(([id]) => id),
+  ];
+
+  runFrames();
+  optionsRegistry.set(MAP3D_WALKS_OPTION, 'normal');
+  square(2, 1).city = null;
+  repatched([1, 1, []], [2, 1, []]);
+
+  expect(
+    'walking quickly, the blow falls in half the time; the square attacked shows its city as it was till the blow, then as it is',
+    [cityBefore, quickBlow],
+    [
+      [3, ['Unit-R', 1]],
+      [2, null, ['battle', 'battle-fallen']],
     ]
   );
 
