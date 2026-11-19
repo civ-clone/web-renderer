@@ -124,10 +124,11 @@ const angleFrom = (
 
 /**
  * The keys that move a unit on a map turned as `heading` says, from `keys`, those of the map unturned. Each moves the
- *  unit in the grid's direction nearest the way the key points on the screen, as the map's turned, so up stays up the
- *  screen. A key that moves nothing unturned (the up and down arrows on a hex grid, which has no neighbour straight up
- *  or down) moves the unit only where one of the grid's directions is within an eighth of a turn of its way. Unturned,
- *  they're `keys`.
+ *  unit in the grid's direction nearest the way the key points, turned on the ground as the camera is, so up moves it
+ *  the way the camera faces. That's the way the key points on the screen seen from above; seen at a slant, the ground
+ *  ahead is foreshortened, and a diagonal key can look a little off its neighbour. A key that moves nothing unturned
+ *  (the up and down arrows on a hex grid, which has no neighbour straight up or down) moves the unit only where one of
+ *  the grid's directions is within a sixteenth of a turn (22.5°) of its way. Unturned, they're `keys`.
  */
 export const turnedDirectionKeys = (
   keys: { [key: string]: Direction },

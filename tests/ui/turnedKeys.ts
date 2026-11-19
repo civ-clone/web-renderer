@@ -8,10 +8,7 @@ import './lib/classicInterface';
 import ActiveUnitController from '@civ-clone/ui-game/ActiveUnitController';
 import HaltedUnits from '@civ-clone/ui-client/lib/haltedUnits';
 import PendingMove from '@civ-clone/ui-client/lib/PendingMove';
-import topologyFor, {
-  Direction,
-  TopologyName,
-} from '@civ-clone/ui-client/lib/topologyFor';
+import topologyFor, { TopologyName } from '@civ-clone/ui-client/lib/topologyFor';
 import {
   MapHeading,
   directionKeys,
@@ -19,6 +16,7 @@ import {
   turnedDirectionKeys,
 } from '@civ-clone/ui-client/lib/unitActionKeys';
 import { groundLayoutFor } from '@civ-clone/ui-map-3d/layouts';
+import groundDirections from '@civ-clone/ui-map-3d/layouts/directions';
 import { presets, toScreen } from '@civ-clone/ui-map-3d/camera/orbit';
 import { TransportHandledAction } from '@civ-clone/ui-protocol/Transport';
 import { Tile } from '@civ-clone/ui-protocol/types';
@@ -71,23 +69,34 @@ grids.forEach(([topologyId, width, height]) => {
       height,
       wrapsY: topology.wrapsY(),
     }),
-    // Taken as the 3D map takes it: from the middle of a square to its neighbour's, on the land as it's laid out.
-    at = (x: number, y: number, direction: Direction): [number, number] => {
-      const [dx, dy] = topology.offset(direction, x, y),
-        [u, v] = layout.centre(x, y),
-        [toU, toV] = layout.centre(x + dx, y + dy);
-
-      return [toU - u, toV - v];
-    },
+    // As the 3D map takes it (`MapView3D#heading`): from the middle of a square to its neighbour's, as it's laid out.
     headingAt = (turn: number): MapHeading => ({
       turn,
-      directions: Object.fromEntries(
-        topology
-          .directions()
-          .map((direction) => [direction, at(0, 0, direction)])
-      ),
+      directions: groundDirections(layout, topology),
     }),
     unturned = directionKeys(topology);
+
+  // The ways it gives are those from any square to its neighbours, on even rows and odd.
+  const fromSquare = (x: number, y: number): string[] =>
+      topology.directions().map((direction) => {
+        const [dx, dy] = topology.offset(direction, x, y),
+          [u, v] = layout.centre(x, y),
+          [toU, toV] = layout.centre(x + dx, y + dy);
+
+        return `${direction} ${Math.round((toU - u) * 1e6)} ${Math.round(
+          (toV - v) * 1e6
+        )}`;
+      }),
+    given = Object.entries(groundDirections(layout, topology)).map(
+      ([direction, [u, v]]) =>
+        `${direction} ${Math.round(u * 1e6)} ${Math.round(v * 1e6)}`
+    );
+
+  expect(
+    `${topologyId}: each way the grid points on the ground is the way from a square's middle to its neighbour's, on even rows and odd`,
+    [fromSquare(4, 4), fromSquare(5, 5)],
+    [given, given]
+  );
 
   expect(
     `${topologyId}: unturned, or turned all the way round, the keys are the 2D map's own`,
@@ -99,14 +108,38 @@ grids.forEach(([topologyId, width, height]) => {
     [unturned, unturned, unturned]
   );
 
-  // Turned every 2.5°, the eighths, the twelfths and the turns half way between them among them, seen from the camera
-  //  as it is by default (its pitch) at that turn, on even and odd rows: each key moves the unit to a neighbour that's
-  //  that way on the screen, every key that moves a unit unturned still does, and every way the grid has has a key.
-  const faults: string[] = [];
+  // Turned every 2.5°, the eighths, the twelfths and the turns half way between them among them, on even and odd rows:
+  //  each key moves the unit to the neighbour nearest its way turned on the ground as the camera is, within half the
+  //  angle between two of the grid's ways (22.5° on the square and isometric grids, 30° on the hex); seen from near
+  //  overhead, that's the way the key points on the screen. Every key that moves a unit unturned still does, and every
+  //  way the grid has has a key.
+  const faults: string[] = [],
+    half = 180 / topology.directions().length,
+    ways = groundDirections(layout, topology);
 
   for (let step = 0; step < 144; step++) {
     const turn = (step * 2.5 * Math.PI) / 180,
       keys = turnedDirectionKeys(unturned, headingAt(turn));
+
+    // On the ground: the key's way, as the camera faces, east and south.
+    Object.entries(keys).forEach(([key, direction]) => {
+      const [right, up] = keyPoints[key]!,
+        way: [number, number] = [
+          right * Math.cos(turn) + up * Math.sin(turn),
+          right * Math.sin(turn) - up * Math.cos(turn),
+        ],
+        off = apart(way, ways[direction] as [number, number]);
+
+      if (off > half + 1e-6) {
+        faults.push(
+          `${
+            step * 2.5
+          }° on the ground: ${key} moves ${direction}, ${off.toFixed(
+            1
+          )}° from its way`
+        );
+      }
+    });
 
     [
       [4, 4],
@@ -117,7 +150,8 @@ grids.forEach(([topologyId, width, height]) => {
         orbit = {
           focus: [u, v] as const,
           yaw: turn,
-          pitch: presets.classic.pitch,
+          // Near overhead, where little's foreshortened.
+          pitch: presets.above.pitch,
           distance: 12,
         },
         here = toScreen(orbit, 0, [u, 0, v], 1);
@@ -138,9 +172,8 @@ grids.forEach(([topologyId, width, height]) => {
           there[1] - here[1],
         ]);
 
-        // The nearest way the grid has to the key's: within half the angle between two of its ways (22.5° on the
-        //  square and isometric grids, 30° on the hex), and a little more as it looks with the camera leaning.
-        if (off > 180 / topology.directions().length + 5) {
+        // As on the ground, but for a little foreshortening.
+        if (off > half + 1) {
           faults.push(
             `${
               step * 2.5
@@ -215,8 +248,8 @@ grids.forEach(([topologyId, width, height]) => {
   );
 }
 
-// On a hex grid, the up and down arrows move nothing unturned, as there's no neighbour straight up or down; turned a
-//  twelfth, there is, and they move the unit to it.
+// On a hex grid, the up and down arrows move nothing unturned, as there's no neighbour straight up or down: each is 30°
+//  away. Turned so one is within a sixteenth of a turn (22.5°), from 7.5°, they move the unit to it.
 {
   const hex = topologyFor({ topologyId: 'hex-odd-r', width: 12, height: 10 }),
     layout = groundLayoutFor({
@@ -225,29 +258,24 @@ grids.forEach(([topologyId, width, height]) => {
       height: 10,
       wrapsY: hex.wrapsY(),
     }),
-    directions = Object.fromEntries(
-      hex.directions().map((direction) => {
-        const [dx, dy] = hex.offset(direction, 0, 0),
-          [u, v] = layout.centre(0, 0),
-          [toU, toV] = layout.centre(dx, dy);
-
-        return [direction, [toU - u, toV - v] as const];
-      })
-    ),
+    directions = groundDirections(layout, hex),
     keysAt = (turn: number) =>
-      turnedDirectionKeys(directionKeys(hex), { turn, directions });
+      turnedDirectionKeys(directionKeys(hex), { turn, directions }),
+    degrees = (angle: number): number => (angle * Math.PI) / 180;
 
   expect(
-    'on a hex grid, up and down move nothing unturned or turned 5°, and turned a twelfth either way, the way that is then up and down',
+    'on a hex grid, up and down move nothing unturned or turned up to just short of 7.5°, and turned past it, or a twelfth either way, the way that is then up and down',
     [
       [keysAt(0).ArrowUp, keysAt(0).ArrowDown],
-      [keysAt(Math.PI / 36).ArrowUp, keysAt(Math.PI / 36).ArrowDown],
+      [keysAt(degrees(7.4)).ArrowUp, keysAt(degrees(-7.4)).ArrowDown],
+      [keysAt(degrees(7.6)).ArrowUp, keysAt(degrees(-7.6)).ArrowDown],
       [keysAt(Math.PI / 6).ArrowUp, keysAt(Math.PI / 6).ArrowDown],
       [keysAt(-Math.PI / 6).ArrowUp, keysAt(-Math.PI / 6).ArrowDown],
     ],
     [
       [undefined, undefined],
       [undefined, undefined],
+      ['ne', 'se'],
       ['ne', 'sw'],
       ['nw', 'se'],
     ]
@@ -257,7 +285,8 @@ grids.forEach(([topologyId, width, height]) => {
 // The game's own controller: a key moves the unit the way the map says it's turned, and the 2D map's way where the map
 //  doesn't say.
 {
-  const tiles = [0, 1, 2].map(
+  // The fourth, its neighbour up and right on the hex grid, apart from the one to its right.
+  const tiles = [0, 1, 2, 3].map(
       (x) => ({ x, y: 1, id: `Tile-${x}` } as unknown as Tile)
     ),
     action = (name: string, to: Tile) => ({ _: name, from: tiles[1], to }),
@@ -271,7 +300,7 @@ grids.forEach(([topologyId, width, height]) => {
         e: [action('Move', tiles[2])],
         w: [action('Move', tiles[0])],
         // On the hex grid.
-        ne: [action('Move', tiles[2])],
+        ne: [action('Move', tiles[3])],
       },
     },
     sent: string[] = [],
@@ -380,11 +409,11 @@ grids.forEach(([topologyId, width, height]) => {
   };
 
   expect(
-    'on the hex grid, up is taken and moves a unit only once the map is turned to a neighbour up the screen',
+    'on the hex grid, up is taken and moves a unit only once the map is turned to a neighbour up the screen: up and right, not right',
     [hexUnturned, press(turned, 'ArrowUp')],
     [
       [false, []],
-      [true, ['Move to Tile-2']],
+      [true, ['Move to Tile-3']],
     ]
   );
 }

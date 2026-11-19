@@ -6,7 +6,7 @@
 
 import { Coordinate, Tile, Unit } from '@civ-clone/ui-protocol/types';
 import { MapEvent } from '@civ-clone/ui-protocol/mapEvents';
-import { MapHeading } from '@civ-clone/ui-client/lib/unitActionKeys';
+import type { MapHeading } from '@civ-clone/ui-client/lib/unitActionKeys';
 import MapPortal from './MapPortal';
 import World from './components/World';
 
