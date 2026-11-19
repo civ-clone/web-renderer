@@ -176,8 +176,15 @@ const staged: string[] = [],
   chunkBuilds: string[] = [],
   // What's laid on the land of each chunk made since, by `i,j`, or nothing.
   overlaysSet = new Map<string, OverlayMesh | null>(),
-  // What's marked on each square, by `x,y`.
+  // Each marker slid into its place, and where from: `x,y`, then `u`, height and `v`, to two places.
+  slid: (string | number)[][] = [],
+  // How many more frames the last slide takes: a slide's frames are drawn until it's done.
+  slideFrames = { left: 0 },
+  // What's marked on each square, by `x,y`, and where it stands.
   markers = new Map<string, TileMarker>(),
+  markedAt = new Map<string, readonly [number, number, number]>(),
+  // The units `markerAt` was asked after, in order.
+  askedAfter: string[] = [],
   fakeStage = (): Stage => ({
     render: () => void staged.push('render'),
     resize: (stageWidth, stageHeight, ratio) =>
@@ -187,8 +194,30 @@ const staged: string[] = [],
       chunkBuilds.push(`${i},${j}`);
     },
     setOverlay: (i, j, mesh) => void overlaysSet.set(`${i},${j}`, mesh),
-    setMarker: (key, at, marker) =>
-      void (marker === null ? markers.delete(key) : markers.set(key, marker)),
+    setMarker: (key, at, marker) => {
+      if (marker === null) {
+        markers.delete(key);
+        markedAt.delete(key);
+
+        return;
+      }
+
+      markers.set(key, marker);
+      markedAt.set(key, at);
+    },
+    slideMarker: (key, from) => {
+      slid.push([key, ...from.map((n) => Math.round(n * 100) / 100)]);
+      slideFrames.left = 6;
+    },
+    // Where each marker stands, for its own unit or another: none slides here. Which unit's asked after.
+    markerAt: (key, unit) => {
+      askedAfter.push(unit);
+
+      const at = markedAt.get(key);
+
+      return at === undefined ? null : [...at];
+    },
+    sliding: () => slideFrames.left-- > 0,
     view: (orbit, height, period) => {
       lookedAt.splice(0, 3, orbit.focus[0], orbit.focus[1], height);
       seenDown.push(period?.v);
@@ -764,6 +793,7 @@ expect(
         disorder: false,
       },
       {
+        id: 'Unit-P',
         type: 'Phalanx',
         kinds: ['Fortifiable', 'Land', 'Unit'],
         colours: ['#aa0000', '#ffffff'],
@@ -1352,6 +1382,258 @@ expect(
     'mid-glide, what’s on the screen is what will be once the camera’s there; it’s moving until it is',
     [...midGlide, glider.moving()],
     [middleOf(tiles[1 * 4 + 1] as Tile), true, false, true, false]
+  );
+
+  // A unit stepping onto a square slides there from where it was drawn as it set off, once the patch that follows its
+  //  move draws it there, as the engine tells them: its move, then its patch.
+  const groundAt = (x: number, y: number): number[] => {
+      const [u, v] = middleOf(tiles[y * 4 + x] as Tile);
+
+      return [u, Math.max(0, glider.land().surfaceAt(u, v)), v].map(
+        (n) => Math.round(n * 100) / 100
+      );
+    },
+    unitOf = (id: string, defence: number) =>
+      ({
+        id,
+        _: 'Phalanx',
+        defence: { value: defence },
+        busy: null,
+        player: { civilization: { attributes: [] } },
+      } as unknown as Tile['units'][number]),
+    walker = unitOf('Unit-A', 1),
+    guard = unitOf('Unit-B', 5),
+    // The engine's patch: who's on each square now.
+    repatched = (...squares: [number, number, Tile['units'][number][]][]) => {
+      squares.forEach(([x, y, units]) => {
+        const tile = tiles[y * 4 + x] as Tile;
+
+        tile.units = units as Tile['units'];
+        glider.queueTile(tile);
+      });
+      glider.releaseTiles();
+
+      return runFrames();
+    },
+    stepped = (
+      unit: Tile['units'][number],
+      from: [number, number],
+      to: [number, number]
+    ) =>
+      glider.mapEvent({
+        kind: 'moved',
+        unit: {
+          id: unit.id,
+          type: 'Phalanx',
+          player: 'Player-1',
+          tile: { x: from[0], y: from[1] },
+        },
+        from: { x: from[0], y: from[1] },
+        to: { x: to[0], y: to[1] },
+      });
+
+  repatched([0, 3, [walker]]);
+  slid.length = 0;
+  askedAfter.length = 0;
+
+  // A first step east: it turns to face the way it goes, marked again where it stands, and slides only once it's on
+  //  the square it went to, from where the stage draws that unit.
+  stepped(walker, [0, 3], [1, 3]);
+  runFrames();
+
+  const beforeThePatch = slid.splice(0),
+    askedAfterIt = askedAfter.splice(0);
+
+  const slideDrawn = repatched([0, 3, []], [1, 3, [walker]]),
+    firstStep = slid.splice(0);
+
+  // Two steps before a patch: from where it's still drawn, both squares.
+  stepped(walker, [1, 3], [2, 3]);
+  stepped(walker, [2, 3], [2, 2]);
+  repatched([1, 3, []], [2, 2, [walker]]);
+
+  const twoSteps = slid.splice(0);
+
+  // Onto a square under a stronger unit, not on top: no slide, nor later, when the stronger one goes and it's on top.
+  repatched([3, 2, [guard]]);
+  slid.length = 0;
+  stepped(walker, [2, 2], [3, 2]);
+  repatched([2, 2, []], [3, 2, [guard, walker]]);
+  stepped(guard, [3, 2], [3, 1]);
+  repatched([3, 2, [walker]], [3, 1, [guard]]);
+
+  const underneath = slid.splice(0);
+
+  // Over the world's seam, from the copy of its old square beside its new one.
+  stepped(walker, [3, 2], [0, 2]);
+  repatched([3, 2, []], [0, 2, [walker]]);
+
+  const overTheSeam = slid.splice(0);
+
+  // Not where the player has asked for less motion.
+  Object.assign(window, {
+    matchMedia: (query: string) => ({ matches: query.includes('reduce') }),
+  });
+  stepped(walker, [0, 2], [1, 2]);
+  repatched([0, 2, []], [1, 2, [walker]]);
+  delete (window as { matchMedia?: unknown }).matchMedia;
+
+  expect(
+    'a unit slides onto a square once the patch draws it there, from where it was drawn as it set off, with frames till it’s there: turned on a first step, across two steps, over the seam from beside it; not onto a square under another unit, then or later; and not asked for less motion',
+    [
+      beforeThePatch,
+      askedAfterIt,
+      firstStep,
+      slideDrawn >= 6,
+      twoSteps,
+      underneath,
+      overTheSeam,
+      slid.splice(0),
+    ],
+    [
+      [],
+      ['Unit-A'],
+      [['1,3', ...groundAt(0, 3)]],
+      true,
+      [['2,2', ...groundAt(1, 3)]],
+      [['3,1', ...groundAt(3, 2)]],
+      [['0,2', -0.5, ...groundAt(3, 2).slice(1)]],
+      [],
+    ]
+  );
+
+  repatched([1, 2, []], [3, 1, []]);
+
+  // A unit moving while units are hidden (`t`) doesn't slide, nor when they're shown again; nor one whose patch comes
+  //  after its slide's been given up.
+  slid.length = 0;
+  glider.toggleUnits();
+  stepped(walker, [1, 2], [2, 2]);
+  repatched([2, 2, [walker]]);
+  glider.toggleUnits();
+  runFrames();
+
+  const whileHidden = slid.splice(0);
+
+  stepped(walker, [2, 2], [3, 2]);
+  now += 2500;
+  repatched([2, 2, []], [3, 2, [walker]]);
+
+  expect(
+    'a unit moving while units are hidden doesn’t slide, nor once they’re shown; nor one whose patch comes too late',
+    [whileHidden, slid.splice(0)],
+    [[], []]
+  );
+
+  repatched([3, 2, []]);
+
+  // Turns, frame by frame: how far the camera turns in all, the way it turns, each frame's step taken the short way.
+  const turnedFrameByFrame = (between: () => void): number => {
+    let turned = 0,
+      last = glider.orbit().yaw;
+    const step = (): void => {
+      const yaw = glider.orbit().yaw;
+
+      turned += shortWay(yaw - last);
+      last = yaw;
+    };
+
+    for (let frame = 0; frame < 3 && runFrames(1) > 0; frame++) {
+      step();
+    }
+
+    between();
+
+    while (runFrames(1) > 0) {
+      step();
+    }
+
+    return Math.round((turned / (Math.PI / 4)) * 1000) / 1000;
+  };
+  const shortWay = (delta: number): number =>
+    delta - Math.PI * 2 * Math.round(delta / (Math.PI * 2));
+
+  // A second turn pressed between frames, mid-glide: the camera ends two eighths round exactly, not short of it, nor a
+  //  whole turn past it; anticlockwise from north too, crossing it as it goes. And centred on a square mid-turn, it
+  //  finishes the turn under way, no more.
+  {
+    const eighth = Math.PI / 4;
+
+    // Clockwise from an eighth short of north, across it.
+    glider.setOrbit({ ...glider.orbit(), yaw: eighth * 7 });
+    glider.turnBy(1);
+
+    const clockwise = turnedFrameByFrame(() => {
+      now += 8;
+      glider.turnBy(1);
+    });
+    const endedAt = Math.round((glider.orbit().yaw - eighth) * 1e6);
+
+    glider.setOrbit({ ...glider.orbit(), yaw: 0 });
+    glider.turnBy(-1);
+
+    const anticlockwise = turnedFrameByFrame(() => {
+      now += 8;
+      glider.turnBy(-1);
+    });
+
+    glider.setOrbit({ ...glider.orbit(), yaw: 0 });
+    glider.turnBy(-1);
+
+    const thenCentred = turnedFrameByFrame(() =>
+      glider.centre(tiles[2 * 4 + 2] as Tile)
+    );
+
+    expect(
+      'a second turn pressed between frames ends two eighths round exactly, either way, across north; centred mid-turn, the turn ends as it would',
+      [endedAt, clockwise, anticlockwise, thenCentred],
+      [0, 2, -2, -1]
+    );
+  }
+
+  // Five quick turns clockwise, before a frame's drawn: the camera turns clockwise all the way, five eighths of a turn,
+  //  never back the short way round. Then north, the short way from there.
+  const turn = Math.PI / 4,
+    toTurn = (angle: number): number =>
+      Math.round(
+        (((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) * 1000
+      ) / 1000,
+    clockwise = (from: number, to: number): number =>
+      Math.round(
+        ((((to - from) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) * 1000
+      ) / 1000;
+
+  glider.setOrbit({ ...glider.orbit(), yaw: 0 });
+
+  const startYaw = glider.orbit().yaw;
+
+  [1, 2, 3, 4, 5].forEach(() => glider.turnBy(1));
+  runFrames(4);
+
+  const turning = clockwise(startYaw, glider.orbit().yaw);
+
+  runFrames();
+
+  const turnedTo = toTurn(glider.orbit().yaw);
+
+  glider.faceNorth();
+  runFrames(4);
+
+  const northward = glider.orbit().yaw;
+
+  runFrames();
+
+  expect(
+    'five quick turns turn the camera clockwise all the way, five eighths round; north then the short way',
+    [
+      turning > 0 && turning < Math.PI,
+      turnedTo,
+      // From five eighths round, north is three eighths on, clockwise.
+      clockwise(turn * 5, northward) > 0 &&
+        clockwise(turn * 5, northward) < Math.PI,
+      toTurn(glider.orbit().yaw),
+    ],
+    [true, toTurn(turn * 5), true, 0]
   );
 
   glider.dispose();

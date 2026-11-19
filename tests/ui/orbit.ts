@@ -24,7 +24,7 @@ import {
   toScreen,
   zoomed,
 } from '@civ-clone/ui-map-3d/camera/orbit';
-import { copiesNear } from '@civ-clone/ui-map-3d/stage';
+import { SLIDE, copiesNear, slideOffset } from '@civ-clone/ui-map-3d/stage';
 
 const failures: string[] = [];
 let checks = 0;
@@ -325,6 +325,45 @@ expect(
     [true, true, true],
   ]
 );
+
+// A turn given exactly: halfway along, half of it, however far and whichever way, not the short way round.
+const turnedFrom: Orbit = { focus: [0, 0], yaw: 0, pitch: 1, distance: 10 },
+  turnedTo: Orbit = { ...turnedFrom, yaw: (Math.PI * 5) / 4 };
+
+expect(
+  'a glide given its turn turns by it exactly, the long way if asked; without, the short way',
+  [
+    Math.round(
+      between(turnedFrom, turnedTo, 0.5, { u: 10, v: null }, (Math.PI * 5) / 4)
+        .yaw * 1000
+    ),
+    Math.round(
+      between(turnedFrom, turnedTo, 0.5, { u: 10, v: null }).yaw * 1000
+    ),
+  ],
+  [
+    Math.round(((Math.PI * 5) / 8) * 1000),
+    Math.round((-(Math.PI * 3) / 8) * 1000),
+  ]
+);
+
+// A unit's slide: all the way from where it started at first, eased in and out (a quarter of the time in, less than a
+//  quarter of the way), and none once it's there.
+{
+  const slide = { from: [2, 0, -1] as [number, number, number], started: 100 };
+
+  expect(
+    'a slide starts where it set off, eases in and out, and ends in place',
+    [
+      slideOffset(slide, 100),
+      slideOffset(slide, 100 + SLIDE / 4)?.map((n) => Math.round(n * 1000)),
+      slideOffset(slide, 100 + SLIDE / 2)?.map((n) => Math.round(n * 1000)),
+      slideOffset(slide, 100 + SLIDE),
+      slideOffset(undefined, 100),
+    ],
+    [[2, 0, -1], [1688, 0, -844], [1000, 0, -500], null, null]
+  );
+}
 
 if (failures.length > 0) {
   process.stderr.write(
