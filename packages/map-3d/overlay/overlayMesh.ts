@@ -39,6 +39,8 @@ export type OverlayPlace = {
   toward(offset: readonly [number, number]): readonly [number, number];
   // How far from its middle the square reaches every way (its outline's nearest edge).
   radius: number;
+  // Half the biggest square, with sides along the ground's axes, that fits inside it: where fields are laid.
+  inner: number;
   heightAt(u: number, v: number): number;
   // A number of the square's own, for where things stand on it.
   seed: number;
@@ -96,9 +98,9 @@ const box = new BoxGeometry(1, 1, 1),
 
 // Where on a square its mine, hut and specials stand, by seeded angle and how far out: plants keep clear of them.
 const SPOTS = {
-  mine: [3, 0.62],
+  mine: [3, 0.72],
   hut: [11, 0.64],
-  special: (index: number): [number, number] => [index + 1, 0.62],
+  special: (index: number): [number, number] => [index + 1, 0.72],
 } as const;
 
 // A seeded fraction, the `n`th for a square's `seed`.
@@ -413,9 +415,10 @@ const railroad = (layer: Layer, route: Route): void => {
 
 // Rows of crops across the square, with ditches between them: more rows, and yellower, for farmland.
 const fields = (layer: Layer, kind: 'irrigation' | 'farmland'): void => {
-  const { centre, radius } = layer.place,
+  const { centre, inner } = layer.place,
     rows = kind === 'farmland' ? 6 : 4,
-    reach = radius * 0.8,
+    // Inside the square's outline, a diamond or a hex as much as a square, so fields don't run into their neighbours'.
+    reach = inner * 0.9,
     width = (reach * 2) / rows;
 
   for (let row = 0; row < rows; row++) {
@@ -575,7 +578,7 @@ const special = (
     afloat = look.shape === 'fish' || look.shape === 'whale';
 
   for (let index = 0; index < look.count; index++) {
-    const [u, v] = look.count === 1 ? [at[0], at[1]] : jitter(index, 0.16),
+    const [u, v] = look.count === 1 ? [at[0], at[1]] : jitter(index, 0.1),
       y = layer.ground(u, v, afloat),
       facing = fraction(layer.place.seed, n * 31 + index + 17) * Math.PI * 2;
 
@@ -681,7 +684,7 @@ const special = (
         }
 
         {
-          const [pu, pv] = jitter(index + 5, 0.2),
+          const [pu, pv] = jitter(index + 5, 0.1),
             py = layer.ground(pu, pv);
 
           layer.solid(

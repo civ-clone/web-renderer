@@ -35,7 +35,8 @@ import { UnitLook, unitLook } from '@civ-clone/ui-models-builtin/units';
 // The size of a square is about 1 (spec §3): a city fills half its square, and a soldier stands a fifth of a square,
 //  drawn half as big again, as strategy maps make units, to be read at a distance.
 const FIGURE_SCALE = 1.5,
-  STAND_HEIGHT = 0.012,
+  // A unit's stand: thick enough to stand over everything laid on the land, roads and smears and all.
+  STAND_HEIGHT = 0.03,
   STONE = '#b5ab98',
   WALL = '#8d8577',
   ACTIVE = '#fff4b0',

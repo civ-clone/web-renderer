@@ -170,6 +170,8 @@ const staged: string[] = [],
   lookedAt: number[] = [],
   // How far down the world the stage was asked to draw it round, each time it was asked for a view.
   seenDown: (number | null | undefined)[] = [],
+  // Every chunk of land built, in order, again or not.
+  chunkBuilds: string[] = [],
   // What's laid on the land of each chunk made since, by `i,j`: how many numbers its points take, or 0 for nothing.
   overlaysSet = new Map<string, number>(),
   // What's marked on each square, by `x,y`.
@@ -178,7 +180,10 @@ const staged: string[] = [],
     render: () => void staged.push('render'),
     resize: (stageWidth, stageHeight, ratio) =>
       void staged.push(`resize ${stageWidth}×${stageHeight}@${ratio}`),
-    setChunk: (i, j) => void chunksSet.add(`${i},${j}`),
+    setChunk: (i, j) => {
+      chunksSet.add(`${i},${j}`);
+      chunkBuilds.push(`${i},${j}`);
+    },
     setOverlay: (i, j, mesh) =>
       void overlaysSet.set(
         `${i},${j}`,
@@ -872,6 +877,27 @@ expect(
       markerFor(town, null, true)?.city?.name,
     ],
     ['Rome', 'Roma']
+  );
+
+  // A road built on the town's square: what's laid on its chunk is made again, by the frames the view draws, without
+  //  building the land again.
+  overlaysSet.clear();
+
+  const landBuilt = chunkBuilds.length;
+
+  town.improvements = [{ _: 'Road' }] as Tile['improvements'];
+  view.queueTile(town);
+  view.releaseTiles();
+  view.flush();
+
+  expect(
+    'a road built: what’s laid on its chunk made again, with the road, and no land built',
+    [
+      (overlaysSet.get(view.land().overlayKeyOf(town.x, town.y)) ?? 0) > 0,
+      view.land().overlaysPending(),
+      chunkBuilds.length === landBuilt,
+    ],
+    [true, 0, true]
   );
 
   staged.splice(0);

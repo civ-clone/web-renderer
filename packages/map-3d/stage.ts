@@ -234,6 +234,9 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
     camera.position.set(x, y, z);
     camera.lookAt(u, height, v);
     camera.far = far * 1.2;
+    // As near as anything gets, no nearer: the depth there is to go round is spread over less, so what's laid a few
+    //  thousandths over the land doesn't flicker with it far out.
+    camera.near = Math.max(0.1, orbit.distance * 0.02);
     camera.updateProjectionMatrix();
     fog.near = near;
     fog.far = far;

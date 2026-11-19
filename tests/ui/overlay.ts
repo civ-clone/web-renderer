@@ -29,6 +29,7 @@ import overlayMesh, {
 import { Stage } from '@civ-clone/ui-map-3d/stage';
 import { TopologyId } from '@civ-clone/ui-protocol/topology';
 import Land from '@civ-clone/ui-map-3d/Land';
+import { ChunkMesh } from '@civ-clone/ui-map-3d/terrain/chunks';
 import * as Civ1Terrains from '@civ-clone/civ1-world/Terrains';
 import { vegetationTable } from '@civ-clone/ui-models-builtin/vegetation';
 import World from '@civ-clone/ui-map/components/World';
@@ -196,6 +197,7 @@ const heightAt = (u: number): number => 0.1 + 0.02 * Math.sin(u),
       toward ??
       (([dx, dy]) => [x + dx + 0.5, y + dy + 0.5] as [number, number]),
     radius: 0.5,
+    inner: 0.5,
     heightAt: height ?? ((u) => heightAt(u)),
     seed: x * 7919 + y,
     latitude: 0.5,
@@ -317,27 +319,56 @@ expect(
   [true, true]
 );
 
-const standing = overlayFor(
-    square(['Mine'], {
-      terrain: 'Hills',
-      features: ['Coal', 'Wine'],
-      hut: true,
-    }),
-    []
-  )!,
-  clear = [0, 1, 2, 3, 4, 5].map((y) =>
+// What stands on a square stands clear of the unit's stand at its middle, 0.2 across: every special, a mine and a hut,
+//  on 300 squares each, as where they stand is seeded from the square.
+const STAND = 0.2,
+  closest = (overlay: SquareOverlay): number =>
     Math.min(
-      ...pointsOf(
-        overlayMesh(16, 0, [{ overlay: standing, place: place(17, y) }])
-      ).map(([u, , v]) => Math.hypot(u - 17.5, v - (y + 0.5)))
-    )
-  );
+      ...Array.from({ length: 300 }, (_, at) => {
+        const x = at % 30,
+          y = Math.floor(at / 30);
+
+        return Math.min(
+          ...pointsOf(overlayMesh(0, 0, [{ overlay, place: place(x, y) }])).map(
+            ([u, , v]) => Math.hypot(u - (x + 0.5), v - (y + 0.5))
+          )
+        );
+      })
+    ),
+  onTheStand = [
+    ...Object.keys(specialTable).map((key): [string, SquareOverlay] => {
+      const [terrain, feature] = key.includes(':')
+        ? key.split(':')
+        : ['River', key];
+
+      return [
+        key,
+        overlayFor(square([], { terrain, features: [feature!] }), [])!,
+      ];
+    }),
+    ['Mine', overlayFor(square(['Mine']), [])!] as [string, SquareOverlay],
+    ['hut', overlayFor(square([], { hut: true }), [])!] as [
+      string,
+      SquareOverlay
+    ],
+  ]
+    .map(([name, overlay]): [string, number] => [name, closest(overlay)])
+    .filter(([, distance]) => distance < STAND);
 
 expect(
-  'what stands on a square, a mine, specials and a hut, stands clear of the unit’s stand at its middle, wherever the square',
-  clear.filter((distance) => distance < 0.18),
+  'what stands on a square, every special, a mine and a hut, stands clear of the unit’s stand at its middle, wherever the square',
+  onTheStand,
   []
 );
+
+const standing = overlayFor(
+  square(['Mine'], {
+    terrain: 'Hills',
+    features: ['Coal', 'Wine'],
+    hut: true,
+  }),
+  []
+)!;
 
 const again = overlayMesh(16, 0, [{ overlay: standing, place: place(17, 3) }]),
   first = overlayMesh(16, 0, [{ overlay: standing, place: place(17, 3) }]),
@@ -481,6 +512,250 @@ expect(
     );
   }
 );
+
+// A world of the land, its squares from `tileOf`, and a stage that keeps what it's given.
+const landOf = (
+  topologyId: TopologyId,
+  width: number,
+  height: number,
+  tileOf: (
+    x: number,
+    y: number
+  ) => {
+    terrain?: string;
+    improvements?: string[];
+    city?: boolean;
+  }
+) => {
+  const tiles = Array.from({ length: width * height }, (_, at) => {
+      const x = at % width,
+        y = Math.floor(at / width),
+        { terrain = 'River', improvements = [], city = false } = tileOf(x, y);
+
+      return {
+        x,
+        y,
+        isWater: false,
+        isLand: true,
+        goodyHut: null,
+        city: city ? {} : null,
+        units: [],
+        improvements: improvements.map((_) => ({ _ })),
+        terrain: { _: terrain, __: [terrain], features: [] },
+      };
+    }),
+    land = new Land(
+      new World({
+        _: 'World',
+        __: ['World', 'DataObject'],
+        id: 'world',
+        width,
+        height,
+        topologyId,
+        tiles: tiles as never,
+      })
+    ),
+    chunks = new Map<string, ChunkMesh>(),
+    laid = new Map<string, OverlayMesh | null>(),
+    order: string[] = [],
+    stage = {
+      setChunk: (i: number, j: number, mesh: ChunkMesh) =>
+        void chunks.set(`${i},${j}`, mesh),
+      setOverlay: (i: number, j: number, mesh: OverlayMesh | null) => {
+        laid.set(`${i},${j}`, mesh);
+        order.push(`${i},${j}`);
+      },
+    } as unknown as Stage;
+
+  return { tiles, land, chunks, laid, order, stage };
+};
+
+// Draped over the land as it's drawn, its flat triangles, not the true relief: on hills, every point of every road and
+//  field above the triangle it lies over, by the chunk's own points and indices.
+{
+  const { land, chunks, laid, stage } = landOf('square', 32, 16, () => ({
+    terrain: 'Hills',
+    improvements: ['Road', 'Irrigation'],
+  }));
+
+  land.queueAll(0, 0);
+  land.build(stage, null);
+
+  // Each chunk's points: how far apart, and how many steps across and down, worked out once from its own points.
+  const grids = [...chunks.values()].map((mesh) => {
+    const p = mesh.positions;
+    let row = 1;
+
+    // Points to a row: until the second row starts, further down.
+    while (row * 3 + 2 < p.length && p[row * 3 + 2]! === 0) {
+      row++;
+    }
+
+    return {
+      mesh,
+      spacing: p[3]! - p[0]!,
+      steps: row - 1,
+      rows: p.length / 3 / row - 1,
+    };
+  });
+
+  // The drawn land's height under (`u`, `v`): the triangle of its chunk that it's in, of the two its cell's indices make.
+  const drawnAt = (u: number, v: number): number => {
+    for (const { mesh, spacing, steps, rows } of grids) {
+      const p = mesh.positions,
+        local = [u - mesh.u, v - mesh.v] as const,
+        a = Math.floor(local[0] / spacing),
+        b = Math.floor(local[1] / spacing);
+
+      if (a < 0 || b < 0 || a >= steps || b >= rows) {
+        continue;
+      }
+
+      for (
+        let at = (b * steps + a) * 6;
+        at < (b * steps + a) * 6 + 6;
+        at += 3
+      ) {
+        const [ia, ib, ic] = [0, 1, 2].map((k) => mesh.indices[at + k]! * 3),
+          ax = p[ia!]!,
+          az = p[ia! + 2]!,
+          bx = p[ib!]!,
+          bz = p[ib! + 2]!,
+          cx = p[ic!]!,
+          cz = p[ic! + 2]!,
+          area = (bx - ax) * (cz - az) - (cx - ax) * (bz - az),
+          w1 =
+            ((bx - local[0]) * (cz - local[1]) -
+              (cx - local[0]) * (bz - local[1])) /
+            area,
+          w2 =
+            ((cx - local[0]) * (az - local[1]) -
+              (ax - local[0]) * (cz - local[1])) /
+            area,
+          w3 = 1 - w1 - w2;
+
+        if (w1 >= -1e-9 && w2 >= -1e-9 && w3 >= -1e-9) {
+          return w1 * p[ia! + 1]! + w2 * p[ib! + 1]! + w3 * p[ic! + 1]!;
+        }
+      }
+    }
+
+    return NaN;
+  };
+
+  const below = [...laid.values()].flatMap((mesh) =>
+    mesh === null
+      ? []
+      : pointsOf(mesh).filter(
+          ([u, y, v]) =>
+            u > 0.1 &&
+            u < 31.9 &&
+            v > 0.1 &&
+            v < 15.9 &&
+            y < drawnAt(u, v) + 0.006
+        )
+  );
+
+  expect(
+    'roads and fields lie over the land as it’s drawn, even on hills, not under it',
+    below.length,
+    0
+  );
+}
+
+// Across the world's east-west seam on the square grid: a road at the last square joins the first at its copy east of
+//  it, halfway there, not back across the world.
+{
+  const { land, laid, stage } = landOf('square', 64, 32, (x, y) => ({
+    improvements: y === 10 && (x === 63 || x === 0) ? ['Road'] : [],
+  }));
+
+  land.queueAll(0, 0);
+  land.build(stage, null);
+
+  const lastRow = pointsOf(laid.get(land.overlayKeyOf(63, 10))!).filter(
+    ([, , v]) => Math.abs(v - 10.5) < 0.04
+  );
+
+  expect(
+    'a road across the world’s seam joins its neighbour there, halfway to its copy',
+    [
+      Math.round(Math.max(...lastRow.map(([u]) => u)) * 1e6) / 1e6,
+      Math.min(...lastRow.map(([u]) => u)) > 63.4,
+    ],
+    [64, true]
+  );
+}
+
+// A change beside a chunk's edge remakes the chunk next door; a release that changes nothing remakes nothing; a city
+//  founded beside a railroad remakes it; and what's waiting is made nearest where the map's centred first.
+{
+  const { tiles, land, laid, order, stage } = landOf(
+    'square',
+    64,
+    32,
+    (x, y) => ({
+      improvements:
+        x === 15 && y === 20
+          ? ['Road']
+          : x === 40 && y === 5
+          ? ['Road', 'Railroad']
+          : [],
+    })
+  );
+
+  land.queueAll(60, 30);
+  land.build(stage, null);
+
+  const nearestFirst = order[0];
+
+  laid.clear();
+  // East of (15, 20), over the edge of its chunk.
+  tiles[20 * 64 + 16]!.improvements = [{ _: 'Road' }];
+  land.changed([[16, 20]], 0, 0);
+  land.build(stage, null);
+
+  const nextDoor = [
+    land.overlayKeyOf(15, 20) !== land.overlayKeyOf(16, 20),
+    laid.has(land.overlayKeyOf(15, 20)),
+  ];
+
+  laid.clear();
+  land.changed([[30, 20]], 0, 0);
+
+  const unchanged = land.overlaysPending();
+
+  tiles[5 * 64 + 41]!.city = {} as never;
+  land.changed([[41, 5]], 0, 0);
+  land.build(stage, null);
+
+  expect(
+    'a road built over a chunk’s edge remakes the chunk next door; a release that changes nothing, nothing; a city founded beside a railroad, its chunk; and the nearest first',
+    [
+      nextDoor,
+      unchanged,
+      laid.has(land.overlayKeyOf(40, 5)),
+      nearestFirst === land.overlayKeyOf(62, 30),
+    ],
+    [[true, true], 0, true, true]
+  );
+}
+
+// Fields lie inside their square, a diamond or a hex as much as a square: every point of a lone square's fields is on it.
+(['staggered-iso', 'hex-odd-r'] as TopologyId[]).forEach((topologyId) => {
+  const { land, laid, stage } = landOf(topologyId, 32, 16, (x, y) => ({
+    improvements: x === 9 && y === 5 ? ['Farmland'] : [],
+  }));
+
+  land.queueAll(0, 0);
+  land.build(stage, null);
+
+  const off = pointsOf(laid.get(land.overlayKeyOf(9, 5))!).filter(
+    ([u, , v]) => land.layout.tileAt(u, v).join() !== '9,5'
+  );
+
+  expect(`${topologyId}: a square’s fields lie inside it`, off.length, 0);
+});
 
 // What grows.
 const engineTerrains = new Set(Object.keys(Civ1Terrains));

@@ -18,7 +18,10 @@ import { Stage } from './stage';
 import { Ground } from './water';
 import World from '@civ-clone/ui-map/components/World';
 import { seaFloor } from '@civ-clone/ui-models-builtin/terrain';
-import overlayFor, { OverlayNeighbour } from './overlay/overlayFor';
+import overlayFor, {
+  OverlayNeighbour,
+  SquareOverlay,
+} from './overlay/overlayFor';
 import overlayMesh, { OverlayMesh, OverlayPlace } from './overlay/overlayMesh';
 
 export class Land {
@@ -33,8 +36,14 @@ export class Land {
   // The chunks whose overlays are to be made again, and which squares' middles each has, worked out once.
   #overlaysDue = new Set<string>();
   #squaresByChunk: Map<string, [number, number][]> | null = null;
-  // How far a square reaches from its middle every way: its outline's nearest edge.
+  // What was last laid on each square, by `x,y`, as `overlayFor` said: a chunk's made again only when one changes.
+  #laid = new Map<string, string>();
+  // Where the map was last centred, for what's laid to be made nearest it first.
+  #focus: [number, number] = [0, 0];
+  // How far a square reaches from its middle every way, its outline's nearest edge; and half the biggest square, with
+  //  sides along the ground's axes, that fits inside it.
   #radius: number;
+  #inner: number;
 
   constructor(world: World) {
     this.#world = world;
@@ -89,17 +98,69 @@ export class Land {
     this.#reach =
       REACH + corner + WANDER * Math.SQRT2 + (seaFloor.reach - 1) * step;
 
-    const outline = this.layout.outline(0, 0);
-
-    this.#radius = Math.min(
-      ...outline.map(([au, av], index) => {
+    // Each edge of a square's outline: how far it is from the middle, and which way it faces.
+    const outline = this.layout.outline(0, 0),
+      edges = outline.flatMap(([au, av], index) => {
         const [bu, bv] = outline[(index + 1) % outline.length]!,
           length = Math.hypot(bu - au, bv - av);
 
         return length === 0
-          ? Infinity
-          : Math.abs((bu - au) * (cv - av) - (bv - av) * (cu - au)) / length;
-      })
+          ? []
+          : [
+              {
+                away:
+                  Math.abs((bu - au) * (cv - av) - (bv - av) * (cu - au)) /
+                  length,
+                normal: [(bv - av) / length, (au - bu) / length],
+              },
+            ];
+      });
+
+    this.#radius = Math.min(...edges.map(({ away }) => away));
+    // A square of half-side h fits inside an edge `away` from the middle while |nu|·h + |nv|·h ≤ away.
+    this.#inner = Math.min(
+      ...edges.map(
+        ({ away, normal: [nu, nv] }) => away / (Math.abs(nu!) + Math.abs(nv!))
+      )
+    );
+  }
+
+  /**
+   * The land's height at a point as it's drawn: flat triangles between the chunks' points, which on a hill can stand a
+   *  little above or below the true relief. What's laid on the land follows this, so it's never under it.
+   */
+  surfaceAt(u: number, v: number, heights = new Map<string, number>()): number {
+    const { spacingU, spacingV } = this.#grid,
+      a = Math.floor(u / spacingU),
+      b = Math.floor(v / spacingV),
+      fu = u / spacingU - a,
+      fv = v / spacingV - b,
+      at = (pa: number, pb: number): number => {
+        const key = `${pa},${pb}`;
+        let height = heights.get(key);
+
+        if (height === undefined) {
+          height = this.#relief.height(pa * spacingU, pb * spacingV);
+          heights.set(key, height);
+        }
+
+        return height;
+      },
+      topLeft = at(a, b),
+      topRight = at(a + 1, b),
+      bottomLeft = at(a, b + 1);
+
+    // As the chunks split each cell: the triangle by its top-left corner, or the one by its bottom-right.
+    if (fu + fv <= 1) {
+      return topLeft + (topRight - topLeft) * fu + (bottomLeft - topLeft) * fv;
+    }
+
+    const bottomRight = at(a + 1, b + 1);
+
+    return (
+      bottomRight +
+      (bottomLeft - bottomRight) * (1 - fu) +
+      (topRight - bottomRight) * (1 - fv)
     );
   }
 
@@ -138,6 +199,7 @@ export class Land {
     }
 
     this.#queue = this.#nearestFirst(all, u, v);
+    this.#focus = [u, v];
     all.forEach((key) => this.#overlaysDue.add(key));
   }
 
@@ -155,14 +217,21 @@ export class Land {
       return;
     }
 
-    // What's laid on them, and beside them, as roads join their neighbours: every square's, for a world replaced.
-    if (always) {
-      this.#chunksOfSquares().forEach((_, key) => this.#overlaysDue.add(key));
-    } else {
-      this.#besides(squares).forEach(([x, y]) =>
-        this.#overlaysDue.add(this.#chunkOf(x, y))
-      );
-    }
+    this.#focus = [u, v];
+
+    // What's laid on them and beside them, as roads join their neighbours, where it's changed: every square's, for a
+    //  world replaced with none released.
+    (squares.length === 0
+      ? [...this.#chunksOfSquares().values()].flat()
+      : this.#besides(squares)
+    ).forEach(([x, y]) => {
+      const key = `${x},${y}`,
+        signature = JSON.stringify(this.#overlayAt(x, y));
+
+      if (signature !== (this.#laid.get(key) ?? 'null')) {
+        this.#overlaysDue.add(this.#chunkOf(x, y));
+      }
+    });
 
     // The squares released alone, unless the world itself may have been replaced.
     const terrain = this.#relief.refresh(always ? undefined : squares);
@@ -185,6 +254,7 @@ export class Land {
   /** The chunks waiting, put in order again, the nearest to (`u`, `v`) first: the map has been centred elsewhere. */
   refocus(u: number, v: number): void {
     this.#queue = this.#nearestFirst(this.#queue, u, v);
+    this.#focus = [u, v];
   }
 
   /** How many chunks wait to be built. */
@@ -218,7 +288,10 @@ export class Land {
       this.#overlaysDue.add(key);
     }
 
-    for (const key of [...this.#overlaysDue]) {
+    for (const key of this.#nearestFirst(
+      [...this.#overlaysDue],
+      ...this.#focus
+    )) {
       if (spent()) {
         return;
       }
@@ -230,28 +303,39 @@ export class Land {
     }
   }
 
+  // What's laid on the square at (`x`, `y`), as its tile and its neighbours' say.
+  #overlayAt(x: number, y: number): SquareOverlay | null {
+    const topology = this.#world.topology();
+
+    return overlayFor(
+      this.#world.get(x, y),
+      topology.directions().flatMap((direction) => {
+        const at = topology.neighbour(x, y, direction);
+
+        return at === null
+          ? []
+          : [
+              {
+                offset: topology.offset(direction, x, y),
+                tile: this.#world.get(at[0], at[1]),
+              } as OverlayNeighbour,
+            ];
+      })
+    );
+  }
+
   /** What's laid on the land of chunk `i` across and `j` down: its squares' roads, fields and the rest, or nothing. */
   overlayOf(i: number, j: number): OverlayMesh | null {
     const { stepsU, stepsV, spacingU, spacingV } = this.#grid,
       { u: periodU, v: periodV } = this.layout.period(),
-      topology = this.#world.topology(),
       squares = this.#chunksOfSquares().get(`${i},${j}`) ?? [],
       extentV = this.extentV(),
+      // The land's heights at its points, each read once for the chunk.
+      heights = new Map<string, number>(),
       laid = squares.flatMap(([x, y]) => {
-        const tile = this.#world.get(x, y),
-          neighbours = topology.directions().flatMap((direction) => {
-            const at = topology.neighbour(x, y, direction);
+        const overlay = this.#overlayAt(x, y);
 
-            return at === null
-              ? []
-              : [
-                  {
-                    offset: topology.offset(direction, x, y),
-                    tile: this.#world.get(at[0], at[1]),
-                  } as OverlayNeighbour,
-                ];
-          }),
-          overlay = overlayFor(tile, neighbours);
+        this.#laid.set(`${x},${y}`, JSON.stringify(overlay));
 
         if (overlay === null) {
           return [];
@@ -269,7 +353,8 @@ export class Land {
               return [nu + du, nv + dv];
             },
             radius: this.#radius,
-            heightAt: (pu, pv) => this.heightAt(pu, pv),
+            inner: this.#inner,
+            heightAt: (pu, pv) => this.surfaceAt(pu, pv, heights),
             seed: Math.imul(x, 73856093) ^ Math.imul(y, 19349663),
             latitude: Math.min(1, Math.abs((2 * (v + dv)) / extentV - 1)),
           };
