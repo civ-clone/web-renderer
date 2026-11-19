@@ -469,6 +469,7 @@ const drawUnit = (
   //  one), behind a low wall when fortified: one mesh, facing the way it last went (its figures face south, unturned).
   const figures = new Mesh(body, kit.figureMaterial);
 
+  figures.name = FIGURES_PART;
   figures.rotation.y = unit.facing;
   group.add(figures);
 
@@ -534,8 +535,14 @@ const drawUnit = (
   return group;
 };
 
-/** The name of a marker's unit's part, which slides as the unit steps onto its square, its city staying put. */
+/** The name of a marker's unit's part: its figures, its flag over them, and its ring. */
 export const UNIT_PART = 'unit';
+
+/** The name of a unit's figures, on their stand: what turns as a unit walking turns. */
+export const FIGURES_PART = 'figures';
+
+/** How far in front of its city's buildings (`+v`) a unit in a city stands, from the square's middle. */
+export const IN_FRONT_OF_CITY = 0.26;
 
 /**
  * A square's markers, standing on the ground at its middle: its city, and the unit on top of its stack in front of its
@@ -549,7 +556,7 @@ export const drawMarker = (kit: MarkerKit, marker: TileMarker): Group => {
   }
 
   if (marker.unit !== null) {
-    const inFront = marker.city === null ? 0 : 0.26,
+    const inFront = marker.city === null ? 0 : IN_FRONT_OF_CITY,
       pawn = drawUnit(
         kit,
         marker.unit,

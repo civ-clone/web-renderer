@@ -866,6 +866,52 @@ mapEvent:
 - **The game waits** for the queue to empty before it asks you for the next unit, so the next unit isn't picked while
   the last one is still walking.
 
+**As built (slice 2.3, first part: walks)** (`packages/map-3d/walks.ts`, `MapView3D`):
+
+- **A walk** is a unit's steps, from where it stood (at its square's middle, or in front of its city's buildings, where
+  cities are shown) through the middle of each square it steps onto, a city's too, to where it'll stand on the last. A
+  unit's drawn walking as the latest patch has it, hurt in a battle say. Less motion asked for mid-walk ends every walk
+  on the next frame. It's drawn as a marker of its own, its
+  units alone, over the land at its feet, the short way round the world. Its figures face the way from one square's
+  middle to the next, as a unit standing faces the way it last went, turning as it passes a square's middle, and from
+  the way it faced when a step's joined. Its flag, ring and pointer go with it.
+- **Left off, not held:** rather than holding patches, a unit walking is left off every square it's on until its walk's
+  over, when those squares are marked again. Whatever else a patch changes (a city captured, the land) shows at once. A
+  unit that joins a stack under a stronger one walks there and disappears into it.
+- **Waiting for its patch:** a walk over before the patch for its unit's last step has come, as when meeting a leader
+  holds the patches until it's answered, stands where it ended, its unit still left off the squares, until it comes.
+  The worker sends both squares of every move the player's view knows, just after the step, so the first tile for
+  either queued after the step is that step's patch, and the unit's then wherever it puts it, sent home by the talks,
+  say. One queued before it, for the step before, say, isn't. A held action's patches, a GoTo's steps', come together.
+  It needs no frames meanwhile, and is drawn
+  again as its units are (hidden, ringed, their size). Stepping on meanwhile, the unit walks on from where it stands,
+  where that move's walked at all.
+- **Pace, by the clock:**
+  - It gets up to pace from standing and stops at its end. A step joined mid-walk goes on at the pace it's going, so a
+    GoTo's steps, which come all at once, and a unit moved again before it's arrived, are one walk.
+  - The player's own units take a quarter of a second a step; other players' units take half that.
+  - However many steps, what's left of a walk takes no more than 2 s, or 1 s for others' units: a railroad trip of a
+    hundred squares hurries, rather than queueing. It doesn't skip.
+  - By the clock, not by frames: with no frames for a while, as in a tab out of sight, the first frame drawn again ends
+    the walks that are over. A walk lets go of the squares it's passed as it goes on.
+  - The world's tiles replaced, as by a square newly seen, which happens on most steps into the unknown, ends none of
+    them.
+- **Together:** units making the same step within 50 ms of each other, drawn at the same place as it was made, walk as
+  one, as a ship and what it carries do, shown as a stack of them.
+  - One that doesn't step on stays bound where it was.
+  - One that steps on from where the walk's bound, ashore say, goes on along the way it came, from where it is.
+  - One that steps from elsewhere sets off from where it's drawn, and a walk it was alone in is taken away.
+- **Not walked:**
+  - other players' units off the screen, unless they're walking already;
+  - a unit the page doesn't have where it set off from, as one stepping out of the dark;
+  - any unit, with reduced motion asked for, or no frames to draw.
+- **Every unit's walk plays at once,** not one queue: as each is left off the squares it's on, no two can disagree.
+- **Still to come:**
+  - the options (speed, others' moves);
+  - the game waiting for walks before the next unit (the camera and the ring only: the next unit is chosen as before);
+  - §6.4's paths: along roads, ships' wakes and aircraft's arcs (a walk goes straight between squares' middles now);
+  - battles (2.4).
+
 ---
 
 ## 9. Seeing it: camera, light, quality

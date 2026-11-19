@@ -19,7 +19,7 @@ export type CityMarker = {
 };
 
 export type UnitMarker = {
-  // The unit's own id, as the page has it: a unit moving slides from where it was drawn.
+  // The unit's own id, as the page has it.
   id: string;
   // The unit type's name, and the names of the kinds it's of (`Naval`, `Air`, …), as the engine sends them.
   type: string;
