@@ -26,6 +26,7 @@ import {
   specialLook,
 } from '@civ-clone/ui-models-builtin/specials';
 import {
+  Growth,
   Plant,
   PlantKind,
   growthOf,
@@ -46,6 +47,15 @@ export type OverlayPlace = {
   seed: number;
   // How far it is from the equator, from 0 there to 1 at the poles.
   latitude: number;
+  // Its corners, as the layout has them.
+  outline: readonly (readonly [number, number])[];
+  // Whether a point is on this square, as the layout says (`GroundLayout#tileAt`): each point is on one square, and on
+  //  none past the edge of a world that doesn't wrap.
+  owns(u: number, v: number): boolean;
+  // Every neighbour's offset, as the topology has them.
+  around: readonly (readonly [number, number])[];
+  // How far apart the world's copies are, across, and down where it wraps over the poles.
+  period: { u: number; v: number | null };
 };
 
 /** A chunk's overlay as three.js takes it: triangles, each point's normal and colour, relative to its corner. */
@@ -367,6 +377,8 @@ class Layer {
   //  an airbase's runway. And what stands there already: where, and how much room it takes.
   readonly lines: [readonly [number, number], readonly [number, number]][] = [];
   readonly taken: [number, number, number][] = [];
+  // Where each plant grown stands.
+  readonly grown: [number, number][] = [];
 
   /**
    * How much more than it needs something taking `room` at (`u`, `v`) has clear: of the square's lines, of what stands
@@ -1058,12 +1070,161 @@ const plants = (layer: Layer, overlay: SquareOverlay): void => {
         if (layer.hasRoom(u, v, room)) {
           grow(layer, plant, kind, u, v, size, angle);
           layer.taken.push([u, v, room]);
+          layer.grown.push([u, v]);
           break;
         }
       }
     }
   });
 };
+
+// Woods (`Growth#canopy`) grow as one canopy across their squares: their trees stand at the points of a lattice laid
+//  over the whole ground, each jittered about its cell, each on the square the layout says it's on, so no point is
+//  planted twice or past the world's edge, and the canopy runs right across the edge between two squares. The lattice
+//  repeats with the world's period, so it has no seam either. Woods are whole across a square, and across the edge to a
+//  neighbour of the same woods; within `MARGIN` of the edge to other ground (or the corner), they thin to a fringe, so
+//  a lone square of forest is a whole wood too. Each point has numbers of its own, for whether it's planted, what grows
+//  there and how big, so a neighbour turning to woods only adds trees.
+/**
+ * How far apart woods' lattice points are, about: as many as fit the world's period exactly. Not a whole share of a
+ *  square, so the points don't line up with squares' edges, and the fringe at an edge to other ground has points at
+ *  every distance from it.
+ */
+export const CANOPY = 0.26;
+
+// How far a point's jittered from its cell's middle, either way, as a share of the cell: it keeps trees apart.
+const JITTER = 0.3,
+  // How far in from the edge to other ground the woods thin, and the share of points planted at that edge.
+  MARGIN = 0.15,
+  FRINGE = 0.5,
+  // How big woods' plants grow against their usual, from the fringe to where they're whole.
+  GROWN = [0.9, 1.3] as const;
+
+// A lattice point's own fraction, the `n`th, from where it is on the world.
+const pointFraction = (i: number, j: number, n: number): number =>
+  fraction(Math.imul(i, 73856093) ^ Math.imul(j, 19349663) ^ 0x5bd1e995, n);
+
+/** The trees of woods on `place`, and where each stands: as `woods` lays them, without laying them. */
+export const woodsPlants = (
+  overlay: SquareOverlay,
+  place: OverlayPlace,
+  growth: Growth
+): {
+  u: number;
+  v: number;
+  kind: PlantKind;
+  plant: Plant;
+  size: number;
+  facing: number;
+}[] => {
+  const { centre, outline, owns, around, period, toward, latitude } = place,
+    cellsU = Math.max(1, Math.round(period.u / CANOPY)),
+    stepU = period.u / cellsU,
+    cellsV =
+      period.v === null ? null : Math.max(1, Math.round(period.v / CANOPY)),
+    stepV = period.v === null || cellsV === null ? CANOPY : period.v / cellsV,
+    us = outline.map(([u]) => u),
+    vs = outline.map(([, v]) => v),
+    // The middles of the squares round it that aren't the same woods: other ground.
+    open = around
+      .filter(
+        ([dx, dy]) => !overlay.woods.some(([wx, wy]) => wx === dx && wy === dy)
+      )
+      .map((offset) => {
+        const [mu, mv] = toward(offset),
+          length = Math.hypot(mu - centre[0], mv - centre[1]);
+
+        return { mu, mv, length };
+      }),
+    total = growth.plants.reduce((sum, { count }) => sum + count, 0),
+    found: ReturnType<typeof woodsPlants> = [];
+
+  for (
+    let j = Math.floor(Math.min(...vs) / stepV) - 1;
+    j <= Math.ceil(Math.max(...vs) / stepV);
+    j++
+  ) {
+    for (
+      let i = Math.floor(Math.min(...us) / stepU) - 1;
+      i <= Math.ceil(Math.max(...us) / stepU);
+      i++
+    ) {
+      // The same point at every copy of the world.
+      const ci = ((i % cellsU) + cellsU) % cellsU,
+        cj = cellsV === null ? j : ((j % cellsV) + cellsV) % cellsV,
+        u = (i + 0.5 + (pointFraction(ci, cj, 0) * 2 - 1) * JITTER) * stepU,
+        v = (j + 0.5 + (pointFraction(ci, cj, 1) * 2 - 1) * JITTER) * stepV;
+
+      if (!owns(u, v)) {
+        continue;
+      }
+
+      // How whole the woods are here, from 0 at the edge to other ground to 1 `MARGIN` in from it or more: how far in
+      //  it is from the line halfway to each neighbour that's other ground, the nearest.
+      const whole = open.reduce((least, { mu, mv, length }) => {
+        const inward =
+          length / 2 -
+          ((u - centre[0]) * (mu - centre[0]) +
+            (v - centre[1]) * (mv - centre[1])) /
+            length;
+
+        return Math.min(least, Math.max(0, inward) / MARGIN);
+      }, 1);
+
+      if (pointFraction(ci, cj, 2) >= FRINGE + (1 - FRINGE) * whole) {
+        continue;
+      }
+
+      // Which of its plants, as often as each's count says.
+      let pick = pointFraction(ci, cj, 3) * total,
+        plant = growth.plants[0]!;
+
+      for (const each of growth.plants) {
+        plant = each;
+        pick -= each.count;
+
+        if (pick < 0) {
+          break;
+        }
+      }
+
+      const conifers = growth.conifers,
+        kind: PlantKind =
+          conifers !== undefined &&
+          pointFraction(ci, cj, 4) >=
+            conifers[0] + (conifers[1] - conifers[0]) * latitude
+            ? 'broadleaf'
+            : plant.kind;
+
+      found.push({
+        u,
+        v,
+        kind,
+        plant,
+        // Bigger where the woods are whole, so their crowns meet.
+        size:
+          (plant.size[0] +
+            (plant.size[1] - plant.size[0]) * pointFraction(ci, cj, 5)) *
+          (GROWN[0] + (GROWN[1] - GROWN[0]) * whole),
+        facing: pointFraction(ci, cj, 6) * Math.PI * 2,
+      });
+    }
+  }
+
+  return found;
+};
+
+// Woods' trees, each where it has room clear of the unit's stand, the square's lines and what stands on it: not of
+//  each other, as the lattice keeps them apart, and a tree can't see its neighbour's square.
+const woods = (layer: Layer, overlay: SquareOverlay, growth: Growth): void =>
+  woodsPlants(overlay, layer.place, growth).forEach(
+    ({ u, v, kind, plant, size, facing }) => {
+      if (layer.hasRoom(u, v, ROOM[kind] * size)) {
+        grow(layer, plant, kind, u, v, size, facing);
+        layer.grown.push([u, v]);
+      }
+    }
+  );
 
 /**
  * Lays `overlay` for the square at `place` into `soup`. What stands on it (its mine, specials, hut, plants), where and
@@ -1079,6 +1240,7 @@ export const layOverlay = (
     readonly [number, number],
     readonly [number, number]
   ])[];
+  grown: readonly (readonly [number, number])[];
 } => {
   const layer = new Layer(soup, place),
     { centre, radius } = place;
@@ -1160,17 +1322,24 @@ export const layOverlay = (
     hut(layer, layer.claim(...SPOTS.hut, 0.13));
   }
 
-  // What grows there, but not on cleared ground: fields, a fortress, an airbase.
+  // What grows there, but not on cleared ground: fields, a fortress, an airbase. Woods as one canopy across their
+  //  squares; the rest about the square's middle.
+  const growth = growthOf(overlay.terrain);
+
   if (
-    overlay.vegetation &&
+    growth !== null &&
     overlay.irrigation === null &&
     !overlay.fortress &&
     !overlay.airbase
   ) {
-    plants(layer, overlay);
+    if (growth.canopy !== undefined) {
+      woods(layer, overlay, growth);
+    } else {
+      plants(layer, overlay);
+    }
   }
 
-  return { taken: layer.taken, lines: layer.lines };
+  return { taken: layer.taken, lines: layer.lines, grown: layer.grown };
 };
 
 /** The overlay of a chunk whose corner is at (`u`, `v`): each of its squares' laid together, relative to the corner. */

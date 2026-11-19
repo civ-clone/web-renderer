@@ -4,7 +4,7 @@
 //
 // For each kind that grows there: how many to a square, how big against their usual, and their colours. Forests are
 //  conifers towards the poles and broadleaf towards the equator (`conifers`, the share at the equator, then at the
-//  poles).
+//  poles). Woods (`canopy`) grow as one across their squares, each kind as often as its count says.
 
 /** What grows. */
 export type PlantKind =
@@ -37,6 +37,10 @@ export type Growth = {
   plants: readonly Plant[];
   // For a forest: the share of its trees that are conifers, at the equator and at the poles.
   conifers?: readonly [number, number];
+  // For woods, which grow as one across squares: which woods they are. Squares beside each other of the same woods
+  //  (forest and jungle; swamp) are one canopy, running across the edge between them, and thin to a fringe where they
+  //  meet other ground. Without one, a square's plants are its own, scattered about its middle.
+  canopy?: string;
 };
 
 const plant = (
@@ -51,18 +55,21 @@ export const vegetationTable: { readonly [terrain: string]: Growth } = {
   Forest: {
     plants: [plant('conifer', 8, [0.95, 1.4], '#2c5230', '#4a3424')],
     conifers: [0.15, 0.95],
+    canopy: 'woods',
   },
   Jungle: {
     plants: [
       plant('broadleaf', 7, [1.05, 1.55], '#2b6a2a', '#4d3a26'),
       plant('palm', 2, [0.9, 1.2], '#3f8a34', '#6b5236'),
     ],
+    canopy: 'woods',
   },
   Swamp: {
     plants: [
       plant('reeds', 7, [0.8, 1.2], '#7a8a4a', '#5a6a38'),
       plant('deadTree', 2, [0.8, 1.1], '#4a4036', '#4a4036'),
     ],
+    canopy: 'swamp',
   },
   Grassland: { plants: [plant('bush', 2, [0.8, 1.2], '#4e7a32', '#4e7a32')] },
   Plains: { plants: [plant('shrub', 3, [0.7, 1.1], '#7a7a3a', '#6a5a36')] },

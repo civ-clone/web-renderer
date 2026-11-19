@@ -13,7 +13,7 @@ import { growthOf } from '@civ-clone/ui-models-builtin/vegetation';
 /** A neighbour of a square: how far off it is, in squares, before the world wraps, and what's on it. */
 export type OverlayNeighbour = {
   offset: readonly [number, number];
-  tile: Pick<Tile, 'city' | 'improvements'>;
+  tile: Pick<Tile, 'city' | 'improvements'> & Partial<Pick<Tile, 'terrain'>>;
 };
 
 /** The ways a road or railroad leaves its square, by its neighbours' offsets, or that it's on its own. */
@@ -36,6 +36,9 @@ export type SquareOverlay = {
   // Its terrain, and whether what grows on it is drawn: not on a city's lot.
   terrain: string;
   vegetation: boolean;
+  // For woods, its neighbours of the same woods that grow them (`Growth#canopy`), by offset: the canopy runs across
+  //  to them. Not one on a city's lot, or cleared (fields, a fortress, an airbase), or never seen.
+  woods: (readonly [number, number])[];
 };
 
 // Features drawn otherwise than as a special: Civ2's rivers, which are drawn as rivers (§5.3).
@@ -43,6 +46,17 @@ const NOT_SPECIALS = ['River'];
 
 const has = (tile: Pick<Tile, 'improvements'>, name: string): boolean =>
   (tile.improvements ?? []).some(({ _ }) => _ === name);
+
+// Ground cleared of what grows there: fields, a fortress, an airbase.
+const CLEARED = ['Irrigation', 'Farmland', 'Fortress', 'Airbase'];
+
+/** The woods `tile` grows (`Growth#canopy`), or none: none on a city's lot, or on cleared ground. */
+export const woodsOf = (
+  tile: Pick<Tile, 'improvements'> & Partial<Pick<Tile, 'city' | 'terrain'>>
+): string | null =>
+  tile.city || CLEARED.some((name) => has(tile, name))
+    ? null
+    : growthOf(tile.terrain?._ ?? 'Unknown')?.canopy ?? null;
 
 /**
  * What's laid on `tile`'s land, its `neighbours` all round it: nothing, for a square with none of it, or a city's lot,
@@ -108,7 +122,15 @@ export const overlayFor = (
       hut: tile.goodyHut !== null && tile.goodyHut !== undefined,
       terrain: tile.terrain?._ ?? 'Unknown',
       vegetation: growthOf(tile.terrain?._ ?? 'Unknown') !== null,
-    };
+      woods: [],
+    },
+    own = woodsOf(tile);
+
+  if (own !== null) {
+    overlay.woods = neighbours
+      .filter((neighbour) => woodsOf(neighbour.tile) === own)
+      .map(({ offset }) => offset);
+  }
 
   const empty =
     overlay.road === null &&

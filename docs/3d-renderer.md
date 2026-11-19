@@ -549,6 +549,27 @@ How plants are placed:
 - **Level of detail:** full models nearby, flat cards (impostors) further out, then nothing.
 - **Wind:** a gentle sway, which reduced motion turns off.
 
+- **Woods, as built:** forest, jungle and swamp grow as one canopy across their squares, as Civ1's forests run together
+  (`woodsPlants` in `packages/map-3d/overlay/overlayMesh.ts`).
+  - **The lattice:** trees stand at the points of a lattice laid over the whole ground, about 0.26 apart, each jittered
+    about its cell. The lattice repeats exactly with the world's period, so it has no seam, and its spacing isn't a
+    whole share of a square, so its points don't line up with squares' edges.
+  - **Ownership:** each point is on the square the layout says (`GroundLayout#tileAt`). So no point is planted twice,
+    none is past the edge of a world that doesn't wrap, and the canopy runs right across the edge between two squares.
+  - **Which woods join:** the vegetation table's `canopy` says. Forest and jungle are one woods; swamp is its own. A
+    neighbour counts only where it grows its woods: not a city's lot, cleared ground (fields, a fortress, an airbase),
+    or a square never seen.
+  - **The fringe:** a square of woods is whole, and whole across the edge to a neighbour of the same woods. Within 0.15
+    of an edge to other ground, it thins to half its trees at the edge, and its trees grow smaller there (0.9 of their
+    usual size, against 1.3 where whole). So a lone square of forest is a whole wood too, and a big one's edge is
+    ragged.
+  - **Stability:** each point has its own numbers for whether it's planted, what grows there and how big. So a
+    neighbour turning to woods only ever adds trees.
+  - **Spacing:** trees keep clear of a unit's stand, roads and what stands on the square, but not of each other: the
+    lattice keeps them apart, and a tree can't see its neighbour's square.
+  - **Cost:** an all-forest chunk has 48,000–58,000 triangles, 11–40% more than when each square scattered its own,
+    and takes 35–50 ms to lay rather than 25–43, a few squares a frame as before.
+
 ### 5.2 Specials and huts
 
 - **Specials:** a special (Fish, Coal, Wheat…) gets a small model on its square. It's looked up as `Terrain:Special`,
