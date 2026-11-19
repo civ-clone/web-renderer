@@ -6,19 +6,16 @@
 //    fortified, with its owner's flag over it (spec §6.3): the stack's size, the letter for what it's busy with, a
 //    veteran's star, and its hit points when hurt; a ring under the active one and a pointer over it.
 //
-// Every marker shares its geometries and its materials, one for each colour, and each unit look in each pair of colours
-//  is one geometry. But each part is a mesh of its own, so each is a draw call, at every copy of the world near enough
-//  to show: hundreds of markers cost thousands of draw calls (#1204, for M6's instancing). Names and flags' labels are
-//  sprites drawn on a canvas, the same size on the screen however far away; each drawn is kept until the map is taken
-//  down.
+// Every marker shares its geometries and its materials. A unit's figures, stand and wall are one geometry for each look
+//  in each pair of colours, and a city's buildings and walls one for each name, number of buildings, owner and walls:
+//  a mesh each, so a draw call each at every copy of the world near enough to show (#1204; M6 instances them). Names
+//  and flags' labels are sprites drawn on a canvas, the same size on the screen however far away. Labels and cities no
+//  marker shows any more are let go once enough have been made (`sweep`), as cities grow and change hands.
 
 import {
-  BoxGeometry,
   BufferGeometry,
   CanvasTexture,
   Color,
-  ConeGeometry,
-  CylinderGeometry,
   Group,
   Mesh,
   MeshStandardMaterial,
@@ -29,7 +26,13 @@ import {
   TorusGeometry,
 } from 'three';
 import { CityMarker, TileMarker, UnitMarker } from './markerFor';
-import { FigureColours, figureGeometry } from './figures';
+import {
+  Building,
+  FigureColours,
+  cityGeometry,
+  figureGeometry,
+  unitBodyGeometry,
+} from './figures';
 import { UnitLook, unitLook } from '@civ-clone/ui-models-builtin/units';
 
 // The size of a square is about 1 (spec §3): a city fills half its square, and a soldier stands a fifth of a square,
@@ -37,8 +40,6 @@ import { UnitLook, unitLook } from '@civ-clone/ui-models-builtin/units';
 const FIGURE_SCALE = 1.5,
   // A unit's stand: thick enough to stand over everything laid on the land, roads and smears and all.
   STAND_HEIGHT = 0.03,
-  STONE = '#b5ab98',
-  WALL = '#8d8577',
   ACTIVE = '#fff4b0',
   // How far over a unit its flag flies, on the land.
   FLAG_GAP = 0.04,
@@ -55,15 +56,22 @@ const FIGURE_SCALE = 1.5,
   // Hit points left: plenty, some, few.
   PLENTY = '#4caf50',
   SOME = '#e0b030',
-  FEW = '#d04030';
+  FEW = '#d04030',
+  // How many labels and cities the kit holds before it first lets go of those no longer drawn.
+  SWEEP_FROM = 256;
 
 /** What markers are drawn with, shared by all of them, and let go together. */
 export class MarkerKit {
   #materials = new Map<string, MeshStandardMaterial>();
   #labels = new Map<string, SpriteMaterial>();
   #figures = new Map<string, BufferGeometry>();
+  #bodies = new Map<string, BufferGeometry>();
+  #cities = new Map<string, BufferGeometry>();
   #flats = new Map<string, SpriteMaterial>();
   #pointer: SpriteMaterial | null = null;
+  // Labels and cities are made for each name and size, so over a game they'd grow without end: how many were kept at
+  //  the last sweep.
+  #kept = 0;
   // Units' figures carry their colours in their vertices.
   readonly figureMaterial = new MeshStandardMaterial({
     vertexColors: true,
@@ -71,13 +79,8 @@ export class MarkerKit {
     metalness: 0.05,
   });
   readonly geometries = {
-    stand: new CylinderGeometry(0.19, 0.2, STAND_HEIGHT, 28),
-    // A fortified unit's low wall, laid flat round it.
-    bank: new TorusGeometry(0.22, 0.014, 4, 32),
+    // The ring at the feet of the unit awaiting orders.
     ring: new TorusGeometry(0.23, 0.018, 8, 36),
-    building: new BoxGeometry(1, 1, 1),
-    roof: new ConeGeometry(0.75, 0.5, 4),
-    wall: new TorusGeometry(0.36, 0.025, 6, 24),
   };
 
   /** A matte material in `colour`, made once. */
@@ -98,6 +101,49 @@ export class MarkerKit {
     }
 
     return material;
+  }
+
+  /**
+   * All that's drawn of a unit on the land, as `look` says, in `colours`, fortified or not: its figures, stand and
+   *  wall, one geometry, made once for each.
+   */
+  body(
+    look: UnitLook,
+    colours: FigureColours,
+    fortified: boolean
+  ): BufferGeometry {
+    const key = JSON.stringify([look, colours, fortified]);
+    let geometry = this.#bodies.get(key);
+
+    if (geometry === undefined) {
+      geometry = unitBodyGeometry(look, colours, {
+        fortified,
+        scale: FIGURE_SCALE,
+        stand: STAND_HEIGHT,
+      });
+      this.#bodies.set(key, geometry);
+    }
+
+    return geometry;
+  }
+
+  /** A city's buildings and walls, one geometry, made once for each name, number of buildings, colour and walls. */
+  city(city: CityMarker): BufferGeometry {
+    const buildings = buildingsOf(city),
+      key = JSON.stringify([
+        city.name,
+        buildings.length,
+        city.colours[0],
+        city.walled,
+      ]);
+    let geometry = this.#cities.get(key);
+
+    if (geometry === undefined) {
+      geometry = cityGeometry(buildings, city.colours[0], city.walled);
+      this.#cities.set(key, geometry);
+    }
+
+    return geometry;
   }
 
   /** A unit's figures as `look` says, in `colours`, made once for each. */
@@ -206,9 +252,56 @@ export class MarkerKit {
     return material;
   }
 
+  /**
+   * Whether enough labels and cities have been made since the last sweep to let go of those no longer drawn: when
+   *  there are twice as many as were kept, so a sweep's cost is spread over what's made between them.
+   */
+  get sweepDue(): boolean {
+    return (
+      this.#labels.size + this.#cities.size >
+      Math.max(SWEEP_FROM, this.#kept * 2)
+    );
+  }
+
+  /** Lets go of the labels and cities that none of `markers` uses: the markers drawn, and to be drawn. */
+  sweep(markers: Iterable<Object3D>): void {
+    const used = new Set<object>();
+
+    for (const marker of markers) {
+      marker.traverse((object) => {
+        if (object instanceof Mesh) {
+          used.add(object.geometry);
+        }
+
+        if (object instanceof Sprite) {
+          used.add(object.material);
+        }
+      });
+    }
+
+    this.#labels.forEach((material, key) => {
+      if (!used.has(material)) {
+        material.map?.dispose();
+        material.dispose();
+        this.#labels.delete(key);
+      }
+    });
+    this.#cities.forEach((geometry, key) => {
+      if (!used.has(geometry)) {
+        geometry.dispose();
+        this.#cities.delete(key);
+      }
+    });
+    this.#kept = this.#labels.size + this.#cities.size;
+  }
+
   dispose(): void {
     Object.values(this.geometries).forEach((geometry) => geometry.dispose());
     this.#figures.forEach((geometry) => geometry.dispose());
+    this.#bodies.forEach((geometry) => geometry.dispose());
+    this.#cities.forEach((geometry) => geometry.dispose());
+    this.#bodies.clear();
+    this.#cities.clear();
     this.figureMaterial.dispose();
     this.#flats.forEach((material) => material.dispose());
     this.#pointer?.map?.dispose();
@@ -223,6 +316,7 @@ export class MarkerKit {
     this.#materials.clear();
     this.#labels.clear();
     this.#figures.clear();
+    this.#kept = 0;
   }
 }
 
@@ -303,41 +397,31 @@ const label = (
 // Where a city's name stands, over its middle.
 const CITY_NAME_AT: [number, number, number] = [0, 0.36, 0];
 
-const drawCity = (kit: MarkerKit, city: CityMarker): Group => {
-  const group = new Group(),
-    { building, roof, wall } = kit.geometries,
-    stone = kit.material(STONE),
-    tiles = kit.material(city.colours[0]),
-    // More buildings as the city grows, up to a dozen.
-    count = Math.min(12, 2 + Math.ceil(city.size / 2));
+/** A city's buildings: more as it grows, up to a dozen, laid the same way every time from its name. */
+export const buildingsOf = (
+  city: Pick<CityMarker, 'name' | 'size'>
+): Building[] => {
+  const count = Math.min(12, 2 + Math.ceil(city.size / 2));
 
-  for (let index = 0; index < count; index++) {
+  return Array.from({ length: count }, (_, index) => {
     const angle = (index / count) * Math.PI * 2 + fractionOf(city.name, 1) * 6,
-      reach = index === 0 ? 0 : 0.12 + fractionOf(city.name, index + 2) * 0.18,
-      width = 0.07 + fractionOf(city.name, index + 20) * 0.05,
-      height =
+      reach = index === 0 ? 0 : 0.12 + fractionOf(city.name, index + 2) * 0.18;
+
+    return {
+      x: Math.cos(angle) * reach,
+      z: Math.sin(angle) * reach,
+      width: 0.07 + fractionOf(city.name, index + 20) * 0.05,
+      height:
         (index === 0 ? 0.13 : 0.05) + fractionOf(city.name, index + 40) * 0.05,
-      x = Math.cos(angle) * reach,
-      z = Math.sin(angle) * reach,
-      block = new Mesh(building, stone),
-      top = new Mesh(roof, tiles);
+    };
+  });
+};
 
-    block.scale.set(width, height, width);
-    block.position.set(x, height / 2, z);
-    top.scale.set(width, width * 0.8, width);
-    top.position.set(x, height + width * 0.2, z);
-    top.rotation.y = Math.PI / 4;
-    group.add(block, top);
-  }
+const drawCity = (kit: MarkerKit, city: CityMarker): Group => {
+  const group = new Group();
 
-  if (city.walled) {
-    const ring = new Mesh(wall, kit.material(WALL));
-
-    ring.rotation.x = Math.PI / 2;
-    ring.position.y = 0.02;
-    ring.scale.set(1, 1, 2.5);
-    group.add(ring);
-  }
+  // Its buildings and walls, one mesh.
+  group.add(new Mesh(kit.city(city), kit.figureMaterial));
 
   // About as tall on the screen as the 2D map's city names, whatever the distance.
   group.add(
@@ -369,12 +453,10 @@ const drawUnit = (
   badges: { at: [number, number, number]; over: number } | null = null
 ): Group => {
   const group = new Group(),
-    { stand, bank, ring } = kit.geometries,
+    { ring } = kit.geometries,
     look = unitLook(unit.type, unit.kinds),
-    afloat = look.shape === 'ship',
-    lift = afloat ? 0 : STAND_HEIGHT,
-    figure = kit.figure(look, unit.colours),
-    top = lift + (figure.boundingBox?.max.y ?? 0.2) * FIGURE_SCALE,
+    body = kit.body(look, unit.colours, unit.fortified),
+    top = body.boundingBox?.max.y ?? 0.3,
     at = badges?.at ?? [0, top + FLAG_GAP, 0],
     // From the bottom up, on the screen.
     hurt = unit.health !== null,
@@ -383,29 +465,12 @@ const drawUnit = (
     text = flagText(unit),
     pointerOver = labelOver + (text === '' ? 0 : UNIT_LABEL + SPACE);
 
-  // On a stand in the owner's second colour, so whose it is shows from afar; a ship rides the water without one.
-  if (!afloat) {
-    group.add(
-      place(new Mesh(stand, kit.material(unit.colours[1])), 0, lift / 2, 0)
-    );
-  }
+  // Its figures on a stand in the owner's second colour, so whose it is shows from afar (a ship rides the water without
+  //  one), behind a low wall when fortified: one mesh, facing the way it last went (its figures face south, unturned).
+  const figures = new Mesh(body, kit.figureMaterial);
 
-  const figures = new Mesh(figure, kit.figureMaterial);
-
-  figures.scale.setScalar(FIGURE_SCALE);
-  // Facing the way it last went: its figures face south, unturned.
   figures.rotation.y = unit.facing;
-  group.add(place(figures, 0, lift, 0));
-
-  // Fortified: behind a low wall.
-  if (unit.fortified) {
-    const wall = new Mesh(bank, kit.material(STONE));
-
-    wall.rotation.x = Math.PI / 2;
-    wall.scale.set(1, 1, 2.5);
-    wall.position.y = lift + 0.015;
-    group.add(wall);
-  }
+  group.add(figures);
 
   // Its hit points, when it has lost some: a bar under its flag, shorter and redder as they go, from its left.
   if (unit.health !== null) {

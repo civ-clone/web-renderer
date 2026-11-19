@@ -99,6 +99,8 @@ export type Placed = {
   at: readonly [number, number, number];
   make: () => Object3D;
   drawn: Object3D[];
+  // A marker as drawn, which its copies are cloned from.
+  original?: Object3D;
   // A marker's unit on top: its id, and where its part stands from `at` (in front of a city's buildings).
   unit?: { id: string; at: [number, number, number] };
   // Its unit on its way from elsewhere: how far from where it stands it started, and when.
@@ -589,7 +591,7 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
     setMarker: (key, at, marker): void => {
       const old = markers.get(key);
 
-      // Its geometries and materials are the kit's, shared by every marker.
+      // Its geometries and materials are the kit's, shared by every marker, and let go by the kit's sweep.
       old?.drawn.forEach((drawn) => markersGroup.remove(drawn));
       markers.delete(key);
 
@@ -609,6 +611,7 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
         at,
         make: () => original.clone(),
         drawn: [],
+        original,
         ...(marker.unit === null || pawn === undefined
           ? {}
           : {
@@ -633,6 +636,15 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
       if (placed.slide !== undefined) {
         sliding.add(key);
         slideAlong(placed, now);
+      }
+
+      // Every city's size and name it has had would be kept otherwise.
+      if (kit.sweepDue) {
+        kit.sweep(
+          [...markers.values()].flatMap(({ original }) =>
+            original === undefined ? [] : [original]
+          )
+        );
       }
     },
     slideMarker: (key, from): void => {
