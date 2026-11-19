@@ -17,6 +17,7 @@ import {
   Matrix4,
   Quaternion,
   SphereGeometry,
+  TorusGeometry,
   Vector3,
 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -1089,15 +1090,9 @@ export const partMatrix = ({
     new Vector3(...size)
   );
 
-/**
- * One geometry for a unit that looks like `look`, in `colours`: its parts merged, their colours in its vertices, with
- *  its bounds worked out. Each call makes a new one, which the caller lets go.
- */
-export const figureGeometry = (
-  look: UnitLook,
-  colours: FigureColours
-): BufferGeometry => {
-  const pieces = figureParts(look, colours).parts.map((part) => {
+/** One geometry of `parts`: each placed, its colour in its vertices, all merged, with its bounds worked out. */
+export const mergeParts = (parts: readonly Part[]): BufferGeometry => {
+  const pieces = parts.map((part) => {
     const { shape, colour } = part,
       piece = shape.clone(),
       linear = new Color(colour),
@@ -1122,3 +1117,105 @@ export const figureGeometry = (
 
   return geometry;
 };
+
+/**
+ * One geometry for a unit that looks like `look`, in `colours`: its parts merged, their colours in its vertices, with
+ *  its bounds worked out. Each call makes a new one, which the caller lets go.
+ */
+export const figureGeometry = (
+  look: UnitLook,
+  colours: FigureColours
+): BufferGeometry => mergeParts(figureParts(look, colours).parts);
+
+// A unit's stand, and a fortified unit's low wall round it.
+const standShape = new CylinderGeometry(0.19, 0.2, 1, 28),
+  bankShape = new TorusGeometry(0.22, 0.014, 4, 32);
+
+/**
+ * All that's drawn of a unit on the land, as one geometry: its figures as `look` says, `scale` times their size, on a
+ *  stand `stand` thick in its owner's second colour (a ship rides the water without one), behind a low wall when
+ *  `fortified`. One draw call.
+ */
+export const unitBodyGeometry = (
+  look: UnitLook,
+  colours: FigureColours,
+  {
+    fortified,
+    scale,
+    stand,
+  }: { fortified: boolean; scale: number; stand: number }
+): BufferGeometry => {
+  const afloat = look.shape === 'ship',
+    lift = afloat ? 0 : stand,
+    parts: Part[] = figureParts(look, colours).parts.map((part) => ({
+      ...part,
+      at: [part.at[0] * scale, part.at[1] * scale + lift, part.at[2] * scale],
+      size: [part.size[0] * scale, part.size[1] * scale, part.size[2] * scale],
+    }));
+
+  if (!afloat) {
+    parts.push({
+      shape: standShape,
+      colour: colours[1],
+      at: [0, stand / 2, 0],
+      size: [1, stand, 1],
+    });
+  }
+
+  if (fortified) {
+    parts.push({
+      shape: bankShape,
+      colour: '#b5ab98',
+      at: [0, lift + 0.015, 0],
+      size: [1, 1, 2.5],
+      turn: [Math.PI / 2, 0, 0],
+    });
+  }
+
+  return mergeParts(parts);
+};
+
+// A city's buildings: a block, and its roof; and its walls.
+const roofShape = new ConeGeometry(0.75, 0.5, 4),
+  wallShape = new TorusGeometry(0.36, 0.025, 6, 24);
+
+/** A city's buildings, each its height and width, at its place round the city's middle, from the middle out. */
+export type Building = { x: number; z: number; width: number; height: number };
+
+/**
+ * A city as one geometry: its `buildings` in stone with roofs in its owner's colour, and walls round them if it's
+ *  `walled`. One draw call.
+ */
+export const cityGeometry = (
+  buildings: readonly Building[],
+  roof: string,
+  walled: boolean
+): BufferGeometry =>
+  mergeParts([
+    ...buildings.flatMap(({ x, z, width, height }): Part[] => [
+      {
+        shape: box,
+        colour: '#b5ab98',
+        at: [x, height / 2, z],
+        size: [width, height, width],
+      },
+      {
+        shape: roofShape,
+        colour: roof,
+        at: [x, height + width * 0.2, z],
+        size: [width, width * 0.8, width],
+        turn: [0, Math.PI / 4, 0],
+      },
+    ]),
+    ...(walled
+      ? [
+          {
+            shape: wallShape,
+            colour: '#8d8577',
+            at: [0, 0.02, 0],
+            size: [1, 1, 2.5],
+            turn: [Math.PI / 2, 0, 0],
+          } as Part,
+        ]
+      : []),
+  ]);

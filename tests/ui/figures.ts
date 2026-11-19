@@ -272,7 +272,11 @@ const kit = new MarkerKit(),
   spearmen = kit.figure(unitTable['Spearman']!, colours),
   disposed: unknown[] = [];
 
-[spearmen, kit.figure(unitTable['Spearman']!, others)].forEach((geometry) =>
+[
+  spearmen,
+  kit.figure(unitTable['Spearman']!, others),
+  kit.body(unitTable['Spearman']!, colours, false),
+].forEach((geometry) =>
   geometry.addEventListener('dispose', () => void disposed.push(geometry))
 );
 // And a flag's material, and the pointer's, and its picture.
@@ -285,8 +289,10 @@ expect(
   [
     kit.figure(unitTable['Spearman']!, colours) === spearmen,
     kit.figure(unitTable['Spearman']!, others) === spearmen,
+    kit.body(unitTable['Spearman']!, colours, false) ===
+      kit.body(unitTable['Spearman']!, colours, false),
   ],
-  [true, false]
+  [true, false, true]
 );
 
 // A unit's marker, and what's in it.
@@ -335,28 +341,36 @@ const unit = (type: string, more: Partial<UnitMarker> = {}): UnitMarker => ({
       (object): object is Sprite =>
         object instanceof Sprite && object.material === material
     ),
-  { stand, bank, ring } = kit.geometries;
+  { ring } = kit.geometries,
+  // How many points a geometry has.
+  pointsIn = (geometry: BufferGeometry | undefined): number =>
+    geometry?.getAttribute('position').count ?? 0,
+  look = (type: string) => unitTable[type]!;
 
 const soldiers = drawn(unit('Spearman')),
   soldiersFigure = figureOf(soldiers),
   soldiersFlag = spriteOf(soldiers, kit.plain(colours[0])),
-  soldiersTop =
-    (soldiersFigure?.position.y ?? 0) +
-    (soldiersFigure?.geometry.boundingBox?.max.y ?? 0) *
-      (soldiersFigure?.scale.y ?? 1);
+  soldiersTop = soldiersFigure?.geometry.boundingBox?.max.y ?? 0,
+  soldiersBox = soldiersFigure?.geometry.boundingBox;
 
 expect(
-  'a unit is its figures on a stand in its owner’s second colour, its owner’s flag over them, the same size on the screen however far away and never culled, and nothing else',
+  'a unit is one mesh, its figures half as big again on a stand on the ground, its owner’s flag over them, the same size on the screen however far away and never culled, and nothing else',
   [
-    soldiersFigure?.geometry === spearmen,
-    meshOf(soldiers, stand)?.material === kit.material(colours[1]),
-    (soldiersFigure?.position.y ?? 0) > 0,
+    soldiersFigure?.geometry === kit.body(look('Spearman'), colours, false),
+    pointsIn(soldiersFigure?.geometry) > pointsIn(spearmen),
+    Math.round((soldiersBox?.min.y ?? 1) * 1000),
+    Math.round(
+      ((soldiersBox?.max.y ?? 0) -
+        0.03 -
+        (spearmen.boundingBox?.max.y ?? 0) * 1.5) *
+        1000
+    ),
     soldiersFlag?.material.sizeAttenuation === false &&
       soldiersFlag?.frustumCulled === false,
     (soldiersFlag?.position.y ?? 0) > soldiersTop,
     soldiers.length,
   ],
-  [true, true, true, true, true, 3]
+  [true, true, 0, 0, true, true, 2]
 );
 
 expect(
@@ -367,10 +381,65 @@ expect(
 
 const trireme = drawn(unit('Trireme'));
 
+const tFigure = kit.figure(look('Trireme'), colours),
+  tBody = figureOf(trireme)?.geometry;
+
 expect(
-  'a ship rides the water without a stand',
-  [meshOf(trireme, stand), figureOf(trireme)?.position.y],
-  [undefined, 0]
+  'a ship rides the water without a stand: only its figure, half as big again, on the water',
+  [
+    pointsIn(tBody) === pointsIn(tFigure),
+    Math.round((tBody?.boundingBox?.min.y ?? 1) * 1000) ===
+      Math.round((tFigure.boundingBox?.min.y ?? 0) * 1.5 * 1000),
+  ],
+  [true, true]
+);
+
+// A unit's body is made for each pair of colours, its stand in the second; a city's for each owner, its roofs in their
+//  first colour, and for each number of buildings, not each size.
+const pointsColoured = (geometry: BufferGeometry, css: string): number => {
+    const attribute = geometry.getAttribute('color'),
+      colour = new Color();
+    let count = 0;
+
+    for (let point = 0; point < attribute.count; point++) {
+      colour.setRGB(
+        attribute.getX(point),
+        attribute.getY(point),
+        attribute.getZ(point)
+      );
+      count += `#${colour.getHexString()}` === css ? 1 : 0;
+    }
+
+    return count;
+  },
+  spearLook = look('Spearman'),
+  ourBody = kit.body(spearLook, colours, false),
+  theirBody = kit.body(spearLook, others, false),
+  cityIn = (pair: typeof colours | typeof others, size = 7) =>
+    kit.city({
+      name: 'Roma',
+      size,
+      colours: pair,
+      walled: false,
+      disorder: false,
+    });
+
+expect(
+  'a unit’s body is made for each pair of colours, its stand in the second; a city’s for each owner, roofed in their first colour, and for each number of buildings',
+  [
+    ourBody !== theirBody,
+    pointsColoured(ourBody, colours[1]) >
+      pointsColoured(kit.figure(spearLook, colours), colours[1]),
+    pointsColoured(theirBody, others[1]) >
+      pointsColoured(kit.figure(spearLook, others), others[1]),
+    cityIn(colours) !== cityIn(others),
+    pointsColoured(cityIn(colours), colours[0]) > 0,
+    pointsColoured(cityIn(others), others[0]) > 0 &&
+      pointsColoured(cityIn(others), colours[0]) === 0,
+    cityIn(colours, 25) === cityIn(colours, 30),
+    cityIn(colours, 3) !== cityIn(colours, 7),
+  ],
+  [true, true, true, true, true, true, true, true]
 );
 
 const fighter = drawn(unit('Fighter')),
@@ -379,9 +448,7 @@ const fighter = drawn(unit('Fighter')),
 expect(
   'an aircraft’s flag flies over it, high as it is',
   (spriteOf(fighter, kit.plain(colours[0]))?.position.y ?? 0) >
-    (fighterFigure?.geometry.boundingBox?.max.y ?? 1) *
-      (fighterFigure?.scale.y ?? 1) +
-      (fighterFigure?.position.y ?? 0),
+    (fighterFigure?.geometry.boundingBox?.max.y ?? 1),
   true
 );
 
@@ -441,7 +508,8 @@ const veterans = drawn(
 expect(
   'fortified, behind a low wall; its flag’s label says the stack’s size, its letter and a veteran’s star; a short red bar for few hit points, from the bar’s left, drawn over it, all from one point up the screen: the bar, the flag, the label',
   [
-    meshOf(veterans, bank) !== undefined,
+    pointsIn(figureOf(veterans)?.geometry) >
+      pointsIn(kit.body(look('Musketman'), colours, false)),
     label !== undefined,
     ends(back),
     ends(front),
@@ -460,10 +528,10 @@ expect(
   'unhurt, alone and idle: no bar, no label, no wall',
   [
     soldiers.filter((object) => object instanceof Sprite).length,
-    meshOf(soldiers, bank),
+    soldiersFigure?.geometry === kit.body(look('Spearman'), colours, false),
   ],
-  // Its flag alone.
-  [1, undefined]
+  // Its flag alone; and its body with no wall.
+  [1, true]
 );
 
 const active = drawn(unit('Spearman', { active: true, count: 2 })),
@@ -480,6 +548,93 @@ expect(
     (pointer?.renderOrder ?? 0) > (activeLabel?.renderOrder ?? 0),
   ],
   [true, false, true, true]
+);
+
+// A city: its buildings and walls one mesh, its name a label, and walls more of the mesh.
+const cityParts = (walled: boolean): Object3D[] => {
+  const found: Object3D[] = [];
+
+  drawMarker(kit, {
+    city: { name: 'Roma', size: 7, colours, walled, disorder: false },
+    unit: null,
+  }).traverse((object) => {
+    if (!(object instanceof Group)) {
+      found.push(object);
+    }
+  });
+
+  return found;
+};
+
+expect(
+  'a city is one mesh of its buildings, walls and all, and its name',
+  [
+    cityParts(false).map((object) => object.type),
+    pointsIn((cityParts(true)[0] as Mesh).geometry) >
+      pointsIn((cityParts(false)[0] as Mesh).geometry),
+  ],
+  [['Mesh', 'Sprite'], true]
+);
+
+// A city's label and buildings are made for each size it reaches, so the kit lets go of those no marker uses, once it
+//  holds enough of them.
+const sweeping = new MarkerKit(),
+  romeAt = (size: number): Group =>
+    drawMarker(sweeping, {
+      city: { name: 'Roma', size, colours, walled: false, disorder: false },
+      unit: null,
+    }),
+  // A drawn city's buildings and its label's material and picture.
+  madeFor = (city: Group): object[] => {
+    const found: object[] = [];
+
+    city.traverse((object) => {
+      if (object instanceof Mesh) {
+        found.push(object.geometry);
+      }
+
+      if (object instanceof Sprite) {
+        found.push(
+          object.material,
+          ...(object.material.map === null ? [] : [object.material.map])
+        );
+      }
+    });
+
+    return found;
+  },
+  stillDrawn = romeAt(1),
+  outgrown = romeAt(9),
+  sweptAway: object[] = [];
+
+[...madeFor(stillDrawn), ...madeFor(outgrown)].forEach((made) =>
+  (made as BufferGeometry).addEventListener('dispose', () =>
+    sweptAway.push(made)
+  )
+);
+
+const dueEarly = sweeping.sweepDue;
+
+for (let size = 10; size <= 300; size++) {
+  romeAt(size);
+}
+
+const dueLater = sweeping.sweepDue;
+
+sweeping.sweep([stillDrawn]);
+
+expect(
+  'a city’s outgrown labels and buildings are let go once there are enough of them, not those still drawn, and made again if they’re wanted',
+  [
+    dueEarly,
+    dueLater,
+    madeFor(outgrown).every((made) => sweptAway.includes(made)),
+    madeFor(stillDrawn).some((made) => sweptAway.includes(made)),
+    sweeping.sweepDue,
+    madeFor(romeAt(9))[0] === madeFor(outgrown)[0],
+    madeFor(romeAt(1))[0] === madeFor(stillDrawn)[0],
+  ],
+  [false, true, true, false, false, false, true]
 );
 
 // In a city: the unit's flag, label and pointer stand over the city's name from the same point on the land, so the two
@@ -676,9 +831,9 @@ sea.dispose();
 kit.dispose();
 
 expect(
-  'taken down, the kit lets every figure it made go, and its flags’ materials, and the pointer’s and its picture',
+  'taken down, the kit lets every figure and body it made go, and its flags’ materials, and the pointer’s and its picture',
   disposed.length,
-  5
+  6
 );
 
 if (failures.length > 0) {

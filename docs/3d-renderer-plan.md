@@ -253,6 +253,10 @@ Building another world from the form starts it in the middle again.
   zoomed out: each marker is several meshes, and the land and markers are drawn at every copy in sight, and again
   for the shadows. Instancing the markers and coarser distant chunks are for M6.
 
+  Since then (#1204), a unit's figures, stand and wall are one mesh, and a city's buildings and walls are one: on the
+  populated debug world, 1,285 draw calls a frame at the default distance, from 2,181. The kit lets go of the city
+  labels and buildings no marker uses, which grew with every size a city reached.
+
 - **What:**
   - the sea surface with depth tint and shore foam;
   - a sky made by code, with its environment map;
