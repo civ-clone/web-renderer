@@ -1,4 +1,4 @@
-// What each square yields, on the 3D map (docs/3d-renderer.md §11, the `y` key): the interface's icons, standing in the
+// What each square yields, on the 3D map (docs/3d-renderer.md §11, the `y` key): the 2D map's icons, standing in the
 //  world over each square's middle, facing the camera, as strategy maps show them. They're laid out as the 2D map lays
 //  them in its tile (`tileYieldGrid`: two rows, more columns the more there are), as big as fits the square seen from
 //  above, so they shrink with distance like the land, and a nearer hill hides them.

@@ -2,7 +2,7 @@
 //  the camera and upright on the screen, standing over its square's middle, its size in the world's units, so it
 //  shrinks with distance as the land does. One draw call for each copy of the world in sight.
 //
-// The icons are the interface's, drawn into an atlas: each in a cell with room round it, so smaller copies of the atlas
+// The icons are the page's (the map's pack's own, or the interface's), drawn into an atlas: each in a cell with room round it, so smaller copies of the atlas
 //  (for icons far off) don't run one into the next. Drawn crisp up close, as the 2D map draws pixel art, and smoothed
 //  smaller. They're tested against the depth of what's drawn, so a hill in front hides them; but nearer the camera than
 //  they are by `DEPTH_BIAS`, so what stands on their own square (its trees, its unit, its city) and its slope don't.
@@ -63,9 +63,9 @@ const vertexShader = /* glsl */ `
     gl_Position.z = nearer.z / nearer.w * gl_Position.w;
 
     // Its cell in the atlas, the room round the icon left out: rows from the top, as the atlas is drawn.
-    float column = mod(cell, cells.x);
-    // Half a cell on, so rounding on the GPU doesn't put it a row out.
+    // Half a cell on, so rounding on the GPU doesn't put it a row out, and its column from that row.
     float row = floor((cell + 0.5) / cells.x);
+    float column = cell - row * cells.x;
     vec2 inCell = vec2(pad) + uv * (1.0 - 2.0 * pad);
 
     vUv = vec2((column + inCell.x) / cells.x, 1.0 - (row + 1.0 - inCell.y) / cells.y);
@@ -248,7 +248,7 @@ export class YieldIcons {
     return id;
   }
 
-  // The interface's icons, each in its cell, drawn again only when the icons in it, or their art, change.
+  // The yields' icons, each in its cell, drawn again only when the icons in it, or their art, change.
   #drawAtlas(mesh: YieldMesh): void {
     // Drawn again for an icon whose art has arrived, or been replaced, since.
     const key = mesh.names
@@ -285,6 +285,9 @@ export class YieldIcons {
     this.#atlas?.dispose();
     this.#atlas = new CanvasTexture(canvas);
     this.#atlas.colorSpace = SRGBColorSpace;
+    // Each pixel's colour weighed by how solid it is, so the smaller copies' edges mix as they should, and the shader
+    //  can take the colour back out (an imported icon's soft edge isn't brightened).
+    this.#atlas.premultiplyAlpha = true;
     this.#atlas.magFilter = NearestFilter;
     this.#atlas.minFilter = LinearMipmapLinearFilter;
     this.#atlas.generateMipmaps = true;

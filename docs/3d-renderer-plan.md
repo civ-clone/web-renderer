@@ -441,8 +441,8 @@ Still to do in 3.4: improvements as models from a hosted set, and Fortress and A
   - disorder, celebration, captured and destroyed;
   - yields over squares (`y`).
 
-**Yields (`y`): done.** The interface's icons for what each square yields stand in the world over each square's middle,
-as strategy maps show them, rather than on the screen:
+**Yields (`y`): done.** The 2D map's icons for what each square yields (the map's pack's own, or the interface's) stand
+in the world over each square's middle, as strategy maps show them, rather than on the screen:
 - **Laid out** as the 2D map lays them in its tile (`tileYieldGrid`: two rows, more columns the more there are), in a
   block that fits the circle inside the square, so it stays within the square from above however the camera's turned
   (`packages/map-3d/yields.ts`). The lower the camera looks, the smaller the blocks are (by the sine of its pitch),

@@ -55,7 +55,10 @@ import {
 import { Stage } from '@civ-clone/ui-map-3d/stage';
 import { movingKeys } from '@civ-clone/ui-client/lib/unitActionKeys';
 import { YieldMesh, yieldIconSize } from '@civ-clone/ui-map-3d/yields';
-import { setSprites } from '@civ-clone/ui-assets/lib/getPreloadedImage';
+import {
+  onPreloadedImagesChanged,
+  setSprites,
+} from '@civ-clone/ui-assets/lib/getPreloadedImage';
 import {
   interfaceArt,
   interfaceSpriteName,
@@ -1009,7 +1012,9 @@ expect(
           return (): void => void listening.delete(changed);
         },
       },
-      counted = new MapView3D({ ...given!, unitSize }, fakeStage),
+      // And for the page's art changing, which the yields' icons are drawn from.
+      artChanged = unitSize.onChange,
+      counted = new MapView3D({ ...given!, unitSize, artChanged }, fakeStage),
       whileShown = listening.size;
 
     counted.dispose();
@@ -1018,7 +1023,7 @@ expect(
     let refused = false;
 
     try {
-      new MapView3D({ ...given!, unitSize }, () => {
+      new MapView3D({ ...given!, unitSize, artChanged }, () => {
         throw new Error('WebGL2 refused');
       });
     } catch {
@@ -1026,9 +1031,9 @@ expect(
     }
 
     expect(
-      'it listens for a size chosen only while it is shown: not once taken down, nor from a map whose stage could not be made',
+      'it listens for a size chosen, and for the page’s art changing, only while it is shown: not once taken down, nor from a map whose stage could not be made',
       [whileShown, afterwards, refused, listening.size],
-      [1, 0, true, 0]
+      [2, 0, true, 0]
     );
   }
 
@@ -1384,6 +1389,8 @@ expect(
       const readWhenShown = (change: () => void): number => {
         change();
         view.releaseTiles();
+        // A world handed over with nothing released is taken with the next frame: the land built for it then too.
+        view.flush();
         read = 0;
         view.toggleYields();
 
@@ -1411,20 +1418,87 @@ expect(
           view.world.setTiles([...tiles], true);
           view.queueTile(tiles[3]!);
         }),
+        // (2, 2) not seen, then seen: its land changes each time, and its neighbours' with it.
+        readWhenShown(() => {
+          view.world.setTiles(
+            tiles.filter((tile) => tile !== tiles[10]),
+            true
+          );
+        }),
+        readWhenShown(() => {
+          view.world.setTiles([...tiles], true);
+        }),
       ];
 
       land.surfaceAt = surfaceAt;
 
       expect(
-        'laid out once and kept: every square the first time, none again with nothing changed, a square whose land changed and its neighbours, one whose yields changed, and a square newly seen, not the whole world again',
+        'laid out once and kept: every square the first time, none again with nothing changed, a square whose land changed and its neighbours, one whose yields changed, one released with the world handed over again, and for a square no longer seen its neighbours, and seen again it and them, not the whole world again',
         counts,
-        [16, 0, 9, 1, 1]
+        [16, 0, 9, 1, 1, 8, 9]
       );
 
       Object.assign(tiles[10]!, {
         terrain: { _: 'Grassland', features: [] },
       });
       view.queueTile(tiles[10]!);
+    }
+
+    // The world handed over again, its squares yielding something else, with none released and no land changed: the
+    //  yields given to the stage again, as they are now.
+    {
+      // What's waiting taken first, so only the hand-over is seen.
+      view.releaseTiles();
+      view.toggleYields();
+      view.flush();
+      yieldsSet.splice(0);
+      view.world.setTiles(
+        tiles.map(
+          (tile) => ({ ...tile, yields: yieldsOf(3, 0) } as unknown as Tile)
+        ),
+        true
+      );
+      view.flush();
+
+      const handedOver = yieldsSet.splice(0).map((mesh) => mesh?.count);
+
+      view.world.setTiles(tiles, true);
+      view.flush();
+      view.toggleYields();
+
+      expect(
+        'the world handed over again, yielding something else with nothing released, has its yields given to the stage again',
+        handedOver,
+        [16 * 3]
+      );
+    }
+
+    // The page gives the map the icons as the 2D map picks them, and tells it when its art changes.
+    {
+      const food = { food: true } as unknown as CanvasImageSource;
+
+      setSprites(
+        new Map([
+          [
+            spriteKey(
+              interfaceArt(),
+              interfaceSpriteName('city/food', interfaceArt())
+            ),
+            food,
+          ],
+        ])
+      );
+
+      expect(
+        "the page gives the map yields' icons as the 2D map picks them, and tells it when its art changes",
+        [
+          given!.yieldIcon?.('Food') === food,
+          given!.artChanged === onPreloadedImagesChanged,
+        ],
+        [true, true]
+      );
+
+      setSprites(new Map());
     }
 
     // Other art chosen for the map mid-game (#1118): the yields' icons are its pack's own, where it has them, so they're

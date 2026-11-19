@@ -1108,6 +1108,8 @@ export class MapView3D implements MapRenderer {
     }
 
     if (replaced) {
+      // Its tiles may yield something else, with none released: the identity of their yields says which.
+      this.#yieldsStale = true;
       this.#marked.forEach((_, key) => {
         const [x, y] = key.split(',').map(Number) as [number, number];
 

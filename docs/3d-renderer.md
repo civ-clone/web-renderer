@@ -912,7 +912,7 @@ The 3D view must show all of this before it stops being experimental:
 | The active unit's marker and blink | §6.3 |
 | Cities, sizes, disorder, the owner's colours | §7 |
 | City names and banners, with their tooltips | §7.5, §9.2 |
-| Yields (`y`) | icons from the interface art standing in the world over each square, facing the camera, shrinking with distance (as strategy maps show them) |
+| Yields (`y`) | the 2D map's icons (the map's pack's own, or the interface's) standing in the world over each square, facing the camera, shrinking with distance (as strategy maps show them) |
 | Hiding units and cities (`t`) | §6.3 |
 | Target picking and long press | §9.2 |
 | The unit menu on right-click (modern interface, #808) | the same menu, for the unit or square picked (§9.2) |

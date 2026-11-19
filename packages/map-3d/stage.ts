@@ -96,7 +96,8 @@ export type StageOptions = {
   period: { u: number; v: number | null };
   // How the land's points lie on the ground, for the sea's surface to read their heights.
   ground: Ground;
-  // The interface's icon for a yield (`Food`, `Production`, `Trade`), or nothing where its art has none.
+  // The icon for a yield (`Food`, `Production`, `Trade`), the map's pack's own or the interface's, or nothing where the
+  //  art has none.
   yieldIcon?: (name: string) => CanvasImageSource | null;
 };
 
