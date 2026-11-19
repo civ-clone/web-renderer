@@ -28,6 +28,12 @@ import {
 } from '@civ-clone/ui-map/MapView3DFactory';
 import MapView2D from '@civ-clone/ui-game/MapView2D';
 import MapView3D from '@civ-clone/ui-map-3d/MapView3D';
+import {
+  DISTANCE_MAX,
+  DISTANCE_MIN,
+  ZOOM_STEP,
+} from '@civ-clone/ui-map-3d/camera/orbit';
+import { instance as optionsRegistry } from '@civ-clone/ui-platform/GameOptionsRegistry';
 import Transport from '@civ-clone/ui-client/Transport';
 import World from '@civ-clone/ui-map/components/World';
 import {
@@ -37,6 +43,7 @@ import {
   zoomOption,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import {
+  MAP3D_DISTANCE_OPTION,
   forgetMap3D,
   loadMap3DScript,
   makeMapView,
@@ -44,6 +51,8 @@ import {
   prepareMap3D,
 } from '@civ-clone/ui-game/lib/map3d';
 import { Stage } from '@civ-clone/ui-map-3d/stage';
+import markerFor, { TileMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
+import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { setBuild } from '@civ-clone/ui-client/lib/build';
 import { sourcesUnder, specifiersOf } from './lib/imports';
 import { createRequire } from 'module';
@@ -156,12 +165,17 @@ const staged: string[] = [],
   // The land's chunks the stage was given, and where its camera looked last, apart from what's drawn.
   chunksSet = new Set<string>(),
   lookedAt: number[] = [],
+  // What's marked on each square, by `x,y`.
+  markers = new Map<string, TileMarker>(),
   fakeStage = (): Stage => ({
     render: () => void staged.push('render'),
     resize: (stageWidth, stageHeight, ratio) =>
       void staged.push(`resize ${stageWidth}×${stageHeight}@${ratio}`),
     setChunk: (i, j) => void chunksSet.add(`${i},${j}`),
-    lookAt: (u, v, height) => void lookedAt.splice(0, 3, u, v, height),
+    setMarker: (key, at, marker) =>
+      void (marker === null ? markers.delete(key) : markers.set(key, marker)),
+    view: (orbit, height) =>
+      void lookedAt.splice(0, 3, orbit.focus[0], orbit.focus[1], height),
     stats: () => ({ drawCalls: 0, triangles: 0, geometries: 0 }),
     dispose: () => void staged.push('dispose'),
   });
@@ -207,12 +221,18 @@ expect(
 (async (): Promise<void> => {
   const told: string[] = [],
     say = (text: string) => void told.push(text);
-  let loads = 0;
+  let loads = 0,
+    // What the page last gave the 3D map.
+    given: MapView3DDeps | null = null;
 
   const load = async (): Promise<CreateMapView3D> => {
       loads++;
 
-      return (deps: MapView3DDeps) => new MapView3D(deps, fakeStage);
+      return (deps: MapView3DDeps) => {
+        given = deps;
+
+        return new MapView3D(deps, fakeStage);
+      };
     },
     // A page as each case starts: nothing fetched, nothing said.
     fresh = (): void => {
@@ -384,6 +404,12 @@ expect(
     sizes(view.portal),
     shown2D()
   );
+  expect(
+    'it is given the page’s names for cities, as its other maps and windows give them',
+    // By identity: `expect` compares by JSON, which a function has none of.
+    (given as MapView3DDeps | null)?.cityName === cityName,
+    true
+  );
   expect('at the zoom kept', sizes(view.portal)[0], 2.6);
 
   // Options keeps the zoom, then tells the portal: read when asked, the new zoom is the city screen's.
@@ -460,6 +486,75 @@ expect(
     [lookedAt[0], lookedAt[1], lookedAt[2]! >= 0],
     [1.5, 1.5, true]
   );
+
+  // What's on the screen: the canvas's box, as the DOM here has no layout, and what floats over it.
+  Object.defineProperties(mapCanvas, {
+    setPointerCapture: { value: () => {}, configurable: true },
+    clientWidth: { get: () => box.width, configurable: true },
+    clientHeight: { get: () => box.height, configurable: true },
+    getBoundingClientRect: {
+      value: () => ({
+        left: 0,
+        top: 0,
+        right: box.width,
+        bottom: box.height,
+        width: box.width,
+        height: box.height,
+      }),
+      configurable: true,
+    },
+  });
+
+  const onScreen = [
+    view.portal.isVisible(1, 1),
+    view.portal.isVisible(1, 1, 100),
+  ];
+
+  // A sidebar over the whole map.
+  deps2D.coveredBy.push({
+    getBoundingClientRect: () => ({
+      left: 0,
+      top: 0,
+      right: box.width,
+      bottom: box.height,
+    }),
+    parentElement: null,
+  } as unknown as HTMLElement);
+  view.measureCovered();
+
+  const covered = view.portal.isVisible(1, 1);
+
+  deps2D.coveredBy.length = 0;
+  view.measureCovered();
+
+  expect(
+    'the square it looks at is on the screen; not with a margin wider than the screen, nor under what floats over the map',
+    [...onScreen, covered, view.portal.isVisible(1, 1)],
+    [true, false, false, true]
+  );
+
+  // Close up, looking north, and a square in from the edges: the squares two along to the east and two down to the
+  //  south are past the screen's right and bottom edges, the nearer copy of them either way round the world; the one
+  //  looked at isn't.
+  const before = view.orbit();
+
+  view.setOrbit({ ...before, yaw: 0, distance: DISTANCE_MIN });
+
+  const closeUp = [
+    view.portal.isVisible(1, 1, 1),
+    view.portal.isVisible(3, 1, 1),
+    view.portal.isVisible(1, 3, 1),
+  ];
+
+  view.setOrbit(before);
+  staged.splice(0);
+
+  expect(
+    'close up, squares past the screen’s right and bottom edges are off it',
+    closeUp,
+    [true, false, false]
+  );
+
   expect(
     'every chunk of the land was built as it started',
     chunksSet.size > 0,
@@ -469,6 +564,44 @@ expect(
   view.portal.setCenter(1, 1);
 
   expect('the same square again draws nothing', staged.splice(0), []);
+
+  // The camera: turned and zoomed at once, with no frames to glide over (slice 1.2).
+  const yawOf = (): number => Math.round((view.orbit().yaw * 180) / Math.PI),
+    distance = view.orbit().distance;
+
+  view.turnBy(1);
+
+  const turned = yawOf();
+
+  view.turnBy(-2);
+
+  const back = yawOf();
+
+  view.faceNorth();
+
+  expect(
+    'the keys turn the camera an eighth of a turn either way, and back to north, and draw it',
+    [turned, back, yawOf(), staged.splice(0)],
+    [45, 315, 0, ['render', 'render', 'render']]
+  );
+
+  view.zoomBy(2);
+
+  const zoomedIn = view.orbit().distance;
+
+  view.zoomBy(-2);
+
+  expect(
+    'zooming brings it nearer by the steps asked, and out again',
+    [
+      Math.abs(zoomedIn - distance / ZOOM_STEP ** 2) < 1e-9,
+      Math.abs(view.orbit().distance - distance) < 1e-9,
+      view.portal.center(),
+    ],
+    [true, true, { x: 1, y: 1 }]
+  );
+
+  staged.splice(0);
 
   // The tiles, as the 2D map takes them: queued, released once the world has them, and taken by a flush.
   view.queueTile(tiles[0]);
@@ -535,6 +668,121 @@ expect(
   );
 
   staged.splice(0);
+
+  // A city and a stack on a square: marked, with the best defender on top, until `t` hides them, and the active unit
+  //  on top, marked as active, even hidden.
+  const owner = {
+      id: 'Player-1',
+      civilization: {
+        attributes: [{ name: 'colors', value: ['#aa0000', '#ffffff'] }],
+      },
+    },
+    town = tiles[2] as Tile,
+    townKey = `${town.x},${town.y}`,
+    warriors = {
+      id: 'Unit-W',
+      _: 'Warriors',
+      defence: { value: 1 },
+      player: owner,
+      busy: null,
+      tile: town,
+    },
+    phalanx = {
+      id: 'Unit-P',
+      _: 'Phalanx',
+      defence: { value: 2 },
+      player: owner,
+      busy: { _: 'Fortified' },
+      tile: town,
+    };
+
+  const roma = {
+      name: 'Roma',
+      growth: { size: 3 },
+      player: owner,
+      originalPlayer: { civilization: { _: 'Romans' } },
+      walled: true,
+      civilDisorderDeclared: false,
+    },
+    // As the page names it.
+    romaName = cityName(roma as unknown as City);
+
+  Object.assign(town, {
+    city: roma,
+    units: [warriors, phalanx],
+  });
+  view.queueTile(town);
+  view.releaseTiles();
+
+  const marked = (): unknown => {
+    const marker = markers.get(townKey);
+
+    return marker === undefined
+      ? null
+      : [
+          marker.city?.name ?? null,
+          marker.unit?.type ?? null,
+          marker.unit?.active ?? null,
+        ];
+  };
+
+  expect(
+    'a square with a city and a stack is marked: the city, its size, walls and colours, and its best defender with the stack’s size',
+    [markers.get(townKey)?.city, markers.get(townKey)?.unit],
+    [
+      {
+        name: romaName,
+        size: 3,
+        colours: ['#aa0000', '#ffffff'],
+        walled: true,
+        disorder: false,
+      },
+      {
+        type: 'Phalanx',
+        colours: ['#aa0000', '#ffffff'],
+        count: 2,
+        active: false,
+        busy: true,
+      },
+    ]
+  );
+
+  view.setActiveUnit(warriors as unknown as Unit);
+
+  const activeOnTop = marked();
+
+  view.toggleUnits();
+
+  const hiddenButActive = marked();
+
+  view.setActiveUnit(null);
+
+  const allHidden = marked();
+
+  view.toggleUnits();
+
+  expect(
+    'the active unit is on top of its stack; t hides the rest, but not the active unit; shown again, all are back',
+    [activeOnTop, hiddenButActive, allHidden, marked()],
+    [
+      [romaName, 'Warriors', true],
+      [null, 'Warriors', true],
+      null,
+      [romaName, 'Phalanx', false],
+    ]
+  );
+
+  expect(
+    'a city is named as the page names it, or by its own name where the page gives none',
+    [
+      markerFor(town, null, true, { cityName: () => 'Rome' })?.city?.name,
+      markerFor(town, null, true)?.city?.name,
+    ],
+    ['Rome', 'Roma']
+  );
+
+  staged.splice(0);
+
   view.flush();
 
   expect(
@@ -565,17 +813,193 @@ expect(
     true
   );
 
+  // Choosing a square for a long-range order: a click on the map picks the square under it, if it's one taken. On a
+  //  canvas of its own: the 2D maps made above leave their listeners on theirs.
+  const ownBox = document.createElement('div'),
+    ownCanvas = document.createElement('canvas');
+
+  ownBox.append(ownCanvas);
+  document.body.append(ownBox);
+  Object.defineProperties(ownCanvas, {
+    setPointerCapture: { value: () => {}, configurable: true },
+    clientWidth: { get: () => box.width, configurable: true },
+    clientHeight: { get: () => box.height, configurable: true },
+    getBoundingClientRect: {
+      value: () => ({ left: 0, top: 0, right: box.width, bottom: box.height }),
+      configurable: true,
+    },
+  });
+
+  const chooser = makeMapView({
+      ...deps2D,
+      mapPortal: ownCanvas,
+    }) as MapView3D,
+    picked: string[] = [],
+    clickAt = (clientX: number, clientY: number): void =>
+      ['pointerdown', 'pointerup'].forEach((type) =>
+        ownCanvas.dispatchEvent(
+          Object.assign(new Event(type), {
+            clientX,
+            clientY,
+            button: 0,
+            pointerId: 1,
+            isPrimary: true,
+            pointerType: 'mouse',
+            timeStamp: 0,
+          })
+        )
+      );
+
+  chooser.centre(tiles[5] as Tile);
+  chooser.pickTile(
+    (tile) => tile.x !== 0,
+    (tile) => void picked.push(`${tile.x},${tile.y}`),
+    'Where?'
+  );
+
+  const choosing = [
+    chooser.picking(),
+    ownCanvas.classList.contains('picking-tile'),
+    document.querySelectorAll('.pick-tile').length,
+  ];
+
+  // The middle of the canvas: the square the camera looks at.
+  clickAt(box.width / 2, box.height / 2);
+
+  expect(
+    'choosing a square: a window says what for, and a click on the map picks the square under it; then it ends',
+    [
+      choosing,
+      picked,
+      chooser.picking(),
+      ownCanvas.classList.contains('picking-tile'),
+    ],
+    [[true, true, 1], ['1,1'], false, false]
+  );
+
+  chooser.dispose();
+
+  // The mouse resting on a square: its tooltip opens after a moment, through the page's own; a key closes it, and while
+  //  the other players move none opens.
+  const tooltips: string[] = [],
+    tipper = new MapView3D(
+      {
+        activateUnit: () => {},
+        art: {
+          id: () => 'art',
+          nativeTileSize: () => ({ width: 16, height: 16 }),
+          scale: () => 1,
+          zoom: () => 1,
+        },
+        cameraDistance: { get: () => null, set: () => {} },
+        cityOpener: { opens: () => false, open: () => {} },
+        coveredBy: [],
+        lockVerticalEdges: false,
+        mapCanvas: ownCanvas,
+        minimapCanvas: null,
+        playerId: 'Player-1',
+        squares: {
+          click: () => {},
+          prompt: () => ({ close: () => {} }),
+          menu: () => {},
+          menuOnRightClick: () => false,
+          menuOpen: () => false,
+          tooltip: (over, tile) => {
+            tooltips.push(`open ${tile.x},${tile.y}`);
+
+            return true;
+          },
+          endTooltip: () => void tooltips.push('closed'),
+        },
+        transport,
+        world: new World(worldData),
+      },
+      fakeStage
+    ),
+    restAt = (clientX: number, clientY: number): void =>
+      void ownCanvas.dispatchEvent(
+        Object.assign(new Event('pointermove'), {
+          clientX,
+          clientY,
+          buttons: 0,
+          pointerId: 1,
+          isPrimary: true,
+          pointerType: 'mouse',
+        })
+      ),
+    pause = (ms: number): Promise<void> =>
+      new Promise((resolve) => setTimeout(resolve, ms));
+
+  tipper.centre(tiles[5] as Tile);
+  restAt(box.width / 2, box.height / 2);
+
+  const waited = [...tooltips];
+
+  await pause(450);
+
+  const tipsOpened = [...tooltips];
+
+  document.dispatchEvent(new Event('keydown'));
+
+  const closedByKey = tooltips.splice(0);
+
+  restAt(box.width / 2, box.height / 2);
+  tipper.setWaiting(true);
+  // Resting again while they move: still none.
+  restAt(box.width / 2 + 1, box.height / 2);
+  await pause(450);
+
+  const whileWaiting = tooltips.splice(0);
+
+  tipper.setWaiting(false);
+  restAt(box.width / 2, box.height / 2);
+  await pause(450);
+
+  const reopened = tooltips.splice(0);
+
+  tipper.zoomBy(1);
+
+  const closedByZoom = tooltips.splice(0);
+
+  restAt(box.width / 2, box.height / 2);
+  await pause(450);
+  tooltips.splice(0);
+  tipper.dispose();
+
+  expect(
+    'resting on a square opens its tooltip after a moment; a key, a zoom and taking the map down close it; while the other players move, none opens',
+    [
+      waited,
+      tipsOpened,
+      closedByKey,
+      whileWaiting,
+      reopened,
+      closedByZoom,
+      tooltips,
+    ],
+    [
+      [],
+      ['open 1,1'],
+      ['open 1,1', 'closed'],
+      [],
+      ['open 1,1'],
+      ['closed'],
+      ['closed'],
+    ]
+  );
+
+  ownBox.remove();
+  staged.splice(0);
+
   view.pickTile(
     () => true,
     () => {},
     'Where?'
   );
+  view.endPicking();
 
-  expect(
-    'no square can be picked yet, and nothing is being chosen',
-    view.picking(),
-    false
-  );
+  expect('given up, nothing is being chosen', view.picking(), false);
+
   expect('nor are there view modes to flip', view.debugViewModes(), []);
 
   // A unit picked in a city screen, and a city opened from the HUD.
@@ -602,6 +1026,7 @@ expect(
   );
 
   // Taken down with the game.
+  staged.splice(0);
   view.dispose();
 
   expect('dispose lets the stage go', staged.splice(0), ['dispose']);
@@ -655,6 +1080,225 @@ expect(
   framed.portal.render();
 
   expect('and nothing more is drawn', [frames.size, staged.splice(0)], [0, []]);
+
+  // With frames, and a clock run by hand: the first centring puts the camera there at once; after that it glides, and
+  //  the glide ends. Zoomed mid-glide, it carries on at the new distance rather than easing back.
+  let now = 1000;
+
+  const realNow = performance.now.bind(performance),
+    runFrames = (limit = 300): number => {
+      let count = 0;
+
+      while (frames.size > 0 && count < limit) {
+        const waiting = [...frames.values()];
+
+        frames.clear();
+        now += 16;
+        waiting.forEach((callback) => callback());
+        count++;
+      }
+
+      return count;
+    };
+
+  Object.defineProperty(performance, 'now', {
+    value: () => now,
+    configurable: true,
+  });
+
+  const glider = makeMapView(deps2D) as MapView3D,
+    middleOf = (tile: Tile): [number, number] =>
+      [...glider.land().layout.centre(tile.x, tile.y)] as [number, number];
+
+  runFrames();
+  glider.centre(tiles[5] as Tile);
+
+  const first = [...glider.orbit().focus];
+
+  glider.centre(tiles[10] as Tile);
+
+  const stillThere = [...glider.orbit().focus];
+
+  runFrames(1);
+  glider.zoomBy(2);
+
+  const zoomedTo = glider.orbit().distance;
+
+  runFrames(1);
+
+  const zoomedStill = glider.orbit().distance,
+    framesToEnd = runFrames();
+
+  expect(
+    'the first centring is at once; the next glides, carries on at a distance zoomed to mid-glide, and ends where it was going',
+    [
+      first,
+      stillThere,
+      Math.abs(zoomedStill - zoomedTo) < 1e-9,
+      framesToEnd < 300,
+      frames.size,
+      glider.orbit().focus,
+    ],
+    [
+      middleOf(tiles[5] as Tile),
+      middleOf(tiles[5] as Tile),
+      true,
+      true,
+      0,
+      middleOf(tiles[10] as Tile),
+    ]
+  );
+
+  // Close up, gliding to the square two along, before a frame's moved it: what's on the screen is what will be once it's
+  //  there, so the game doesn't move it again for a unit by the square it's leaving, nor leave one it's going to.
+  glider.setOrbit({
+    ...glider.orbit(),
+    yaw: 0,
+    distance: DISTANCE_MIN,
+    focus: middleOf(tiles[1 * 4 + 1] as Tile),
+  });
+  glider.centre(tiles[1 * 4 + 3] as Tile);
+
+  const midGlide = [
+    glider.orbit().focus,
+    glider.portal.isVisible(3, 1, 1),
+    glider.portal.isVisible(1, 1, 1),
+    glider.moving(),
+  ];
+
+  runFrames();
+
+  expect(
+    'mid-glide, what’s on the screen is what will be once the camera’s there; it’s moving until it is',
+    [...midGlide, glider.moving()],
+    [middleOf(tiles[1 * 4 + 1] as Tile), true, false, true, false]
+  );
+
+  glider.dispose();
+  Object.defineProperty(performance, 'now', {
+    value: realNow,
+    configurable: true,
+  });
+
+  // The camera's distance, kept as an option: not saved before the player changes it, saved once they do, read back by
+  //  the next map, and kept within the camera's range whatever's kept.
+  // None chosen (the default, 0), whatever the zooming above kept.
+  optionsRegistry.set(MAP3D_DISTANCE_OPTION, 0);
+
+  const distanceKept = (): unknown =>
+      optionsRegistry.get(MAP3D_DISTANCE_OPTION, 'none'),
+    keeper = makeMapView(deps2D) as MapView3D;
+
+  runFrames();
+
+  const unsaved = distanceKept();
+
+  // Its first centring is at once: the next glides.
+  keeper.centre(tiles[5] as Tile);
+  runFrames();
+  keeper.zoomBy(2);
+  runFrames();
+
+  // Not every frame of a zoom or a pinch: once it's stayed the same a moment, however many frames are drawn meanwhile.
+  const notYet = distanceKept();
+
+  for (let wait = 0; wait < 7; wait++) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    keeper.portal.render();
+    runFrames();
+  }
+
+  const saved = distanceKept();
+
+  // At once, as the map's taken down, even mid-glide: the distance it's gliding at.
+  keeper.zoomBy(1);
+  runFrames();
+  keeper.centre(tiles[6] as Tile);
+  keeper.dispose();
+
+  const atDispose = distanceKept(),
+    readBack = makeMapView(deps2D) as MapView3D,
+    readDistance = readBack.orbit().distance;
+
+  readBack.dispose();
+
+  const rangeOf = (kept: number): number => {
+    optionsRegistry.set(MAP3D_DISTANCE_OPTION, kept);
+
+    const view = makeMapView(deps2D) as MapView3D,
+      { distance } = view.orbit();
+
+    view.dispose();
+
+    return distance;
+  };
+
+  expect(
+    'the camera’s distance is kept once the player changes it and it’s stayed the same a moment, or the map’s taken down, read back by the next map, and kept within its range',
+    [
+      unsaved,
+      notYet,
+      typeof saved === 'number' && saved > 0 && saved < 24,
+      typeof atDispose === 'number' &&
+        typeof saved === 'number' &&
+        atDispose < saved,
+      readDistance === atDispose,
+      rangeOf(5000),
+      rangeOf(-5),
+    ],
+    [0, 0, true, true, true, DISTANCE_MAX, 24]
+  );
+
+  optionsRegistry.set(MAP3D_DISTANCE_OPTION, 0);
+
+  // Stopped at the poles, as the player can ask: the camera stays within the world's rows, rather than going round.
+  kept.lockVerticalEdges = true;
+
+  const locked = makeMapView(deps2D) as MapView3D,
+    beyond = (view: MapView3D): number => {
+      view.setOrbit({ ...view.orbit(), focus: [1, 1000] });
+
+      return view.orbit().focus[1];
+    },
+    lockedAt = beyond(locked),
+    // The square it looks at, past the pole: the last row's, not the first's.
+    lockedCentre = locked.portal.center();
+
+  // A glide from the top row to the bottom goes down the world, not over the pole it's stopped at: on the clock run by
+  //  hand again.
+  Object.defineProperty(performance, 'now', {
+    value: () => now,
+    configurable: true,
+  });
+  locked.centre(tiles[2] as Tile);
+  locked.centre(tiles[14] as Tile);
+  runFrames();
+  Object.defineProperty(performance, 'now', {
+    value: realNow,
+    configurable: true,
+  });
+
+  const glidedTo = locked.orbit().focus,
+    bottom = locked.land().layout.centre(2, 3);
+
+  locked.dispose();
+  kept.lockVerticalEdges = false;
+
+  const wrapping = makeMapView(deps2D) as MapView3D,
+    wrappedAt = beyond(wrapping);
+
+  wrapping.dispose();
+
+  expect(
+    'stopped at the poles, the camera stays at the world’s last row, looking at a square in it, and glides down the world to a square; otherwise it goes round',
+    [
+      lockedAt === locked.land().extentV(),
+      lockedCentre,
+      glidedTo,
+      wrappedAt < locked.land().extentV(),
+    ],
+    [true, { x: 1, y: 3 }, bottom, true]
+  );
 
   delete (globalThis as any).requestAnimationFrame;
   delete (globalThis as any).cancelAnimationFrame;
@@ -726,8 +1370,9 @@ expect(
 
   delete (window as any)[MAP3D_GLOBAL];
 
-  // `dist/map3d.js`: three.js and the 3D map's own code, and from the rest only what has no state (the factory's name),
-  //  so no registry or singleton the page's bundle has is bundled again with its own state.
+  // `dist/map3d.js`: three.js and the 3D map's own code, and from the rest only what has no state (the factory's name,
+  //  whether the player has asked for less motion, and the gestures the 2D map shares with it), so no registry or
+  //  singleton the page's bundle has is bundled again with its own state. One more here is one to check has none.
   //  The suites run from the repository's root, and esbuild is loaded from there rather than bundled into this one.
   const { build } = createRequire(join(process.cwd(), 'package.json'))(
       'esbuild'
@@ -751,9 +1396,14 @@ expect(
     );
 
   expect(
-    'map3d.js bundles three.js, its own code, the built-in model set, the emitter, and the factory’s name alone',
-    others,
-    ['packages/map/MapView3DFactory.ts']
+    'map3d.js bundles three.js, its own code, the built-in model set, the emitter, and from the rest only the factory’s name, reduced motion and the shared gestures',
+    others.sort(),
+    [
+      'packages/map/MapView3DFactory.ts',
+      'packages/map/lib/reducedMotion.ts',
+      'packages/widgets/lib/drag.ts',
+      'packages/widgets/lib/mapGestures.ts',
+    ]
   );
   expect(
     'and three.js is in it',

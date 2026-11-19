@@ -57,7 +57,22 @@ const takesEnter = (target: EventTarget | null): boolean =>
     target instanceof Element &&
     target.matches('input, select, textarea, [contenteditable]'),
   // The map's zoom (#1101), a tenth at a time: Civilization II's keys. `+` and `-` are the trade rates'.
-  zoomKeys: { [key: string]: number } = { z: 1, x: -1 };
+  zoomKeys: { [key: string]: number } = { z: 1, x: -1 },
+  // The keys that turn a map that turns (the 3D map, docs/3d-renderer.md §9.1), by eighths of a turn, and the one that
+  //  turns it back to north. None is a unit's order, nor the numeric keypad's (`mappedKey`).
+  turnKeys: { [key: string]: number } = { '[': -1, ']': 1 },
+  NORTH_KEY = '\\',
+  // And the same keys where they are on a US keyboard, for layouts that type them only with AltGr or Option, which the
+  //  game leaves to the browser: only where what they type there is none of the game's own keys. A German keyboard
+  //  types ü, + and # on them, and + is the trade rates'.
+  turnCodes: { [code: string]: number | 'north' } = {
+    BracketLeft: -1,
+    BracketRight: 1,
+    Backslash: 'north',
+  },
+  // What a key types that's the game's own whatever key types it: a letter or digit (a unit's order, a report), the
+  //  trade rates' `+` and `-`, or the Civilopedia's `?` and a window's filter's `/` (which Dvorak types on `[`).
+  gameKey = (key: string): boolean => /^[a-z0-9+\-=/?]$/i.test(key);
 
 export type InputControllerDeps = {
   // The primary actions' area, whose first button Tab focuses.
@@ -78,8 +93,10 @@ export type InputControllerDeps = {
     | 'centre'
     | 'endPicking'
     | 'picking'
+    | 'faceNorth'
     | 'toggleUnits'
     | 'toggleYields'
+    | 'turnBy'
     | 'zoomBy'
   >;
   notificationBar: { show(text: string): void };
@@ -338,6 +355,29 @@ export class InputController {
     ) {
       this.#zoomKeyHeld = key;
       this.#deps.mapView.zoomBy(zoomKeys[key]!);
+
+      event.preventDefault();
+
+      return;
+    }
+
+    // Once for each press: held down, it would spin.
+    const turn =
+      key === NORTH_KEY
+        ? 'north'
+        : turnKeys[key] ?? (gameKey(key) ? undefined : turnCodes[event.code]);
+
+    if (
+      turn !== undefined &&
+      !modalWindow &&
+      !takesText(event.target) &&
+      !event.repeat
+    ) {
+      if (turn === 'north') {
+        this.#deps.mapView.faceNorth();
+      } else {
+        this.#deps.mapView.turnBy(turn);
+      }
 
       event.preventDefault();
 

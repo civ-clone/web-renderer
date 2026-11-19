@@ -152,13 +152,46 @@ and a colour per terrain. It's built a few chunks a frame, from where the map is
 
 ### 1.1b The debug world page
 
+**Done:** `dist/map3d-debug.html`, served beside the scripts (open it as `/dist/map3d-debug.html`), and published with
+them. A form on the page sets `grid`, `width` and `height` (up to 160), `seed` and `seen` (0 to 1). The arrow keys move
+the square it's centred on, which the address keeps as `x` and `y`, so a reload or a link shows the same place.
+Building another world from the form starts it in the middle again.
+- **Code:** `packages/map-3d/debug`: the page, its script, its options, and `generateWorld.ts`. That makes a world with
+  about two fifths land, ice at the poles, hills, mountains, rivers, and terrain by latitude and wetness. It isn't the
+  engine's generator.
+- **Tests:** `tests/ui/debugWorld.ts`. It also checks the land over a debug world builds every chunk once, the nearest
+  to the map's centre first.
+
 - **What:** a page that builds a generated world on any grid (`square`, `staggered-iso`, `hex-odd-r`), with no game,
   from a seed and a size in its address, and draws it with the 3D map. It's for screenshots and for trying the grids a
   game can't start on yet (the isometric grid needs Civ2's art to start a game).
-- **It has:** the stats overlay, and every square seen or a fog of war at random.
+- **It has:** the stats overlay, and every square seen, or as much as asked, round the world's middle.
 - **It doesn't:** start the game's worker, or load the 2D art.
 
 ### 1.2 Camera
+
+**Done** (spec §9.1, "As built"): the camera's maths, the keys, centring, and the mouse, the wheel and touch.
+- **The orbit:** `packages/map-3d/camera/orbit.ts`, with no three.js. It holds the yaw, pitch and distance, the presets
+  (not offered yet: no key or menu chooses one), a ray from the screen to the ground, and dragging that keeps the ground
+  under the pointer. Tested at every yaw and pitch by `tests/ui/orbit.ts`.
+- **What the view does:**
+  - centring on a square glides the camera there: at once the first time, as a game starts or loads, anywhere
+    further than about the camera sees round its focus, and under reduced motion;
+  - the camera stops at the poles when the player asks the map to (`lockVerticalEdges`);
+  - it follows the land's height under the focus, eased, so it doesn't jolt over hills;
+  - the world's copies follow the camera: every copy the haze doesn't hide is drawn, however far it sees;
+  - the haze, and how far the camera sees, follow its distance.
+- **Keys:** through `InputController`, as the zoom keys are. `[` and `]` turn the view an eighth of a turn, and `\`
+  turns it back to north, or the keys where those are on a US keyboard, for layouts that type them with AltGr. `z` and `x` zoom. A 2D map ignores the turn keys.
+- **The mouse, the wheel and touch:** `packages/map-3d/camera/CameraInput.ts`, on the shared gestures (0.1b):
+  - a drag keeps the ground under the pointer, and a flick glides on, unless the player asked for less motion;
+  - the middle button, or the main one with Alt, turns and tilts; the right button is left to the unit's menu;
+  - the wheel, or a trackpad's pinch, zooms about the pointer, in the 2D map's steps and pauses;
+  - two fingers pinch, twist and tilt, and Safari's trackpad gestures pinch and twist.
+
+  Tested by `tests/ui/cameraInput.ts`.
+- **Its distance** is kept as an option of its own, `map3dDistance` (0 until the player zooms), as each set's zoom is,
+  and kept within the camera's range whatever's stored.
 
 - **What:**
   - orbit, pan with glide, zoom on the shared wheel steps, turn and tilt;
@@ -171,6 +204,26 @@ and a colour per terrain. It's built a few chunks a frame, from where the map is
 - **Reduced motion:** no glide.
 
 ### 1.3 Picking and input
+
+**First parts done:**
+- **Picking's maths:** `packages/map-3d/camera/pick.ts`. A ray from the screen is stepped through the band of heights
+  the land can be in, and halved down to where it first meets the land, or the sea's surface over land below it.
+  Tested at every yaw and pitch over a known height function (`tests/ui/pick.ts`), with a ridge in the way, and the sea.
+- **Markers:** `packages/map-3d/markers`. A city is a cluster of buildings, more as it grows, with its owner's colour on
+  their roofs, a wall if it's walled, and its name and size over it ("!" in disorder). A unit is a pawn in its owner's
+  colours, the active unit if it's in the stack or else the best defender, with a pennant giving the stack's size, and
+  a ring under the active unit. `t` hides all but the active unit. Colours are the civilization's `colors` attribute.
+  The debug page puts seeded cities and units on its world.
+- **What's on the screen:** `isVisible` projects a square's middle to the screen, `margin` squares and half a square in
+  from its edges, and not under what floats over the map (`measureCovered`), so the game brings the active unit into
+  view as on the 2D map.
+- **Clicks, held presses and right-clicks** do what they do on the 2D map, through the page's own handling
+  (`packages/game/lib/mapSquares.ts`, which `GamePortal` uses too): open a city, choose among the player's units there,
+  or centre on the square; the unit's menu; and choosing a square for a long-range order.
+- **Tooltips:** the mouse resting on a square opens its tooltip, or its city's, after a moment, as on the 2D map, through
+  the page's own; a key, a press, the camera moving or the other players' turns close it.
+- **Still to do:** a city's banner as something to click and hover over of its own (on the 2D map it hangs past its
+  square), and waiting's cursor (the page's, not the map's).
 
 - **What:**
   - a ray to what's shown, then to a square: the land, or the water's surface where the land is below it (spec §9.2);
@@ -185,6 +238,21 @@ and a colour per terrain. It's built a few chunks a frame, from where the map is
 
 ### 1.4 Water, light and sky
 
+**First part done:**
+- **The sea:** `packages/map-3d/water.ts`. One surface at height 0 under the camera, drawn wherever the land is below it.
+  How deep the water is comes from the land's own heights, which each chunk writes into a texture the size of the ground
+  as it's built; the texture repeats as the world does. Teal over the shallows, deep blue out at sea, foam where it
+  meets the land, the sky in it at a low angle, and the sun's glint.
+- **Shadows:** the sun casts one shadow map, fitted round the camera's focus as it moves and zooms. The land shadows
+  itself, and markers cast shadows on it.
+- **Cloud** over the squares never seen (§4.5): a layer just over the land, reading which points are unseen from the
+  same texture, softened over a short edge and broken up by noise. No water is drawn under it.
+- **Still to do:** the sky and its environment map, waves (they need frames all the time: for the quality presets,
+  M6), lakes at their own height, and the cloud clearing as squares are seen (it goes at once).
+- **Cost:** at the default distance, about 1,500 draw calls and 3 million triangles a frame on an 80×50 world, more
+  zoomed out: each marker is several meshes, and the land and markers are drawn at every copy in sight, and again
+  for the shadows. Instancing the markers and coarser distant chunks are for M6.
+
 - **What:**
   - the sea surface with depth tint and shore foam;
   - a sky made by code, with its environment map;
@@ -192,6 +260,12 @@ and a colour per terrain. It's built a few chunks a frame, from where the map is
   - tone mapping.
 
 ### 1.5 The minimap's view outline
+
+**Done:** `packages/map-3d/minimap/Minimap3D.ts`, the 3D map's own overview on the page's minimap canvas, drawn on the
+ground rather than the grid: each square is its outline (`GroundLayout`) in its terrain's colour, so one overview serves
+every grid. Dots for cities and stacks in their owners' colours, the unit awaiting orders, and the four-sided patch of
+ground the camera sees at each copy the overview shows. A click moves the camera there. Drawn again only when squares
+change, and its patch each frame the camera moves. Tested by `tests/ui/minimap3d.ts`.
 
 - **What:**
   - the 3D view keeps a 2D overview of its own, fed the same tile updates as its map;

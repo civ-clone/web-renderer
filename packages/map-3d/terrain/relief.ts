@@ -10,7 +10,8 @@
 // - **The sea's floor,** under every square the engine says is water, falls away from the shore, by how far a square is from land, walking the squares outwards from
 //   it as far as `seaFloor.reach`.
 // - **A square never seen** is flat, at sea level, whatever is round it: the client is never told its terrain, and its
-//   neighbours' relief doesn't spill into it. The step at its edge is under cloud (§4.5).
+//   neighbours' relief doesn't spill into it. The step at its edge is mostly under cloud (§4.5): a hill or a mountain
+//   beside it stands through.
 //
 // Deterministic: the same squares always give the same land.
 
@@ -41,13 +42,24 @@ export type ReliefSource = {
 };
 
 /** A point's height, in world units, and its colour, as linear red, green and blue from 0 to 1. */
-export type GroundSample = { height: number; colour: [number, number, number] };
+export type GroundSample = {
+  height: number;
+  colour: [number, number, number];
+  // Whether the point is on a square never seen, which cloud covers.
+  unseen: boolean;
+};
 
 export interface ReliefMap {
   sample(u: number, v: number): GroundSample;
   height(u: number, v: number): number;
-  /** Reads every square's terrain again, after the world's tiles have changed: the squares whose terrain has. */
-  refresh(): [number, number][];
+  /**
+   * Reads every square's terrain again, after the world's tiles have changed: the squares whose terrain has. Given
+   *  `released`, those alone are looked at first, and the rest read again only if one of them has changed, as most
+   *  changes (a unit moving, a city growing) change no terrain, and reading it all takes milliseconds.
+   */
+  refresh(
+    released?: readonly (readonly [number, number])[]
+  ): [number, number][];
 }
 
 // How much of a peak's height is its own, weighted by the square of its weight: the rest is in the blend with its
@@ -65,12 +77,46 @@ const linear = (hex: string): [number, number, number] => {
   return [channel(1), channel(3), channel(5)];
 };
 
-// What's kept for each square, read once per refresh.
+// What's kept for each square, read once per refresh: and for a peak, where it stands off the square's middle and how
+//  much taller or lower it is than the terrain's, its own, so a range of mountains isn't a grid of cones.
 type Square = {
   relief: Relief;
   colour: [number, number, number];
   unknown: boolean;
+  peak: { u: number; v: number; scale: number };
 };
+
+/** How far a peak can stand off its square's middle, and a terrain's colour reach past its edge, in world units. */
+export const WANDER = 0.22;
+
+// A square's own fraction from 0 to 1, from its co-ordinates, the seed and what it's for.
+const chance = (x: number, y: number, seed: number, salt: number): number => {
+  let h =
+    (Math.imul(x, 374761393) +
+      Math.imul(y, 668265263) +
+      Math.imul(seed, 2246822519) +
+      Math.imul(salt, 3266489917)) |
+    0;
+
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  h ^= h >>> 16;
+
+  return (h >>> 0) / 4294967296;
+};
+
+/**
+ * Where the peak of the square at (`x`, `y`) stands off its middle, within `WANDER` either way, and how much taller or
+ *  lower than its terrain's it is, from `seed`: the same every time.
+ */
+export const peakOf = (
+  x: number,
+  y: number,
+  seed: number
+): { u: number; v: number; scale: number } => ({
+  u: (chance(x, y, seed, 1) * 2 - 1) * WANDER,
+  v: (chance(x, y, seed, 2) * 2 - 1) * WANDER,
+  scale: 0.75 + chance(x, y, seed, 3) * 0.5,
+});
 
 export const createRelief = ({
   layout,
@@ -94,6 +140,9 @@ export const createRelief = ({
     ]),
     // A crest where the noise crosses 0, from -1 between them to 1 on them.
     ridged: Noise = (u, v) => 1 - 2 * Math.abs(ridges(u, v)),
+    // How far a point's colour is taken from, across and down, so terrains' edges wander rather than run straight.
+    wanderU = periodicNoise({ cell: 0.8, period, seed: seed + 5 }),
+    wanderV = periodicNoise({ cell: 0.8, period, seed: seed + 6 }),
     // Which noise each shape rides on. Noise depends on the point alone, not the square, so each is taken once a point.
     noiseFor: { [shape in ReliefShape]: 'rolling' | 'ridged' | null } = {
       flat: null,
@@ -151,7 +200,31 @@ export const createRelief = ({
     return distance;
   };
 
-  const refresh = (): [number, number][] => {
+  // What the square at index `at` is read as: its terrain's name, and whether it's water.
+  const readAs = (x: number, y: number): string => {
+    const name = source.terrainAt(x, y);
+
+    return `${name}${
+      name !== 'Unknown' && source.waterAt(x, y) ? ' water' : ''
+    }`;
+  };
+
+  const refresh = (
+    released?: readonly (readonly [number, number])[]
+  ): [number, number][] => {
+    // Only these may have changed: none has, so nothing's to read again.
+    if (
+      released !== undefined &&
+      read.length > 0 &&
+      released.every(([x, y]) => {
+        const at = index(x, y);
+
+        return at === null || read[at] === readAs(x, y);
+      })
+    ) {
+      return [];
+    }
+
     const names: string[] = [],
       water: boolean[] = [],
       entries: TerrainEntry[] = [];
@@ -180,13 +253,17 @@ export const createRelief = ({
     read = now;
 
     squares = entries.map((entry, at) => {
-      const unknown = entry === unknownTerrain;
+      const unknown = entry === unknownTerrain,
+        x = at % width,
+        y = Math.floor(at / width),
+        peak = peakOf(x, y, seed);
 
       if (!water[at]) {
         return {
           relief: entry.relief,
           colour: linear(entry.colour),
           unknown,
+          peak,
         };
       }
 
@@ -201,6 +278,7 @@ export const createRelief = ({
         relief: { ...entry.relief, base: depth },
         colour: linear(entry.colour),
         unknown,
+        peak,
       };
     });
 
@@ -220,7 +298,11 @@ export const createRelief = ({
       for (let dx = -4; dx <= 4; dx++) {
         const [u, v] = layout.centre(dx, parity + dy);
 
-        if (Math.hypot(u - cu, v - cv) < REACH + corner + 1e-9) {
+        // As far again as a peak or a colour wanders: up to `WANDER` either way, so its diagonal.
+        if (
+          Math.hypot(u - cu, v - cv) <
+          REACH + corner + WANDER * Math.SQRT2 + 1e-9
+        ) {
           found.push([dx, dy]);
         }
       }
@@ -238,7 +320,7 @@ export const createRelief = ({
 
     // Never seen, or off a world that doesn't wrap over the poles: flat, at sea level.
     if (ownSquare === null || ownSquare.unknown) {
-      return { height: 0, colour: linear(unknownTerrain.colour) };
+      return { height: 0, colour: linear(unknownTerrain.colour), unseen: true };
     }
 
     // Each noise at this point, once it's asked for.
@@ -253,9 +335,14 @@ export const createRelief = ({
     let total = 0,
       blended = 0,
       peaks = 0,
+      shades = 0,
       red = 0,
       green = 0,
       blue = 0;
+
+    // Where the colour's taken from.
+    const colourU = u + WANDER * wanderU(u, v),
+      colourV = v + WANDER * wanderV(u, v);
 
     (offsets[y0 & 1] ?? []).forEach(([dx, dy]) => {
       const x = x0 + dx,
@@ -266,39 +353,55 @@ export const createRelief = ({
         return;
       }
 
-      const [cu, cv] = layout.centre(x, y),
-        w = weight(Math.hypot(u - cu, v - cv));
-
-      if (w === 0) {
-        return;
-      }
-
       const square = squares[at];
 
       if (square === undefined) {
         return;
       }
 
-      const { relief, colour } = square,
-        noise = noiseFor[relief.shape],
-        rough = noise === null ? 0 : relief.roughness * noiseHere(noise);
+      const [cu, cv] = layout.centre(x, y),
+        { relief, colour, peak } = square,
+        w = weight(Math.hypot(u - cu, v - cv)),
+        // A peak's own, from where it stands; and the colour's, sharper than the land's, from where it's taken.
+        peakW =
+          relief.shape === 'peaked'
+            ? weight(Math.hypot(u - cu - peak.u, v - cv - peak.v))
+            : 0,
+        shade = weight(Math.hypot(colourU - cu, colourV - cv)) ** 3;
 
-      if (relief.shape === 'peaked') {
-        blended += w * (relief.base * (1 - PEAK_SHARE) + rough * 0.5);
-        peaks += w * w * (relief.base * PEAK_SHARE + rough * 0.5);
-      } else {
-        blended += w * (relief.base + rough);
+      if (w > 0) {
+        const noise = noiseFor[relief.shape],
+          rough = noise === null ? 0 : relief.roughness * noiseHere(noise);
+
+        if (relief.shape === 'peaked') {
+          blended += w * (relief.base * (1 - PEAK_SHARE) + rough * 0.5);
+        } else {
+          blended += w * (relief.base + rough);
+        }
+
+        total += w;
       }
 
-      total += w;
-      red += w * colour[0];
-      green += w * colour[1];
-      blue += w * colour[2];
+      if (peakW > 0) {
+        const rough = relief.roughness * noiseHere('ridged');
+
+        peaks +=
+          peakW * peakW * (relief.base * PEAK_SHARE * peak.scale + rough * 0.5);
+      }
+
+      shades += shade;
+      red += shade * colour[0];
+      green += shade * colour[1];
+      blue += shade * colour[2];
     });
 
     return {
-      height: blended / total + peaks,
-      colour: [red / total, green / total, blue / total],
+      height: (total > 0 ? blended / total : 0) + peaks,
+      colour:
+        shades > 0
+          ? [red / shades, green / shades, blue / shades]
+          : ownSquare.colour,
+      unseen: false,
     };
   };
 

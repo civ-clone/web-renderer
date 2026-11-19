@@ -14,6 +14,9 @@
         // The 3D map (docs/3d-renderer.md §2.4): dist/map3d.js, fetched the first time a game starts in 3D, so the 2D
         //  map's players never download three.js.
         'packages/map-3d/map3d.ts',
+        // The 3D map's debug page's own script (docs/3d-renderer-plan.md 1.1b): dist/map3d-debug.js, which only
+        //  dist/map3d-debug.html loads.
+        'packages/map-3d/debug/map3d-debug.ts',
       ],
       bundle: true,
       keepNames: true,
@@ -80,6 +83,21 @@
         'dist/sound.schema.json'
       );
     },
+    // The 3D map's debug page (docs/3d-renderer-plan.md 1.1b), beside the scripts it loads: dist/map3d-debug.html, its
+    //  scripts versioned by `build.json` as the game's are, or by the time where it hasn't been made (a dev build).
+    copyDebugPage = () => {
+      const fs = require('fs'),
+        version = fs.existsSync('build.json')
+          ? JSON.parse(fs.readFileSync('build.json', 'utf8')).version
+          : String(Date.now());
+
+      fs.writeFileSync(
+        'dist/map3d-debug.html',
+        fs
+          .readFileSync('packages/map-3d/debug/map3d-debug.html', 'utf8')
+          .replaceAll('{{version}}', encodeURIComponent(version))
+      );
+    },
     failed = (e) => {
       console.log(`\x1b[31mfailed.\x1b[0m`);
       console.log('');
@@ -104,6 +122,7 @@
       .then(() => {
         copyReleases();
         copySchema();
+        copyDebugPage();
 
         console.log('\x1b[32mdone.\x1b[0m');
       })
@@ -140,8 +159,10 @@
                 copyReleases();
               }
 
-              // After every build, as the schema may have changed with it.
+              // After every build: the schema may have changed with it. The debug page isn't a script, so an edit to it
+              //  alone is copied with the next build.
               copySchema();
+              copyDebugPage();
 
               console.log(
                 built ? '\x1b[32mRebuilt.\x1b[0m' : '\x1b[32mdone.\x1b[0m'

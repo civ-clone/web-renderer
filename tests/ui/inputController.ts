@@ -91,6 +91,8 @@ let nextTurnButton: {
 // Choosing a square for a long-range order (M2b): whether one is being chosen, and what gave it up.
 // And the map's zoom (#1101): the steps asked for.
 const zooms: number[] = [],
+  // The turns asked of the map, in eighths, or `north`.
+  turns: (number | 'north')[] = [],
   pickingEnded: string[] = [];
 
 let picking = false;
@@ -136,6 +138,8 @@ const controller = new InputController({
       picking = false;
     },
     zoomBy: (steps: number): void => void zooms.push(steps),
+    turnBy: (steps: number): void => void turns.push(steps),
+    faceNorth: (): void => void turns.push('north'),
   },
   notificationBar: {
     show: (html: string): void => {
@@ -691,6 +695,8 @@ const run = async (): Promise<void> => {
     .forEach((dialog) => dialog.remove());
 
   for (const init of [
+    // A German keyboard's +, where a US keyboard's ] is, which turns a 3D map: here it's the trade rates'.
+    { code: 'BracketRight', key: '+' },
     { code: 'Minus', key: '-' },
     { code: 'NumpadAdd', key: '+', location: 3 },
     { code: 'NumpadSubtract', key: '-', location: 3 },
@@ -804,6 +810,96 @@ const run = async (): Promise<void> => {
     over.remove();
 
     expect('not typed into a field, nor over a modal window', zooms, []);
+  }
+
+  // `[` and `]` turn a map that turns (the 3D map) an eighth of a turn, and `\` turns it back to north: once for each
+  //  press, not over a modal window or into a field.
+  {
+    reset();
+    turns.splice(0);
+
+    const left = press({ code: 'BracketLeft', key: '[' }),
+      right = press({ code: 'BracketRight', key: ']' }),
+      north = press({ code: 'Backslash', key: '\\' });
+
+    expect(
+      '[ turns left, ] right, and \\ back to north, and nothing else has them',
+      [
+        turns,
+        left.defaultPrevented,
+        right.defaultPrevented,
+        north.defaultPrevented,
+        calls,
+      ],
+      [[-1, 1, 'north'], true, true, true, []]
+    );
+
+    // A German keyboard types ü and # on those keys, and [ ] \\ only with AltGr, which the game leaves alone.
+    turns.splice(0);
+    press({ code: 'BracketLeft', key: 'ü' });
+    press({ code: 'Backslash', key: '#' });
+
+    expect(
+      'the same keys turn the map where a layout types something else on them',
+      turns,
+      [-1, 'north']
+    );
+
+    // Dvorak types / and ? on the first of them: Find City's and the Civilopedia's, as on any keyboard, and no turn,
+    //  with a window open or not.
+    turns.splice(0);
+    calls = [];
+    press({ code: 'BracketLeft', key: '/' });
+    press({ code: 'BracketLeft', key: '?', shiftKey: true });
+    press({ code: 'BracketLeft', key: '/' });
+
+    expect(
+      'on Dvorak, / and ? on that key are the game’s, and don’t turn the map, even over the Civilopedia',
+      [turns, calls, document.querySelectorAll('dialog.civilopedia').length],
+      [[], ['findCity'], 1]
+    );
+
+    document
+      .querySelectorAll('dialog.civilopedia')
+      .forEach((dialog) => dialog.remove());
+
+    turns.splice(0);
+
+    const held = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      key: ']',
+    });
+
+    Object.defineProperty(held, 'repeat', { value: true });
+    document.dispatchEvent(held);
+    press({ code: 'BracketLeft', key: '[', ctrlKey: true });
+
+    const field = document.createElement('input');
+
+    document.body.append(field);
+    focused = field;
+    press({ code: 'BracketLeft', key: '[', target: field });
+    focused = document.body;
+    field.remove();
+
+    const over = document.createElement('dialog'),
+      overButton = document.createElement('button');
+
+    over.className = 'window modal';
+    over.setAttribute('open', '');
+    over.append(overButton);
+    document.body.append(over);
+    focused = overButton;
+    press({ code: 'BracketRight', key: ']', target: overButton });
+    focused = document.body;
+    over.remove();
+
+    expect(
+      'not held down, with Ctrl, typed into a field, nor over a modal window',
+      turns,
+      []
+    );
   }
 
   // Over a modal window a leader screen would be drawn out of reach: the key goes to the modal window instead.

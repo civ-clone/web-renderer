@@ -10,6 +10,8 @@ import topologyFor, { Topology } from '@civ-clone/ui-client/lib/topologyFor';
 import groundLayoutFor, { GroundLayout } from '@civ-clone/ui-map-3d/layouts';
 import createRelief, {
   ReliefSource,
+  WANDER,
+  peakOf,
 } from '@civ-clone/ui-map-3d/terrain/relief';
 import { TopologyId } from '@civ-clone/ui-protocol/topology';
 
@@ -138,20 +140,39 @@ ids.forEach((topologyId) => {
         }
 
         const step = Math.abs(
-          relief.height(...inside) - relief.height(...outside)
-        );
+            relief.height(...inside) - relief.height(...outside)
+          ),
+          // The colours too: blended sharper, but with no edge of their own.
+          inColour = relief.sample(...inside).colour,
+          outColour = relief.sample(...outside).colour,
+          shade = Math.max(
+            ...inColour.map((value, channel) =>
+              Math.abs(value - (outColour[channel] ?? 0))
+            )
+          );
 
-        if (step > 1e-6) {
-          steps.push(`${x},${y} ${index}@${along}: ${step}`);
+        if (step > 1e-6 || shade > 1e-5) {
+          steps.push(`${x},${y} ${index}@${along}: ${step} ${shade}`);
         }
       });
     });
   });
 
   expect(
-    `${topologyId}: no step across any edge or corner between squares seen`,
+    `${topologyId}: no step in height or colour across any edge or corner between squares seen`,
     steps.slice(0, 3),
     []
+  );
+
+  // Never seen: points on such squares are marked, for the cloud, and no others.
+  expect(
+    `${topologyId}: a point on a square never seen is marked unseen, and one on a square seen isn't`,
+    squares.every(([x, y]) => {
+      const [u, v] = layout.centre(x, y);
+
+      return relief.sample(u, v).unseen === unknown(x, y);
+    }),
+    true
   );
 
   // No seam where the world wraps: a point and its copy a period along have the same land.
@@ -203,17 +224,64 @@ ids.forEach((topologyId) => {
       topologyId: 'square',
       wrapsY: true,
     }),
+    // A seed whose peak at (5, 5) stands at its square's middle, at its terrain's height, near enough: the peak's fall
+    //  measured from the middle, as if it didn't wander.
+    still =
+      Array.from({ length: 2000 }, (_, n) => n + 1).find((seed) => {
+        const { u, v, scale } = peakOf(5, 5, seed);
+
+        return Math.hypot(u, v) < 0.02 && Math.abs(scale - 1) < 0.05;
+      }) ?? 1,
     lone = createRelief({
       layout,
+      seed: still,
       source: sourceFor(topology, (x, y) =>
         x === 5 && y === 5 ? 'Mountains' : 'Grassland'
       ),
     }),
     plain = createRelief({
       layout,
+      seed: still,
       source: sourceFor(topology, () => 'Grassland'),
     }),
     middle = (x: number, y: number) => lone.height(...layout.centre(x, y));
+
+  // Elsewhere, peaks wander off their squares' middles, by as much as `WANDER`, and some are taller than others.
+  const wandering = Array.from({ length: 25 }, (_, n) =>
+      peakOf(n % 5, Math.floor(n / 5), 1)
+    ),
+    [peakX, peakY] = layout.centre(5, 5),
+    { u: offU, v: offV } = peakOf(5, 5, 1),
+    wanders = createRelief({
+      layout,
+      source: sourceFor(topology, (x, y) =>
+        x === 5 && y === 5 ? 'Mountains' : 'Grassland'
+      ),
+    }),
+    // The highest point of the square, sampled a twentieth apart.
+    highest = Array.from({ length: 21 * 21 }, (_, n) => [
+      peakX - 0.5 + (n % 21) / 20,
+      peakY - 0.5 + Math.floor(n / 21) / 20,
+    ]).reduce((best, point) =>
+      wanders.height(point[0]!, point[1]!) > wanders.height(best[0]!, best[1]!)
+        ? point
+        : best
+    );
+
+  expect(
+    'peaks wander off their squares’ middles, as far as WANDER, each its own, and a mountain is highest near its peak',
+    [
+      still !== 1,
+      wandering.every(
+        ({ u, v }) => Math.abs(u) <= WANDER && Math.abs(v) <= WANDER
+      ),
+      new Set(wandering.map(({ u, v }) => `${u},${v}`)).size,
+      new Set(wandering.map(({ scale }) => scale.toFixed(3))).size > 20,
+      Math.hypot(highest[0]! - (peakX + offU), highest[1]! - (peakY + offV)) <
+        0.12,
+    ],
+    [true, true, 25, true, true]
+  );
 
   expect(
     'a mountain stands well above its plain at its middle',
@@ -267,6 +335,36 @@ ids.forEach((topologyId) => {
     'a square never seen among mountains is still flat at sea level',
     [0.5, 0.2, 0.8].map((along) => hidden.height(5 + along, 5 + 0.5)),
     [0, 0, 0]
+  );
+
+  // Read again for squares released: only those, unless one of them has changed, when every square is.
+  let reads = 0,
+    changedTo = 'Plains';
+
+  const counted = createRelief({
+      layout,
+      source: sourceFor(topology, (x, y) => {
+        reads++;
+
+        return x === 2 && y === 3 ? changedTo : 'Grassland';
+      }),
+    }),
+    readAtFirst = reads;
+
+  reads = 0;
+
+  const unchanged = counted.refresh([[2, 3]]),
+    readForOne = reads;
+
+  changedTo = 'Hills';
+  reads = 0;
+
+  const readAfterChange = counted.refresh([[2, 3]]);
+
+  expect(
+    'squares released with their terrain unchanged are read alone; one changed, the whole world is read again',
+    [unchanged, readForOne < 5, readAfterChange, reads >= readAtFirst],
+    [[], true, [[2, 3]], true]
   );
 
   // Water is what the engine says is water (`tile.isWater`), whatever the terrain's called: a lake among plains, the

@@ -53,6 +53,9 @@ export const setOptionDefaults = (): void => {
     uiTheme: '',
     // How the unit awaiting orders is marked (#753): the theme's, or the blink, the ring or both. See `UNIT_MARKER_CHOICES`.
     unitMarker: 'theme',
+    // The 3D map's camera's distance, as the player last chose it, or 0 for the camera's own (docs/3d-renderer.md §11).
+    //  See `MAP3D_DISTANCE_OPTION`.
+    map3dDistance: 0,
     // Civilization's music, with an ASOUND.CVL imported (#126): on, and its volume, 0 to 100. See `soundGain`.
     sound: true,
     soundVolume: 70,

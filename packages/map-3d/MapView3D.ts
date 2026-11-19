@@ -1,16 +1,14 @@
 // The 3D map (`MapRenderer`, docs/3d-renderer.md §2.1), behind `?3d=1` until it shows everything the 2D map does (§11).
 //
 // It shows the land (slice 1.1), its relief and its terrain's colours, built a few chunks a frame from where the map is
-//  centred, and again where tile patches change it; the camera looks down at the square the map is centred on. The
-//  rest comes slice by slice:
-//  - turning, tilting and zooming the camera in 1.2;
-//  - picking squares, hovering and hiding the units in 1.3.
-//  - the minimap's view of it in 1.5: it's left empty until then.
-// Until then, what the game asks of it is kept or let go as below, and a long-range order's square can't be picked: the
-//  order is given up, as if the player had.
+//  centred, and again where tile patches change it. The camera (slice 1.2) orbits a point on the ground: centring the
+//  map glides it there (at once the first time), the keys turn it and zoom it, the mouse, the wheel and touch move it,
+//  and its distance is kept as the 2D map's zoom is. Cities and units are marked on the land (1.3), a click, a press
+//  held and a right-click do what they do on the 2D map, and the minimap shows its own overview (1.5). Still to come:
+//  hovering's tooltips, waiting's cursor, and units moving and fighting (M2).
 //
-// Reaches beyond its canvas in one place, as the 2D map does: the `window` `resize` handler and an observer of the
-//  canvas's parent, which size the canvas to it.
+// Reaches beyond its canvas where the 2D map does: the `window` `resize` handler and an observer of the canvas's
+//  parent, which size the canvas to it, and the minimap's canvas, which it draws its overview on.
 
 import { Coordinate, Tile, Unit } from '@civ-clone/ui-protocol/types';
 import { MapEvent } from '@civ-clone/ui-protocol/mapEvents';
@@ -18,18 +16,72 @@ import { MapView3DDeps } from '@civ-clone/ui-map/MapView3DFactory';
 import MapPortal3D from './MapPortal3D';
 import MapRenderer from '@civ-clone/ui-map/MapRenderer';
 import World from '@civ-clone/ui-map/components/World';
-import { SIGHT, Stage, StageFactory, createStage } from './stage';
+import { Stage, StageFactory, createStage } from './stage';
 import Land from './Land';
+import {
+  Orbit,
+  TURN_STEP,
+  between,
+  clampOrbit,
+  defaultOrbit,
+  groundAt,
+  settled,
+  sightFor,
+  toScreen,
+  zoomed,
+} from './camera/orbit';
+import prefersReducedMotion from '@civ-clone/ui-map/lib/reducedMotion';
+import CameraInput from './camera/CameraInput';
+import markerFor, { MarkerWords } from './markers/markerFor';
+import pickGround from './camera/pick';
+import Minimap3D from './minimap/Minimap3D';
 
 // How long, in ms, each frame may go on building the land's chunks while any wait. A chunk is built whole, once a frame
 //  has begun one: one takes 17–25 ms, so a frame builds one, and more only where they're quicker.
 const BUILD_BUDGET = 10;
+
+// How long the camera takes to glide to a square it's centred on, or to turn, in ms.
+const GLIDE = 350;
+
+// How long the camera's distance stays the same before it's kept, in ms: a pinch or a zoom changes it every frame.
+const KEEP_DISTANCE_AFTER = 500;
+
+// How much of the way to the land's height under the focus the camera rises or falls each frame, so it doesn't jolt
+//  over every hill as it moves.
+const HEIGHT_EASE = 0.25;
+
+// How long the mouse rests on a square before its tooltip opens, as on the 2D map.
+const HOVER_DELAY = 400;
+
+// The square the mouse rests on: where the mouse is on the page, the timer before its tooltip opens, and whether it has.
+type Hover = {
+  key: string;
+  x: number;
+  y: number;
+  // Where the mouse is on the canvas, and on the page.
+  canvasX: number;
+  canvasY: number;
+  clientX: number;
+  clientY: number;
+  timer: number | null;
+  open: boolean;
+};
+
+// A square being chosen for a long-range order: which it takes, what's done with it, and the window saying what for.
+type Picking = {
+  accept: (tile: Tile) => boolean;
+  onPick: (tile: Tile) => void;
+  window: { close(): void } | null;
+};
 
 export class MapView3D implements MapRenderer {
   readonly portal: MapPortal3D;
   readonly world: World;
 
   #canvas: HTMLCanvasElement;
+  // What floats over the map, and where it covers it, in the canvas's px from its corner (`measureCovered`).
+  #coveredBy: HTMLElement[];
+  #covered: { left: number; top: number; right: number; bottom: number }[] = [];
   #land: Land;
   #stage: Stage;
   // The `?debug=1` overlay: frame time, draw calls, triangles and chunks waiting (§12).
@@ -37,6 +89,53 @@ export class MapView3D implements MapRenderer {
   #frameTime = 0;
   // Where the map was centred when the chunks waiting were last put in order, as `u,v`.
   #focused = '';
+  // The camera now, the one it's gliding to, if it is, and the height it looks at, following the land's.
+  #orbit: Orbit;
+  #glide: { from: Orbit; to: Orbit; started: number | null } | null = null;
+  #lookHeight: number | null = null;
+  // The mouse, the wheel and touch moving the camera; and where its distance is kept, and what was kept last.
+  #input: CameraInput;
+  #distance: MapView3DDeps['cameraDistance'];
+  #keptDistance: number;
+  // The wait to keep a distance, and the distance it's waiting to keep.
+  #keeping: ReturnType<typeof setTimeout> | null = null;
+  #waitingToKeep: number | null = null;
+  // Whether the camera stops at the poles, as it starts: the portal's after that, which the options can change.
+  #lockAtStart: boolean;
+  // Whether the camera has been centred on anything yet: the first time, it's put there at once.
+  #centred = false;
+  // What a square does when clicked or held, the page's; and a square being chosen for a long-range order, if one is.
+  #squares: MapView3DDeps['squares'];
+  // How the page words markers: cities' names.
+  #words: MarkerWords;
+  #transport: MapView3DDeps['transport'];
+  #picking: Picking | null = null;
+  // The square the mouse rests on, waiting to show its tooltip or showing it, and whose tooltips they'd be.
+  #hover: Hover | null = null;
+  #playerId: string;
+  #endHover = (): void => {
+    const hover = this.#hover;
+
+    if (hover === null) {
+      return;
+    }
+
+    if (hover.timer !== null) {
+      window.clearTimeout(hover.timer);
+    }
+
+    this.#hover = null;
+    document.removeEventListener('keydown', this.#endHover, true);
+
+    if (hover.open) {
+      this.#squares.endTooltip(this.#canvas);
+    }
+  };
+  // The minimap's overview, if there's a minimap, and whether the squares have changed since it was drawn.
+  #minimap: Minimap3D | null = null;
+  #minimapStale = true;
+  // The squares marked now, by `x,y`, each with what it was marked with, so a square marked the same is left alone.
+  #marked = new Map<string, string>();
   // A frame asked for to draw in, if one is.
   #frame: number | null = null;
   // Keyed by the square, as the 2D map's: a tile waits in `#incomingTiles` until the world has it (`releaseTiles`).
@@ -61,17 +160,50 @@ export class MapView3D implements MapRenderer {
 
   constructor(deps: MapView3DDeps, stageFactory: StageFactory = createStage) {
     this.#canvas = deps.mapCanvas;
+    this.#coveredBy = deps.coveredBy;
     this.#art = deps.art;
+    this.#words = { cityName: deps.cityName };
     this.#artId = deps.art.id();
     this.world = deps.world;
-    this.portal = new MapPortal3D(deps, () => this.#draw());
     this.#land = new Land(deps.world);
     // Read just now, by the land.
     this.#worldTiles = deps.world.tiles();
     this.#worldTileCount = this.#worldTiles.length;
-    this.#stage = stageFactory(deps.mapCanvas, {
-      copies: this.#land.copies(SIGHT),
+    this.#distance = deps.cameraDistance;
+    this.#lockAtStart = deps.lockVerticalEdges;
+
+    const kept = deps.cameraDistance.get();
+
+    // The distance the player last chose, kept within the camera's range; and kept as it is, so it's saved again only
+    //  once the player changes it.
+    this.#orbit = this.#settle({
+      ...defaultOrbit(this.#land.layout.centre(0, 0)),
+      ...(kept === null ? {} : { distance: kept }),
     });
+    this.#keptDistance = this.#orbit.distance;
+    this.portal = new MapPortal3D(deps, {
+      centre: () => this.#centreSquare(),
+      centreOn: (x, y) => this.#centreOn(x, y),
+      changed: () => this.#draw(),
+      visible: (x, y, margin) => this.#visible(x, y, margin),
+    });
+
+    this.#stage = stageFactory(deps.mapCanvas, {
+      period: this.#land.layout.period(),
+      ground: this.#land.ground(),
+    });
+
+    // After the stage: one that can't be made leaves no minimap behind it.
+    if (deps.minimapCanvas !== null) {
+      this.#minimap = new Minimap3D(
+        deps.minimapCanvas,
+        this.#land.layout,
+        deps.world,
+        this.#land.extentV(),
+        (u, v) =>
+          this.#moveTo({ ...(this.#glide?.to ?? this.#orbit), focus: [u, v] })
+      );
+    }
 
     if (deps.debug && deps.mapCanvas.parentElement) {
       this.#stats = this.#statsOverlay(deps.mapCanvas.parentElement);
@@ -80,8 +212,29 @@ export class MapView3D implements MapRenderer {
     }
 
     this.#land.queueAll(...this.#focus());
+    this.#markAll();
 
     this.portal.on('activate-unit', (unit) => deps.activateUnit(unit));
+
+    this.#squares = deps.squares;
+    this.#playerId = deps.playerId;
+    this.#transport = deps.transport;
+    this.#input = new CameraInput(
+      deps.mapCanvas,
+      {
+        orbit: () => this.#orbit,
+        lookHeight: () => this.#lookHeight ?? 0,
+        setOrbit: (orbit) => this.setOrbit(orbit),
+      },
+      {
+        click: (x, y) => this.#clicked(x, y),
+        menu: (x, y, clientX, clientY, pressed) =>
+          this.#menu(x, y, clientX, clientY, pressed),
+        menuOnRightClick: () => this.#squares.menuOnRightClick(),
+        menuOpen: () => this.#squares.menuOpen(),
+        hover: (at) => this.#hovered(at),
+      }
+    );
 
     window.addEventListener('resize', this.#resizeHandler);
 
@@ -102,6 +255,27 @@ export class MapView3D implements MapRenderer {
     return this.#land;
   }
 
+  /** The camera now, for the `?debug=1` console and the tests. */
+  orbit(): Orbit {
+    return this.#orbit;
+  }
+
+  /**
+   * Whether the camera's on its way somewhere: gliding to a square, or being dragged, pinched or flicked. The debug page
+   *  follows it once it's still.
+   */
+  moving(): boolean {
+    return this.#glide !== null || this.#input.moving();
+  }
+
+  /** The camera put where it's asked, at once, for the `?debug=1` console. */
+  setOrbit(orbit: Orbit): void {
+    this.#endHover();
+    this.#glide = null;
+    this.#orbit = this.#settle(orbit);
+    this.#draw();
+  }
+
   /** The unit active now, and where it's drawn while its move is answered. */
   activeUnit(): { unit: Unit | null; pendingTile: Coordinate | null } {
     return { unit: this.#activeUnit, pendingTile: this.#pendingTile };
@@ -111,13 +285,29 @@ export class MapView3D implements MapRenderer {
     this.portal.setCenter(tile.x, tile.y);
   }
 
+  /** Turns the view `steps` eighths of a turn: clockwise seen from above, or the other way for fewer than none. */
+  turnBy(steps: number): void {
+    const target = this.#glide?.to ?? this.#orbit;
+
+    this.#moveTo({ ...target, yaw: target.yaw + steps * TURN_STEP });
+  }
+
+  /** Turns the view to look north, the short way round. */
+  faceNorth(): void {
+    this.#moveTo({ ...(this.#glide?.to ?? this.#orbit), yaw: 0 });
+  }
+
   /** Nothing to flip yet: the stress runner's view modes are the 2D map's layers. */
   debugViewModes(): (() => void)[] {
     return [];
   }
 
   dispose(): void {
+    this.#keepDistance(true);
     this.#disposed = true;
+    this.#endHover();
+    this.#input.dispose();
+    this.#minimap?.dispose();
     window.removeEventListener('resize', this.#resizeHandler);
     this.#resizeObserver?.disconnect();
 
@@ -137,7 +327,18 @@ export class MapView3D implements MapRenderer {
     }
   }
 
-  endPicking(): void {}
+  /** Gives up choosing a square, if one is being chosen: its window goes, and a click is a click again. */
+  endPicking(): void {
+    const picking = this.#picking;
+
+    if (picking === null) {
+      return;
+    }
+
+    this.#picking = null;
+    this.#canvas.classList.remove('picking-tile');
+    picking.window?.close();
+  }
 
   /** The tiles released so far are taken, the land they change queued to be built again, and the map drawn. */
   flush(): void {
@@ -150,20 +351,57 @@ export class MapView3D implements MapRenderer {
     void event;
   }
 
-  /** Nothing floats over anything to keep the active unit out from under yet (slice 1.2). */
-  measureCovered(): void {}
+  /**
+   * Measures again what floats over the map (the sidebar's sections, #697), for the active unit to be kept out from
+   *  under it: each cut to its container's box, as the sidebar scrolls what doesn't fit, and to the canvas's.
+   */
+  measureCovered(): void {
+    const canvas = this.#canvas.getBoundingClientRect();
 
-  /** No square can be picked yet (slice 1.3): the order is given up, as if the player had. */
+    this.#covered = this.#coveredBy
+      .map((element) => {
+        const box = element.getBoundingClientRect(),
+          container = element.parentElement?.getBoundingClientRect() ?? box;
+
+        return {
+          left: Math.max(box.left, container.left, canvas.left) - canvas.left,
+          top: Math.max(box.top, container.top, canvas.top) - canvas.top,
+          right:
+            Math.min(box.right, container.right, canvas.right) - canvas.left,
+          bottom:
+            Math.min(box.bottom, container.bottom, canvas.bottom) - canvas.top,
+        };
+      })
+      .filter(({ left, top, right, bottom }) => right > left && bottom > top);
+  }
+
+  /**
+   * Takes the next click on a square `accept` allows for `onPick` (a long-range order's target, M2b), instead of what a
+   *  click does: a window says what for (`prompt`), and closing it, or Escape, gives up. A click on any other square
+   *  does nothing. The map's cursor is a crosshair meanwhile, as on the 2D map. Choosing again gives up the last.
+   */
   pickTile(
     accept: (tile: Tile) => boolean,
     onPick: (tile: Tile) => void,
     prompt: string
   ): void {
-    void [accept, onPick, prompt];
+    this.endPicking();
+
+    const picking: Picking = { accept, onPick, window: null };
+
+    this.#picking = picking;
+    this.#canvas.classList.add('picking-tile');
+    picking.window = this.#squares.prompt(prompt, () => {
+      if (this.#picking === picking) {
+        this.#picking = null;
+        this.#canvas.classList.remove('picking-tile');
+      }
+    });
   }
 
+  /** Whether a square is being chosen for a long-range order. */
   picking(): boolean {
-    return false;
+    return this.#picking !== null;
   }
 
   queueTile(tile: Tile): void {
@@ -198,13 +436,28 @@ export class MapView3D implements MapRenderer {
     }
   }
 
+  /** Marks `unit` as the one awaiting orders, and the one before as not. */
   setActiveUnit(unit: Unit | null, pendingTile?: Coordinate | null): void {
+    const before = this.#activeUnit?.tile;
+
     this.#activeUnit = unit;
     this.#pendingTile = pendingTile ?? null;
+
+    [before, unit?.tile].forEach((tile) => {
+      if (tile) {
+        this.#mark(tile.x, tile.y);
+      }
+    });
+    this.#draw();
   }
 
+  /** While the other players move, no tooltip opens, and any open one goes, as on the 2D map. */
   setWaiting(waiting: boolean): void {
     this.#waiting = waiting;
+
+    if (waiting) {
+      this.#endHover();
+    }
   }
 
   /**
@@ -214,7 +467,11 @@ export class MapView3D implements MapRenderer {
   showActiveUnit(changed: Tile[]): void {
     void changed;
 
-    this.#unitsShown = true;
+    if (!this.#unitsShown) {
+      this.#unitsShown = true;
+      this.#markAll();
+      this.#draw();
+    }
   }
 
   /** Whether the units, the yields, and waiting for the next turn are shown, as asked. */
@@ -230,29 +487,400 @@ export class MapView3D implements MapRenderer {
     return this.#tilesToDraw.size;
   }
 
+  /** Hides the units, cities and their names, but the unit awaiting orders, or shows them again (`t`). */
   toggleUnits(): void {
     this.#unitsShown = !this.#unitsShown;
+    this.#markAll();
+    this.#draw();
   }
 
   toggleYields(): void {
     this.#yieldsShown = !this.#yieldsShown;
   }
 
-  /** The camera's zoom is slice 1.2's. */
+  /** Brings the camera `steps` nearer, or further away for fewer than none, about the point it looks at. */
   zoomBy(steps: number): void {
-    void steps;
+    this.#endHover();
+    this.#orbit = zoomed(this.#orbit, steps);
+
+    // Both ends of a glide, so it carries on at the new distance rather than easing back to the old one.
+    if (this.#glide !== null) {
+      this.#glide.from = zoomed(this.#glide.from, steps);
+      this.#glide.to = zoomed(this.#glide.to, steps);
+    }
+
+    this.#draw();
   }
 
-  // The square the map is centred on, on the ground.
+  // Whether the square at (`x`, `y`) is on the screen: its middle, at its copy nearest the camera, `margin` squares and
+  //  half a square in from the screen's edges, as big as a square is there, and not under what floats over the map.
+  //  Mid-glide, where the camera's going: the game asks so as to know whether to move it there again.
+  #visible(x: number, y: number, margin: number): boolean {
+    const width = this.#canvas.clientWidth,
+      height = this.#canvas.clientHeight;
+
+    // Not laid out yet: nothing can be seen.
+    if (width <= 0 || height <= 0) {
+      return false;
+    }
+
+    const orbit = this.#glide?.to ?? this.#orbit,
+      [u, v] = this.#land.layout.centre(x, y),
+      { u: periodU, v: periodV } = this.#period(),
+      [focusU, focusV] = orbit.focus,
+      nearest = (value: number, focus: number, period: number | null) =>
+        period === null
+          ? value
+          : value + period * Math.round((focus - value) / period),
+      at: [number, number, number] = [
+        nearest(u, focusU, periodU),
+        Math.max(0, this.#land.heightAt(u, v)),
+        nearest(v, focusV, periodV),
+      ],
+      aspect = width / height,
+      look = this.#lookHeight ?? 0,
+      middle = toScreen(orbit, look, at, aspect),
+      // A square's width there, along the screen.
+      beside = toScreen(
+        orbit,
+        look,
+        [at[0] + Math.cos(orbit.yaw), at[1], at[2] + Math.sin(orbit.yaw)],
+        aspect
+      );
+
+    if (middle === null || beside === null) {
+      return false;
+    }
+
+    const px = ((middle[0] + 1) / 2) * width,
+      py = ((1 - middle[1]) / 2) * height,
+      square = Math.abs(beside[0] - middle[0]) * (width / 2),
+      inset = (margin + 0.5) * square;
+
+    return (
+      px >= inset &&
+      px <= width - inset &&
+      py >= inset &&
+      py <= height - inset &&
+      !this.#covered.some(
+        ({ left, top, right, bottom }) =>
+          px >= left - square / 2 &&
+          px <= right + square / 2 &&
+          py >= top - square / 2 &&
+          py <= bottom + square / 2
+      )
+    );
+  }
+
+  // The square under (`x`, `y`) in the canvas's px: what's shown there, the land or the water over it, on the world.
+  //  Nothing above the horizon, or past a pole the world doesn't wrap over.
+  #tileAt(x: number, y: number): Tile | null {
+    const width = this.#canvas.clientWidth,
+      height = this.#canvas.clientHeight;
+
+    if (width <= 0 || height <= 0) {
+      return null;
+    }
+
+    const ground = pickGround(
+      this.#orbit,
+      this.#lookHeight ?? 0,
+      [(x / width) * 2 - 1, 1 - (y / height) * 2],
+      width / height,
+      (u, v) => this.#land.heightAt(u, v)
+    );
+
+    if (ground === null) {
+      return null;
+    }
+
+    const [tileX, tileY] = this.#land.layout.tileAt(...ground),
+      worldWidth = this.world.width(),
+      worldHeight = this.world.height(),
+      wrapsY = this.#period().v !== null;
+
+    if (!wrapsY && (tileY < 0 || tileY >= worldHeight)) {
+      return null;
+    }
+
+    return this.world.get(
+      ((tileX % worldWidth) + worldWidth) % worldWidth,
+      ((tileY % worldHeight) + worldHeight) % worldHeight
+    );
+  }
+
+  // A click on the map: for the square being chosen, if one is, or else what a click does, as on the 2D map.
+  #clicked(x: number, y: number): void {
+    const tile = this.#tileAt(x, y);
+
+    if (tile !== null) {
+      this.portal.emit('tile-clicked', tile.x, tile.y);
+    }
+
+    const picking = this.#picking;
+
+    if (picking !== null) {
+      if (tile !== null && picking.accept(tile)) {
+        this.endPicking();
+        picking.onPick(tile);
+      }
+
+      return;
+    }
+
+    if (tile !== null) {
+      this.#squares.click(this.portal, tile);
+    }
+  }
+
+  // A press held, or a right-click: the active unit's menu for the square, if there is an active unit. Choosing a
+  //  square ends, as the menu is another way to give the unit orders.
+  #menu(
+    x: number,
+    y: number,
+    clientX: number,
+    clientY: number,
+    pressed: boolean
+  ): boolean {
+    const unit = this.#activeUnit,
+      tile = this.#tileAt(x, y);
+
+    if (unit === null || tile === null) {
+      return false;
+    }
+
+    this.endPicking();
+    this.#squares.menu(
+      this.portal,
+      clientX,
+      clientY,
+      unit,
+      tile,
+      this.#transport,
+      pressed
+    );
+
+    return true;
+  }
+
+  // The mouse rests at a point on the canvas, or has left it (`null`): the square under it's tooltip opens after a moment,
+  //  if the interface has one for it. Not while the other players move, or over a menu.
+  #hovered(
+    at: { x: number; y: number; clientX: number; clientY: number } | null
+  ): void {
+    const tile =
+        at === null || this.#waiting || this.#squares.menuOpen()
+          ? null
+          : this.#tileAt(at.x, at.y),
+      current = this.#hover;
+
+    if (tile === null || at === null) {
+      this.#endHover();
+
+      return;
+    }
+
+    const key = `${tile.x},${tile.y}`;
+
+    // Still the same square: wait on, or leave it open.
+    if (current !== null && current.key === key) {
+      Object.assign(current, {
+        canvasX: at.x,
+        canvasY: at.y,
+        clientX: at.clientX,
+        clientY: at.clientY,
+      });
+
+      return;
+    }
+
+    this.#endHover();
+
+    const hover: Hover = {
+      key,
+      x: tile.x,
+      y: tile.y,
+      canvasX: at.x,
+      canvasY: at.y,
+      clientX: at.clientX,
+      clientY: at.clientY,
+      timer: null,
+      open: false,
+    };
+
+    hover.timer = window.setTimeout(() => {
+      hover.timer = null;
+      this.#showHover(hover);
+    }, HOVER_DELAY);
+    this.#hover = hover;
+
+    // A key, while it waits or once it's open: it may move the map, or open a window over it.
+    document.addEventListener('keydown', this.#endHover, true);
+  }
+
+  // The tooltip for the square the mouse rests on, as it is now, over the mouse: or none, if a window has opened over
+  //  the map since, or the square under the mouse is another now, or it has nothing to say any more.
+  #showHover(hover: Hover): void {
+    const over =
+        typeof document.elementFromPoint !== 'function' ||
+        document.elementFromPoint(hover.clientX, hover.clientY) ===
+          this.#canvas,
+      under = over ? this.#tileAt(hover.canvasX, hover.canvasY) : null;
+
+    if (under === null || `${under.x},${under.y}` !== hover.key) {
+      this.#endHover();
+
+      return;
+    }
+
+    const opened = this.#squares.tooltip(this.#canvas, under, this.#playerId, {
+      left: hover.clientX - 10,
+      top: hover.clientY - 10,
+      bottom: hover.clientY + 10,
+    });
+
+    // Open before, with nothing to say now: it goes.
+    if (!opened && hover.open) {
+      this.#squares.endTooltip(this.#canvas);
+    }
+
+    hover.open = opened;
+  }
+
+  // The point on the ground the camera looks at.
   #focus(): [number, number] {
-    const { x, y } = this.portal.center();
-
-    return [...this.#land.layout.centre(x, y)];
+    return [...this.#orbit.focus];
   }
 
-  // The tiles released, their squares' land queued to be built again. The world's terrain is read again even with
-  //  none released when its tiles have been replaced, as a whole new world may have none: not otherwise, as reading
-  //  it all takes milliseconds.
+  // The square the camera looks at, on the world: past a pole the camera stops at, the row at that pole, not the far
+  //  one's.
+  #centreSquare(): Coordinate {
+    const [x, y] = this.#land.layout.tileAt(...this.#orbit.focus),
+      width = this.world.width(),
+      height = this.world.height();
+
+    return {
+      x: ((x % width) + width) % width,
+      y:
+        this.#period().v === null
+          ? Math.min(height - 1, Math.max(0, y))
+          : ((y % height) + height) % height,
+    };
+  }
+
+  // Glides the camera to look at the middle of the square at (`x`, `y`), unless it's there already.
+  #centreOn(x: number, y: number): void {
+    const [u, v] = this.#land.layout.centre(x, y),
+      [toU, toV] = (this.#glide?.to ?? this.#orbit).focus;
+
+    if (u === toU && v === toV) {
+      return;
+    }
+
+    const target: Orbit = {
+        ...(this.#glide?.to ?? this.#orbit),
+        focus: [u, v],
+      },
+      { u: periodU, v: periodV } = this.#period(),
+      short = (delta: number, period: number | null): number =>
+        period === null ? delta : delta - period * Math.round(delta / period),
+      [fromU, fromV] = this.#orbit.focus,
+      away = Math.hypot(short(u - fromU, periodU), short(v - fromV, periodV));
+
+    // The first time, as a game starts or loads, and anywhere further than the camera sees round its focus: there at
+    //  once, rather than gliding over the world.
+    if (!this.#centred || away > this.#orbit.distance * 1.5) {
+      this.#centred = true;
+      this.setOrbit(target);
+
+      return;
+    }
+
+    this.#moveTo(target);
+  }
+
+  // The camera kept on the world, round its period, or within its rows where it doesn't wrap over the poles or the
+  //  player stops it at them; and its pitch and distance within their ranges.
+  #settle(orbit: Orbit): Orbit {
+    return settled(clampOrbit(orbit), this.#period(), this.#land.extentV());
+  }
+
+  // How far along the world repeats as the camera goes round it: across, and down unless it doesn't wrap over the poles
+  //  or the player stops the camera at them (`lockVerticalEdges`).
+  #period(): { u: number; v: number | null } {
+    const period = this.#land.layout.period(),
+      // Before the portal's made, as the view starts, as it started.
+      locked = this.portal?.lockVerticalEdges() ?? this.#lockAtStart;
+
+    return locked ? { u: period.u, v: null } : period;
+  }
+
+  // The camera glides to `target`, or is put there at once where there are no frames to glide over, or the player
+  //  has asked for less motion.
+  #moveTo(target: Orbit): void {
+    // The square under the mouse is about to move away.
+    this.#endHover();
+
+    if (typeof requestAnimationFrame !== 'function' || prefersReducedMotion()) {
+      this.#glide = null;
+      this.#orbit = this.#settle(target);
+    } else {
+      this.#glide = { from: this.#orbit, to: target, started: null };
+    }
+
+    this.#draw();
+  }
+
+  // The camera this frame: part of the way along a glide, if there is one. Whether it's still moving.
+  #moveCamera(now: number): boolean {
+    const glide = this.#glide;
+
+    if (glide === null) {
+      return false;
+    }
+
+    glide.started ??= now;
+
+    const t = Math.min(1, (now - glide.started) / GLIDE);
+
+    this.#orbit = this.#settle(
+      between(glide.from, glide.to, t, this.#period())
+    );
+
+    if (t >= 1) {
+      this.#glide = null;
+    }
+
+    return t < 1;
+  }
+
+  // The height the camera looks at: following the land's under the focus, no lower than the sea's surface, part of
+  //  the way each frame where there are frames. Whether it's still moving.
+  #followHeight(eased: boolean): boolean {
+    const [u, v] = this.#orbit.focus,
+      target = Math.max(0, this.#land.heightAt(u, v));
+
+    if (!eased || this.#lookHeight === null || prefersReducedMotion()) {
+      this.#lookHeight = target;
+
+      return false;
+    }
+
+    this.#lookHeight += (target - this.#lookHeight) * HEIGHT_EASE;
+
+    if (Math.abs(target - this.#lookHeight) < 0.002) {
+      this.#lookHeight = target;
+
+      return false;
+    }
+
+    return true;
+  }
+
+  // The tiles released: the land round any whose terrain changed queued to be built again, and each marked again. The
+  //  world's terrain is read again even with none released when its tiles have been replaced, as a whole new world
+  //  may have none, and every square marked before is marked again: not otherwise, as reading it all takes
+  //  milliseconds.
   #takeTiles(): void {
     const squares = [...this.#tilesToDraw.values()].map(
         ({ x, y }): [number, number] => [x, y]
@@ -265,6 +893,73 @@ export class MapView3D implements MapRenderer {
     this.#worldTileCount = tiles.length;
     this.#tilesToDraw.clear();
     this.#land.changed(squares, ...this.#focus(), replaced);
+    squares.forEach(([x, y]) => this.#mark(x, y));
+
+    // The square an open tooltip is about has changed: it says what's there now.
+    const hover = this.#hover;
+
+    if (
+      hover !== null &&
+      hover.open &&
+      squares.some(([x, y]) => x === hover.x && y === hover.y)
+    ) {
+      this.#showHover(hover);
+    }
+
+    if (squares.length > 0 || replaced) {
+      this.#minimapStale = true;
+    }
+
+    if (replaced) {
+      this.#marked.forEach((_, key) => {
+        const [x, y] = key.split(',').map(Number) as [number, number];
+
+        this.#mark(x, y);
+      });
+    }
+  }
+
+  // What's on the square at (`x`, `y`), marked on the land at its middle, or nothing.
+  #mark(x: number, y: number): void {
+    const key = `${x},${y}`,
+      marker = markerFor(
+        this.world.get(x, y),
+        this.#activeUnit?.id ?? null,
+        this.#unitsShown,
+        this.#words
+      );
+
+    const [u, v] = this.#land.layout.centre(x, y),
+      at: [number, number, number] = [
+        u,
+        Math.max(0, this.#land.heightAt(u, v)),
+        v,
+      ],
+      signature = marker === null ? null : JSON.stringify([marker, at]);
+
+    if (signature === (this.#marked.get(key) ?? null)) {
+      return;
+    }
+
+    this.#stage.setMarker(key, at, marker);
+
+    if (signature === null) {
+      this.#marked.delete(key);
+    } else {
+      this.#marked.set(key, signature);
+    }
+  }
+
+  // Every square the world has, and every one marked before.
+  #markAll(): void {
+    const squares = new Set(this.#marked.keys());
+
+    this.world.tiles().forEach(({ x, y }) => squares.add(`${x},${y}`));
+    squares.forEach((key) => {
+      const [x, y] = key.split(',').map(Number) as [number, number];
+
+      this.#mark(x, y);
+    });
   }
 
   // A frame: the tiles released taken, as many chunks built as the budget allows (every one, where there are no
@@ -272,6 +967,7 @@ export class MapView3D implements MapRenderer {
   //  is asked for while chunks wait.
   #frameDrawn(budget: number | null): void {
     const started = performance.now(),
+      moving = this.#moveCamera(started),
       [u, v] = this.#focus();
 
     this.#takeTiles();
@@ -283,15 +979,125 @@ export class MapView3D implements MapRenderer {
     }
 
     this.#land.build(this.#stage, budget);
-    // Over the sea, at the sea's surface.
-    this.#stage.lookAt(u, v, Math.max(0, this.#land.heightAt(u, v)));
+
+    const rising = this.#followHeight(budget !== null);
+
+    this.#stage.view(this.#orbit, this.#lookHeight ?? 0);
     this.#stage.render();
+    this.#showMinimap();
+    this.#keepDistance();
     this.#frameTime = performance.now() - started;
     this.#showStats();
 
-    if (this.#land.pending() > 0) {
+    if (this.#land.pending() > 0 || moving || rising) {
       this.#draw();
     }
+  }
+
+  // The minimap: its overview drawn again if the squares have changed, and the ground the camera sees over it.
+  #showMinimap(): void {
+    const minimap = this.#minimap;
+
+    if (minimap === null) {
+      return;
+    }
+
+    if (this.#minimapStale) {
+      this.#minimapStale = false;
+      minimap.redraw();
+    }
+
+    const active = this.#activeUnit?.tile ?? null;
+
+    minimap.show(
+      this.#patch(),
+      active === null ? null : { x: active.x, y: active.y }
+    );
+  }
+
+  // The ground the camera sees, as the corners of the screen meet it, at the height it looks at: where a corner is
+  //  above the horizon, as far as the haze lets it see along that edge.
+  #patch(): [number, number][] | null {
+    const width = this.#canvas.clientWidth,
+      height = this.#canvas.clientHeight;
+
+    if (width <= 0 || height <= 0) {
+      return null;
+    }
+
+    const aspect = width / height,
+      look = this.#lookHeight ?? 0,
+      far = sightFor(this.#orbit.distance).far,
+      [focusU, focusV] = this.#orbit.focus,
+      corner = (x: number, y: number): [number, number] | null => {
+        // Down the edge from the corner until it meets the ground.
+        for (let along = y; along >= -1; along -= 0.05) {
+          const ground = groundAt(this.#orbit, look, [x, along], aspect);
+
+          if (ground !== null) {
+            const reach = Math.hypot(ground[0] - focusU, ground[1] - focusV),
+              cut = reach > far ? far / reach : 1;
+
+            return [
+              focusU + (ground[0] - focusU) * cut,
+              focusV + (ground[1] - focusV) * cut,
+            ];
+          }
+        }
+
+        return null;
+      },
+      corners = [corner(-1, -1), corner(1, -1), corner(1, 1), corner(-1, 1)];
+
+    return corners.every((point) => point !== null)
+      ? (corners as [number, number][])
+      : null;
+  }
+
+  // The camera's distance kept when it's changed, once it's stayed the same for a moment: not mid-glide, which only
+  //  passes through, nor every frame of a pinch or a zoom. Taken down, the distance it was at or gliding to is kept at
+  //  once.
+  #keepDistance(now = false): void {
+    const distance = (now ? this.#glide?.to ?? this.#orbit : this.#orbit)
+        .distance,
+      stop = (): void => {
+        if (this.#keeping !== null) {
+          clearTimeout(this.#keeping);
+        }
+
+        this.#keeping = null;
+        this.#waitingToKeep = null;
+      },
+      keep = (): void => {
+        stop();
+        this.#keptDistance = distance;
+        this.#distance.set(distance);
+      };
+
+    if (now) {
+      stop();
+
+      if (distance !== this.#keptDistance) {
+        keep();
+      }
+
+      return;
+    }
+
+    if (this.#glide !== null || distance === this.#keptDistance) {
+      stop();
+
+      return;
+    }
+
+    // Already waiting to keep this one: frames drawn meanwhile don't put it off.
+    if (this.#keeping !== null && distance === this.#waitingToKeep) {
+      return;
+    }
+
+    stop();
+    this.#waitingToKeep = distance;
+    this.#keeping = setTimeout(keep, KEEP_DISTANCE_AFTER);
   }
 
   // Drawn on the next frame, once however often it's asked for in one.
@@ -371,6 +1177,8 @@ export class MapView3D implements MapRenderer {
 
     this.#size = size;
     this.#stage.resize(width, height, ratio);
+    // What floats over the map sits elsewhere over it now.
+    this.measureCovered();
     this.#stage.render();
   }
 }

@@ -342,7 +342,8 @@ As built in slice 0.2:
 - **Tests** (`tests/ui/map3d.ts`):
   - one bundles `map3d.js` and fails if it takes in anything from the other packages but the factory's name;
   - another fails if anything outside `packages/map-3d` imports three.js or that package.
-- **Until later slices:** the minimap stays empty (1.5), and a long-range order's square can't be picked (1.3).
+- **Since:** the minimap shows the 3D map's own overview (1.5), and a long-range order's square is picked on the 3D map
+  (1.3).
 - **Sizes**, minified: `map3d.js` is 556 KB (140 KB gzipped), and `frontend.js` grew by 1.7 KB (0.8 KB gzipped).
 
 ---
@@ -435,6 +436,11 @@ blended across squares.
   - A peak keeps 65% of its height out of the blend, weighted by the square of its weight. The rest is blended.
   - The sea's floor is −0.03 beside land, falling to −0.15 three squares out. The walk goes no further.
   - The noise is gradient noise (Perlin's): value noise showed its lattice as lines across the sea.
+  - Each peak stands off its square's middle by up to 0.22 either way, and is 0.75 to 1.25 times its terrain's height,
+    both seeded from the square, so a range of mountains isn't a grid of cones (`peakOf`).
+  - A point's colour is blended more sharply than its height (each square's weight cubed), from a point moved by noise
+    up to 0.22 either way (0.31 at most), so terrains' edges wander rather than run along the squares' edges. This makes the land about
+    twice as slow to build: 750 ms for an 80×50 world. Spreading a chunk over frames is for M6.
 
 ### 4.2 The mesh
 
@@ -805,6 +811,12 @@ mapEvent:
 - **The sidebar:** squares under the sidebar (`setCovered`) count as off screen, so the active unit is kept clear of it,
   as on the 2D map.
 
+- **As built (slice 1.2):** `packages/map-3d/camera/orbit.ts`, and `CameraInput.ts` for the mouse, the wheel and touch. The distance runs from 5 to 90 world units,
+  24 by default, and a step of zoom brings the camera 1.12 times nearer. The haze starts at 1.2 times the distance and
+  hides everything by 3.5 times it. The keys are `[` and `]` to turn an eighth of a turn and `\` to face north: none is a
+  unit's order or one the numeric keypad sends (`mappedKey`). Two fingers on a touch screen also tilt the view by
+  moving up or down together. The distance is kept in the `map3dDistance` option.
+
 ### 9.2 Picking
 
 - **A square:** a ray from the pointer meets what's shown there: the land, or the water's surface where the land is
@@ -931,8 +943,9 @@ CI has no GPU, so the logic is kept apart from the drawing and tested headless:
     yaw and pitch, the water's surface where the land is below it;
   - the minimap's four-sided view outline is right.
 - **Map events:** a worker-client suite, like the battle sound's. A move the player can't see sends nothing.
-- **What's drawn:** a debug page (`?3d=1&debug=1`) with fixed seeds and saved camera positions, for screenshots in a
-  browser at each slice. It also has a stats overlay (frame time, draw calls, triangles, GPU memory). Pixel
+- **What's drawn:** a debug page (`dist/map3d-debug.html`, plan 1.1b) that draws a seeded, made-up world on any grid,
+  for screenshots in a browser at each slice, with the place it looks at kept in its address. Under `?debug=1`, a game
+  under `?3d=1` and the debug page have a stats overlay (frame time, draw calls, triangles, chunks waiting). Pixel
   comparisons can come later, if CI gets a software GPU.
 
 ---

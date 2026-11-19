@@ -1,6 +1,6 @@
 // The land on the 3D map (docs/3d-renderer.md §4): the world's layout, its relief, and its chunks, built a few at a
-//  time and handed to the stage that draws them. The nearest to where the map is centred are built first, so the land under the camera
-//  is there at once and the rest follows over the next frames.
+//  time and handed to the stage that draws them. The nearest to where the map is centred are built first, so the land
+//  under the camera is there at once and the rest follows over the next frames.
 //
 // A tile patch reads the world's terrain again, and builds again only the chunks round the squares whose terrain it
 //  changed: as far as the kernel reaches from each, and from each square of sea whose floor it moved. Most patches
@@ -8,9 +8,10 @@
 
 import groundLayoutFor, { GroundLayout } from './layouts';
 import { REACH } from './terrain/kernel';
-import createRelief, { ReliefMap } from './terrain/relief';
+import createRelief, { ReliefMap, WANDER } from './terrain/relief';
 import { ChunkGrid, buildChunk, chunkGrid, chunksNear } from './terrain/chunks';
 import { Stage } from './stage';
+import { Ground } from './water';
 import World from '@civ-clone/ui-map/components/World';
 import { seaFloor } from '@civ-clone/ui-models-builtin/terrain';
 
@@ -70,36 +71,27 @@ export class Land {
           })
       );
 
-    this.#reach = REACH + corner + (seaFloor.reach - 1) * step;
+    // And as far again as a peak or a colour wanders from its square's middle.
+    this.#reach =
+      REACH + corner + WANDER * Math.SQRT2 + (seaFloor.reach - 1) * step;
   }
 
-  /**
-   * Where the world's copies lie, as offsets: itself, and as many more a period away each way it wraps as the camera
-   *  can see `sight` across from anywhere on it, so a small world doesn't end inside the view.
-   */
-  copies(sight: number): [number, number][] {
-    const { u, v } = this.layout.period(),
-      along = (period: number | null): number[] => {
-        if (period === null) {
-          return [0];
-        }
+  /** How the land's points lie on the ground, for the sea's surface to read their heights (`water.ts`). */
+  ground(): Ground {
+    const { chunksU, chunksV, stepsU, stepsV, spacingU, spacingV } = this.#grid;
 
-        const offsets: number[] = [];
+    return {
+      columns: chunksU * stepsU,
+      rows: chunksV * stepsV,
+      spacingU,
+      spacingV,
+      wrapsV: this.layout.period().v !== null,
+    };
+  }
 
-        for (
-          let k = Math.floor(-sight / period);
-          k <= Math.floor((period + sight) / period);
-          k++
-        ) {
-          offsets.push(k * period);
-        }
-
-        return offsets;
-      };
-
-    return along(u).flatMap((across) =>
-      along(v).map((offset): [number, number] => [across, offset])
-    );
+  /** How far the ground runs down: its period where it wraps over the poles, or to its last row's bottom. */
+  extentV(): number {
+    return this.#grid.chunksV * this.#grid.stepsV * this.#grid.spacingV;
   }
 
   /** The land's height at a point on the ground. */
@@ -135,7 +127,8 @@ export class Land {
       return;
     }
 
-    const terrain = this.#relief.refresh();
+    // The squares released alone, unless the world itself may have been replaced.
+    const terrain = this.#relief.refresh(always ? undefined : squares);
 
     if (terrain.length === 0) {
       return;

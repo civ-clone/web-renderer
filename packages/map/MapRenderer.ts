@@ -26,6 +26,8 @@ export interface MapRenderer {
   dispose(): void;
   /** Gives up choosing a square, if one is being chosen. */
   endPicking(): void;
+  /** Turns the view to look north, the short way round: only a map that turns does anything. */
+  faceNorth(): void;
   /** Builds the tiles released so far, and draws the map. */
   flush(): void;
   /** A move or a battle the player sees, as it happens, before the patches that show where things are after it. */
@@ -71,6 +73,11 @@ export interface MapRenderer {
   tilesPending(): number;
   /** Shows or hides the units, cities and city names (`t`). */
   toggleUnits(): void;
+  /**
+   * Turns the view `steps` eighths of a turn, clockwise seen from above, or the other way for fewer than none: only a
+   *  map that turns does anything.
+   */
+  turnBy(steps: number): void;
   /** Shows or hides the yields (`y`). */
   toggleYields(): void;
   /** Zooms in `steps` tenths, or out where it's less than none, about the middle. */

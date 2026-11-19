@@ -26,7 +26,13 @@ import {
   zoomFor,
   zoomOption,
 } from '@civ-clone/ui-assets/lib/tilesets';
+import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import MapView2D, { MapView2DDeps } from '../MapView2D';
+import mapSquares from './mapSquares';
+import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
+
+/** The option the 3D camera's distance is kept in, as each set's zoom is kept in its own (`zoomOption`). */
+export const MAP3D_DISTANCE_OPTION = 'map3dDistance';
 
 // How long the script has to arrive before the game starts in 2D without it.
 const LOAD_TIMEOUT = 30000;
@@ -221,12 +227,30 @@ export const makeMapView = (
         scale: () => scaleOfZoom(zoom()),
         zoom,
       },
+      // An option of its own (docs/3d-renderer.md §11), as each set's zoom is.
+      cameraDistance: {
+        // None chosen yet (`0`, the default), or nothing that's a distance: the camera's own.
+        get: (): number | null => {
+          const distance = options.get(MAP3D_DISTANCE_OPTION, 0);
+
+          return typeof distance === 'number' &&
+            Number.isFinite(distance) &&
+            distance > 0
+            ? distance
+            : null;
+        },
+        set: (distance: number): void =>
+          options.set(MAP3D_DISTANCE_OPTION, distance),
+      },
+      cityName,
       cityOpener: deps.cityOpener,
       coveredBy: deps.coveredBy ?? [],
       debug,
       lockVerticalEdges: deps.options.get('lockVerticalEdges', false),
       mapCanvas: deps.mapPortal,
+      minimapCanvas: deps.minimapCanvas,
       playerId: deps.playerId,
+      squares: mapSquares,
       transport: deps.transport,
       world,
     });
