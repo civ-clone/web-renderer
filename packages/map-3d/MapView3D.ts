@@ -221,19 +221,6 @@ export class MapView3D implements MapRenderer {
       ground: this.#land.ground(),
     });
 
-    // After the stage, as what follows: one that can't be made leaves nothing listening to Options. Each marker drawn
-    //  again at the size chosen, as Options changes it.
-    this.#stopUnitSize =
-      deps.unitSize?.onChange((): void => {
-        const size = deps.unitSize?.get() ?? 1;
-
-        if (size !== this.#unitSize && !this.#disposed) {
-          this.#unitSize = size;
-          this.#markAll();
-          this.#draw();
-        }
-      }) ?? ((): void => {});
-
     // After the stage: one that can't be made leaves no minimap behind it.
     if (deps.minimapCanvas !== null) {
       this.#minimap = new Minimap3D(
@@ -289,6 +276,19 @@ export class MapView3D implements MapRenderer {
     // The land built from the start, wherever the map is centred: centring it on the square it's on already asks for
     //  nothing.
     this.#draw();
+
+    // Last, once the map's made: one that can't be leaves nothing listening to Options. Each marker drawn again at the
+    //  size chosen, as Options changes it.
+    this.#stopUnitSize =
+      deps.unitSize?.onChange((): void => {
+        const size = deps.unitSize?.get() ?? 1;
+
+        if (size !== this.#unitSize && !this.#disposed) {
+          this.#unitSize = size;
+          this.#markAll();
+          this.#draw();
+        }
+      }) ?? ((): void => {});
   }
 
   /** The land, for the `?debug=1` console. */

@@ -874,6 +874,8 @@ expect(
 
   // A size chosen before the game: its units are drawn at it from the start.
   optionsRegistry.set(MAP3D_UNIT_SIZE_OPTION, 1.25);
+  // As the map shown re-marks it: only the new map's marking counts.
+  markers.delete(townKey);
 
   const chosenBefore = makeMapView(deps2D) as MapView3D;
 
