@@ -40,6 +40,7 @@
     "./lib/haltedUnits": "./lib/haltedUnits.ts",
     "./lib/instanceOf": "./lib/instanceOf.ts",
     "./lib/interactionLabels": "./lib/interactionLabels.ts",
+    "./lib/map3dOptions": "./lib/map3dOptions.ts",
     "./lib/nextTurnQueue": "./lib/nextTurnQueue.ts",
     "./lib/parseBooleanParam": "./lib/parseBooleanParam.ts",
     "./lib/playerActionPanels": "./lib/playerActionPanels.ts",

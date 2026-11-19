@@ -40,6 +40,8 @@ export type UnitMarker = {
   // Which way it faces on the ground, turned from south (`+v`) towards east (`+u`), in radians: the way it last moved,
   //  or last attacked, as the page saw it. South when it hasn't been seen to.
   facing: number;
+  // How big its figures are drawn, as the player chose: 1 is life size.
+  size: number;
 };
 
 export type TileMarker = {
@@ -101,7 +103,8 @@ export const markerFor = (
   activeUnitId: string | null,
   shown: boolean,
   words: MarkerWords = {},
-  facingOf: (unit: Unit) => number = () => 0
+  facingOf: (unit: Unit) => number = () => 0,
+  unitSize: number = 1
 ): TileMarker | null => {
   const units = tile.units ?? [],
     top = unitOnTop(units, activeUnitId),
@@ -133,6 +136,7 @@ export const markerFor = (
             health: healthOf(top),
             status: (top.busy ? words.unitStatus?.(top) : null) || null,
             facing: facingOf(top),
+            size: unitSize,
           }
         : null;
 

@@ -36,10 +36,9 @@ import {
 import { UnitLook, unitLook } from '@civ-clone/ui-models-builtin/units';
 
 // The size of a square is about 1 (spec §3): a city fills half its square, and a soldier stands a fifth of a square,
-//  drawn half as big again, as strategy maps make units, to be read at a distance.
-const FIGURE_SCALE = 1.5,
-  // A unit's stand: thick enough to stand over everything laid on the land, roads and smears and all.
-  STAND_HEIGHT = 0.03,
+//  drawn as big as the player chooses (`UnitMarker.size`), life size unless they choose otherwise. A unit's stand is
+//  thick enough to stand over everything laid on the land, roads and smears and all.
+const STAND_HEIGHT = 0.03,
   ACTIVE = '#fff4b0',
   // How far over a unit its flag flies, on the land.
   FLAG_GAP = 0.04,
@@ -104,21 +103,22 @@ export class MarkerKit {
   }
 
   /**
-   * All that's drawn of a unit on the land, as `look` says, in `colours`, fortified or not: its figures, stand and
-   *  wall, one geometry, made once for each.
+   * All that's drawn of a unit on the land, as `look` says, in `colours`, fortified or not, its figures `size` times
+   *  life size: its figures, stand and wall, one geometry, made once for each.
    */
   body(
     look: UnitLook,
     colours: FigureColours,
-    fortified: boolean
+    fortified: boolean,
+    size: number = 1
   ): BufferGeometry {
-    const key = JSON.stringify([look, colours, fortified]);
+    const key = JSON.stringify([look, colours, fortified, size]);
     let geometry = this.#bodies.get(key);
 
     if (geometry === undefined) {
       geometry = unitBodyGeometry(look, colours, {
         fortified,
-        scale: FIGURE_SCALE,
+        scale: size,
         stand: STAND_HEIGHT,
       });
       this.#bodies.set(key, geometry);
@@ -455,7 +455,7 @@ const drawUnit = (
   const group = new Group(),
     { ring } = kit.geometries,
     look = unitLook(unit.type, unit.kinds),
-    body = kit.body(look, unit.colours, unit.fortified),
+    body = kit.body(look, unit.colours, unit.fortified, unit.size),
     top = body.boundingBox?.max.y ?? 0.3,
     at = badges?.at ?? [0, top + FLAG_GAP, 0],
     // From the bottom up, on the screen.

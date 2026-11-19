@@ -42,6 +42,7 @@ import {
   mapTileset,
   zoomOption,
 } from '@civ-clone/ui-assets/lib/tilesets';
+import { MAP3D_UNIT_SIZE_OPTION } from '@civ-clone/ui-client/lib/map3dOptions';
 import {
   MAP3D_DISTANCE_OPTION,
   forgetMap3D,
@@ -807,6 +808,8 @@ expect(
         status: 'Fd',
         // Not seen to move yet: facing south.
         facing: 0,
+        // Life size, as no other size is chosen.
+        size: 1,
       },
     ]
   );
@@ -835,6 +838,98 @@ expect(
       [romaName, 'Phalanx', false],
     ]
   );
+
+  // How big units are drawn, changed in Options as the game goes on: every square's unit drawn again at once, at the
+  //  nearest size a player could choose, and life size again after.
+  // Each change drawn at once, with no other reason for a frame: the map's idle.
+  staged.splice(0);
+
+  const sizeDrawn = (): [number | undefined, boolean] => [
+      markers.get(townKey)?.unit?.size,
+      staged.splice(0).includes('render'),
+    ],
+    sizesDrawn = [sizeDrawn()];
+
+  optionsRegistry.set(MAP3D_UNIT_SIZE_OPTION, 1.5);
+  sizesDrawn.push(sizeDrawn());
+  optionsRegistry.set(MAP3D_UNIT_SIZE_OPTION, 9);
+  sizesDrawn.push(sizeDrawn());
+  optionsRegistry.set(MAP3D_UNIT_SIZE_OPTION, 0.6);
+  sizesDrawn.push(sizeDrawn());
+  optionsRegistry.set(MAP3D_UNIT_SIZE_OPTION, 'big');
+  sizesDrawn.push(sizeDrawn());
+
+  expect(
+    'units are drawn at the size chosen in Options as soon as it changes, and the map drawn, the nearest size a player could choose, or life size',
+    sizesDrawn,
+    [
+      [1, false],
+      [1.5, true],
+      // As it was: nothing drawn.
+      [1.5, false],
+      [0.5, true],
+      [1, true],
+    ]
+  );
+
+  // A size chosen before the game: its units are drawn at it from the start.
+  optionsRegistry.set(MAP3D_UNIT_SIZE_OPTION, 1.25);
+  // As the map shown re-marks it: only the new map's marking counts.
+  markers.delete(townKey);
+
+  const chosenBefore = makeMapView(deps2D) as MapView3D;
+
+  chosenBefore.queueTile(town);
+  chosenBefore.releaseTiles();
+
+  const sizeAtStart = markers.get(townKey)?.unit?.size;
+
+  chosenBefore.dispose();
+  optionsRegistry.set(MAP3D_UNIT_SIZE_OPTION, 1);
+  view.queueTile(town);
+  view.releaseTiles();
+  staged.splice(0);
+
+  expect(
+    'a size chosen before the game is the one its units are drawn at from the start',
+    sizeAtStart,
+    1.25
+  );
+
+  // Listened to only while there's a map: none once it's taken down, and none from one whose stage can't be made, the
+  //  game falling back to the 2D map.
+  {
+    const listening = new Set<() => void>(),
+      unitSize = {
+        get: (): number => 1,
+        onChange: (changed: () => void): (() => void) => {
+          listening.add(changed);
+
+          return (): void => void listening.delete(changed);
+        },
+      },
+      counted = new MapView3D({ ...given!, unitSize }, fakeStage),
+      whileShown = listening.size;
+
+    counted.dispose();
+
+    const afterwards = listening.size;
+    let refused = false;
+
+    try {
+      new MapView3D({ ...given!, unitSize }, () => {
+        throw new Error('WebGL2 refused');
+      });
+    } catch {
+      refused = true;
+    }
+
+    expect(
+      'it listens for a size chosen only while it is shown: not once taken down, nor from a map whose stage could not be made',
+      [whileShown, afterwards, refused, listening.size],
+      [1, 0, true, 0]
+    );
+  }
 
   // The map's events: a unit faces the way it last moved, the short way round the world, and the way it attacked, and a
   //  defender faces its attacker. The town is at (2, 0), on a world 4 across that wraps.
@@ -1240,6 +1335,18 @@ expect(
   view.dispose();
 
   expect('dispose lets the stage go', staged.splice(0), ['dispose']);
+
+  // Once taken down, a size chosen in Options draws nothing.
+  const markedWhenDown = JSON.stringify([...markers]);
+
+  optionsRegistry.set(MAP3D_UNIT_SIZE_OPTION, 1.5);
+
+  expect(
+    'nor is anything drawn again at a size chosen after',
+    [JSON.stringify([...markers]) === markedWhenDown, staged.splice(0)],
+    [true, []]
+  );
+  optionsRegistry.set(MAP3D_UNIT_SIZE_OPTION, 1);
 
   box.width = 900;
   window.dispatchEvent(new Event('resize'));

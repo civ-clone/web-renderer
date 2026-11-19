@@ -331,7 +331,7 @@ Epic's UE4 skeleton or only match its bone names.
     it carries, its hull, and how many figures stand for it. A type it doesn't know is drawn by its kind (`Naval`,
     `Air`).
   - `packages/map-3d/markers/figures.ts` makes each look from plain shapes in the owner's colours, merged into one
-    geometry, half as big again as life so they read at a distance.
+    geometry, life size unless the player chooses otherwise in Options (half to half as big again).
   - A unit stands on a stand in its owner's second colour (a ship rides the water without one), behind a low wall when
     fortified. Its flag flies over it, with the stack's size, the 2D map's letter for what it's busy with, a veteran's
     star, and a bar for its hit points when it's hurt.

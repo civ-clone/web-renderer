@@ -171,6 +171,9 @@ export class MapView3D implements MapRenderer {
   #activeUnit: Unit | null = null;
   #pendingTile: Coordinate | null = null;
   #unitsShown = true;
+  // How big units are drawn, as the player chose (1 is life size), and what stops a change to it being told.
+  #unitSize: number;
+  #stopUnitSize: () => void = (): void => {};
   #yieldsShown = false;
   #waiting = false;
   // The 2D art the city screen and windows draw with, as it was when last asked.
@@ -187,6 +190,7 @@ export class MapView3D implements MapRenderer {
     this.#coveredBy = deps.coveredBy;
     this.#art = deps.art;
     this.#words = { cityName: deps.cityName, unitStatus: deps.unitStatus };
+    this.#unitSize = deps.unitSize?.get() ?? 1;
     this.#artId = deps.art.id();
     this.world = deps.world;
     this.#land = new Land(deps.world);
@@ -272,6 +276,19 @@ export class MapView3D implements MapRenderer {
     // The land built from the start, wherever the map is centred: centring it on the square it's on already asks for
     //  nothing.
     this.#draw();
+
+    // Last, once the map's made: one that can't be leaves nothing listening to Options. Each marker drawn again at the
+    //  size chosen, as Options changes it.
+    this.#stopUnitSize =
+      deps.unitSize?.onChange((): void => {
+        const size = deps.unitSize?.get() ?? 1;
+
+        if (size !== this.#unitSize && !this.#disposed) {
+          this.#unitSize = size;
+          this.#markAll();
+          this.#draw();
+        }
+      }) ?? ((): void => {});
   }
 
   /** The land, for the `?debug=1` console. */
@@ -346,6 +363,7 @@ export class MapView3D implements MapRenderer {
   dispose(): void {
     this.#keepDistance(true);
     this.#disposed = true;
+    this.#stopUnitSize();
     this.#endHover();
     this.#input.dispose();
     this.#minimap?.dispose();
@@ -1060,7 +1078,8 @@ export class MapView3D implements MapRenderer {
         this.#activeUnit?.id ?? null,
         this.#unitsShown,
         this.#words,
-        (unit) => this.#facings.get(unit.id) ?? 0
+        (unit) => this.#facings.get(unit.id) ?? 0,
+        this.#unitSize
       );
 
     // On the land as it's drawn, as what's laid on it is, so a unit's stand stands over that.

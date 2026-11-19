@@ -587,6 +587,8 @@ Each is looked up by its type name in the model set.
   buildings.
 - **Facing:** a unit faces the way it last moved.
 - **Height:** it stands on the land's height at its feet.
+- **Size:** life size, as cities are drawn, so a small city doesn't look tiny beside its garrison. Options has the size
+  of the 3D map's units, from half to half as big again, for a player who'd rather have them read from further away.
 - **Squads:** a squad's figures spread around its position, each with a small fixed offset, so they don't line up like
   a parade.
 

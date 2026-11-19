@@ -9,7 +9,11 @@
 import { t } from 'i18next';
 import NotificationWindow from '@civ-clone/ui-component-window/NotificationWindow';
 import build from '@civ-clone/ui-client/lib/build';
-import parseBooleanParam from '@civ-clone/ui-client/lib/parseBooleanParam';
+import {
+  MAP3D_UNIT_SIZE_OPTION,
+  map3dAsked,
+  unitSizeFor,
+} from '@civ-clone/ui-client/lib/map3dOptions';
 import {
   CreateMapView3D,
   MAP3D_GLOBAL,
@@ -38,9 +42,8 @@ export const MAP3D_DISTANCE_OPTION = 'map3dDistance';
 // How long the script has to arrive before the game starts in 2D without it.
 const LOAD_TIMEOUT = 30000;
 
-/** Whether the page asked for the 3D map (`?3d=1`). */
-export const map3dAsked = (search: string): boolean =>
-  parseBooleanParam(new URLSearchParams(search).get('3d'), false);
+// Where the page and its menus both read it.
+export { map3dAsked };
 
 /** Whether this browser can draw the 3D map: three.js's renderer needs WebGL2. The context asked for is let go. */
 export const hasWebGL2 = (): boolean => {
@@ -253,6 +256,16 @@ export const makeMapView = (
       playerId: deps.playerId,
       squares: mapSquares,
       transport: deps.transport,
+      // An option of its own (docs/3d-renderer.md §6.2), changed in Options as the game goes on.
+      unitSize: {
+        get: (): number => unitSizeFor(options.get(MAP3D_UNIT_SIZE_OPTION, 1)),
+        onChange: (changed: () => void): (() => void) =>
+          options.onChange((key): void => {
+            if (key === MAP3D_UNIT_SIZE_OPTION) {
+              changed();
+            }
+          }),
+      },
       unitStatus,
       world,
     });
