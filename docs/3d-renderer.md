@@ -906,9 +906,22 @@ mapEvent:
   - a unit the page doesn't have where it set off from, as one stepping out of the dark;
   - any unit, with reduced motion asked for, or no frames to draw.
 - **Every unit's walk plays at once,** not one queue: as each is left off the squares it's on, no two can disagree.
+- **The game waits** (second part): when the game chooses the next unit while the one that was active is still walking,
+  its moves spent, the ring and the minimap's mark stay on that unit, and the camera where it is, until it's there:
+  then they go to the next.
+  - Unlike the design above, the next unit is chosen as before, at once, and the unit panel shows it: only what the
+    map shows waits, so a unit's orders are never held up.
+  - The active unit's own walk holds nothing: moved on and on, the camera follows it at once.
+  - A key pressed, or the map pressed, while they wait ends that walk at once, so what it's for is shown where it is.
+    Pressed on the map, the camera stays where the player's looking; a minimap click goes where it's clicked. A key
+    typed in a field, a modifier alone, or a shortcut with Ctrl, Cmd or Alt doesn't.
+  - Another chosen while the game would still offer the unit walking (`w`, a click) ends its walk at once too: the
+    player's moved on from it. One boarding a ship is asleep aboard, so isn't offered, and the ring waits for it.
+  - While they wait, whether a square's in sight is as the camera will look once they've moved on. The unit walking
+    made active again, the camera's errand is dropped.
+  - Others' walks hold nothing, nor do the player's other units' walks, as GoTos at the turn's start.
 - **Still to come:**
   - the options (speed, others' moves);
-  - the game waiting for walks before the next unit (the camera and the ring only: the next unit is chosen as before);
   - §6.4's paths: along roads, ships' wakes and aircraft's arcs (a walk goes straight between squares' middles now);
   - battles (2.4).
 

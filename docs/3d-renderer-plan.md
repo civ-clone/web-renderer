@@ -356,8 +356,11 @@ Epic's UE4 skeleton or only match its bone names.
 
 **First part, walks: done** (spec §8.2, "As built"). Units walk from square to square over the land, a GoTo's steps as
 one walk, by the clock. Other players' units walk only on the screen, twice as fast. Long walks hurry. Units stepping
-together, as a ship and its cargo, walk as one. Still to do: the options, and the game waiting for walks before the
-next unit (camera and ring only).
+together, as a ship and its cargo, walk as one.
+
+**Second part, the game waits: done.** The ring and the camera wait for the unit that was active to finish walking
+before going to the next unit, which is chosen at once as before; a key or a press for it ends the walk. Still to do:
+the options.
 
 - **What:**
   - the shown state and held patches (spec §8.2);

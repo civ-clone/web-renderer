@@ -2733,6 +2733,352 @@ expect(
     ]
   );
 
+  // The game waits for the unit that was active to walk there (§8.2): the next unit's ring, and the camera going to it,
+  //  wait till it's there. A key or a press on the map for it ends the walk at once; a key while the unit walking is
+  //  still the active one doesn't. A rival's walk holds nothing.
+  const placed = (unit: Tile['units'][number], x: number, y: number) =>
+      ({ ...unit, tile: tiles[y * 4 + x] } as unknown as Unit),
+    nextUnit = unitOf('Unit-N', 1),
+    ringOn = (x: number, y: number) =>
+      markers.get(`${x},${y}`)?.unit?.active ?? null,
+    walkerRinged = () => [...walkers.values()][0]?.unit?.active ?? null,
+    focusOn = (x: number, y: number) => {
+      const [u, v] = middleOf(tiles[y * 4 + x] as Tile),
+        [focusU, focusV] = glider.orbit().focus;
+
+      return Math.hypot(focusU - u, focusV - v) < 0.01;
+    },
+    pickedNext = (from: [number, number], to: [number, number]) => {
+      repatched([from[0], from[1], [walker]], [3, 3, [nextUnit]]);
+      glider.setActiveUnit(placed(walker, ...from));
+      glider.portal.setCenter(...from);
+      runFrames();
+      walkersSet.length = 0;
+      stepped(walker, from, to);
+      patch([from[0], from[1], []], [to[0], to[1], [walker]]);
+      // As the game does when a unit's moves are spent: the next unit active, and the map centred on it.
+      glider.setActiveUnit(placed(nextUnit, 3, 3));
+      glider.portal.setCenter(3, 3);
+      runFrames(2);
+    };
+
+  pickedNext([0, 0], [1, 0]);
+  // A patch for the next unit's square meanwhile marks it again, still without the ring.
+  patch([3, 3, [nextUnit]]);
+  runFrames(1);
+
+  const meanwhile = [walkerRinged(), ringOn(3, 3), focusOn(0, 0)];
+
+  runFrames();
+
+  const caughtUp = [unitOn(1, 0), ringOn(1, 0), ringOn(3, 3), focusOn(3, 3)];
+
+  // A key for the next unit mid-walk: the walk's over at once, the ring and the camera with the next unit.
+  pickedNext([1, 0], [2, 0]);
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'w' }));
+
+  const keyed = [unitOn(2, 0), [...walkers.keys()], ringOn(3, 3)];
+
+  runFrames();
+
+  const keyedThere = focusOn(3, 3);
+
+  // Pressed on the map mid-walk: over at once too, but the camera stays where the player's looking.
+  pickedNext([2, 0], [2, 1]);
+  mapCanvas.dispatchEvent(new Event('pointerdown'));
+
+  const pressed = [unitOn(2, 1), walkers.size, ringOn(3, 3)];
+
+  runFrames();
+  pressed.push(focusOn(2, 0));
+
+  // A key for the next unit mid-walk, the walk's patch held: over at once, standing where it was bound, not mid-way.
+  repatched([2, 1, []], [1, 1, [walker]], [3, 3, [nextUnit]]);
+  glider.setActiveUnit(placed(walker, 1, 1));
+  runFrames();
+  walkersPlaced.clear();
+  stepped(walker, [1, 1], [1, 2]);
+  glider.setActiveUnit(placed(nextUnit, 3, 3));
+  runFrames(2);
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'w' }));
+  runFrames(1);
+
+  const [heldWay] = [...walkersPlaced.values()],
+    keyedHeld: unknown[] = [
+      walkers.size,
+      heldWay!
+        .at(-1)!
+        .slice(0, 3)
+        .map((n) => Math.round(n * 100) / 100),
+    ];
+
+  patch([1, 1, []], [1, 2, [walker]]);
+  runFrames();
+  keyedHeld.push(unitOn(1, 2), walkers.size);
+  repatched([1, 2, []], [2, 1, [walker]]);
+  walkersPlaced.clear();
+
+  expect(
+    'a key for the next unit mid-walk, the walk’s patch held: over at once, standing where it was bound until the patch comes',
+    keyedHeld,
+    [1, groundAt(1, 2), ['Unit-A', 1], 0]
+  );
+
+  // A key while the unit walking is still the active one: it walks on.
+  repatched([2, 1, [walker]]);
+  glider.setActiveUnit(placed(walker, 2, 1));
+  runFrames();
+  stepped(walker, [2, 1], [1, 1]);
+  patch([2, 1, []], [1, 1, [walker]]);
+  glider.setActiveUnit(placed(walker, 1, 1));
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+  runFrames(1);
+
+  const stillWalking = [unitOn(1, 1), walkers.size];
+
+  runFrames();
+
+  // A rival's walk: the ring and the camera go to the next unit at once.
+  repatched([1, 1, []], [0, 2, [rival]], [3, 3, [nextUnit]]);
+  glider.setActiveUnit(placed(walker, 1, 1));
+  glider.portal.setCenter(1, 2);
+  runFrames();
+  stepped(rival, [0, 2], [1, 2], 'Player-2');
+  patch([0, 2, []], [1, 2, [rival]]);
+  glider.setActiveUnit(placed(nextUnit, 3, 3));
+  glider.portal.setCenter(3, 3);
+  runFrames(2);
+
+  const rivalWalking = [walkers.size, ringOn(3, 3), !focusOn(1, 2)];
+
+  runFrames();
+
+  expect(
+    'the next unit’s ring and the camera wait for the player’s own unit walking, then go to it; a key for it ends the walk at once, a press on the map too but the camera stays; a key while the unit walking is active doesn’t; a rival’s walk holds nothing',
+    [
+      meanwhile,
+      caughtUp,
+      keyed,
+      keyedThere,
+      pressed,
+      stillWalking,
+      rivalWalking,
+    ],
+    [
+      [true, false, true],
+      [['Unit-A', 1], false, true, true],
+      [['Unit-A', 1], [], true],
+      true,
+      [['Unit-A', 1], 0, true, true],
+      [null, 1],
+      [1, true, true],
+    ]
+  );
+
+  repatched([1, 2, []], [3, 3, []], [1, 1, []]);
+  walkersSet.length = 0;
+  walkersPlaced.clear();
+
+  // The active unit moved on and on, near the screen's edge: the camera follows it at once, not when it stops.
+  repatched([0, 0, [walker]]);
+  glider.setActiveUnit(placed(walker, 0, 0));
+  glider.portal.setCenter(0, 0);
+  runFrames();
+  stepped(walker, [0, 0], [1, 0]);
+  patch([0, 0, []], [1, 0, [walker]]);
+  glider.setActiveUnit(placed(walker, 1, 0));
+  glider.portal.setCenter(1, 0);
+  runFrames(3);
+
+  const followed = [walkers.size, !focusOn(0, 0)];
+
+  runFrames();
+  repatched([1, 0, []]);
+
+  // Another chosen while the unit walking would still be offered, with moves (`w`): its walk's over at once, the ring on
+  //  the next.
+  const mover = {
+    ...unitOf('Unit-M', 1),
+    moves: { value: 1 },
+  } as unknown as Tile['units'][number];
+
+  repatched([0, 0, [mover]], [3, 3, [nextUnit]]);
+  glider.setActiveUnit(placed(mover, 0, 0));
+  runFrames();
+  walkersSet.length = 0;
+  stepped(mover, [0, 0], [1, 0]);
+  patch([0, 0, []], [1, 0, [mover]]);
+  runFrames(1);
+  glider.setActiveUnit(placed(nextUnit, 3, 3));
+
+  const switched = [unitOn(1, 0), walkers.size, ringOn(3, 3)];
+
+  runFrames();
+  repatched([1, 0, []]);
+
+  // One no longer active, as one boarding a ship is asleep aboard, isn't offered, whatever its moves: the game's chosen
+  //  the next, and the ring waits for it.
+  const boarder = {
+    ...unitOf('Unit-S', 1),
+    moves: { value: 1 },
+    active: false,
+  } as unknown as Tile['units'][number];
+
+  repatched([0, 0, [boarder]], [3, 3, [nextUnit]]);
+  glider.setActiveUnit(placed(boarder, 0, 0));
+  runFrames();
+  stepped(boarder, [0, 0], [1, 0]);
+  patch([0, 0, []], [1, 0, [boarder]]);
+  runFrames(1);
+  glider.setActiveUnit(placed(nextUnit, 3, 3));
+
+  const boarded = [walkers.size, ringOn(3, 3)];
+
+  runFrames();
+  boarded.push(ringOn(3, 3));
+  repatched([1, 0, []]);
+
+  // The next unit walks too before the last's there: once both are, one ring, on the next unit where it walked to.
+  repatched([0, 0, [walker]], [3, 3, [nextUnit]]);
+  glider.setActiveUnit(placed(walker, 0, 0));
+  runFrames();
+  stepped(walker, [0, 0], [1, 0]);
+  patch([0, 0, []], [1, 0, [walker]]);
+  glider.setActiveUnit(placed(nextUnit, 3, 3));
+  runFrames(5);
+  stepped(nextUnit, [3, 3], [3, 2]);
+  patch([3, 3, []], [3, 2, [nextUnit]]);
+  glider.setActiveUnit(placed(nextUnit, 3, 2));
+  runFrames();
+
+  const rings = [...markers.entries()]
+    .filter(([, marker]) => marker.unit?.active)
+    .map(([key]) => key);
+
+  repatched([1, 0, []], [3, 2, []]);
+
+  // The walk over before its patch, the ring moves on: the walker that waits is drawn again without it.
+  repatched([0, 0, [walker]], [3, 3, [nextUnit]]);
+  glider.setActiveUnit(placed(walker, 0, 0));
+  runFrames();
+  stepped(walker, [0, 0], [1, 0]);
+  glider.setActiveUnit(placed(nextUnit, 3, 3));
+  runFrames();
+
+  const waitingUnringed = [walkers.size, walkerRinged(), ringOn(3, 3)];
+
+  patch([0, 0, []], [1, 0, []]);
+  runFrames();
+  repatched([3, 3, []]);
+
+  expect(
+    'the camera follows the active unit walking on and on; another chosen while it has moves ends its walk at once; the next walking too, one ring once both are there; a walker waiting for its patch drawn again without the ring',
+    [followed, switched, boarded, rings, waitingUnringed],
+    [
+      [1, true],
+      [['Unit-M', 1], 0, true],
+      [1, false, true],
+      ['3,2'],
+      [1, false, true],
+    ]
+  );
+
+  // Keys that aren't for a unit: typed in a field, a modifier alone, or with Ctrl or Alt, leave the walk to go on.
+  const field = document.createElement('input');
+
+  document.body.append(field);
+  repatched([0, 0, [walker]], [3, 3, [nextUnit]]);
+  glider.setActiveUnit(placed(walker, 0, 0));
+  runFrames();
+  stepped(walker, [0, 0], [1, 0]);
+  patch([0, 0, []], [1, 0, [walker]]);
+  glider.setActiveUnit(placed(nextUnit, 3, 3));
+  runFrames(1);
+  field.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'w', bubbles: true })
+  );
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift' }));
+  // With Ctrl, then Alt, held: the test's DOM doesn't take them from the event's init, so they're set on it.
+  ['ctrlKey', 'altKey'].forEach((modifier) => {
+    const event = new KeyboardEvent('keydown', { key: 'w' });
+
+    Object.defineProperty(event, modifier, { value: true });
+    document.dispatchEvent(event);
+  });
+  runFrames(1);
+
+  const notForAUnit = [walkers.size, ringOn(3, 3)];
+
+  runFrames();
+  field.remove();
+  repatched([1, 0, []], [3, 3, []]);
+
+  // While the ring waits, what the camera will see is where it's to go: the square it looks at now, well in from the
+  //  screen's edges, isn't in sight from there, so the game centres on it rather than leave it off the screen once the
+  //  ring moves on.
+  const viewedFrom = glider.orbit();
+
+  glider.setOrbit({
+    ...viewedFrom,
+    focus: middleOf(tiles[0] as Tile),
+    distance: 0,
+  });
+  runFrames();
+  repatched([0, 0, [walker]], [2, 2, [nextUnit]]);
+  glider.setActiveUnit(placed(walker, 0, 0));
+  runFrames();
+
+  const inSightBefore = glider.portal.isVisible(0, 0, 1);
+
+  stepped(walker, [0, 0], [1, 0]);
+  patch([0, 0, []], [1, 0, [walker]]);
+  glider.setActiveUnit(placed(nextUnit, 2, 2));
+  glider.portal.setCenter(2, 2);
+
+  const inSightAfter = glider.portal.isVisible(0, 0, 1);
+
+  // The unit walking made active again before it's there: where the camera was to go is for no one now, and what's in
+  //  sight is as the camera looks.
+  glider.setActiveUnit(placed(walker, 1, 0));
+
+  const inSightAgain = glider.portal.isVisible(0, 0, 1);
+
+  runFrames();
+  glider.setOrbit(viewedFrom);
+  runFrames();
+  repatched([1, 0, []], [2, 2, []]);
+
+  // Another of the player's units walking, not the one that was active, as a GoTo at the turn's start: it holds nothing.
+  const goer = unitOf('Unit-G', 1);
+
+  repatched([0, 2, [goer]], [3, 3, [nextUnit]]);
+  glider.setActiveUnit(placed(nextUnit, 3, 3));
+  runFrames();
+  stepped(goer, [0, 2], [1, 2]);
+  patch([0, 2, []], [1, 2, [goer]]);
+  glider.setActiveUnit(null);
+  glider.setActiveUnit(placed(nextUnit, 3, 3));
+  glider.portal.setCenter(1, 1);
+  runFrames(3);
+
+  const elsewhere = [walkers.size, ringOn(3, 3), !focusOn(3, 3)];
+
+  runFrames();
+  glider.setActiveUnit(null);
+  repatched([1, 2, []], [3, 3, []]);
+  walkersSet.length = 0;
+  walkersPlaced.clear();
+
+  expect(
+    'keys typed in a field, a modifier alone, or with Ctrl or Alt, leave the walk to go on; while the ring waits, a square is in sight as the camera will look, and as it looks once the unit walking is active again; another unit of the player’s walking holds nothing',
+    [notForAUnit, [inSightBefore, inSightAfter, inSightAgain], elsewhere],
+    [
+      [1, false],
+      [true, false, true],
+      [1, true, true],
+    ]
+  );
+
   // Turns, frame by frame: how far the camera turns in all, the way it turns, each frame's step taken the short way.
   const turnedFrameByFrame = (between: () => void): number => {
     let turned = 0,

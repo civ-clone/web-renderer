@@ -153,6 +153,40 @@ export class MapView3D implements MapRenderer {
   #queued = 0;
   #queuedAt = new Map<string, number>();
   #releasedAt = new Map<string, number>();
+  // The unit whose ring is shown, and the square it's on as the map has it: the active unit, but while it walks on after
+  //  the game's chosen another, its moves spent, the ring and the camera wait for it to get there (§8.2), so the next unit
+  //  isn't shown picked while the last is still walking. Where the camera was asked to go meanwhile, the last asked for.
+  #ringed: string | null = null;
+  #ringedTile: Coordinate | null = null;
+  #centreAfter: Coordinate | null = null;
+  // The map pressed while they wait: the walk's over at once (`#hurry`), but the camera stays where the player's
+  //  looking, as they may be about to move it.
+  #pressed = (): void => {
+    if (this.#holding()) {
+      this.#centreAfter = null;
+    }
+
+    this.#hurry();
+  };
+  // A key pressed while they wait, as for the unit now active: the walk's over at once, so what it's for is shown where
+  //  it is. Not a key typed in a field, a modifier alone, or a shortcut with Ctrl, Cmd or Alt.
+  #keyed = (event: KeyboardEvent): void => {
+    const target = event.target as HTMLElement | null;
+
+    if (
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey ||
+      ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(event.key) ||
+      (target !== null &&
+        (target.isContentEditable ||
+          ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)))
+    ) {
+      return;
+    }
+
+    this.#hurry();
+  };
   #transport: MapView3DDeps['transport'];
   #picking: Picking | null = null;
   // The square the mouse rests on, waiting to show its tooltip or showing it, and whose tooltips they'd be.
@@ -247,7 +281,7 @@ export class MapView3D implements MapRenderer {
     this.#keptDistance = this.#orbit.distance;
     this.portal = new MapPortal3D(deps, {
       centre: () => this.#centreSquare(),
-      centreOn: (x, y) => this.#centreOn(x, y),
+      centreOn: (x, y) => this.#centreSoon(x, y),
       changed: () => this.#draw(),
       visible: (x, y, margin) => this.#visible(x, y, margin),
     });
@@ -265,8 +299,11 @@ export class MapView3D implements MapRenderer {
         this.#land.layout,
         deps.world,
         this.#land.extentV(),
-        (u, v) =>
-          this.#moveTo({ ...(this.#glide?.to ?? this.#orbit), focus: [u, v] })
+        (u, v) => {
+          // Somewhere the player chose: not where the camera was to go once the ring's moved on.
+          this.#centreAfter = null;
+          this.#moveTo({ ...(this.#glide?.to ?? this.#orbit), focus: [u, v] });
+        }
       );
     }
 
@@ -302,6 +339,8 @@ export class MapView3D implements MapRenderer {
     );
 
     window.addEventListener('resize', this.#resizeHandler);
+    document.addEventListener('keydown', this.#keyed, true);
+    deps.mapCanvas.addEventListener('pointerdown', this.#pressed, true);
 
     // Not everywhere the map is built has one (the tests' DOM doesn't).
     if (typeof ResizeObserver !== 'undefined' && deps.mapCanvas.parentElement) {
@@ -423,6 +462,8 @@ export class MapView3D implements MapRenderer {
     this.#unpatched.clear();
     this.#unpatchedUnits.clear();
     this.#awaiting.clear();
+    document.removeEventListener('keydown', this.#keyed, true);
+    this.#canvas.removeEventListener('pointerdown', this.#pressed, true);
 
     this.#stopUnitSize();
     this.#stopArtChanged();
@@ -514,6 +555,12 @@ export class MapView3D implements MapRenderer {
       after: this.#queued,
     });
     this.#stepsOn(unit.id);
+
+    // The unit ringed: where it is now, as the map has it.
+    if (unit.id === this.#ringed) {
+      this.#ringedTile = to;
+    }
+
     this.#walks.step(
       unit.id,
       from,
@@ -638,9 +685,9 @@ export class MapView3D implements MapRenderer {
     }
   }
 
-  // What a walker's drawn as: its units alone, as a square's marked, the one on top the active one or the best
+  // What a walker's drawn as: its units alone, as a square's marked, the one on top the one ringed or the best
   //  defender; their figures turned as it goes, not as they last went. Nothing with its units hidden (`t`), unless
-  //  the active one's among them.
+  //  the one ringed is among them.
   #walkerMarker(walker: Walker): TileMarker | null {
     const units = walker.units.flatMap((id) => {
       const unit = this.#walkingUnits.get(id);
@@ -650,7 +697,7 @@ export class MapView3D implements MapRenderer {
 
     return markerFor(
       { city: null, units },
-      this.#activeUnit?.id ?? null,
+      this.#ringed,
       this.#unitsShown,
       this.#words,
       () => 0,
@@ -691,11 +738,99 @@ export class MapView3D implements MapRenderer {
       });
     });
 
+    // The unit ringed there, or waiting for its patch, as the game is: the ring and the camera go where the game has
+    //  them.
+    if (
+      this.#ringed !== null &&
+      this.#ringed !== (this.#activeUnit?.id ?? null) &&
+      !this.#walks.walking(this.#ringed)
+    ) {
+      this.#caughtUp(squares);
+    }
+
     squares.forEach((key) => {
       const [x, y] = key.split(',').map(Number) as [number, number];
 
       this.#mark(x, y);
     });
+  }
+
+  // The unit ringed is there: the ring on the active unit, the squares it moves between added to `squares`, to be marked
+  //  again, a walk waiting for its patch drawn again without it; and the camera where it was asked to go meanwhile.
+  #caughtUp(squares: Set<string>): void {
+    const active = this.#activeUnit;
+
+    [this.#ringedTile, active?.tile].forEach((tile) => {
+      if (tile) {
+        squares.add(`${tile.x},${tile.y}`);
+      }
+    });
+    this.#ringed = active?.id ?? null;
+    this.#ringedTile = active?.tile ?? null;
+    this.#unpatched.forEach((walker) => this.#drawWalker(walker));
+
+    const after = this.#centreAfter;
+
+    if (after !== null) {
+      this.#centreAfter = null;
+      this.#centreOn(after.x, after.y);
+    }
+  }
+
+  // Whether the ring and the camera wait: the unit ringed walks on, and the game's chosen another.
+  #holding(): boolean {
+    const ringed = this.#ringed;
+
+    return (
+      ringed !== null &&
+      ringed !== (this.#activeUnit?.id ?? null) &&
+      this.#walks.walking(ringed)
+    );
+  }
+
+  // While they wait, the unit ringed's walk is over at once, and they go where the game has them.
+  #hurry(): void {
+    const ringed = this.#ringed;
+
+    if (ringed === null || !this.#holding()) {
+      return;
+    }
+
+    this.#walksEnded(
+      this.#walks.endWhere((units) => units.includes(ringed), performance.now())
+    );
+    this.#draw();
+  }
+
+  // Whether the game would still offer the unit ringed, as the map has it where it's walking to: active (one boarding a
+  //  ship is asleep aboard, and isn't), with moves left, as the engine offers a unit. Another chosen while it would, the
+  //  player's moved on.
+  #ringedOffered(): boolean {
+    const tile = this.#ringedTile,
+      unit =
+        tile === null
+          ? undefined
+          : this.world
+              .get(tile.x, tile.y)
+              .units.find(({ id }) => id === this.#ringed);
+
+    return (
+      unit !== undefined &&
+      unit.active !== false &&
+      (unit.moves?.value ?? 0) > 0
+    );
+  }
+
+  // The camera to the square at (`x`, `y`): while the ring waits, once the unit ringed is there, so it doesn't leave it
+  //  mid-walk; the active unit's own walk, or anyone else's, holds it for no one.
+  #centreSoon(x: number, y: number): void {
+    if (this.#holding()) {
+      this.#centreAfter = { x, y };
+
+      return;
+    }
+
+    this.#centreOn(x, y);
   }
 
   // Tiles have come, the squares `released` and when each was queued: the units whose last step's patch it is have it,
@@ -844,7 +979,28 @@ export class MapView3D implements MapRenderer {
     this.#activeUnit = unit;
     this.#pendingTile = pendingTile ?? null;
 
-    [before, unit?.tile].forEach((tile) => {
+    // Another chosen while the game would still offer the unit ringed (`w`, a click): the player's moved on from it, and
+    //  its walk's over at once. Its moves spent, or asleep aboard a ship, the game's chosen the next: the ring waits for
+    //  it to get there.
+    if (this.#holding() && this.#ringedOffered()) {
+      this.#hurry();
+    }
+
+    if (this.#holding()) {
+      this.#draw();
+
+      return;
+    }
+
+    // Not waiting, or no longer: where the camera was to go once the ring moved on is for no one now.
+    this.#centreAfter = null;
+
+    const ringedTile = this.#ringedTile;
+
+    this.#ringed = unit?.id ?? null;
+    this.#ringedTile = unit?.tile ?? null;
+
+    [before, ringedTile, unit?.tile].forEach((tile) => {
       if (tile) {
         this.#mark(tile.x, tile.y);
       }
@@ -928,7 +1084,15 @@ export class MapView3D implements MapRenderer {
       return false;
     }
 
-    const orbit = this.#glide?.to ?? this.#orbit,
+    // As the camera will look: where it's gliding to, or where it's to go once the ring's moved on.
+    const after = this.#centreAfter,
+      orbit: Orbit =
+        after === null
+          ? this.#glide?.to ?? this.#orbit
+          : {
+              ...(this.#glide?.to ?? this.#orbit),
+              focus: this.#land.layout.centre(after.x, after.y),
+            },
       [u, v] = this.#land.layout.centre(x, y),
       { u: periodU, v: periodV } = this.#period(),
       [focusU, focusV] = orbit.focus,
@@ -1389,7 +1553,7 @@ export class MapView3D implements MapRenderer {
             city: tile.city,
             units: tile.units.filter(({ id }) => !this.#leftOff(id)),
           },
-      this.#activeUnit?.id ?? null,
+      this.#ringed,
       this.#unitsShown,
       this.#words,
       (unit) => this.#facings.get(unit.id) ?? 0,
@@ -1576,7 +1740,10 @@ export class MapView3D implements MapRenderer {
       minimap.redraw();
     }
 
-    const active = this.#activeUnit?.tile ?? null;
+    // The unit ringed, as the map shows it: while it walks on, not yet the next.
+    const active = this.#holding()
+      ? this.#ringedTile
+      : this.#activeUnit?.tile ?? null;
 
     minimap.show(
       this.#patch(),
