@@ -126,6 +126,36 @@ export const eye = (orbit: Orbit, height: number): ScenePoint => {
 };
 
 /**
+ * `toScreen` for the camera looking at its focus raised to `height`, on a screen `aspect` times as wide as it's tall:
+ *  its axes worked out once, for the many points a frame puts on the screen.
+ */
+export const projectorFor = (
+  orbit: Orbit,
+  height: number,
+  aspect: number
+): ((point: ScenePoint) => [number, number] | null) => {
+  const { forward, right, up } = basis(orbit),
+    [fromU, fromY, fromV] = eye(orbit, height),
+    spread = Math.tan(FIELD_OF_VIEW / 2);
+
+  return ([u, y, v]) => {
+    const a = u - fromU,
+      b = y - fromY,
+      c = v - fromV,
+      depth = a * forward[0] + b * forward[1] + c * forward[2];
+
+    if (depth <= 1e-6) {
+      return null;
+    }
+
+    return [
+      (a * right[0] + b * right[1] + c * right[2]) / (depth * spread * aspect),
+      (a * up[0] + b * up[1] + c * up[2]) / (depth * spread),
+    ];
+  };
+};
+
+/**
  * Where `point` in the scene is on the screen, as `groundAt` takes a point on the screen (-1 to 1 across and up, on a
  *  screen `aspect` times as wide as it's tall), seen by the camera looking at its focus raised to `height`. Nothing for
  *  a point behind the camera.
@@ -133,28 +163,9 @@ export const eye = (orbit: Orbit, height: number): ScenePoint => {
 export const toScreen = (
   orbit: Orbit,
   height: number,
-  [u, up, v]: ScenePoint,
+  point: ScenePoint,
   aspect: number
-): [number, number] | null => {
-  const { forward, right, up: upward } = basis(orbit),
-    from = eye(orbit, height),
-    along = [u - from[0], up - from[1], v - from[2]],
-    dot = (axis: ScenePoint): number =>
-      (along[0] ?? 0) * axis[0] +
-      (along[1] ?? 0) * axis[1] +
-      (along[2] ?? 0) * axis[2],
-    depth = dot(forward),
-    spread = Math.tan(FIELD_OF_VIEW / 2);
-
-  if (depth <= 1e-6) {
-    return null;
-  }
-
-  return [
-    dot(right) / (depth * spread * aspect),
-    dot(upward) / (depth * spread),
-  ];
-};
+): [number, number] | null => projectorFor(orbit, height, aspect)(point);
 
 /**
  * The ray from the camera, looking at its focus raised to `height`, through a point on the screen (as `groundAt` takes

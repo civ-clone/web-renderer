@@ -1650,6 +1650,8 @@ expect(
       images: { [name: string]: object } = {
         Food: { name: 'food', naturalWidth: 14, naturalHeight: 14 },
         Production: { name: 'shield', naturalWidth: 14, naturalHeight: 7 },
+        // A canvas, as the art's sprites can be: no natural size, its own.
+        Trade: { name: 'trade', width: 14, height: 14 },
       };
 
     drawYields(
@@ -1657,22 +1659,27 @@ expect(
       [
         { _: 'Food', x: 10, y: 20, size: 14 },
         { _: 'Food', x: 30, y: 20, size: 7 },
+        { _: 'Food', x: 50, y: 20, size: 9 },
         { _: 'Production', x: 10, y: 40, size: 14 },
         { _: 'Trade', x: 30, y: 40, size: 14 },
+        { _: 'Luxuries', x: 50, y: 40, size: 14 },
       ],
       (name) => (images[name] as CanvasImageSource | undefined) ?? null,
       { width: 300, height: 200, ratio: 2 }
     );
 
     expect(
-      'yields are drawn on a cleared canvas, each icon at its own size crisp or shrunk smoothly, keeping its shape, and none without art',
+      'yields are drawn on a cleared canvas, each icon crisp at a whole number of device px to its own and smoothed otherwise, keeping its shape, and none without art',
       drawn,
       [
         ['setTransform', 2, 0, 0, 2, 0, 0],
         ['clearRect', 0, 0, 300, 200],
+        // Twice its own on a screen of two device px to each, and its own; then 18 device px for 14.
         ['drawImage', 'food', 10, 20, 14, 14, false],
-        ['drawImage', 'food', 30, 20, 7, 7, true],
+        ['drawImage', 'food', 30, 20, 7, 7, false],
+        ['drawImage', 'food', 50, 20, 9, 9, true],
         ['drawImage', 'shield', 10, 43.5, 14, 7, false],
+        ['drawImage', 'trade', 30, 40, 14, 14, false],
       ]
     );
   }

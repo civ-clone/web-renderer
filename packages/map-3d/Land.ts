@@ -63,6 +63,8 @@ export class Land {
   //  sides along the ground's axes, that fits inside it.
   #radius: number;
   #inner: number;
+  // Each edge of a square's outline: how far from its middle, and which way it faces.
+  #edges: { away: number; normal: number[] }[] = [];
   #reliefChanges = 0;
 
   constructor(world: World) {
@@ -136,6 +138,7 @@ export class Land {
             ];
       });
 
+    this.#edges = edges;
     this.#radius = Math.min(...edges.map(({ away }) => away));
     // A square of half-side h fits inside an edge `away` from the middle while |nu|·h + |nv|·h ≤ away.
     this.#inner = Math.min(
@@ -202,9 +205,28 @@ export class Land {
     return this.#reliefChanges;
   }
 
-  /** Half the biggest square, with sides along the ground's axes, that fits inside a square: where icons fit in it. */
+  /** Half the biggest square, with sides along the ground's axes, that fits inside a square: where fields are laid. */
   inner(): number {
     return this.#inner;
+  }
+
+  /**
+   * Half the biggest square that fits inside a square with its sides along `across` and `away`, two directions on the
+   *  ground at right angles, each a unit long: where icons fit in it, as the camera's turned.
+   */
+  innerAlong(
+    [acrossU, acrossV]: readonly [number, number],
+    [awayU, awayV]: readonly [number, number]
+  ): number {
+    // A square of half-side h fits inside an edge `away` from the middle while |n·across|·h + |n·away|·h ≤ away.
+    return Math.min(
+      ...this.#edges.map(
+        ({ away, normal: [nu = 0, nv = 0] }) =>
+          away /
+          (Math.abs(nu * acrossU + nv * acrossV) +
+            Math.abs(nu * awayU + nv * awayV))
+      )
+    );
   }
 
   /** How far the ground runs down: its period where it wraps over the poles, or to its last row's bottom. */

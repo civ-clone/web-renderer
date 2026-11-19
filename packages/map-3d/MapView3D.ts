@@ -19,6 +19,7 @@ import World from '@civ-clone/ui-map/components/World';
 import { Stage, StageFactory, copiesNear, createStage } from './stage';
 import Land from './Land';
 import {
+  FIELD_OF_VIEW,
   Orbit,
   TURN_STEP,
   between,
@@ -26,6 +27,7 @@ import {
   defaultOrbit,
   eye,
   groundAt,
+  projectorFor,
   settled,
   sightFor,
   toScreen,
@@ -36,7 +38,13 @@ import CameraInput from './camera/CameraInput';
 import markerFor, { MarkerWords } from './markers/markerFor';
 import pickGround from './camera/pick';
 import Minimap3D from './minimap/Minimap3D';
-import yieldIconsAt, { YieldIcon, drawYields, sizeOf } from './yields';
+import yieldIconsAt, {
+  ICONS_FILL,
+  SMALLEST_ICON,
+  YieldIcon,
+  drawYields,
+  sizeOf,
+} from './yields';
 import { squareCity, squareYields } from '@civ-clone/ui-client/lib/yieldMap';
 
 // How long, in ms, each frame may go on building the land's chunks while any wait. A chunk is built whole, once a frame
@@ -633,8 +641,8 @@ export class MapView3D implements MapRenderer {
 
   /**
    * The yields' icons over the squares as the camera sees them now, in the canvas's px, while they're shown (`y`): each
-   *  square's at every copy of the world in sight, on the land as it's drawn, if it's on the screen and not lost in the
-   *  haze.
+   *  square's at every copy of the world in sight, on the land as it's drawn, if it's on the screen, near enough for its
+   *  icons to be read, and not lost in the haze.
    */
   yieldIcons(): YieldIcon[] {
     const width = this.#canvas.clientWidth,
@@ -647,14 +655,50 @@ export class MapView3D implements MapRenderer {
     const orbit = this.#orbit,
       look = this.#lookHeight ?? 0,
       aspect = width / height,
+      project = projectorFor(orbit, look, aspect),
       { near, far } = sightFor(orbit.distance),
-      // Half way into the haze, from the camera: past it the land's too faint for its icons.
-      hazed = (near + far) / 2,
-      [eyeU, eyeY, eyeV] = eye(orbit, look),
-      inner = this.#land.inner(),
-      // Across the screen, and away up it, on the ground.
-      [acrossU, acrossV] = [Math.cos(orbit.yaw), Math.sin(orbit.yaw)],
-      [awayU, awayV] = [-Math.sin(orbit.yaw), Math.cos(orbit.yaw)],
+      from = eye(orbit, look),
+      // Which way the camera looks, a unit long: how deep into the view a point is, as the haze measures it.
+      [forwardU, forwardY, forwardV] = ((): [number, number, number] => {
+        const [fu, fy, fv] = [
+            orbit.focus[0] - from[0],
+            look - from[1],
+            orbit.focus[1] - from[2],
+          ],
+          length = Math.hypot(fu, fy, fv) || 1;
+
+        return [fu / length, fy / length, fv / length];
+      })(),
+      depthOf = (u: number, up: number, v: number): number =>
+        (u - from[0]) * forwardU +
+        (up - from[1]) * forwardY +
+        (v - from[2]) * forwardV,
+      // Across the screen, and away up it, on the ground; and the biggest square box with sides that way in a square.
+      across: [number, number] = [Math.cos(orbit.yaw), Math.sin(orbit.yaw)],
+      away: [number, number] = [-Math.sin(orbit.yaw), Math.cos(orbit.yaw)],
+      inner = this.#land.innerAlong(across, away),
+      // How deep icons go: half way into the haze, past which the land's too faint for them, or where a square's too
+      //  small on the screen for its icons to be read, whichever's nearer.
+      deepest = Math.min(
+        (near + far) / 2,
+        (inner * height * ICONS_FILL) /
+          (Math.tan(FIELD_OF_VIEW / 2) * 2 * SMALLEST_ICON)
+      ),
+      // Squares' middles are this far above or below the height the camera looks at, at most, and a square reaches this
+      //  far from its middle.
+      slack = 2,
+      // How far from the camera a point that deep can be, at the screen's corners; and that squared, with the slack.
+      reach =
+        deepest *
+          Math.hypot(
+            1,
+            Math.tan(FIELD_OF_VIEW / 2),
+            Math.tan(FIELD_OF_VIEW / 2) * aspect
+          ) +
+        slack,
+      reachSquared = reach * reach,
+      // How far the camera is above the height it looks at, squared: all of what's on the ground is at least that far.
+      overSquared = (from[1] - look) * (from[1] - look),
       onScreen = (point: [number, number] | null, margin: number) =>
         point !== null &&
         point[0] >= -1 - margin &&
@@ -672,9 +716,35 @@ export class MapView3D implements MapRenderer {
               ((a[0] - b[0]) * width) / 2,
               ((a[1] - b[1]) * height) / 2
             ),
-      copies = copiesNear(orbit.focus, far, this.#period()),
+      { u: periodU } = this.#land.layout.period(),
+      extentV = this.#land.extentV(),
+      // The copies of the world any of which is near enough the camera: the rest are all too deep for icons, or off the
+      //  screen; and none, with the camera too high for any.
+      copies =
+        overSquared > reachSquared
+          ? []
+          : copiesNear(orbit.focus, far, this.#period()).filter(
+              ([offsetU, offsetV]) => {
+                const du = Math.max(
+                    offsetU - slack - from[0],
+                    0,
+                    from[0] - (offsetU + periodU + slack)
+                  ),
+                  dv = Math.max(
+                    offsetV - slack - from[2],
+                    0,
+                    from[2] - (offsetV + extentV + slack)
+                  );
+
+                return du * du + dv * dv + overSquared <= reachSquared;
+              }
+            ),
       biggest = this.#yieldIconSize(),
       icons: YieldIcon[] = [];
+
+    if (copies.length === 0) {
+      return icons;
+    }
 
     this.world.tiles().forEach((tile) => {
       const [u, v] = this.#land.layout.centre(tile.x, tile.y);
@@ -682,14 +752,22 @@ export class MapView3D implements MapRenderer {
 
       copies.forEach(([offsetU, offsetV]) => {
         const atU = u + offsetU,
-          atV = v + offsetV;
+          atV = v + offsetV,
+          du = atU - from[0],
+          dv = atV - from[2];
 
-        // Cheap tests first, on the ground at the height the camera looks at: in the haze, or well off the screen.
-        if (Math.hypot(atU - eyeU, look - eyeY, atV - eyeV) > hazed) {
+        // Cheap tests first, at the height the camera looks at: too far, too deep, behind, or well off the screen.
+        if (du * du + dv * dv + overSquared > reachSquared) {
           return;
         }
 
-        if (!onScreen(toScreen(orbit, look, [atU, look, atV], aspect), 0.5)) {
+        const depth = depthOf(atU, look, atV);
+
+        if (depth > deepest + slack || depth < 0.1) {
+          return;
+        }
+
+        if (!onScreen(project([atU, look, atV]), 0.5)) {
           return;
         }
 
@@ -699,34 +777,28 @@ export class MapView3D implements MapRenderer {
           return;
         }
 
-        const up = this.#heightOf(tile.x, tile.y, u, v),
-          middle = toScreen(orbit, look, [atU, up, atV], aspect);
+        const up = this.#heightOf(tile.x, tile.y, u, v);
+
+        if (depthOf(atU, up, atV) > deepest) {
+          return;
+        }
+
+        const middle = project([atU, up, atV]);
 
         if (middle === null || !onScreen(middle, 0.1)) {
           return;
         }
 
         const point = (along: number, [du, dv]: [number, number]) =>
-          toScreen(
-            orbit,
-            look,
-            [atU + du * along, up, atV + dv * along],
-            aspect
-          );
+          project([atU + du * along, up, atV + dv * along]);
 
         icons.push(
           ...yieldIconsAt(
             yields,
             toPx(middle),
             [
-              apart(
-                point(inner, [acrossU, acrossV]),
-                point(-inner, [acrossU, acrossV])
-              ),
-              apart(
-                point(inner, [awayU, awayV]),
-                point(-inner, [awayU, awayV])
-              ),
+              apart(point(inner, across), point(-inner, across)),
+              apart(point(inner, away), point(-inner, away)),
             ],
             biggest
           )

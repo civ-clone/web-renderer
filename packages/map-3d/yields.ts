@@ -10,10 +10,12 @@ import { tileYieldGrid } from '@civ-clone/ui-client/lib/yieldMap';
 /** An icon to draw: the yield's name, the top left of its box on the screen in px, and how big the box is, square. */
 export type YieldIcon = { _: string; x: number; y: number; size: number };
 
-// The smallest an icon's worth drawing, in px; and how much of a square's box, across and up the screen, its icons
-//  take.
-const SMALLEST = 5,
-  FILL = 0.9;
+/**
+ * The smallest an icon's worth drawing, in px: smaller, it can't be read, and a far-off view would be thousands of them.
+ *  And how much of a square's box, across and up the screen, its icons take.
+ */
+export const SMALLEST_ICON = 8,
+  ICONS_FILL = 0.9;
 
 // Where `count` icons `size` across go along a stretch `length` long from `start`: a block centred on it, each `size`
 //  apart or closer, so the block fits where an icon does.
@@ -44,11 +46,11 @@ export const yieldIconsAt = (
   biggest: number
 ): YieldIcon[] => {
   const { columns, icons } = tileYieldGrid(yields),
-    width = across * FILL,
-    height = down * FILL,
+    width = across * ICONS_FILL,
+    height = down * ICONS_FILL,
     size = Math.min(biggest, Math.floor(height / 2), Math.floor(width / 2));
 
-  if (icons.length === 0 || size < SMALLEST) {
+  if (icons.length === 0 || size < SMALLEST_ICON) {
     return [];
   }
 
@@ -90,8 +92,8 @@ export const sizeOf = (image: CanvasImageSource): [number, number] => {
 
 /**
  * Draws `icons` on a canvas `width` × `height` in the page's px, `ratio` device px to each: cleared first, each icon the
- *  image `iconFor` gives, keeping its shape, centred in its box. At its own size it's drawn crisp, as the 2D map draws
- *  pixel art; shrunk, it's smoothed, so its pixels don't come out uneven.
+ *  image `iconFor` gives, keeping its shape, centred in its box. At a whole number of device px to each of its own, it's
+ *  drawn crisp, as the 2D map draws pixel art; otherwise it's smoothed, so its pixels don't come out uneven.
  */
 export const drawYields = (
   context: Pick<
@@ -115,9 +117,11 @@ export const drawYields = (
     const [imageWidth, imageHeight] = sizeOf(image),
       scale = size / Math.max(1, imageWidth, imageHeight),
       drawnWidth = imageWidth * scale,
-      drawnHeight = imageHeight * scale;
+      drawnHeight = imageHeight * scale,
+      onDevice = scale * ratio;
 
-    context.imageSmoothingEnabled = scale < 1;
+    context.imageSmoothingEnabled =
+      onDevice < 1 || Math.abs(onDevice - Math.round(onDevice)) > 1e-6;
     context.drawImage(
       image,
       x + (size - drawnWidth) / 2,

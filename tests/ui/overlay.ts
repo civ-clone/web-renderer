@@ -1073,6 +1073,54 @@ const landOf = (
   );
 }
 
+// The biggest square box inside a square, with its sides along two directions on the ground: along the ground's axes,
+//  the one fields are laid in; turned an eighth, smaller, as a turned box's corners reach further. Either way, its
+//  corners are inside the square, on every grid.
+(['square', 'staggered-iso', 'hex-odd-r'] as TopologyId[]).forEach(
+  (topologyId) => {
+    const { land } = landOf(topologyId, 32, 16, () => ({})),
+      eighth = Math.PI / 4,
+      corners = (angle: number): boolean => {
+        const across: [number, number] = [Math.cos(angle), Math.sin(angle)],
+          away: [number, number] = [-Math.sin(angle), Math.cos(angle)],
+          half = land.innerAlong(across, away) * 0.999,
+          [u, v] = land.layout.centre(9, 6);
+
+        return [
+          [1, 1],
+          [1, -1],
+          [-1, 1],
+          [-1, -1],
+        ].every(
+          ([a, b]) =>
+            land.layout
+              .tileAt(
+                u + (a! * across[0] + b! * away[0]) * half,
+                v + (a! * across[1] + b! * away[1]) * half
+              )
+              .join() === '9,6'
+        );
+      };
+
+    expect(
+      `${topologyId}: the biggest box in a square along the ground's axes is the one fields are laid in; turned, its corners are still inside the square`,
+      [
+        Math.round(land.innerAlong([1, 0], [0, 1]) * 1e6) ===
+          Math.round(land.inner() * 1e6),
+        [0, eighth / 2, eighth, eighth * 3].every(corners),
+        topologyId !== 'square' ||
+          Math.round(
+            land.innerAlong(
+              [Math.cos(eighth), Math.sin(eighth)],
+              [-Math.sin(eighth), Math.cos(eighth)]
+            ) * 1000
+          ) === 354,
+      ],
+      [true, true, true]
+    );
+  }
+);
+
 // The poles' planes keep what lies between them, and what's laid past a pole is drawn a period round as well when
 //  they're stopped at, so on every grid that wraps over them, all that's laid on the first and last rows is drawn
 //  somewhere between them: where the land is theirs.
