@@ -15,6 +15,7 @@ import {
   ConeGeometry,
   CylinderGeometry,
   Euler,
+  Matrix3,
   Matrix4,
   Quaternion,
   SphereGeometry,
@@ -24,6 +25,11 @@ import {
   SpecialLook,
   specialLook,
 } from '@civ-clone/ui-models-builtin/specials';
+import {
+  Plant,
+  PlantKind,
+  growthOf,
+} from '@civ-clone/ui-models-builtin/vegetation';
 import { Route, SquareOverlay } from './overlayFor';
 
 /** Where a square is, and what it needs to know of the land round it, to lay its overlay. */
@@ -36,6 +42,8 @@ export type OverlayPlace = {
   heightAt(u: number, v: number): number;
   // A number of the square's own, for where things stand on it.
   seed: number;
+  // How far it is from the equator, from 0 there to 1 at the poles.
+  latitude: number;
 };
 
 /** A chunk's overlay as three.js takes it: triangles, each point's normal and colour, relative to its corner. */
@@ -80,7 +88,18 @@ const box = new BoxGeometry(1, 1, 1),
   cylinder = new CylinderGeometry(0.5, 0.5, 1, 8),
   cone = new ConeGeometry(0.5, 1, 8),
   pyramid = new ConeGeometry(0.5, 1, 4),
-  sphere = new SphereGeometry(0.5, 8, 6);
+  sphere = new SphereGeometry(0.5, 8, 6),
+  // Plants are many, thousands to a chunk: few sides each, and no ends where nothing sees them.
+  stem = new CylinderGeometry(0.5, 0.5, 1, 4, 1, true),
+  tier = new ConeGeometry(0.5, 1, 5, 1, true),
+  crown = new SphereGeometry(0.5, 5, 3);
+
+// Where on a square its mine, hut and specials stand, by seeded angle and how far out: plants keep clear of them.
+const SPOTS = {
+  mine: [3, 0.62],
+  hut: [11, 0.64],
+  special: (index: number): [number, number] => [index + 1, 0.62],
+} as const;
 
 // A seeded fraction, the `n`th for a square's `seed`.
 const fraction = (seed: number, n: number): number => {
@@ -93,11 +112,57 @@ const fraction = (seed: number, n: number): number => {
   return (h >>> 0) / 4294967296;
 };
 
-const colourOf = (css: string): [number, number, number] => {
-  const { r, g, b } = new Color(css);
+// Colours as three.js works in them, each worked out once.
+const colours = new Map<string, [number, number, number]>();
 
-  return [r, g, b];
+const colourOf = (css: string): [number, number, number] => {
+  let colour = colours.get(css);
+
+  if (colour === undefined) {
+    const { r, g, b } = new Color(css);
+
+    colour = [r, g, b];
+    colours.set(css, colour);
+  }
+
+  return colour;
 };
+
+// Each shape's triangles, a point at a time, worked out once: solids are copies of them, moved into place.
+const triangles = new WeakMap<
+  BufferGeometry,
+  { positions: Float32Array; normals: Float32Array }
+>();
+
+const trianglesOf = (
+  shape: BufferGeometry
+): { positions: Float32Array; normals: Float32Array } => {
+  let made = triangles.get(shape);
+
+  if (made === undefined) {
+    const flat = shape.index === null ? shape : shape.toNonIndexed();
+
+    made = {
+      positions: new Float32Array(flat.getAttribute('position').array),
+      normals: new Float32Array(flat.getAttribute('normal').array),
+    };
+    triangles.set(shape, made);
+
+    if (flat !== shape) {
+      flat.dispose();
+    }
+  }
+
+  return made;
+};
+
+// Worked in, a solid at a time.
+const MATRIX = new Matrix4(),
+  NORMALS = new Matrix3(),
+  POSITION = new Vector3(),
+  ROTATION = new Quaternion(),
+  EULER = new Euler(),
+  SCALE = new Vector3();
 
 /** Lays shapes for one square into a soup of triangles. */
 class Layer {
@@ -220,33 +285,38 @@ class Layer {
     css: string,
     turn: readonly [number, number, number] = [0, 0, 0]
   ): void {
-    const matrix = new Matrix4().compose(
-        new Vector3(...at),
-        new Quaternion().setFromEuler(new Euler(...turn)),
-        new Vector3(...size)
+    const { positions, normals } = trianglesOf(shape),
+      matrix = MATRIX.compose(
+        POSITION.set(...at),
+        ROTATION.setFromEuler(EULER.set(...turn)),
+        SCALE.set(...size)
       ),
-      placed = shape.clone().applyMatrix4(matrix),
-      flat = placed.index === null ? placed : placed.toNonIndexed(),
-      positions = flat.getAttribute('position'),
-      normals = flat.getAttribute('normal'),
-      colour = colourOf(css);
+      e = matrix.elements,
+      n = NORMALS.getNormalMatrix(matrix).elements,
+      [r, g, b] = colourOf(css),
+      soup = this.soup;
 
-    for (let point = 0; point < positions.count; point++) {
-      this.soup.positions.push(
-        positions.getX(point),
-        positions.getY(point),
-        positions.getZ(point)
+    // Each point moved into place, and its normal turned with it: no geometry made for it, as a chunk lays thousands.
+    for (let at = 0; at < positions.length; at += 3) {
+      const x = positions[at]!,
+        y = positions[at + 1]!,
+        z = positions[at + 2]!,
+        nx = normals[at]!,
+        ny = normals[at + 1]!,
+        nz = normals[at + 2]!,
+        tx = n[0]! * nx + n[3]! * ny + n[6]! * nz,
+        ty = n[1]! * nx + n[4]! * ny + n[7]! * nz,
+        tz = n[2]! * nx + n[5]! * ny + n[8]! * nz,
+        length = Math.hypot(tx, ty, tz) || 1;
+
+      soup.positions.push(
+        e[0]! * x + e[4]! * y + e[8]! * z + e[12]!,
+        e[1]! * x + e[5]! * y + e[9]! * z + e[13]!,
+        e[2]! * x + e[6]! * y + e[10]! * z + e[14]!
       );
-      this.soup.normals.push(
-        normals.getX(point),
-        normals.getY(point),
-        normals.getZ(point)
-      );
-      this.soup.colours.push(...colour);
+      soup.normals.push(tx / length, ty / length, tz / length);
+      soup.colours.push(r, g, b);
     }
-
-    placed.dispose();
-    flat.dispose();
   }
 
   /** A point `distance` of the square's reach from its middle, at its `n`th seeded angle. */
@@ -375,7 +445,7 @@ const fields = (layer: Layer, kind: 'irrigation' | 'farmland'): void => {
 };
 
 const mine = (layer: Layer): void => {
-  const [u, v] = layer.spot(3, 0.62),
+  const [u, v] = layer.spot(...SPOTS.mine),
     y = layer.ground(u, v);
 
   // A headframe: two legs leaning together, and its wheel.
@@ -653,7 +723,7 @@ const special = (
 };
 
 const hut = (layer: Layer): void => {
-  const at = layer.spot(11, 0.64);
+  const at = layer.spot(...SPOTS.hut);
 
   // Three round huts, thatched.
   [0, 1, 2].forEach((index) => {
@@ -665,6 +735,265 @@ const hut = (layer: Layer): void => {
 
     layer.solid(cylinder, [u, y + 0.02, v], [0.05, 0.04, 0.05], WALL);
     layer.solid(cone, [u, y + 0.055, v], [0.065, 0.035, 0.065], THATCH);
+  });
+};
+
+// How much room each plant takes, round where it stands, at its usual size.
+const ROOM: { [kind in PlantKind]: number } = {
+  conifer: 0.06,
+  broadleaf: 0.07,
+  palm: 0.06,
+  deadTree: 0.05,
+  bush: 0.035,
+  shrub: 0.03,
+  scrub: 0.03,
+  reeds: 0.03,
+  rock: 0.04,
+  cactus: 0.03,
+};
+
+// One plant, standing at (`u`, `v`), `s` times its usual size, turned `facing` about the vertical.
+const grow = (
+  layer: Layer,
+  plant: Plant,
+  kind: PlantKind,
+  u: number,
+  v: number,
+  s: number,
+  facing: number
+): void => {
+  const y = layer.ground(u, v),
+    { colour, detail } = plant;
+
+  switch (kind) {
+    case 'conifer':
+      layer.solid(
+        stem,
+        [u, y + 0.025 * s, v],
+        [0.016 * s, 0.05 * s, 0.016 * s],
+        detail
+      );
+      layer.solid(
+        tier,
+        [u, y + 0.09 * s, v],
+        [0.11 * s, 0.12 * s, 0.11 * s],
+        colour
+      );
+      layer.solid(
+        tier,
+        [u, y + 0.16 * s, v],
+        [0.08 * s, 0.1 * s, 0.08 * s],
+        colour
+      );
+      break;
+    case 'broadleaf':
+      layer.solid(
+        stem,
+        [u, y + 0.04 * s, v],
+        [0.018 * s, 0.08 * s, 0.018 * s],
+        detail
+      );
+      layer.solid(
+        crown,
+        [u, y + 0.12 * s, v],
+        [0.13 * s, 0.11 * s, 0.13 * s],
+        colour,
+        [0, facing, 0]
+      );
+      break;
+    case 'palm':
+      layer.solid(
+        stem,
+        [u, y + 0.08 * s, v],
+        [0.012 * s, 0.16 * s, 0.012 * s],
+        detail,
+        [0.12, facing, 0]
+      );
+      layer.solid(
+        tier,
+        [u + 0.01 * s, y + 0.165 * s, v],
+        [0.15 * s, 0.03 * s, 0.15 * s],
+        colour,
+        [0, facing, 0]
+      );
+      break;
+    case 'deadTree':
+      layer.solid(
+        stem,
+        [u, y + 0.06 * s, v],
+        [0.014 * s, 0.12 * s, 0.014 * s],
+        detail
+      );
+      layer.solid(
+        box,
+        [u + 0.02 * s, y + 0.09 * s, v],
+        [0.006 * s, 0.05 * s, 0.006 * s],
+        detail,
+        [0, facing, -0.7]
+      );
+      break;
+    case 'bush':
+      layer.solid(
+        crown,
+        [u, y + 0.02 * s, v],
+        [0.06 * s, 0.045 * s, 0.06 * s],
+        colour,
+        [0, facing, 0]
+      );
+      break;
+    case 'shrub':
+      layer.solid(
+        tier,
+        [u, y + 0.025 * s, v],
+        [0.05 * s, 0.05 * s, 0.05 * s],
+        colour,
+        [0, facing, 0]
+      );
+      layer.solid(
+        tier,
+        [u + 0.02 * s, y + 0.018 * s, v + 0.01 * s],
+        [0.035 * s, 0.036 * s, 0.035 * s],
+        colour,
+        [0, facing, 0]
+      );
+      break;
+    case 'scrub':
+      layer.solid(
+        crown,
+        [u, y + 0.008 * s, v],
+        [0.05 * s, 0.02 * s, 0.05 * s],
+        colour,
+        [0, facing, 0]
+      );
+      break;
+    case 'reeds':
+      [-1, 0, 1].forEach((lean) =>
+        layer.solid(
+          box,
+          [u + lean * 0.008 * s, y + 0.035 * s, v],
+          [0.005, 0.07 * s, 0.005],
+          lean === 0 ? colour : detail,
+          [0, facing, lean * 0.18]
+        )
+      );
+      break;
+    case 'rock':
+      layer.solid(
+        crown,
+        [u, y + 0.012 * s, v],
+        [0.07 * s, 0.04 * s, 0.06 * s],
+        colour,
+        [0, facing, 0]
+      );
+      break;
+    default:
+      // A cactus, and its arm.
+      layer.solid(
+        stem,
+        [u, y + 0.05 * s, v],
+        [0.018 * s, 0.1 * s, 0.018 * s],
+        colour
+      );
+      layer.solid(
+        box,
+        [u + 0.015 * s, y + 0.06 * s, v],
+        [0.025 * s, 0.01 * s, 0.01 * s],
+        colour,
+        [0, facing, 0]
+      );
+  }
+};
+
+// Whether the point (`u`, `v`) is at least `away` from the line from `a` to `b`.
+const clearOf = (
+  u: number,
+  v: number,
+  a: readonly [number, number],
+  b: readonly [number, number],
+  away: number
+): boolean => {
+  const du = b[0] - a[0],
+    dv = b[1] - a[1],
+    length = du * du + dv * dv,
+    t =
+      length === 0
+        ? 0
+        : Math.max(
+            0,
+            Math.min(1, ((u - a[0]) * du + (v - a[1]) * dv) / length)
+          );
+
+  return Math.hypot(u - (a[0] + du * t), v - (a[1] + dv * t)) >= away;
+};
+
+// What grows on the square, each where it has room: clear of the unit's stand at its middle, its roads, its mine, hut
+//  and specials, and the plants already there. A forest's trees are conifers towards the poles, broadleaf otherwise.
+const plants = (layer: Layer, overlay: SquareOverlay): void => {
+  const growth = growthOf(overlay.terrain);
+
+  if (growth === null) {
+    return;
+  }
+
+  const { place } = layer,
+    { centre, radius, seed, latitude } = place,
+    // The roads' lines, from the middle halfway to each neighbour they join.
+    routes = [
+      ...(overlay.road?.joins ?? []),
+      ...(overlay.railroad?.joins ?? []),
+    ].map((offset): [readonly [number, number], readonly [number, number]] => [
+      centre,
+      halfway(place, offset),
+    ]),
+    // What's there already: where, and how much room it takes.
+    taken: [number, number, number][] = [
+      ...(overlay.mine
+        ? [[...layer.spot(...SPOTS.mine), 0.1] as [number, number, number]]
+        : []),
+      ...(overlay.hut
+        ? [[...layer.spot(...SPOTS.hut), 0.13] as [number, number, number]]
+        : []),
+      ...overlay.specials.map((_, index): [number, number, number] => [
+        ...layer.spot(...SPOTS.special(index)),
+        0.12,
+      ]),
+    ],
+    hasRoom = (u: number, v: number, room: number): boolean =>
+      Math.hypot(u - centre[0], v - centre[1]) >= 0.22 + room &&
+      routes.every(([a, b]) => clearOf(u, v, a, b, 0.05 + room)) &&
+      taken.every(
+        ([tu, tv, other]) => Math.hypot(u - tu, v - tv) >= other + room
+      );
+
+  growth.plants.forEach((plant, which) => {
+    for (let index = 0; index < plant.count; index++) {
+      const n = 1000 + which * 97 + index * 7,
+        size =
+          plant.size[0] + (plant.size[1] - plant.size[0]) * fraction(seed, n),
+        conifers = growth.conifers,
+        // A forest's tree: a conifer as often as its latitude says.
+        kind: PlantKind =
+          conifers !== undefined &&
+          fraction(seed, n + 1) >=
+            conifers[0] + (conifers[1] - conifers[0]) * latitude
+            ? 'broadleaf'
+            : plant.kind,
+        room = ROOM[kind] * size;
+
+      // A few tries for a place with room.
+      for (let attempt = 0; attempt < 6; attempt++) {
+        const angle = fraction(seed, n + 2 + attempt * 2) * Math.PI * 2,
+          out = Math.sqrt(fraction(seed, n + 3 + attempt * 2)) * radius * 0.92,
+          u = centre[0] + Math.cos(angle) * out,
+          v = centre[1] + Math.sin(angle) * out;
+
+        if (hasRoom(u, v, room)) {
+          grow(layer, plant, kind, u, v, size, angle);
+          taken.push([u, v, room]);
+          break;
+        }
+      }
+    }
   });
 };
 
@@ -708,13 +1037,23 @@ export const layOverlay = (
     special(
       layer,
       specialLook(terrain, feature),
-      layer.spot(index + 1, 0.62),
+      layer.spot(...SPOTS.special(index)),
       index + 1
     )
   );
 
   if (overlay.hut) {
     hut(layer);
+  }
+
+  // What grows there, but not on cleared ground: fields, a fortress, an airbase.
+  if (
+    overlay.vegetation &&
+    overlay.irrigation === null &&
+    !overlay.fortress &&
+    !overlay.airbase
+  ) {
+    plants(layer, overlay);
   }
 };
 

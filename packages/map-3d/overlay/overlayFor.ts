@@ -1,6 +1,6 @@
-// What the 3D map lays on a square's land (docs/3d-renderer.md §5.2, §5.4, plan 3.4): its roads and railroads, joined to
+// What the 3D map lays on a square's land (docs/3d-renderer.md §5, plan 3.2 and 3.4): its roads and railroads, joined to
 //  their neighbours as the 2D map joins them; irrigation or farmland; a mine, a fortress, an airbase; pollution; its
-//  specials; a hut. Pure: `overlayMesh.ts` makes the shapes.
+//  specials; a hut; and what grows there. Pure: `overlayMesh.ts` makes the shapes.
 //
 // Roads join as the 2D map's do (`packages/map/components/Map/Landscape.ts`): a road joins each neighbour with a road;
 //  a railroad joins each with a railroad or a city; a road isn't drawn under a railroad going the same way; and one
@@ -8,6 +8,7 @@
 //  diamond neighbours alike. What's there is the engine's to say: this only draws it.
 
 import { Tile } from '@civ-clone/ui-protocol/types';
+import { growthOf } from '@civ-clone/ui-models-builtin/vegetation';
 
 /** A neighbour of a square: how far off it is, in squares, before the world wraps, and what's on it. */
 export type OverlayNeighbour = {
@@ -32,6 +33,9 @@ export type SquareOverlay = {
   // Its features drawn as specials, as `[terrain, feature]`: not those drawn some other way (rivers).
   specials: (readonly [string, string])[];
   hut: boolean;
+  // Its terrain, and whether what grows on it is drawn: not on a city's lot.
+  terrain: string;
+  vegetation: boolean;
 };
 
 // Features drawn otherwise than as a special: Civ2's rivers, which are drawn as rivers (§5.3).
@@ -42,7 +46,8 @@ const has = (tile: Pick<Tile, 'improvements'>, name: string): boolean =>
 
 /** What's laid on `tile`'s land, its `neighbours` all round it: nothing, for a square with none of it. */
 export const overlayFor = (
-  tile: Pick<Tile, 'improvements' | 'terrain' | 'goodyHut'>,
+  tile: Pick<Tile, 'improvements' | 'terrain' | 'goodyHut'> &
+    Partial<Pick<Tile, 'city'>>,
   neighbours: readonly OverlayNeighbour[]
 ): SquareOverlay | null => {
   const road = has(tile, 'Road'),
@@ -94,6 +99,8 @@ export const overlayFor = (
         .filter((feature) => !NOT_SPECIALS.includes(feature))
         .map((feature): [string, string] => [tile.terrain._, feature]),
       hut: tile.goodyHut !== null && tile.goodyHut !== undefined,
+      terrain: tile.terrain?._ ?? 'Unknown',
+      vegetation: !tile.city && growthOf(tile.terrain?._ ?? 'Unknown') !== null,
     };
 
   const empty =
@@ -104,7 +111,8 @@ export const overlayFor = (
     !overlay.airbase &&
     !overlay.pollution &&
     overlay.specials.length === 0 &&
-    !overlay.hut;
+    !overlay.hut &&
+    !overlay.vegetation;
 
   return empty ? null : overlay;
 };

@@ -7,7 +7,9 @@
 //    over the land; a road reaching halfway to the neighbour it joins, at the copy the place says; specials at sea on
 //    the water; what stands on a square standing clear of the unit's stand at its middle; the same every time;
 //  - on the land: a chunk's overlay is its squares', roads at the world's edges and poles joined across them at the
-//    nearest copy, on every grid; a road built remakes its chunk's overlay, and its neighbours', and builds no land.
+//    nearest copy, on every grid; a road built remakes its chunk's overlay, and its neighbours', and builds no land;
+//  - what grows: on each terrain the table says, not on a city's lot nor cleared ground, clear of the unit's stand and
+//    the roads, forests' trees conifers towards the poles.
 
 import * as Civ1Features from '@civ-clone/civ1-world/TerrainFeatures';
 import * as Civ2Features from '@civ-clone/civ2-world/TerrainFeatures';
@@ -27,6 +29,8 @@ import overlayMesh, {
 import { Stage } from '@civ-clone/ui-map-3d/stage';
 import { TopologyId } from '@civ-clone/ui-protocol/topology';
 import Land from '@civ-clone/ui-map-3d/Land';
+import * as Civ1Terrains from '@civ-clone/civ1-world/Terrains';
+import { vegetationTable } from '@civ-clone/ui-models-builtin/vegetation';
 import World from '@civ-clone/ui-map/components/World';
 
 const failures: string[] = [];
@@ -75,7 +79,8 @@ const named = (...names: string[]) => names.map((_) => ({ _ })),
   square = (
     improvements: string[] = [],
     {
-      terrain = 'Grassland',
+      // Where nothing grows, but where something's said to.
+      terrain = 'River',
       features: on = [],
       hut = false,
     }: { terrain?: string; features?: string[]; hut?: boolean } = {}
@@ -193,6 +198,7 @@ const heightAt = (u: number): number => 0.1 + 0.02 * Math.sin(u),
     radius: 0.5,
     heightAt: height ?? ((u) => heightAt(u)),
     seed: x * 7919 + y,
+    latitude: 0.5,
   }),
   roadEast: SquareOverlay = overlayFor(square(['Road']), [
     neighbour([1, 0], ['Road']),
@@ -474,6 +480,80 @@ expect(
       [true, []]
     );
   }
+);
+
+// What grows.
+const engineTerrains = new Set(Object.keys(Civ1Terrains));
+
+expect(
+  'what grows is said for terrains the engine names, forests, jungles and swamps among them',
+  [
+    Object.keys(vegetationTable).filter((name) => !engineTerrains.has(name)),
+    ['Forest', 'Jungle', 'Swamp'].every((name) => name in vegetationTable),
+  ],
+  [[], true]
+);
+
+const forest = (more: string[] = [], city = false) =>
+    overlayFor(
+      {
+        ...square(more, { terrain: 'Forest' }),
+        city: city ? ({} as Tile['city']) : null,
+      },
+      more.includes('Road')
+        ? [neighbour([1, 0], ['Road']), neighbour([0, 1], ['Road'])]
+        : []
+    ),
+  // The points of a square's overlay at (17, 3), at `latitude`, back on the ground.
+  laidAt = (overlay: SquareOverlay, latitude = 0.5) =>
+    pointsOf(
+      overlayMesh(16, 0, [{ overlay, place: { ...place(17, 3), latitude } }])
+    );
+
+expect(
+  'a forest grows trees, but not on a city’s lot',
+  [forest()?.vegetation, laidAt(forest()!).length > 0, forest([], true)],
+  [true, true, null]
+);
+
+const trees = laidAt(forest(['Road'])!),
+  // The road's lines: from the middle halfway east, and halfway south.
+  offRoad = ([u, , v]: [number, number, number]): boolean =>
+    // Points of the road itself lie on it: only what stands higher is a plant.
+    (u >= 17.5 - 0.036 && u <= 18 && Math.abs(v - 3.5) <= 0.036) ||
+    (v >= 3.5 - 0.036 && v <= 4 && Math.abs(u - 17.5) <= 0.036)
+      ? true
+      : Math.hypot(u - 17.5, v - 3.5) > 0.22 &&
+        !(u > 17.5 && Math.abs(v - 3.5) < 0.05) &&
+        !(v > 3.5 && Math.abs(u - 17.5) < 0.05);
+
+expect(
+  'its trees stand clear of the unit’s stand at the middle, and of the roads',
+  trees.filter((point) => !offRoad(point)).length,
+  0
+);
+expect(
+  'fields, a fortress or an airbase clear the ground of it',
+  [
+    laidAt(forest(['Irrigation'])!).length ===
+      laidAt(overlayFor(square(['Irrigation']), [])!).length,
+    laidAt(forest(['Fortress'])!).length ===
+      laidAt(overlayFor(square(['Fortress']), [])!).length,
+  ],
+  [true, true]
+);
+expect(
+  'a forest’s trees are mostly broadleaf at the equator and conifers at the poles: different trees',
+  Array.from(laidAt(forest()!, 0).flat()).join() !==
+    Array.from(laidAt(forest()!, 1).flat()).join(),
+  true
+);
+expect(
+  'its solids’ normals are of length one',
+  unitNormals(
+    overlayMesh(16, 0, [{ overlay: forest()!, place: place(17, 3) }])
+  ),
+  true
 );
 
 if (failures.length > 0) {

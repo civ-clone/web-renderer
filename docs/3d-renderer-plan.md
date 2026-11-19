@@ -375,6 +375,13 @@ Epic's UE4 skeleton or only match its bone names.
 | 3.4 | Improvements: roads, railroads, irrigation and Farmland, mines, Fortress and Airbase, pollution and fallout; specials and huts. |
 | 3.5 | Clouds over unseen squares, which clear when a square is seen. Squares not in sight are dimmed under rules that say. Grid lines and the hover highlight. |
 
+**3.2, first part: done.** What grows is laid with the rest of the overlay, from the built-in set's table (`packages/models-builtin/vegetation.ts`):
+- forests' trees are conifers towards the poles and broadleaf towards the equator;
+- jungle has broadleaf and palms, swamps reeds and dead trees, and grassland, plains, tundra and hills bushes, shrubs and scrub;
+- deserts and mountains get rocks, and deserts a cactus or two.
+
+Plants are scattered by seed, each where it has room. They stay clear of a unit's stand, roads, mines, huts and specials, and off a city's lot and cleared ground (fields, a fortress, an airbase). A tree is a handful of low-sided shapes. An all-forest chunk is about 43,000 triangles and 16 ms to lay. Still to do in 3.2: instancing, impostors at a distance, and wind.
+
 **3.4, first part: done.** What's laid on the land is made by code (`packages/map-3d/overlay/`), one vertex-coloured mesh a chunk, so it costs a draw call a chunk:
 - roads and railroads are draped over the land, joined to their neighbours as the 2D map joins them, along the topology's directions, and at the nearest copy across the world's seams;
 - irrigation and farmland are rows of crops with ditches; pollution is a dark smear;
