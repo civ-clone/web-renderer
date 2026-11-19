@@ -383,7 +383,7 @@ Epic's UE4 skeleton or only match its bone names.
 | 3.4 | Improvements: roads, railroads, irrigation and Farmland, mines, Fortress and Airbase, pollution and fallout; specials and huts. |
 | 3.5 | Clouds over unseen squares, which clear when a square is seen. Squares not in sight are dimmed under rules that say. Grid lines and the hover highlight. |
 
-**3.1, first part: done.** The surfaces' detail (spec §4.3): each terrain has a surface (grass, plains, sand, rock, snow, forest floor, mud, tundra), blended across squares as its colour is, and drawn as a texture made by code over the land's colour, with its bumps and roughness, tiling with the world. Rock on steep slopes, snow on the tallest peaks, more towards the poles, and wet ground at the waterline: done too. Still to do in 3.1: rock mapped from three sides, should the land grow steeper.
+**3.1, first part: done.** The surfaces' detail (spec §4.3): each terrain has a surface (grass, plains, sand, rock, snow, forest floor, mud, tundra), blended across squares as its colour is, and drawn as a texture made by code over the land's colour, with its bumps and roughness, tiling with the world. Rock on steep slopes, snow on the tallest peaks, more towards the poles, and wet ground at the waterline: done too. Still to do in 3.1: rock mapped from three sides, as mountains' steepest sides stretch a texture laid flat 1.37 times.
 
 **Ranges: done.** Mountains side by side are joined, as Civ1 joins them (spec §4.1): a ridge runs from each peak to
 its neighbour's, across an edge or a corner, dipping to a saddle between them, so a chain of mountains is a range and

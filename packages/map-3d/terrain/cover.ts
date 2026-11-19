@@ -12,8 +12,8 @@ export const COVER = {
   rockFrom: 0.97,
   rockTo: 0.88,
   // Snow from this height at the equator, and at the poles; whole a little above. A mountain's top is 0.32 to 0.47
-  //  high, about 0.40 for most, so about half the peaks near the equator have some snow and the tallest are capped,
-  //  more of them towards the poles.
+  //  high, about 0.40 for most, so near the equator about half the peaks are capped and two thirds have some snow,
+  //  and from halfway to the poles nearly every peak is capped.
   snowAtEquator: 0.4,
   snowAtPoles: 0.26,
   snowDeepens: 0.04,

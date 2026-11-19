@@ -502,9 +502,9 @@ blended across squares.
       43° at their steepest (37° for most of the steepest), hills about 35°, most under 13°. A texture laid flat
       stretches 1.37 times at 43°: rock mapped from three sides would fix that, and is still to do;
     - **snow** above a snowline, 0.40 high at the equator and 0.26 at the poles, on ground level enough to hold it. A
-      mountain's top is 0.32 to 0.47 high, about 0.40 for most, so about half the peaks near the equator have some
-      snow and the tallest are capped, more of them towards the poles. Its latitude is the same at every copy of the
-      world, above or below;
+      mountain's top is 0.32 to 0.47 high, about 0.40 for most, so near the equator about half the peaks are capped and
+      two thirds have some snow, and from halfway to the poles nearly every peak is capped. Its latitude is the same at
+      every copy of the world, above or below;
     - **wet**, darker and shinier, at the waterline, where water squares are part of what the ground's blended from
       (`GroundSample#shore`, carried by the mesh). Not by height alone: a swamp or a river inland, however low, stays
       dry.

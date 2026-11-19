@@ -1,9 +1,12 @@
 // What covers the land by where it lies (docs/3d-renderer.md §4.3, `terrain/cover.ts`): bare rock where it's steep,
 //  snow high up, wet ground at the waterline.
 //  - Each rises from none to whole between its numbers, and not elsewhere.
-//  - On a generated world of each grid: snow lies on mountains alone, more towards the poles; rock on mountains'
-//    flanks and the steepest hills, and on the foot of a mountain or a hill where it reaches into a neighbour, but
-//    nowhere else; wet ground beside water alone, never on a swamp or a river inland, however low.
+//  - On a generated world of each grid: snow lies on mountains, or a peak's shoulder beside one, more towards the
+//    poles; rock on mountains' flanks and the steepest hills, and on the foot of a mountain or a hill where it reaches
+//    into a neighbour, but nowhere else; wet ground on plenty of the land beside water, and nowhere else, never on a
+//    swamp or a river inland, however low.
+//  - On made-up worlds of each grid: a swamp inland is never wet; a sea beside a square never seen is all water to
+//    its edge; on a coast, the share of water is the sea floor's sand's, weighed as the surfaces are.
 
 import generateWorld from '@civ-clone/ui-map-3d/debug/generateWorld';
 import topologyFor from '@civ-clone/ui-client/lib/topologyFor';
@@ -17,6 +20,7 @@ import {
   snowiness,
   wetness,
 } from '@civ-clone/ui-map-3d/terrain/cover';
+import { SURFACES } from '@civ-clone/ui-models-builtin/terrain';
 import { TopologyName } from '@civ-clone/ui-client/lib/topologyFor';
 
 const failures: string[] = [];
@@ -90,63 +94,88 @@ expect(
   [0, 1, 1, true, 0]
 );
 
-// A swamp inland, far from water, as low as land goes: never wet. A sea beside a square never seen: all water, to its
-//  edge.
-{
-  const width = 12,
-    height = 10,
-    topology = topologyFor({ width, height, topologyId: 'square' }),
-    layout = groundLayoutFor({
-      width,
-      height,
-      topologyId: 'square',
-      wrapsY: topology.wrapsY(),
-    }),
-    reliefOf = (terrainAt: (x: number, y: number) => string) =>
-      createRelief({
-        layout,
-        source: {
-          width,
-          height,
-          wrapsY: topology.wrapsY(),
-          terrainAt,
-          waterAt: (x, y) => terrainAt(x, y) === 'Ocean',
-          neighbours: (x, y) =>
-            topology
-              .directions()
-              .map((direction) => topology.neighbour(x, y, direction))
-              .filter((square): square is [number, number] => square !== null),
-        },
+// Made-up worlds on each grid, 12 by 10:
+//  - a swamp inland, as low as land goes, with no water anywhere: never wet;
+//  - a sea beside a square never seen: all water, to its edge, every way round it;
+//  - a coast of grassland and sea: how much of the ground's blended from water is how much of it is the sea floor's
+//    sand, weighed as the surfaces are, at every point.
+(['square', 'staggered-iso', 'hex-odd-r'] as TopologyName[]).forEach(
+  (topologyId) => {
+    const width = 12,
+      height = 10,
+      topology = topologyFor({ width, height, topologyId }),
+      layout = groundLayoutFor({
+        width,
+        height,
+        topologyId,
+        wrapsY: topology.wrapsY(),
       }),
-    swampy = reliefOf((x, y) =>
-      x >= 4 && x <= 7 && y >= 3 && y <= 6 ? 'Swamp' : 'Grassland'
-    ),
-    frontier = reliefOf((x, y) =>
-      x === 6 && y === 5 ? 'Unknown' : x >= 4 ? 'Ocean' : 'Grassland'
-    ),
-    wetInland: number[] = [];
-
-  for (let at = 0; at < 400; at++) {
-    const u = 4 + (at % 20) / 5,
-      v = 3 + Math.floor(at / 20) / 5,
-      { height: up, shore } = swampy.sample(u, v);
-
-    if (wetness(up, shore) > 0) {
-      wetInland.push(at);
-    }
-  }
-
-  expect(
-    'a swamp inland, as low as land goes, is never wet; a sea beside a square never seen is all water to its edge',
-    [
-      wetInland.slice(0, 3),
-      [0, 0.2, 0.4, 0.49].every(
-        (along) => frontier.sample(5.5 + along, 5.5).shore === 1
+      reliefOf = (terrainAt: (x: number, y: number) => string) =>
+        createRelief({
+          layout,
+          source: {
+            width,
+            height,
+            wrapsY: topology.wrapsY(),
+            terrainAt,
+            waterAt: (x, y) => terrainAt(x, y) === 'Ocean',
+            neighbours: (x, y) =>
+              topology
+                .directions()
+                .map((direction) => topology.neighbour(x, y, direction))
+                .filter(
+                  (square): square is [number, number] => square !== null
+                ),
+          },
+        }),
+      swampy = reliefOf((x, y) =>
+        x >= 4 && x <= 7 && y >= 3 && y <= 6 ? 'Swamp' : 'Grassland'
       ),
-    ],
-    [[], true]
-  );
-}
+      frontier = reliefOf((x, y) => (x === 6 && y === 5 ? 'Unknown' : 'Ocean')),
+      coast = reliefOf((x) => (x >= 6 ? 'Ocean' : 'Grassland')),
+      sand = SURFACES.indexOf('sand'),
+      [aroundU, aroundV] = layout.centre(6, 5),
+      [farU, farV] = layout.centre(width - 1, height - 1),
+      wetInland: number[] = [],
+      notAllWater: string[] = [],
+      unlikeSand: string[] = [];
+
+    // Every point over the world, a fifth of a square apart, and round the square never seen.
+    for (let u = 0; u <= farU + 0.5; u += 0.2) {
+      for (let v = 0; v <= farV + 0.5; v += 0.2) {
+        const swamp = swampy.sample(u, v),
+          shore = coast.sample(u, v);
+
+        if (wetness(swamp.height, swamp.shore) > 0) {
+          wetInland.push(u, v);
+        }
+
+        if (Math.abs(shore.shore - (shore.surfaces[sand] ?? 0)) > 1e-6) {
+          unlikeSand.push(`${u},${v}`);
+        }
+      }
+    }
+
+    for (let turn = 0; turn < 64; turn++) {
+      [0.3, 0.5, 0.7, 0.9, 1.1].forEach((reach) => {
+        const angle = (turn / 64) * Math.PI * 2,
+          u = aroundU + Math.cos(angle) * reach,
+          v = aroundV + Math.sin(angle) * reach,
+          sample = frontier.sample(u, v);
+
+        if (!sample.unseen && sample.shore !== 1) {
+          notAllWater.push(`${u},${v}: ${sample.shore}`);
+        }
+      });
+    }
+
+    expect(
+      `${topologyId}: a swamp inland, as low as land goes, is never wet; a sea beside a square never seen is all water to its edge; on a coast, how much of the ground's blended from water is how much is the sea floor's sand`,
+      [wetInland.slice(0, 4), notAllWater.slice(0, 3), unlikeSand.slice(0, 3)],
+      [[], [], []]
+    );
+  }
+);
 
 // A generated world of each grid, its land as drawn: every point of every chunk, with the square it's on.
 (['square', 'staggered-iso', 'hex-odd-r'] as TopologyName[]).forEach(
@@ -188,7 +217,8 @@ expect(
         { points: number; snow: number; rock: number; wet: number }
       >(),
       wetFar: string[] = [],
-      rockFar: string[] = [];
+      rockFar: string[] = [],
+      snowFar: string[] = [];
     let polarSnow = 0,
       polarMountains = 0,
       tropicalSnow = 0,
@@ -227,7 +257,8 @@ expect(
             }
           }
 
-          // Rock only on mountains or hills, or a square beside one.
+          // Rock only on mountains or hills, or a square beside one; snow only on mountains, or beside one, where a peak's
+          //  shoulder reaches.
           const square = [
             ((x % width) + width) % width,
             ((y % height) + height) % height,
@@ -240,6 +271,15 @@ expect(
             )
           ) {
             rockFar.push(`${name} at ${u},${v}`);
+          }
+
+          if (
+            snow > 0 &&
+            ![square, ...neighbours(...square)].some(
+              ([nx, ny]) => terrainAt(nx, ny) === 'Mountains'
+            )
+          ) {
+            snowFar.push(`${name} at ${u},${v}`);
           }
 
           // Wet only on water, or on a square beside it.
@@ -263,12 +303,16 @@ expect(
       return count === undefined ? 0 : count[of] / count.points;
     };
 
+    // The land beside the sea that's wet, by its points: many, on a world with coasts.
+    const wetLand = [...counts].reduce(
+      (wet, [name, count]) => wet + (name === 'Ocean' ? 0 : count.wet),
+      0
+    );
+
     expect(
-      `${topologyId}: snow lies on mountains alone, more of them towards the poles; rock on mountains' flanks, a little on hills, and nowhere but on them or the foot of one reaching into a neighbour; wet ground beside water alone, never on a swamp or a river inland`,
+      `${topologyId}: snow lies on mountains, or a peak's shoulder beside one, more of them towards the poles; rock on mountains' flanks, a little on hills, and nowhere but on them or the foot of one reaching into a neighbour; wet ground on plenty of the land beside water, and nowhere else, never on a swamp or a river inland`,
       [
-        [...counts.keys()].filter(
-          (name) => name !== 'Mountains' && share(name, 'snow') > 0
-        ),
+        snowFar.slice(0, 3),
         share('Mountains', 'snow') > 0,
         polarMountains === 0 ||
           tropicalMountains === 0 ||
@@ -276,9 +320,10 @@ expect(
         share('Mountains', 'rock') > 0.05,
         share('Hills', 'rock') < share('Mountains', 'rock'),
         rockFar.slice(0, 3),
+        wetLand > 500,
         wetFar.slice(0, 3),
       ],
-      [[], true, true, true, true, [], []]
+      [[], true, true, true, true, [], true, []]
     );
   }
 );
