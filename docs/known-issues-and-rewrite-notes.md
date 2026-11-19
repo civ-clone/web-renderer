@@ -54,8 +54,8 @@ From `README.md` known issues/TODO:
   - A tall city's top 16 px reach the tile north of it, where a unit is drawn over that part of the city: units are a
     layer over every city (so a unit in a city stands in front of it), not interleaved row by row (#86).
   - The overview (minimap) is scaled to its box by a factor that need not be whole, so its tiles can be uneven.
-  - Loading a Civ2 save before Civ2's art is imported is refused once the page has reloaded into the load
-    (`followSavedRuleSet`), in the start-failure dialog, whose Reload can't help: it would be better refused on the menu,
+  - Loading a Civ2 save with neither Civ2's art nor the isometric pixel art installed (its sheet failed to load) is
+    refused once the page has reloaded into the load (`followSavedRuleSet`), in the start-failure dialog, whose Reload can't help: it would be better refused on the menu,
     as a save on a grid that can't be drawn is with an `alert()`.
 - Minimap highlight render position/wrapping needs work. Fixed: the viewport box wraps (91fe1f6) and a click lands on the tile clicked (#54). The README's TODO list still has it.
 

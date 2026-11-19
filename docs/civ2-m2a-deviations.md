@@ -184,7 +184,7 @@ The AI is the shared one (`simple-ai-client`). Since M2e part 2 it reads Civ2's 
 
 ## Interface
 
-- **Hidden until playable.** The Civ2 choice only appears when the `civ2` set is installed and you have imported the Civ2 tileset. (web-renderer: #1039, #1042, #1045 and #1046 install the set; #1049 adds the choice to New Game and the game setup.)
+- **Offered to everyone.** The Civ2 choice appears in New Game and the game setup with nothing imported: its games are drawn with Civ2's art where you have imported it, and otherwise with civ.one's isometric pixel art. (web-renderer: #1039, #1042, #1045 and #1046 install the set; #1049 adds the choice to New Game and the game setup; #1250 offers it without Civ2's art.)
 - **Isometric grid only.** Starting a Civ2 game forces the staggered-iso layout.
 - **Six difficulty levels** (Chieftain to Deity) replace Civ1's, with their own calendars: 2020 arrives on turn 421 to 571 depending on the level and map size.
 - **The Civ1 interface is reused.** No Civ2 windows, sounds or sidebar yet. (Track F, M3.)

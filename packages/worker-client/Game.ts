@@ -17,7 +17,13 @@ import {
   seatFromDescriptor,
 } from '@civ-clone/ui-protocol/lib/savedSeats';
 import Observer from './Observer';
-import { PluginSet, Plugins, isOffered, offeredSets } from './Plugins';
+import {
+  PluginSet,
+  Plugins,
+  drawnWith,
+  isOffered,
+  offeredSets,
+} from './Plugins';
 import { registerDiplomacyClasses } from './diplomacy';
 import { registerBarbarianClasses } from './barbarians';
 import BarbarianClient from '@civ-clone/simple-ai-client/BarbarianClient';
@@ -333,19 +339,24 @@ export class Game implements IGame {
   // What the game setup asks of the rules before a game starts: which set of plugins, the levels, the civilizations, the
   //  rule sets and the AI clients.
   #answerSetup(): void {
-    // The sets a new game can be played with (#668), for the art packs the page says the player has imported, and the
-    //  one fixed already, if any: answered without loading anything, so asking fixes nothing. A page that is reloaded
-    //  to load a save may ask, for the art the save's set names (#1114), and the save's set is still free to load.
-    answer(this.#transport, 'pluginSets', (tilesets: unknown) => ({
-      sets: offeredSets(
-        this.#plugins,
-        Array.isArray(tilesets)
-          ? tilesets.filter((id): id is string => typeof id === 'string')
-          : []
-      ).map(({ id, tileset }) => ({ id, tileset })),
-      default: this.#plugins.default,
-      chosen: this.#set?.id ?? null,
-    }));
+    // The sets a new game can be played with (#668), for the art packs the page says it has, each with the one of its
+    //  own it's drawn with there, and the one fixed already, if any: answered without loading anything, so asking fixes
+    //  nothing. A page that is reloaded to load a save may ask, for the art the save's set names (#1114), and the save's
+    //  set is still free to load.
+    answer(this.#transport, 'pluginSets', (tilesets: unknown) => {
+      const have = Array.isArray(tilesets)
+        ? tilesets.filter((id): id is string => typeof id === 'string')
+        : [];
+
+      return {
+        sets: offeredSets(this.#plugins, have).map((set) => ({
+          id: set.id,
+          tileset: drawnWith(set, have),
+        })),
+        default: this.#plugins.default,
+        chosen: this.#set?.id ?? null,
+      };
+    });
 
     // The set a new game is played with, loaded: everything the setup asks for next comes from it. Refused once
     //  another set is fixed, as `#choose` refuses it: the page plays that set in a worker of its own.

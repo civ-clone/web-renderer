@@ -28,6 +28,7 @@ import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { join } from 'path';
 import pluginSets from '../../src/js/pluginSets';
 import {
+  drawnWith,
   isOffered,
   offeredSets,
   pluginsFrom,
@@ -634,11 +635,17 @@ const play = (name: string, path: string): void => {
     }
 
     if (name === 'civ2') {
-      // What the page asks before New Game (#668): which sets, with no art beyond Civ1's and with Civ2's. Neither
-      //  loads anything.
+      // What the page asks before New Game (#668): which sets, with no art beyond Civ1's, with Civ2's, and with only
+      //  the pixel art that ships. None loads anything.
       const protocol: { [request: string]: unknown } = {
         withoutArt: await ask('pluginSets', ['civ1']),
         withArt: await ask('pluginSets', ['civ1', 'civ2']),
+        withPixelArt: await ask('pluginSets', [
+          'civ1-pixelart',
+          'hex-pixelart',
+          'iso-pixelart',
+        ]),
+        withBoth: await ask('pluginSets', ['iso-pixelart', 'civ2']),
       };
 
       protocol.loadedRules = ruleRegistryInstance.entries().length;
@@ -909,29 +916,44 @@ if (scenario !== null) {
     ]
   );
 
-  // A set drawn with an art pack of its own (`tileset`, #668): offered only to a page with that art, and never a set a
-  //  game gets without asking.
+  // A set drawn with art packs of its own (`tileset`, #668): offered only to a page with some of that art, and never a
+  //  set a game gets without asking.
   expect(
-    'a set names its art pack by tileset id, or none; anything else is a problem',
+    'a set names its art pack by tileset id, or a list of them in the order it prefers them, or none; anything else is a problem',
     [
       resolvePluginSets(
         {
           one: { rules: '@x/rules', plugins: ['@x/a'], tileset: 'pack' },
           two: { rules: '@x/rules', plugins: ['@x/b'] },
+          three: {
+            rules: '@x/rules',
+            plugins: ['@x/a'],
+            tileset: ['pack', 'hosted'],
+          },
         },
         [plugin('@x/a'), plugin('@x/b')]
-      ).sets.map(({ id, tileset }: any) => [id, tileset]),
-      resolvePluginSets(
-        { one: { rules: '@x/rules', plugins: ['@x/a'], tileset: 2 } },
-        [plugin('@x/a')]
-      ).problems,
+      ).sets.map(({ id, tilesets }: any) => [id, tilesets]),
+      [2, '', [], ['pack', ''], ['pack', 3]].flatMap(
+        (tileset) =>
+          resolvePluginSets(
+            { one: { rules: '@x/rules', plugins: ['@x/a'], tileset } },
+            [plugin('@x/a')]
+          ).problems
+      ),
     ],
     [
       [
-        ['one', 'pack'],
-        ['two', null],
+        ['one', ['pack']],
+        ['two', []],
+        ['three', ['pack', 'hosted']],
       ],
-      ["set one has `tileset` 2, which isn't a tileset's id"],
+      [
+        "set one has `tileset` 2, which isn't a tileset's id or a list of them",
+        'set one has `tileset` "", which isn\'t a tileset\'s id or a list of them',
+        "set one has `tileset` [], which isn't a tileset's id or a list of them",
+        'set one has `tileset` ["pack",""], which isn\'t a tileset\'s id or a list of them',
+        'set one has `tileset` ["pack",3], which isn\'t a tileset\'s id or a list of them',
+      ],
     ]
   );
   expect(
@@ -943,6 +965,12 @@ if (scenario !== null) {
           child: { extends: 'art', plugins: ['@x/b'] },
           grandchild: { extends: 'child', plugins: [] },
           named: { extends: 'art', plugins: [], tileset: 'pack' },
+          listed: {
+            rules: '@x/rules',
+            plugins: [],
+            tileset: ['pack', 'hosted'],
+          },
+          listedChild: { extends: 'listed', plugins: [] },
         },
         [plugin('@x/a'), plugin('@x/b')]
       ).problems,
@@ -951,6 +979,7 @@ if (scenario !== null) {
       [
         'set child extends art, which is drawn with the pack art, but names no `tileset` of its own',
         'set grandchild extends art, which is drawn with the pack art, but names no `tileset` of its own',
+        'set listedChild extends listed, which is drawn with the pack or hosted art, but names no `tileset` of its own',
       ],
     ]
   );
@@ -962,30 +991,37 @@ if (scenario !== null) {
         plugins: [],
         rules: '@x/rules',
         hidden: false,
-        tileset: 'pack',
+        tilesets: ['pack', 'hosted'],
       },
     ]),
     [
-      '`civ-clone.defaultSet`, the set a new game is played with, is "art", which needs the pack art imported',
-      '`civ-clone.setForSavesWithoutOne`, the set a save made before there were sets loads with, is "art", which needs the pack art imported',
+      '`civ-clone.defaultSet`, the set a new game is played with, is "art", which needs the pack or hosted art',
+      '`civ-clone.setForSavesWithoutOne`, the set a save made before there were sets loads with, is "art", which needs the pack or hosted art',
     ]
   );
   expect(
-    'a set with art of its own is offered once that art is imported, hidden or not; any other unless it is hidden',
+    'a set with art of its own is offered once some of that art is there, hidden or not; any other unless it is hidden',
     [
       [true, false].flatMap((hidden) =>
-        [[], ['pack'], ['other']].map((tilesets) =>
-          isOffered({ hidden, tileset: 'pack' }, tilesets)
+        [[], ['pack'], ['hosted'], ['other']].map((tilesets) =>
+          isOffered({ hidden, tilesets: ['pack', 'hosted'] }, tilesets)
         )
       ),
       [true, false].map((hidden) =>
-        isOffered({ hidden, tileset: null }, ['pack'])
+        isOffered({ hidden, tilesets: [] }, ['pack'])
       ),
     ],
     [
-      [false, true, false, false, true, false],
+      [false, true, true, false, false, true, true, false],
       [false, true],
     ]
+  );
+  expect(
+    'and is drawn with the first of its art the page has, in its order, whatever order the page names them in',
+    [[], ['hosted'], ['pack'], ['hosted', 'pack'], ['other']].map((tilesets) =>
+      drawnWith({ tilesets: ['pack', 'hosted'] }, tilesets)
+    ),
+    [null, 'hosted', 'pack', 'pack', null]
   );
 
   // What a package only imports (`civ-clone.importsOnly`) isn't followed from it, but is still loaded when named or
@@ -1105,7 +1141,7 @@ if (scenario !== null) {
     ]
   );
   expect(
-    'civ2 and civ2-enhanced are hidden, so the page offers only the two Civ1 sets until Civ2’s art can be imported',
+    'civ2 and civ2-enhanced are hidden, so a page with none of their art is offered only the two Civ1 sets',
     [
       pluginSets.sets.map(({ id, hidden }) => [id, hidden]),
       offeredSets(pluginsFrom(pluginSets)).map(({ id }) => id),
@@ -1121,21 +1157,37 @@ if (scenario !== null) {
     ]
   );
   expect(
-    'and they are drawn with Civ2’s art, so a page that has imported it is offered both Civ2 sets too',
+    'they are drawn with Civ2’s art, or else the isometric pixel art, so a page with either is offered both Civ2 sets too',
     [
-      pluginSets.sets.map(({ id, tileset }) => [id, tileset]),
-      offeredSets(pluginsFrom(pluginSets), ['civ1', 'civ2']).map(
-        ({ id }) => id
+      pluginSets.sets.map(({ id, tilesets }) => [id, tilesets]),
+      [
+        ['civ1', 'civ2'],
+        ['civ1-pixelart', 'iso-pixelart'],
+        ['civ2', 'iso-pixelart'],
+      ].map((tilesets) =>
+        offeredSets(pluginsFrom(pluginSets), tilesets).map((set) => [
+          set.id,
+          drawnWith(set, tilesets),
+        ])
       ),
     ],
     [
       [
+        ['civ1', []],
+        ['civ1-enhanced', []],
+        ['civ2', ['civ2', 'iso-pixelart']],
+        ['civ2-enhanced', ['civ2', 'iso-pixelart']],
+      ],
+      [
+        ['civ2', 'civ2'],
+        ['iso-pixelart', 'iso-pixelart'],
+        ['civ2', 'civ2'],
+      ].map(([civ2]) => [
         ['civ1', null],
         ['civ1-enhanced', null],
-        ['civ2', 'civ2'],
-        ['civ2-enhanced', 'civ2'],
-      ],
-      ['civ1', 'civ1-enhanced', 'civ2', 'civ2-enhanced'],
+        ['civ2', civ2],
+        ['civ2-enhanced', civ2],
+      ]),
     ]
   );
   expect(
@@ -1330,8 +1382,8 @@ if (scenario !== null) {
     [false, true, true, false]
   );
 
-  // Civ2, chosen in New Game (#668): offered only to a page with Civ2's art, played on the isometric grid, saved as
-  //  civ2 and loaded as civ2 by a worker whose default is civ1-enhanced.
+  // Civ2, chosen in New Game (#668): offered only to a page with Civ2's art or the isometric pixel art, played on the
+  //  isometric grid, saved as civ2 and loaded as civ2 by a worker whose default is civ1-enhanced.
   const civ2Path = join(directory, 'civ2.json'),
     civ2Game = run('civ2', civ2Path),
     protocol = civ2Game.protocol as any,
@@ -1339,13 +1391,15 @@ if (scenario !== null) {
       answer?.sets?.map(({ id, tileset }: any) => [id, tileset]);
 
   expect(
-    'asked which sets there are, the worker offers civ2 only to a page with Civ2’s art, and has loaded none',
+    'asked which sets there are, the worker offers civ2 only to a page with Civ2’s art or the isometric pixel art, and has loaded none',
     [
       sets(protocol.withoutArt),
       protocol.withoutArt.default,
       protocol.withoutArt.chosen,
       sets(protocol.withArt),
       protocol.withArt.chosen,
+      sets(protocol.withPixelArt),
+      sets(protocol.withBoth),
     ],
     [
       [
@@ -1361,6 +1415,18 @@ if (scenario !== null) {
         ['civ2-enhanced', 'civ2'],
       ],
       null,
+      [
+        ['civ1', null],
+        ['civ1-enhanced', null],
+        ['civ2', 'iso-pixelart'],
+        ['civ2-enhanced', 'iso-pixelart'],
+      ],
+      [
+        ['civ1', null],
+        ['civ1-enhanced', null],
+        ['civ2', 'civ2'],
+        ['civ2-enhanced', 'civ2'],
+      ],
     ]
   );
   expect(

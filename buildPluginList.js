@@ -251,15 +251,15 @@ const sets: {
   plugins: string[];
   rules: string;
   hidden: boolean;
-  tileset: string | null;
+  tilesets: string[];
   manifest: { [name: string]: string };
 }[] = ${JSON.stringify(
-    sets.map(({ id, plugins, rules, hidden, tileset }) => ({
+    sets.map(({ id, plugins, rules, hidden, tilesets }) => ({
       id,
       plugins,
       rules,
       hidden,
-      tileset,
+      tilesets,
       manifest: manifestOf(plugins),
     })),
     null,

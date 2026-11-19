@@ -40,7 +40,7 @@ new Game(transport, {
       id: 'lazy',
       manifest: {},
       hidden: false,
-      tileset: null,
+      tilesets: [],
       load: () => {
         loads++;
 

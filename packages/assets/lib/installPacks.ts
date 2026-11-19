@@ -163,6 +163,39 @@ export type MapArt = {
 };
 
 /**
+ * Tries again each hosted set for the `topologyId` grid whose sheet failed as the page started, which was left
+ *  uninstalled (`installPacks`), installing it again once it loads: as a game starts or loads on the grid, in case it can
+ *  be loaded now. Resolves with those that still can't, and why.
+ */
+export const retryHostedTilesets = async (
+  topologyId: string,
+  store: AssetStore = assetStore
+): Promise<MapArt['failed']> => {
+  const installed = installedTilesets(),
+    failed: MapArt['failed'] = [];
+
+  for (const tileset of bundledTilesets().filter(
+    (bundled) =>
+      bundled.grid === topologyId &&
+      isHosted(bundled) &&
+      !installed.includes(bundled) &&
+      sheetFailure(bundled.id) !== null
+  )) {
+    try {
+      await ensureTilesetLoaded(tileset, store);
+      reinstallHostedTileset(tileset);
+    } catch (error) {
+      failed.push({
+        tileset,
+        reason: sheetFailure(tileset.id) ?? String(error),
+      });
+    }
+  }
+
+  return failed;
+};
+
+/**
  * Has the art a map on the `topologyId` grid is drawn with (`mapTileset`) ready to draw from (`ensureTilesetLoaded`),
  *  before a game on that grid starts or loads. A hosted set whose sheet can't be loaded, offline say, is passed over
  *  for the next set ready for the grid (#1141), and resolves saying which were. Each set for the grid is tried again
@@ -197,19 +230,7 @@ export const ensureMapArt = async (
   // And for a hosted one whose sheet failed as the page started, which was left uninstalled: unless the rule set's own
   //  art is drawn on the grid, whatever happens to it.
   if (ruleSetMapTileset(topologyId) === null) {
-    const installed = installedTilesets();
-
-    for (const tileset of bundledTilesets().filter(
-      (bundled) =>
-        bundled.grid === topologyId &&
-        isHosted(bundled) &&
-        !installed.includes(bundled) &&
-        sheetFailure(bundled.id) !== null
-    )) {
-      if (await tried(tileset)) {
-        reinstallHostedTileset(tileset);
-      }
-    }
+    failed.push(...(await retryHostedTilesets(topologyId, store)));
   }
 
   for (;;) {

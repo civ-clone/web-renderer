@@ -28,9 +28,11 @@ The project uses generated import lists rather than dynamic runtime discovery in
   civilizations (every plugin installed but Civ2's), and `civ2`, Civ2's packages with the shared plugins and worker
   rules of its own (`@civ-clone/ui-rules-civ2`, `packages/rules-civ2`), sharing no Civ1 package (M2a, #1008). A set
   marked `hidden` can be played and saved with, but isn't offered (`offeredSets` in
-  `packages/worker-client/Plugins.ts`), unless it names the art pack its games are drawn with (`tileset`, a tileset's
-  id) and the page says the player has imported it: `civ2` is hidden and names `civ2`, so New Game offers it only once
-  Civ2's art is imported (#668). A set with a `tileset` is played on that pack's grid.
+  `packages/worker-client/Plugins.ts`), unless it names the art packs its games are drawn with (`tileset`, a tileset's
+  id or a list of them in the order the set prefers them) and the page says one of them is installed: `civ2` is hidden
+  and names `["civ2", "iso-pixelart"]`, so New Game offers it with Civ2's art imported, or with the isometric pixel art
+  that ships with civ.one (#668). A set with a `tileset` is played on the grid of the first of them the page has
+  (`drawnWith`).
 - The generator stops, saying why, when:
   - a set names a plugin that isn't installed;
   - two plugins in a set conflict (`civ-clone.conflicts` in a plugin's own `package.json`, or in the root's
@@ -38,7 +40,8 @@ The project uses generated import lists rather than dynamic runtime discovery in
   - a plugin installed is in no set;
   - a set extends a set that doesn't exist, or itself;
   - a set has no `rules`;
-  - a set's `tileset` isn't a tileset's id, or a set extends one with a `tileset` without naming one itself;
+  - a set's `tileset` isn't a tileset's id or a non-empty list of them, or a set extends one with a `tileset`
+    without naming one itself;
   - `defaultSet` or `setForSavesWithoutOne` names no set, a hidden one, or one with a `tileset`.
 - `tests/engine/civ2Isolation.ts` loads `civ2` and checks that nothing of Civ1's is registered (no `civ1-` rule, no
   Religion, no Arctic or River terrain) and that its content is what its packages have.
@@ -80,10 +83,10 @@ set lacks.
 
 **Choosing the game** (#668, `packages/menus/lib/pluginSets.ts`):
 
-- Without art beyond the interface's, nothing new is asked of the worker, and New Game, Earth and the setup are as
-  they were.
-- With it, the page asks the worker which sets there are for the art imported (`pluginSets`, which loads nothing and
-  says which set, if any, is fixed). It offers the default and each set with art of its own: "Which game?" in New
+- With no set installed beyond the interface's, nothing new is asked of the worker, and New Game, Earth and the setup
+  are as they were.
+- Otherwise, the page asks the worker which sets there are for the art installed, hosted sets included (`pluginSets`,
+  which loads nothing and says which set, if any, is fixed). It offers the default and each set with art of its own: "Which game?" in New
   Game, and a Game select in both interfaces' setup.
 - A game with a `tileset` (Civ2's) is played on that pack's grid, with no grid question and no Earth, and the setup asks
   its set for the levels, civilizations, rule sets and AI clients. Earth is always the default set's.

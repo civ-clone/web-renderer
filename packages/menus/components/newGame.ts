@@ -44,10 +44,10 @@ export type FinishedHandler = () => void;
 export type CustomiseHandler = (pluginSet?: string) => void;
 
 /**
- * Which game (#668): civ.one's own, or another game's rules drawn with that game's art (Civ2's), offered only once the
- *  player has imported that art. With only one game to play, as without it, nothing is asked. The worker plays the
- *  game chosen from then on, a new worker if it had another loaded already, and `onChoose` is told the grid that game
- *  is played on, or null for one on any.
+ * Which game (#668): civ.one's own, or another game's rules (Civ2's), drawn with that game's art where the player has
+ *  imported it and otherwise with civ.one's isometric pixel art. With only one game to play, nothing is asked. The
+ *  worker plays the game chosen from then on, a new worker if it had another loaded already, and `onChoose` is told the
+ *  grid that game is played on, or null for one on any.
  */
 export const askGame = (
   transport: Transport,
@@ -102,8 +102,8 @@ const ask = (
 
 /**
  * Which grid the map is on: square, isometric or hex (#89). The first question of New Game and Customize World, and
- *  fixed for the rest of the game. Only the grids that can be drawn are offered: square and hex with the pixel art that
- *  ships, and isometric once Civ2's art is imported (#97). Where only one can be, the question answers itself and is
+ *  fixed for the rest of the game. Only the grids that can be drawn are offered: square, isometric and hex, each with
+ *  the pixel art that ships (#97, #1063). Where only one can be, the question answers itself and is
  *  never shown (#148). Earth is on its game's own grid, or else square, so it never asks.
  */
 export const askMapGrid = (

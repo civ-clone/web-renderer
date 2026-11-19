@@ -1,4 +1,8 @@
-import { MapArt, ensureMapArt } from '@civ-clone/ui-assets/lib/installPacks';
+import {
+  MapArt,
+  ensureMapArt,
+  retryHostedTilesets,
+} from '@civ-clone/ui-assets/lib/installPacks';
 import NotificationWindow from '@civ-clone/ui-component-window/NotificationWindow';
 import { followSavedRuleSet, gameFailed } from './pluginSets';
 import Transport from '@civ-clone/ui-client/Transport';
@@ -52,15 +56,21 @@ export const prepareMapArt = async (topologyId: string): Promise<boolean> => {
 /**
  * Has the art a saved game's map is drawn with ready before it loads (#1114, #1141): its rule set's art, when that
  *  names some (`followSavedRuleSet`), or the player's for its grid, fetched if it has to be, or another set ready for
- *  the grid, which the player is told of. Rejects, saying why, when there's none: the load stops.
+ *  the grid, which the player is told of. Rejects, saying why, when there's none: the load stops. A save whose rules
+ *  have none of their art here tries the grid's hosted sets whose sheets failed as the page started again before it's
+ *  refused, so one drawn with such a set (Civ2's, with the isometric pixel art) loads once it can be loaded again.
  */
 export const prepareSavedMapArt = async (
   transport: Transport,
   save: Parameters<typeof savedTopologyId>[0] & { pluginSet?: unknown }
 ): Promise<MapArt> => {
-  await followSavedRuleSet(transport, save.pluginSet);
+  const topologyId = savedTopologyId(save);
 
-  const art = await ensureMapArt(savedTopologyId(save));
+  await followSavedRuleSet(transport, save.pluginSet, () =>
+    retryHostedTilesets(topologyId)
+  );
+
+  const art = await ensureMapArt(topologyId);
 
   sayMapArtFellBack(art);
 

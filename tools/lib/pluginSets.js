@@ -2,7 +2,8 @@
 //  `package.json`, and everything they depend on. Worked out here, when the plugin list is written, and nowhere in the
 //  browser.
 //
-//   sets: { [id]: { plugins: string[], extends?: string, rules?: string, hidden?: boolean, tileset?: string } }
+//   sets: { [id]: { plugins: string[], extends?: string, rules?: string, hidden?: boolean,
+//    tileset?: string | string[] } }
 //   plugins: [{ name, dependencies: string[], conflicts: string[], importsOnly?: string[] }], every plugin installed
 //   dependenciesOf: (name) => string[] | null, any other installed package's, or null for one that isn't installed
 //   conflicts: { [name]: string[] }, conflicts declared for plugins beside their own (`civ-clone.conflicts` in the root
@@ -30,6 +31,22 @@ const byName = (a, b) => {
   const [x, y] = [a, b].map((name) => name.replace(/^@[^/]+\//, ''));
 
   return x < y ? -1 : x > y ? 1 : 0;
+};
+
+// The art packs a set names (`tileset`), in the order it prefers them: a list of tileset ids, or the one it names
+//  alone. Null for anything else, an empty name or list included; an empty list for a set that names none.
+const tilesetsOf = ({ tileset }) => {
+  if (tileset === undefined) {
+    return [];
+  }
+
+  const ids = typeof tileset === 'string' ? [tileset] : tileset;
+
+  return Array.isArray(ids) &&
+    ids.length > 0 &&
+    ids.every((id) => typeof id === 'string' && id !== '')
+    ? ids
+    : null;
 };
 
 // The dependencies a set's walk follows from a package: all of them, but those it only imports.
@@ -132,16 +149,13 @@ const resolvePluginSets = (
       );
     }
 
-    // The art pack a set's games are drawn with, by its tileset id: a page offers the set only once the player has
-    //  imported it. A name, or nothing.
-    if (
-      'tileset' in sets[id] &&
-      (typeof sets[id].tileset !== 'string' || sets[id].tileset === '')
-    ) {
+    // The art packs a set's games are drawn with, by tileset id, the first there is (Civ2's, then civ.one's own): a
+    //  page offers the set only once one of them is installed. A name, a list of them, or nothing.
+    if ('tileset' in sets[id] && tilesetsOf(sets[id]) === null) {
       problems.push(
         `set ${id} has \`tileset\` ${JSON.stringify(
           sets[id].tileset
-        )}, which isn't a tileset's id`
+        )}, which isn't a tileset's id or a list of them`
       );
     }
 
@@ -159,9 +173,11 @@ const resolvePluginSets = (
       ) {
         seen.add(ancestor);
 
-        if (typeof sets[ancestor].tileset === 'string') {
+        if ((tilesetsOf(sets[ancestor]) ?? []).length > 0) {
           problems.push(
-            `set ${id} extends ${ancestor}, which is drawn with the ${sets[ancestor].tileset} art, but names no \`tileset\` of its own`
+            `set ${id} extends ${ancestor}, which is drawn with the ${tilesetsOf(
+              sets[ancestor]
+            ).join(' or ')} art, but names no \`tileset\` of its own`
           );
 
           break;
@@ -171,14 +187,14 @@ const resolvePluginSets = (
 
     members.forEach((name) => loaded.add(name));
     // A hidden set is one a game can be played with that the page doesn't offer yet, unless the player has imported
-    //  the art pack it names (`tileset`). Both its own settings, not the one it extends', so a set built on a hidden
-    //  one is offered unless it says otherwise.
+    //  one of the art packs it names (`tileset`). Both its own settings, not the one it extends', so a set built on a
+    //  hidden one is offered unless it says otherwise.
     resolved.push({
       id,
       plugins: [...members].sort(byName),
       rules,
       hidden: sets[id].hidden === true,
-      tileset: typeof sets[id].tileset === 'string' ? sets[id].tileset : null,
+      tilesets: tilesetsOf(sets[id]) ?? [],
     });
   });
 
@@ -234,11 +250,11 @@ const defaultSetProblems = (config, sets) =>
     }
 
     // A game without the player's art would have nothing to draw it with.
-    return typeof set.tileset === 'string'
+    return (set.tilesets ?? []).length > 0
       ? [
           `\`civ-clone.${key}\`, ${what}, is ${JSON.stringify(
             config[key]
-          )}, which needs the ${set.tileset} art imported`,
+          )}, which needs the ${set.tilesets.join(' or ')} art`,
         ]
       : [];
   });
