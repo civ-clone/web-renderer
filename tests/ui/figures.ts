@@ -26,6 +26,7 @@ import {
   unitTable,
 } from '@civ-clone/ui-models-builtin/units';
 import { MarkerKit, drawMarker } from '@civ-clone/ui-map-3d/markers/drawMarker';
+import Water, { Clouds } from '@civ-clone/ui-map-3d/water';
 import {
   Part,
   figureGeometry,
@@ -70,6 +71,15 @@ Object.assign(globalThis, {
     }),
   },
 });
+
+// A ground for a cloud to be made over, to know its order.
+const ground = {
+  columns: 8,
+  rows: 8,
+  spacingU: 0.5,
+  spacingV: 0.5,
+  wrapsV: false,
+};
 
 // How much bigger the map draws units than their figures are made.
 const DRAWN = 1.5;
@@ -369,6 +379,26 @@ const veterans = drawn(
   back = spriteOf(veterans, kit.plain('#202020')),
   front = spriteOf(veterans, kit.plain('#d04030')),
   veteransFlag = spriteOf(veterans, kit.plain(colours[0])),
+  // In a copy of the marker, as the stage draws one at each copy of the world: the front still made after the back.
+  afterItsBack = (): boolean => {
+    const copied: Object3D[] = [];
+
+    drawMarker(kit, {
+      city: null,
+      unit: unit('Musketman', { health: 0.2 }),
+    })
+      .clone()
+      .traverse((object) => void copied.push(object));
+
+    const copiedBack = spriteOf(copied, kit.plain('#202020')),
+      copiedFront = spriteOf(copied, kit.plain('#d04030'));
+
+    return (
+      copiedBack !== undefined &&
+      copiedFront !== undefined &&
+      copiedFront.id > copiedBack.id
+    );
+  },
   // Where a sprite's ends are, across the screen and up it, from the point it stands at, in ten-thousandths of the
   //  screen's units: a sprite's `center` is that point.
   ends = (sprite: Sprite | undefined): [number, number] => [
@@ -395,10 +425,15 @@ expect(
     label !== undefined,
     ends(back),
     ends(front),
-    (front?.renderOrder ?? 0) > (back?.renderOrder ?? 0),
+    // Drawn after its back: at the same depth and order, as it's made after it, and when the map copies it.
+    front?.renderOrder === back?.renderOrder &&
+      (front?.id ?? 0) > (back?.id ?? 0) &&
+      front?.position.equals(back!.position),
+    afterItsBack(),
+    span(front)[0] >= span(back)[0] && span(front)[1] <= span(back)[1],
     stacked(back, veteransFlag, label),
   ],
-  [true, true, [-90, 90], [-90, -54], true, true]
+  [true, true, [-90, 90], [-90, -54], true, true, true, true]
 );
 
 expect(
@@ -463,6 +498,7 @@ const cityName = spriteOf(inCity, kit.label('Roma  3', colours[0], '#ffffff')),
 expect(
   'in a city, the unit’s bar, flag, label and pointer stand over the city’s name, from the same point on the land, in that order up the screen',
   [
+    cityName !== undefined && over.every((sprite) => sprite !== undefined),
     over.every((sprite) => where(sprite) === where(cityName)),
     span(over[0])[0] >= span(cityName)[1],
     over.every(
@@ -470,8 +506,30 @@ expect(
         index === 0 || span(sprite)[0] >= span(over[index - 1])[1]
     ),
   ],
-  [true, true, true]
+  [true, true, true, true]
 );
+
+// What stands over units and cities is drawn after the cloud, which it would otherwise be under at the edge of what's
+//  been seen, and over the land, as tests of depth would cut it off behind a hill.
+const cloud = new Clouds(
+    new Water(ground, new Color('#9fb3c4')).texture(),
+    ground
+  ),
+  badges = inCity.filter(
+    (object): object is Sprite => object instanceof Sprite
+  );
+
+expect(
+  'what stands over units and cities is drawn after the cloud, and over the land',
+  [
+    badges.length,
+    badges.every((sprite) => sprite.renderOrder > cloud.mesh.renderOrder),
+    badges.every((sprite) => sprite.material.depthTest === false),
+  ],
+  // The city's name, and the unit's bar (back and front), flag, label and pointer.
+  [6, true, true]
+);
+cloud.dispose();
 
 kit.dispose();
 

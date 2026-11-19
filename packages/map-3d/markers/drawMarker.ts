@@ -259,6 +259,11 @@ const flagText = (unit: UnitMarker): string =>
     .filter((part) => part !== '')
     .join(' ');
 
+// The order what stands over units and cities is drawn in: after the sea (1) and the cloud (2), so neither covers it;
+//  and among themselves the far before the near, but the pointer over all.
+const BADGES = 3,
+  POINTED = 4;
+
 // A sprite the same size on the screen however far away, as `width` and `height` say in the screen's units, standing
 //  `over` above the point it's put at, drawn over the land in the order `order` says.
 const badge = (
@@ -266,7 +271,7 @@ const badge = (
   width: number,
   height: number,
   over: number,
-  order = 2
+  order = BADGES
 ): Sprite => {
   const sprite = new Sprite(material);
 
@@ -405,13 +410,7 @@ const drawUnit = (
 
     group.add(
       place(
-        badge(
-          kit.plain('#202020'),
-          FLAG_WIDTH,
-          BAR_HEIGHT,
-          badges?.over ?? 0,
-          2
-        ),
+        badge(kit.plain('#202020'), FLAG_WIDTH, BAR_HEIGHT, badges?.over ?? 0),
         ...at
       )
     );
@@ -421,11 +420,11 @@ const drawUnit = (
         kit.plain(left > 0.5 ? PLENTY : left > 0.25 ? SOME : FEW),
         FLAG_WIDTH * left,
         BAR_HEIGHT * 0.6,
-        (badges?.over ?? 0) + BAR_HEIGHT * 0.2,
-        3
+        (badges?.over ?? 0) + BAR_HEIGHT * 0.2
       );
 
-      // Its left edge on the back's: a sprite stands `center` of its width from its left edge.
+      // Over the back, at the same depth: made after it, it's drawn after it. Its left edge on the back's: a sprite
+      //  stands `center` of its width from its left edge.
       front.center.x = 1 / (2 * left);
       group.add(place(front, ...at));
     }
@@ -460,7 +459,7 @@ const drawUnit = (
     halo.position.y = 0.01;
     group.add(
       halo,
-      place(badge(kit.pointer(), POINTER, POINTER, pointerOver, 4), ...at)
+      place(badge(kit.pointer(), POINTER, POINTER, pointerOver, POINTED), ...at)
     );
   }
 
