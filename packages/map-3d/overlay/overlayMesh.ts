@@ -171,13 +171,13 @@ class Layer {
         [u0, v0] = at(step / steps),
         [u1, v1] = at((step + 1) / steps);
 
-      // Two triangles, wound to face up.
+      // Two triangles, wound anticlockwise seen from above (`v` runs south), so they face up and aren't culled.
       this.#point(u0 + across[0]!, v0 + across[1]!, lift, colour);
-      this.#point(u0 - across[0]!, v0 - across[1]!, lift, colour);
-      this.#point(u1 + across[0]!, v1 + across[1]!, lift, colour);
       this.#point(u1 + across[0]!, v1 + across[1]!, lift, colour);
       this.#point(u0 - across[0]!, v0 - across[1]!, lift, colour);
+      this.#point(u1 + across[0]!, v1 + across[1]!, lift, colour);
       this.#point(u1 - across[0]!, v1 - across[1]!, lift, colour);
+      this.#point(u0 - across[0]!, v0 - across[1]!, lift, colour);
     }
   }
 

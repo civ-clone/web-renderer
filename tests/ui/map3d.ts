@@ -168,6 +168,8 @@ const staged: string[] = [],
   // The land's chunks the stage was given, and where its camera looked last, apart from what's drawn.
   chunksSet = new Set<string>(),
   lookedAt: number[] = [],
+  // What's laid on the land of each chunk made since, by `i,j`: how many numbers its points take, or 0 for nothing.
+  overlaysSet = new Map<string, number>(),
   // What's marked on each square, by `x,y`.
   markers = new Map<string, TileMarker>(),
   fakeStage = (): Stage => ({
@@ -175,6 +177,11 @@ const staged: string[] = [],
     resize: (stageWidth, stageHeight, ratio) =>
       void staged.push(`resize ${stageWidth}×${stageHeight}@${ratio}`),
     setChunk: (i, j) => void chunksSet.add(`${i},${j}`),
+    setOverlay: (i, j, mesh) =>
+      void overlaysSet.set(
+        `${i},${j}`,
+        mesh === null ? 0 : mesh.positions.length
+      ),
     setMarker: (key, at, marker) =>
       void (marker === null ? markers.delete(key) : markers.set(key, marker)),
     view: (orbit, height) =>

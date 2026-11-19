@@ -989,7 +989,12 @@ export class MapView3D implements MapRenderer {
     this.#frameTime = performance.now() - started;
     this.#showStats();
 
-    if (this.#land.pending() > 0 || moving || rising) {
+    if (
+      this.#land.pending() > 0 ||
+      this.#land.overlaysPending() > 0 ||
+      moving ||
+      rising
+    ) {
       this.#draw();
     }
   }

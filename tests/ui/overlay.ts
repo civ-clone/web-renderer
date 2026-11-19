@@ -5,7 +5,9 @@
 //    fortresses, airbases, pollution, specials (not rivers) and huts, or nothing;
 //  - its shapes: triangles with a normal and a colour at every point, relative to their chunk's corner; strips draped
 //    over the land; a road reaching halfway to the neighbour it joins, at the copy the place says; specials at sea on
-//    the water; what stands on a square standing clear of the unit's stand at its middle; the same every time.
+//    the water; what stands on a square standing clear of the unit's stand at its middle; the same every time;
+//  - on the land: a chunk's overlay is its squares', roads at the world's edges and poles joined across them at the
+//    nearest copy, on every grid; a road built remakes its chunk's overlay, and its neighbours', and builds no land.
 
 import * as Civ1Features from '@civ-clone/civ1-world/TerrainFeatures';
 import * as Civ2Features from '@civ-clone/civ2-world/TerrainFeatures';
@@ -19,8 +21,13 @@ import overlayFor, {
   SquareOverlay,
 } from '@civ-clone/ui-map-3d/overlay/overlayFor';
 import overlayMesh, {
+  OverlayMesh,
   OverlayPlace,
 } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
+import { Stage } from '@civ-clone/ui-map-3d/stage';
+import { TopologyId } from '@civ-clone/ui-protocol/topology';
+import Land from '@civ-clone/ui-map-3d/Land';
+import World from '@civ-clone/ui-map/components/World';
 
 const failures: string[] = [];
 let checks = 0;
@@ -224,6 +231,43 @@ expect(
   ],
   [true, 0, true, true, true, true, true]
 );
+// Each triangle's face, from its corners' order: three.js draws only the side they go round anticlockwise.
+const facesUp = (mesh: ReturnType<typeof overlayMesh>): boolean => {
+  const p = mesh.positions;
+
+  for (let at = 0; at < p.length; at += 9) {
+    const ax = p[at + 3]! - p[at]!,
+      az = p[at + 5]! - p[at + 2]!,
+      bx = p[at + 6]! - p[at]!,
+      bz = p[at + 8]! - p[at + 2]!;
+
+    // The up part of (b - a) × (c - a).
+    if (az * bx - ax * bz <= 0) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+expect(
+  'what’s laid flat faces up, so it isn’t culled: roads, railroads, fields, pollution',
+  [
+    facesUp(roadMesh),
+    facesUp(
+      overlayMesh(16, 0, [
+        {
+          overlay: overlayFor(
+            square(['Road', 'Railroad', 'Farmland', 'Pollution']),
+            [neighbour([1, 0], ['Road', 'Railroad'])]
+          )!,
+          place: place(17, 3),
+        },
+      ])
+    ),
+  ],
+  [true, true]
+);
 expect(
   'a road is draped over the land, a little above it, and reaches halfway to the neighbour it joins',
   [
@@ -302,6 +346,134 @@ expect(
       .join() === Array.from(first.positions).join(),
   ],
   [true, false]
+);
+
+// On the land, on every grid: a world 64 across and 48 down of grassland, in chunks about 16 across, with roads along the rows at its poles and
+//  across its east-west seam, and one square more to build a road on.
+(['square', 'staggered-iso', 'hex-odd-r'] as TopologyId[]).forEach(
+  (topologyId) => {
+    const width = 64,
+      height = 48,
+      roaded = (x: number, y: number): boolean =>
+        y === 0 || y === height - 1 || x === 0 || x === width - 1,
+      tiles = Array.from({ length: width * height }, (_, at) => {
+        const x = at % width,
+          y = Math.floor(at / width);
+
+        return {
+          x,
+          y,
+          isWater: false,
+          isLand: true,
+          goodyHut: null,
+          city: null,
+          units: [],
+          improvements: roaded(x, y) ? [{ _: 'Road' }] : [],
+          terrain: { _: 'Grassland', __: ['Grassland'], features: [] },
+        };
+      }),
+      world = new World({
+        _: 'World',
+        __: ['World', 'DataObject'],
+        id: 'world',
+        width,
+        height,
+        topologyId,
+        tiles: tiles as never,
+      }),
+      land = new Land(world),
+      laid = new Map<string, OverlayMesh | null>(),
+      built: string[] = [],
+      stage = {
+        setChunk: (i: number, j: number) => void built.push(`${i},${j}`),
+        setOverlay: (i: number, j: number, mesh: OverlayMesh | null) =>
+          void laid.set(`${i},${j}`, mesh),
+      } as unknown as Stage,
+      // The widest any chunk's overlay reaches across and down, from its own points.
+      widest = (): [number, number] =>
+        [0, 2].map((axis) => {
+          let widestOne = 0;
+
+          laid.forEach((mesh) => {
+            let low = Infinity,
+              high = -Infinity;
+
+            for (
+              let index = axis;
+              index < (mesh?.positions.length ?? 0);
+              index += 3
+            ) {
+              low = Math.min(low, mesh!.positions[index]!);
+              high = Math.max(high, mesh!.positions[index]!);
+            }
+
+            widestOne = Math.max(widestOne, high > low ? high - low : 0);
+          });
+
+          return widestOne;
+        }) as [number, number];
+
+    land.queueAll(0, 0);
+    land.build(stage, null);
+
+    // A chunk's overlay is about as big as the chunk: a road joined across the world instead would be most of it.
+    const [across, down] = widest();
+
+    expect(
+      `${topologyId}: a chunk's overlay is its squares': roads at the world's edges, and at its poles where it wraps, joined at the nearest copy, not across the world`,
+      [
+        [...laid.values()].some((mesh) => mesh !== null),
+        across < 20,
+        down < 20,
+        land.overlaysPending(),
+      ],
+      [true, true, true, 0]
+    );
+
+    // A road built in the middle: its chunk's overlay and its neighbours' made again, and no land.
+    laid.clear();
+    built.length = 0;
+    (tiles[20 * width + 30]!.improvements as { _: string }[]).push({
+      _: 'Road',
+    });
+    land.changed([[30, 20]], 0, 0);
+
+    const due = [land.pending(), land.overlaysPending() > 0];
+
+    land.build(stage, null);
+
+    expect(
+      `${topologyId}: a road built remakes its chunk's overlay, with the road on it, and builds no land`,
+      [
+        due,
+        built.length,
+        [...laid.entries()].some(
+          ([key, mesh]) =>
+            mesh !== null &&
+            key === land.overlayKeyOf(30, 20) &&
+            mesh.positions.length > 0
+        ),
+      ],
+      [[0, true], 0, true]
+    );
+
+    // A square raised to a mountain: the land round it built again, and what's laid on that land with it.
+    laid.clear();
+    built.length = 0;
+    tiles[30 * width + 40]!.terrain = {
+      _: 'Mountains',
+      __: ['Mountains'],
+      features: [],
+    };
+    land.changed([[40, 30]], 0, 0);
+    land.build(stage, null);
+
+    expect(
+      `${topologyId}: the land built again under a road is laid again with it`,
+      [built.length > 0, built.filter((key) => !laid.has(key))],
+      [true, []]
+    );
+  }
 );
 
 if (failures.length > 0) {

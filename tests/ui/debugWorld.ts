@@ -219,6 +219,7 @@ grids.forEach((topologyId) => {
         void mesh;
         built.push([i, j]);
       },
+      setOverlay: () => undefined,
     } as unknown as Stage,
     // The middle of chunk `i`, `j` on the ground, from where the land puts it.
     chunkMiddles = new Map<string, [number, number]>(),
@@ -234,6 +235,7 @@ grids.forEach((topologyId) => {
           mesh.v + (mesh.positions[last + 2] ?? 0) / 2,
         ]);
       },
+      setOverlay: () => undefined,
     } as unknown as Stage,
     { u: periodU, v: periodV } = land.layout.period(),
     // How far apart two places are, the short way round the world.

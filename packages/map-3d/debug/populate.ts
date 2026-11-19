@@ -91,6 +91,122 @@ const chance = (x: number, y: number, seed: number, salt: number): number => {
   return (h >>> 0) / 4294967296;
 };
 
+// The specials the page puts on each terrain, Civ1's first and a Civ2 one some of the time.
+const specials: { [terrain: string]: [string, string] } = {
+  Arctic: ['Seal', 'Ivory'],
+  Desert: ['Oasis', 'Oil'],
+  Forest: ['Game', 'Silk'],
+  Glacier: ['Ivory', 'Oil'],
+  Grassland: ['Shield', 'Shield'],
+  Hills: ['Coal', 'Wine'],
+  Jungle: ['Gems', 'Fruit'],
+  Mountains: ['Gold', 'Iron'],
+  Ocean: ['Fish', 'Whales'],
+  Plains: ['Horse', 'Wheat'],
+  River: ['Shield', 'Shield'],
+  Swamp: ['Peat', 'Spice'],
+  Tundra: ['Game', 'Furs'],
+};
+
+/**
+ * Lays roads, railroads, fields, mines, pollution and the odd fortress and airbase round `tiles`' cities, and specials
+ *  and huts about the world, from `seed`, on squares that have been seen, so what's laid on the land can be seen.
+ */
+export const improve = (tiles: Tile[], seed: number): void => {
+  const width = Math.max(0, ...tiles.map(({ x }) => x)) + 1,
+    cities = tiles.filter(({ city }) => Boolean(city)),
+    // How many squares from the nearest city, round the world's east-west seam.
+    fromCity = ({ x, y }: Tile): number =>
+      Math.min(
+        Infinity,
+        ...cities.map((city) => {
+          const across = Math.abs(city.x - x);
+
+          return Math.max(
+            Math.min(across, width - across),
+            Math.abs(city.y - y)
+          );
+        })
+      );
+
+  tiles.forEach((tile) => {
+    const { x, y } = tile,
+      terrain = tile.terrain._;
+
+    if (terrain === 'Unknown') {
+      return;
+    }
+
+    const pair = specials[terrain];
+
+    if (pair !== undefined && chance(x, y, seed, 80) < 0.07) {
+      tile.terrain = {
+        ...tile.terrain,
+        features: [
+          {
+            _: chance(x, y, seed, 81) < 0.3 ? pair[1] : pair[0],
+            __: [],
+            id: `Feature-${x}-${y}`,
+          },
+        ],
+      };
+    }
+
+    if (!tile.isLand) {
+      return;
+    }
+
+    const near = fromCity(tile),
+      improvements: string[] = [];
+
+    if (near === 0 || (near === 1 && chance(x, y, seed, 82) < 0.7)) {
+      improvements.push('Road');
+
+      if (chance(x, y, seed, 83) < 0.35) {
+        improvements.push('Railroad');
+      }
+    }
+
+    if (near <= 2 && near > 0) {
+      if (
+        ['Grassland', 'Plains', 'Desert', 'River'].includes(terrain) &&
+        chance(x, y, seed, 84) < 0.5
+      ) {
+        improvements.push(
+          chance(x, y, seed, 85) < 0.3 ? 'Farmland' : 'Irrigation'
+        );
+      } else if (
+        ['Hills', 'Mountains'].includes(terrain) &&
+        chance(x, y, seed, 86) < 0.5
+      ) {
+        improvements.push('Mine');
+      }
+
+      if (chance(x, y, seed, 87) < 0.05) {
+        improvements.push('Pollution');
+      }
+    }
+
+    if (near > 2 && chance(x, y, seed, 88) < 0.006) {
+      improvements.push(chance(x, y, seed, 89) < 0.5 ? 'Fortress' : 'Airbase');
+    }
+
+    tile.improvements = improvements.map((name) => ({
+      _: name,
+      __: [],
+      id: `${name}-${x}-${y}`,
+    })) as Tile['improvements'];
+
+    if (
+      !tile.city &&
+      (tile.units ?? []).length === 0 &&
+      chance(x, y, seed, 90) < 0.012
+    ) {
+      tile.goodyHut = { _: 'GoodyHut', __: [], id: `GoodyHut-${x}-${y}` };
+    }
+  });
+};
+
 // The civilizations' players, as the client gets them: only what the 3D map reads.
 const playersOf = () =>
   civilizations.map(({ colours }, index) => ({
@@ -205,6 +321,8 @@ export const populate = (tiles: Tile[], seed: number): void => {
       } as unknown as Tile['units'][number];
     });
   });
+
+  improve(tiles, seed);
 };
 
 /**

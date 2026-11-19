@@ -28,6 +28,7 @@ import {
 import { ChunkMesh } from './terrain/chunks';
 import { MarkerKit, drawMarker } from './markers/drawMarker';
 import { TileMarker } from './markers/markerFor';
+import { OverlayMesh } from './overlay/overlayMesh';
 import { FIELD_OF_VIEW, Orbit, eye, sightFor } from './camera/orbit';
 import Water, { Clouds, Ground } from './water';
 
@@ -45,6 +46,11 @@ export interface Stage {
   resize(width: number, height: number, pixelRatio: number): void;
   /** The land's chunk `i` across and `j` down, drawn at every copy of the world: one drawn before is replaced. */
   setChunk(i: number, j: number, mesh: ChunkMesh): void;
+  /**
+   * What's laid on the land of chunk `i` across and `j` down (roads, fields, specials, huts), drawn at every copy of
+   *  the world as the land is: one laid before is replaced, and nothing takes it away.
+   */
+  setOverlay(i: number, j: number, mesh: OverlayMesh | null): void;
   /**
    * What's marked on the square `key` (`x,y`), standing at `at` (`u`, height, `v`), drawn at every copy of the world:
    *  one marked before is replaced, and nothing takes it away.
@@ -140,6 +146,17 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
     // What's drawn at every copy of the world in sight: the land's chunks by `i,j`, and the squares' markers by `x,y`.
     //  Each has where it lies, how to make one copy of it, and the copies drawn now.
     chunks = new Map<string, Placed & { geometry: BufferGeometry }>(),
+    // What's laid on the land, by chunk: its colours in its vertices, a little in front of the land so it doesn't
+    //  flicker with it where it lies close.
+    overlays = new Map<string, Placed & { geometry: BufferGeometry }>(),
+    overlayMaterial = new MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 0.9,
+      metalness: 0,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -2,
+    }),
     markers = new Map<string, Placed>(),
     markersGroup = new Group(),
     kit = new MarkerKit(),
@@ -249,10 +266,12 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
     if (key !== copiesKey) {
       copies = inSight;
       copiesKey = key;
-      chunks.forEach((chunk) => {
-        chunk.drawn.forEach((drawn) => land.remove(drawn));
-        chunk.drawn = copiesOf(chunk, land);
-      });
+      [chunks, overlays].forEach((placed) =>
+        placed.forEach((chunk) => {
+          chunk.drawn.forEach((drawn) => land.remove(drawn));
+          chunk.drawn = copiesOf(chunk, land);
+        })
+      );
     }
 
     if (markersKey !== markerCopiesKey) {
@@ -309,6 +328,45 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
       chunks.set(key, chunk);
       water.setChunk(mesh);
     },
+    setOverlay: (i, j, mesh): void => {
+      const key = `${i},${j}`,
+        old = overlays.get(key);
+
+      if (old !== undefined) {
+        old.drawn.forEach((drawn) => land.remove(drawn));
+        old.geometry.dispose();
+        overlays.delete(key);
+      }
+
+      if (mesh === null) {
+        return;
+      }
+
+      const geometry = new BufferGeometry();
+
+      geometry.setAttribute('position', new BufferAttribute(mesh.positions, 3));
+      geometry.setAttribute('normal', new BufferAttribute(mesh.normals, 3));
+      geometry.setAttribute('color', new BufferAttribute(mesh.colours, 3));
+      geometry.computeBoundingSphere();
+
+      const overlay: Placed & { geometry: BufferGeometry } = {
+        geometry,
+        at: [mesh.u, 0, mesh.v],
+        make: () => {
+          const drawn = new Mesh(geometry, overlayMaterial);
+
+          // Its specials, huts and mines cast shadows; what's laid flat takes the land's.
+          drawn.castShadow = true;
+          drawn.receiveShadow = true;
+
+          return drawn;
+        },
+        drawn: [],
+      };
+
+      overlay.drawn = copiesOf(overlay, land);
+      overlays.set(key, overlay);
+    },
     setMarker: (key, at, marker): void => {
       const old = markers.get(key);
 
@@ -345,6 +403,9 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
     dispose: (): void => {
       chunks.forEach(({ geometry }) => geometry.dispose());
       chunks.clear();
+      overlays.forEach(({ geometry }) => geometry.dispose());
+      overlays.clear();
+      overlayMaterial.dispose();
       markers.clear();
       kit.dispose();
       water.dispose();

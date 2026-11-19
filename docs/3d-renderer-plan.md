@@ -374,6 +374,14 @@ Epic's UE4 skeleton or only match its bone names.
 | 3.4 | Improvements: roads, railroads, irrigation and Farmland, mines, Fortress and Airbase, pollution and fallout; specials and huts. |
 | 3.5 | Clouds over unseen squares, which clear when a square is seen. Squares not in sight are dimmed under rules that say. Grid lines and the hover highlight. |
 
+**3.4, first part: done.** What's laid on the land is made by code (`packages/map-3d/overlay/`), one vertex-coloured mesh a chunk, so it costs a draw call a chunk:
+- roads and railroads are draped over the land, joined to their neighbours as the 2D map joins them, along the topology's directions, and at the nearest copy across the world's seams;
+- irrigation and farmland are rows of crops with ditches; pollution is a dark smear;
+- mines, fortresses, airbases, specials (`packages/models-builtin/specials.ts`, every feature Civ1 and Civ2 name) and huts are small solids, standing clear of a unit's stand;
+- a chunk's overlay is made again with its land, or when a square in it or next to it is released, so a road built rebuilds no land.
+
+Still to do in 3.4: improvements as models from a hosted set, and Fortress and Airbase models that read better from afar.
+
 ---
 
 ## M4: cities
