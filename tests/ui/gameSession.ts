@@ -447,9 +447,13 @@ const run = async (): Promise<void> => {
   );
 
   // The map's art chosen again during the game (#1118): the map is drawn with it at once, and again as it goes back.
+  //  The pixel art in place of Civ1's has the interface follow other art (`mapArtChangesInterface`), so the game is
+  //  carried over to a new page for it, as for a theme with other art; Civ1's again doesn't, as the interface still
+  //  follows the theme's on this page.
   {
     const { redrawArt } = MapView2D.prototype,
-      redrawn: string[] = [];
+      redrawn: string[] = [],
+      before = sent.length;
 
     MapView2D.prototype.redrawArt = function (
       this: MapView2D
@@ -479,6 +483,14 @@ const run = async (): Promise<void> => {
       redrawn,
       ['redrawn', 'redrawn']
     );
+    expect(
+      "the pixel art in place of Civ1's carries the game over to a new page, for its interface, once",
+      sent.slice(before),
+      [['save', { name: 'hand-over', handOver: true }]]
+    );
+
+    // Handed back, for what follows.
+    deliver('saveFailed', { message: 'full', handOver: true });
   }
 
   // The game carried over to a new page (#1118), for a theme's new interface art: saved for the page that replaces

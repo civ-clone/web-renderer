@@ -32,7 +32,10 @@ export {
 let preferred: () => readonly string[] = () => [],
   // The set the page settled on, once asked for: resolved again only once the list or the installed sets change, so a
   //  lookup on every draw (`Map#getInterfaceImage`) doesn't resolve it each time.
-  settled: TilesetDescriptor | null = null;
+  settled: TilesetDescriptor | null = null,
+  // The interface art the game being played follows from its map's (`followMapArt`), or null before a game, and in a
+  //  game whose map is drawn with imported art.
+  mapArt: TilesetDescriptor | null = null;
 
 const unsettle = (): void => {
   settled = null;
@@ -77,7 +80,12 @@ const resolve = (art: readonly string[]): TilesetDescriptor => {
  *  sizes, the cursor and every sprite come from the same set.
  */
 export const interfaceArt = (art?: readonly string[]): TilesetDescriptor =>
-  art === undefined ? (settled ??= resolve(preferred())) : resolve(art);
+  art === undefined
+    ? (settled ??= mapArt ?? resolve(preferred()))
+    : resolve(art);
+
+/** The theme's interface art (`interfaceArt` of the theme's list), whatever a game's map has it follow. */
+export const themeInterfaceArt = (): TilesetDescriptor => resolve(preferred());
 
 /**
  * Whether the interface's art (`interfaceArt`, of `art` or the theme's list) is there to draw with: installed, rather
@@ -143,6 +151,56 @@ export const ownInterfaceArt = (): TilesetDescriptor | null => {
     own.find(({ grid }) => grid === 'square') ??
     null
   );
+};
+
+// A game whose map is drawn with civ.one's own art (the pixel art, a hosted set) draws its interface with it too: its
+//  icons, people, cursor and order buttons, whatever art the theme lists first. A game whose map is drawn with art the
+//  player imported (Civ1's, Civ2's) draws its interface as the theme says, as before, and the menus always do.
+
+/** Whether `sprite`, a name of the interface's, can be drawn from `tileset` now: its sheet loaded, for a hosted set. */
+const hasLoaded = (tileset: TilesetDescriptor, sprite = 'city/food'): boolean =>
+  hasPreloadedImage(interfaceSpriteName(sprite, tileset), tileset);
+
+/**
+ * The interface art a game whose map is drawn with `map` follows: for civ.one's own art (a hosted set with interface art
+ *  of its own), civ.one's own interface art (`ownInterfaceArt`, the square pixel art, drawn for buttons and windows),
+ *  or the map's set itself while that isn't loaded; and null for art the player imported, whose game draws its
+ *  interface as the theme says.
+ */
+export const mapInterfaceArt = (
+  map: TilesetDescriptor
+): TilesetDescriptor | null => {
+  if (!isHosted(map) || !hasInterfaceArt(map)) {
+    return null;
+  }
+
+  const own = ownInterfaceArt();
+
+  return own !== null && hasLoaded(own) ? own : map;
+};
+
+/**
+ * Has the interface's art (`interfaceArt`) follow the art `map` the game's map is drawn with (`mapInterfaceArt`), as a
+ *  game starts; or, given null, the theme's again. Not as the map's art changes during a game: what's drawn already
+ *  keeps the sprites it was drawn with, so that takes a new page (`mapArtChangesInterface`).
+ */
+export const followMapArt = (map: TilesetDescriptor | null): void => {
+  mapArt = map === null ? null : mapInterfaceArt(map);
+  unsettle();
+};
+
+/**
+ * Whether drawing the game's map with `map` would have the interface draw with other art than it does now
+ *  (`followMapArt`): the pixel art chosen in place of an imported set the theme draws with, or the other way round.
+ *  The interface then needs a new page, as a theme drawing with other art does, as what's drawn keeps the sprites it
+ *  was drawn with. Not one pixel art set for another, whose interface sprites are the same pictures; nor art whose
+ *  interface is the one drawn now, as an imported map's is when the theme's art is the pixel art already.
+ */
+export const mapArtChangesInterface = (map: TilesetDescriptor): boolean => {
+  const next = mapInterfaceArt(map) ?? themeInterfaceArt(),
+    now = interfaceArt();
+
+  return next.id !== now.id && !(isHosted(next) && isHosted(now));
 };
 
 /** A sprite of the interface's: the set it's drawn from, and its key there. */
