@@ -1084,7 +1084,8 @@ const plants = (layer: Layer, overlay: SquareOverlay): void => {
 //  repeats with the world's period, so it has no seam either. Woods are whole across a square, and across the edge to a
 //  neighbour of the same woods; within `MARGIN` of the edge to other ground (or the corner), they thin to a fringe, so
 //  a lone square of forest is a whole wood too. Each point has numbers of its own, for whether it's planted, what grows
-//  there and how big, so a neighbour turning to woods only adds trees.
+//  there and how big, so a neighbour turning to woods only adds trees: each keeps the room it would whole, and the
+//  same lines clear (its own roads, and its neighbours' that cross its corners).
 /**
  * How far apart woods' lattice points are, about: as many as fit the world's period exactly. Not a whole share of a
  *  square, so the points don't line up with squares' edges, and the fringe at an edge to other ground has points at
@@ -1115,6 +1116,9 @@ export const woodsPlants = (
   kind: PlantKind;
   plant: Plant;
   size: number;
+  // The room it keeps, as if it were as big as it grows where the woods are whole: the same however whole they are
+  //  here, so a neighbour turning to woods doesn't crowd it out.
+  room: number;
   facing: number;
 }[] => {
   const { centre, outline, owns, around, period, toward, latitude } = place,
@@ -1125,6 +1129,14 @@ export const woodsPlants = (
     stepV = period.v === null || cellsV === null ? CANOPY : period.v / cellsV,
     us = outline.map(([u]) => u),
     vs = outline.map(([, v]) => v),
+    [firstI, lastI] = [
+      Math.floor(Math.min(...us) / stepU) - 1,
+      Math.ceil(Math.max(...us) / stepU),
+    ],
+    [firstJ, lastJ] = [
+      Math.floor(Math.min(...vs) / stepV) - 1,
+      Math.ceil(Math.max(...vs) / stepV),
+    ],
     // The middles of the squares round it that aren't the same woods: other ground.
     open = around
       .filter(
@@ -1139,16 +1151,8 @@ export const woodsPlants = (
     total = growth.plants.reduce((sum, { count }) => sum + count, 0),
     found: ReturnType<typeof woodsPlants> = [];
 
-  for (
-    let j = Math.floor(Math.min(...vs) / stepV) - 1;
-    j <= Math.ceil(Math.max(...vs) / stepV);
-    j++
-  ) {
-    for (
-      let i = Math.floor(Math.min(...us) / stepU) - 1;
-      i <= Math.ceil(Math.max(...us) / stepU);
-      i++
-    ) {
+  for (let j = firstJ; j <= lastJ; j++) {
+    for (let i = firstI; i <= lastI; i++) {
       // The same point at every copy of the world.
       const ci = ((i % cellsU) + cellsU) % cellsU,
         cj = cellsV === null ? j : ((j % cellsV) + cellsV) % cellsV,
@@ -1196,16 +1200,18 @@ export const woodsPlants = (
             ? 'broadleaf'
             : plant.kind;
 
+      const usual =
+        plant.size[0] +
+        (plant.size[1] - plant.size[0]) * pointFraction(ci, cj, 5);
+
       found.push({
         u,
         v,
         kind,
         plant,
+        room: ROOM[kind] * usual * GROWN[1],
         // Bigger where the woods are whole, so their crowns meet.
-        size:
-          (plant.size[0] +
-            (plant.size[1] - plant.size[0]) * pointFraction(ci, cj, 5)) *
-          (GROWN[0] + (GROWN[1] - GROWN[0]) * whole),
+        size: usual * (GROWN[0] + (GROWN[1] - GROWN[0]) * whole),
         facing: pointFraction(ci, cj, 6) * Math.PI * 2,
       });
     }
@@ -1216,15 +1222,41 @@ export const woodsPlants = (
 
 // Woods' trees, each where it has room clear of the unit's stand, the square's lines and what stands on it: not of
 //  each other, as the lattice keeps them apart, and a tree can't see its neighbour's square.
-const woods = (layer: Layer, overlay: SquareOverlay, growth: Growth): void =>
+const woods = (layer: Layer, overlay: SquareOverlay, growth: Growth): void => {
+  const { centre, around, toward, heightAt } = layer.place,
+    // How far its furthest neighbour's middle is: two of its neighbours that far apart or nearer are neighbours.
+    furthest = Math.max(
+      ...around.map((offset) => {
+        const [u, v] = toward(offset);
+
+        return Math.hypot(u - centre[0], v - centre[1]);
+      })
+    ),
+    paths = overlay.paths.map((offset) => toward(offset));
+
+  // The roads between its neighbours that cross its corners (a diagonal road beside it), as its own lines.
+  paths.forEach((a, index) =>
+    paths.slice(index + 1).forEach((b) => {
+      if (Math.hypot(b[0] - a[0], b[1] - a[1]) <= furthest + 1e-6) {
+        layer.lines.push([a, b]);
+      }
+    })
+  );
+
   woodsPlants(overlay, layer.place, growth).forEach(
-    ({ u, v, kind, plant, size, facing }) => {
-      if (layer.hasRoom(u, v, ROOM[kind] * size)) {
+    ({ u, v, kind, plant, size, room, facing }) => {
+      // Not in the water at the shore, but for reeds.
+      if (kind !== 'reeds' && heightAt(u, v) < 0) {
+        return;
+      }
+
+      if (layer.hasRoom(u, v, room)) {
         grow(layer, plant, kind, u, v, size, facing);
         layer.grown.push([u, v]);
       }
     }
   );
+};
 
 /**
  * Lays `overlay` for the square at `place` into `soup`. What stands on it (its mine, specials, hut, plants), where and

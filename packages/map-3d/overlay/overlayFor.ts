@@ -39,6 +39,9 @@ export type SquareOverlay = {
   // For woods, its neighbours of the same woods that grow them (`Growth#canopy`), by offset: the canopy runs across
   //  to them. Not one on a city's lot, or cleared (fields, a fortress, an airbase), or never seen.
   woods: (readonly [number, number])[];
+  // For woods, its neighbours with a road or a city, by offset: a road between two of them that crosses this square's
+  //  corner, a diagonal road beside it, is one its trees keep clear of too.
+  paths: (readonly [number, number])[];
 };
 
 // Features drawn otherwise than as a special: Civ2's rivers, which are drawn as rivers (§5.3).
@@ -123,12 +126,19 @@ export const overlayFor = (
       terrain: tile.terrain?._ ?? 'Unknown',
       vegetation: growthOf(tile.terrain?._ ?? 'Unknown') !== null,
       woods: [],
+      paths: [],
     },
     own = woodsOf(tile);
 
   if (own !== null) {
     overlay.woods = neighbours
       .filter((neighbour) => woodsOf(neighbour.tile) === own)
+      .map(({ offset }) => offset);
+    overlay.paths = neighbours
+      .filter(
+        (neighbour) =>
+          Boolean(neighbour.tile.city) || has(neighbour.tile, 'Road')
+      )
       .map(({ offset }) => offset);
   }
 

@@ -18,6 +18,8 @@ import {
   CANOPY,
   OverlayMesh,
   OverlayPlace,
+  layOverlay,
+  soup,
   woodsPlants,
 } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
 import { growthOf } from '@civ-clone/ui-models-builtin/vegetation';
@@ -79,7 +81,8 @@ const overlayOf = (
   y: number,
   terrain: string,
   around: (offset: readonly [number, number]) => string,
-  improvements: string[] = []
+  improvements: string[] = [],
+  improvementsAt: (offset: readonly [number, number]) => string[] = () => []
 ): SquareOverlay =>
   overlayFor(
     {
@@ -97,7 +100,7 @@ const overlayOf = (
         return {
           offset,
           tile: {
-            improvements: [],
+            improvements: improvementsAt(offset).map((_) => ({ _ })),
             city: null,
             terrain: { _: around(offset), features: [] },
           } as unknown as OverlayNeighbour['tile'],
@@ -115,86 +118,110 @@ ids.forEach((topologyId) => {
       topologyId,
       wrapsY: topology.wrapsY(),
     }),
-    period = layout.period(),
-    cellsU = Math.round(period.u / CANOPY),
-    cellsV = period.v === null ? null : Math.round(period.v / CANOPY),
-    stepU = period.u / cellsU,
-    stepV = period.v === null || cellsV === null ? CANOPY : period.v / cellsV;
+    // Every grid's topology wraps over the poles; a layout that doesn't is checked too, for its edges.
+    layouts = [true, false].map((wrapsY) =>
+      groundLayoutFor({ width, height, topologyId, wrapsY })
+    );
 
   // An all-forest world: every point of the lattice, on the world, planted once, by the square it's on.
-  const planted = new Map<string, string[]>(),
-    misplaced: string[] = [];
+  layouts.forEach((layout) => {
+    const period = layout.period(),
+      cellsU = Math.round(period.u / CANOPY),
+      cellsV = period.v === null ? null : Math.round(period.v / CANOPY),
+      stepU = period.u / cellsU,
+      stepV = period.v === null || cellsV === null ? CANOPY : period.v / cellsV,
+      planted = new Map<string, string[]>(),
+      misplaced: string[] = [];
 
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      woodsPlants(
-        overlayOf(topology, x, y, 'Forest', () => 'Forest'),
-        placeOf(layout, topology, x, y),
-        forest
-      ).forEach(({ u, v }) => {
-        // Its cell, round the world's period.
-        const i = Math.floor(u / stepU),
-          j = Math.floor(v / stepV),
-          key = `${((i % cellsU) + cellsU) % cellsU},${
-            cellsV === null ? j : ((j % cellsV) + cellsV) % cellsV
-          }`,
-          [tx, ty] = layout.tileAt(u, v);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        woodsPlants(
+          overlayOf(topology, x, y, 'Forest', () => 'Forest'),
+          placeOf(layout, topology, x, y),
+          forest
+        ).forEach(({ u, v }) => {
+          // Its cell, round the world's period.
+          const i = Math.floor(u / stepU),
+            j = Math.floor(v / stepV),
+            key = `${((i % cellsU) + cellsU) % cellsU},${
+              cellsV === null ? j : ((j % cellsV) + cellsV) % cellsV
+            }`,
+            [tx, ty] = layout.tileAt(u, v);
 
-        planted.set(key, [...(planted.get(key) ?? []), `${x},${y}`]);
+          planted.set(key, [...(planted.get(key) ?? []), `${x},${y}`]);
 
-        if (tx !== x || ty !== y) {
-          misplaced.push(`${x},${y} at ${u},${v}`);
-        }
-      });
+          if (tx !== x || ty !== y) {
+            misplaced.push(`${x},${y} at ${u},${v}`);
+          }
+        });
+      }
     }
-  }
 
-  // Every cell whose point is on the world, by the layout's own say: once round the period across, and down where it
-  //  wraps over the poles, or as far down as the world's squares reach where it doesn't.
-  const vs = Array.from({ length: height }, (_, y) =>
-      layout.outline(0, y).map(([, v]) => v)
-    ).flat(),
-    rows =
-      cellsV === null
-        ? Array.from(
-            {
-              length:
-                Math.ceil(Math.max(...vs) / stepV) -
-                Math.floor(Math.min(...vs) / stepV),
-            },
-            (_, at) => Math.floor(Math.min(...vs) / stepV) + at
-          )
-        : Array.from({ length: cellsV }, (_, at) => at),
-    // Each cell's point is where `woodsPlants` puts it: the cell is told by where that point lies.
-    onWorld = new Set<string>();
+    // Every cell whose point is on the world, by the layout's own say: once round the period across, and down where it
+    //  wraps over the poles, or as far down as the world's squares reach where it doesn't.
+    const vs = Array.from({ length: height }, (_, y) =>
+        layout.outline(0, y).map(([, v]) => v)
+      ).flat(),
+      rows =
+        cellsV === null
+          ? Array.from(
+              {
+                length:
+                  Math.ceil(Math.max(...vs) / stepV) -
+                  Math.floor(Math.min(...vs) / stepV),
+              },
+              (_, at) => Math.floor(Math.min(...vs) / stepV) + at
+            )
+          : Array.from({ length: cellsV }, (_, at) => at),
+      // Each cell's point is where `woodsPlants` puts it: the cell is told by where that point lies.
+      onWorld = new Set<string>();
 
-  rows.forEach((j) => {
-    for (let i = 0; i < cellsU; i++) {
-      // Some point of the cell is on the world if any square planted it; one that wasn't must be off the world.
-      onWorld.add(`${i},${j}`);
-    }
+    rows.forEach((j) => {
+      for (let i = 0; i < cellsU; i++) {
+        // Some point of the cell is on the world if any square planted it; one that wasn't must be off the world.
+        onWorld.add(`${i},${j}`);
+      }
+    });
+
+    const twice = [...planted.entries()].filter(
+        ([, squares]) => squares.length > 1
+      ),
+      offWorld = [...planted.keys()].filter((key) => !onWorld.has(key)),
+      // A cell not planted must be one whose point may be off the world: past the edge of a world that doesn't wrap
+      //  over the poles, a cell not wholly on its squares. One wholly on them is planted.
+      wholly = (key: string): boolean => {
+        const [i, j] = key.split(',').map(Number) as [number, number];
+
+        return [
+          [0, 0],
+          [1, 0],
+          [0, 1],
+          [1, 1],
+        ].every(([a, b]) => {
+          const [, y] = layout.tileAt((i + a!) * stepU, (j + b!) * stepV);
+
+          return y >= 0 && y < height;
+        });
+      },
+      unplanted = [...onWorld].filter((key) => !planted.has(key));
+
+    expect(
+      `${topologyId}, ${
+        period.v === null ? 'not wrapping' : 'wrapping'
+      } over the poles: in an all-forest world, every point of the woods' lattice is planted by exactly one square, the one the layout says it's on, round the world's period, and none past its edge`,
+      [
+        planted.size > 0,
+        twice.slice(0, 3),
+        misplaced.slice(0, 3),
+        offWorld.slice(0, 3),
+        // On a world that wraps over the poles, every cell; on one that doesn't, every cell wholly on its squares.
+        cellsV === null
+          ? unplanted.filter(wholly).slice(0, 3)
+          : unplanted.slice(0, 3),
+      ],
+      [true, [], [], [], []]
+    );
   });
-
-  const twice = [...planted.entries()].filter(
-      ([, squares]) => squares.length > 1
-    ),
-    offWorld = [...planted.keys()].filter((key) => !onWorld.has(key)),
-    // A cell not planted: its point off the world (on a world that doesn't wrap over the poles, past its edge) or none.
-    unplanted = [...onWorld].filter((key) => !planted.has(key));
-
-  expect(
-    `${topologyId}: in an all-forest world, every point of the woods' lattice is planted by exactly one square, the one the layout says it's on, round the world's period, and none past its edge`,
-    [
-      planted.size > 0,
-      twice.slice(0, 3),
-      misplaced.slice(0, 3),
-      offWorld.slice(0, 3),
-      // On a world that wraps over the poles, every cell; on one that doesn't, all but those whose point is past the
-      //  first or last row's edge: no more than two rows' worth.
-      cellsV === null ? unplanted.length <= cellsU * 2 : unplanted.length === 0,
-    ],
-    [true, [], [], [], true]
-  );
 
   // A forest square, and its neighbour each way the grid has, forest or plain, from rows of each parity: the band
   //  along the edge between them has more trees where the neighbour's forest, as the canopy runs across to it, and
@@ -212,6 +239,7 @@ ids.forEach((topologyId) => {
     edges = steps.filter((step) => step <= nearest + 1e-6).length,
     thinner: string[] = [],
     added: string[] = [],
+    elsewhere: string[] = [],
     // How many trees stand along the edge, each way, from rows of each parity, beside forest and beside plains.
     counts = new Map<string, [number, number]>();
   let canopy = 0,
@@ -245,20 +273,20 @@ ids.forEach((topologyId) => {
         withWoods = trees('Forest'),
         withPlain = trees('Plains'),
         near = withWoods.filter(inBand).length,
-        far = withPlain.filter(inBand).length;
+        far = withPlain.filter(inBand).length,
+        // Further in from that edge than the woods thin: the same trees either way, the same size.
+        inward = ({ u, v }: { u: number; v: number }): boolean =>
+          ((u - cu) * (nu - cu) + (v - cv) * (nv - cv)) / length <=
+          length / 2 - 0.15,
+        key = (tree: { u: number; v: number; kind: string; size: number }) =>
+          `${tree.u},${tree.v},${tree.kind},${tree.size}`;
 
-      // Across an edge, its nearest neighbours: one across a corner weighs little at this square's points, its middle
-      //  too far off for the kernel.
-      if (length > nearest + 1e-6) {
-        return;
+      if (
+        JSON.stringify(withWoods.filter(inward).map(key)) !==
+        JSON.stringify(withPlain.filter(inward).map(key))
+      ) {
+        elsewhere.push(`${x},${y} ${direction}`);
       }
-
-      const key = `${direction} from ${y! & 1 ? 'odd' : 'even'} rows`,
-        [nearSoFar, farSoFar] = counts.get(key) ?? [0, 0];
-
-      counts.set(key, [nearSoFar + near, farSoFar + far]);
-      canopy += near;
-      fringe += far;
 
       withPlain.forEach((tree) => {
         if (
@@ -270,6 +298,18 @@ ids.forEach((topologyId) => {
           added.push(`${x},${y} ${direction}: ${tree.u},${tree.v}`);
         }
       });
+
+      // The edge's band counted across an edge, its nearest neighbours: past a corner, the band's a sliver.
+      if (length > nearest + 1e-6) {
+        return;
+      }
+
+      const edge = `${direction} from ${y! & 1 ? 'odd' : 'even'} rows`,
+        [nearSoFar, farSoFar] = counts.get(edge) ?? [0, 0];
+
+      counts.set(edge, [nearSoFar + near, farSoFar + far]);
+      canopy += near;
+      fringe += far;
     })
   );
 
@@ -280,17 +320,176 @@ ids.forEach((topologyId) => {
   });
 
   expect(
-    `${topologyId}: forest beside forest, across each edge the grid has, from rows of each parity, at twelve places, has more trees along the edge than forest beside plains, which has a fringe; and a neighbour turning to forest, any way, only adds trees`,
+    `${topologyId}: forest beside forest, across each edge the grid has, from rows of each parity, at twelve places, has more trees along the edge than forest beside plains, which has a fringe; further in, the same trees; and a neighbour turning to forest, any way, only adds trees`,
     [
       thinner,
       counts.size === edges * 2,
       fringe > 0,
       fringe < canopy * 0.85,
+      elsewhere.slice(0, 3),
       added.slice(0, 3),
     ],
-    [[], true, true, true, []]
+    [[], true, true, true, [], []]
+  );
+
+  // A road between a square and its neighbour, each way the grid has, from rows of each parity, in all-forest woods:
+  //  the squares beside both of them, whose corner or edge it may cross, plant no tree on it. And with roads all round
+  //  a square, at twelve places on rows of each parity, its trees as drawn are only added to when a neighbour turns to
+  //  forest, any way.
+  const onRoad: string[] = [],
+    dropped: string[] = [],
+    // The square at (`x`, `y`) on the world, as the topology names it.
+    named = (x: number, y: number): string =>
+      `${((x % width) + width) % width},${((y % height) + height) % height}`,
+    neighboursOf = (x: number, y: number): [number, number][] =>
+      topology
+        .directions()
+        .map((direction) => topology.neighbour(x, y, direction))
+        .filter((square): square is [number, number] => square !== null);
+
+  [
+    [4, 4],
+    [5, 5],
+  ].forEach(([x, y]) =>
+    topology.directions().forEach((direction) => {
+      const to = topology.neighbour(x!, y!, direction)!,
+        ends = new Set([named(x!, y!), named(...to)]),
+        beside = neighboursOf(x!, y!).filter(([bx, by]) =>
+          neighboursOf(...to).some(([tx, ty]) => tx === bx && ty === by)
+        );
+
+      beside.forEach(([bx, by]) => {
+        const place = placeOf(layout, topology, bx, by),
+          // Its neighbours' offsets, and which of them are the road's ends.
+          offsets = topology
+            .directions()
+            .filter((each) => topology.neighbour(bx, by, each) !== null)
+            .map((each) => ({
+              offset: topology.offset(each, bx, by),
+              end: ends.has(named(...topology.neighbour(bx, by, each)!)),
+            })),
+          [a, b] = offsets
+            .filter(({ end }) => end)
+            .map(({ offset }) => place.toward(offset)),
+          { grown } = layOverlay(
+            overlayOf(
+              topology,
+              bx,
+              by,
+              'Forest',
+              () => 'Forest',
+              [],
+              (offset) =>
+                offsets.some(
+                  ({ offset: other, end }) =>
+                    end && other[0] === offset[0] && other[1] === offset[1]
+                )
+                  ? ['Road']
+                  : []
+            ),
+            place,
+            soup()
+          );
+
+        if (a === undefined || b === undefined) {
+          return;
+        }
+
+        grown.forEach(([u, v]) => {
+          const du = b[0] - a[0],
+            dv = b[1] - a[1],
+            t = Math.max(
+              0,
+              Math.min(
+                1,
+                ((u - a[0]) * du + (v - a[1]) * dv) / (du * du + dv * dv)
+              )
+            );
+
+          // Half a road's width (0.035), and a little.
+          if (Math.hypot(u - a[0] - du * t, v - a[1] - dv * t) < 0.05) {
+            onRoad.push(`${x},${y} ${direction}: ${bx},${by} at ${u},${v}`);
+          }
+        });
+      });
+    })
+  );
+
+  // Roads all round a square, at twelve places on rows of each parity, each way.
+  Array.from({ length: 24 }, (_, at) => [
+    2 + (at % 3) * 3,
+    1 + Math.floor(at / 3),
+  ]).forEach(([x, y]) =>
+    topology.directions().forEach((direction) => {
+      // Roads all round, and the neighbour that way forest or plains: the trees drawn beside plains are all drawn
+      //  beside forest.
+      const place = placeOf(layout, topology, x!, y!),
+        offset = topology.offset(direction, x!, y!),
+        drawn = (besideIt: string) =>
+          layOverlay(
+            overlayOf(
+              topology,
+              x!,
+              y!,
+              'Forest',
+              (other) =>
+                other[0] === offset[0] && other[1] === offset[1]
+                  ? besideIt
+                  : 'Forest',
+              ['Road'],
+              () => ['Road']
+            ),
+            place,
+            soup()
+          ).grown.map(([u, v]) => `${u},${v}`),
+        withWoods = new Set(drawn('Forest')),
+        withPlain = drawn('Plains');
+
+      withPlain
+        .filter((tree) => !withWoods.has(tree))
+        .forEach((tree) => dropped.push(`${x},${y} ${direction}: ${tree}`));
+    })
+  );
+
+  expect(
+    `${topologyId}: no tree stands on a road between two squares beside it, across its corner or along its edge, each way; and with roads all round, a neighbour turning to forest only adds to the trees drawn`,
+    [onRoad.slice(0, 3), dropped.slice(0, 3)],
+    [[], []]
   );
 });
+
+// At the shore, where the land under a square dips below the sea: a forest's trees stand on dry land, a swamp's reeds in
+//  the shallows too.
+{
+  const topology = topologyFor({ width: 12, height: 10, topologyId: 'square' }),
+    layout = groundLayoutFor({
+      width: 12,
+      height: 10,
+      topologyId: 'square',
+      wrapsY: topology.wrapsY(),
+    }),
+    // The land falls away west to east across the square at (4, 4), under the sea past its middle.
+    shore = {
+      ...placeOf(layout, topology, 4, 4),
+      heightAt: (u: number) => 4.5 - u,
+    },
+    laid = (terrain: string) =>
+      layOverlay(
+        overlayOf(topology, 4, 4, terrain, () => terrain),
+        shore,
+        soup()
+      ).grown;
+
+  expect(
+    'at the shore, a forest’s trees stand on dry land, and a swamp’s reeds in the shallows too',
+    [
+      laid('Forest').length > 0,
+      laid('Forest').every(([u]) => u <= 4.5),
+      laid('Swamp').some(([u]) => u > 4.5),
+    ],
+    [true, true, true]
+  );
+}
 
 // What counts as woods beside a square: the same woods (forest and jungle), growing there.
 {
@@ -349,7 +548,8 @@ ids.forEach((topologyId) => {
 }
 
 // A neighbour's woods changing lays its square's chunk again: a forest on one side of a chunk's border, its neighbour
-//  across it turned to plains and back. Every chunk whose overlay that changes is laid again, as land made afresh lays it.
+//  across it given a fortress, which clears its woods, and then without it. Every chunk whose overlay that changes is
+//  laid again, as land made afresh lays it.
 ids.forEach((topologyId) => {
   const width = 64,
     height = 40,
@@ -413,13 +613,40 @@ ids.forEach((topologyId) => {
         land.overlayKeyOf(x, row).startsWith('0,') &&
         land.overlayKeyOf(x + 1, row).startsWith(`${border},`)
     )!,
+    // Its neighbour across an edge in the next chunk: across a corner, the woods barely thin.
+    topology = world.topology(),
+    [westU, westV] = land.layout.centre(west, row),
+    across = topology
+      .directions()
+      .map((direction) => topology.neighbour(west, row, direction)!)
+      .filter(
+        ([x, y]) => land.overlayKeyOf(x, y) !== land.overlayKeyOf(west, row)
+      )
+      .sort(
+        (a, b) =>
+          Math.hypot(
+            land.layout.centre(...a)[0] - westU,
+            land.layout.centre(...a)[1] - westV
+          ) -
+          Math.hypot(
+            land.layout.centre(...b)[0] - westU,
+            land.layout.centre(...b)[1] - westV
+          )
+      )[0]!,
     results: unknown[] = [];
 
-  ['Plains', 'Forest'].forEach((name) => {
-    const tile = tiles.find((each) => each.x === west + 1 && each.y === row)!;
+  // A fortress built there and taken away: no terrain changes, so no land is built again, and only what's laid on it
+  //  and beside it can lay the forest's chunk again.
+  [['Fortress'], []].forEach((improvements) => {
+    const tile = tiles.find(
+      (each) => each.x === across[0] && each.y === across[1]
+    )!;
 
-    tile.terrain = { _: name, __: [name], id: `changed-${name}`, features: [] };
-    land.changed([[west + 1, row]], 0, 0);
+    (tile as { improvements: unknown[] }).improvements = improvements.map(
+      (_) => ({ _ })
+    );
+    land.changed([across], 0, 0);
+    results.push(land.pending());
 
     const laid = overlays(land),
       fresh = new Land(world);
@@ -442,12 +669,9 @@ ids.forEach((topologyId) => {
   });
 
   expect(
-    `${topologyId}: a forest's neighbour across a chunk's border turned to plains and back lays the forest's chunk again, and every chunk it changes, as land made afresh lays them`,
+    `${topologyId}: a forest's neighbour across a chunk's border, given a fortress and then without it, builds no land again, but lays the forest's chunk again, and every chunk it changes, as land made afresh lays them`,
     results,
-    [
-      [true, [], true],
-      [true, [], true],
-    ]
+    [0, [true, [], true], 0, [true, [], true]]
   );
 });
 
