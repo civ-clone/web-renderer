@@ -419,6 +419,9 @@ blended across squares.
     distance from the square's middle (Wendland C2, radius 1.2 squares).
   - Mountains' peaks are weighted by the square of their weight, so a peak stays inside its own square and doesn't
     spill into the plain beside it.
+  - Neighbouring mountains are joined into ranges, as Civ1 joins its mountains: a ridge runs from each peak to its
+    neighbour's, dipping to a saddle between them. Across the ridge, the land falls away as it does from a peak, so the
+    plain beside a range isn't lifted either.
   - So the land has no seams along square edges, on any grid.
 - **Noise** is periodic over the world's period (lattice-periodic, as the hex art's is [verified: the hex pack's
   `src/hex.js`, `civ1-tileset-pixelart`]), so the seam where the world wraps has no seam either.
@@ -438,6 +441,20 @@ blended across squares.
   - The noise is gradient noise (Perlin's): value noise showed its lattice as lines across the sea.
   - Each peak stands off its square's middle by up to 0.22 either way, and is 0.75 to 1.25 times its terrain's height,
     both seeded from the square, so a range of mountains isn't a grid of cones (`peakOf`).
+  - **Ranges:** every terrain whose shape is `peaked` is joined to each neighbour of that shape the topology gives,
+    across a corner as well as an edge, so a chain of mountains running diagonally is a range too. Squares never seen
+    and water are never joined.
+    - A ridge runs from one peak to a saddle and on to the other. The saddle is between 0.2 and 0.5 of the lower peak's
+      own height, and stands off the line between the peaks by up to 0.12 either way, both seeded from the pair.
+    - The crest falls from each peak and levels out at the saddle. Across it, the land falls away by the kernel squared,
+      as it does from a peak, and past each peak the ridge is that peak exactly. The land is the highest of the ridges
+      and the peaks there, never their sum, so a block of mountains is a massif and not a spike.
+    - Each ridge is made once a refresh, and listed under every square it reaches. A point reads only its own square's
+      list, so building the land takes about 5% longer on the debug world, and about 15% longer for a chunk full of
+      mountains.
+    - A change to a mountain changes its neighbours' ridges, so `refresh` gives back the mountains joined to it, or
+      that were, as well as the squares whose terrain changed. The land is rebuilt round them, and the yields over
+      them and their neighbours are laid out again.
   - A point's colour is blended more sharply than its height (each square's weight cubed), from a point moved by noise
     up to 0.22 either way (0.31 at most), so terrains' edges wander rather than run along the squares' edges. This makes the land about
     twice as slow to build: 750 ms for an 80×50 world. Spreading a chunk over frames is for M6.

@@ -9,6 +9,8 @@
 import topologyFor, { Topology } from '@civ-clone/ui-client/lib/topologyFor';
 import groundLayoutFor, { GroundLayout } from '@civ-clone/ui-map-3d/layouts';
 import createRelief, {
+  BEND,
+  ReliefMap,
   ReliefSource,
   WANDER,
   peakOf,
@@ -67,6 +69,80 @@ const sourceFor = (
       .filter((square): square is [number, number] => square !== null),
 });
 
+// Where the land steps, in height or colour, across an edge or a corner of `squares`: a hair either side of each, between
+//  two squares that have both been seen.
+const stepsIn = (
+  relief: ReliefMap,
+  layout: GroundLayout,
+  squares: [number, number][],
+  unknown: (x: number, y: number) => boolean
+): string[] => {
+  const EPSILON = 1e-7,
+    steps: string[] = [];
+
+  squares.forEach(([x, y]) => {
+    const outline = layout.outline(x, y),
+      [cu, cv] = layout.centre(x, y);
+
+    outline.forEach((corner, index) => {
+      const next = outline[(index + 1) % outline.length];
+
+      [0, 0.25, 0.5, 0.75].forEach((along) => {
+        const pu = corner[0] + (next[0] - corner[0]) * along,
+          pv = corner[1] + (next[1] - corner[1]) * along,
+          // Towards the middle, and away from it.
+          du = (pu - cu) * EPSILON,
+          dv = (pv - cv) * EPSILON,
+          inside: [number, number] = [pu - du, pv - dv],
+          outside: [number, number] = [pu + du, pv + dv],
+          other = layout.tileAt(...outside);
+
+        if (unknown(x, y) || unknown(...other)) {
+          return;
+        }
+
+        const step = Math.abs(
+            relief.height(...inside) - relief.height(...outside)
+          ),
+          // The colours too: blended sharper, but with no edge of their own.
+          inColour = relief.sample(...inside).colour,
+          outColour = relief.sample(...outside).colour,
+          shade = Math.max(
+            ...inColour.map((value, channel) =>
+              Math.abs(value - (outColour[channel] ?? 0))
+            )
+          );
+
+        if (step > 1e-6 || shade > 1e-5) {
+          steps.push(`${x},${y} ${index}@${along}: ${step} ${shade}`);
+        }
+      });
+    });
+  });
+
+  return steps;
+};
+
+// Where the land isn't the same as its copy a period along, across the world or down it where it wraps over the poles.
+const seamsIn = (relief: ReliefMap, layout: GroundLayout): string[] => {
+  const { u: acrossPeriod, v: downPeriod } = layout.period(),
+    seams: string[] = [];
+
+  for (let index = 0; index < 400; index++) {
+    const u = (index * 0.731) % (acrossPeriod * 1.5),
+      v = (index * 0.377) % ((downPeriod ?? 5) * 1.5),
+      here = relief.height(u, v),
+      across = relief.height(u + acrossPeriod, v),
+      down = downPeriod === null ? here : relief.height(u, v + downPeriod);
+
+    if (Math.abs(here - across) > 1e-9 || Math.abs(here - down) > 1e-9) {
+      seams.push(`${u},${v}: ${here} ${across} ${down}`);
+    }
+  }
+
+  return seams;
+};
+
 const pattern = (x: number, y: number): string =>
   (x * 7 + y * 3) % 23 === 0
     ? 'Unknown'
@@ -114,53 +190,9 @@ ids.forEach((topologyId) => {
     true
   );
 
-  // No step across an edge or a corner: a hair either side of each, between two squares that have both been seen.
-  const EPSILON = 1e-7,
-    steps: string[] = [];
-
-  squares.forEach(([x, y]) => {
-    const outline = layout.outline(x, y),
-      [cu, cv] = layout.centre(x, y);
-
-    outline.forEach((corner, index) => {
-      const next = outline[(index + 1) % outline.length];
-
-      [0, 0.5].forEach((along) => {
-        const pu = corner[0] + (next[0] - corner[0]) * along,
-          pv = corner[1] + (next[1] - corner[1]) * along,
-          // Towards the middle, and away from it.
-          du = (pu - cu) * EPSILON,
-          dv = (pv - cv) * EPSILON,
-          inside: [number, number] = [pu - du, pv - dv],
-          outside: [number, number] = [pu + du, pv + dv],
-          other = layout.tileAt(...outside);
-
-        if (unknown(x, y) || unknown(...other)) {
-          return;
-        }
-
-        const step = Math.abs(
-            relief.height(...inside) - relief.height(...outside)
-          ),
-          // The colours too: blended sharper, but with no edge of their own.
-          inColour = relief.sample(...inside).colour,
-          outColour = relief.sample(...outside).colour,
-          shade = Math.max(
-            ...inColour.map((value, channel) =>
-              Math.abs(value - (outColour[channel] ?? 0))
-            )
-          );
-
-        if (step > 1e-6 || shade > 1e-5) {
-          steps.push(`${x},${y} ${index}@${along}: ${step} ${shade}`);
-        }
-      });
-    });
-  });
-
   expect(
     `${topologyId}: no step in height or colour across any edge or corner between squares seen`,
-    steps.slice(0, 3),
+    stepsIn(relief, layout, squares, unknown).slice(0, 3),
     []
   );
 
@@ -175,23 +207,11 @@ ids.forEach((topologyId) => {
     true
   );
 
-  // No seam where the world wraps: a point and its copy a period along have the same land.
-  const { u: acrossPeriod, v: downPeriod } = layout.period(),
-    seams: string[] = [];
-
-  for (let index = 0; index < 400; index++) {
-    const u = (index * 0.731) % (acrossPeriod * 1.5),
-      v = (index * 0.377) % ((downPeriod ?? 5) * 1.5),
-      here = relief.height(u, v),
-      across = relief.height(u + acrossPeriod, v),
-      down = downPeriod === null ? here : relief.height(u, v + downPeriod);
-
-    if (Math.abs(here - across) > 1e-9 || Math.abs(here - down) > 1e-9) {
-      seams.push(`${u},${v}: ${here} ${across} ${down}`);
-    }
-  }
-
-  expect(`${topologyId}: no seam where the world wraps`, seams.slice(0, 3), []);
+  expect(
+    `${topologyId}: no seam where the world wraps`,
+    seamsIn(relief, layout).slice(0, 3),
+    []
+  );
 
   // A square never seen: flat at sea level, everywhere in it.
   const unseen = squares.filter(([x, y]) => unknown(x, y));
@@ -426,6 +446,293 @@ ids.forEach((topologyId) => {
     [true, true]
   );
 }
+
+// Ranges: neighbouring mountains are joined by a ridge, on every grid.
+ids.forEach((topologyId) => {
+  const topology = topologyFor({ width, height, topologyId }),
+    layout = groundLayoutFor({
+      width,
+      height,
+      topologyId,
+      wrapsY: topology.wrapsY(),
+    }),
+    neighboursOf = (x: number, y: number): [number, number][] =>
+      topology
+        .directions()
+        .map((direction) => topology.neighbour(x, y, direction))
+        .filter((square): square is [number, number] => square !== null),
+    plain = createRelief({
+      layout,
+      source: sourceFor(topology, () => 'Grassland'),
+    }),
+    // Where a square's peak stands, on the copy of it at (`x`, `y`).
+    peakAt = (x: number, y: number): [number, number] => {
+      const [u, v] = layout.centre(x, y),
+        { u: offU, v: offV } = peakOf(
+          ((x % width) + width) % width,
+          ((y % height) + height) % height,
+          1
+        );
+
+      return [u + offU, v + offV];
+    },
+    // The crest between two peaks: the highest point across the line between them, at its middle, as far either way
+    //  as the saddle can bend.
+    crest = (
+      relief: ReliefMap,
+      [au, av]: [number, number],
+      [bu, bv]: [number, number]
+    ): { height: number; lift: number } => {
+      const length = Math.hypot(bu - au, bv - av),
+        [mu, mv] = [(au + bu) / 2, (av + bv) / 2];
+      let best = { height: -Infinity, lift: -Infinity };
+
+      for (let off = -BEND - 0.05; off <= BEND + 0.05; off += 0.005) {
+        const u = mu - ((bv - av) / length) * off,
+          v = mv + ((bu - au) / length) * off,
+          height = relief.height(u, v);
+
+        if (height > best.height) {
+          best = { height, lift: height - plain.height(u, v) };
+        }
+      }
+
+      return best;
+    },
+    lift = (relief: ReliefMap, [u, v]: readonly [number, number]): number =>
+      relief.height(u, v) - plain.height(u, v);
+
+  // Two mountains, one at (5, 5) and one beside it each way the grid has, or two steps away. Across a corner, the crest's
+  //  over a corner of the plain, so it's lower: a quarter of the lower peak at least, on every grid, where peaks two
+  //  steps apart barely lift it.
+  const pairs = topology.directions().map((direction) => {
+    const [dx, dy] = topology.offset(direction, 5, 5),
+      [farX, farY] = topology.offset(direction, 5 + dx, 5 + dy),
+      lone = (to: [number, number]) => {
+        const relief = createRelief({
+            layout,
+            source: sourceFor(topology, (x, y) =>
+              (x === 5 && y === 5) || (x === to[0] && y === to[1])
+                ? 'Mountains'
+                : 'Grassland'
+            ),
+          }),
+          a = peakAt(5, 5),
+          b = peakAt(...to),
+          lower = Math.min(lift(relief, a), lift(relief, b));
+
+        return {
+          ...crest(relief, a, b),
+          lower,
+          highest: Math.min(relief.height(...a), relief.height(...b)),
+        };
+      };
+
+    return {
+      direction,
+      near: lone([5 + dx, 5 + dy]),
+      far: lone([5 + dx + farX, 5 + dy + farY]),
+    };
+  });
+
+  expect(
+    `${topologyId}: two mountains side by side, every way the grid has, are a range: the crest between them stands over the plain, under their peaks; two steps apart, they're two peaks`,
+    pairs.flatMap(({ direction, near, far }) =>
+      near.lift > 0.25 * near.lower &&
+      near.height < near.highest &&
+      far.lift < 0.15 * far.lower
+        ? []
+        : [
+            `${direction}: ${near.lift.toFixed(3)} of ${near.lower.toFixed(
+              3
+            )}, ${near.height.toFixed(3)} under ${near.highest.toFixed(
+              3
+            )}; apart ${far.lift.toFixed(3)} of ${far.lower.toFixed(3)}`,
+          ]
+    ),
+    []
+  );
+
+  // A range along a row, across the world's seam, and down across its poles, a block of them, and a square never seen
+  //  in the block: the land as smooth as anywhere, the same at every copy of the world, made the same twice.
+  const block = new Set<string>(),
+    add = (x: number, y: number) =>
+      block.add(
+        `${((x % width) + width) % width},${((y % height) + height) % height}`
+      );
+
+  for (let x = -2; x <= 3; x++) {
+    add(x, 2);
+  }
+
+  for (let y = -2; y <= 2; y++) {
+    add(7, y);
+  }
+
+  for (let y = 5; y <= 7; y++) {
+    for (let x = 4; x <= 6; x++) {
+      add(x, y);
+    }
+  }
+
+  const ranged = (x: number, y: number): string =>
+      x === 5 && y === 6
+        ? 'Unknown'
+        : block.has(`${x},${y}`)
+        ? 'Mountains'
+        : 'Grassland',
+    range = createRelief({ layout, source: sourceFor(topology, ranged) }),
+    again = createRelief({ layout, source: sourceFor(topology, ranged) }),
+    squares: [number, number][] = [];
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      squares.push([x, y]);
+    }
+  }
+
+  expect(
+    `${topologyId}: ranges, across the world's seams and round a square never seen, have no step, no seam, and are the same made twice`,
+    [
+      stepsIn(
+        range,
+        layout,
+        squares,
+        (x, y) =>
+          ranged(
+            ((x % width) + width) % width,
+            ((y % height) + height) % height
+          ) === 'Unknown'
+      ).slice(0, 3),
+      seamsIn(range, layout).slice(0, 3),
+      squares.every(([x, y]) => {
+        const [u, v] = layout.centre(x, y);
+
+        return [
+          [u, v],
+          [u + 0.31, v - 0.17],
+          [u - 0.27, v + 0.36],
+        ].every(
+          ([pu, pv]) =>
+            JSON.stringify(range.sample(pu!, pv!)) ===
+            JSON.stringify(again.sample(pu!, pv!))
+        );
+      }),
+    ],
+    [[], [], true]
+  );
+
+  // The plain beside a range is barely lifted: each square next to the row, not in it, at its middle.
+  const beside = [
+    ...new Set(
+      [-1, 0, 1, 2].flatMap((x) =>
+        neighboursOf(((x % width) + width) % width, 2).map((square) =>
+          square.join()
+        )
+      )
+    ),
+  ]
+    .map((key) => key.split(',').map(Number) as [number, number])
+    .filter(([x, y]) => ranged(x, y) === 'Grassland');
+
+  expect(
+    `${topologyId}: the plain beside a range is barely lifted`,
+    [
+      beside.length > 0,
+      beside.filter(
+        ([x, y]) =>
+          lift(range, layout.centre(x, y)) > 0.1 * lift(range, peakAt(1, 2))
+      ),
+    ],
+    [true, []]
+  );
+
+  // The squares whose land changes when a square does: those `refresh` says, and their neighbours, at every square's
+  //  middle (what the map's yields stand on). And refreshed, the land is as it would be made afresh.
+  const changes: [number, number, string][] = [
+      [4, 2, 'Mountains'],
+      [3, 3, 'Mountains'],
+      [2, 2, 'Hills'],
+      [5, 6, 'Mountains'],
+      [6, 7, 'Grassland'],
+      [9, 8, 'Plains'],
+    ],
+    now = new Map<string, string>();
+  let wrong: string[] = [];
+
+  const read = (x: number, y: number): string =>
+      now.get(`${x},${y}`) ?? ranged(x, y),
+    changing = createRelief({ layout, source: sourceFor(topology, read) }),
+    returned: string[] = [];
+
+  changes.forEach(([cx, cy, name]) => {
+    const before = squares.map(([x, y]) =>
+      changing.height(...layout.centre(x, y))
+    );
+
+    now.set(`${cx},${cy}`, name);
+
+    const reshaped = changing.refresh([[cx, cy]]),
+      covered = new Set(
+        reshaped.flatMap(([x, y]) =>
+          [[x, y] as [number, number], ...neighboursOf(x, y)].map((square) =>
+            square.join()
+          )
+        )
+      ),
+      fresh = createRelief({ layout, source: sourceFor(topology, read) });
+
+    returned.push(
+      `${cx},${cy}: ${reshaped
+        .map((square) => square.join())
+        .sort()
+        .join(' ')}`
+    );
+
+    squares.forEach(([x, y], at) => {
+      const [u, v] = layout.centre(x, y);
+
+      if (changing.height(u, v) !== before[at] && !covered.has(`${x},${y}`)) {
+        wrong.push(`${cx},${cy} → ${x},${y}`);
+      }
+
+      [
+        [u, v],
+        [u + 0.29, v + 0.13],
+      ].forEach(([pu, pv]) => {
+        if (
+          JSON.stringify(changing.sample(pu!, pv!)) !==
+          JSON.stringify(fresh.sample(pu!, pv!))
+        ) {
+          wrong.push(`${cx},${cy}: not as made afresh at ${pu},${pv}`);
+        }
+      });
+    });
+  });
+
+  expect(
+    `${topologyId}: a square changed changes the land only on the squares refresh says and their neighbours, and refreshed, it's as if made afresh`,
+    wrong.slice(0, 5),
+    []
+  );
+
+  if (topologyId === 'square') {
+    expect(
+      'refresh says which squares’ land changed: a mountain added beside a range, and the mountains it joins; one that’s gone, and those it joined (7,8 is the far end of the range down across the poles); a square of plains, itself alone',
+      returned,
+      [
+        '4,2: 3,2 4,2',
+        '3,3: 2,2 3,2 3,3 4,2',
+        '2,2: 1,2 2,2 3,2 3,3',
+        '5,6: 4,5 4,6 4,7 5,5 5,6 5,7 6,5 6,6 6,7',
+        '6,7: 5,6 5,7 6,6 6,7 7,8',
+        '9,8: 9,8',
+      ]
+    );
+  }
+
+  wrong = [];
+});
 
 if (failures.length > 0) {
   process.stderr.write(

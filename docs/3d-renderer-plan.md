@@ -383,6 +383,10 @@ Epic's UE4 skeleton or only match its bone names.
 | 3.4 | Improvements: roads, railroads, irrigation and Farmland, mines, Fortress and Airbase, pollution and fallout; specials and huts. |
 | 3.5 | Clouds over unseen squares, which clear when a square is seen. Squares not in sight are dimmed under rules that say. Grid lines and the hover highlight. |
 
+**Ranges: done.** Mountains side by side are joined, as Civ1 joins them (spec §4.1): a ridge runs from each peak to
+its neighbour's, across an edge or a corner, dipping to a saddle between them, so a chain of mountains is a range and
+a block of them a massif, not a grid of cones. Hills already run into one another, as their relief is blended.
+
 **3.2, first part: done.** What grows is laid with the rest of the overlay, from the built-in set's table (`packages/models-builtin/vegetation.ts`):
 - forests' trees are conifers towards the poles and broadleaf towards the equator;
 - jungle has broadleaf and palms, swamps reeds and dead trees, and grassland, plains, tundra and hills bushes, shrubs and scrub;

@@ -6,6 +6,9 @@
 //   neighbour list would miss: chosen by distance, the land has no step anywhere.
 // - **Peaks** (`peaked`) are weighted by the square of their weight, outside the blend, so a mountain's peak stays in
 //   its own square rather than lifting the plain beside it.
+// - **Ranges:** neighbouring peaks are joined by a ridge, from one peak down to a saddle and up to the other, so
+//   mountains side by side make a range rather than a row of cones. Across the ridge, it falls away as a peak does,
+//   so the plain beside a range is barely lifted either. Where ridges and peaks meet, the land is the highest of them.
 // - **Noise** repeats over the world's period, so the wrap has no seam either.
 // - **The sea's floor,** under every square the engine says is water, falls away from the shore, by how far a square is from land, walking the squares outwards from
 //   it as far as `seaFloor.reach`.
@@ -53,7 +56,8 @@ export interface ReliefMap {
   sample(u: number, v: number): GroundSample;
   height(u: number, v: number): number;
   /**
-   * Reads every square's terrain again, after the world's tiles have changed: the squares whose terrain has. Given
+   * Reads every square's terrain again, after the world's tiles have changed: the squares whose land has, those whose
+   *  terrain has and the mountains a range joins to them, or did, whose ridge to them has come or gone. Given
    *  `released`, those alone are looked at first, and the rest read again only if one of them has changed, as most
    *  changes (a unit moving, a city growing) change no terrain, and reading it all takes milliseconds.
    */
@@ -88,6 +92,57 @@ type Square = {
 
 /** How far a peak can stand off its square's middle, and a terrain's colour reach past its edge, in world units. */
 export const WANDER = 0.22;
+
+/** How far a range's saddle can stand off the line between its two peaks, either way, in world units. */
+export const BEND = 0.12;
+
+// How low a range's saddle is between its peaks, as a share of the lower peak's own height: from `low` to `high`.
+const SADDLE = { low: 0.2, high: 0.5 };
+
+// A range's ridge between two neighbouring peaks: its crest runs from one peak (`a`) down to its saddle (`m`) and up
+//  to the other (`b`), each point as (`u`, `v`) from the middle of the square it's listed under, and how high each
+//  stands over the blend, as a peak's own height is. How rough it is, as its peaks are.
+type Ridge = {
+  au: number;
+  av: number;
+  ah: number;
+  mu: number;
+  mv: number;
+  mh: number;
+  bu: number;
+  bv: number;
+  bh: number;
+  roughness: number;
+};
+
+// Half a ridge, at (`pu`, `pv`): from its peak at (`su`, `sv`), `sh` high, to its saddle at (`eu`, `ev`), `eh` high.
+//  Its crest falls from the peak and levels out at the saddle; across it, the land falls away by the kernel squared,
+//  as a peak's does, so the end past its peak is that peak exactly. `rough` is the noise on it there.
+const halfRidge = (
+  pu: number,
+  pv: number,
+  su: number,
+  sv: number,
+  sh: number,
+  eu: number,
+  ev: number,
+  eh: number,
+  rough: number
+): number => {
+  const du = eu - su,
+    dv = ev - sv,
+    length = du * du + dv * dv,
+    t =
+      length === 0
+        ? 0
+        : Math.max(0, Math.min(1, ((pu - su) * du + (pv - sv) * dv) / length)),
+    w = weight(Math.hypot(pu - su - du * t, pv - sv - dv * t)),
+    fall = 1 - t;
+
+  return w === 0
+    ? 0
+    : w * w * (sh + (eh - sh) * (1 - fall * fall * fall) + rough);
+};
 
 // A square's own fraction from 0 to 1, from its co-ordinates, the seed and what it's for.
 const chance = (x: number, y: number, seed: number, salt: number): number => {
@@ -151,9 +206,13 @@ export const createRelief = ({
       peaked: 'ridged',
     };
 
-  // Every square's terrain, by its index on the world, and what it was read as, to tell which have changed since.
+  // Every square's terrain, by its index on the world, and what it was read as, to tell which have changed since. And
+  //  the ridges of the ranges that reach into each square, for its points to take.
   let squares: Square[] = [],
-    read: string[] = [];
+    read: string[] = [],
+    ridgesIn: Ridge[][] = [],
+    // Which squares a range joins: peaks seen, on land.
+    ranged: boolean[] = [];
 
   const index = (x: number, y: number): number | null => {
     const wrappedX = ((x % width) + width) % width;
@@ -208,6 +267,9 @@ export const createRelief = ({
       name !== 'Unknown' && source.waterAt(x, y) ? ' water' : ''
     }`;
   };
+
+  // Whether ridges join peaks across a square's corner too, as well as across its edges.
+  const ACROSS_CORNERS = true;
 
   const refresh = (
     released?: readonly (readonly [number, number])[]
@@ -282,7 +344,258 @@ export const createRelief = ({
       };
     });
 
-    return changed;
+    // The squares whose land has changed: those whose terrain has, and the peaks a range joins to one of them, or did,
+    //  whose ridge to it has come or gone.
+    const was = ranged,
+      reshaped = new Map<string, [number, number]>(
+        changed.map(([x, y]) => [`${x},${y}`, [x, y]])
+      );
+
+    ranged = squares.map(
+      ({ relief, unknown }, at) =>
+        !unknown && !water[at] && relief.shape === 'peaked'
+    );
+    ridgesIn = ranges();
+
+    changed.forEach(([x, y]) => {
+      const at = y * width + x;
+
+      if (ranged[at] !== true && was[at] !== true) {
+        return;
+      }
+
+      source.neighbours(x, y).forEach(([nx, ny]) => {
+        const there = index(nx, ny);
+
+        // One that's no longer ranged has changed itself.
+        if (there !== null && ranged[there] === true) {
+          reshaped.set(`${nx},${ny}`, [nx, ny]);
+        }
+      });
+    });
+
+    return [...reshaped.values()];
+  };
+
+  // How far a square's furthest corner is from its middle, on a row of each parity.
+  const cornerOf = (parity: number): number => {
+    const [cu, cv] = layout.centre(0, parity);
+
+    return Math.max(
+      ...layout.outline(0, parity).map(([u, v]) => Math.hypot(u - cu, v - cv))
+    );
+  };
+
+  // The offsets from a square, by its row's parity, of every square whose middle is within `radius` of its middle.
+  const offsetsWithin = (
+    parity: number,
+    radius: number
+  ): [number, number][] => {
+    const [cu, cv] = layout.centre(0, parity),
+      found: [number, number][] = [];
+
+    for (let dy = -8; dy <= 8; dy++) {
+      for (let dx = -6; dx <= 6; dx++) {
+        const [u, v] = layout.centre(dx, parity + dy);
+
+        if (Math.hypot(u - cu, v - cv) < radius + 1e-9) {
+          found.push([dx, dy]);
+        }
+      }
+    }
+
+    return found;
+  };
+
+  // How far a square's nearest neighbour's middle is from its own: across an edge.
+  const edgeStep = Math.min(
+    ...[0, 1].flatMap((parity) => {
+      const [cu, cv] = layout.centre(0, parity);
+
+      return offsetsWithin(parity, 2)
+        .filter(([dx, dy]) => dx !== 0 || dy !== 0)
+        .map(([dx, dy]) => {
+          const [u, v] = layout.centre(dx, parity + dy);
+
+          return Math.hypot(u - cu, v - cv);
+        });
+    })
+  );
+
+  // The squares a ridge can reach into, from the square it's kept by, by its row's parity: as far as its far peak is,
+  //  a neighbour's middle (two steps at most) and as far again as that peak wanders and its saddle bends, and the
+  //  kernel's reach past that to a square's furthest corner.
+  const reachOfRidges = [0, 1].map((parity) =>
+    offsetsWithin(
+      parity,
+      2 +
+        WANDER * Math.SQRT2 +
+        BEND +
+        REACH +
+        Math.max(cornerOf(0), cornerOf(1))
+    )
+  );
+
+  // How far the point (`pu`, `pv`) is from the line from (`su`, `sv`) to (`eu`, `ev`).
+  const toSegment = (
+    pu: number,
+    pv: number,
+    su: number,
+    sv: number,
+    eu: number,
+    ev: number
+  ): number => {
+    const du = eu - su,
+      dv = ev - sv,
+      length = du * du + dv * dv,
+      t =
+        length === 0
+          ? 0
+          : Math.max(
+              0,
+              Math.min(1, ((pu - su) * du + (pv - sv) * dv) / length)
+            );
+
+    return Math.hypot(pu - su - du * t, pv - sv - dv * t);
+  };
+
+  // The way from the square at (`x`, `y`) to its neighbour at index `there`, on the world, as the nearest copy of it.
+  const stepTo = (
+    x: number,
+    y: number,
+    there: number
+  ): [number, number] | null => {
+    const [cu, cv] = layout.centre(x, y);
+    let best: [number, number] | null = null,
+      nearest = Infinity;
+
+    for (let dy = -2; dy <= 2; dy++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        if ((dx === 0 && dy === 0) || index(x + dx, y + dy) !== there) {
+          continue;
+        }
+
+        const [u, v] = layout.centre(x + dx, y + dy),
+          away = Math.hypot(u - cu, v - cv);
+
+        if (away < nearest) {
+          nearest = away;
+          best = [dx, dy];
+        }
+      }
+    }
+
+    return best;
+  };
+
+  // Every range's ridges, each listed under every square it reaches into, as (`u`, `v`) from that square's middle. Each
+  //  is made once, by the end that comes later down the world (or along it, on the same row), so every square it
+  //  reaches, at every copy of the world, has the same ridge.
+  const ranges = (): Ridge[][] => {
+    const listed: Ridge[][] = squares.map(() => []),
+      corner = Math.max(cornerOf(0), cornerOf(1));
+
+    squares.forEach((square, at) => {
+      if (ranged[at] !== true) {
+        return;
+      }
+
+      const x = at % width,
+        y = Math.floor(at / width),
+        [cu, cv] = layout.centre(x, y);
+
+      source.neighbours(x, y).forEach(([nx, ny]) => {
+        const there = index(nx, ny),
+          other = there === null ? undefined : squares[there],
+          step = there === null ? null : stepTo(x, y, there);
+
+        if (
+          there === null ||
+          other === undefined ||
+          ranged[there] !== true ||
+          step === null
+        ) {
+          return;
+        }
+
+        const [dx, dy] = step;
+
+        // Made by the other end.
+        if (dy < 0 || (dy === 0 && dx < 0)) {
+          return;
+        }
+
+        const [tu, tv] = layout.centre(x + dx, y + dy);
+
+        // Only across an edge, where `ACROSS_CORNERS` says so.
+        if (
+          !ACROSS_CORNERS &&
+          Math.hypot(tu - cu, tv - cv) > edgeStep * (1 + 1e-6)
+        ) {
+          return;
+        }
+
+        const { peak: from, relief: fromRelief } = square,
+          { peak: to, relief: toRelief } = other,
+          au = from.u,
+          av = from.v,
+          bu = tu - cu + to.u,
+          bv = tv - cv + to.v,
+          ah = fromRelief.base * PEAK_SHARE * from.scale,
+          bh = toRelief.base * PEAK_SHARE * to.scale,
+          length = Math.hypot(bu - au, bv - av) || 1,
+          // Each ridge its own, from the square it's made by and which way it runs.
+          salt = 16 + (dy + 2) * 5 + (dx + 2),
+          bend = (chance(x, y, seed, salt) * 2 - 1) * BEND,
+          share =
+            SADDLE.low +
+            (SADDLE.high - SADDLE.low) * chance(x, y, seed, salt + 32),
+          mu = (au + bu) / 2 - ((bv - av) / length) * bend,
+          mv = (av + bv) / 2 + ((bu - au) / length) * bend,
+          ridge: Ridge = {
+            au,
+            av,
+            ah,
+            mu,
+            mv,
+            mh: share * Math.min(ah, bh),
+            bu,
+            bv,
+            bh,
+            roughness: (fromRelief.roughness + toRelief.roughness) / 2,
+          };
+
+        (reachOfRidges[y & 1] ?? []).forEach(([ex, ey]) => {
+          const into = index(x + ex, y + ey),
+            [eu, ev] = layout.centre(x + ex, y + ey),
+            ou = eu - cu,
+            ov = ev - cv;
+
+          if (
+            into === null ||
+            Math.min(
+              toSegment(ou, ov, au, av, mu, mv),
+              toSegment(ou, ov, mu, mv, bu, bv)
+            ) >=
+              REACH + corner
+          ) {
+            return;
+          }
+
+          listed[into]?.push({
+            ...ridge,
+            au: au - ou,
+            av: av - ov,
+            mu: mu - ou,
+            mv: mv - ov,
+            bu: bu - ou,
+            bv: bv - ov,
+          });
+        });
+      });
+    });
+
+    return listed;
   };
 
   // The offsets from a square, by its row's parity, of every square whose middle can be within `REACH` of a point in
@@ -395,8 +708,48 @@ export const createRelief = ({
       blue += shade * colour[2];
     });
 
+    // The ranges through this square: the highest of them and the peaks, so a ridge leaves its own peaks as they are.
+    const ridges = own === null ? [] : ridgesIn[own] ?? [];
+    let mountains = peaks;
+
+    if (ridges.length > 0) {
+      const [ou, ov] = layout.centre(x0, y0),
+        pu = u - ou,
+        pv = v - ov;
+
+      ridges.forEach((ridge) => {
+        const rough = ridge.roughness * noiseHere('ridged') * 0.5;
+
+        mountains = Math.max(
+          mountains,
+          halfRidge(
+            pu,
+            pv,
+            ridge.au,
+            ridge.av,
+            ridge.ah,
+            ridge.mu,
+            ridge.mv,
+            ridge.mh,
+            rough
+          ),
+          halfRidge(
+            pu,
+            pv,
+            ridge.bu,
+            ridge.bv,
+            ridge.bh,
+            ridge.mu,
+            ridge.mv,
+            ridge.mh,
+            rough
+          )
+        );
+      });
+    }
+
     return {
-      height: (total > 0 ? blended / total : 0) + peaks,
+      height: (total > 0 ? blended / total : 0) + mountains,
       colour:
         shades > 0
           ? [red / shades, green / shades, blue / shades]

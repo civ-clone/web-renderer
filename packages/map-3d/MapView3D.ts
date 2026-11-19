@@ -1072,7 +1072,7 @@ export class MapView3D implements MapRenderer {
     return true;
   }
 
-  // The tiles released: the land round any whose terrain changed queued to be built again, and each marked again. The
+  // The tiles released: the land round any whose land changed queued to be built again, and each marked again. The
   //  world's terrain is read again even with none released when its tiles have been replaced, as a whole new world
   //  may have none, and every square marked before is marked again: not otherwise, as reading it all takes
   //  milliseconds.

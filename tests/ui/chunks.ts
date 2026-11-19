@@ -331,10 +331,15 @@ ids.forEach((topologyId) => {
     0
   );
 
+  // A range made across a chunk's border, a mountain at a time, along it and across a corner, then broken.
   [
     [20, 20, 'Mountains'],
     [33, 11, 'Ocean'],
     [12, 30, 'Grassland'],
+    [15, 21, 'Mountains'],
+    [16, 21, 'Mountains'],
+    [17, 22, 'Mountains'],
+    [16, 21, 'Grassland'],
   ].forEach(([x, y, wanted]) => {
     const tile = tiles.find((each) => each.x === x && each.y === y)!,
       // Something other than it is.
