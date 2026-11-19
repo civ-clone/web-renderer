@@ -98,10 +98,30 @@ export interface SpriteFamily {
    *  terrain or one of its features has the name.
    */
   features?: string[];
+  /**
+   * For the terrain family: other pictures of a terrain fully joined (every neighbour the family looks at is the same
+   *  terrain), so a stretch of it isn't one tile over and over. A square picks one of them, or the usual sprite, by a
+   *  stable hash of its position (`squareHash`).
+   */
+  variants?: TerrainPictures;
+  /**
+   * For the terrain family: small pictures drawn over a terrain fully joined, on about `chance` of such squares, one
+   *  of them picked by a stable hash of the square's position: flavour that only turns up in larger stretches.
+   */
+  flavour?: TerrainPictures & { chance: number };
   /** Where sprites smaller than a tile go in it, by engine name. */
   anchors?: { [name: string]: Point };
   /** Drawn over the terrain instead of under it: irrigation, for a tileset whose terrain covers the land. */
   overTerrain?: boolean;
+}
+
+/**
+ * Extra pictures of a terrain (`SpriteFamily.variants`, `flavour`): `counts[terrain]` of them, by the terrain's engine
+ *  name, `sprite` filled with `{terrain}`, as the family's own, and `{variant}`, 1 to the count.
+ */
+export interface TerrainPictures {
+  sprite: string;
+  counts: { [terrain: string]: number };
 }
 
 /** Civ1's coast: one strip of `cell`-wide columns, each two `quarter`-sized corners across and down. */
@@ -578,6 +598,27 @@ export const readDescriptor = (json: unknown): TilesetDescriptor => {
 
   fills('families.base.land', base.land, ['terrain']);
   fills('families.base.ocean', base.ocean, []);
+
+  // A terrain's other pictures (`variants`, `flavour`) are named with {terrain} and {variant}, which the map fills; a
+  //  name without {variant} would be the same sprite for every one of them.
+  (['variants', 'flavour'] as const).forEach((field) => {
+    const pictures = families.terrain[field];
+
+    if (pictures === undefined) {
+      return;
+    }
+
+    fills(`families.terrain.${field}.sprite`, pictures.sprite, [
+      'terrain',
+      'variant',
+    ]);
+
+    if (!placeholders(pictures.sprite).includes('variant')) {
+      refuse(
+        `families.terrain.${field}.sprite must have {variant}, so that each of its pictures has a sprite of its own.`
+      );
+    }
+  });
 
   if (base.under !== undefined) {
     if (!placeholders(base.land).includes('terrain')) {

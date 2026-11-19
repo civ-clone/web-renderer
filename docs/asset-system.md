@@ -391,6 +391,12 @@ map draws it (`tests/ui/fixtures/iso-tileset.json` is one, its sprite names in t
 - **Features drawn as terrain.** `families.terrain.features` lists terrain features the terrain family draws as a
   terrain of their own, over the square's terrain and joined as `matches` says (Civ2's River). A square is that terrain
   to its neighbours, and to the river mouths, when its terrain or one of its features has the name.
+- **Variants and flavour.** A set may give a terrain other pictures for where it's fully joined (every neighbour the
+  family looks at matches): `families.terrain.variants`, more of the joined sprite, and `families.terrain.flavour`, small
+  pictures drawn over it on about `chance` of such squares. Each names its sprites with `{terrain}` and `{variant}` (1
+  to `counts[terrain]`, by engine name), and `Landscape` picks one by a stable hash of the square's position
+  (`squareHash`), so a stretch of a terrain isn't one tile over and over. A set that declares neither, as Civ1's and
+  Civ2's art don't, is drawn as before. civ.one's pixel art has both.
 - **River mouths by direction.** `families.riverMouth` is `edges` with `{dir}`: the Civ2 extractor names its four mouths
   `terrain/river-mouth/ne`, `se`, `sw` and `nw` (civ-clone/civ2-asset-extractor#1), the river bitmask's edge order.
 - **No fog.** `families.fog` may be left out; the edge of what a player has seen is then drawn without one, a hard edge
