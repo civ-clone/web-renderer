@@ -8,7 +8,9 @@ import './lib/classicInterface';
 import ActiveUnitController from '@civ-clone/ui-game/ActiveUnitController';
 import HaltedUnits from '@civ-clone/ui-client/lib/haltedUnits';
 import PendingMove from '@civ-clone/ui-client/lib/PendingMove';
-import topologyFor, { TopologyName } from '@civ-clone/ui-client/lib/topologyFor';
+import topologyFor, {
+  TopologyName,
+} from '@civ-clone/ui-client/lib/topologyFor';
 import {
   MapHeading,
   directionKeys,
@@ -304,6 +306,8 @@ grids.forEach(([topologyId, width, height]) => {
       },
     },
     sent: string[] = [],
+    // What was sent, to answer.
+    messages: TransportHandledAction[] = [],
     heading: { now: MapHeading | null } = { now: null },
     grid = { now: topologyFor({ width: 3, height: 3 }) },
     controllerFor = (map: object) =>
@@ -327,6 +331,7 @@ grids.forEach(([topologyId, width, height]) => {
           send: ((name: string, message: TransportHandledAction) => {
             if (name === 'action') {
               sent.push(`${message.unitAction} to ${message.target}`);
+              messages.push(message);
             }
           }) as any,
         },
@@ -389,6 +394,50 @@ grids.forEach(([topologyId, width, height]) => {
       [true, ['Move to Tile-0']],
     ]
   );
+
+  // A key kept while a move's answered moves the unit the way it pointed when it was pressed, whatever the camera's
+  //  done since: as the same keys, typed at the same moments, do however soon the answer comes.
+  {
+    const quarter: MapHeading = {
+      turn: Math.PI / 2,
+      directions: {
+        n: [0, -1],
+        ne: [1, -1],
+        e: [1, 0],
+        se: [1, 1],
+        s: [0, 1],
+        sw: [-1, 1],
+        w: [-1, 0],
+        nw: [-1, -1],
+      },
+    };
+
+    // Turned a quarter clockwise: up is east, and down west.
+    heading.now = quarter;
+    sent.splice(0);
+    messages.splice(0);
+
+    const controller = controllerFor(turned);
+
+    controller.next([{ _: 'ActiveUnit', value: settlers } as any], false);
+    controller.pressKey('ArrowUp');
+    controller.pressKey('ArrowDown');
+
+    const whileAnswered = sent.splice(0);
+
+    // Back to north before the answer, where down is south, and there's nothing to the south.
+    heading.now = null;
+    settlers.tile = tiles[2]!;
+    controller.actionHandled(messages[0]!);
+
+    expect(
+      'a key kept while a move is answered moves the unit the way it pointed when it was pressed, though the camera has turned since',
+      [whileAnswered, sent.splice(0)],
+      [['Move to Tile-2'], ['Move to Tile-0']]
+    );
+
+    settlers.tile = tiles[1]!;
+  }
 
   // On the hex grid, up moves nothing unturned, so the key isn't the unit's; turned a twelfth, it moves it.
   grid.now = topologyFor({ topologyId: 'hex-odd-r', width: 4, height: 4 });

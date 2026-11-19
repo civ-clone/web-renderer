@@ -8,6 +8,7 @@ import {
 import { TransportHandledAction } from '@civ-clone/ui-protocol/Transport';
 import Transport from '@civ-clone/ui-client/Transport';
 import {
+  directionKeys,
   keyToActionsMap,
   movingKeys,
 } from '@civ-clone/ui-client/lib/unitActionKeys';
@@ -424,21 +425,38 @@ export class ActiveUnitController {
    * (#326, #543). `false` when it is not a unit key, or there is no active unit.
    */
   pressKey(key: string): boolean {
-    const activeUnit = this.#activeUnit;
+    const activeUnit = this.#activeUnit,
+      topology = this.#deps.world.topology(),
+      // Which way it moves a unit is the way it points as the map's turned now, even when it's kept until a move's
+      //  answered and the map's turned since: kept as the map's own key for that way.
+      pressed = this.#unturned(key, topology);
 
     return !!(
       activeUnit &&
-      (key in keyToActionsMap ||
-        key in
-          movingKeys(
-            this.#deps.world.topology(),
-            this.#deps.map.heading?.() ?? null
-          )) &&
+      (pressed in keyToActionsMap || pressed in directionKeys(topology)) &&
       this.#pendingMove.press(
-        key,
+        pressed,
         hasUnitActions(activeUnit),
         (key) => this.#playUnitKey(key) !== null
       )
+    );
+  }
+
+  // A key that moves a unit, on a map turned as it says now (`MapRenderer#heading`), as the key that moves it the same
+  //  way on the map unturned (`turnedDirectionKeys`). Any other key, or any key on a map that doesn't turn, as it is.
+  #unturned(key: string, topology: Topology): string {
+    const heading = this.#deps.map.heading?.() ?? null,
+      direction =
+        heading === null ? undefined : movingKeys(topology, heading)[key];
+
+    if (direction === undefined) {
+      return key;
+    }
+
+    return (
+      Object.entries(directionKeys(topology)).find(
+        ([, way]) => way === direction
+      )?.[0] ?? key
     );
   }
 
@@ -513,7 +531,6 @@ export class ActiveUnitController {
 
     return playUnitKey(key, this.#activeUnit, {
       apply: (unit) => this.apply(unit),
-      heading: () => this.#deps.map.heading?.() ?? null,
       chooseTarget: (unit, actionName) => this.chooseTarget(unit, actionName),
       pendingMove: this.#pendingMove,
       scheduleRender,

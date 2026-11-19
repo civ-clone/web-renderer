@@ -2,9 +2,8 @@ import { Tile, Unit, UnitAction } from '@civ-clone/ui-protocol/types';
 import { t } from 'i18next';
 import Transport from '@civ-clone/ui-client/Transport';
 import {
-  MapHeading,
+  directionKeys,
   keyToActionsMap,
-  movingKeys,
 } from '@civ-clone/ui-client/lib/unitActionKeys';
 import NotificationWindow from '@civ-clone/ui-component-window/NotificationWindow';
 import { cityNameText } from '@civ-clone/ui-client/components/lib/city';
@@ -33,8 +32,6 @@ export type PlayUnitKeyContext = {
   apply: (unit: Unit) => void;
   // Asks where a long-range order goes, then sends it there (M2b, `chooseDistantTarget`).
   chooseTarget: (unit: Unit, actionName: string) => void;
-  // How the map's turned, which the keys that move a unit turn with (the 3D map's camera), or nothing.
-  heading?: () => MapHeading | null;
   pendingMove: Pick<PendingMove<Tile>, 'start'>;
   scheduleRender: () => void;
   // Sends an order and waits for its answer (#543); `towardsTile` for one behind a direction key.
@@ -52,7 +49,6 @@ export const playUnitKey = (
   {
     apply,
     chooseTarget,
-    heading,
     pendingMove,
     scheduleRender,
     send,
@@ -119,7 +115,7 @@ export const playUnitKey = (
     return 'prompted';
   }
 
-  const keyDirections = movingKeys(world.topology(), heading?.() ?? null);
+  const keyDirections = directionKeys(world.topology());
 
   if (!(key in keyDirections)) {
     return null;
