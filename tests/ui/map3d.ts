@@ -52,6 +52,8 @@ import {
 } from '@civ-clone/ui-game/lib/map3d';
 import { Stage } from '@civ-clone/ui-map-3d/stage';
 import markerFor, { TileMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
+import { OverlayMesh } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
+import { Color } from 'three';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { unitStatus } from '@civ-clone/ui-assets/lib/renderUnit';
 import { setBuild } from '@civ-clone/ui-client/lib/build';
@@ -168,17 +170,29 @@ const staged: string[] = [],
   // The land's chunks the stage was given, and where its camera looked last, apart from what's drawn.
   chunksSet = new Set<string>(),
   lookedAt: number[] = [],
+  // How far down the world the stage was asked to draw it round, each time it was asked for a view.
+  seenDown: (number | null | undefined)[] = [],
+  // Every chunk of land built, in order, again or not.
+  chunkBuilds: string[] = [],
+  // What's laid on the land of each chunk made since, by `i,j`, or nothing.
+  overlaysSet = new Map<string, OverlayMesh | null>(),
   // What's marked on each square, by `x,y`.
   markers = new Map<string, TileMarker>(),
   fakeStage = (): Stage => ({
     render: () => void staged.push('render'),
     resize: (stageWidth, stageHeight, ratio) =>
       void staged.push(`resize ${stageWidth}×${stageHeight}@${ratio}`),
-    setChunk: (i, j) => void chunksSet.add(`${i},${j}`),
+    setChunk: (i, j) => {
+      chunksSet.add(`${i},${j}`);
+      chunkBuilds.push(`${i},${j}`);
+    },
+    setOverlay: (i, j, mesh) => void overlaysSet.set(`${i},${j}`, mesh),
     setMarker: (key, at, marker) =>
       void (marker === null ? markers.delete(key) : markers.set(key, marker)),
-    view: (orbit, height) =>
-      void lookedAt.splice(0, 3, orbit.focus[0], orbit.focus[1], height),
+    view: (orbit, height, period) => {
+      lookedAt.splice(0, 3, orbit.focus[0], orbit.focus[1], height);
+      seenDown.push(period?.v);
+    },
     stats: () => ({ drawCalls: 0, triangles: 0, geometries: 0 }),
     dispose: () => void staged.push('dispose'),
   });
@@ -761,6 +775,8 @@ expect(
         health: 0.6,
         // The page's letter for Fortified, in the locale.
         status: 'Fd',
+        // Not seen to move yet: facing south.
+        facing: 0,
       },
     ]
   );
@@ -790,6 +806,91 @@ expect(
     ]
   );
 
+  // The map's events: a unit faces the way it last moved, the short way round the world, and the way it attacked, and a
+  //  defender faces its attacker. The town is at (2, 0), on a world 4 across that wraps.
+  const facing = (): number | undefined => markers.get(townKey)?.unit?.facing,
+    step = (from: [number, number], to: [number, number]) =>
+      view.mapEvent({
+        kind: 'moved',
+        unit: {
+          id: 'Unit-P',
+          type: 'Phalanx',
+          player: 'Player-1',
+          tile: { x: from[0], y: from[1] },
+        },
+        from: { x: from[0], y: from[1] },
+        to: { x: to[0], y: to[1] },
+      }),
+    round = (angle: number | undefined): number =>
+      Math.round((angle ?? NaN) * 100) / 100,
+    faced: number[] = [],
+    // As the patch that follows a move does: the town's square released, and drawn.
+    patched = (): void => {
+      view.queueTile(town);
+      view.releaseTiles();
+      view.flush();
+    };
+
+  step([1, 0], [2, 0]);
+  faced.push(round(facing()));
+  step([3, 0], [2, 0]);
+  faced.push(round(facing()));
+  // Over the seam, from the last square to the first, going east the short way; and down and to the east.
+  step([3, 0], [0, 0]);
+  patched();
+  faced.push(round(facing()));
+  step([1, 0], [2, 1]);
+  patched();
+  faced.push(round(facing()));
+  view.mapEvent({
+    kind: 'battle',
+    attacker: {
+      id: 'Unit-P',
+      type: 'Phalanx',
+      player: 'Player-1',
+      tile: { x: 2, y: 0 },
+    },
+    defender: {
+      id: 'Unit-Rival',
+      type: 'Warriors',
+      player: 'Player-2',
+      tile: { x: 2, y: 1 },
+    },
+    winner: 'attacker',
+  });
+  faced.push(round(facing()));
+  // Attacked from the west, where it stands: it turns to face its attacker.
+  view.mapEvent({
+    kind: 'battle',
+    attacker: {
+      id: 'Unit-Rival',
+      type: 'Warriors',
+      player: 'Player-2',
+      tile: { x: 1, y: 0 },
+    },
+    defender: {
+      id: 'Unit-P',
+      type: 'Phalanx',
+      player: 'Player-1',
+      tile: { x: 2, y: 0 },
+    },
+    winner: 'defender',
+  });
+  faced.push(round(facing()));
+
+  expect(
+    'a unit faces the way it last moved, and the way it attacked; a defender faces its attacker',
+    faced,
+    [
+      round(Math.PI / 2),
+      round(-Math.PI / 2),
+      round(Math.PI / 2),
+      round(Math.PI / 4),
+      0,
+      round(-Math.PI / 2),
+    ]
+  );
+
   expect(
     'a city is named as the page names it, or by its own name where the page gives none',
     [
@@ -797,6 +898,67 @@ expect(
       markerFor(town, null, true)?.city?.name,
     ],
     ['Rome', 'Roma']
+  );
+
+  // A road built on the square beside the town: what's laid on its chunk is made again, by the frames the view draws,
+  //  without building the land again. On the town's own square, a city's lot, nothing's laid.
+  overlaysSet.clear();
+
+  const landBuilt = chunkBuilds.length,
+    beside = tiles[1] as Tile;
+
+  [beside, town].forEach((tile) => {
+    tile.improvements = [{ _: 'Road' }] as Tile['improvements'];
+    view.queueTile(tile);
+  });
+  view.releaseTiles();
+  view.flush();
+
+  // The points laid within `reach` of a square's middle, and whether any is in `colour`.
+  const laidNear = (
+    tile: Tile,
+    reach: number
+  ): { points: number; coloured: (colour: string) => boolean } => {
+    const mesh = overlaysSet.get(view.land().overlayKeyOf(tile.x, tile.y)),
+      [cu, cv] = view.land().layout.centre(tile.x, tile.y),
+      near: number[] = [];
+
+    for (let at = 0; mesh && at < mesh.positions.length; at += 3) {
+      if (
+        Math.hypot(
+          mesh.positions[at]! + mesh.u - cu,
+          mesh.positions[at + 2]! + mesh.v - cv
+        ) < reach
+      ) {
+        near.push(at);
+      }
+    }
+
+    return {
+      points: near.length,
+      coloured: (colour) => {
+        const { r, g, b } = new Color(colour);
+
+        return near.some(
+          (at) =>
+            Math.abs(mesh!.colours[at]! - r) < 1e-4 &&
+            Math.abs(mesh!.colours[at + 1]! - g) < 1e-4 &&
+            Math.abs(mesh!.colours[at + 2]! - b) < 1e-4
+        );
+      },
+    };
+  };
+
+  expect(
+    'a road built: what’s laid on its chunk made again, with the road, and no land built; none on a city’s lot',
+    [
+      overlaysSet.has(view.land().overlayKeyOf(beside.x, beside.y)),
+      laidNear(beside, 0.3).coloured('#8c7a58'),
+      view.land().overlaysPending(),
+      chunkBuilds.length === landBuilt,
+      laidNear(town, 0.3).points,
+    ],
+    [true, true, 0, true, 0]
   );
 
   staged.splice(0);
@@ -1297,7 +1459,8 @@ expect(
   });
 
   const glidedTo = locked.orbit().focus,
-    bottom = locked.land().layout.centre(2, 3);
+    bottom = locked.land().layout.centre(2, 3),
+    lockedDown = seenDown[seenDown.length - 1];
 
   locked.dispose();
   kept.lockVerticalEdges = false;
@@ -1305,17 +1468,23 @@ expect(
   const wrapping = makeMapView(deps2D) as MapView3D,
     wrappedAt = beyond(wrapping);
 
+  runFrames();
+
+  const wrappingDown = seenDown[seenDown.length - 1];
+
   wrapping.dispose();
 
   expect(
-    'stopped at the poles, the camera stays at the world’s last row, looking at a square in it, and glides down the world to a square; otherwise it goes round',
+    'stopped at the poles, the camera stays at the world’s last row, looking at a square in it, glides down the world to a square, and nothing is drawn past them; otherwise it goes round, and so is the world drawn',
     [
       lockedAt === locked.land().extentV(),
       lockedCentre,
       glidedTo,
+      lockedDown,
       wrappedAt < locked.land().extentV(),
+      wrappingDown,
     ],
-    [true, { x: 1, y: 3 }, bottom, true]
+    [true, { x: 1, y: 3 }, bottom, null, true, 4]
   );
 
   delete (globalThis as any).requestAnimationFrame;

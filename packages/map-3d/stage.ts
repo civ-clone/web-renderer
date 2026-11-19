@@ -21,13 +21,16 @@ import {
   MeshStandardMaterial,
   Object3D,
   PerspectiveCamera,
+  Plane,
   SRGBColorSpace,
   Scene,
+  Vector3,
   WebGLRenderer,
 } from 'three';
 import { ChunkMesh } from './terrain/chunks';
 import { MarkerKit, drawMarker } from './markers/drawMarker';
 import { TileMarker } from './markers/markerFor';
+import { OverlayMesh } from './overlay/overlayMesh';
 import { FIELD_OF_VIEW, Orbit, eye, sightFor } from './camera/orbit';
 import Water, { Clouds, Ground } from './water';
 
@@ -46,6 +49,11 @@ export interface Stage {
   /** The land's chunk `i` across and `j` down, drawn at every copy of the world: one drawn before is replaced. */
   setChunk(i: number, j: number, mesh: ChunkMesh): void;
   /**
+   * What's laid on the land of chunk `i` across and `j` down (roads, fields, specials, huts), drawn at every copy of
+   *  the world as the land is: one laid before is replaced, and nothing takes it away.
+   */
+  setOverlay(i: number, j: number, mesh: OverlayMesh | null): void;
+  /**
    * What's marked on the square `key` (`x,y`), standing at `at` (`u`, height, `v`), drawn at every copy of the world:
    *  one marked before is replaced, and nothing takes it away.
    */
@@ -54,8 +62,15 @@ export interface Stage {
     at: readonly [number, number, number],
     marker: TileMarker | null
   ): void;
-  /** The camera, round its focus raised to `height`, the land's there. */
-  view(orbit: Orbit, height: number): void;
+  /**
+   * The camera, round its focus raised to `height`, the land's there; and the world drawn as far round as `period`
+   *  says, if the view's stopped at the poles, rather than as the world wraps.
+   */
+  view(
+    orbit: Orbit,
+    height: number,
+    period?: { u: number; v: number | null }
+  ): void;
   stats(): StageStats;
   dispose(): void;
 }
@@ -118,6 +133,36 @@ export const copiesNear = (
   );
 };
 
+/** The planes that keep what lies between the poles, from 0 to `extent` down the ground: three.js keeps n·p + c ≥ 0. */
+export const polesAt = (extent: number): Plane[] => [
+  new Plane(new Vector3(0, 0, 1), 0),
+  new Plane(new Vector3(0, 0, -1), extent),
+];
+
+/**
+ * The copies of the world to draw what's laid on a chunk at, from those in sight (`copies`), its reach down the ground
+ *  being `span`. With the view stopped at the poles (`stopped`) of a world that wraps over them (`period`), the land just
+ *  inside a pole is the far edge's, by wrapping: on a staggered or hex world, between the first row's squares lie the
+ *  last row's southern halves, and between the last row's the first row's northern halves. So what reaches past a pole
+ *  is drawn a period round as well, where the poles' planes keep only what lies over the land.
+ */
+export const overlayCopies = (
+  copies: readonly (readonly [number, number])[],
+  [top, bottom]: readonly [number, number],
+  extent: number,
+  period: number | null,
+  stopped: boolean
+): [number, number][] =>
+  copies.flatMap(([u, v]): [number, number][] => [
+    [u, v],
+    ...(stopped && period !== null && bottom > extent
+      ? [[u, v - period] as [number, number]]
+      : []),
+    ...(stopped && period !== null && top < 0
+      ? [[u, v + period] as [number, number]]
+      : []),
+  ]);
+
 // The sun's shadow map's size, in texels a side, and how far the sun is from what it lights (its offset below).
 const SHADOW_MAP = 2048,
   SUN_DISTANCE = Math.hypot(30, 40, 20);
@@ -140,6 +185,27 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
     // What's drawn at every copy of the world in sight: the land's chunks by `i,j`, and the squares' markers by `x,y`.
     //  Each has where it lies, how to make one copy of it, and the copies drawn now.
     chunks = new Map<string, Placed & { geometry: BufferGeometry }>(),
+    // What's laid on the land, by chunk: its colours in its vertices, a little in front of the land so it doesn't
+    //  flicker with it where it lies close.
+    overlays = new Map<
+      string,
+      Placed & { geometry: BufferGeometry; span: [number, number] }
+    >(),
+    overlayMaterial = new MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 0.9,
+      metalness: 0,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -6,
+      // Its shadows clipped with it.
+      clipShadows: true,
+    }),
+    // What's laid on the land stops where the land does past a pole the view's stopped at: the last row's fields and
+    //  roads on a staggered or hex world reach a little past it, where the land, the sea and the cloud stop (and are
+    //  drawn a period round too, where the land is theirs: `overlayCopies`).
+    extent = ground.rows * ground.spacingV,
+    poles = polesAt(extent),
     markers = new Map<string, Placed>(),
     markersGroup = new Group(),
     kit = new MarkerKit(),
@@ -152,9 +218,13 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
     copiesKey = '0,0',
     // The markers', fewer: past about twice the camera's distance they're too small and hazy to matter.
     markerCopies: [number, number][] = [[0, 0]],
-    markerCopiesKey = '0,0';
+    markerCopiesKey = '0,0',
+    // Whether the view's stopped at the poles.
+    stopped = false;
 
   renderer.outputColorSpace = SRGBColorSpace;
+  // For what's laid on the land, to stop at a pole the view's stopped at.
+  renderer.localClippingEnabled = true;
   renderer.toneMapping = ACESFilmicToneMapping;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = PCFSoftShadowMap;
@@ -198,7 +268,21 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
       return drawn;
     });
 
-  const view = (orbit: Orbit, height: number): void => {
+  // What's laid on a chunk, at the copies it's drawn at.
+  const overlayCopiesOf = (
+    overlay: Placed & { span: [number, number] }
+  ): Object3D[] =>
+    copiesOf(
+      overlay,
+      land,
+      overlayCopies(copies, overlay.span, extent, period.v, stopped)
+    );
+
+  const view = (
+    orbit: Orbit,
+    height: number,
+    seen: { u: number; v: number | null } = period
+  ): void => {
     const [u, v] = orbit.focus,
       [x, y, z] = eye(orbit, height),
       { near, far } = sightFor(orbit.distance);
@@ -206,6 +290,9 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
     camera.position.set(x, y, z);
     camera.lookAt(u, height, v);
     camera.far = far * 1.2;
+    // As near as anything gets, no nearer: the depth there is to go round is spread over less, so what's laid a few
+    //  thousandths over the land doesn't flicker with it far out.
+    camera.near = Math.max(0.1, orbit.distance * 0.02);
     camera.updateProjectionMatrix();
     fog.near = near;
     fog.far = far;
@@ -235,14 +322,21 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
     );
     clouds.follow(u, v, far * 2.2);
 
+    // Stopped at the poles: nothing past them, as the 2D map shows nothing past its locked edges.
+    water.pastThePoles(seen.v !== null);
+    clouds.pastThePoles(seen.v !== null);
+    overlayMaterial.clippingPlanes = seen.v === null ? poles : null;
+    stopped = seen.v === null;
+
     // The copies of the world the haze doesn't hide: when they change, every chunk is drawn at the new ones. And the
     //  markers', nearer.
-    const inSight = copiesNear(orbit.focus, far, period),
-      key = inSight.join(';'),
+    const inSight = copiesNear(orbit.focus, far, seen),
+      // What's laid past the poles is drawn round the world too when they're stopped at.
+      key = `${inSight.join(';')}${stopped ? ' stopped' : ''}`,
       markersInSight = copiesNear(
         orbit.focus,
         Math.min(far, orbit.distance * 2.2),
-        period
+        seen
       ),
       markersKey = markersInSight.join(';');
 
@@ -252,6 +346,10 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
       chunks.forEach((chunk) => {
         chunk.drawn.forEach((drawn) => land.remove(drawn));
         chunk.drawn = copiesOf(chunk, land);
+      });
+      overlays.forEach((overlay) => {
+        overlay.drawn.forEach((drawn) => land.remove(drawn));
+        overlay.drawn = overlayCopiesOf(overlay);
       });
     }
 
@@ -309,6 +407,52 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
       chunks.set(key, chunk);
       water.setChunk(mesh);
     },
+    setOverlay: (i, j, mesh): void => {
+      const key = `${i},${j}`,
+        old = overlays.get(key);
+
+      if (old !== undefined) {
+        old.drawn.forEach((drawn) => land.remove(drawn));
+        old.geometry.dispose();
+        overlays.delete(key);
+      }
+
+      if (mesh === null) {
+        return;
+      }
+
+      const geometry = new BufferGeometry();
+
+      geometry.setAttribute('position', new BufferAttribute(mesh.positions, 3));
+      geometry.setAttribute('normal', new BufferAttribute(mesh.normals, 3));
+      geometry.setAttribute('color', new BufferAttribute(mesh.colours, 3));
+      geometry.computeBoundingSphere();
+      geometry.computeBoundingBox();
+
+      const box = geometry.boundingBox,
+        overlay: Placed & {
+          geometry: BufferGeometry;
+          span: [number, number];
+        } = {
+          geometry,
+          // How far down the ground it reaches, from its top to its bottom.
+          span: [mesh.v + (box?.min.z ?? 0), mesh.v + (box?.max.z ?? 0)],
+          at: [mesh.u, 0, mesh.v],
+          make: () => {
+            const drawn = new Mesh(geometry, overlayMaterial);
+
+            // Its specials, huts and mines cast shadows; what's laid flat takes the land's.
+            drawn.castShadow = true;
+            drawn.receiveShadow = true;
+
+            return drawn;
+          },
+          drawn: [],
+        };
+
+      overlay.drawn = overlayCopiesOf(overlay);
+      overlays.set(key, overlay);
+    },
     setMarker: (key, at, marker): void => {
       const old = markers.get(key);
 
@@ -345,6 +489,9 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
     dispose: (): void => {
       chunks.forEach(({ geometry }) => geometry.dispose());
       chunks.clear();
+      overlays.forEach(({ geometry }) => geometry.dispose());
+      overlays.clear();
+      overlayMaterial.dispose();
       markers.clear();
       kit.dispose();
       water.dispose();

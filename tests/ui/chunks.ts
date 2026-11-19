@@ -306,6 +306,7 @@ ids.forEach((topologyId) => {
         {
           setChunk: (i: number, j: number, mesh: ChunkMesh) =>
             void built.set(`${i},${j}`, mesh),
+          setOverlay: () => undefined,
         } as unknown as Stage,
         null
       );
@@ -453,6 +454,7 @@ ids.forEach((topologyId) => {
         {
           setChunk: (i: number, j: number, mesh: ChunkMesh) =>
             void built.set(`${i},${j}`, mesh),
+          setOverlay: () => undefined,
         } as unknown as Stage,
         null
       );

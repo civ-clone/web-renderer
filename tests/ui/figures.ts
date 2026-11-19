@@ -289,6 +289,7 @@ const unit = (type: string, more: Partial<UnitMarker> = {}): UnitMarker => ({
     veteran: false,
     health: null,
     status: null,
+    facing: 0,
     ...more,
   }),
   drawn = (marker: UnitMarker): Object3D[] => {
@@ -343,6 +344,12 @@ expect(
     soldiers.length,
   ],
   [true, true, true, true, true, 3]
+);
+
+expect(
+  'its figures face the way it last went',
+  figureOf(drawn(unit('Spearman', { facing: 1.25 })))?.rotation.y,
+  1.25
 );
 
 const trireme = drawn(unit('Trireme'));
@@ -511,10 +518,8 @@ expect(
 
 // What stands over units and cities is drawn after the cloud, which it would otherwise be under at the edge of what's
 //  been seen, and over the land, as tests of depth would cut it off behind a hill.
-const cloud = new Clouds(
-    new Water(ground, new Color('#9fb3c4')).texture(),
-    ground
-  ),
+const sea = new Water(ground, new Color('#9fb3c4')),
+  cloud = new Clouds(sea.texture(), ground),
   badges = inCity.filter(
     (object): object is Sprite => object instanceof Sprite
   );
@@ -530,6 +535,7 @@ expect(
   [6, true, true]
 );
 cloud.dispose();
+sea.dispose();
 
 kit.dispose();
 
