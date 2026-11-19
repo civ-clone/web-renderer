@@ -2699,6 +2699,22 @@ expect(
     }
   }
 
+  // The variants' sprites are loaded, as a set's sheet has them; the flavour's needn't be, to be asked for.
+  const word = terrainOf(stub, 0, 0)[0]!.split('/')[1];
+
+  setSprites(
+    new Map(
+      [1, 2].map((n) => [
+        `./assets/land/${word}/v${n}.png`,
+        new FakeImage(
+          `land/${word}/v${n}`,
+          1,
+          1
+        ) as unknown as CanvasImageSource,
+      ])
+    )
+  );
+
   const usual = squares.map(([x, y]) => terrainOf(stub, x, y)),
     picked = squares.map(([x, y]) => terrainOf(varied, x, y)),
     full = squares
@@ -2870,6 +2886,29 @@ expect(
         fy
       ).filter((sprite) => /flavour-/.test(sprite)).length,
       1
+    );
+  }
+  {
+    const missing: TilesetDescriptor = {
+      ...varied,
+      families: {
+        ...varied.families,
+        terrain: {
+          ...varied.families.terrain,
+          variants: {
+            sprite: 'land/{terrain}/missing{variant}',
+            counts: { Grassland: 2 },
+          },
+        },
+      },
+    };
+
+    expect(
+      "a variant the art hasn't got is drawn as the usual sprite, rather than leaving the square bare",
+      squares.every(
+        ([x, y], index) => terrainOf(missing, x, y)[0] === usual[index]![0]
+      ),
+      true
     );
   }
   expect(

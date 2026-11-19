@@ -13,7 +13,10 @@ import {
 import TerrainAbstract from './TerrainAbstract';
 import squareHash from '../../lib/squareHash';
 import { isDrawable } from '@civ-clone/ui-assets/lib/imageSize';
-import { onPreloadedImagesChanged } from '@civ-clone/ui-assets/lib/getPreloadedImage';
+import {
+  hasPreloadedImage,
+  onPreloadedImagesChanged,
+} from '@civ-clone/ui-assets/lib/getPreloadedImage';
 import { s } from '@dom111/element';
 
 type Improvement = 'Mine' | 'Pollution' | 'Railroad' | 'Road';
@@ -395,15 +398,20 @@ export class Landscape extends TerrainAbstract {
       joined = matched.length === directions.length,
       variant = joined ? this.pictureOf(tile, name, terrain.variants, 1) : 0;
 
-    if (variant > 0) {
-      this.drawImage(
-        expandName(terrain.variants!.sprite, {
-          ...values,
-          variant: String(variant),
-        }),
-        offsetX,
-        offsetY
-      );
+    // A variant the art hasn't got (a sheet without it, or a count too high) leaves the usual sprite in its place.
+    const variantSprite =
+      variant > 0
+        ? expandName(terrain.variants!.sprite, {
+            ...values,
+            variant: String(variant),
+          })
+        : null;
+
+    if (
+      variantSprite !== null &&
+      hasPreloadedImage(variantSprite, this.tileset())
+    ) {
+      this.drawImage(variantSprite, offsetX, offsetY);
     } else {
       this.drawFamily(terrain, matched, values, offsetX, offsetY);
     }
