@@ -236,6 +236,7 @@ export class Land {
       { u: periodU, v: periodV } = this.layout.period(),
       topology = this.#world.topology(),
       squares = this.#chunksOfSquares().get(`${i},${j}`) ?? [],
+      extentV = this.extentV(),
       laid = squares.flatMap(([x, y]) => {
         const tile = this.#world.get(x, y),
           neighbours = topology.directions().flatMap((direction) => {
@@ -270,6 +271,7 @@ export class Land {
             radius: this.#radius,
             heightAt: (pu, pv) => this.heightAt(pu, pv),
             seed: Math.imul(x, 73856093) ^ Math.imul(y, 19349663),
+            latitude: Math.min(1, Math.abs((2 * (v + dv)) / extentV - 1)),
           };
 
         return [{ overlay, place }];
