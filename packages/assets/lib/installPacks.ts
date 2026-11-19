@@ -18,6 +18,7 @@ import {
   sheetFailure,
 } from './tilesets';
 import {
+  hasInterfaceArt,
   hasOwnInterfaceSprites,
   interfaceArt,
   ownInterfaceArt,
@@ -129,6 +130,30 @@ export const startFallbackInterfaceArt = (
   return attempt(0);
 };
 
+/**
+ * For a map drawn with civ.one's own art on another grid than the square (the pixel art's hexagonal or isometric set),
+ *  fetches civ.one's own interface art (`ownInterfaceArt`, the square pixel art), which the game's interface follows
+ *  (`mapInterfaceArt`). A sheet that can't be fetched isn't marked as failed, so the square maps don't pass the pixel
+ *  art over for it: the interface is drawn with the map's own set's sprites instead, which are the same pictures.
+ */
+const loadMapInterfaceArt = async (
+  map: TilesetDescriptor,
+  store: AssetStore
+): Promise<void> => {
+  const own = ownInterfaceArt();
+
+  if (!isHosted(map) || !hasInterfaceArt(map) || own === null || own === map) {
+    return;
+  }
+
+  try {
+    await store.loadHostedPack(packFor(own));
+    setSheetFailed(own.id, null);
+  } catch (error) {
+    console.error(`Could not load the ${own.id} set's sheet.`, error);
+  }
+};
+
 /** What a map on a grid is drawn with as a game starts or loads (`ensureMapArt`), and the art it fell back from. */
 export type MapArt = {
   /** The set the map is drawn with. */
@@ -204,6 +229,7 @@ export const ensureMapArt = async (
     }
 
     if (await tried(tileset)) {
+      await loadMapInterfaceArt(tileset, store);
       // Not waited for: see `startFallbackInterfaceArt`.
       void startFallbackInterfaceArt(tileset, store);
 
@@ -233,6 +259,7 @@ export const useMapArt = async (
   }
 
   await ensureTilesetLoaded(tileset, store);
+  await loadMapInterfaceArt(tileset, store);
 
   if (stillWanted()) {
     chooseMapTileset(grid, id);

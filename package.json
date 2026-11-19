@@ -180,6 +180,7 @@
     "test:interface-options": "node tools/run-suite.js ui interfaceOptions",
     "test:interface-art": "node tools/run-suite.js ui interfaceArt",
     "test:game-interface-art": "node tools/run-suite.js ui gameInterfaceArt",
+    "test:map-interface-art": "node tools/run-suite.js ui mapInterfaceArt",
     "test:order-icons": "node tools/run-suite.js ui orderIcons",
     "test:ui-menu": "node tools/run-suite.js ui uiMenu",
     "test:unit-card": "node tools/run-suite.js ui unitCard",

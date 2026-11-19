@@ -2,7 +2,10 @@ import { applyUiTheme, uiThemeArt } from '@civ-clone/ui-widgets/lib/theme';
 import { handOverGame } from '@civ-clone/ui-client/lib/gameHandOver';
 import { TilesetDescriptor } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import forgetVisitParam from '@civ-clone/ui-platform/lib/forgetVisitParam';
-import { interfaceArt } from '@civ-clone/ui-assets/lib/interfaceArt';
+import {
+  interfaceArt,
+  themeInterfaceArt,
+} from '@civ-clone/ui-assets/lib/interfaceArt';
 import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
 
 // Choosing the interface's theme (#735), as Options' Theme and the library's Use (#1063) both do it.
@@ -11,12 +14,13 @@ import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry'
 export const THEME_CHOICE = 'ui-theme-choice';
 
 /**
- * Whether the theme `id` draws with other interface art than `art`, the page's (#1063): whether the first set it draws
- *  with that is there (`interfaceArt`) is another, not whether its list is.
+ * Whether the theme `id` draws with other interface art than `art`, the page's theme's (#1063): whether the first set it
+ *  draws with that is there (`interfaceArt`) is another, not whether its list is. Not the art a game's map has the
+ *  interface follow (`followMapArt`), which a theme doesn't change.
  */
 export const themeChangesArt = (
   id: string,
-  art: TilesetDescriptor = interfaceArt()
+  art: TilesetDescriptor = themeInterfaceArt()
 ): boolean => interfaceArt(uiThemeArt(id)).id !== art.id;
 
 /**

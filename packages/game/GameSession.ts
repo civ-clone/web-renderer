@@ -66,6 +66,13 @@ import {
 } from '@civ-clone/ui-hud/lib/cityOpeners';
 import { ObserverState } from '@civ-clone/ui-protocol/observer';
 import sendBuildPreferences from '@civ-clone/ui-client/lib/buildPreferences';
+import {
+  followMapArt,
+  interfaceArt,
+  mapArtChangesInterface,
+} from '@civ-clone/ui-assets/lib/interfaceArt';
+import { mapTileset } from '@civ-clone/ui-assets/lib/tilesets';
+import { setCursor, setTilesetSizes } from './app/assets';
 
 // One game, from its first `gameData` (#344): the welcome, the map, the active unit, the panels, the menu, the debug
 //  panel and the keyboard, the render pair, the order each update runs in, and the game's receivers.
@@ -180,6 +187,7 @@ export class GameSession {
         return;
       }
 
+      this.#followMapArt();
       this.#begin();
       this.#welcome();
       this.#buildInterface(observer);
@@ -256,6 +264,22 @@ export class GameSession {
       // What the player has asked their cities to choose by themselves, before they found any (#690, #691).
       sendBuildPreferences(transport);
     }
+  }
+
+  // The art the game's map is drawn with now, for its grid.
+  #mapArt(): ReturnType<typeof mapTileset> {
+    const { topologyId } = this.#gameState.data().player.world;
+
+    return mapTileset(topologyId ?? 'square');
+  }
+
+  // The interface drawn with the art the game's map is drawn with, where that is civ.one's own (the pixel art): its
+  //  icons, people, cursor and order buttons (`followMapArt`), at that art's sizes. Before anything of the game's is
+  //  drawn. Art chosen during the game that would change it takes a new page (`#artChanged`).
+  #followMapArt(): void {
+    followMapArt(this.#mapArt());
+    setTilesetSizes(interfaceArt());
+    void setCursor();
   }
 
   // The welcome window, for a new game.
@@ -1051,20 +1075,24 @@ export class GameSession {
   // The map drawn with the art for its grid as it is now, and what's drawn with it outside the map: the active unit's
   //  panel, and the units open windows show. Art whose units and cities stack the other way from the layers made needs
   //  a new page to stack them as it does: the game is carried over to one, or, where it can't be now, that waits for
-  //  the next load, which is said.
+  //  the next load, which is said. So does art that changes the art the interface follows (`mapArtChangesInterface`):
+  //  the pixel art chosen in place of an imported set, or the other way round, as a theme with other art does.
   #artChanged(): void {
-    const redrawn = this.#mapView.redrawArt();
+    const interfaceChanges = mapArtChangesInterface(this.#mapArt()),
+      redrawn = this.#mapView.redrawArt();
 
-    if (redrawn === 'unchanged') {
+    if (redrawn === 'unchanged' && !interfaceChanges) {
       return;
     }
 
-    this.#unitDetails.update(this.#unitController!.active());
-    // And what windows still open show with it: the unit stack, the production list, a city's units (#1142).
-    redrawWindowUnits();
-    this.#scheduleRender();
+    if (redrawn !== 'unchanged') {
+      this.#unitDetails.update(this.#unitController!.active());
+      // And what windows still open show with it: the unit stack, the production list, a city's units (#1142).
+      redrawWindowUnits();
+      this.#scheduleRender();
+    }
 
-    if (redrawn === 'reload' && !handOverGame()) {
+    if ((redrawn === 'reload' || interfaceChanges) && !handOverGame()) {
       this.#deps.notificationBar.show(t('Game.art-next-load'));
     }
   }
