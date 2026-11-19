@@ -70,6 +70,27 @@ const shortTurn = (delta: number): number =>
 // How long the camera takes to glide to a square it's centred on, or to turn, in ms.
 const GLIDE = 350;
 
+// How far behind a unit's battles may fall before those under way are over at once, as the spec has the queue (§8.2).
+const BATTLES_BEHIND = 2000;
+
+// A unit as it's shown, kept: the page fills the objects it holds in place as patches come, so what a marker shows of it
+//  is copied, its hit points and all.
+const keptUnit = (unit: Unit): Unit => ({
+  ...unit,
+  ...(unit.hitPoints ? { hitPoints: { ...unit.hitPoints } } : {}),
+  ...(unit.defence ? { defence: { ...unit.defence } } : {}),
+  ...(unit.improvements ? { improvements: [...unit.improvements] } : {}),
+});
+
+// A city as it's shown, kept, as `keptUnit` keeps a unit: its size with it.
+const keptCity = (city: Tile['city']): Tile['city'] =>
+  city
+    ? {
+        ...city,
+        ...(city.growth ? { growth: { ...city.growth } } : {}),
+      }
+    : city;
+
 // How long the camera's distance stays the same before it's kept, in ms: a pinch or a zoom changes it every frame.
 const KEEP_DISTANCE_AFTER = 500;
 
@@ -569,9 +590,11 @@ export class MapView3D implements MapRenderer {
   // A battle: the attacker lunges to the edge between the two squares, and goes back, or fades away there if it lost;
   //  the loser fades away where it stood (`battles.ts`). Till the blow, the square attacked is shown as it was before.
   //  Not where there are no frames, or the player has asked for less motion, or for units to move at once; nor
-  //  between other players with their moves not shown, nor off the screen; nor one whose units the page doesn't have
-  //  where they fought: those show how it went at once. The attacker walking there, it's fought once it's there, as a
-  //  rival's step and attack come together; one waiting for its patch there fights from where it stands.
+  //  between other players with their moves not shown, nor off the screen; nor one whose defender the page doesn't
+  //  have where it fought: those show how it went at once. The attacker walking there, it's fought once it's there, as
+  //  a rival's step and attack come together; one waiting for its patch there fights from where it stands; one the
+  //  page doesn't have there yet, out of the dark, is drawn once it has. A unit's battles too far behind are over at
+  //  once.
   #fight({
     attacker,
     defender,
@@ -593,13 +616,11 @@ export class MapView3D implements MapRenderer {
       return;
     }
 
-    const attackerUnit =
-        this.world
-          .get(attacker.tile.x, attacker.tile.y)
-          .units.find(({ id }) => id === attacker.id) ??
-        (this.#leftOff(attacker.id)
-          ? this.#walkingUnits.get(attacker.id)
-          : undefined),
+    // As the page has it there now: walking there, or waiting for its patch, it's drawn as it's held already, and
+    //  marked there once the page has it (`#mark`).
+    const attackerUnit = this.world
+        .get(attacker.tile.x, attacker.tile.y)
+        .units.find(({ id }) => id === attacker.id),
       defenderSquare = `${defender.tile.x},${defender.tile.y}`,
       tile = this.world.get(defender.tile.x, defender.tile.y),
       // A battle there before this one whose patch the page's world hasn't taken yet, as when a rival's attacks come
@@ -607,21 +628,32 @@ export class MapView3D implements MapRenderer {
       earlier = [...this.#before.values()]
         .filter(({ square, patched }) => square === defenderSquare && !patched)
         .at(-1),
-      // What's on the square attacked, as the page has it before the battle's patch, but those drawn elsewhere.
-      before = (
+      // What's on the square attacked, as the page has it before the battle's patch, kept: those drawn elsewhere, as one
+      //  lunging in a battle of its own, aren't drawn there till they're back (`#mark`).
+      before =
         earlier === undefined
-          ? tile.units
+          ? tile.units.map(keptUnit)
           : earlier.units.filter(
               ({ id }) => !(earlier.won && id === earlier.defender)
-            )
-      ).filter(({ id }) => !this.#leftOff(id));
+            );
 
     if (
-      attackerUnit === undefined ||
       this.#gone.has(attacker.id) ||
       !before.some(({ id }) => id === defender.id)
     ) {
       return;
+    }
+
+    const busy = this.#battles.busyUntil([attacker.id, defender.id]);
+
+    if (busy !== null && busy - now > BATTLES_BEHIND) {
+      this.#battlesOver(
+        this.#battles.endWhere(
+          (battle) =>
+            battle.attacker === attacker.id || battle.attacker === defender.id,
+          now
+        )
+      );
     }
 
     // Standing where it walked to, waiting for its step's patch: it fights from there, and the battle's patch is the one
@@ -661,14 +693,18 @@ export class MapView3D implements MapRenderer {
 
     this.#before.set(battle.id, {
       square: defenderSquare,
-      city: earlier?.city ?? tile.city,
+      city: earlier?.city ?? keptCity(tile.city),
       units: before,
       after: this.#queued,
       won: winner === 'attacker',
       defender: defender.id,
       patched: false,
     });
-    this.#walkingUnits.set(attacker.id, attackerUnit);
+    // Drawn as the page has it; out of the dark, once it has it there (`#mark`).
+    if (attackerUnit !== undefined) {
+      this.#walkingUnits.set(attacker.id, attackerUnit);
+    }
+
     // Each waits for the battle's patch: the loser's gone from it, and the winner's as it came out.
     [attacker.id, defender.id].forEach((unit) =>
       this.#awaiting.set(unit, {
@@ -700,6 +736,17 @@ export class MapView3D implements MapRenderer {
       prefersReducedMotion() ||
       speed === 'off'
     ) {
+      return;
+    }
+
+    // Another player's unit stepping on from its battle, as one taking the square it emptied: on its new square once its
+    //  battle's over, as the step's patch has it, rather than the battle unseen.
+    if (unit.player !== this.#playerId && this.#battles.attacking(unit.id)) {
+      this.#awaiting.set(unit.id, {
+        squares: [`${from.x},${from.y}`, `${to.x},${to.y}`],
+        after: this.#queued,
+      });
+
       return;
     }
 
@@ -1906,7 +1953,16 @@ export class MapView3D implements MapRenderer {
       attacked = this.#battles.awaitingBlow({ x, y }),
       shownBefore =
         attacked === null ? undefined : this.#before.get(attacked.id),
-      units = shownBefore?.units ?? tile.units,
+      // As it was, and any that have come since.
+      units =
+        shownBefore === undefined
+          ? tile.units
+          : [
+              ...shownBefore.units,
+              ...tile.units.filter(
+                ({ id }) => !shownBefore.units.some((kept) => kept.id === id)
+              ),
+            ],
       // Units walking here, or waiting for their patch, or attacking from here, are drawn walking or fighting, not
       //  here, until they're there or back: marked again then. Those fallen are only left off.
       walking = tile.units.filter(

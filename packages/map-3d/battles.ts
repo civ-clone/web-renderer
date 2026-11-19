@@ -5,9 +5,10 @@
 //   two: that's the blow.
 // - Won, it goes back to where it stood, and the loser fades away where it stood.
 // - Lost, it fades away at the edge.
-// - Battles that share a unit or a square play one after another, in the order they came: the square attacked shows how
-//   the last battle there left it before the next is fought. One can wait for its attacker to get there, walking. Those
-//   ended at once, those waiting for them go on as soon as they can.
+// - A battle waits for those whose attacker is one of its units, as one figure can't lunge twice at once: a unit
+//   attacking again, or attacked as it lunges. Others are fought at once, several at a square together, as a rival's
+//   attacks on a city come. One can wait for its attacker to get there, walking. Those ended at once, those waiting for
+//   them go on as soon as they can.
 // - An attacker's drawn once, in the first battle it's in: one attacking again stands in the next battle only once the
 //   last's over.
 //
@@ -133,16 +134,9 @@ export const battleAt = (
 const sameSquare = (a: WalkSquare, b: WalkSquare): boolean =>
   a.x === b.x && a.y === b.y;
 
-// Whether two battles share a unit or a square.
-const touching = (a: BattleOf, b: BattleOf): boolean =>
-  [a.attacker, a.defender].some(
-    (unit) => unit === b.attacker || unit === b.defender
-  ) ||
-  [a.attackerSquare, a.defenderSquare].some(
-    (square) =>
-      sameSquare(square, b.attackerSquare) ||
-      sameSquare(square, b.defenderSquare)
-  );
+// Whether `of` waits for `earlier`: its attacker's one of `of`'s units, drawn lunging.
+const waitsFor = (earlier: BattleOf, of: BattleOf): boolean =>
+  earlier.attacker === of.attacker || earlier.attacker === of.defender;
 
 export class Battles {
   // In the order they came.
@@ -184,7 +178,7 @@ export class Battles {
 
   /**
    * A battle at `now`, at `pace`: fought at once, or no sooner than `notBefore`, as when its attacker's walking there,
-   *  or, sharing a unit or a square with one that isn't over, once that one is.
+   *  or, waiting for one whose attacker's one of its units, once that one's over.
    */
   add(
     of: BattleOf,
@@ -268,15 +262,25 @@ export class Battles {
     return { struck, ended };
   }
 
+  /** When the last battle any of `units` attacks in is over, or nothing with none. */
+  busyUntil(units: readonly string[]): number | null {
+    return this.#battles
+      .filter(({ attacker }) => units.includes(attacker))
+      .reduce<number | null>(
+        (latest, battle) => Math.max(latest ?? 0, battleEnds(battle)),
+        null
+      );
+  }
+
   /** Every battle over at `now`, at once, as `endWhere` has them. */
   endAll(now: number): { struck: Battle[]; ended: Battle[] } {
     return this.endWhere(() => true, now);
   }
 
-  // When a battle starts, no sooner than `soonest`, after each of `before` it shares a unit or a square with.
+  // When a battle starts, no sooner than `soonest`, after each of `before` it waits for.
   #startOf(of: BattleOf, before: Battle[], soonest: number): number {
     return before
-      .filter((battle) => touching(battle, of))
+      .filter((battle) => waitsFor(battle, of))
       .reduce(
         (latest, battle) => Math.max(latest, battleEnds(battle)),
         soonest

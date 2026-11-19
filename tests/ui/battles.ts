@@ -200,21 +200,48 @@ const battleOf = (
 }
 
 {
-  // Battles sharing a unit or a square wait for the one before; the square attacked awaits the first blow still to fall
-  //  there.
+  // A battle waits for those whose attacker is one of its units: the same attacker again, or one attacking it as it
+  //  lunges. Others are fought at once, several at one square together. The square attacked awaits the first blow still
+  //  to fall there.
   const battles = new Battles(),
-    first = battles.add(battleOf('a', 'd', false, [0, 0], [1, 0]), 0, pace),
-    // Another attacker, at the same square.
-    second = battles.add(battleOf('b', 'd', true, [2, 0], [1, 0]), 10, pace),
-    // The first's attacker again, at another square: after the first, sharing nothing with the second.
+    first = battles.add(battleOf('a', 'd', true, [0, 0], [1, 0]), 0, pace),
+    // Another attacker, at the same square and the same defender: together.
+    second = battles.add(battleOf('b', 'd', false, [2, 0], [1, 0]), 10, pace),
+    // The first's attacker again, at another square: after the first.
     third = battles.add(battleOf('a', 'e', true, [0, 0], [0, 1]), 20, pace),
+    // The first's attacker attacked as it lunges: after it's lunged in both its battles.
+    counter = battles.add(battleOf('g', 'a', true, [0, 1], [0, 0]), 25, pace),
+    // The first's defender attacking: it isn't drawn lunging there, so at once.
+    defenderAttacks = battles.add(
+      battleOf('d', 'h', true, [1, 0], [2, 1]),
+      27,
+      pace
+    ),
     // Nothing shared: at once.
     apart = battles.add(battleOf('c', 'f', true, [3, 3], [2, 3]), 30, pace);
 
   expect(
-    'a battle sharing a unit or a square starts once the one before is over; one sharing nothing, at once',
-    [first.start, second.start, third.start, apart.start],
-    [0, battleEnds(first), battleEnds(first), 30]
+    'a battle waits for those whose attacker is one of its units, and no others: several at a square are fought together',
+    [
+      first.start,
+      second.start,
+      third.start,
+      counter.start,
+      defenderAttacks.start,
+      apart.start,
+    ],
+    [0, 10, battleEnds(first), battleEnds(third), 27, 30]
+  );
+
+  // How long the battles a unit attacks in go on, for the view to bound them.
+  expect(
+    'a unit’s battles are over when the last it attacks in is; one attacking in none has none',
+    [
+      battles.busyUntil(['a']),
+      battles.busyUntil(['x', 'c']),
+      battles.busyUntil(['x']),
+    ],
+    [battleEnds(third), battleEnds(apart), null]
   );
 
   const awaiting = (now: number) => {
@@ -238,7 +265,7 @@ const battleOf = (
   const waiting = new Battles();
 
   waiting.add(battleOf('a', 'd', true), 0, pace);
-  waiting.add(battleOf('b', 'd', true, [2, 0], [1, 0]), 0, pace);
+  waiting.add(battleOf('b', 'a', true, [2, 0], [0, 0]), 0, pace);
 
   const { going } = waiting.at(100);
 
@@ -325,8 +352,8 @@ const battleOf = (
   //  their attacker's there.
   const queue = new Battles(),
     cut = queue.add(battleOf('a', 'd', true), 0, pace),
-    afterCut = queue.add(battleOf('b', 'd', true, [2, 0], [1, 0]), 0, pace),
-    afterBoth = queue.add(battleOf('c', 'd', true, [1, 1], [1, 0]), 0, pace),
+    afterCut = queue.add(battleOf('a', 'e', true, [0, 0], [0, 1]), 0, pace),
+    afterBoth = queue.add(battleOf('a', 'f', true, [0, 0], [1, 1]), 0, pace),
     walkingTo = queue.add(
       battleOf('e', 'f', true, [3, 3], [2, 3]),
       0,
