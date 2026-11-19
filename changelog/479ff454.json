@@ -1,0 +1,1 @@
+{"version":"0.1.0@479ff454","date":"2026-11-19T04:19:11.000Z","localChanges":["chore: work towards a 3D map, not offered yet: under ?3d=1 each unit and each city is drawn in one go, so frames come quicker, and old city labels are let go (#1214)"],"externalChanges":{}}

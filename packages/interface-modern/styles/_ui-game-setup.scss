@@ -3,7 +3,9 @@
 //  colours, which are data.
 
 // The seats scroll, so Start and the world stay in view however many seats there are. Only on a screen too short for
-//  the world and a few seats does the body scroll as well.
+//  the world and a few seats does the body scroll as well. With the rules or Advanced open, the world is too tall for
+//  that anyway: the body scrolls, and the seats are shown in full beneath it rather than squeezed to scroll inside it
+//  (#1091).
 .window.ui-window.ui-game-setup-window > .body {
   display: flex;
   flex-direction: column;
@@ -77,13 +79,17 @@
   }
 }
 
-// It gives way to the world first, down to its heading, a few seats and Add a seat: past that the body scrolls.
+// It gives way to the world first, down to its heading, four seats and Add a seat: past that the body scrolls. Four
+//  seats (#1091): a seat's row is about 2.4rem with its Human / Computer toggle, and the table's heading about 1.5rem.
+//  The heading above the table, Add a seat below it and the gaps between come to about 4.5rem.
 .ui-game-setup-seating {
+  --game-setup-seats-min: calc(1.5rem + 4 * 2.4rem);
+
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
   gap: 0.5rem;
-  min-height: 11rem;
+  min-height: calc(var(--game-setup-seats-min) + 4.5rem);
 }
 
 .ui-game-setup-seats-heading {
@@ -103,13 +109,27 @@
   }
 }
 
-// The one part that scrolls, its heading kept in view.
+// The one part that scrolls, its heading kept in view, and never fewer than four seats tall: unless the rules or
+//  Advanced are open (below).
 .ui-game-setup-table {
   border: 1px solid var(--ui-line);
   border-radius: var(--ui-radius-control);
   flex: 1 1 auto;
-  min-height: 6rem;
+  min-height: var(--game-setup-seats-min);
   overflow: auto;
+}
+
+// The rules or Advanced open: every seat is shown, the body scrolling to them, with no second scrollbar inside it. The
+//  setup keeps its full height rather than shrinking to the body, so its padding stays below Add a seat. The table can
+//  still be wider than a phone, so it keeps its own scroll across, and its heading scrolls away with the rows.
+.ui-game-setup:has(.ui-game-setup-rules[open], .ui-game-setup-advanced[open]) {
+  flex: none;
+
+  .ui-game-setup-table {
+    flex: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
 }
 
 .ui-game-setup-seats {
@@ -124,8 +144,8 @@
     white-space: nowrap;
   }
 
-  // Drawn as every window's table headings are, and kept in view over the seats. Nothing in the rows is positioned or
-  //  made its own layer, so nothing draws over them.
+  // Drawn as every window's table headings are, and kept in view over the seats while the table scrolls. Nothing in
+  //  the rows is positioned or made its own layer, so nothing draws over them.
   thead th {
     background: var(--ui-sunken);
     border-bottom: 1px solid var(--ui-table-rule);
