@@ -53,7 +53,7 @@ import {
 import { Stage } from '@civ-clone/ui-map-3d/stage';
 import markerFor, { TileMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
 import { OverlayMesh } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
-import yieldIconsAt from '@civ-clone/ui-map-3d/yields';
+import yieldIconsAt, { drawYields } from '@civ-clone/ui-map-3d/yields';
 import { Color } from 'three';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { unitStatus } from '@civ-clone/ui-assets/lib/renderUnit';
@@ -1592,23 +1592,25 @@ expect(
     );
   }
 
-  // What each square yields, over it (`y`): laid out as the 2D map lays them, centred on its middle on the screen,
-  //  smaller further away, none too small to read; shown and hidden by the key, on a canvas over the map's.
+  // What each square yields, over it (`y`): laid out as the 2D map lays them, centred on its middle on the screen, in
+  //  the square as it looks there, none too small to read; drawn crisp at the icons' own size, keeping their shape; shown
+  //  and hidden by the key, on a canvas over the map's.
+  const fourYields = [
+      { _: 'Food', value: 2 },
+      { _: 'Production', value: 1 },
+      { _: 'Trade', value: 1 },
+    ],
+    foreshortened = yieldIconsAt(fourYields, [100, 100], [64, 20], 16);
+
   expect(
-    'a square’s yields are laid out in two rows centred over its middle, as big as the square allows, and none too small to read or with nothing',
+    'a square’s yields are laid out in two rows centred over its middle, as big as the square allows across and up the screen, no bigger than the icons, and none too small to read or with nothing',
     [
-      yieldIconsAt(
-        [
-          { _: 'Food', value: 2 },
-          { _: 'Production', value: 1 },
-          { _: 'Trade', value: 1 },
-        ],
-        [100, 100],
-        64
-      ),
-      yieldIconsAt([{ _: 'Food', value: 2 }], [100, 100], 12),
-      yieldIconsAt([], [100, 100], 64),
-      yieldIconsAt([{ _: 'Food', value: 1 }], [100, 100], 200)[0]?.size,
+      yieldIconsAt(fourYields, [100, 100], [64, 64], 16),
+      foreshortened.map(({ y, size }) => [y, size]),
+      yieldIconsAt([{ _: 'Food', value: 2 }], [100, 100], [10, 10], 16),
+      yieldIconsAt([], [100, 100], [64, 64], 16),
+      yieldIconsAt([{ _: 'Food', value: 1 }], [100, 100], [200, 200], 14)[0]
+        ?.size,
     ],
     [
       [
@@ -1617,22 +1619,75 @@ expect(
         { _: 'Production', x: 84, y: 100, size: 16 },
         { _: 'Trade', x: 100, y: 100, size: 16 },
       ],
+      [
+        [91, 9],
+        [91, 9],
+        [100, 9],
+        [100, 9],
+      ],
       [],
       [],
-      16,
+      14,
     ]
   );
 
   {
-    const yielding = tiles[1 * 4 + 1] as Tile;
+    const drawn: unknown[][] = [],
+      context = {
+        imageSmoothingEnabled: true,
+        setTransform: (...args: unknown[]) =>
+          void drawn.push(['setTransform', ...args]),
+        clearRect: (...args: unknown[]) =>
+          void drawn.push(['clearRect', ...args]),
+        drawImage: (image: { name: string }, ...args: unknown[]) =>
+          void drawn.push([
+            'drawImage',
+            image.name,
+            ...args,
+            context.imageSmoothingEnabled,
+          ]),
+      },
+      images: { [name: string]: object } = {
+        Food: { name: 'food', naturalWidth: 14, naturalHeight: 14 },
+        Production: { name: 'shield', naturalWidth: 14, naturalHeight: 7 },
+      };
 
-    yielding.yields = [
-      { _: 'Food', value: 2 },
-      { _: 'Production', value: 1 },
-      { _: 'Trade', value: 1 },
-    ] as unknown as Tile['yields'];
-    glider.queueTile(yielding);
+    drawYields(
+      context as unknown as CanvasRenderingContext2D,
+      [
+        { _: 'Food', x: 10, y: 20, size: 14 },
+        { _: 'Food', x: 30, y: 20, size: 7 },
+        { _: 'Production', x: 10, y: 40, size: 14 },
+        { _: 'Trade', x: 30, y: 40, size: 14 },
+      ],
+      (name) => (images[name] as CanvasImageSource | undefined) ?? null,
+      { width: 300, height: 200, ratio: 2 }
+    );
+
+    expect(
+      'yields are drawn on a cleared canvas, each icon at its own size crisp or shrunk smoothly, keeping its shape, and none without art',
+      drawn,
+      [
+        ['setTransform', 2, 0, 0, 2, 0, 0],
+        ['clearRect', 0, 0, 300, 200],
+        ['drawImage', 'food', 10, 20, 14, 14, false],
+        ['drawImage', 'food', 30, 20, 7, 7, true],
+        ['drawImage', 'shield', 10, 43.5, 14, 7, false],
+      ]
+    );
+  }
+
+  {
+    const yielding = tiles[1 * 4 + 1] as Tile,
+      beside = tiles[1 * 4 + 2] as Tile,
+      north = tiles[0 * 4 + 1] as Tile;
+
+    [yielding, beside, north].forEach((tile) => {
+      tile.yields = fourYields as unknown as Tile['yields'];
+      glider.queueTile(tile);
+    });
     glider.releaseTiles();
+    glider.setOrbit({ ...glider.orbit(), yaw: 0 });
     glider.centre(yielding);
     runFrames();
 
@@ -1642,42 +1697,69 @@ expect(
     runFrames();
 
     const shown = glider.yieldIcons(),
-      overlay = document.querySelector('.map3d-yields') as HTMLElement | null,
-      // Where the icons are, as a block: its middle.
-      middleOfIcons =
-        shown.length === 0
-          ? null
-          : [
-              (Math.min(...shown.map(({ x }) => x)) +
-                Math.max(...shown.map(({ x, size }) => x + size))) /
-                2,
-              (Math.min(...shown.map(({ y }) => y)) +
-                Math.max(...shown.map(({ y, size }) => y + size))) /
-                2,
-            ],
-      shownAt = overlay?.style.display;
+      overlay = document.querySelector('.map3d-yields') as HTMLCanvasElement,
+      [centreX, centreY] = [box.width / 2, box.height / 2],
+      // Each square's four icons, as a block: its middle.
+      blocks = Array.from({ length: shown.length / 4 }, (_, index) => {
+        const block = shown.slice(index * 4, index * 4 + 4);
 
+        return [
+          (Math.min(...block.map(({ x }) => x)) +
+            Math.max(...block.map(({ x, size }) => x + size))) /
+            2,
+          (Math.min(...block.map(({ y }) => y)) +
+            Math.max(...block.map(({ y, size }) => y + size))) /
+            2,
+        ] as [number, number];
+      }),
+      [middleX, middleY] = [...blocks].sort(
+        (a, b) =>
+          Math.hypot(a[0] - centreX, a[1] - centreY) -
+          Math.hypot(b[0] - centreX, b[1] - centreY)
+      )[0] ?? [-1, -1],
+      // The square beside it, east, the nearest block to its right on the same row.
+      besideIt = blocks
+        .filter(([x, y]) => x > middleX + 10 && Math.abs(y - middleY) < 10)
+        .sort((a, b) => a[0] - b[0])[0],
+      // The square north of it, further from a camera facing north: above it on the screen.
+      northOfIt = blocks.find(
+        ([x, y]) => Math.abs(x - middleX) < 10 && y < middleY - 10
+      ),
+      shownAt = overlay?.style.display,
+      wide = box.width;
+
+    // The window narrowed: the overlay's sized again with the map.
+    box.width = 500;
+    window.dispatchEvent(new Event('resize'));
+
+    const resizedTo = overlay?.width;
+
+    box.width = wide;
+    window.dispatchEvent(new Event('resize'));
     glider.toggleYields();
     runFrames();
 
     expect(
-      'yields over the squares: shown with `y`, over the square’s middle where the camera looks at it, on a canvas over the map’s; and hidden again',
+      'yields over the squares: shown with `y`, over each square’s middle where the camera looks at it, the square beside it to its right and the one north above it, at every copy of the world in sight, on a canvas over the map’s sized with it; and hidden again',
       [
         hidden,
-        shown.map(({ _ }) => _),
-        middleOfIcons !== null &&
-          Math.abs(middleOfIcons[0]! - box.width / 2) < 20 &&
-          Math.abs(middleOfIcons[1]! - box.height / 2) < 20,
+        shown.length % 4 === 0 && blocks.length > 3,
+        Math.abs(middleX - centreX) < 2 && Math.abs(middleY - centreY) < 2,
+        besideIt !== undefined && besideIt[0] - middleX < centreX / 2,
+        northOfIt !== undefined,
         overlay?.previousElementSibling === mapCanvas,
         shownAt,
+        resizedTo,
         glider.yieldIcons(),
         overlay?.style.display,
       ],
-      [[], ['Food', 'Food', 'Production', 'Trade'], true, true, '', [], 'none']
+      [[], true, true, true, true, true, '', 500, [], 'none']
     );
 
-    yielding.yields = [] as unknown as Tile['yields'];
-    glider.queueTile(yielding);
+    [yielding, beside, north].forEach((tile) => {
+      tile.yields = [] as unknown as Tile['yields'];
+      glider.queueTile(tile);
+    });
     glider.releaseTiles();
     runFrames();
   }

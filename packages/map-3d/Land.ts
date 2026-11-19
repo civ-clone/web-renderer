@@ -63,6 +63,7 @@ export class Land {
   //  sides along the ground's axes, that fits inside it.
   #radius: number;
   #inner: number;
+  #reliefChanges = 0;
 
   constructor(world: World) {
     this.#world = world;
@@ -196,6 +197,16 @@ export class Land {
     };
   }
 
+  /** How many times the land's relief has changed since it was made: what's read of its heights is good till then. */
+  reliefChanges(): number {
+    return this.#reliefChanges;
+  }
+
+  /** Half the biggest square, with sides along the ground's axes, that fits inside a square: where icons fit in it. */
+  inner(): number {
+    return this.#inner;
+  }
+
   /** How far the ground runs down: its period where it wraps over the poles, or to its last row's bottom. */
   extentV(): number {
     return this.#grid.chunksV * this.#grid.stepsV * this.#grid.spacingV;
@@ -268,6 +279,8 @@ export class Land {
     if (terrain.length === 0) {
       return;
     }
+
+    this.#reliefChanges++;
 
     const near = chunksNear(this.#grid, this.layout, terrain, this.#reach).map(
       ([i, j]) => `${i},${j}`

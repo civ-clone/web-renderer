@@ -16,7 +16,7 @@ import { MapView3DDeps } from '@civ-clone/ui-map/MapView3DFactory';
 import MapPortal3D from './MapPortal3D';
 import MapRenderer from '@civ-clone/ui-map/MapRenderer';
 import World from '@civ-clone/ui-map/components/World';
-import { Stage, StageFactory, createStage } from './stage';
+import { Stage, StageFactory, copiesNear, createStage } from './stage';
 import Land from './Land';
 import {
   Orbit,
@@ -24,6 +24,7 @@ import {
   between,
   clampOrbit,
   defaultOrbit,
+  eye,
   groundAt,
   settled,
   sightFor,
@@ -35,7 +36,7 @@ import CameraInput from './camera/CameraInput';
 import markerFor, { MarkerWords } from './markers/markerFor';
 import pickGround from './camera/pick';
 import Minimap3D from './minimap/Minimap3D';
-import yieldIconsAt, { YieldIcon } from './yields';
+import yieldIconsAt, { YieldIcon, drawYields, sizeOf } from './yields';
 import { squareCity, squareYields } from '@civ-clone/ui-client/lib/yieldMap';
 
 // How long, in ms, each frame may go on building the land's chunks while any wait. A chunk is built whole, once a frame
@@ -177,6 +178,9 @@ export class MapView3D implements MapRenderer {
   // The yields over the squares (`y`), on a canvas of their own over the map's, made the first time they're shown.
   #yieldsCanvas: HTMLCanvasElement | null = null;
   #yieldIcon: MapView3DDeps['yieldIcon'];
+  // The land's height at each square's middle, by `x,y`, read since the relief last changed (`reliefChanges`).
+  #heights = new Map<string, number>();
+  #heightsAt = -1;
   #waiting = false;
   // The 2D art the city screen and windows draw with, as it was when last asked.
   #art: MapView3DDeps['art'];
@@ -628,8 +632,9 @@ export class MapView3D implements MapRenderer {
   }
 
   /**
-   * The yields' icons over the squares as the camera sees them now, in the canvas's px, while they're shown (`y`):
-   *  each square's at its copy nearest the camera's focus, on the land as it's drawn, if it's on the screen.
+   * The yields' icons over the squares as the camera sees them now, in the canvas's px, while they're shown (`y`): each
+   *  square's at every copy of the world in sight, on the land as it's drawn, if it's on the screen and not lost in the
+   *  haze.
    */
   yieldIcons(): YieldIcon[] {
     const width = this.#canvas.clientWidth,
@@ -642,51 +647,124 @@ export class MapView3D implements MapRenderer {
     const orbit = this.#orbit,
       look = this.#lookHeight ?? 0,
       aspect = width / height,
-      { u: periodU, v: periodV } = this.#period(),
-      [focusU, focusV] = orbit.focus,
-      nearest = (value: number, focus: number, period: number | null) =>
-        period === null
-          ? value
-          : value + period * Math.round((focus - value) / period),
-      // A square's width along the screen, from its middle.
-      [acrossU, acrossV] = [Math.cos(orbit.yaw), Math.sin(orbit.yaw)];
+      { near, far } = sightFor(orbit.distance),
+      // Half way into the haze, from the camera: past it the land's too faint for its icons.
+      hazed = (near + far) / 2,
+      [eyeU, eyeY, eyeV] = eye(orbit, look),
+      inner = this.#land.inner(),
+      // Across the screen, and away up it, on the ground.
+      [acrossU, acrossV] = [Math.cos(orbit.yaw), Math.sin(orbit.yaw)],
+      [awayU, awayV] = [-Math.sin(orbit.yaw), Math.cos(orbit.yaw)],
+      onScreen = (point: [number, number] | null, margin: number) =>
+        point !== null &&
+        point[0] >= -1 - margin &&
+        point[0] <= 1 + margin &&
+        point[1] >= -1 - margin &&
+        point[1] <= 1 + margin,
+      toPx = ([x, y]: [number, number]): [number, number] => [
+        ((x + 1) / 2) * width,
+        ((1 - y) / 2) * height,
+      ],
+      apart = (a: [number, number] | null, b: [number, number] | null) =>
+        a === null || b === null
+          ? 0
+          : Math.hypot(
+              ((a[0] - b[0]) * width) / 2,
+              ((a[1] - b[1]) * height) / 2
+            ),
+      copies = copiesNear(orbit.focus, far, this.#period()),
+      biggest = this.#yieldIconSize(),
+      icons: YieldIcon[] = [];
 
-    return this.world.tiles().flatMap((tile) => {
-      const yields = squareYields(tile, squareCity(tile));
+    this.world.tiles().forEach((tile) => {
+      const [u, v] = this.#land.layout.centre(tile.x, tile.y);
+      let yields: ReturnType<typeof squareYields> | null = null;
 
-      if (yields.length === 0) {
-        return [];
-      }
+      copies.forEach(([offsetU, offsetV]) => {
+        const atU = u + offsetU,
+          atV = v + offsetV;
 
-      const [u, v] = this.#land.layout.centre(tile.x, tile.y),
-        at: [number, number, number] = [
-          nearest(u, focusU, periodU),
-          Math.max(0, this.#land.surfaceAt(u, v)),
-          nearest(v, focusV, periodV),
-        ],
-        middle = toScreen(orbit, look, at, aspect),
-        beside = toScreen(
-          orbit,
-          look,
-          [at[0] + acrossU, at[1], at[2] + acrossV],
-          aspect
+        // Cheap tests first, on the ground at the height the camera looks at: in the haze, or well off the screen.
+        if (Math.hypot(atU - eyeU, look - eyeY, atV - eyeV) > hazed) {
+          return;
+        }
+
+        if (!onScreen(toScreen(orbit, look, [atU, look, atV], aspect), 0.5)) {
+          return;
+        }
+
+        yields ??= squareYields(tile, squareCity(tile));
+
+        if (yields.length === 0) {
+          return;
+        }
+
+        const up = this.#heightOf(tile.x, tile.y, u, v),
+          middle = toScreen(orbit, look, [atU, up, atV], aspect);
+
+        if (middle === null || !onScreen(middle, 0.1)) {
+          return;
+        }
+
+        const point = (along: number, [du, dv]: [number, number]) =>
+          toScreen(
+            orbit,
+            look,
+            [atU + du * along, up, atV + dv * along],
+            aspect
+          );
+
+        icons.push(
+          ...yieldIconsAt(
+            yields,
+            toPx(middle),
+            [
+              apart(
+                point(inner, [acrossU, acrossV]),
+                point(-inner, [acrossU, acrossV])
+              ),
+              apart(
+                point(inner, [awayU, awayV]),
+                point(-inner, [awayU, awayV])
+              ),
+            ],
+            biggest
+          )
         );
-
-      if (middle === null || beside === null) {
-        return [];
-      }
-
-      const x = ((middle[0] + 1) / 2) * width,
-        y = ((1 - middle[1]) / 2) * height,
-        side = Math.hypot(
-          ((beside[0] - middle[0]) * width) / 2,
-          ((beside[1] - middle[1]) * height) / 2
-        );
-
-      return x < -side || x > width + side || y < -side || y > height + side
-        ? []
-        : yieldIconsAt(yields, [x, y], side);
+      });
     });
+
+    return icons;
+  }
+
+  // The height of the land as it's drawn at the middle of the square at (`x`, `y`), (`u`, `v`) on the ground, no lower
+  //  than the sea's: read once, until the relief changes.
+  #heightOf(x: number, y: number, u: number, v: number): number {
+    const changes = this.#land.reliefChanges();
+
+    if (changes !== this.#heightsAt) {
+      this.#heights.clear();
+      this.#heightsAt = changes;
+    }
+
+    const key = `${x},${y}`;
+    let height = this.#heights.get(key);
+
+    if (height === undefined) {
+      height = Math.max(0, this.#land.surfaceAt(u, v));
+      this.#heights.set(key, height);
+    }
+
+    return height;
+  }
+
+  // The size the interface draws its yield icons at, its own, in px: no bigger over the 3D map. As the 2D map's, if
+  //  there are none to measure.
+  #yieldIconSize(): number {
+    const sample = this.#yieldIcon?.('Food') ?? null,
+      [, size] = sample === null ? [0, 0] : sizeOf(sample);
+
+    return size > 0 ? size : 16;
   }
 
   /** Brings the camera `steps` nearer, or further away for fewer than none, about the point it looks at. */
@@ -1400,21 +1478,14 @@ export class MapView3D implements MapRenderer {
 
     const context = canvas.getContext('2d');
 
-    if (context === null) {
-      return;
+    if (context !== null) {
+      drawYields(
+        context,
+        this.yieldIcons(),
+        (name) => this.#yieldIcon?.(name) ?? null,
+        { width, height, ratio }
+      );
     }
-
-    context.setTransform(ratio, 0, 0, ratio, 0, 0);
-    context.clearRect(0, 0, width, height);
-    // The interface's art is pixel art: drawn crisp, as the 2D map draws it.
-    context.imageSmoothingEnabled = false;
-    this.yieldIcons().forEach(({ _, x, y, size }) => {
-      const image = this.#yieldIcon?.(_) ?? null;
-
-      if (image !== null) {
-        context.drawImage(image, x, y, size, size);
-      }
-    });
   }
 
   // Over the map, the same size, straight after its canvas, so what else is over the map stays over it too; never in
@@ -1494,6 +1565,7 @@ export class MapView3D implements MapRenderer {
     // What floats over the map sits elsewhere over it now.
     this.measureCovered();
     this.#stage.render();
+    this.#showYields();
   }
 }
 

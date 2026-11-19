@@ -437,7 +437,7 @@ Still to do in 3.4: improvements as models from a hosted set, and Fortress and A
   - disorder, celebration, captured and destroyed;
   - yields over squares (`y`).
 
-**Yields (`y`): done.** The interface's icons for what each square yields float over its middle on the screen, laid out as the 2D map lays them in its tile (`packages/map-3d/yields.ts`, `tileYieldGrid`). They're on a canvas of their own straight after the map's, drawn again with each frame while shown. Each is as big as its square looks, up to the 2D map's size, and a square too small on the screen to read them has none. The page gives the icons (`yieldIcon`), as the 3D map's script keeps no art of its own.
+**Yields (`y`): done.** The interface's icons for what each square yields float over its middle on the screen, laid out as the 2D map lays them in its tile (`packages/map-3d/yields.ts`, `tileYieldGrid`). They're on a canvas of their own straight after the map's, drawn again with each frame while shown and when the map's resized. They're at every copy of the world in sight, short of half way into the haze. Each square's fit its inscribed box as it looks on the screen, across and up it, up to the icons' own size, drawn crisp at that size; a square too small on the screen to read them has none. Squares are culled on the screen before their height's read, and heights are kept until the relief changes, so the default view takes about 6 ms a frame on an explored 80×50 world. The page gives the icons (`yieldIcon`), as the 3D map's script keeps no art of its own.
 
 **M4 is done when** every row of spec §11 is in the 3D view but one: changing the art mid-game, which comes with model
 sets in 6.4.
