@@ -2847,6 +2847,30 @@ expect(
       ],
       [1, [], []]
     );
+
+    // A feature the terrain family draws as terrain of its own (Civ2's River) isn't a special: the flavour stays.
+    const withRiver: TilesetDescriptor = {
+      ...varied,
+      families: {
+        ...varied.families,
+        terrain: { ...varied.families.terrain, features: ['River'] },
+      },
+    };
+
+    expect(
+      "a feature the terrain family draws as terrain (Civ2's River) keeps the square's flavour",
+      drawn(
+        Landscape,
+        withRiver,
+        makeWorld(12, 12, {
+          '5,5': { terrain: 'Hills' },
+          [at]: { features: ['River'] },
+        }),
+        fx,
+        fy
+      ).filter((sprite) => /flavour-/.test(sprite)).length,
+      1
+    );
   }
   expect(
     'and the same square is drawn the same way every time',
