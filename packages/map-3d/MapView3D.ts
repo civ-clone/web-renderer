@@ -44,6 +44,13 @@ import Walks, {
   Walker,
   quicker,
 } from './walks';
+import Battles, {
+  BATTLE_PACE,
+  Battle,
+  Fighter,
+  REACH,
+  quickerBattle,
+} from './battles';
 import pickGround from './camera/pick';
 import Minimap3D from './minimap/Minimap3D';
 import { LaidYields, innerOf, laidYields, yieldMesh } from './yields';
@@ -159,6 +166,14 @@ export class MapView3D implements MapRenderer {
   #queued = 0;
   #queuedAt = new Map<string, number>();
   #releasedAt = new Map<string, number>();
+  // Battles under way (`battles.ts`): each attacker drawn on its own, left off its square till its battle's over. The
+  //  square attacked is shown as it was before each battle there, till its blow: what was on it then, by battle, in
+  //  the order they came. Those that fell at a blow, drawn where they stood till they're gone; and units fallen whose
+  //  patch hasn't come, left off.
+  #battles = new Battles();
+  #before = new Map<string, { square: string; units: Unit[] }>();
+  #fallen = new Map<string, Unit[]>();
+  #gone = new Set<string>();
   // How the player chose units to move, and whether others' are shown walking.
   #walkOptions: MapView3DDeps['walks'];
   // The unit whose ring is shown, and the square it's on as the map has it: the active unit, but while it walks on after
@@ -468,6 +483,10 @@ export class MapView3D implements MapRenderer {
     this.#keepDistance(true);
     this.#disposed = true;
     this.#walks.endAll(0);
+    this.#battles.endAll();
+    this.#before.clear();
+    this.#fallen.clear();
+    this.#gone.clear();
     this.#unpatched.clear();
     this.#unpatchedUnits.clear();
     this.#awaiting.clear();
@@ -531,6 +550,106 @@ export class MapView3D implements MapRenderer {
 
     this.#face(event.attacker.id, event.attacker.tile, event.defender.tile);
     this.#face(event.defender.id, event.defender.tile, event.attacker.tile);
+    this.#fight(event);
+  }
+
+  // A battle: the attacker lunges to the edge between the two squares, and goes back, or fades away there if it lost;
+  //  the loser fades away where it stood (`battles.ts`). Till the blow, the square attacked is shown as it was before.
+  //  Not where there are no frames, or the player has asked for less motion, or for units to move at once; nor
+  //  between other players with their moves not shown, nor off the screen; nor one whose units the page doesn't have
+  //  where they fought, or that wait for a patch: those show how it went at once. Either walking, its walk's over at
+  //  once, so it's fought from where they are.
+  #fight({
+    attacker,
+    defender,
+    winner,
+  }: Extract<MapEvent, { kind: 'battle' }>): void {
+    const speed = this.#walkOptions?.speed() ?? 'normal',
+      now = performance.now();
+
+    if (
+      typeof requestAnimationFrame !== 'function' ||
+      prefersReducedMotion() ||
+      speed === 'off' ||
+      (attacker.player !== this.#playerId &&
+        defender.player !== this.#playerId &&
+        !(this.#walkOptions?.rivals() ?? true)) ||
+      (!this.#visible(attacker.tile.x, attacker.tile.y, -0.5) &&
+        !this.#visible(defender.tile.x, defender.tile.y, -0.5))
+    ) {
+      return;
+    }
+
+    this.#walksEnded(
+      this.#walks.endWhere(
+        (units) => units.includes(attacker.id) || units.includes(defender.id),
+        now
+      )
+    );
+
+    const attackerUnit =
+        this.world
+          .get(attacker.tile.x, attacker.tile.y)
+          .units.find(({ id }) => id === attacker.id) ??
+        (this.#battles.attacking(attacker.id)
+          ? this.#walkingUnits.get(attacker.id)
+          : undefined),
+      // What's on the square attacked, as the page has it before the battle's patch, but those drawn elsewhere.
+      before = this.world
+        .get(defender.tile.x, defender.tile.y)
+        .units.filter(({ id }) => !this.#leftOff(id));
+
+    if (
+      attackerUnit === undefined ||
+      this.#unpatchedUnits.has(attacker.id) ||
+      this.#gone.has(attacker.id) ||
+      !before.some(({ id }) => id === defender.id)
+    ) {
+      return;
+    }
+
+    const [fromU, fromV] = this.#land.layout.centre(
+        attacker.tile.x,
+        attacker.tile.y
+      ),
+      [toU, toV] = this.#land.layout.centre(defender.tile.x, defender.tile.y),
+      { u: periodU, v: periodV } = this.#land.layout.period(),
+      short = (delta: number, period: number | null): number =>
+        period === null ? delta : delta - period * Math.round(delta / period),
+      du = short(toU - fromU, periodU),
+      dv = short(toV - fromV, periodV),
+      attackerSquare = `${attacker.tile.x},${attacker.tile.y}`,
+      defenderSquare = `${defender.tile.x},${defender.tile.y}`,
+      battle = this.#battles.add(
+        {
+          attacker: attacker.id,
+          defender: defender.id,
+          attackerSquare: attacker.tile,
+          defenderSquare: defender.tile,
+          won: winner === 'attacker',
+          from: this.#standing(attacker.tile),
+          edge: [fromU + du * REACH, fromV + dv * REACH],
+          fallsAt: this.#standing(defender.tile),
+          facing: this.#facings.get(attacker.id) ?? Math.atan2(du, dv),
+          defenderFacing:
+            this.#facings.get(defender.id) ?? Math.atan2(-du, -dv),
+        },
+        now,
+        speed === 'fast' ? quickerBattle(BATTLE_PACE) : BATTLE_PACE
+      );
+
+    this.#before.set(battle.id, { square: defenderSquare, units: before });
+    this.#walkingUnits.set(attacker.id, attackerUnit);
+    // Each waits for the battle's patch: the loser's gone from it, and the winner's as it came out.
+    [attacker.id, defender.id].forEach((unit) =>
+      this.#awaiting.set(unit, {
+        squares: [attackerSquare, defenderSquare],
+        after: this.#queued,
+      })
+    );
+    this.#mark(attacker.tile.x, attacker.tile.y);
+    this.#mark(defender.tile.x, defender.tile.y);
+    this.#draw();
   }
 
   // The unit `unit` steps from the square `from` to `to`: it walks there (`walks.ts`), drawn on its own, and is left off
@@ -554,6 +673,13 @@ export class MapView3D implements MapRenderer {
     ) {
       return;
     }
+
+    // In a battle: it's over at once, and the unit steps from where it is.
+    this.#battlesOver(
+      this.#battles.endWhere(
+        ({ attacker, defender }) => attacker === unit.id || defender === unit.id
+      )
+    );
 
     const walking = this.#walks.walking(unit.id),
       seen =
@@ -635,9 +761,15 @@ export class MapView3D implements MapRenderer {
     });
   }
 
-  // Whether a unit's left off the squares it's on: walking, or waiting for its patch.
+  // Whether a unit's left off the squares it's on: walking, or waiting for its patch; attacking, or fallen in battle and
+  //  waiting for the patch that takes it off.
   #leftOff(unit: string): boolean {
-    return this.#walks.walking(unit) || this.#unpatchedUnits.has(unit);
+    return (
+      this.#walks.walking(unit) ||
+      this.#unpatchedUnits.has(unit) ||
+      this.#battles.attacking(unit) ||
+      this.#gone.has(unit)
+    );
   }
 
   // The walkers where they are at `now`, each drawn as its units are now (active, shown or hidden, their size); those
@@ -671,19 +803,27 @@ export class MapView3D implements MapRenderer {
 
   // A walker drawn as its units are now, where it is.
   #drawWalker(walker: Walker): void {
-    const marker = this.#walkerMarker(walker),
-      signature = marker === null ? null : JSON.stringify(marker),
+    this.#drawFigure(walker, this.#walkerMarker(walker.units));
+  }
+
+  // Something walking or fighting (`id`) drawn as `marker`, where it is, `opacity` solid.
+  #drawFigure(
+    { id, at, lift, facing }: Pick<Walker, 'id' | 'at' | 'lift' | 'facing'>,
+    marker: TileMarker | null,
+    opacity = 1
+  ): void {
+    const signature = marker === null ? null : JSON.stringify(marker),
       { u: periodU, v: periodV } = this.#land.layout.period(),
       within = (value: number, period: number | null): number =>
         period === null ? value : ((value % period) + period) % period;
 
-    if (signature !== (this.#walkersDrawn.get(walker.id) ?? null)) {
-      this.#stage.setWalker(walker.id, marker);
+    if (signature !== (this.#walkersDrawn.get(id) ?? null)) {
+      this.#stage.setWalker(id, marker);
 
       if (signature === null) {
-        this.#walkersDrawn.delete(walker.id);
+        this.#walkersDrawn.delete(id);
       } else {
-        this.#walkersDrawn.set(walker.id, signature);
+        this.#walkersDrawn.set(id, signature);
       }
     }
 
@@ -691,14 +831,15 @@ export class MapView3D implements MapRenderer {
       return;
     }
 
-    const u = within(walker.at[0], periodU),
-      v = within(walker.at[1], periodV);
+    const u = within(at[0], periodU),
+      v = within(at[1], periodV);
 
     this.#stage.placeWalker(
-      walker.id,
-      [u, Math.max(0, this.#land.surfaceAt(u, v)) + walker.lift, v],
-      walker.facing
+      id,
+      [u, Math.max(0, this.#land.surfaceAt(u, v)) + lift, v],
+      facing
     );
+    this.#stage.fadeWalker(id, opacity);
   }
 
   // The walker `id` taken off the stage, if it's drawn.
@@ -711,13 +852,18 @@ export class MapView3D implements MapRenderer {
   // What a walker's drawn as: its units alone, as a square's marked, the one on top the one ringed or the best
   //  defender; their figures turned as it goes, not as they last went. Nothing with its units hidden (`t`), unless
   //  the one ringed is among them.
-  #walkerMarker(walker: Walker): TileMarker | null {
-    const units = walker.units.flatMap((id) => {
+  #walkerMarker(ids: readonly string[]): TileMarker | null {
+    const units = ids.flatMap((id) => {
       const unit = this.#walkingUnits.get(id);
 
       return unit === undefined ? [] : [unit];
     });
 
+    return this.#unitsMarker(units);
+  }
+
+  // What units on their own are drawn as, as a square's are marked, with no city.
+  #unitsMarker(units: Unit[]): TileMarker | null {
     return markerFor(
       { city: null, units },
       this.#ringed,
@@ -748,25 +894,37 @@ export class MapView3D implements MapRenderer {
       }
 
       this.#takeAway(walker.id);
-      walker.units.forEach((unit) => {
-        this.#unpatchedUnits.delete(unit);
-
-        if (this.#walks.walking(unit)) {
-          return;
-        }
-
-        this.#heldFor.get(unit)?.forEach((key) => squares.add(key));
-        this.#heldFor.delete(unit);
-        this.#walkingUnits.delete(unit);
-      });
+      walker.units.forEach((unit) => this.#unpatchedUnits.delete(unit));
+      this.#release(walker.units, squares);
     });
 
-    // The unit ringed there, or waiting for its patch, as the game is: the ring and the camera go where the game has
-    //  them.
+    this.#released(squares);
+  }
+
+  // `units` are back on the squares they were left off, those `squares` are added to, to be marked again, unless they're
+  //  still left off: walking on, or fighting. Those fallen are let go of, their squares marked again without them.
+  #release(units: readonly string[], squares: Set<string>): void {
+    units.forEach((unit) => {
+      if (this.#leftOff(unit) && !this.#gone.has(unit)) {
+        return;
+      }
+
+      this.#heldFor.get(unit)?.forEach((key) => squares.add(key));
+      this.#heldFor.delete(unit);
+      this.#walkingUnits.delete(unit);
+    });
+  }
+
+  // `squares` marked again, units walking or fighting back on them: and the unit ringed there, or waiting for its patch,
+  //  as the game is, the ring and the camera go where the game has them.
+  #released(squares: Set<string>): void {
+    const ringed = this.#ringed;
+
     if (
-      this.#ringed !== null &&
-      this.#ringed !== (this.#activeUnit?.id ?? null) &&
-      !this.#walks.walking(this.#ringed)
+      ringed !== null &&
+      ringed !== (this.#activeUnit?.id ?? null) &&
+      !this.#walks.walking(ringed) &&
+      !this.#battles.attacking(ringed)
     ) {
       this.#caughtUp(squares);
     }
@@ -776,6 +934,133 @@ export class MapView3D implements MapRenderer {
 
       this.#mark(x, y);
     });
+  }
+
+  // The battles under way at `now`: the blows that have fallen since, those that are over, and what's drawn of each,
+  //  as `#placeWalkers` has walks. Less motion asked for mid-battle, or units to move at once: every battle's over now.
+  #placeBattles(now: number): void {
+    if (this.#battles.size() === 0) {
+      return;
+    }
+
+    if (
+      prefersReducedMotion() ||
+      (this.#walkOptions?.speed() ?? 'normal') === 'off'
+    ) {
+      this.#battlesOver(this.#battles.endAll());
+
+      return;
+    }
+
+    const { going, struck, ended } = this.#battles.at(now);
+
+    struck.forEach((battle) => this.#blow(battle, true));
+    going.forEach((fighter) => this.#drawFighter(fighter));
+    this.#battlesEnded(ended);
+  }
+
+  // Battles over at once, as `Battles#endWhere` has them: their blows fall now, with nothing left to fade.
+  #battlesOver({ struck, ended }: { struck: Battle[]; ended: Battle[] }): void {
+    struck.forEach((battle) => this.#blow(battle, false));
+    this.#battlesEnded(ended);
+  }
+
+  // The blow falls in `battle`: the square attacked is shown as it is after it, or as it was before the next battle
+  //  there; what fell, drawn where it stood to fade away, if it's `shown`; and the loser left off till its patch comes,
+  //  if it hasn't.
+  #blow(battle: Battle, shown: boolean): void {
+    const { square, units } = this.#before.get(battle.id) ?? {
+        square: '',
+        units: [],
+      },
+      { x, y } = battle.defenderSquare,
+      next = [...this.#before.entries()].find(
+        ([id, before]) => id !== battle.id && before.square === square
+      )?.[1],
+      after = new Set(
+        (next?.units ?? this.world.get(x, y).units).map(({ id }) => id)
+      ),
+      loser = battle.won ? battle.defender : battle.attacker,
+      fell = units.filter(
+        ({ id }) =>
+          (battle.won && id === battle.defender) ||
+          (!after.has(id) && !this.#leftOff(id))
+      );
+
+    this.#before.delete(battle.id);
+
+    if (this.#awaiting.has(loser)) {
+      this.#gone.add(loser);
+    }
+
+    if (shown && battle.won && fell.length > 0) {
+      this.#fallen.set(battle.id, fell);
+    }
+
+    this.#mark(x, y);
+  }
+
+  // What's drawn of a battle: the attacker, as the patch has it now, or what fell, as it was.
+  #drawFighter(fighter: Fighter): void {
+    const fallen = this.#fallen.get(fighter.battle);
+
+    if (fighter.fallen && fallen === undefined) {
+      return;
+    }
+
+    this.#drawFigure(
+      fighter,
+      fighter.fallen
+        ? this.#unitsMarker(fallen!)
+        : this.#walkerMarker([fighter.unit]),
+      fighter.opacity
+    );
+  }
+
+  // Battles that are over, taken away: each attacker back on its square, or, won and waiting for the battle's patch,
+  //  standing where it stood till it comes; fallen, left off till it does.
+  #battlesEnded(ended: Battle[]): void {
+    if (ended.length === 0) {
+      return;
+    }
+
+    const squares = new Set<string>();
+
+    ended.forEach((battle) => {
+      const { id, attacker, won, from, attackerSquare, facing } = battle;
+
+      this.#takeAway(`${id}-fallen`);
+      this.#fallen.delete(id);
+      this.#before.delete(id);
+
+      if (this.#awaiting.has(attacker) && !this.#leftOff(attacker)) {
+        if (!won) {
+          this.#gone.add(attacker);
+        } else {
+          const standing: Walker = {
+            id,
+            units: [attacker],
+            at: [from.at[0], from.at[1]],
+            lift: from.lift,
+            facing,
+            from: attackerSquare,
+            before: attackerSquare,
+            to: attackerSquare,
+          };
+
+          this.#unpatched.set(id, standing);
+          this.#unpatchedUnits.add(attacker);
+          this.#drawWalker(standing);
+
+          return;
+        }
+      }
+
+      this.#takeAway(id);
+      this.#release([attacker], squares);
+    });
+
+    this.#released(squares);
   }
 
   // The unit ringed is there: the ring on the active unit, the squares it moves between added to `squares`, to be marked
@@ -807,7 +1092,7 @@ export class MapView3D implements MapRenderer {
     return (
       ringed !== null &&
       ringed !== (this.#activeUnit?.id ?? null) &&
-      this.#walks.walking(ringed)
+      (this.#walks.walking(ringed) || this.#battles.attacking(ringed))
     );
   }
 
@@ -821,6 +1106,9 @@ export class MapView3D implements MapRenderer {
 
     this.#walksEnded(
       this.#walks.endWhere((units) => units.includes(ringed), performance.now())
+    );
+    this.#battlesOver(
+      this.#battles.endWhere(({ attacker }) => attacker === ringed)
     );
     this.#draw();
   }
@@ -862,6 +1150,7 @@ export class MapView3D implements MapRenderer {
     this.#awaiting.forEach(({ squares, after }, unit) => {
       if (squares.some((key) => (released.get(key) ?? 0) > after)) {
         this.#awaiting.delete(unit);
+        this.#gone.delete(unit);
       }
     });
 
@@ -1556,9 +1845,17 @@ export class MapView3D implements MapRenderer {
   #mark(x: number, y: number): void {
     const key = `${x},${y}`,
       tile = this.world.get(x, y),
-      // Units walking here, or waiting for their patch, are drawn walking, not here, until they're there: marked again
-      //  then.
-      walking = tile.units.filter(({ id }) => this.#leftOff(id));
+      // Attacked, with the blow still to fall: shown as it was before the battle.
+      attacked = this.#battles.awaitingBlow({ x, y }),
+      units =
+        attacked === null
+          ? tile.units
+          : this.#before.get(attacked.id)?.units ?? tile.units,
+      // Units walking here, or waiting for their patch, or attacking from here, are drawn walking or fighting, not
+      //  here, until they're there or back: marked again then. Those fallen are only left off.
+      walking = tile.units.filter(
+        ({ id }) => this.#leftOff(id) && !this.#gone.has(id)
+      );
 
     // Each drawn walking as the patch has it now, hurt in a battle say.
     walking.forEach((unit) => {
@@ -1570,11 +1867,11 @@ export class MapView3D implements MapRenderer {
     });
 
     const marker = markerFor(
-      walking.length === 0
+      attacked === null && !units.some(({ id }) => this.#leftOff(id))
         ? tile
         : {
             city: tile.city,
-            units: tile.units.filter(({ id }) => !this.#leftOff(id)),
+            units: units.filter(({ id }) => !this.#leftOff(id)),
           },
       this.#ringed,
       this.#unitsShown,
@@ -1720,6 +2017,7 @@ export class MapView3D implements MapRenderer {
 
     this.#takeTiles();
     this.#placeWalkers(started);
+    this.#placeBattles(started);
 
     // Centred elsewhere since: the chunks nearest the new centre are built first.
     if (`${u},${v}` !== this.#focused) {
@@ -1743,6 +2041,7 @@ export class MapView3D implements MapRenderer {
       this.#land.pending() > 0 ||
       this.#land.overlaysPending() > 0 ||
       this.#walks.size() > 0 ||
+      this.#battles.size() > 0 ||
       moving ||
       rising
     ) {

@@ -1,0 +1,310 @@
+// How battles play out on the 3D map (docs/3d-renderer.md §6.4, §8.2, `battles.ts`), by the clock:
+//  - the attacker gathers pace to the edge between the squares, where the blow falls; won, it goes back to where it
+//    stood, and the loser fades where it stood; lost, it fades at the edge;
+//  - each blow is told once, and each battle's end once, the fighters drawn till then;
+//  - battles sharing a unit or a square wait for the one before to be over; others are fought at once;
+//  - the square attacked awaits the first blow still to fall there;
+//  - battles ended at once have their blows told, those not told already, and are over.
+
+import Battles, {
+  BATTLE_PACE,
+  BattleOf,
+  BattlePace,
+  battleAt,
+  battleEnds,
+  blowAt,
+  quickerBattle,
+} from '@civ-clone/ui-map-3d/battles';
+
+const failures: string[] = [];
+let checks = 0;
+
+const expect = (description: string, actual: unknown, expected: unknown) => {
+  checks++;
+
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    failures.push(
+      `${description}\n    expected: ${JSON.stringify(
+        expected
+      )}\n    actual:   ${JSON.stringify(actual)}`
+    );
+  }
+};
+
+const round = (value: number, places = 3): number =>
+  Math.round(value * 10 ** places) / 10 ** places;
+
+const pace: BattlePace = { reach: 200, back: 300, fade: 600 };
+
+// A battle from the square (0, 0) to (1, 0), its attacker standing at (0, 0) a little raised, as in front of a city.
+const battleOf = (
+  attacker: string,
+  defender: string,
+  won: boolean,
+  from: [number, number] = [0, 0],
+  to: [number, number] = [1, 0]
+): BattleOf => ({
+  attacker,
+  defender,
+  attackerSquare: { x: from[0], y: from[1] },
+  defenderSquare: { x: to[0], y: to[1] },
+  won,
+  from: { at: [from[0], from[1]], lift: 0.1 },
+  edge: [
+    from[0] + (to[0] - from[0]) * 0.45,
+    from[1] + (to[1] - from[1]) * 0.45,
+  ],
+  fallsAt: { at: [to[0], to[1]], lift: 0 },
+  facing: Math.PI / 2,
+  defenderFacing: -Math.PI / 2,
+});
+
+{
+  const battles = new Battles(),
+    won = battles.add(battleOf('a', 'd', true), 1000, pace),
+    // How far it's reached, how solid it and the loser are, at each time.
+    sample = (at: number) => {
+      const { reach, attacker, fallen } = battleAt(won, at);
+
+      return [round(reach), round(attacker), round(fallen)];
+    };
+
+  expect(
+    'won: it gathers pace to the edge, the blow falls a reach in, then it goes back while the loser fades',
+    [
+      blowAt(won),
+      battleEnds(won),
+      sample(1000),
+      sample(1100),
+      sample(1200),
+      sample(1350),
+      sample(1500),
+      sample(1500 + 300 - 1),
+      sample(1800),
+    ],
+    [
+      1200,
+      1800,
+      [0, 1, 1],
+      // Slower to start than at the blow: a quarter of the way at half the time.
+      [0.25, 1, 1],
+      [1, 1, 1],
+      [0.5, 1, 0.75],
+      [0, 1, 0.5],
+      [0, 1, 0.002],
+      [0, 1, 0],
+    ]
+  );
+
+  const lost = battles.add(battleOf('b', 'e', false, [2, 2], [3, 2]), 1000, {
+    ...pace,
+  });
+
+  expect(
+    'lost: the blow falls as it would, and the attacker fades at the edge, no loser to fade where it stood',
+    [
+      battleEnds(lost),
+      battleAt(lost, 1200),
+      battleAt(lost, 1500),
+      battleAt(lost, 1800),
+    ],
+    [
+      1800,
+      { reach: 1, attacker: 1, fallen: 0 },
+      { reach: 1, attacker: 0.5, fallen: 0 },
+      { reach: 1, attacker: 0, fallen: 0 },
+    ]
+  );
+}
+
+{
+  // What's drawn, frame by frame: the attacker, from where it stands to the edge, coming down off what it stood on; the
+  //  loser from the blow, fading where it stood; each blow told once, and each end once.
+  const battles = new Battles(),
+    battle = battles.add(battleOf('a', 'd', true), 0, pace),
+    drawn = (now: number) => {
+      const { going, struck, ended } = battles.at(now);
+
+      return {
+        going: going.map(({ id, unit, fallen, at, lift, facing, opacity }) => [
+          id,
+          unit,
+          fallen,
+          at.map((n) => round(n)),
+          round(lift),
+          round(facing),
+          round(opacity),
+        ]),
+        struck: struck.map(({ id }) => id),
+        ended: ended.map(({ id }) => id),
+      };
+    };
+
+  expect(
+    'the attacker drawn from where it stands to the edge, the loser where it stood from the blow; each blow and end told once',
+    [
+      [
+        battle.id,
+        battles.size(),
+        battles.attacking('a'),
+        battles.attacking('d'),
+      ],
+      [battles.fighting('a'), battles.fighting('d'), battles.fighting('x')],
+      drawn(0),
+      drawn(200),
+      drawn(500),
+      drawn(800),
+      drawn(900),
+      battles.size(),
+      battles.attacking('a'),
+    ],
+    [
+      ['battle-1', 1, true, false],
+      [true, true, false],
+      {
+        going: [['battle-1', 'a', false, [0, 0], 0.1, 1.571, 1]],
+        struck: [],
+        ended: [],
+      },
+      {
+        going: [
+          ['battle-1', 'a', false, [0.45, 0], 0, 1.571, 1],
+          ['battle-1-fallen', 'd', true, [1, 0], 0, -1.571, 1],
+        ],
+        struck: ['battle-1'],
+        ended: [],
+      },
+      {
+        going: [
+          ['battle-1', 'a', false, [0, 0], 0.1, 1.571, 1],
+          ['battle-1-fallen', 'd', true, [1, 0], 0, -1.571, 0.5],
+        ],
+        struck: [],
+        ended: [],
+      },
+      { going: [], struck: [], ended: ['battle-1'] },
+      { going: [], struck: [], ended: [] },
+      0,
+      false,
+    ]
+  );
+
+  // Gone too far at once, as in a tab out of sight: its blow and its end told together, nothing drawn.
+  battles.add(battleOf('a', 'd', false), 1000, pace);
+
+  expect(
+    'a battle long over by the next frame has its blow and its end told together, nothing drawn',
+    drawn(5000),
+    { going: [], struck: ['battle-2'], ended: ['battle-2'] }
+  );
+}
+
+{
+  // Battles sharing a unit or a square wait for the one before; the square attacked awaits the first blow still to fall
+  //  there.
+  const battles = new Battles(),
+    first = battles.add(battleOf('a', 'd', false, [0, 0], [1, 0]), 0, pace),
+    // Another attacker, at the same square.
+    second = battles.add(battleOf('b', 'd', true, [2, 0], [1, 0]), 10, pace),
+    // The first's attacker again, at another square: after the first, sharing nothing with the second.
+    third = battles.add(battleOf('a', 'e', true, [0, 0], [0, 1]), 20, pace),
+    // Nothing shared: at once.
+    apart = battles.add(battleOf('c', 'f', true, [3, 3], [2, 3]), 30, pace);
+
+  expect(
+    'a battle sharing a unit or a square starts once the one before is over; one sharing nothing, at once',
+    [first.start, second.start, third.start, apart.start],
+    [0, battleEnds(first), battleEnds(first), 30]
+  );
+
+  const awaiting = (now: number) => {
+    battles.at(now);
+
+    return battles.awaitingBlow({ x: 1, y: 0 })?.id ?? null;
+  };
+
+  expect(
+    'the square attacked awaits the first blow still to fall there, then the next, then none',
+    [
+      awaiting(0),
+      awaiting(blowAt(first)),
+      awaiting(blowAt(second)),
+      battles.awaitingBlow({ x: 3, y: 3 }),
+    ],
+    [first.id, second.id, null, null]
+  );
+
+  // A second's before its start: its attacker stands where it is, solid.
+  const waiting = new Battles();
+
+  waiting.add(battleOf('a', 'd', true), 0, pace);
+  waiting.add(battleOf('b', 'd', true, [2, 0], [1, 0]), 0, pace);
+
+  const { going } = waiting.at(100);
+
+  expect(
+    'one waiting for its turn is drawn standing where it is',
+    going.map(({ unit, at, opacity }) => [
+      unit,
+      at.map((n) => round(n)),
+      opacity,
+    ]),
+    [
+      ['a', [0.113, 0], 1],
+      ['b', [2, 0], 1],
+    ]
+  );
+}
+
+{
+  // Ended at once: the blows not yet told are told, and the battles are over; the others go on.
+  const battles = new Battles(),
+    struckAlready = battles.add(battleOf('a', 'd', true), 0, pace),
+    another = battles.add(battleOf('b', 'e', true, [2, 2], [3, 2]), 0, pace),
+    left = battles.add(battleOf('c', 'f', true, [0, 3], [1, 3]), 0, pace);
+
+  battles.at(250);
+  battles.add(battleOf('g', 'h', true, [3, 0], [3, 1]), 240, pace);
+
+  const ended = battles.endWhere(({ attacker }) =>
+    ['a', 'g'].includes(attacker)
+  );
+
+  expect(
+    'ending the battles picked at once tells the blows not told already, and those battles are over; the rest go on',
+    [
+      ended.struck.map(({ attacker }) => attacker),
+      ended.ended.map(({ attacker }) => attacker),
+      battles.size(),
+      battles.attacking('a'),
+      battles.attacking('b'),
+      [struckAlready.id, another.id, left.id],
+    ],
+    [['g'], ['a', 'g'], 2, false, true, ['battle-1', 'battle-2', 'battle-3']]
+  );
+
+  const all = battles.endAll();
+
+  expect(
+    'ending them all at once ends the rest, their blows told already not told again',
+    [all.struck.length, all.ended.length, battles.size()],
+    [0, 2, 0]
+  );
+}
+
+expect(
+  'a battle twice as quick takes half as long; the blow falls a fifth of a second in',
+  [quickerBattle(BATTLE_PACE), BATTLE_PACE.reach],
+  [{ reach: 100, back: 150, fade: 300 }, 200]
+);
+
+if (failures.length > 0) {
+  process.stderr.write(
+    `FAIL battles: ${
+      failures.length
+    } of ${checks} checks failed\n  ${failures.join('\n  ')}\n`
+  );
+  process.exit(1);
+}
+
+process.stdout.write(`PASS battles (${checks} checks)\n`);

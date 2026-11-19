@@ -201,6 +201,8 @@ const staged: string[] = [],
   walkers = new Map<string, TileMarker>(),
   walkersSet: [string, TileMarker | null][] = [],
   walkersPlaced = new Map<string, number[][]>(),
+  // How solid each walker was last drawn, by its id, from 1 down to 0, once it's been faded.
+  walkersFaded = new Map<string, number>(),
   // What's marked on each square, by `x,y`, and where it stands.
   markers = new Map<string, TileMarker>(),
   markedAt = new Map<string, readonly [number, number, number]>(),
@@ -228,6 +230,7 @@ const staged: string[] = [],
     },
     setWalker: (id, marker) => {
       walkersSet.push([id, marker]);
+      walkersFaded.delete(id);
 
       if (marker === null) {
         walkers.delete(id);
@@ -242,6 +245,11 @@ const staged: string[] = [],
         ...(walkersPlaced.get(id) ?? []),
         [...at, facing],
       ]),
+    fadeWalker: (id, opacity) => {
+      if (opacity < 1 || walkersFaded.has(id)) {
+        walkersFaded.set(id, opacity);
+      }
+    },
     setYields: (mesh) => void yieldsSet.push(mesh),
     view: (orbit, height, period) => {
       lookedAt.splice(0, 3, orbit.focus[0], orbit.focus[1], height);
@@ -3187,6 +3195,459 @@ expect(
       [0, ['Unit-A', 1], ['Unit-A', 1], 0],
       [['Unit-R', 1], { ids: [], units: [] }],
       [null, 1, ['Unit-R', 1], true],
+    ]
+  );
+
+  // A battle (§6.4, `battles.ts`): the attacker lunges to the edge between the squares and goes back, or fades away
+  //  there if it lost; the loser fades away where it stood. The square attacked shows what was on it till the blow,
+  //  though the battle's patch has come; the attacker's off its square till it's back.
+  const fought = (
+      attacker: Tile['units'][number],
+      from: [number, number],
+      defender: Tile['units'][number],
+      to: [number, number],
+      winner: 'attacker' | 'defender',
+      players: [string, string] = ['Player-1', 'Player-2']
+    ) =>
+      glider.mapEvent({
+        kind: 'battle',
+        attacker: {
+          id: attacker.id,
+          type: 'Phalanx',
+          player: players[0],
+          tile: { x: from[0], y: from[1] },
+        },
+        defender: {
+          id: defender.id,
+          type: 'Phalanx',
+          player: players[1],
+          tile: { x: to[0], y: to[1] },
+        },
+        winner,
+      }),
+    // What's drawn of each battle under way: its walkers' kinds, the unit on top of each and the stack's size, and how
+    //  solid each is.
+    kind = (id: string) => id.replace(/-\d+/, ''),
+    fighters = () =>
+      [...walkers.entries()].map(([id, marker]) => [
+        kind(id),
+        marker.unit?.id ?? null,
+        marker.unit?.count ?? null,
+        Math.round((walkersFaded.get(id) ?? 1) * 10) / 10,
+      ]),
+    // Whether the walker `id` was first put at the middle of the square (`x`, `y`).
+    setOffFrom = (id: string, x: number, y: number) =>
+      (walkersPlaced.get(id)?.[0] ?? [])
+        .slice(0, 3)
+        .every((n, at) => Math.abs(n - groundAt(x, y)[at]!) < 0.05),
+    rivalMate = unitOf('Unit-T', 0, 'Player-2');
+
+  glider.setActiveUnit(null);
+  glider.portal.setCenter(1, 1);
+  runFrames();
+  repatched([1, 1, [walker]], [2, 1, [rival, rivalMate]]);
+  walkersSet.length = 0;
+  walkersPlaced.clear();
+
+  // Won: the stack attacked dies with its defender, as Civ1 has it.
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+
+  const wonAtOnce = [unitOn(1, 1), unitOn(2, 1)];
+
+  patch([1, 1, [walker]], [2, 1, []]);
+  runFrames(1);
+
+  const beforeBlow = [unitOn(1, 1), unitOn(2, 1), fighters()];
+
+  // A fifth of a second in, the blow.
+  runFrames(12);
+
+  const atBlow = [unitOn(2, 1), fighters()];
+
+  runFrames(10);
+
+  const fading = [unitOn(2, 1), fighters()];
+
+  runFrames();
+
+  const [lunge] = placedSince(),
+    // How far along the way to the square attacked the attacker is, from its square's middle.
+    [startU, , startV] = groundAt(1, 1),
+    [toU, , toV] = groundAt(2, 1),
+    along = (point: number[]) =>
+      Math.round(
+        (((point[0]! - startU!) * (toU! - startU!) +
+          (point[2]! - startV!) * (toV! - startV!)) /
+          ((toU! - startU!) ** 2 + (toV! - startV!) ** 2)) *
+          100
+      ) / 100;
+
+  expect(
+    'won: the attacker’s off its square at once, lunging to the edge and back, facing the square attacked; that square shows its stack till the blow, the patch notwithstanding; then what fell fades where it stood, the stack’s size with it',
+    [
+      wonAtOnce,
+      beforeBlow,
+      atBlow,
+      fading,
+      [unitOn(1, 1), unitOn(2, 1), walkers.size],
+      [
+        along(lunge![0]!),
+        Math.max(...lunge!.map(along)),
+        along(lunge!.at(-1)!),
+      ],
+      lunge!.every((point) => point[3] === 1.57),
+    ],
+    [
+      [null, ['Unit-R', 2]],
+      [null, ['Unit-R', 2], [['battle', 'Unit-A', 1, 1]]],
+      [
+        null,
+        [
+          ['battle', 'Unit-A', 1, 1],
+          ['battle-fallen', 'Unit-R', 2, 1],
+        ],
+      ],
+      [
+        null,
+        [
+          ['battle', 'Unit-A', 1, 1],
+          ['battle-fallen', 'Unit-R', 2, 0.7],
+        ],
+      ],
+      [['Unit-A', 1], null, 0],
+      [0, 0.45, 0],
+      true,
+    ]
+  );
+
+  // Lost: the attacker fades away at the edge, and never comes back; the defender stands.
+  repatched([1, 1, [walker]], [2, 1, [rival]]);
+  walkersSet.length = 0;
+  walkersPlaced.clear();
+  fought(walker, [1, 1], rival, [2, 1], 'defender');
+  patch([1, 1, []], [2, 1, [rival]]);
+  runFrames(13);
+
+  const lostAtBlow = [unitOn(1, 1), unitOn(2, 1), fighters()];
+
+  runFrames(18);
+
+  const lostFading = fighters();
+
+  runFrames();
+
+  expect(
+    'lost: the attacker fades away at the edge and isn’t back; the defender stands where it was',
+    [lostAtBlow, lostFading, [unitOn(1, 1), unitOn(2, 1), walkers.size]],
+    [
+      [null, ['Unit-R', 1], [['battle', 'Unit-A', 1, 1]]],
+      [['battle', 'Unit-A', 1, 0.5]],
+      [null, ['Unit-R', 1], 0],
+    ]
+  );
+
+  // Moving at once chosen, or less motion asked for, or two other players' battle with their moves not shown, or one
+  //  off the screen: how it went, at once. Others' shown, it's fought.
+  const atOnceWhen = (
+    setUp: () => () => void,
+    players?: [string, string],
+    from: [number, number] = [1, 1],
+    to: [number, number] = [2, 1]
+  ) => {
+    repatched([...from, [walker]], [...to, [rival]]);
+    walkersSet.length = 0;
+
+    const undo = setUp();
+
+    fought(walker, from, rival, to, 'attacker', players);
+
+    // On its square as the battle comes, or off it, lunging.
+    const standing = unitOn(...from);
+
+    patch([...from, [walker]], [...to, []]);
+    runFrames(1);
+
+    const shown = [
+      standing,
+      drawnWalkers().ids.map(kind),
+      unitOn(...from),
+      unitOn(...to),
+    ];
+
+    undo();
+    runFrames();
+    repatched([...from, []]);
+
+    return shown;
+  };
+
+  const offAtOnce = atOnceWhen(() => {
+      optionsRegistry.set(MAP3D_WALKS_OPTION, 'off');
+
+      return () => optionsRegistry.set(MAP3D_WALKS_OPTION, 'normal');
+    }),
+    lessMotionBattle = atOnceWhen(() => {
+      Object.assign(window, {
+        matchMedia: (query: string) => ({ matches: query.includes('reduce') }),
+      });
+
+      return () => delete (window as { matchMedia?: unknown }).matchMedia;
+    }),
+    othersHidden = atOnceWhen(() => {
+      optionsRegistry.set(MAP3D_RIVALS_WALK_OPTION, false);
+
+      return () => optionsRegistry.set(MAP3D_RIVALS_WALK_OPTION, true);
+    }, ['Player-3', 'Player-2']),
+    othersShown = atOnceWhen(() => () => undefined, ['Player-3', 'Player-2']),
+    offTheScreen = atOnceWhen(
+      () => {
+        const lookedFrom = glider.orbit();
+
+        glider.setOrbit({
+          ...lookedFrom,
+          focus: middleOf(tiles[0] as Tile),
+          distance: 0,
+        });
+        runFrames();
+
+        return () => glider.setOrbit(lookedFrom);
+      },
+      undefined,
+      [2, 2],
+      [3, 2]
+    );
+
+  runFrames();
+
+  expect(
+    'moving at once, less motion, two other players’ battle with their moves not shown, or one off the screen: how it went at once; others’ shown, it’s fought',
+    [offAtOnce, lessMotionBattle, othersHidden, othersShown, offTheScreen],
+    [
+      [['Unit-A', 1], [], ['Unit-A', 1], null],
+      [['Unit-A', 1], [], ['Unit-A', 1], null],
+      [['Unit-A', 1], [], ['Unit-A', 1], null],
+      [null, ['battle'], null, ['Unit-R', 1]],
+      [['Unit-A', 1], [], ['Unit-A', 1], null],
+    ]
+  );
+
+  // Chosen mid-battle, moving at once ends it on the next frame, what fell gone with it.
+  repatched([1, 1, [walker]], [2, 1, [rival]]);
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  patch([1, 1, [walker]], [2, 1, []]);
+  runFrames(14);
+  optionsRegistry.set(MAP3D_WALKS_OPTION, 'off');
+  runFrames(1);
+
+  const offMidBattle = [walkers.size, unitOn(1, 1), unitOn(2, 1)];
+
+  optionsRegistry.set(MAP3D_WALKS_OPTION, 'normal');
+  runFrames();
+  repatched([1, 1, []]);
+
+  // The attacker walking as it attacks: its walk's over at once, and it lunges from its square. A step mid-battle ends
+  //  the battle at once, and it walks on from its square.
+  repatched([0, 1, [walker]], [2, 1, [rival]]);
+  walkersSet.length = 0;
+  walkersPlaced.clear();
+  stepped(walker, [0, 1], [1, 1]);
+  patch([0, 1, []], [1, 1, [walker]]);
+  runFrames(3);
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+
+  const walkedThenFought: unknown[] = [walkers.size, unitOn(1, 1)];
+
+  patch([1, 1, [walker]], [2, 1, []]);
+  runFrames(1);
+
+  const lunging = [...walkers.keys()];
+
+  walkedThenFought.push(lunging.map(kind), setOffFrom(lunging[0]!, 1, 1));
+  runFrames(3);
+  walkersPlaced.clear();
+  stepped(walker, [1, 1], [2, 1]);
+
+  const steppedMidBattle: unknown[] = [walkers.size, unitOn(2, 1)];
+
+  patch([1, 1, []], [2, 1, [walker]]);
+  runFrames(1);
+
+  const walkingOn = [...walkers.keys()];
+
+  steppedMidBattle.push(walkingOn.map(kind), setOffFrom(walkingOn[0]!, 1, 1));
+  runFrames();
+  steppedMidBattle.push(unitOn(2, 1), walkers.size);
+  repatched([2, 1, []]);
+  walkersSet.length = 0;
+  walkersPlaced.clear();
+
+  expect(
+    'moving at once chosen mid-battle ends it on the next frame; walking as it attacks, its walk’s over and it lunges from its square; a step mid-battle ends the battle, and it walks from its square',
+    [offMidBattle, walkedThenFought, steppedMidBattle],
+    [
+      [0, ['Unit-A', 1], null],
+      [0, null, ['battle'], true],
+      [0, null, ['walk'], true, ['Unit-A', 1], 0],
+    ]
+  );
+
+  // The active unit attacks with its last move, and the game chooses the next: the ring and the camera wait till the
+  //  battle's over. A key while they wait ends it at once, and they go to the next.
+  const attackedLast = () => {
+    repatched([1, 1, [walker]], [2, 1, [rival]], [3, 3, [nextUnit]]);
+    glider.setActiveUnit(placed(walker, 1, 1));
+    glider.portal.setCenter(1, 1);
+    runFrames();
+    fought(walker, [1, 1], rival, [2, 1], 'attacker');
+    patch([1, 1, [walker]], [2, 1, []]);
+    glider.setActiveUnit(placed(nextUnit, 3, 3));
+    glider.portal.setCenter(3, 3);
+    runFrames(2);
+  };
+
+  repatched([0, 1, [rivalMate]]);
+  attackedLast();
+
+  const heldForBattle: unknown[] = [
+    walkerRinged(),
+    ringOn(3, 3),
+    focusOn(1, 1),
+  ];
+
+  // Another's walk over meanwhile, a rival's: the ring and the camera still wait for the battle.
+  stepped(rivalMate, [0, 1], [0, 2], 'Player-2');
+  patch([0, 1, []], [0, 2, [rivalMate]]);
+  runFrames(12);
+  heldForBattle.push(unitOn(0, 2), walkerRinged(), ringOn(3, 3), focusOn(1, 1));
+  runFrames();
+  repatched([0, 2, []]);
+
+  const afterBattle = [unitOn(1, 1), ringOn(1, 1), ringOn(3, 3), focusOn(3, 3)];
+
+  attackedLast();
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'w' }));
+
+  const keyedBattle = [unitOn(1, 1), unitOn(2, 1), walkers.size, ringOn(3, 3)];
+
+  runFrames();
+  keyedBattle.push(focusOn(3, 3));
+
+  // Lost with its last move: the ring and the camera wait till it's faded away, then go to the next.
+  repatched([1, 1, [walker]], [2, 1, [rival]], [3, 3, [nextUnit]]);
+  glider.setActiveUnit(placed(walker, 1, 1));
+  glider.portal.setCenter(1, 1);
+  runFrames();
+  fought(walker, [1, 1], rival, [2, 1], 'defender');
+  patch([1, 1, []], [2, 1, [rival]]);
+  glider.setActiveUnit(placed(nextUnit, 3, 3));
+  glider.portal.setCenter(3, 3);
+  runFrames(2);
+
+  const diedRinged: unknown[] = [walkerRinged(), ringOn(3, 3), focusOn(1, 1)];
+
+  runFrames();
+  diedRinged.push(unitOn(1, 1), ringOn(3, 3), focusOn(3, 3));
+  glider.setActiveUnit(null);
+  repatched([1, 1, []], [2, 1, []], [3, 3, []]);
+
+  expect(
+    'the active unit attacking with its last move holds the ring and the camera till the battle’s over, then they go to the next; a key meanwhile ends it at once; lost, they wait till it’s gone',
+    [heldForBattle, afterBattle, keyedBattle, diedRinged],
+    [
+      [true, false, true, ['Unit-T', 1], true, false, true],
+      [['Unit-A', 1], false, true, true],
+      [['Unit-A', 1], null, 0, true, true],
+      [true, false, true, null, true, true],
+    ]
+  );
+
+  // The battle's patch held, as meeting a leader holds it: once the battle's over, the winner stands where it stood till
+  //  it comes, and the loser's left off.
+  repatched([1, 1, [walker]], [2, 1, [rival]]);
+  walkersSet.length = 0;
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  runFrames();
+
+  const heldPatch: unknown[] = [
+    unitOn(1, 1),
+    unitOn(2, 1),
+    [...walkers.keys()].map(kind),
+  ];
+
+  repatched([1, 1, [walker]], [2, 1, []]);
+  heldPatch.push(unitOn(1, 1), walkers.size);
+
+  // Lost, its patch held: once it's faded away, it's left off its square till the patch comes.
+  repatched([1, 1, [walker]], [2, 1, [rival]]);
+  fought(walker, [1, 1], rival, [2, 1], 'defender');
+  runFrames();
+  heldPatch.push(unitOn(1, 1), unitOn(2, 1), walkers.size);
+  repatched([1, 1, []], [2, 1, []]);
+
+  // Two attacks on one square at once, two units holding it, as in a city, where one falls at a time: the second waits
+  //  for the first to be over, and the square shows what was on it before each till that one's blow, what fell in each
+  //  fading alone.
+  repatched([1, 1, [walker]], [3, 1, [guard]], [2, 1, [rival, rivalMate]]);
+  walkersSet.length = 0;
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  patch([1, 1, [walker]], [2, 1, [rivalMate]]);
+  fought(guard, [3, 1], rivalMate, [2, 1], 'attacker');
+  patch([3, 1, [guard]], [2, 1, []]);
+  runFrames(13);
+
+  const firstBlow = [unitOn(2, 1), fighters()];
+
+  // The first over at 800 ms; the second's blow 200 ms after.
+  runFrames(50);
+
+  const secondBlow = [unitOn(2, 1), fighters()];
+
+  runFrames();
+
+  const twoOver = [unitOn(1, 1), unitOn(2, 1), unitOn(3, 1), walkers.size];
+
+  repatched([3, 1, []]);
+
+  // In a tab out of sight, with no frames: the first frame drawn again ends the battle, nothing of it drawn.
+  repatched([1, 1, [walker]], [2, 1, [rival]]);
+  walkersSet.length = 0;
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  patch([1, 1, [walker]], [2, 1, []]);
+  now += 5000;
+  runFrames(1);
+
+  const outOfSight = [
+    unitOn(1, 1),
+    unitOn(2, 1),
+    drawnWalkers().ids,
+    walkers.size,
+  ];
+
+  runFrames();
+  repatched([1, 1, []]);
+
+  expect(
+    'its patch held, the winner stands where it stood once the battle’s over, and the loser’s left off, till it comes; two attacks on one square, the second after the first, the square as it was before each till its blow; with no frames, the first drawn again ends it',
+    [heldPatch, firstBlow, secondBlow, twoOver, outOfSight],
+    [
+      [null, null, ['battle'], ['Unit-A', 1], 0, null, ['Unit-R', 1], 0],
+      [
+        ['Unit-T', 1],
+        [
+          ['battle', 'Unit-A', 1, 1],
+          ['battle', 'Unit-B', 1, 1],
+          ['battle-fallen', 'Unit-R', 1, 1],
+        ],
+      ],
+      [
+        null,
+        [
+          ['battle', 'Unit-B', 1, 1],
+          ['battle-fallen', 'Unit-T', 1, 1],
+        ],
+      ],
+      [['Unit-A', 1], null, ['Unit-B', 1], 0],
+      [['Unit-A', 1], null, [], 0],
     ]
   );
 

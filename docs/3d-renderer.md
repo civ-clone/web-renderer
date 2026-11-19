@@ -925,9 +925,37 @@ mapEvent:
   - **Show other players' units moving:** off, their units are on their new squares at once, unless they're walking
     already.
   - Either chosen as walks go on: moving at once ends them all on the next frame, as less motion asked for does.
+- **Battles** (2.4, first part: `packages/map-3d/battles.ts`, `MapView3D`), by the clock, as walks are:
+  - **The fight:** the attacker sets off from where it stands towards the square it attacks, gathering pace, to the
+    edge between the two (`REACH`, 0.45 of the way between their middles), facing it: that's the blow, a fifth of a
+    second in. Won, it goes back to where it stood in under a third of a second; lost, it fades away at the edge. The
+    loser that stood fades away where it stood over 0.6 s, from the blow, as what was drawn there: the stack's size with
+    it, as a stack dies with its defender outside a city or fortress in Civ1; what's left there, as in a city, is shown
+    at once. The defender turns to face its attacker as the battle comes, as it did before. Walking quickly halves it all.
+  - **Left off, as walks are:** the attacker's left off its square, drawn on its own (a walker with a battle's id), till
+    it's back. The square attacked isn't held: it's drawn with what was on it as the battle came, till the blow, the
+    battle's patch notwithstanding, and then as the patch has it.
+  - **Waiting for its patch:** the battle's patch, both squares, comes just after the event, as a step's does. If it's
+    held, as meeting a leader holds patches, the winner stands where it stood once the battle's over, and the loser's
+    left off, till it comes.
+  - **One after another:** a battle sharing a unit or a square with one that isn't over starts once it is, as a rival's
+    attacks on one square come all at once; the square's shown as it was before each till that one's blow, and what
+    fell in each fades alone. Others are fought at the same time.
+  - **Ended at once:** the attacker or the defender stepping (a unit attacking, then moving in), a key or a press while
+    the ring waits for the battle, moving at once or less motion chosen mid-battle: the blow falls, and it's over, with
+    nothing left to fade. Walking as a battle comes, either's walk's over at once, and it's fought from their squares.
+  - **The game waits:** the active unit attacking with its last move holds the ring and the camera till its battle's
+    over, as its walk does; lost, till it's faded away.
+  - **Not fought:** as walks aren't walked: with no frames, less motion asked for, or moving at once; two other players'
+    battle with their moves not shown; one with both squares off the screen; one whose attacker or defender the page
+    doesn't have where they fought, or that waits for a patch. How it went is shown at once.
+  - **Fading:** a marker fading has materials of its own, made from the kit's, so no other unit in its colours fades
+    with it; under half solid, it casts no shadow.
 - **Still to come:**
   - §6.4's paths: along roads, ships' wakes and aircraft's arcs (a walk goes straight between squares' middles now);
-  - battles (2.4).
+  - battles' rest (2.4): a ranged unit firing, ships and aircraft as they fight, Civ2's rounds once they're sent (§8.1),
+    a flash under reduced motion, a unit gone with its battle won (a missile) fading rather than going at the end, and
+    units arriving or leaving with no move fading in and out.
 
 ---
 
