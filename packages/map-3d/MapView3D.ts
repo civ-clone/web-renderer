@@ -145,9 +145,14 @@ export class MapView3D implements MapRenderer {
   //  stands where it ended, its units still left off their squares, until it comes. By its id, with the units it has.
   #unpatched = new Map<string, Walker>();
   #unpatchedUnits = new Set<string>();
-  // The squares of each walking unit's last step (`x,y`), until a patch for either of them has come: the patch for that
-  //  step, as the engine sends both squares of every move.
-  #awaiting = new Map<string, [string, string]>();
+  // The squares of each walking unit's last step (`x,y`), and the last tile queued before it, until a tile for either of
+  //  them queued since has come: that step's patch, as the worker sends both squares of every move the player's view
+  //  knows, just after the step. Tiles queued before it, for the step before, say, are not.
+  #awaiting = new Map<string, { squares: [string, string]; after: number }>();
+  // How many tiles have been queued, and the count at each square's latest: queued, then released, until it's taken.
+  #queued = 0;
+  #queuedAt = new Map<string, number>();
+  #releasedAt = new Map<string, number>();
   #transport: MapView3DDeps['transport'];
   #picking: Picking | null = null;
   // The square the mouse rests on, waiting to show its tooltip or showing it, and whose tooltips they'd be.
@@ -504,7 +509,10 @@ export class MapView3D implements MapRenderer {
     }
 
     this.#walkingUnits.set(unit.id, seen);
-    this.#awaiting.set(unit.id, [`${from.x},${from.y}`, `${to.x},${to.y}`]);
+    this.#awaiting.set(unit.id, {
+      squares: [`${from.x},${from.y}`, `${to.x},${to.y}`],
+      after: this.#queued,
+    });
     this.#stepsOn(unit.id);
     this.#walks.step(
       unit.id,
@@ -650,7 +658,7 @@ export class MapView3D implements MapRenderer {
     );
   }
 
-  // Whether a walker's units are waiting for the patch for their last step, as when meeting a leader holds it.
+  // Whether any of a walker's units is waiting for the patch for its last step, as when meeting a leader holds it.
   #awaitsPatch({ units }: Walker): boolean {
     return units.some((unit) => this.#awaiting.has(unit));
   }
@@ -680,7 +688,6 @@ export class MapView3D implements MapRenderer {
         this.#heldFor.get(unit)?.forEach((key) => squares.add(key));
         this.#heldFor.delete(unit);
         this.#walkingUnits.delete(unit);
-        this.#awaiting.delete(unit);
       });
     });
 
@@ -691,11 +698,11 @@ export class MapView3D implements MapRenderer {
     });
   }
 
-  // Tiles have come, the squares `released`: the units whose last step's patch it is have it, and the walks that were
-  //  waiting for it are over, wherever it's put their units.
-  #patched(released: ReadonlySet<string>): void {
-    this.#awaiting.forEach(([from, to], unit) => {
-      if (released.has(from) || released.has(to)) {
+  // Tiles have come, the squares `released` and when each was queued: the units whose last step's patch it is have it,
+  //  and the walks that were waiting for it are over, wherever it's put their units.
+  #patched(released: ReadonlyMap<string, number>): void {
+    this.#awaiting.forEach(({ squares, after }, unit) => {
+      if (squares.some((key) => (released.get(key) ?? 0) > after)) {
         this.#awaiting.delete(unit);
       }
     });
@@ -792,7 +799,10 @@ export class MapView3D implements MapRenderer {
   }
 
   queueTile(tile: Tile): void {
-    this.#incomingTiles.set(`${tile.x},${tile.y}`, tile);
+    const key = `${tile.x},${tile.y}`;
+
+    this.#incomingTiles.set(key, tile);
+    this.#queuedAt.set(key, ++this.#queued);
   }
 
   /**
@@ -815,10 +825,12 @@ export class MapView3D implements MapRenderer {
 
   /** The world has the queued tiles now: they're taken on the next frame, if a flush doesn't take them first. */
   releaseTiles(): void {
-    this.#incomingTiles.forEach((tile, key) =>
-      this.#tilesToDraw.set(key, tile)
-    );
+    this.#incomingTiles.forEach((tile, key) => {
+      this.#tilesToDraw.set(key, tile);
+      this.#releasedAt.set(key, this.#queuedAt.get(key) ?? 0);
+    });
     this.#incomingTiles.clear();
+    this.#queuedAt.clear();
 
     if (this.#tilesToDraw.size > 0) {
       this.#draw();
@@ -1302,7 +1314,13 @@ export class MapView3D implements MapRenderer {
     const reshaped = this.#besides(
         this.#land.changed(squares, ...this.#focus(), replaced)
       ),
-      released = new Set(squares.map(([x, y]) => `${x},${y}`));
+      released = new Set(squares.map(([x, y]) => `${x},${y}`)),
+      // When each was queued, to tell a step's patch from those before it.
+      queuedAt = new Map(
+        [...released].map((key) => [key, this.#releasedAt.get(key) ?? 0])
+      );
+
+    this.#releasedAt.clear();
 
     squares.forEach(([x, y]) => this.#mark(x, y));
     // What stands on them, marked again on the land as it is now: only where something's marked, and not released. A
@@ -1343,7 +1361,7 @@ export class MapView3D implements MapRenderer {
 
     // Walks that were waiting for their patch, over if it's come.
     if (squares.length > 0) {
-      this.#patched(released);
+      this.#patched(queuedAt);
     }
   }
 

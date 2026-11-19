@@ -880,8 +880,10 @@ mapEvent:
   unit that joins a stack under a stronger one walks there and disappears into it.
 - **Waiting for its patch:** a walk over before the patch for its unit's last step has come, as when meeting a leader
   holds the patches until it's answered, stands where it ended, its unit still left off the squares, until it comes.
-  The engine sends both squares of every move, so a patch for either is that step's: the unit's then wherever it puts
-  it, sent home by the talks, say. A GoTo's steps' patches come together. It needs no frames meanwhile, and is drawn
+  The worker sends both squares of every move the player's view knows, just after the step, so the first tile for
+  either queued after the step is that step's patch, and the unit's then wherever it puts it, sent home by the talks,
+  say. One queued before it, for the step before, say, isn't. A held action's patches, a GoTo's steps', come together.
+  It needs no frames meanwhile, and is drawn
   again as its units are (hidden, ringed, their size). Stepping on meanwhile, the unit walks on from where it stands,
   where that move's walked at all.
 - **Pace, by the clock:**

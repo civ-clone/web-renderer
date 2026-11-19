@@ -2519,6 +2519,43 @@ expect(
     ]
   );
 
+  // A move typed ahead: the patch for the step before comes, not yet drawn, as the next step's event does, and that
+  //  step's patch is held. The walk waits for its own step's patch, not the one before it, which has a square in common.
+  //  And a held step whose patch touches only where it set off, as when the unit's lost there: over, the unit nowhere.
+  repatched([0, 2, [walker]], [1, 2, []], [2, 2, []]);
+  walkersSet.length = 0;
+  stepped(walker, [0, 2], [1, 2]);
+  patch([0, 2, []], [1, 2, [walker]]);
+  stepped(walker, [1, 2], [2, 2]);
+  runFrames();
+
+  const typedAhead: unknown[] = [
+    unitOn(0, 2),
+    unitOn(1, 2),
+    unitOn(2, 2),
+    walkers.size,
+  ];
+
+  patch([1, 2, []], [2, 2, [walker]]);
+  runFrames();
+  typedAhead.push(unitOn(1, 2), unitOn(2, 2), walkers.size);
+  repatched([2, 2, []], [0, 2, [walker]]);
+  walkersSet.length = 0;
+  stepped(walker, [0, 2], [1, 2]);
+  runFrames();
+  typedAhead.push(walkers.size);
+  patch([0, 2, []]);
+  runFrames();
+  typedAhead.push(unitOn(0, 2), unitOn(1, 2), walkers.size);
+  walkersSet.length = 0;
+  walkersPlaced.clear();
+
+  expect(
+    'a move typed ahead waits for its own step’s patch, not the one before it, then is on its square; a held step whose patch touches only where it set off ends, the unit nowhere',
+    typedAhead,
+    [null, null, null, 1, null, ['Unit-A', 1], 0, 1, null, null, 0]
+  );
+
   // Drawn walking as the unit's drawn standing: the active one with its ring, at the size the player chose.
   repatched([1, 2, []], [0, 3, [walker]]);
   glider.setActiveUnit({ ...walker, tile: tiles[3 * 4] } as unknown as Unit);
