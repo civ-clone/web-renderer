@@ -408,10 +408,15 @@ export class Landscape extends TerrainAbstract {
       this.drawFamily(terrain, matched, values, offsetX, offsetY);
     }
 
+    // Flavour is left off a square with a special or a hut, which are what a player looks for there.
     const flavour =
       joined &&
       terrain.flavour !== undefined &&
-      squareHash(tile.x, tile.y, 3) < terrain.flavour.chance
+      tile.goodyHut === null &&
+      (tile.terrain.features ?? []).every(({ _ }) =>
+        terrain.features?.includes(_)
+      ) &&
+      squareHash(...this.positionOf(tile), 3) < terrain.flavour.chance
         ? this.pictureOf(tile, name, terrain.flavour, 4, false)
         : 0;
 
@@ -425,6 +430,13 @@ export class Landscape extends TerrainAbstract {
         offsetY
       );
     }
+  }
+
+  /** Where `tile` is in the world, for picking its pictures: the world's position of a city map's copy of it. */
+  protected positionOf(tile: Tile): [number, number] {
+    const { x, y } = tile.worldPosition ?? tile;
+
+    return [x, y];
   }
 
   /**
@@ -446,7 +458,7 @@ export class Landscape extends TerrainAbstract {
     }
 
     const pick = Math.floor(
-      squareHash(tile.x, tile.y, seed) * (usual ? count + 1 : count)
+      squareHash(...this.positionOf(tile), seed) * (usual ? count + 1 : count)
     );
 
     return usual ? pick : pick + 1;

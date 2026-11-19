@@ -99,14 +99,15 @@ export interface SpriteFamily {
    */
   features?: string[];
   /**
-   * For the terrain family: other pictures of a terrain fully joined (every neighbour the family looks at is the same
-   *  terrain), so a stretch of it isn't one tile over and over. A square picks one of them, or the usual sprite, by a
+   * For the terrain family: other pictures of a terrain fully joined (every neighbour the family looks at joins it: the
+   *  same terrain, or one `matches` names), so a stretch of it isn't one tile over and over. A square picks one of them, or the usual sprite, by a
    *  stable hash of its position (`squareHash`).
    */
   variants?: TerrainPictures;
   /**
    * For the terrain family: small pictures drawn over a terrain fully joined, on about `chance` of such squares, one
-   *  of them picked by a stable hash of the square's position: flavour that only turns up in larger stretches.
+   *  of them picked by a stable hash of the square's position: flavour that only turns up in larger stretches. Never on a
+   *  square with a special or a hut, which are what a player looks for there.
    */
   flavour?: TerrainPictures & { chance: number };
   /** Where sprites smaller than a tile go in it, by engine name. */

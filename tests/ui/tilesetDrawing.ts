@@ -2784,6 +2784,70 @@ expect(
     ],
     [true, true, 3]
   );
+  // On a city's map a square is a copy at the small map's coordinates, carrying where it is in the world.
+  const copyOf = (x: number, y: number): string[] => {
+    const tile = world.get(x, y),
+      copy = { ...tile, x: 1, y: 1, worldPosition: { x, y } } as Tile,
+      copies = makeWorld(3, 3, {}),
+      sprites: string[] = [];
+
+    class Copy extends (Landscape as any) {
+      tileset(): TilesetDescriptor {
+        return varied;
+      }
+
+      protected drawImage(path: string): void {
+        sprites.push(path);
+      }
+
+      protected filterNeighbours(): string[] {
+        return ['n', 'e', 's', 'w'];
+      }
+    }
+
+    new (Copy as any)(
+      copies,
+      2,
+      { width: 16, height: 16 },
+      recordingCanvas(50, 50).canvas
+    ).drawTile(copy, 0, 0);
+
+    return sprites.filter((sprite) => /^land\//.test(sprite));
+  };
+
+  expect(
+    "a city map's copy of a square, at the small map's coordinates, is drawn as the square is on the world's map",
+    squares
+      .map(([x, y], index) => ({ x, y, index }))
+      .filter(({ x, y }) => !joinedToHills.includes(`${x},${y}`))
+      .every(
+        ({ x, y, index }) =>
+          JSON.stringify(copyOf(x, y)) === JSON.stringify(picked[index])
+      ),
+    true
+  );
+  {
+    const [{ at }] = flavoured,
+      [fx, fy] = at.split(',').map(Number) as [number, number],
+      sprites = (changes: TileChanges) =>
+        drawn(
+          Landscape,
+          varied,
+          makeWorld(12, 12, { '5,5': { terrain: 'Hills' }, [at]: changes }),
+          fx,
+          fy
+        ).filter((sprite) => /flavour-/.test(sprite));
+
+    expect(
+      'but a square with a special or a hut has no flavour, as those are what a player looks for there',
+      [
+        sprites({}).length,
+        sprites({ features: ['Shield'] }),
+        sprites({ goodyHut: true }),
+      ],
+      [1, [], []]
+    );
+  }
   expect(
     'and the same square is drawn the same way every time',
     squares.every(
