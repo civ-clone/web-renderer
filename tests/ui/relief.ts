@@ -532,16 +532,21 @@ ids.forEach((topologyId) => {
     topology.directions().forEach((direction) => {
       const [dx, dy] = topology.offset(direction, x0!, y0!),
         [farX, farY] = topology.offset(direction, x0! + dx, y0! + dy),
-        pair = (to: [number, number], ranges: boolean) =>
-          createRelief({
+        // The second mountain at `to`, as the world has it: round the period, as the source is read.
+        pair = (to: [number, number], ranges: boolean) => {
+          const toX = ((to[0] % width) + width) % width,
+            toY = ((to[1] % height) + height) % height;
+
+          return createRelief({
             layout,
             ranges,
             source: sourceFor(topology, (x, y) =>
-              (x === x0 && y === y0) || (x === to[0] && y === to[1])
+              (x === x0 && y === y0) || (x === toX && y === toY)
                 ? 'Mountains'
                 : 'Grassland'
             ),
-          }),
+          });
+        },
         a = peakAt(x0!, y0!),
         b = peakAt(x0! + dx, y0! + dy),
         joined = pair([x0! + dx, y0! + dy], true),
@@ -561,9 +566,15 @@ ids.forEach((topologyId) => {
         )
       );
 
-      // Two steps apart: along the line between them, the land as it is without ranges.
-      const far: [number, number] = [x0! + dx + farX, y0! + dy + farY],
-        c = peakAt(...far),
+      // Two steps apart: along the line between them, the land as it is without ranges. Off a world that doesn't wrap
+      //  over the poles, there's no square there.
+      const far: [number, number] = [x0! + dx + farX, y0! + dy + farY];
+
+      if (!topology.wrapsY() && (far[1] < 0 || far[1] >= height)) {
+        return;
+      }
+
+      const c = peakAt(...far),
         farJoined = pair(far, true),
         farApart = pair(far, false);
 
@@ -736,14 +747,31 @@ ids.forEach((topologyId) => {
   const read = (x: number, y: number): string =>
       now.get(`${x},${y}`) ?? ranged(x, y),
     changing = createRelief({ layout, source: sourceFor(topology, read) }),
-    returned: string[] = [];
+    returned: string[] = [],
+    expected: string[] = [];
 
   changes.forEach(([cx, cy, name]) => {
     const before = squares.map(([x, y]) =>
-      changing.height(...layout.centre(x, y))
-    );
+        changing.height(...layout.centre(x, y))
+      ),
+      wasMountain = read(cx, cy) === 'Mountains';
 
     now.set(`${cx},${cy}`, name);
+
+    // What it should give back: the square changed, and if it is or was a mountain, the mountains beside it now.
+    expected.push(
+      `${cx},${cy}: ${[
+        `${cx},${cy}`,
+        ...(wasMountain || name === 'Mountains'
+          ? neighboursOf(cx, cy)
+              .filter(([x, y]) => read(x, y) === 'Mountains')
+              .map((square) => square.join())
+          : []),
+      ]
+        .filter((square, at, all) => all.indexOf(square) === at)
+        .sort()
+        .join(' ')}`
+    );
 
     const reshaped = changing.refresh([[cx, cy]]),
       covered = new Set(
@@ -787,6 +815,12 @@ ids.forEach((topologyId) => {
     `${topologyId}: a square changed changes the land only on the squares refresh says and their neighbours, and refreshed, it's as if made afresh`,
     wrong.slice(0, 5),
     []
+  );
+
+  expect(
+    `${topologyId}: refresh says which squares’ land changed: the square changed, and if it is or was a mountain, the mountains beside it`,
+    returned,
+    expected
   );
 
   if (topologyId === 'square') {
