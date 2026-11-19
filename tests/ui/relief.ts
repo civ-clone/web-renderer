@@ -476,81 +476,101 @@ ids.forEach((topologyId) => {
 
       return [u + offU, v + offV];
     },
-    // The crest between two peaks: the highest point across the line between them, at its middle, as far either way
-    //  as the saddle can bend.
-    crest = (
+    // The saddle between two peaks: the lowest point of the crest from one to the other, the crest being the highest
+    //  point across the line between them, as far either way as the saddle can bend. As high as it stands over the
+    //  plain.
+    saddle = (
       relief: ReliefMap,
       [au, av]: [number, number],
       [bu, bv]: [number, number]
-    ): { height: number; lift: number } => {
-      const length = Math.hypot(bu - au, bv - av),
-        [mu, mv] = [(au + bu) / 2, (av + bv) / 2];
-      let best = { height: -Infinity, lift: -Infinity };
+    ): number => {
+      const length = Math.hypot(bu - au, bv - av);
+      let lowest = Infinity;
 
-      for (let off = -BEND - 0.05; off <= BEND + 0.05; off += 0.005) {
-        const u = mu - ((bv - av) / length) * off,
-          v = mv + ((bu - au) / length) * off,
-          height = relief.height(u, v);
+      for (let along = 0.1; along <= 0.9001; along += 0.05) {
+        const mu = au + (bu - au) * along,
+          mv = av + (bv - av) * along;
+        let top = -Infinity;
 
-        if (height > best.height) {
-          best = { height, lift: height - plain.height(u, v) };
+        for (let off = -BEND - 0.05; off <= BEND + 0.0501; off += 0.02) {
+          const u = mu - ((bv - av) / length) * off,
+            v = mv + ((bu - au) / length) * off;
+
+          top = Math.max(top, relief.height(u, v) - plain.height(u, v));
         }
+
+        lowest = Math.min(lowest, top);
       }
 
-      return best;
+      return lowest;
     },
     lift = (relief: ReliefMap, [u, v]: readonly [number, number]): number =>
       relief.height(u, v) - plain.height(u, v);
 
-  // Two mountains, one at (5, 5) and one beside it each way the grid has, or two steps away. Across a corner, the crest's
-  //  over a corner of the plain, so it's lower: a quarter of the lower peak at least, on every grid, where peaks two
-  //  steps apart barely lift it.
-  const pairs = topology.directions().map((direction) => {
-    const [dx, dy] = topology.offset(direction, 5, 5),
-      [farX, farY] = topology.offset(direction, 5 + dx, 5 + dy),
-      lone = (to: [number, number]) => {
-        const relief = createRelief({
+  // Two mountains side by side, every way the grid has, at six places: the lowest saddle of them all, as a share of the
+  //  lower peak, with ranges and without. Without, two peaks close enough already meet (on the hex grid, a third of
+  //  the way up at the least, as its neighbours are nearest), and two further apart dip almost to the plain between
+  //  them; with ranges, the ridge holds the lowest of them up. And two mountains two steps apart aren't joined: the
+  //  land between them is as it is without ranges.
+  let withRanges = Infinity,
+    withoutRanges = Infinity;
+  const apart: string[] = [];
+
+  [
+    [2, 2],
+    [5, 3],
+    [8, 4],
+    [3, 6],
+    [6, 7],
+    [9, 5],
+  ].forEach(([x0, y0]) =>
+    topology.directions().forEach((direction) => {
+      const [dx, dy] = topology.offset(direction, x0!, y0!),
+        [farX, farY] = topology.offset(direction, x0! + dx, y0! + dy),
+        pair = (to: [number, number], ranges: boolean) =>
+          createRelief({
             layout,
+            ranges,
             source: sourceFor(topology, (x, y) =>
-              (x === 5 && y === 5) || (x === to[0] && y === to[1])
+              (x === x0 && y === y0) || (x === to[0] && y === to[1])
                 ? 'Mountains'
                 : 'Grassland'
             ),
           }),
-          a = peakAt(5, 5),
-          b = peakAt(...to),
-          lower = Math.min(lift(relief, a), lift(relief, b));
+        a = peakAt(x0!, y0!),
+        b = peakAt(x0! + dx, y0! + dy),
+        joined = pair([x0! + dx, y0! + dy], true),
+        lower = Math.min(lift(joined, a), lift(joined, b));
 
-        return {
-          ...crest(relief, a, b),
-          lower,
-          highest: Math.min(relief.height(...a), relief.height(...b)),
-        };
-      };
+      withRanges = Math.min(withRanges, saddle(joined, a, b) / lower);
+      withoutRanges = Math.min(
+        withoutRanges,
+        saddle(pair([x0! + dx, y0! + dy], false), a, b) / lower
+      );
 
-    return {
-      direction,
-      near: lone([5 + dx, 5 + dy]),
-      far: lone([5 + dx + farX, 5 + dy + farY]),
-    };
-  });
+      // Two steps apart: along the line between them, the land as it is without ranges.
+      const far: [number, number] = [x0! + dx + farX, y0! + dy + farY],
+        c = peakAt(...far),
+        farJoined = pair(far, true),
+        farApart = pair(far, false);
+
+      for (let along = 0; along <= 1; along += 0.1) {
+        const u = a[0] + (c[0] - a[0]) * along,
+          v = a[1] + (c[1] - a[1]) * along;
+
+        if (farJoined.height(u, v) !== farApart.height(u, v)) {
+          apart.push(`${x0},${y0} ${direction}`);
+
+          break;
+        }
+      }
+    })
+  );
 
   expect(
-    `${topologyId}: two mountains side by side, every way the grid has, are a range: the crest between them stands over the plain, under their peaks; two steps apart, they're two peaks`,
-    pairs.flatMap(({ direction, near, far }) =>
-      near.lift > 0.25 * near.lower &&
-      near.height < near.highest &&
-      far.lift < 0.15 * far.lower
-        ? []
-        : [
-            `${direction}: ${near.lift.toFixed(3)} of ${near.lower.toFixed(
-              3
-            )}, ${near.height.toFixed(3)} under ${near.highest.toFixed(
-              3
-            )}; apart ${far.lift.toFixed(3)} of ${far.lower.toFixed(3)}`,
-          ]
-    ),
-    []
+    `${topologyId}: two mountains side by side, every way the grid has, are a range: with ranges, no saddle between them is under a quarter of the lower peak, and the lowest is a tenth of a peak higher than without; two steps apart, they're not joined`,
+    [withRanges >= 0.25, withRanges - withoutRanges >= 0.1, apart.slice(0, 3)],
+    [true, true, []]
   );
 
   // A range along a row, across the world's seam, and down across its poles, a block of them, and a square never seen
@@ -620,6 +640,38 @@ ids.forEach((topologyId) => {
       }),
     ],
     [[], [], true]
+  );
+
+  // Mountains scattered over half the world, every way joined, and a few squares never seen among them: the land as
+  //  smooth as anywhere, where many ridges cross and every square's list of them is needed whole.
+  const scatteredAt = (x: number, y: number): string => {
+      const h =
+        (Math.imul((x * 73856093) ^ (y * 19349663), 2654435761) >>> 0) /
+        4294967296;
+
+      return h < 0.5 ? 'Mountains' : h < 0.55 ? 'Unknown' : 'Hills';
+    },
+    scattered = createRelief({
+      layout,
+      source: sourceFor(topology, scatteredAt),
+    });
+
+  expect(
+    `${topologyId}: mountains scattered over half the world have no step and no seam`,
+    [
+      stepsIn(
+        scattered,
+        layout,
+        squares,
+        (x, y) =>
+          scatteredAt(
+            ((x % width) + width) % width,
+            ((y % height) + height) % height
+          ) === 'Unknown'
+      ).slice(0, 3),
+      seamsIn(scattered, layout).slice(0, 3),
+    ],
+    [[], []]
   );
 
   // The plain beside a range is barely lifted: each square next to the row, not in it, at its middle.

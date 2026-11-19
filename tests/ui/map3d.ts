@@ -1000,6 +1000,68 @@ expect(
     1.25
   );
 
+  // A city and its units on a mountain, and a mountain made beside it, with only that square released: the range's
+  //  ridge between them rises under the city (or not, the way its peak stands), and the city's marked again on the
+  //  land as it's drawn now, not left buried or floating. Each neighbour in turn, till one moves the land under it.
+  {
+    const land = view.land(),
+      [townU, townV] = land.layout.centre(town.x, town.y),
+      ground = (): number => Math.max(0, land.surfaceAt(townU, townV)),
+      standing = (): number | undefined => markedAt.get(townKey)?.[1],
+      raise = (tile: Tile, name: string): void => {
+        (
+          tile as unknown as { terrain: { _: string; features: never[] } }
+        ).terrain = {
+          _: name,
+          features: [],
+        };
+        view.queueTile(tile);
+        view.releaseTiles();
+      };
+
+    raise(town, 'Mountains');
+
+    const onMountain = [standing() === ground()],
+      neighbours = [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [1, 1],
+        [-1, 1],
+      ].map(
+        ([dx, dy]) =>
+          tiles[
+            ((town.y + dy! + height) % height) * width +
+              ((town.x + dx! + width) % width)
+          ] as Tile
+      );
+    let moved: boolean[] = [];
+
+    for (const beside of neighbours) {
+      const before = ground();
+
+      raise(beside, 'Mountains');
+
+      if (ground() !== before) {
+        moved = [true, standing() === ground()];
+        raise(beside, 'Grassland');
+        moved.push(standing() === ground());
+
+        break;
+      }
+
+      raise(beside, 'Grassland');
+    }
+
+    raise(town, 'Grassland');
+
+    expect(
+      'a city on a mountain stands on the land as it is when a mountain beside it, the only square released, raises a ridge under it, and when that mountain goes again',
+      [onMountain, moved, standing() === ground()],
+      [[true], [true, true, true], true]
+    );
+  }
+
   // Listened to only while there's a map: none once it's taken down, and none from one whose stage can't be made, the
   //  game falling back to the 2D map.
   {

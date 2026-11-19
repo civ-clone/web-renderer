@@ -450,11 +450,15 @@ blended across squares.
       as it does from a peak, and past each peak the ridge is that peak exactly. The land is the highest of the ridges
       and the peaks there, never their sum, so a block of mountains is a massif and not a spike.
     - Each ridge is made once a refresh, and listed under every square it reaches. A point reads only its own square's
-      list, so building the land takes about 5% longer on the debug world, and about 15% longer for a chunk full of
-      mountains.
+      list, and passes over a ridge whose reach it's outside.
+    - **Cost:** on a world with 7–12% of its squares mountains, as Civ1's are, building the land takes 1–14% longer,
+      and reading the terrain again 2–6 ms longer (to 5 ms on an 80×50 world, 12–15 ms on a 160×100 one). A world all
+      mountains is the worst case: its land takes about 2.5 times as long to build, and reading its terrain again
+      30 ms on an 80×50 world and 120 ms on a 160×100 one, rather than 3–10 ms.
     - A change to a mountain changes its neighbours' ridges, so `refresh` gives back the mountains joined to it, or
-      that were, as well as the squares whose terrain changed. The land is rebuilt round them, and the yields over
-      them and their neighbours are laid out again.
+      that were, as well as the squares whose terrain changed. The land is rebuilt round them. What's marked on them
+      and their neighbours (a unit, a city) is marked again on the land as it is now, and the yields over them laid
+      out again.
   - A point's colour is blended more sharply than its height (each square's weight cubed), from a point moved by noise
     up to 0.22 either way (0.31 at most), so terrains' edges wander rather than run along the squares' edges. This makes the land about
     twice as slow to build: 750 ms for an 80×50 world. Spreading a chunk over frames is for M6.

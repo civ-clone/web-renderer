@@ -1087,9 +1087,23 @@ export class MapView3D implements MapRenderer {
     this.#worldTiles = tiles;
     this.#worldTileCount = tiles.length;
     this.#tilesToDraw.clear();
-    const reshaped = this.#land.changed(squares, ...this.#focus(), replaced);
+    // The squares whose land changed, and those beside them, where their land meets: a range's ridge may rise or fall
+    //  as far as that, under what stands there.
+    const reshaped = this.#besides(
+        this.#land.changed(squares, ...this.#focus(), replaced)
+      ),
+      released = new Set(squares.map(([x, y]) => `${x},${y}`));
 
     squares.forEach(([x, y]) => this.#mark(x, y));
+    // What stands on them, marked again on the land as it is now: only where something's marked, and not released. A
+    //  world replaced has every square marked again, below.
+    reshaped.forEach(([x, y]) => {
+      const key = `${x},${y}`;
+
+      if (!replaced && !released.has(key) && this.#marked.has(key)) {
+        this.#mark(x, y);
+      }
+    });
     this.#yieldsChanged(squares, reshaped);
 
     // The square an open tooltip is about has changed: it says what's there now.
@@ -1184,9 +1198,9 @@ export class MapView3D implements MapRenderer {
     }
   }
 
-  // Squares that changed (`squares`), their yields laid out again; and those whose land did (`reshaped`, which a world
-  //  replaced, by a square newly seen, say, may add to), with their neighbours', whose land meets theirs and so may
-  //  stand higher or lower. A tile replaced with yields of its own is told by them (`#showYields`).
+  // Squares that changed (`squares`), their yields laid out again; and those whose land may stand higher or lower
+  //  (`reshaped`: those whose land changed, which a world replaced, by a square newly seen, say, may add to, and their
+  //  neighbours). A tile replaced with yields of its own is told by them (`#showYields`).
   #yieldsChanged(
     squares: readonly (readonly [number, number])[],
     reshaped: readonly (readonly [number, number])[]
@@ -1195,20 +1209,30 @@ export class MapView3D implements MapRenderer {
       return;
     }
 
-    const topology = this.world.topology();
-
     squares.forEach(([x, y]) => this.#yieldsLaid.delete(`${x},${y}`));
-    reshaped.forEach(([x, y]) => {
-      this.#yieldsLaid.delete(`${x},${y}`);
+    reshaped.forEach(([x, y]) => this.#yieldsLaid.delete(`${x},${y}`));
+    this.#yieldsStale = true;
+  }
+
+  // `squares`, and the squares beside each, once each.
+  #besides(
+    squares: readonly (readonly [number, number])[]
+  ): [number, number][] {
+    const topology = this.world.topology(),
+      found = new Map<string, [number, number]>();
+
+    squares.forEach(([x, y]) => {
+      found.set(`${x},${y}`, [x, y]);
       topology.directions().forEach((direction) => {
         const next = topology.neighbour(x, y, direction);
 
         if (next !== null) {
-          this.#yieldsLaid.delete(`${next[0]},${next[1]}`);
+          found.set(`${next[0]},${next[1]}`, next);
         }
       });
     });
-    this.#yieldsStale = true;
+
+    return [...found.values()];
   }
 
   // What each square yields, drawn again on the stage if it's out of date and shown, and taken away once it's hidden.
