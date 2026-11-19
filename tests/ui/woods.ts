@@ -4,7 +4,9 @@
 //    is past the edge of a world that doesn't wrap.
 //  - The canopy runs across the edge between two squares of the same woods, and thins to a fringe where woods meet
 //    other ground: each way the grid has, from rows of each parity.
-//  - A neighbour turning to woods only adds trees.
+//  - A neighbour turning to woods only adds trees, as drawn too, with roads all round.
+//  - No tree stands on a road between two of a square's neighbours, across its corner.
+//  - At the shore, trees stand on dry land; only reeds stand in the shallows.
 //  - Woods count as woods beside a square only where it grows them: not a city's lot, cleared ground, or another woods.
 //  - A neighbour's woods changing lays its square's chunk again, across a chunk's border too.
 
@@ -189,15 +191,14 @@ ids.forEach((topologyId) => {
       offWorld = [...planted.keys()].filter((key) => !onWorld.has(key)),
       // A cell not planted must be one whose point may be off the world: past the edge of a world that doesn't wrap
       //  over the poles, a cell not wholly on its squares. One wholly on them is planted.
+      // The cell's point is jittered within the middle 0.6 of it, either way: sampled finely there, all on the world.
       wholly = (key: string): boolean => {
         const [i, j] = key.split(',').map(Number) as [number, number];
 
-        return [
-          [0, 0],
-          [1, 0],
-          [0, 1],
-          [1, 1],
-        ].every(([a, b]) => {
+        return Array.from({ length: 81 }, (_, at) => [
+          0.2 + ((at % 9) / 8) * 0.6,
+          0.2 + (Math.floor(at / 9) / 8) * 0.6,
+        ]).every(([a, b]) => {
           const [, y] = layout.tileAt((i + a!) * stepU, (j + b!) * stepV);
 
           return y >= 0 && y < height;
@@ -406,8 +407,8 @@ ids.forEach((topologyId) => {
               )
             );
 
-          // Half a road's width (0.035), and a little.
-          if (Math.hypot(u - a[0] - du * t, v - a[1] - dv * t) < 0.05) {
+          // Half a road's width (0.035), and a crown's (0.065).
+          if (Math.hypot(u - a[0] - du * t, v - a[1] - dv * t) < 0.1) {
             onRoad.push(`${x},${y} ${direction}: ${bx},${by} at ${u},${v}`);
           }
         });
@@ -452,7 +453,7 @@ ids.forEach((topologyId) => {
   );
 
   expect(
-    `${topologyId}: no tree stands on a road between two squares beside it, across its corner or along its edge, each way; and with roads all round, a neighbour turning to forest only adds to the trees drawn`,
+    `${topologyId}: no tree stands on a road between two squares beside it, across its corner or along its edge, its crown clear of it, each way; and with roads all round, a neighbour turning to forest only adds to the trees drawn`,
     [onRoad.slice(0, 3), dropped.slice(0, 3)],
     [[], []]
   );
@@ -481,13 +482,17 @@ ids.forEach((topologyId) => {
       ).grown;
 
   expect(
-    'at the shore, a forest’s trees stand on dry land, and a swamp’s reeds in the shallows too',
+    'at the shore, a forest’s trees stand on dry land, and a swamp’s dead trees too, but its reeds in the shallows as well',
     [
       laid('Forest').length > 0,
       laid('Forest').every(([u]) => u <= 4.5),
       laid('Swamp').some(([u]) => u > 4.5),
+      laid('Swamp')
+        .filter(([u]) => u > 4.5)
+        .every(([, , kind]) => kind === 'reeds'),
+      laid('Swamp').some(([u, , kind]) => kind === 'deadTree' && u <= 4.5),
     ],
-    [true, true, true]
+    [true, true, true, true, true]
   );
 }
 

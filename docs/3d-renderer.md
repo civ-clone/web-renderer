@@ -564,13 +564,15 @@ How plants are placed:
     usual size, against 1.3 where whole). So a lone square of forest is a whole wood too, and a big one's edge is
     ragged.
   - **Stability:** each point has its own numbers for whether it's planted, what grows there and how big, and keeps
-    the room it would where the woods are whole. So a neighbour turning to woods only ever adds trees, roads or not.
-  - **Spacing:** trees keep clear of a unit's stand, what stands on the square, its roads, and its neighbours' roads
-    that cross its corners (a diagonal road beside it), but not of each other: the lattice keeps them apart, and a
-    tree can't see its neighbour's square.
+    the room it would where the woods are whole. So a neighbour turning to woods only ever adds trees, roads or not,
+    away from the shore: there, the land under a tree can fall below the sea with the change.
+  - **Spacing:** trees keep clear of a unit's stand, what stands on their own square, its roads, and its neighbours'
+    roads that cross its corners (a diagonal road beside it), but not of each other: the lattice keeps them apart. A
+    crown at a square's edge can reach over a neighbour's hut or mine by a few hundredths, as a tree can't see what
+    stands on its neighbour's square.
   - **The shore:** trees stand on dry land; a swamp's reeds stand in the shallows too.
   - **Cost:** an all-forest chunk has 48,000–58,000 triangles, 11–40% more than when each square scattered its own,
-    and takes 35–50 ms to lay rather than 25–43, a few squares a frame as before.
+    and takes 35–50 ms to lay rather than 24–43, a few squares a frame as before.
 
 ### 5.2 Specials and huts
 

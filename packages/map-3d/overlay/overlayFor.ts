@@ -33,7 +33,7 @@ export type SquareOverlay = {
   // Its features drawn as specials, as `[terrain, feature]`: not those drawn some other way (rivers).
   specials: (readonly [string, string])[];
   hut: boolean;
-  // Its terrain, and whether what grows on it is drawn: not on a city's lot.
+  // Its terrain, and whether anything grows on it (`growthOf`): on a city's lot, nothing's laid at all.
   terrain: string;
   vegetation: boolean;
   // For woods, its neighbours of the same woods that grow them (`Growth#canopy`), by offset: the canopy runs across

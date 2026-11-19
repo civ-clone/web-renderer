@@ -377,8 +377,8 @@ class Layer {
   //  an airbase's runway. And what stands there already: where, and how much room it takes.
   readonly lines: [readonly [number, number], readonly [number, number]][] = [];
   readonly taken: [number, number, number][] = [];
-  // Where each plant grown stands.
-  readonly grown: [number, number][] = [];
+  // Where each plant grown stands, and what it is.
+  readonly grown: [number, number, PlantKind][] = [];
 
   /**
    * How much more than it needs something taking `room` at (`u`, `v`) has clear: of the square's lines, of what stands
@@ -1070,7 +1070,7 @@ const plants = (layer: Layer, overlay: SquareOverlay): void => {
         if (layer.hasRoom(u, v, room)) {
           grow(layer, plant, kind, u, v, size, angle);
           layer.taken.push([u, v, room]);
-          layer.grown.push([u, v]);
+          layer.grown.push([u, v, kind]);
           break;
         }
       }
@@ -1084,8 +1084,9 @@ const plants = (layer: Layer, overlay: SquareOverlay): void => {
 //  repeats with the world's period, so it has no seam either. Woods are whole across a square, and across the edge to a
 //  neighbour of the same woods; within `MARGIN` of the edge to other ground (or the corner), they thin to a fringe, so
 //  a lone square of forest is a whole wood too. Each point has numbers of its own, for whether it's planted, what grows
-//  there and how big, so a neighbour turning to woods only adds trees: each keeps the room it would whole, and the
-//  same lines clear (its own roads, and its neighbours' that cross its corners).
+//  there and how big, so a neighbour turning to woods only adds trees, away from the shore (where the land under a
+//  tree can fall below the sea with it): each keeps the room it would whole, and the same lines clear (its own roads,
+//  and its neighbours' that cross its corners).
 /**
  * How far apart woods' lattice points are, about: as many as fit the world's period exactly. Not a whole share of a
  *  square, so the points don't line up with squares' edges, and the fringe at an edge to other ground has points at
@@ -1252,7 +1253,7 @@ const woods = (layer: Layer, overlay: SquareOverlay, growth: Growth): void => {
 
       if (layer.hasRoom(u, v, room)) {
         grow(layer, plant, kind, u, v, size, facing);
-        layer.grown.push([u, v]);
+        layer.grown.push([u, v, kind]);
       }
     }
   );
@@ -1272,7 +1273,7 @@ export const layOverlay = (
     readonly [number, number],
     readonly [number, number]
   ])[];
-  grown: readonly (readonly [number, number])[];
+  grown: readonly (readonly [number, number, PlantKind])[];
 } => {
   const layer = new Layer(soup, place),
     { centre, radius } = place;
