@@ -628,11 +628,12 @@ export class MapView3D implements MapRenderer {
       earlier = [...this.#before.values()]
         .filter(({ square, patched }) => square === defenderSquare && !patched)
         .at(-1),
-      // What's on the square attacked, as the page has it before the battle's patch, kept: those drawn elsewhere, as one
-      //  lunging in a battle of its own, aren't drawn there till they're back (`#mark`).
+      // What's on the square attacked, as the page has it before the battle's patch, kept, but those fallen already whose
+      //  patch hasn't come: those drawn elsewhere, as one lunging in a battle of its own, aren't drawn there till they're
+      //  back (`#mark`).
       before =
         earlier === undefined
-          ? tile.units.map(keptUnit)
+          ? tile.units.filter(({ id }) => !this.#gone.has(id)).map(keptUnit)
           : earlier.units.filter(
               ({ id }) => !(earlier.won && id === earlier.defender)
             );

@@ -4081,12 +4081,16 @@ expect(
     [3, 2],
     [2, 2],
   ].map(([x, y], n) => [x!, y!, unitOf(`Unit-P${n}`, 1)] as const);
+  // And a third rival attacking the city after, in the same burst: fought on what's left there, not on those fallen
+  //  already, whose patch hasn't come.
+  const zed = unitOf('Unit-Z', 1, 'Player-2');
 
   repatched(
     [0, 1, [raider]],
     [1, 1, []],
     [3, 1, [otherRaider]],
     [2, 1, holders],
+    [2, 0, [zed]],
     ...spares.map(([x, y, unit]): [number, number, Tile['units'][number][]] => [
       x,
       y,
@@ -4108,10 +4112,13 @@ expect(
     glider.queueTile(square(3, 1));
     glider.queueTile(square(x, y));
   });
+  fought(zed, [2, 0], holders[2]!, [2, 1], 'attacker', rivals);
+  glider.queueTile(square(2, 0));
+  glider.queueTile(square(2, 1));
   burstThen(
     [0, 1, []],
     [1, 1, [raider]],
-    [2, 1, [holders[2]!]],
+    [2, 1, []],
     ...spares.map(([x, y]): [number, number, Tile['units'][number][]] => [
       x,
       y,
@@ -4130,11 +4137,17 @@ expect(
       .forEach(([, unit, count]) => fallenAfterCut.add(`${unit}×${count}`));
   }
 
-  cutInOrder.push([...fallenAfterCut], unitOn(1, 1), unitOn(2, 1));
+  cutInOrder.push(
+    [...fallenAfterCut],
+    unitOn(1, 1),
+    unitOn(2, 1),
+    walkers.size
+  );
   repatched(
     [1, 1, []],
     [3, 1, []],
     [2, 1, []],
+    [2, 0, []],
     ...spares.map(([x, y]): [number, number, Tile['units'][number][]] => [
       x,
       y,
@@ -4143,7 +4156,7 @@ expect(
   );
 
   expect(
-    'a rival’s attack and its step onto the square it emptied, in one burst: the battle’s shown, and it’s on its new square once it’s over; one stepping out of the dark and attacking, or with others’ moves not shown, is drawn fighting once the page has it, not before; a walk-then-attack and a direct attack on one square fall together, each defender once, and so when the second’s battles are too far behind and over at once',
+    'a rival’s attack and its step onto the square it emptied, in one burst: the battle’s shown, and it’s on its new square once it’s over; one stepping out of the dark and attacking, or with others’ moves not shown, is drawn fighting once the page has it, not before; a walk-then-attack and a direct attack on one square fall together, each defender once, and so when the second’s battles are too far behind and over at once, a third attack after fought on what’s left',
     [movedIn, fromTheDark, movesHidden, frameFirst, inOrder, cutInOrder],
     [
       [
@@ -4188,10 +4201,11 @@ expect(
       ],
       [
         ['Unit-Q3', 1],
-        ['walk', 'battle'],
-        ['Unit-P2×1'],
+        ['walk', 'battle', 'battle'],
+        ['Unit-P2×1', 'Unit-Q3×1'],
         ['Unit-X', 1],
-        ['Unit-Q3', 1],
+        null,
+        0,
       ],
     ]
   );

@@ -291,14 +291,16 @@ const battleOf = (
       pace,
       1000
     ),
-    besideIt = cutting.add(battleOf('b', 'e', true, [2, 0], [1, 0]), 0, pace);
+    besideIt = cutting.add(battleOf('b', 'e', true, [2, 0], [1, 0]), 0, pace),
+    afterIt = cutting.add(battleOf('f', 'j', true, [1, 1], [1, 0]), 0, pace),
+    afterItBefore = afterIt.start;
 
   cutting.at(5);
 
   const cut = cutting.endWhere(({ id }) => id === besideIt.id, 10);
 
   expect(
-    'ended at once, a battle takes those before it at its square with it, their blows first; those elsewhere, and one there whose blow’s fallen, go on',
+    'ended at once, a battle takes those before it at its square with it, their blows first; those elsewhere, and one there whose blow’s fallen, go on; one after it there starts at once',
     [
       cut.struck.map(({ id }) => id),
       cut.ended.map(({ id }) => id),
@@ -306,14 +308,16 @@ const battleOf = (
       cutting.attacking(elsewhere.attacker),
       cutting.attacking(struckThere.attacker),
       walkingThere.id,
+      [afterItBefore, afterIt.start, elsewhere.start],
     ],
     [
       ['battle-2', 'battle-4'],
       ['battle-2', 'battle-4'],
-      2,
+      3,
       true,
       true,
       'battle-2',
+      [1000, 10, 1000],
     ]
   );
 
