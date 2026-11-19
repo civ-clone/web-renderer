@@ -141,6 +141,11 @@ export class MapView3D implements MapRenderer {
   #heldFor = new Map<string, Set<string>>();
   // What each walker was last drawn as.
   #walkersDrawn = new Map<string, string>();
+  // Walks over before the patch that moves their units has come, as when meeting a leader holds it: each stands where
+  //  it ended, its units still left off their squares, until the patch takes them from where they set off. By its id,
+  //  with the units it has.
+  #unpatched = new Map<string, Walker>();
+  #unpatchedUnits = new Set<string>();
   #transport: MapView3DDeps['transport'];
   #picking: Picking | null = null;
   // The square the mouse rests on, waiting to show its tooltip or showing it, and whose tooltips they'd be.
@@ -408,6 +413,8 @@ export class MapView3D implements MapRenderer {
     this.#keepDistance(true);
     this.#disposed = true;
     this.#walks.endAll(0);
+    this.#unpatched.clear();
+    this.#unpatchedUnits.clear();
 
     this.#stopUnitSize();
     this.#stopArtChanged();
@@ -503,13 +510,13 @@ export class MapView3D implements MapRenderer {
       performance.now(),
       own ? OWN_PACE : RIVALS_PACE
     );
-    // Off the square it set off from, now.
-    this.#mark(from.x, from.y);
+    // Off the square it set off from, now: `#face` marks it again.
     this.#draw();
   }
 
   // Where a unit stands on the square (`x`, `y`) as it's marked, on the land as it's drawn: at its middle, or in front
-  //  of its city's buildings. As a point to walk from or to, with how far above the land there that is.
+  //  of its city's buildings. As a point to walk from or to, with how far above the land there that is, and the
+  //  square's middle, which it faces between, as a unit standing does.
   #standing({ x, y }: Coordinate): WalkPoint {
     const [u, v] = this.#land.layout.centre(x, y),
       stands = Math.max(0, this.#land.surfaceAt(u, v)),
@@ -518,50 +525,72 @@ export class MapView3D implements MapRenderer {
         v + (this.world.get(x, y).city ? IN_FRONT_OF_CITY : 0),
       ];
 
-    return { at, lift: stands - Math.max(0, this.#land.surfaceAt(...at)) };
+    return {
+      at,
+      lift: stands - Math.max(0, this.#land.surfaceAt(...at)),
+      middle: [u, v],
+    };
+  }
+
+  // Whether a unit's left off the squares it's on: walking, or waiting for its patch.
+  #leftOff(unit: string): boolean {
+    return this.#walks.walking(unit) || this.#unpatchedUnits.has(unit);
   }
 
   // The walkers where they are at `now`, each drawn as its units are now (active, shown or hidden, their size); those
-  //  that are there taken away, and the squares their units were left off marked again, with them. By the clock: with
-  //  no frames for a while, as in a tab out of sight, the first frame drawn again ends those that are over.
+  //  that are there, or given up, taken away, and the squares their units were left off marked again, with them. By
+  //  the clock: with no frames for a while, as in a tab out of sight, the first frame drawn again ends those that are
+  //  over.
   #placeWalkers(now: number): void {
+    this.#walks.dropped().forEach((id) => this.#takeAway(id));
+
     if (this.#walks.size() === 0) {
       return;
     }
 
-    const { going, ended } = this.#walks.at(now),
+    const { going, ended } = this.#walks.at(now);
+
+    this.#walksEnded(ended);
+    going.forEach((walker) => this.#drawWalker(walker));
+  }
+
+  // A walker drawn as its units are now, where it is.
+  #drawWalker(walker: Walker): void {
+    const marker = this.#walkerMarker(walker),
+      signature = marker === null ? null : JSON.stringify(marker),
       { u: periodU, v: periodV } = this.#land.layout.period(),
       within = (value: number, period: number | null): number =>
         period === null ? value : ((value % period) + period) % period;
 
-    ended.forEach((walker) => this.#arrived(walker, true));
-    going.forEach((walker) => {
-      const marker = this.#walkerMarker(walker),
-        signature = marker === null ? null : JSON.stringify(marker);
+    if (signature !== (this.#walkersDrawn.get(walker.id) ?? null)) {
+      this.#stage.setWalker(walker.id, marker);
 
-      if (signature !== (this.#walkersDrawn.get(walker.id) ?? null)) {
-        this.#stage.setWalker(walker.id, marker);
-
-        if (signature === null) {
-          this.#walkersDrawn.delete(walker.id);
-        } else {
-          this.#walkersDrawn.set(walker.id, signature);
-        }
+      if (signature === null) {
+        this.#walkersDrawn.delete(walker.id);
+      } else {
+        this.#walkersDrawn.set(walker.id, signature);
       }
+    }
 
-      if (marker === null) {
-        return;
-      }
+    if (marker === null) {
+      return;
+    }
 
-      const u = within(walker.at[0], periodU),
-        v = within(walker.at[1], periodV);
+    const u = within(walker.at[0], periodU),
+      v = within(walker.at[1], periodV);
 
-      this.#stage.placeWalker(
-        walker.id,
-        [u, Math.max(0, this.#land.surfaceAt(u, v)) + walker.lift, v],
-        walker.facing
-      );
-    });
+    this.#stage.placeWalker(
+      walker.id,
+      [u, Math.max(0, this.#land.surfaceAt(u, v)) + walker.lift, v],
+      walker.facing
+    );
+  }
+
+  // The walker `id` taken off the stage, if it's drawn.
+  #takeAway(id: string): void {
+    if (this.#walkersDrawn.delete(id)) {
+      this.#stage.setWalker(id, null);
+    }
   }
 
   // What a walker's drawn as: its units alone, as a square's marked, the one on top the active one or the best
@@ -584,38 +613,63 @@ export class MapView3D implements MapRenderer {
     );
   }
 
-  // A walker that's there, or stopped: taken away, and the squares its units were left off marked again with them, if
-  //  `mark`, unless they walk on.
-  #arrived(walker: Walker, mark: boolean): void {
-    if (this.#walkersDrawn.delete(walker.id)) {
-      this.#stage.setWalker(walker.id, null);
-    }
+  // Whether a walker's units are still where they set off from, as the patch that moves them hasn't come: any of them
+  //  still on the square its last step left, and not on the one it's bound for.
+  #awaitsPatch({ units, before, to }: Walker): boolean {
+    const on = ({ x, y }: { x: number; y: number }, unit: string): boolean =>
+      this.world.get(x, y).units.some(({ id }) => id === unit);
 
-    walker.units.forEach((unit) => {
-      if (this.#walks.walking(unit)) {
+    return units.some((unit) => on(before, unit) && !on(to, unit));
+  }
+
+  // Walkers that are there, or stopped: those whose patch hasn't come stand where they ended till it does; the rest are
+  //  taken away, and the squares their units were left off marked again with them, unless they walk on.
+  #walksEnded(ended: Walker[]): void {
+    const squares = new Set<string>();
+
+    ended.forEach((walker) => {
+      if (this.#awaitsPatch(walker)) {
+        this.#unpatched.set(walker.id, walker);
+        walker.units.forEach((unit) => this.#unpatchedUnits.add(unit));
+        this.#drawWalker(walker);
+
         return;
       }
 
-      const held = this.#heldFor.get(unit);
+      this.#takeAway(walker.id);
+      walker.units.forEach((unit) => {
+        this.#unpatchedUnits.delete(unit);
 
-      this.#walkingUnits.delete(unit);
-      this.#heldFor.delete(unit);
+        if (this.#walks.walking(unit)) {
+          return;
+        }
 
-      if (mark) {
-        held?.forEach((key) => {
-          const [x, y] = key.split(',').map(Number) as [number, number];
+        this.#heldFor.get(unit)?.forEach((key) => squares.add(key));
+        this.#heldFor.delete(unit);
+        this.#walkingUnits.delete(unit);
+      });
+    });
 
-          this.#mark(x, y);
-        });
-      }
+    squares.forEach((key) => {
+      const [x, y] = key.split(',').map(Number) as [number, number];
+
+      this.#mark(x, y);
     });
   }
 
-  // Every walk over now, wherever it's got to: as the world's replaced.
-  #endWalks(): void {
-    this.#walks
-      .endAll(performance.now())
-      .forEach((walker) => this.#arrived(walker, true));
+  // The walks waiting for their patch, now that tiles have come: over, if their units have gone from where they set off,
+  //  or every one of them, with the world replaced, as by a square newly seen, which comes with a patch.
+  #patched(replaced: boolean): void {
+    if (this.#unpatched.size === 0) {
+      return;
+    }
+
+    const over = [...this.#unpatched.values()].filter(
+      (walker) => replaced || !this.#awaitsPatch(walker)
+    );
+
+    over.forEach((walker) => this.#unpatched.delete(walker.id));
+    this.#walksEnded(over);
   }
 
   // The unit `id` faces from the square `from` towards `to`, the short way round the world, and is marked again.
@@ -1203,11 +1257,6 @@ export class MapView3D implements MapRenderer {
     this.#worldTileCount = tiles.length;
     this.#tilesToDraw.clear();
 
-    // Another world: no one's walking in it.
-    if (replaced) {
-      this.#endWalks();
-    }
-
     // The squares whose land changed, and those beside them, where their land meets: a range's ridge may rise or fall
     //  as far as that, under what stands there.
     const reshaped = this.#besides(
@@ -1251,14 +1300,20 @@ export class MapView3D implements MapRenderer {
         this.#mark(x, y);
       });
     }
+
+    // Walks that were waiting for their patch, over if it's come.
+    if (squares.length > 0 || replaced) {
+      this.#patched(replaced);
+    }
   }
 
   // What's on the square at (`x`, `y`), marked on the land at its middle, or nothing.
   #mark(x: number, y: number): void {
     const key = `${x},${y}`,
       tile = this.world.get(x, y),
-      // Units walking here are drawn walking, not here, until they're there: marked again then.
-      walking = tile.units.filter(({ id }) => this.#walks.walking(id));
+      // Units walking here, or waiting for their patch, are drawn walking, not here, until they're there: marked again
+      //  then.
+      walking = tile.units.filter(({ id }) => this.#leftOff(id));
 
     walking.forEach(({ id }) => {
       const held = this.#heldFor.get(id) ?? new Set<string>();
@@ -1272,7 +1327,7 @@ export class MapView3D implements MapRenderer {
         ? tile
         : {
             city: tile.city,
-            units: tile.units.filter(({ id }) => !this.#walks.walking(id)),
+            units: tile.units.filter(({ id }) => !this.#leftOff(id)),
           },
       this.#activeUnit?.id ?? null,
       this.#unitsShown,

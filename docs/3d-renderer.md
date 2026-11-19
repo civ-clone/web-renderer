@@ -870,11 +870,15 @@ mapEvent:
 
 - **A walk** is a unit's steps, from where it stood (at its square's middle, or in front of its city's buildings) through
   the middle of each square it steps onto, to where it'll stand on the last. It's drawn as a marker of its own, its
-  units alone, over the land at its feet, the short way round the world, its figures turning as it passes a square's
-  middle. Its flag, ring and pointer go with it.
+  units alone, over the land at its feet, the short way round the world. Its figures face the way from one square's
+  middle to the next, as a unit standing faces the way it last went, turning as it passes a square's middle, and from
+  the way it faced when a step's joined. Its flag, ring and pointer go with it.
 - **Left off, not held:** rather than holding patches, a unit walking is left off every square it's on until its walk's
   over, when those squares are marked again. Whatever else a patch changes (a city captured, the land) shows at once. A
   unit that joins a stack under a stronger one walks there and disappears into it.
+- **Waiting for its patch:** a walk over before the patch that moves its unit has come, as when meeting a leader holds
+  the patches until it's answered, stands where it ended, its unit still left off the squares, until the patch takes
+  the unit from where it set off. It needs no frames meanwhile.
 - **Pace, by the clock:**
   - It gets up to pace from standing and stops at its end. A step joined mid-walk goes on at the pace it's going, so a
     GoTo's steps, which come all at once, and a unit moved again before it's arrived, are one walk.
@@ -882,10 +886,14 @@ mapEvent:
   - However many steps, what's left of a walk takes no more than 2 s, or 1 s for others' units: a railroad trip of a
     hundred squares hurries, rather than queueing. It doesn't skip.
   - By the clock, not by frames: with no frames for a while, as in a tab out of sight, the first frame drawn again ends
-    the walks that are over. A world replaced ends them all.
-- **Together:** units making the same step within 50 ms of each other walk as one, as a ship and what it carries do,
-  shown as a stack of them. One that doesn't step on stays bound where it was; one that steps elsewhere sets off from
-  where it's drawn.
+    the walks that are over. A walk lets go of the squares it's passed as it goes on.
+  - The world's tiles replaced, as by a square newly seen, which happens on most steps into the unknown, ends none of
+    them; it ends those waiting for their patch, which comes with it.
+- **Together:** units making the same step within 50 ms of each other, drawn at the same place, walk as one, as a ship
+  and what it carries do, shown as a stack of them.
+  - One that doesn't step on stays bound where it was.
+  - One that steps on from where the walk's bound, ashore say, goes on along the way it came, from where it is.
+  - One that steps from elsewhere sets off from where it's drawn, and a walk it was alone in is taken away.
 - **Not walked:**
   - other players' units off the screen, unless they're walking already;
   - a unit the page doesn't have where it set off from, as one stepping out of the dark;

@@ -2298,7 +2298,8 @@ expect(
   const shown = drawnWalkers(),
     shownAgain = [[shown.ids.length, shown.units], unitOn(2, 2)];
 
-  // The world replaced mid-walk: the walk's over, and the unit where the new world has it.
+  // The world's tiles replaced mid-walk, as a square newly seen does: the walk goes on, and the unit's on its square once
+  //  it's there.
   stepped(walker, [2, 2], [3, 2]);
   patch([2, 2, []], [3, 2, [guard, walker]]);
   runFrames(2);
@@ -2308,13 +2309,14 @@ expect(
   glider.world.setTiles([...glider.world.tiles()], true);
   glider.flush();
 
-  const worldReplaced = [unitOn(3, 2), [...walkers.keys()]];
+  const worldReplaced = [unitOn(3, 2), walkers.size];
 
   runFrames();
+  worldReplaced.push(unitOn(3, 2));
   walkersSet.length = 0;
 
   expect(
-    'asked for less motion, a unit’s on its square at once, not walking; with units hidden it walks unseen, and is drawn walking once shown; the world replaced mid-walk ends it, the unit where the world has it',
+    'asked for less motion, a unit’s on its square at once, not walking; with units hidden it walks unseen, and is drawn walking once shown; the world’s tiles replaced mid-walk, as by a square newly seen, it walks on, and is on its square once there',
     [lessMotion, hiddenWalking, shownAgain, midWalk, worldReplaced],
     [
       [['Unit-A', 1], { ids: [], units: [] }],
@@ -2324,7 +2326,7 @@ expect(
         ['Unit-A', 1],
       ],
       ['Unit-B', 1],
-      [['Unit-B', 2], []],
+      [['Unit-B', 1], 1, ['Unit-B', 2]],
     ]
   );
 
@@ -2349,6 +2351,119 @@ expect(
   repatched([2, 1, []]);
   walkersSet.length = 0;
   walkersPlaced.clear();
+
+  // A walk given up as its unit steps from elsewhere, as a rival does after a step it wasn't seen to take: taken off the
+  //  stage, the unit walking once only.
+  repatched([0, 1, [walker]]);
+  walkersSet.length = 0;
+  stepped(walker, [0, 1], [1, 1]);
+  patch([0, 1, []], [1, 1, [walker]]);
+  runFrames(1);
+  stepped(walker, [2, 1], [3, 1]);
+  patch([1, 1, []], [3, 1, [walker]]);
+  runFrames(1);
+
+  const givenUp: unknown[] = [walkers.size, [...walkers.values()][0]?.unit?.id];
+
+  runFrames();
+  givenUp.push(walkers.size, unitOn(3, 1), unitOn(1, 1));
+
+  // Over before its patch has come, as when meeting a leader holds it: it stands where it ended, not back where it set
+  //  off, until the patch comes, with no frames drawn meanwhile.
+  repatched([3, 1, []], [0, 2, [walker]]);
+  walkersSet.length = 0;
+  walkersPlaced.clear();
+  stepped(walker, [0, 2], [1, 2]);
+  runFrames();
+
+  const [unpatchedWay] = [...walkersPlaced.values()],
+    unpatched = [
+      unitOn(0, 2),
+      unitOn(1, 2),
+      walkers.size,
+      unpatchedWay!
+        .at(-1)!
+        .slice(0, 3)
+        .map((n) => Math.round(n * 100) / 100),
+      runFrames(),
+    ];
+
+  patch([0, 2, []], [1, 2, [walker]]);
+  runFrames();
+  unpatched.push(unitOn(0, 2), unitOn(1, 2), walkers.size);
+
+  expect(
+    'a walk given up as its unit steps from elsewhere is taken off the stage, the unit walking once only; a walk over before its patch stands where it ended, not back where it set off, until the patch comes, with no frames drawn meanwhile',
+    [givenUp, unpatched],
+    [
+      [1, 'Unit-A', 0, ['Unit-A', 1], null],
+      [null, null, 1, groundAt(1, 2), 0, null, ['Unit-A', 1], 0],
+    ]
+  );
+
+  // Drawn walking as the unit's drawn standing: the active one with its ring, at the size the player chose.
+  repatched([1, 2, []], [0, 3, [walker]]);
+  glider.setActiveUnit({ ...walker, tile: tiles[3 * 4] } as unknown as Unit);
+  optionsRegistry.set(MAP3D_UNIT_SIZE_OPTION, 1.5);
+  walkersSet.length = 0;
+  stepped(walker, [0, 3], [1, 3]);
+  patch([0, 3, []], [1, 3, [walker]]);
+  runFrames(1);
+
+  const asDrawn = [
+    walkers.size,
+    [...walkers.values()][0]?.unit?.active,
+    [...walkers.values()][0]?.unit?.size,
+  ];
+
+  runFrames();
+  optionsRegistry.set(MAP3D_UNIT_SIZE_OPTION, 1);
+  glider.setActiveUnit(null);
+  repatched([1, 3, []]);
+  walkersSet.length = 0;
+
+  // A rival's unit stepping out of the dark, where the page doesn't have it: on its square at once, not walking.
+  stepped(rival, [2, 2], [3, 2], 'Player-2');
+  patch([3, 2, [rival]]);
+  runFrames(1);
+
+  const outOfTheDark = [unitOn(3, 2), drawnWalkers()];
+
+  runFrames();
+  repatched([3, 2, []]);
+
+  // A rival's unit off the screen, the camera close in elsewhere: on its square at once, not walking.
+  const lookedFrom = glider.orbit();
+
+  glider.setOrbit({
+    ...lookedFrom,
+    focus: middleOf(tiles[0] as Tile),
+    distance: 0,
+  });
+  runFrames();
+  repatched([2, 2, [rival]]);
+  walkersSet.length = 0;
+  stepped(rival, [2, 2], [3, 2], 'Player-2');
+  patch([2, 2, []], [3, 2, [rival]]);
+  runFrames(1);
+
+  const offScreen = [unitOn(3, 2), drawnWalkers()];
+
+  glider.setOrbit(lookedFrom);
+  runFrames();
+  repatched([3, 2, []]);
+  walkersSet.length = 0;
+  walkersPlaced.clear();
+
+  expect(
+    'a unit walking is drawn as it is standing, the active one ringed, at the size chosen; a rival’s stepping out of the dark, or off the screen, is on its square at once, not walking',
+    [asDrawn, outOfTheDark, offScreen],
+    [
+      [1, true, 1.5],
+      [['Unit-R', 1], { ids: [], units: [] }],
+      [['Unit-R', 1], { ids: [], units: [] }],
+    ]
+  );
 
   // Turns, frame by frame: how far the camera turns in all, the way it turns, each frame's step taken the short way.
   const turnedFrameByFrame = (between: () => void): number => {

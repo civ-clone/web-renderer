@@ -3,8 +3,10 @@
 //  - a step joined mid-walk goes on from where it is, at the pace it's going, with no jump or jolt;
 //  - however many steps, what's left takes no longer than its most;
 //  - a GoTo's steps, all at once, are one walk through each square's middle;
-//  - units stepping together walk as one, and part where they step apart;
-//  - over the world's seam, the short way; facing the way it goes, turning at a square's middle.
+//  - units stepping together walk as one, and part where they step apart: one stepping on goes on along the way it
+//    came; a unit standing a square from a walk doesn't join it; a walk left empty is given up;
+//  - over the world's seam, the short way; facing the way between squares' middles, turning at one, and from the way
+//    it faced when a step's joined late.
 
 import Walks, {
   Pace,
@@ -417,6 +419,239 @@ const point = (u: number, v: number, lift = 0): WalkPoint => ({
       walks.walking('goer'),
     ],
     [[[['goer'], [1, 1]]], 0, false]
+  );
+}
+
+// A step joined while going at full pace, in `Walks` itself: on at the same pace, not from standing.
+{
+  const walks = new Walks({ u: 10, v: null }),
+    east = (from: number, now: number) =>
+      walks.step(
+        'goer',
+        { x: from, y: 1 },
+        { x: from + 1, y: 1 },
+        point(from, 1),
+        point(from + 1, 1),
+        now,
+        pace
+      ),
+    uAt = (now: number): number => walks.at(now).going[0]!.at[0];
+
+  east(1, 0);
+
+  const before = uAt(200) - uAt(199);
+
+  east(2, 200);
+
+  const after = uAt(201) - uAt(200);
+
+  expect(
+    'a step joined at full pace goes on at it, in the walks themselves',
+    [round(before * pace.step, 2), round(after * pace.step, 2)],
+    [1, 1]
+  );
+}
+
+// A ship and its cargo sail two squares east; the cargo then steps ashore, south, before the ship's there: on from
+//  where it is, along the way the ship came, through the square's middle, not straight across the sea.
+{
+  const walks = new Walks({ u: 10, v: null }),
+    sail = (unit: string, from: number, now: number) =>
+      walks.step(
+        unit,
+        { x: from, y: 1 },
+        { x: from + 1, y: 1 },
+        point(from, 1),
+        point(from + 1, 1),
+        now,
+        pace
+      );
+
+  sail('ship', 0, 0);
+  sail('cargo', 0, 1);
+  sail('ship', 1, 2);
+  sail('cargo', 1, 3);
+
+  const shipThen = walks.at(100).going[0]!.at;
+
+  walks.step(
+    'cargo',
+    { x: 2, y: 1 },
+    { x: 2, y: 2 },
+    point(9, 9),
+    point(2, 2),
+    100,
+    pace
+  );
+
+  const cargoAt = (now: number) =>
+      walks.at(now).going.find(({ units }) => units.includes('cargo'))?.at,
+    straightOn: boolean[] = [],
+    cargoThen = cargoAt(100)!;
+
+  for (let now = 100; now < 2000; now += 5) {
+    const at = cargoAt(now);
+
+    if (at === undefined) {
+      break;
+    }
+
+    // Along the row till it's at the square's middle, then south.
+    straightOn.push(at[0] < 1.999 ? Math.abs(at[1] - 1) < 1e-9 : true);
+  }
+
+  expect(
+    'cargo stepping ashore from a ship under way goes on from where it is, along the way the ship came, through the square’s middle, then ashore',
+    [
+      cargoThen.map((n) => round(n)),
+      shipThen.map((n) => round(n)),
+      straightOn.length > 10 && straightOn.every(Boolean),
+    ],
+    [shipThen.map((n) => round(n)), shipThen.map((n) => round(n)), true]
+  );
+}
+
+// A unit standing on a square a walk's left behind makes the same step just after: its own walk, not the one drawn a
+//  square away.
+{
+  const walks = new Walks({ u: 10, v: null }),
+    a = [
+      walks.step(
+        'a',
+        { x: 0, y: 1 },
+        { x: 1, y: 1 },
+        point(0, 1),
+        point(1, 1),
+        0,
+        pace
+      ),
+      walks.step(
+        'a',
+        { x: 1, y: 1 },
+        { x: 2, y: 1 },
+        point(9, 9),
+        point(2, 1),
+        1,
+        pace
+      ),
+    ],
+    b = walks.step(
+      'b',
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+      point(1, 1),
+      point(2, 1),
+      3,
+      pace
+    ),
+    bAt = walks.at(3).going.find(({ units }) => units.includes('b'))!.at;
+
+  expect(
+    'a unit standing a square from a walk that’s just made its step walks on its own, from where it stands',
+    [a[0] === a[1], b === a[0], bAt.map((n) => round(n))],
+    [true, false, [1, 1]]
+  );
+}
+
+// A walk its last unit leaves, stepping from elsewhere, is given up, and said so once.
+{
+  const walks = new Walks({ u: 10, v: null }),
+    first = walks.step(
+      'goer',
+      { x: 0, y: 1 },
+      { x: 1, y: 1 },
+      point(0, 1),
+      point(1, 1),
+      0,
+      pace
+    );
+
+  walks.at(16);
+
+  const second = walks.step(
+    'goer',
+    { x: 4, y: 1 },
+    { x: 5, y: 1 },
+    point(4, 1),
+    point(5, 1),
+    20,
+    pace
+  );
+
+  expect(
+    'a walk its last unit leaves for another is given up, and said so once',
+    [first === second, walks.dropped(), walks.dropped(), walks.size()],
+    [false, [first], [], 1]
+  );
+}
+
+// Too fast to stop in time at its pace's rate, as a hurried walk joined near its end is: it slows as it must, never
+//  past where it's bound or back, and stops there.
+{
+  const motion = plan(0, 0.95, 2 / pace.step, 1, pace),
+    { forward, last } = sampled(motion, 0);
+  let past = false;
+
+  for (let now = 0; now <= motionEnds(motion) + 2; now++) {
+    past ||= motionAt(motion, now).along > 1 + 1e-9;
+  }
+
+  expect(
+    'too fast to stop at its rate, it slows as it must and stops where it’s bound, never past it or back',
+    [forward, past, round(last)],
+    [true, false, 1]
+  );
+}
+
+// Facing: a step south joined late in a step east turns from where it faced, not snapping; and a walk faces the way
+//  between the squares' middles, though it ends in front of a city.
+{
+  const walks = new Walks({ u: 10, v: null });
+
+  walks.step(
+    'goer',
+    { x: 0, y: 1 },
+    { x: 1, y: 1 },
+    point(0, 1),
+    point(1, 1),
+    0,
+    pace
+  );
+
+  const late = 0.9 * (pace.step + pace.ramp),
+    facedBefore = walks.at(late).going[0]!.facing;
+
+  walks.step(
+    'goer',
+    { x: 1, y: 1 },
+    { x: 1, y: 2 },
+    point(9, 9),
+    point(1, 2),
+    late,
+    pace
+  );
+
+  const facedAfter = walks.at(late).going[0]!.facing,
+    city = new Walks({ u: 10, v: null });
+
+  city.step(
+    'goer',
+    { x: 0, y: 1 },
+    { x: 1, y: 1 },
+    { at: [0, 1], lift: 0, middle: [0, 1] },
+    { at: [1, 1.26], lift: 0, middle: [1, 1] },
+    0,
+    pace
+  );
+
+  const cityFacings = [50, 150, 300].map((now) =>
+    round(city.at(now).going[0]!.facing)
+  );
+
+  expect(
+    'a step joined late turns from where it faced, not snapping; a walk faces the way between squares’ middles, though it ends in front of a city',
+    [round(facedAfter - facedBefore, 2), cityFacings],
+    [0, [round(Math.PI / 2), round(Math.PI / 2), round(Math.PI / 2)]]
   );
 }
 

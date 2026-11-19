@@ -9,8 +9,13 @@
 //   it's at.
 // - However many steps, what's left of a walk takes no longer than its pace's `most`: a railroad trip of a hundred
 //   squares hurries, rather than taking half a minute.
-// - Units that step together walk as one: a unit stepping from and to the squares a walk's last step was, as it was
-//   taken, rides along. A ship and what it carries step so, the ship first, as do units sent the same way at once.
+// - Units that step together walk as one: a unit drawn where a walk is, stepping from and to the squares its last step
+//   was, as it was taken, rides along. A ship and what it carries step so, the ship first, as do units sent the same
+//   way at once. One stepping on from where its walk's bound goes on along it, the others staying bound there unless
+//   they step along too; one stepping from elsewhere sets off from where it's drawn, and a walk it leaves empty is
+//   given up (`dropped`).
+// - It faces the way from one square's middle to the next (each point's `middle`), turning as it passes one, and,
+//   when a step's joined, from the way it faced then.
 //
 // Where it walks is on the ground (`u`, `v`), each point with a `lift`: how far above the land there the unit stands,
 //  which the view sets, so a walk starts and ends where the unit's drawn standing.
@@ -18,8 +23,16 @@
 /** A square, as the engine has it. */
 export type WalkSquare = { readonly x: number; readonly y: number };
 
-/** A point on the ground (`u`, `v`), and how far above the land there a unit stands. */
-export type WalkPoint = { at: readonly [number, number]; lift: number };
+/**
+ * A point on the ground (`u`, `v`), and how far above the land there a unit stands; and the middle of the square it's
+ *  on, which a walk faces between, as a unit standing faces the way it last went from one square's middle to the next.
+ *  Its own point, without one.
+ */
+export type WalkPoint = {
+  at: readonly [number, number];
+  lift: number;
+  middle?: readonly [number, number];
+};
 
 /** How fast a walk goes. */
 export type Pace = {
@@ -41,8 +54,9 @@ export type Walker = {
   // Which way it faces, turned from south (`+v`) towards east (`+u`), in radians: the way it's going, turning as it
   //  passes a square's middle.
   facing: number;
-  // The square it set off from, and the square it's bound for.
+  // The square it set off from, the square its last step set off from, and the square it's bound for.
   from: WalkSquare;
+  before: WalkSquare;
   to: WalkSquare;
 };
 
@@ -77,11 +91,16 @@ type Motion = {
 type Walk = {
   id: string;
   units: string[];
+  // The square it set off from; and those it goes through, with their points, from the one before where it is now.
+  from: WalkSquare;
   points: WalkPoint[];
   squares: WalkSquare[];
   // When its last step was taken: a unit making the same step this soon after rides along.
   stepped: number;
   motion: Motion;
+  // The way it faced as its last step was joined, when, and how long it takes to turn from it to the way its path
+  //  goes, so it turns rather than snapping round.
+  turned: { facing: number; at: number; over: number } | null;
 };
 
 const sameSquare = (a: WalkSquare, b: WalkSquare): boolean =>
@@ -228,6 +247,8 @@ export class Walks {
   #walks = new Map<string, Walk>();
   // Which walk each unit walking is in.
   #walkOf = new Map<string, string>();
+  // The walks given up as their last unit left them, since last asked.
+  #dropped: string[] = [];
   #made = 0;
 
   constructor(period: { u: number; v: number | null }) {
@@ -237,11 +258,6 @@ export class Walks {
   /** Whether `unit` is walking. */
   walking(unit: string): boolean {
     return this.#walkOf.has(unit);
-  }
-
-  /** The units walking now. */
-  units(): ReadonlySet<string> {
-    return new Set(this.#walkOf.keys());
   }
 
   /** How many walks are under way. */
@@ -266,13 +282,13 @@ export class Walks {
     const ownId = this.#walkOf.get(unit),
       own = ownId === undefined ? undefined : this.#walks.get(ownId),
       drawn = own === undefined ? setOff : this.#drawn(own, now),
-      // Another walk that's just made this step, from where this unit is: it rides along with it, as what a ship
+      // Another walk that's just made this step, drawn where this unit is: it rides along with it, as what a ship
       //  carries does, stepping after the ship.
       riding = [...this.#walks.values()].find(
         (walk) =>
           walk !== own &&
           this.#justMade(walk, from, to, now) &&
-          (own === undefined || this.#beside(this.#drawn(walk, now), drawn))
+          this.#beside(this.#drawn(walk, now), drawn)
       );
 
     if (riding !== undefined) {
@@ -286,29 +302,23 @@ export class Walks {
       return riding.id;
     }
 
-    // Its own walk's just made this step: it's riding along already.
-    if (own !== undefined && this.#justMade(own, from, to, now)) {
-      return own.id;
-    }
-
-    // Leading its walk on from where it's bound: it goes on, at the pace it's going. Those riding with it stay bound
-    //  where they were, unless they step along too, as they do just after it.
+    // Going on from where its walk's bound: it goes on, at the pace it's going, along the way it's come. Those walking
+    //  with it stay bound where they were, unless they step along too, as they do just after it.
     if (
       own !== undefined &&
-      own.units[0] === unit &&
       sameSquare(own.squares[own.squares.length - 1]!, from)
     ) {
       if (own.units.length > 1) {
         const behind: Walk = {
           ...own,
           id: `walk-${++this.#made}`,
-          units: own.units.slice(1),
+          units: own.units.filter((id) => id !== unit),
           points: [...own.points],
           squares: [...own.squares],
         };
 
         this.#walks.set(behind.id, behind);
-        behind.units.forEach((rider) => this.#walkOf.set(rider, behind.id));
+        behind.units.forEach((other) => this.#walkOf.set(other, behind.id));
         own.units = [unit];
       }
 
@@ -344,6 +354,11 @@ export class Walks {
     });
 
     return { going, ended };
+  }
+
+  /** The walks given up since last asked, as their last unit left them for another: none of them goes on. */
+  dropped(): string[] {
+    return this.#dropped.splice(0);
   }
 
   /** When the next walk under way ends, or nothing with none. */
@@ -401,10 +416,12 @@ export class Walks {
       walk: Walk = {
         id,
         units: [unit],
+        from,
         points: [setOff],
         squares: [from],
         stepped: now,
         motion: plan(now, 0, 0, 0, pace),
+        turned: null,
       };
 
     this.#walks.set(id, walk);
@@ -415,7 +432,8 @@ export class Walks {
   }
 
   // `walk` goes on to `to`, arriving at `arrive`, taken to the copy of the world nearest where it's been, from where it
-  //  is now and at the pace it's going.
+  //  is now and at the pace it's going, turning from the way it faces. The points it's passed are let go, but the one
+  //  before where it is, which it turns from.
   #goOn(
     walk: Walk,
     to: WalkSquare,
@@ -424,16 +442,40 @@ export class Walks {
     pace: Pace
   ): void {
     const { u, v } = this.#period,
-      [lastU, lastV] = walk.points[walk.points.length - 1]!.at,
-      { along, speed } = motionAt(walk.motion, now);
+      last = walk.points[walk.points.length - 1]!,
+      lastMiddle = last.middle ?? last.at,
+      { along, speed } = motionAt(walk.motion, now),
+      passed = Math.max(0, Math.floor(along) - 1),
+      facing = walk.points.length > 1 ? this.#walker(walk, now).facing : null;
 
+    walk.points.splice(0, passed);
+    walk.squares.splice(0, passed);
     walk.points.push({
-      at: [nearest(arrive.at[0], lastU, u), nearest(arrive.at[1], lastV, v)],
+      at: [
+        nearest(arrive.at[0], last.at[0], u),
+        nearest(arrive.at[1], last.at[1], v),
+      ],
       lift: arrive.lift,
+      ...(arrive.middle === undefined
+        ? {}
+        : {
+            middle: [
+              nearest(arrive.middle[0], lastMiddle[0], u),
+              nearest(arrive.middle[1], lastMiddle[1], v),
+            ] as [number, number],
+          }),
     });
     walk.squares.push(to);
     walk.stepped = now;
-    walk.motion = plan(now, along, speed, walk.points.length - 1, pace);
+    walk.turned =
+      facing === null ? null : { facing, at: now, over: pace.step / 2 };
+    walk.motion = plan(
+      now,
+      along - passed,
+      speed,
+      walk.points.length - 1,
+      pace
+    );
   }
 
   // `unit` leaves `walk`: one walking alone ends it there.
@@ -443,6 +485,7 @@ export class Walks {
 
     if (walk.units.length === 0) {
       this.#walks.delete(walk.id);
+      this.#dropped.push(walk.id);
     }
   }
 
@@ -471,7 +514,7 @@ export class Walks {
   }
 
   #walker(walk: Walk, now: number): Walker {
-    const { points, squares } = walk,
+    const { points, squares, turned } = walk,
       last = points.length - 1,
       along = Math.min(last, Math.max(0, motionAt(walk.motion, now).along)),
       index = Math.min(last - 1, Math.floor(along)),
@@ -482,16 +525,27 @@ export class Walks {
         a.at[0] + (b.at[0] - a.at[0]) * t,
         a.at[1] + (b.at[1] - a.at[1]) * t,
       ],
+      middle = (i: number): readonly [number, number] =>
+        points[i]!.middle ?? points[i]!.at,
       way = (i: number): number | null =>
-        i < 0 || i >= last ? null : wayOf(points[i]!.at, points[i + 1]!.at),
+        i < 0 || i >= last ? null : wayOf(middle(i), middle(i + 1)),
       here = way(index) ?? 0,
       // Turning at each square's middle: a quarter of a step either side, from the way it came to the way it goes.
-      facing =
+      pathFacing =
         t > 0.75 && way(index + 1) !== null
           ? turnTowards(here, way(index + 1)!, (t - 0.75) * 2)
           : t < 0.25 && way(index - 1) !== null
           ? turnTowards(way(index - 1)!, here, (t + 0.25) * 2)
-          : here;
+          : here,
+      // Just after a step's joined, from the way it faced then.
+      facing =
+        turned !== null && now - turned.at < turned.over
+          ? turnTowards(
+              turned.facing,
+              pathFacing,
+              Math.max(0, now - turned.at) / turned.over
+            )
+          : pathFacing;
 
     return {
       id: walk.id,
@@ -499,7 +553,8 @@ export class Walks {
       at,
       lift: a.lift + (b.lift - a.lift) * t,
       facing,
-      from: squares[0]!,
+      from: walk.from,
+      before: squares[last - 1] ?? squares[last]!,
       to: squares[last]!,
     };
   }
