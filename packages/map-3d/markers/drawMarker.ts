@@ -39,13 +39,18 @@ const FIGURE_SCALE = 1.5,
   STONE = '#b5ab98',
   WALL = '#8d8577',
   ACTIVE = '#fff4b0',
-  // A unit's flag: how far over the unit it flies, and how big it is.
-  FLAG_GAP = 0.07,
-  FLAG_WIDTH = 0.11,
-  FLAG_HEIGHT = 0.06,
-  // How tall a unit's label is on the screen, and the pointer over the unit awaiting orders, above it.
+  // How far over a unit its flag flies, on the land.
+  FLAG_GAP = 0.04,
+  // What stands over a unit, the same size on the screen however far away, from the bottom up: its hit-point bar, its
+  //  flag, its label, and the pointer over the unit awaiting orders. A city's name is as tall as `CITY_LABEL`.
+  BAR_HEIGHT = 0.004,
+  FLAG_WIDTH = 0.018,
+  FLAG_HEIGHT = 0.01,
   UNIT_LABEL = 0.022,
   POINTER = 0.03,
+  CITY_LABEL = 0.03,
+  // The space between them.
+  SPACE = 0.002,
   // Hit points left: plenty, some, few.
   PLENTY = '#4caf50',
   SOME = '#e0b030',
@@ -107,12 +112,16 @@ export class MarkerKit {
     return geometry;
   }
 
-  /** A plain sprite's material in `colour`, as big as the world makes it, facing the camera: a flag, a bar. */
-  flat(colour: string): SpriteMaterial {
+  /** A plain sprite's material in `colour`, the same size on the screen however far away, over all: a flag, a bar. */
+  plain(colour: string): SpriteMaterial {
     let material = this.#flats.get(colour);
 
     if (material === undefined) {
-      material = new SpriteMaterial({ color: new Color(colour) });
+      material = new SpriteMaterial({
+        color: new Color(colour),
+        sizeAttenuation: false,
+        depthTest: false,
+      });
       this.#flats.set(colour, material);
     }
 
@@ -250,37 +259,45 @@ const flagText = (unit: UnitMarker): string =>
     .filter((part) => part !== '')
     .join(' ');
 
-// A label's sprite, as tall on the screen as `height`, its bottom middle at (`x`, `y`, `z`), or `raised` its own height
-//  over that.
-const labelSprite = (
+// A sprite the same size on the screen however far away, as `width` and `height` say in the screen's units, standing
+//  `over` above the point it's put at, drawn over the land in the order `order` says.
+const badge = (
+  material: SpriteMaterial,
+  width: number,
+  height: number,
+  over: number,
+  order = 2
+): Sprite => {
+  const sprite = new Sprite(material);
+
+  sprite.scale.set(width, height, 1);
+  sprite.center.set(0.5, -over / height);
+  sprite.renderOrder = order;
+  // Its bounds are the screen's, which three.js doesn't know: it would cull it by the world's, while still on screen.
+  sprite.frustumCulled = false;
+
+  return sprite;
+};
+
+// A label as tall on the screen as `height`, `over` above the point it's put at.
+const label = (
   material: SpriteMaterial,
   height: number,
-  x: number,
-  y: number,
-  z: number,
-  raised = 0
+  over: number
 ): Sprite => {
-  const sprite = new Sprite(material),
-    image = material.map?.image as { width: number; height: number } | null,
+  const image = material.map?.image as { width: number; height: number } | null,
     aspect =
       image && image.height > 0 && image.width > 0
         ? image.width / image.height
         : 1;
 
-  sprite.scale.set(height * aspect, height, 1);
-  sprite.center.set(0.5, -raised);
-  sprite.position.set(x, y, z);
-  sprite.renderOrder = 2;
-
-  return sprite;
+  return badge(material, height * aspect, height, over);
 };
 
-// A city, its name raised clear of a unit's label when one stands in it.
-const drawCity = (
-  kit: MarkerKit,
-  city: CityMarker,
-  garrisoned = false
-): Group => {
+// Where a city's name stands, over its middle.
+const CITY_NAME_AT: [number, number, number] = [0, 0.36, 0];
+
+const drawCity = (kit: MarkerKit, city: CityMarker): Group => {
   const group = new Group(),
     { building, roof, wall } = kit.geometries,
     stone = kit.material(STONE),
@@ -318,25 +335,33 @@ const drawCity = (
 
   // About as tall on the screen as the 2D map's city names, whatever the distance.
   group.add(
-    labelSprite(
-      kit.label(
-        `${city.name}  ${city.size}${city.disorder ? ' !' : ''}`,
-        city.colours[0],
-        textOn(city.colours[0])
+    place(
+      label(
+        kit.label(
+          `${city.name}  ${city.size}${city.disorder ? ' !' : ''}`,
+          city.colours[0],
+          textOn(city.colours[0])
+        ),
+        CITY_LABEL,
+        0
       ),
-      0.03,
-      0,
-      0.36,
-      0,
-      garrisoned ? (UNIT_LABEL + POINTER + 0.012) / 0.03 : 0
+      ...CITY_NAME_AT
     )
   );
 
   return group;
 };
 
-/** The unit on top of a stack, as the built-in set draws its type, standing on its square's middle. */
-const drawUnit = (kit: MarkerKit, unit: UnitMarker): Group => {
+/**
+ * The unit on top of a stack, as the built-in set draws its type, standing on its square's middle. What stands over it
+ *  (its bar, flag, label and pointer) stands over the point `badges.at` says, from `badges.over` up the screen: over
+ *  the unit, or over a city's name.
+ */
+const drawUnit = (
+  kit: MarkerKit,
+  unit: UnitMarker,
+  badges: { at: [number, number, number]; over: number } | null = null
+): Group => {
   const group = new Group(),
     { stand, bank, ring } = kit.geometries,
     look = unitLook(unit.type, unit.kinds),
@@ -344,7 +369,13 @@ const drawUnit = (kit: MarkerKit, unit: UnitMarker): Group => {
     lift = afloat ? 0 : STAND_HEIGHT,
     figure = kit.figure(look, unit.colours),
     top = lift + (figure.boundingBox?.max.y ?? 0.2) * FIGURE_SCALE,
-    flagY = top + FLAG_GAP;
+    at = badges?.at ?? [0, top + FLAG_GAP, 0],
+    // From the bottom up, on the screen.
+    hurt = unit.health !== null,
+    flagOver = (badges?.over ?? 0) + (hurt ? BAR_HEIGHT + SPACE : 0),
+    labelOver = flagOver + FLAG_HEIGHT + SPACE,
+    text = flagText(unit),
+    pointerOver = labelOver + (text === '' ? 0 : UNIT_LABEL + SPACE);
 
   // On a stand in the owner's second colour, so whose it is shows from afar; a ship rides the water without one.
   if (!afloat) {
@@ -368,88 +399,99 @@ const drawUnit = (kit: MarkerKit, unit: UnitMarker): Group => {
     group.add(wall);
   }
 
-  // The owner's flag, over the unit, and its hit-point bar: sprites, facing the camera however it's turned.
-  const flag = new Sprite(kit.flat(unit.colours[0])),
-    labelAt = flagY + FLAG_HEIGHT / 2 + 0.005;
+  // Its hit points, when it has lost some: a bar under its flag, shorter and redder as they go, from its left.
+  if (unit.health !== null) {
+    const left = Math.max(0, Math.min(1, unit.health));
 
-  flag.scale.set(FLAG_WIDTH, FLAG_HEIGHT, 1);
-  group.add(place(flag, 0, flagY, 0));
+    group.add(
+      place(
+        badge(
+          kit.plain('#202020'),
+          FLAG_WIDTH,
+          BAR_HEIGHT,
+          badges?.over ?? 0,
+          2
+        ),
+        ...at
+      )
+    );
 
-  const text = flagText(unit);
+    if (left > 0) {
+      const front = badge(
+        kit.plain(left > 0.5 ? PLENTY : left > 0.25 ? SOME : FEW),
+        FLAG_WIDTH * left,
+        BAR_HEIGHT * 0.6,
+        (badges?.over ?? 0) + BAR_HEIGHT * 0.2,
+        3
+      );
+
+      // Its left edge on the back's: a sprite stands `center` of its width from its left edge.
+      front.center.x = 1 / (2 * left);
+      group.add(place(front, ...at));
+    }
+  }
+
+  // The owner's flag, and its label: the stack's size, what it's busy with, and a veteran's star.
+  group.add(
+    place(
+      badge(kit.plain(unit.colours[0]), FLAG_WIDTH, FLAG_HEIGHT, flagOver),
+      ...at
+    )
+  );
 
   if (text !== '') {
     group.add(
-      labelSprite(
-        kit.label(text, unit.colours[0], textOn(unit.colours[0])),
-        UNIT_LABEL,
-        0,
-        labelAt,
-        0
+      place(
+        label(
+          kit.label(text, unit.colours[0], textOn(unit.colours[0])),
+          UNIT_LABEL,
+          labelOver
+        ),
+        ...at
       )
     );
   }
 
-  // Its hit points, when it has lost some: a bar under the flag, shorter and redder as they go, from its left on the
-  //  screen whichever way the camera faces.
-  if (unit.health !== null) {
-    const left = Math.max(0, Math.min(1, unit.health)),
-      back = new Sprite(kit.flat('#202020')),
-      barAt = flagY - FLAG_HEIGHT / 2 - 0.012;
-
-    back.scale.set(FLAG_WIDTH, 0.014, 1);
-    back.renderOrder = 1;
-    group.add(place(back, 0, barAt, 0));
-
-    if (left > 0) {
-      const front = new Sprite(
-        kit.flat(left > 0.5 ? PLENTY : left > 0.25 ? SOME : FEW)
-      );
-
-      front.scale.set(FLAG_WIDTH * left, 0.01, 1);
-      // Its left edge on the back's: a sprite's middle is `center` of its width from its left edge.
-      front.center.set(1 / (2 * left), 0.5);
-      front.renderOrder = 2;
-      group.add(place(front, 0, barAt, 0));
-    }
-  }
-
-  // The unit awaiting orders: a ring at its feet, and a pointer over its flag and label, the same size on the screen
-  //  however far away, so it's found at any distance.
+  // The unit awaiting orders: a ring at its feet, and a pointer over all the rest, so it's found at any distance.
   if (unit.active) {
-    const halo = new Mesh(ring, kit.material(ACTIVE, true)),
-      over = new Sprite(kit.pointer());
+    const halo = new Mesh(ring, kit.material(ACTIVE, true));
 
     halo.rotation.x = Math.PI / 2;
     halo.position.y = 0.01;
-    over.scale.set(POINTER, POINTER, 1);
-    // Clear of a label, which stands its own height over the same point.
-    over.center.set(0.5, -(UNIT_LABEL + 0.006) / POINTER);
-    over.renderOrder = 3;
-    group.add(halo, place(over, 0, labelAt, 0));
+    group.add(
+      halo,
+      place(badge(kit.pointer(), POINTER, POINTER, pointerOver, 4), ...at)
+    );
   }
 
   return group;
 };
 
 /**
- * A square's markers, standing on the ground at its middle: its city, and the unit on top of its stack in front, its
- *  flag's label under the city's name.
+ * A square's markers, standing on the ground at its middle: its city, and the unit on top of its stack in front of its
+ *  buildings, its flag over the city's name, from the same point, so the two never cross however the camera's turned.
  */
 export const drawMarker = (kit: MarkerKit, marker: TileMarker): Group => {
   const group = new Group();
 
   if (marker.city !== null) {
-    group.add(drawCity(kit, marker.city, marker.unit !== null));
+    group.add(drawCity(kit, marker.city));
   }
 
   if (marker.unit !== null) {
-    const pawn = drawUnit(kit, marker.unit);
+    const inFront = marker.city === null ? 0 : 0.26,
+      pawn = drawUnit(
+        kit,
+        marker.unit,
+        marker.city === null
+          ? null
+          : {
+              at: [CITY_NAME_AT[0], CITY_NAME_AT[1], CITY_NAME_AT[2] - inFront],
+              over: CITY_LABEL + SPACE,
+            }
+      );
 
-    // In a city, in front of its buildings.
-    if (marker.city !== null) {
-      pawn.position.z = 0.26;
-    }
-
+    pawn.position.z = inFront;
     group.add(pawn);
   }
 

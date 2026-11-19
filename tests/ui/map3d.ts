@@ -676,6 +676,7 @@ expect(
   // The page's words from here on: a city's name in the locale, and a busy unit's letter.
   await i18next.init({ ...i18nOptions, lng: 'en' });
   i18next.addResource('en', 'city', 'Romans.Roma.name', 'Rome');
+  i18next.addResource('en', 'unit', 'Busy.Fortified.icon', 'Fd');
 
   // A city and a stack on a square: marked, with the best defender on top, until `t` hides them, and the active unit
   //  on top, marked as active, even hidden.
@@ -758,8 +759,8 @@ expect(
         fortified: true,
         veteran: true,
         health: 0.6,
-        // The page's letter for Fortified.
-        status: 'F',
+        // The page's letter for Fortified, in the locale.
+        status: 'Fd',
       },
     ]
   );

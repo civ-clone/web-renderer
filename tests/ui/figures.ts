@@ -248,10 +248,14 @@ ours.dispose();
 // The kit: each look in each pair of colours made once, and all let go together.
 const kit = new MarkerKit(),
   spearmen = kit.figure(unitTable['Spearman']!, colours),
-  disposed: BufferGeometry[] = [];
+  disposed: unknown[] = [];
 
 [spearmen, kit.figure(unitTable['Spearman']!, others)].forEach((geometry) =>
   geometry.addEventListener('dispose', () => void disposed.push(geometry))
+);
+// And a flag's material, and the pointer's, and its picture.
+[kit.plain(colours[0]), kit.pointer(), kit.pointer().map!].forEach((made) =>
+  made.addEventListener('dispose', () => void disposed.push(made))
 );
 
 expect(
@@ -311,19 +315,20 @@ const unit = (type: string, more: Partial<UnitMarker> = {}): UnitMarker => ({
 
 const soldiers = drawn(unit('Spearman')),
   soldiersFigure = figureOf(soldiers),
-  soldiersFlag = spriteOf(soldiers, kit.flat(colours[0])),
+  soldiersFlag = spriteOf(soldiers, kit.plain(colours[0])),
   soldiersTop =
     (soldiersFigure?.position.y ?? 0) +
     (soldiersFigure?.geometry.boundingBox?.max.y ?? 0) *
       (soldiersFigure?.scale.y ?? 1);
 
 expect(
-  'a unit is its figures on a stand in its owner’s second colour, its owner’s flag over them, facing the camera, and nothing else',
+  'a unit is its figures on a stand in its owner’s second colour, its owner’s flag over them, the same size on the screen however far away and never culled, and nothing else',
   [
     soldiersFigure?.geometry === spearmen,
     meshOf(soldiers, stand)?.material === kit.material(colours[1]),
     (soldiersFigure?.position.y ?? 0) > 0,
-    soldiersFlag?.material.sizeAttenuation,
+    soldiersFlag?.material.sizeAttenuation === false &&
+      soldiersFlag?.frustumCulled === false,
     (soldiersFlag?.position.y ?? 0) > soldiersTop,
     soldiers.length,
   ],
@@ -343,7 +348,7 @@ const fighter = drawn(unit('Fighter')),
 
 expect(
   'an aircraft’s flag flies over it, high as it is',
-  (spriteOf(fighter, kit.flat(colours[0]))?.position.y ?? 0) >
+  (spriteOf(fighter, kit.plain(colours[0]))?.position.y ?? 0) >
     (fighterFigure?.geometry.boundingBox?.max.y ?? 1) *
       (fighterFigure?.scale.y ?? 1) +
       (fighterFigure?.position.y ?? 0),
@@ -361,25 +366,39 @@ const veterans = drawn(
     })
   ),
   label = spriteOf(veterans, kit.label('3 F ★', colours[0], '#ffffff')),
-  back = spriteOf(veterans, kit.flat('#202020')),
-  front = spriteOf(veterans, kit.flat('#d04030')),
-  // Where the bar's ends are, across the screen, from the point both stand at: a sprite's `center` is that point.
+  back = spriteOf(veterans, kit.plain('#202020')),
+  front = spriteOf(veterans, kit.plain('#d04030')),
+  veteransFlag = spriteOf(veterans, kit.plain(colours[0])),
+  // Where a sprite's ends are, across the screen and up it, from the point it stands at, in ten-thousandths of the
+  //  screen's units: a sprite's `center` is that point.
   ends = (sprite: Sprite | undefined): [number, number] => [
-    Math.round(-(sprite?.center.x ?? 0) * (sprite?.scale.x ?? 0) * 1000),
-    Math.round((1 - (sprite?.center.x ?? 0)) * (sprite?.scale.x ?? 0) * 1000),
-  ];
+    Math.round(-(sprite?.center.x ?? 0) * (sprite?.scale.x ?? 0) * 10000),
+    Math.round((1 - (sprite?.center.x ?? 0)) * (sprite?.scale.x ?? 0) * 10000),
+  ],
+  span = (sprite: Sprite | undefined): [number, number] => [
+    -(sprite?.center.y ?? 0) * (sprite?.scale.y ?? 0),
+    (1 - (sprite?.center.y ?? 0)) * (sprite?.scale.y ?? 0),
+  ],
+  // Whether each of `sprites` starts above the last ends, up the screen from the same point.
+  stacked = (...sprites: (Sprite | undefined)[]): boolean =>
+    sprites.every(
+      (sprite, index) =>
+        sprite !== undefined &&
+        sprite.position.equals(sprites[0]!.position) &&
+        (index === 0 || span(sprite)[0] >= span(sprites[index - 1])[1])
+    );
 
 expect(
-  'fortified, behind a low wall; its flag says the stack’s size, its letter and a veteran’s star; a short red bar for few hit points, from the bar’s left, facing the camera',
+  'fortified, behind a low wall; its flag’s label says the stack’s size, its letter and a veteran’s star; a short red bar for few hit points, from the bar’s left, drawn over it, all from one point up the screen: the bar, the flag, the label',
   [
     meshOf(veterans, bank) !== undefined,
     label !== undefined,
     ends(back),
     ends(front),
-    front !== undefined && front.position.equals(back!.position),
     (front?.renderOrder ?? 0) > (back?.renderOrder ?? 0),
+    stacked(back, veteransFlag, label),
   ],
-  [true, true, [-55, 55], [-55, -33], true, true]
+  [true, true, [-90, 90], [-90, -54], true, true]
 );
 
 expect(
@@ -393,31 +412,24 @@ expect(
 );
 
 const active = drawn(unit('Spearman', { active: true, count: 2 })),
+  activeFlag = spriteOf(active, kit.plain(colours[0])),
   activeLabel = spriteOf(active, kit.label('2', colours[0], '#ffffff')),
-  pointer = spriteOf(active, kit.pointer()),
-  // How far over the point it stands at a sprite starts, and ends, on the screen.
-  span = (sprite: Sprite | undefined): [number, number] => [
-    -(sprite?.center.y ?? 0) * (sprite?.scale.y ?? 0),
-    (1 - (sprite?.center.y ?? 0)) * (sprite?.scale.y ?? 0),
-  ];
+  pointer = spriteOf(active, kit.pointer());
 
 expect(
-  'the unit awaiting orders has a ring at its feet, and a pointer the same size on the screen however far away, over its label and drawn over it',
+  'the unit awaiting orders has a ring at its feet, and a pointer the same size on the screen however far away, over its flag and label from the same point, drawn over them',
   [
     meshOf(active, ring) !== undefined,
     pointer?.material.sizeAttenuation,
-    pointer?.position.equals(activeLabel!.position),
-    span(pointer)[0] > span(activeLabel)[1],
+    stacked(activeFlag, activeLabel, pointer),
     (pointer?.renderOrder ?? 0) > (activeLabel?.renderOrder ?? 0),
   ],
-  [true, false, true, true, true]
+  [true, false, true, true]
 );
 
-// In a city: the unit's label under the city's name, which stands clear of it.
-const inCity = (garrisoned: boolean): Sprite | undefined => {
-  const found: Object3D[] = [];
-
-  drawMarker(kit, {
+// In a city: the unit's flag, label and pointer stand over the city's name from the same point on the land, so the two
+//  never cross, whichever way the camera's turned.
+const garrisoned = drawMarker(kit, {
     city: {
       name: 'Roma',
       size: 3,
@@ -425,21 +437,49 @@ const inCity = (garrisoned: boolean): Sprite | undefined => {
       walled: false,
       disorder: false,
     },
-    unit: garrisoned ? unit('Spearman', { count: 2, active: true }) : null,
-  }).traverse((object) => void found.push(object));
+    unit: unit('Spearman', { count: 2, active: true, health: 0.5 }),
+  }),
+  inCity: Object3D[] = [];
 
-  return spriteOf(found, kit.label('Roma  3', colours[0], '#ffffff'));
-};
+garrisoned.updateMatrixWorld(true);
+garrisoned.traverse((object) => void inCity.push(object));
+
+const cityName = spriteOf(inCity, kit.label('Roma  3', colours[0], '#ffffff')),
+  over = [
+    spriteOf(inCity, kit.plain('#202020')),
+    spriteOf(inCity, kit.plain(colours[0])),
+    spriteOf(inCity, kit.label('2', colours[0], '#ffffff')),
+    spriteOf(inCity, kit.pointer()),
+  ],
+  where = (sprite: Sprite | undefined): string =>
+    sprite === undefined
+      ? 'none'
+      : sprite
+          .getWorldPosition(new Vector3())
+          .toArray()
+          .map((n) => n.toFixed(6))
+          .join();
 
 expect(
-  'a city’s name stands clear of a unit’s label and pointer when one is in it, and where it is otherwise',
-  [span(inCity(true))[0] > span(pointer)[1], span(inCity(false))[0]],
-  [true, 0]
+  'in a city, the unit’s bar, flag, label and pointer stand over the city’s name, from the same point on the land, in that order up the screen',
+  [
+    over.every((sprite) => where(sprite) === where(cityName)),
+    span(over[0])[0] >= span(cityName)[1],
+    over.every(
+      (sprite, index) =>
+        index === 0 || span(sprite)[0] >= span(over[index - 1])[1]
+    ),
+  ],
+  [true, true, true]
 );
 
 kit.dispose();
 
-expect('taken down, the kit lets every figure it made go', disposed.length, 2);
+expect(
+  'taken down, the kit lets every figure it made go, and its flags’ materials, and the pointer’s and its picture',
+  disposed.length,
+  5
+);
 
 if (failures.length > 0) {
   process.stderr.write(
