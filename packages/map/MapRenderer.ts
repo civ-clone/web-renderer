@@ -6,6 +6,7 @@
 
 import { Coordinate, Tile, Unit } from '@civ-clone/ui-protocol/types';
 import { MapEvent } from '@civ-clone/ui-protocol/mapEvents';
+import { MapHeading } from '@civ-clone/ui-client/lib/unitActionKeys';
 import MapPortal from './MapPortal';
 import World from './components/World';
 
@@ -17,6 +18,11 @@ export interface MapRenderer {
 
   /** Centres the map on `tile` and draws it. */
   centre(tile: Tile): void;
+  /**
+   * How the map's turned, which the keys that move a unit turn with, so up is still up the screen: the way it's turning
+   *  to, mid-turn. `null` for a map that doesn't turn.
+   */
+  heading(): MapHeading | null;
   /**
    * What the `?debug=1` stress runner flips between, each a function that flips one: none, for a map with nothing to
    *  flip.

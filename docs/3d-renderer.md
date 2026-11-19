@@ -806,9 +806,12 @@ mapEvent:
   - twist with two fingers to turn;
   - drag with two fingers to tilt.
 - **Keys:**
-  - two keys turn the view, and one returns it to north-up;
+  - two keys turn the view, and one returns it to north-up: `[`, `]` and `\`;
   - the 2D map's keys keep working;
-  - the keys aren't chosen yet: they must not clash with unit orders. The plan checks the key table.
+  - the keys that move a unit (the arrows, Home, End, Page Up and Page Down, and the number pad) turn with the view,
+    so up always moves a unit up the screen: to the neighbour nearest that way as the camera's turned to. Unturned,
+    they're the 2D map's own. On the hex grid, where up and down move nothing unturned, they move a unit once the view
+    is turned to put a neighbour within an eighth of a turn of straight up or down.
 - **Following:** centring on a unit glides the focus to it. It's instant under reduced motion.
 - **The sidebar:** squares under the sidebar (`setCovered`) count as off screen, so the active unit is kept clear of it,
   as on the 2D map.

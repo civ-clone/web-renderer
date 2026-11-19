@@ -85,6 +85,104 @@ export const directionKeys = (
   return directionKeysByTopology.get(topology)!;
 };
 
+// The way each key that moves a unit points on the screen: right, and up.
+const keyPoints: { [key: string]: readonly [number, number] } = {
+  ArrowUp: [0, 1],
+  PageUp: [1, 1],
+  ArrowRight: [1, 0],
+  PageDown: [1, -1],
+  ArrowDown: [0, -1],
+  End: [-1, -1],
+  ArrowLeft: [-1, 0],
+  Home: [-1, 1],
+};
+
+/**
+ * How a map that turns is turned (the 3D map's camera): its turn from north, clockwise seen from above, in radians, and
+ *  the way each of its grid's directions points on the ground from a square, east and south, as it's drawn.
+ */
+export type MapHeading = {
+  turn: number;
+  directions: { [direction: string]: readonly [number, number] };
+};
+
+// Where a way on the ground, east and south, points with the map turned by `turn`, as the camera's way ahead does.
+const turned = (
+  [east, south]: readonly [number, number],
+  turn: number
+): [number, number] => [
+  east * Math.cos(turn) - south * Math.sin(turn),
+  east * Math.sin(turn) + south * Math.cos(turn),
+];
+
+// The angle from one way on the ground to another, clockwise seen from above (east towards south), within half a turn
+//  either way.
+const angleFrom = (
+  [a, b]: readonly [number, number],
+  [c, d]: readonly [number, number]
+): number => Math.atan2(a * d - b * c, a * c + b * d);
+
+/**
+ * The keys that move a unit on a map turned as `heading` says, from `keys`, those of the map unturned. Each moves the
+ *  unit in the grid's direction nearest the way the key points on the screen, as the map's turned, so up stays up the
+ *  screen. A key that moves nothing unturned (the up and down arrows on a hex grid, which has no neighbour straight up
+ *  or down) moves the unit only where one of the grid's directions is within an eighth of a turn of its way. Unturned,
+ *  they're `keys`.
+ */
+export const turnedDirectionKeys = (
+  keys: { [key: string]: Direction },
+  heading: MapHeading
+): { [key: string]: Direction } => {
+  const directions = Object.entries(heading.directions) as [
+    Direction,
+    readonly [number, number]
+  ][];
+
+  return Object.fromEntries(
+    Object.entries(keyPoints).flatMap(
+      ([key, [right, up]]): [string, Direction][] => {
+        // The way the key points on the screen, on the ground: up is north, unturned.
+        const unturned = keys[key],
+          way = turned([right, -up], heading.turn);
+        let nearest: Direction | null = null,
+          off = Infinity;
+
+        for (const [direction, points] of directions) {
+          const signed = angleFrom(way, points),
+            angle = Math.abs(signed);
+
+          // Of two as near (turned half way between them), the one clockwise of it, so each key still moves a unit
+          //  a way of its own.
+          if (
+            angle < off - 1e-9 ||
+            (Math.abs(angle - off) <= 1e-9 && signed > 0)
+          ) {
+            nearest = direction;
+            off = angle;
+          }
+        }
+
+        return nearest === null ||
+          (unturned === undefined && off > Math.PI / 8 + 1e-9)
+          ? []
+          : [[key, nearest]];
+      }
+    )
+  );
+};
+
+/**
+ * The keys that move a unit on `topology`'s grid, turned with the map where it's turned (`heading`), as
+ *  `turnedDirectionKeys` turns them: those of `directionKeys`, unturned.
+ */
+export const movingKeys = (
+  topology: Topology,
+  heading: MapHeading | null = null
+): { [key: string]: Direction } =>
+  heading === null
+    ? directionKeys(topology)
+    : turnedDirectionKeys(directionKeys(topology), heading);
+
 export const keyForAction = (actionName: string): string | null =>
   Object.entries(keyToActionsMap).find(([, actions]) =>
     actions.includes(actionName)

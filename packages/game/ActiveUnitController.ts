@@ -8,8 +8,8 @@ import {
 import { TransportHandledAction } from '@civ-clone/ui-protocol/Transport';
 import Transport from '@civ-clone/ui-client/Transport';
 import {
-  directionKeys,
   keyToActionsMap,
+  movingKeys,
 } from '@civ-clone/ui-client/lib/unitActionKeys';
 import chooseActiveUnit from '@civ-clone/ui-client/lib/chooseActiveUnit';
 import UnitQueue from '@civ-clone/ui-client/lib/UnitQueue';
@@ -48,7 +48,9 @@ export type ActiveUnitPortal = Pick<
 export type ActiveUnitMap = Pick<
   MapRenderer,
   'setActiveUnit' | 'showActiveUnit'
->;
+> &
+  // How it's turned, which the keys that move a unit turn with: the 2D map's own keys where it doesn't say.
+  Partial<Pick<MapRenderer, 'heading'>>;
 
 export type ActiveUnitControllerDeps = {
   // Once a halted unit's window has closed, chosen or dismissed (#357).
@@ -427,7 +429,11 @@ export class ActiveUnitController {
     return !!(
       activeUnit &&
       (key in keyToActionsMap ||
-        key in directionKeys(this.#deps.world.topology())) &&
+        key in
+          movingKeys(
+            this.#deps.world.topology(),
+            this.#deps.map.heading?.() ?? null
+          )) &&
       this.#pendingMove.press(
         key,
         hasUnitActions(activeUnit),
@@ -507,6 +513,7 @@ export class ActiveUnitController {
 
     return playUnitKey(key, this.#activeUnit, {
       apply: (unit) => this.apply(unit),
+      heading: () => this.#deps.map.heading?.() ?? null,
       chooseTarget: (unit, actionName) => this.chooseTarget(unit, actionName),
       pendingMove: this.#pendingMove,
       scheduleRender,
