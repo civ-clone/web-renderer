@@ -922,7 +922,9 @@ mapEvent:
   - Others' walks hold nothing, nor do the player's other units' walks, as GoTos at the turn's start.
 - **Options** (third part), under `?3d=1` only, read at each move:
   - **Units moving on the 3D map:** walk, walk quickly (twice as fast), or move at once (no walks);
-  - **Show other players' units moving:** off, their units are on their new squares at once.
+  - **Show other players' units moving:** off, their units are on their new squares at once, unless they're walking
+    already.
+  - Either chosen as walks go on: moving at once ends them all on the next frame, as less motion asked for does.
 - **Still to come:**
   - §6.4's paths: along roads, ships' wakes and aircraft's arcs (a walk goes straight between squares' middles now);
   - battles (2.4).

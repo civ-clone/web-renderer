@@ -542,6 +542,11 @@ export class MapView3D implements MapRenderer {
   #walk(unit: MapEventUnit, from: Coordinate, to: Coordinate): void {
     const speed = this.#walkOptions?.speed() ?? 'normal';
 
+    // The unit ringed: where it is now, as the map has it, walked or not.
+    if (unit.id === this.#ringed) {
+      this.#ringedTile = to;
+    }
+
     if (
       typeof requestAnimationFrame !== 'function' ||
       prefersReducedMotion() ||
@@ -575,11 +580,6 @@ export class MapView3D implements MapRenderer {
       after: this.#queued,
     });
     this.#stepsOn(unit.id);
-
-    // The unit ringed: where it is now, as the map has it.
-    if (unit.id === this.#ringed) {
-      this.#ringedTile = to;
-    }
 
     this.#walks.step(
       unit.id,
@@ -653,8 +653,11 @@ export class MapView3D implements MapRenderer {
       return;
     }
 
-    // Less motion asked for mid-walk: every walk's over now.
-    if (prefersReducedMotion()) {
+    // Less motion asked for mid-walk, or units to move at once: every walk's over now.
+    if (
+      prefersReducedMotion() ||
+      (this.#walkOptions?.speed() ?? 'normal') === 'off'
+    ) {
       this.#walksEnded(this.#walks.endAll(now));
 
       return;

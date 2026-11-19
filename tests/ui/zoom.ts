@@ -784,6 +784,13 @@ const run = async (): Promise<void> => {
       options.get(MAP3D_RIVALS_WALK_OPTION),
     ];
 
+    // Opened again: as chosen.
+    const reopened = walkRows('?3d=1'),
+      asChosen = [
+        reopened[0]?.querySelector('option[selected]')?.getAttribute('value'),
+        reopened[1]?.querySelector('input')?.hasAttribute('checked'),
+      ];
+
     options.set(MAP3D_WALKS_OPTION, 'sideways');
 
     const unknown = (
@@ -796,12 +803,13 @@ const run = async (): Promise<void> => {
     options.set(MAP3D_RIVALS_WALK_OPTION, true);
 
     expect(
-      "Options has how the 3D map's units move, and whether others' are shown moving, under ?3d=1 only: walking and shown at first, kept as chosen; a way it doesn't know is walking",
-      [walkRows('').length, walks.length, asFirst, chosen, unknown],
+      "Options has how the 3D map's units move, and whether others' are shown moving, under ?3d=1 only: walking and shown at first, kept as chosen, and as chosen opened again; a way it doesn't know is walking",
+      [walkRows('').length, walks.length, asFirst, chosen, asChosen, unknown],
       [
         0,
         2,
         [['normal', 'fast', 'off'], 'normal', true],
+        ['fast', false],
         ['fast', false],
         'normal',
       ]
@@ -809,17 +817,24 @@ const run = async (): Promise<void> => {
 
     // The Options window has it on a page that asked for the 3D map, and not on one that didn't.
     const location = Object.getOwnPropertyDescriptor(globalThis, 'location'),
-      windowFor = (search: string): boolean => {
+      windowFor = (search: string): boolean[] => {
         Object.defineProperty(globalThis, 'location', {
           configurable: true,
           value: { search },
         });
 
         const optionsWindow = new GameOptions(null),
-          found =
-            optionsWindow
-              .element()
-              .querySelector('input[type="range"][step="0.25"]') !== null;
+          element = optionsWindow.element(),
+          found = [
+            element.querySelector('input[type="range"][step="0.25"]') !== null,
+            // How units move: the select with walking, quickly and at once.
+            [...element.querySelectorAll('select')].some((select) =>
+              ['normal', 'fast', 'off'].every(
+                (speed) =>
+                  select.querySelector(`option[value="${speed}"]`) !== null
+              )
+            ),
+          ];
 
         optionsWindow.close();
 
@@ -834,9 +849,12 @@ const run = async (): Promise<void> => {
     }
 
     expect(
-      "the Options window has the 3D map's unit size where the page asked for the 3D map, and not otherwise",
+      "the Options window has the 3D map's unit size, and how its units move, where the page asked for the 3D map, and not otherwise",
       inWindow,
-      [true, false]
+      [
+        [true, true],
+        [false, false],
+      ]
     );
   }
 
