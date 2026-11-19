@@ -28,6 +28,7 @@ import {
   WebGLRenderer,
 } from 'three';
 import { ChunkMesh } from './terrain/chunks';
+import landMaterial from './landMaterial';
 import { MarkerKit, UNIT_PART, drawMarker } from './markers/drawMarker';
 import { TileMarker } from './markers/markerFor';
 import { OverlayMesh } from './overlay/overlayMesh';
@@ -308,10 +309,8 @@ export const createStage: StageFactory = (
       400
     ),
     land = new Group(),
-    material = new MeshStandardMaterial({
-      roughness: 0.92,
-      vertexColors: true,
-    }),
+    // The land's colour at each point, and its surfaces' detail over it (`landMaterial.ts`).
+    { material, detail } = landMaterial(period),
     sun = new DirectionalLight(SUN, 2.6),
     // What's drawn at every copy of the world in sight: the land's chunks by `i,j`, and the squares' markers by `x,y`.
     //  Each has where it lies, how to make one copy of it, and the copies drawn now.
@@ -538,6 +537,15 @@ export const createStage: StageFactory = (
       geometry.setAttribute('position', new BufferAttribute(mesh.positions, 3));
       geometry.setAttribute('normal', new BufferAttribute(mesh.normals, 3));
       geometry.setAttribute('color', new BufferAttribute(mesh.colours, 3));
+      // How much of each surface the ground is, from 0 to 1.
+      geometry.setAttribute(
+        'surfacesA',
+        new BufferAttribute(mesh.surfacesA, 4, true)
+      );
+      geometry.setAttribute(
+        'surfacesB',
+        new BufferAttribute(mesh.surfacesB, 4, true)
+      );
       geometry.setIndex(new BufferAttribute(mesh.indices, 1));
       geometry.computeBoundingSphere();
 
@@ -725,6 +733,7 @@ export const createStage: StageFactory = (
       water.dispose();
       clouds.dispose();
       material.dispose();
+      detail.dispose();
       renderer.dispose();
     },
   };

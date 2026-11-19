@@ -24,6 +24,7 @@ import { Noise, fractalNoise, periodicNoise } from './noise';
 import {
   Relief,
   ReliefShape,
+  SURFACES,
   TerrainEntry,
   seaFloor,
   terrainEntry,
@@ -48,6 +49,9 @@ export type ReliefSource = {
 export type GroundSample = {
   height: number;
   colour: [number, number, number];
+  // How much of each surface (`SURFACES`, in order) its ground is, blended as its colour is, summing to 1: or none, on
+  //  a square never seen.
+  surfaces: number[];
   // Whether the point is on a square never seen, which cloud covers.
   unseen: boolean;
 };
@@ -86,6 +90,8 @@ const linear = (hex: string): [number, number, number] => {
 type Square = {
   relief: Relief;
   colour: [number, number, number];
+  // Its surface, by its place in `SURFACES`: the sea's floor is sand.
+  surface: number;
   unknown: boolean;
   peak: { u: number; v: number; scale: number };
 };
@@ -331,6 +337,7 @@ export const createRelief = ({
         return {
           relief: entry.relief,
           colour: linear(entry.colour),
+          surface: SURFACES.indexOf(entry.surface),
           unknown,
           peak,
         };
@@ -346,6 +353,7 @@ export const createRelief = ({
       return {
         relief: { ...entry.relief, base: depth },
         colour: linear(entry.colour),
+        surface: SURFACES.indexOf('sand'),
         unknown,
         peak,
       };
@@ -691,7 +699,12 @@ export const createRelief = ({
 
     // Never seen, or off a world that doesn't wrap over the poles: flat, at sea level.
     if (ownSquare === null || ownSquare.unknown) {
-      return { height: 0, colour: linear(unknownTerrain.colour), unseen: true };
+      return {
+        height: 0,
+        colour: linear(unknownTerrain.colour),
+        surfaces: SURFACES.map(() => 0),
+        unseen: true,
+      };
     }
 
     // Each noise at this point, once it's asked for.
@@ -707,6 +720,8 @@ export const createRelief = ({
       blended = 0,
       peaks = 0,
       shades = 0,
+      // Each surface's share, weighed as the colour is.
+      surfaces = SURFACES.map(() => 0),
       red = 0,
       green = 0,
       blue = 0;
@@ -731,7 +746,7 @@ export const createRelief = ({
       }
 
       const [cu, cv] = layout.centre(x, y),
-        { relief, colour, peak } = square,
+        { relief, colour, peak, surface } = square,
         w = weight(Math.hypot(u - cu, v - cv)),
         // A peak's own, from where it stands; and the colour's, sharper than the land's, from where it's taken.
         peakW =
@@ -761,6 +776,7 @@ export const createRelief = ({
       }
 
       shades += shade;
+      surfaces[surface] = (surfaces[surface] ?? 0) + shade;
       red += shade * colour[0];
       green += shade * colour[1];
       blue += shade * colour[2];
@@ -819,6 +835,10 @@ export const createRelief = ({
         shades > 0
           ? [red / shades, green / shades, blue / shades]
           : ownSquare.colour,
+      surfaces:
+        shades > 0
+          ? surfaces.map((share) => share / shades)
+          : SURFACES.map((_, at) => (at === ownSquare.surface ? 1 : 0)),
       unseen: false,
     };
   };

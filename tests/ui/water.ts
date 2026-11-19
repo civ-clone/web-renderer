@@ -52,6 +52,8 @@ const ground = {
       positions,
       normals: new Float32Array(27),
       colours: new Float32Array(27),
+      surfacesA: new Uint8Array(36),
+      surfacesB: new Uint8Array(36),
       // The middle point alone on a square never seen.
       unseen: new Float32Array(9)
         .fill(0)
