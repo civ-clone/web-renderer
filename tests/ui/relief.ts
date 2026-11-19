@@ -16,6 +16,7 @@ import createRelief, {
   peakOf,
 } from '@civ-clone/ui-map-3d/terrain/relief';
 import { TopologyId } from '@civ-clone/ui-protocol/topology';
+import { SURFACES, terrainEntry } from '@civ-clone/ui-models-builtin/terrain';
 
 const failures: string[] = [];
 let checks = 0;
@@ -104,17 +105,24 @@ const stepsIn = (
         const step = Math.abs(
             relief.height(...inside) - relief.height(...outside)
           ),
-          // The colours too: blended sharper, but with no edge of their own.
-          inColour = relief.sample(...inside).colour,
-          outColour = relief.sample(...outside).colour,
+          // The colours too, and the surfaces: blended sharper, but with no edge of their own.
+          inSample = relief.sample(...inside),
+          outSample = relief.sample(...outside),
           shade = Math.max(
-            ...inColour.map((value, channel) =>
-              Math.abs(value - (outColour[channel] ?? 0))
+            ...inSample.colour.map((value, channel) =>
+              Math.abs(value - (outSample.colour[channel] ?? 0))
+            )
+          ),
+          surface = Math.max(
+            ...inSample.surfaces.map((share, at) =>
+              Math.abs(share - (outSample.surfaces[at] ?? 0))
             )
           );
 
-        if (step > 1e-6 || shade > 1e-5) {
-          steps.push(`${x},${y} ${index}@${along}: ${step} ${shade}`);
+        if (step > 1e-6 || shade > 1e-5 || surface > 1e-5) {
+          steps.push(
+            `${x},${y} ${index}@${along}: ${step} ${shade} ${surface}`
+          );
         }
       });
     });
@@ -191,8 +199,37 @@ ids.forEach((topologyId) => {
   );
 
   expect(
-    `${topologyId}: no step in height or colour across any edge or corner between squares seen`,
+    `${topologyId}: no step in height, colour or surface across any edge or corner between squares seen`,
     stepsIn(relief, layout, squares, unknown).slice(0, 3),
+    []
+  );
+
+  // Surfaces: how much of each the ground is sums to 1 everywhere seen, and to 0 on a square never seen; and deep in a
+  //  square, its own terrain's surface is most of it, the sea's floor sand.
+  const wrongSurface: string[] = [];
+
+  squares.forEach(([x, y]) => {
+    const [u, v] = layout.centre(x, y),
+      name = pattern(x, y),
+      { surfaces, unseen } = relief.sample(u, v),
+      total = surfaces.reduce((sum, share) => sum + share, 0),
+      most = surfaces.indexOf(Math.max(...surfaces)),
+      expected = ['Ocean', 'Lake'].includes(name)
+        ? 'sand'
+        : terrainEntry(name).surface;
+
+    if (
+      unseen
+        ? total !== 0
+        : Math.abs(total - 1) > 1e-9 || SURFACES[most] !== expected
+    ) {
+      wrongSurface.push(`${x},${y} ${name}: ${surfaces.join(',')}`);
+    }
+  });
+
+  expect(
+    `${topologyId}: each point's surfaces sum to 1, or to 0 on a square never seen; at a square's middle, its own terrain's surface is most of it, the sea's floor sand`,
+    wrongSurface.slice(0, 3),
     []
   );
 
@@ -397,8 +434,98 @@ ids.forEach((topologyId) => {
   });
 
   expect(
-    'a square the engine says is water, of a terrain the table doesn’t know, is the sea’s floor beside the shore',
-    lake.height(5.5, 5.5) < 0 && lake.height(5.5, 5.5) > -0.08,
+    'a square the engine says is water, of a terrain the table doesn’t know, is the sea’s floor beside the shore, of sand',
+    [
+      lake.height(5.5, 5.5) < 0 && lake.height(5.5, 5.5) > -0.08,
+      SURFACES[
+        lake
+          .sample(5.5, 5.5)
+          .surfaces.indexOf(Math.max(...lake.sample(5.5, 5.5).surfaces))
+      ],
+    ],
+    [true, 'sand']
+  );
+
+  // Surfaces blended as the colour is: in a world of grassland and desert, all seen, how much of the point's ground
+  //  is grass is how much of its colour is grassland's, everywhere, by the channel the two differ in most.
+  const twoLands = createRelief({
+      layout,
+      source: sourceFor(topology, (x, y) =>
+        (x * 3 + y * 7 + ((x * y) % 3)) % 5 < 2 ? 'Desert' : 'Grassland'
+      ),
+    }),
+    unlike: string[] = [];
+
+  // The two colours as the table has them, linear: grassland's and desert's.
+  const linear = (hex: string): number[] =>
+      [1, 3, 5].map((offset) => {
+        const value = parseInt(hex.slice(offset, offset + 2), 16) / 255;
+
+        return value <= 0.04045
+          ? value / 12.92
+          : ((value + 0.055) / 1.055) ** 2.4;
+      }),
+    grass = linear(terrainEntry('Grassland').colour),
+    desert = linear(terrainEntry('Desert').colour),
+    // The channel they differ in most.
+    most = [0, 1, 2].reduce((best, at) =>
+      Math.abs((grass[at] ?? 0) - (desert[at] ?? 0)) >
+      Math.abs((grass[best] ?? 0) - (desert[best] ?? 0))
+        ? at
+        : best
+    );
+
+  for (let at = 0; at < 2000; at++) {
+    const u = (at * 0.6180339) % 12,
+      v = (at * 0.381966 * 7) % 10,
+      { colour, surfaces } = twoLands.sample(u, v),
+      grassy =
+        ((colour[most] ?? 0) - (desert[most] ?? 0)) /
+        ((grass[most] ?? 0) - (desert[most] ?? 0));
+
+    if (Math.abs((surfaces[SURFACES.indexOf('grass')] ?? 0) - grassy) > 1e-9) {
+      unlike.push(
+        `${u},${v}: ${surfaces[SURFACES.indexOf('grass')]} ${grassy}`
+      );
+    }
+  }
+
+  expect(
+    'in grassland and desert, all seen, how much of a point’s ground is grass is how much of its colour is grassland’s',
+    unlike.slice(0, 3),
+    []
+  );
+
+  // Beside a square never seen: none of its surface. A square of arctic beside one, every way the grid has: snow, all
+  //  through it, to its edge.
+  const edging = topology
+    .directions()
+    .map((direction) => {
+      const [dx, dy] = topology.offset(direction, 5, 5),
+        beside = createRelief({
+          layout,
+          source: sourceFor(topology, (x, y) =>
+            x === 5 + dx && y === 5 + dy ? 'Unknown' : 'Arctic'
+          ),
+        }),
+        [cu, cv] = layout.centre(5, 5),
+        [nu, nv] = layout.centre(5 + dx, 5 + dy);
+
+      // Along the way to it, to just short of the edge.
+      return [0, 0.2, 0.35, 0.45, 0.49].every((along) => {
+        const { surfaces } = beside.sample(
+          cu + (nu - cu) * along,
+          cv + (nv - cv) * along
+        );
+
+        return surfaces[SURFACES.indexOf('snow')] === 1;
+      });
+    })
+    .every(Boolean);
+
+  expect(
+    'a square of arctic beside one never seen is snow all through, to its edge: the square never seen lends it no surface',
+    edging,
     true
   );
 

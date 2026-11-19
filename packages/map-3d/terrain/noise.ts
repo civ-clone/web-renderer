@@ -20,6 +20,11 @@ const hash = (i: number, j: number, seed: number): number => {
   return (h >>> 0) / 4294967296;
 };
 
+// The 16 directions a lattice point's slope can take, round the circle: each one's cosine and sine, worked out once.
+const DIRECTIONS = Float64Array.from({ length: 32 }, (_, at) =>
+  (at % 2 === 0 ? Math.cos : Math.sin)(Math.floor(at / 2) * (Math.PI / 8))
+);
+
 // Smooth from 0 to 1, flat at both ends, with a smooth slope too, so the land's normals have no creases at cell edges.
 const fade = (t: number): number => t * t * t * (t * (t * 6 - 15) + 10);
 
@@ -47,9 +52,11 @@ export const periodicNoise = ({
 
   // The slope at a lattice point, along (`dx`, `dy`) from it: one of 16 directions round the circle, hashed.
   const slope = (i: number, j: number, dx: number, dy: number): number => {
-    const angle = Math.floor(hash(i, j, seed) * 16) * (Math.PI / 8);
+    const direction = Math.floor(hash(i, j, seed) * 16) * 2;
 
-    return Math.cos(angle) * dx + Math.sin(angle) * dy;
+    return (
+      (DIRECTIONS[direction] ?? 0) * dx + (DIRECTIONS[direction + 1] ?? 0) * dy
+    );
   };
 
   return (u: number, v: number): number => {
