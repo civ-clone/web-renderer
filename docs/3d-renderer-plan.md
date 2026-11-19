@@ -359,8 +359,11 @@ one walk, by the clock. Other players' units walk only on the screen, twice as f
 together, as a ship and its cargo, walk as one.
 
 **Second part, the game waits: done.** The ring and the camera wait for the unit that was active to finish walking
-before going to the next unit, which is chosen at once as before; a key or a press for it ends the walk. Still to do:
-the options.
+before going to the next unit, which is chosen at once as before; a key or a press for it ends the walk.
+
+**Third part, the options: done.** Under `?3d=1`, Options has how units move (walk, walk quickly, or at once) and
+whether other players' units are shown moving. Still to do from the spec: §6.4's paths (along roads, ships' wakes,
+aircraft's arcs).
 
 - **What:**
   - the shown state and held patches (spec §8.2);

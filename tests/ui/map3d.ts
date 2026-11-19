@@ -42,7 +42,11 @@ import {
   mapTileset,
   zoomOption,
 } from '@civ-clone/ui-assets/lib/tilesets';
-import { MAP3D_UNIT_SIZE_OPTION } from '@civ-clone/ui-client/lib/map3dOptions';
+import {
+  MAP3D_RIVALS_WALK_OPTION,
+  MAP3D_UNIT_SIZE_OPTION,
+  MAP3D_WALKS_OPTION,
+} from '@civ-clone/ui-client/lib/map3dOptions';
 import {
   MAP3D_DISTANCE_OPTION,
   forgetMap3D,
@@ -3076,6 +3080,113 @@ expect(
       [1, false],
       [true, false, true],
       [1, true, true],
+    ]
+  );
+
+  // As the player chose in Options: walking quickly, the player's own units take half as long as walking; moving at
+  //  once, there's no walk, the unit on its square at once; with others' units' moves not shown, a rival's on the
+  //  screen doesn't walk. Read at each move.
+  glider.setActiveUnit(null);
+  glider.portal.setCenter(1, 1);
+  runFrames();
+
+  const walkFrames = framesFor(walker, [1, 1], [2, 1], 'Player-1');
+
+  optionsRegistry.set(MAP3D_WALKS_OPTION, 'fast');
+
+  const quickFrames = framesFor(walker, [1, 1], [2, 1], 'Player-1'),
+    quickRival = framesFor(rival, [1, 1], [2, 1], 'Player-2');
+
+  optionsRegistry.set(MAP3D_WALKS_OPTION, 'off');
+  walkersSet.length = 0;
+  repatched([1, 1, [walker]]);
+  stepped(walker, [1, 1], [2, 1]);
+  patch([1, 1, []], [2, 1, [walker]]);
+  runFrames(1);
+
+  const atOnce = [unitOn(2, 1), drawnWalkers()];
+
+  optionsRegistry.set(MAP3D_WALKS_OPTION, 'normal');
+  optionsRegistry.set(MAP3D_RIVALS_WALK_OPTION, false);
+  runFrames();
+  repatched([2, 1, []], [1, 1, [rival]]);
+  walkersSet.length = 0;
+  stepped(rival, [1, 1], [2, 1], 'Player-2');
+  patch([1, 1, []], [2, 1, [rival]]);
+  runFrames(1);
+
+  const rivalsHidden = [unitOn(2, 1), drawnWalkers()];
+
+  optionsRegistry.set(MAP3D_RIVALS_WALK_OPTION, true);
+  runFrames();
+  repatched([2, 1, []]);
+  walkersSet.length = 0;
+  walkersPlaced.clear();
+
+  // A rival walking already when others' moves are turned off: it walks on, as one walk, to where it's bound.
+  repatched([1, 1, [rival]]);
+  walkersPlaced.clear();
+  stepped(rival, [1, 1], [2, 1], 'Player-2');
+  patch([1, 1, []], [2, 1, [rival]]);
+  runFrames(2);
+  optionsRegistry.set(MAP3D_RIVALS_WALK_OPTION, false);
+  stepped(rival, [2, 1], [2, 2], 'Player-2');
+  patch([2, 1, []], [2, 2, [rival]]);
+  runFrames(1);
+
+  const rivalWalksOn: unknown[] = [unitOn(2, 2), drawnWalkers().ids.length];
+
+  runFrames();
+
+  const [rivalWay] = [...walkersPlaced.values()];
+
+  rivalWalksOn.push(
+    unitOn(2, 2),
+    rivalWay!
+      .at(-1)!
+      .slice(0, 3)
+      .every((n, at) => Math.abs(n - groundAt(2, 2)[at]!) < 0.05)
+  );
+  optionsRegistry.set(MAP3D_RIVALS_WALK_OPTION, true);
+  repatched([2, 2, []]);
+
+  // Moving at once chosen mid-walk: the walk's over on the next frame, and the next step isn't walked.
+  repatched([1, 1, [walker]]);
+  stepped(walker, [1, 1], [2, 1]);
+  patch([1, 1, []], [2, 1, [walker]]);
+  runFrames(3);
+  optionsRegistry.set(MAP3D_WALKS_OPTION, 'off');
+  runFrames(1);
+
+  const offMidWalk = [walkers.size, unitOn(2, 1)];
+
+  stepped(walker, [2, 1], [3, 1]);
+  patch([2, 1, []], [3, 1, [walker]]);
+  runFrames(1);
+  offMidWalk.push(unitOn(3, 1), walkers.size);
+  optionsRegistry.set(MAP3D_WALKS_OPTION, 'normal');
+  runFrames();
+  repatched([3, 1, []]);
+  walkersSet.length = 0;
+  walkersPlaced.clear();
+
+  expect(
+    'walking quickly takes half as long, a rival’s too, walking still; moving at once, the unit’s on its square at once, not walking, and chosen mid-walk ends it on the next frame; with others’ moves not shown, a rival’s on the screen doesn’t walk, but one walking already walks on',
+    [
+      quickFrames < walkFrames * 0.7,
+      quickRival < quickFrames && quickRival > 2,
+      atOnce,
+      offMidWalk,
+      rivalsHidden,
+      rivalWalksOn,
+    ],
+    [
+      true,
+      true,
+      [['Unit-A', 1], { ids: [], units: [] }],
+      [0, ['Unit-A', 1], ['Unit-A', 1], 0],
+      [['Unit-R', 1], { ids: [], units: [] }],
+      [null, 1, ['Unit-R', 1], true],
     ]
   );
 

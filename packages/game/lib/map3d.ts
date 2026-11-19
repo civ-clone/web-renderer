@@ -10,9 +10,12 @@ import { t } from 'i18next';
 import NotificationWindow from '@civ-clone/ui-component-window/NotificationWindow';
 import build from '@civ-clone/ui-client/lib/build';
 import {
+  MAP3D_RIVALS_WALK_OPTION,
   MAP3D_UNIT_SIZE_OPTION,
+  MAP3D_WALKS_OPTION,
   map3dAsked,
   unitSizeFor,
+  walkSpeedFor,
 } from '@civ-clone/ui-client/lib/map3dOptions';
 import {
   CreateMapView3D,
@@ -304,6 +307,12 @@ export const makeMapView = (
           }),
       },
       unitStatus,
+      // Options of their own (docs/3d-renderer.md §8.2), read at each move.
+      walks: {
+        speed: () => walkSpeedFor(options.get(MAP3D_WALKS_OPTION, 'normal')),
+        rivals: (): boolean =>
+          options.get(MAP3D_RIVALS_WALK_OPTION, true) !== false,
+      },
       world,
       yieldIcon: yieldIconFrom(tileset),
       artChanged: onPreloadedImagesChanged,

@@ -24,3 +24,21 @@ export const unitSizeFor = (value: unknown): number =>
         )
       )
     : 1;
+
+/**
+ * The option how the 3D map's units move from square to square is kept in (docs/3d-renderer.md §8.2): walking, walking
+ *  quickly, or there at once.
+ */
+export const MAP3D_WALKS_OPTION = 'map3dWalks';
+
+/** How the 3D map's units can move from square to square, the first as it comes. */
+export const WALK_SPEEDS = ['normal', 'fast', 'off'] as const;
+
+export type WalkSpeed = (typeof WALK_SPEEDS)[number];
+
+/** The way `value` stands for: walking, for anything else. */
+export const walkSpeedFor = (value: unknown): WalkSpeed =>
+  WALK_SPEEDS.find((speed) => speed === value) ?? 'normal';
+
+/** The option whether other players' units are shown walking on the 3D map is kept in: they are, as it comes. */
+export const MAP3D_RIVALS_WALK_OPTION = 'map3dRivalsWalk';
