@@ -916,6 +916,41 @@ if (scenario !== null) {
     ]
   );
 
+  // A set that is a game's enhanced rules names that game's original rules (`original`, #1248): another set, there.
+  expect(
+    "a set's original is another set's id, or it has none; anything else is a problem",
+    [
+      resolvePluginSets(
+        {
+          plain: { rules: '@x/rules', plugins: ['@x/a'] },
+          fixed: { extends: 'plain', original: 'plain', plugins: ['@x/b'] },
+        },
+        [plugin('@x/a'), plugin('@x/b')]
+      ).sets.map(({ id, original }: any) => [id, original]),
+      [2, '', 'fixed', 'none'].flatMap(
+        (original) =>
+          resolvePluginSets(
+            {
+              plain: { rules: '@x/rules', plugins: ['@x/a'] },
+              fixed: { extends: 'plain', original, plugins: ['@x/b'] },
+            },
+            [plugin('@x/a'), plugin('@x/b')]
+          ).problems
+      ),
+    ],
+    [
+      [
+        ['plain', null],
+        ['fixed', 'plain'],
+      ],
+      [
+        "set fixed has `original` 2, which isn't another set's id",
+        'set fixed has `original` "", which isn\'t another set\'s id',
+        'set fixed has `original` "fixed", which isn\'t another set\'s id',
+        'set fixed has `original` "none", which isn\'t another set\'s id',
+      ],
+    ]
+  );
   // A set drawn with art packs of its own (`tileset`, #668): offered only to a page with some of that art, and never a
   //  set a game gets without asking.
   expect(
@@ -1222,6 +1257,16 @@ if (scenario !== null) {
         civ2.plugins.filter((name) => !civ2Enhanced.plugins.includes(name))
       ),
     ['@civ-clone/civ2-enhanced']
+  );
+  expect(
+    "each enhanced set names the set that is its game's original rules (#1248), which the setup offers beneath it as Original rules; the others are games of their own",
+    pluginSets.sets.map(({ id, original }) => [id, original]),
+    [
+      ['civ1', null],
+      ['civ1-enhanced', 'civ1'],
+      ['civ2', null],
+      ['civ2-enhanced', 'civ2'],
+    ]
   );
   expect(
     'civ1-default-spaceship-layout, the layout simple-ai-client’s Civ1 space race plays for, is in both Civ1 sets and in neither civ2 set (M2e)',

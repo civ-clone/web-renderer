@@ -3,7 +3,7 @@
 //  browser.
 //
 //   sets: { [id]: { plugins: string[], extends?: string, rules?: string, hidden?: boolean,
-//    tileset?: string | string[] } }
+//    tileset?: string | string[], original?: string } }
 //   plugins: [{ name, dependencies: string[], conflicts: string[], importsOnly?: string[] }], every plugin installed
 //   dependenciesOf: (name) => string[] | null, any other installed package's, or null for one that isn't installed
 //   conflicts: { [name]: string[] }, conflicts declared for plugins beside their own (`civ-clone.conflicts` in the root
@@ -185,6 +185,21 @@ const resolvePluginSets = (
       }
     }
 
+    // The set that plays the same game as the original plays it (#1248), when this one is that game with its fixes:
+    //  the setup offers the two as one game, its Original and Enhanced rules. A set that is there, and not this one.
+    if (
+      'original' in sets[id] &&
+      (typeof sets[id].original !== 'string' ||
+        sets[id].original === id ||
+        sets[sets[id].original] === undefined)
+    ) {
+      problems.push(
+        `set ${id} has \`original\` ${JSON.stringify(
+          sets[id].original
+        )}, which isn't another set's id`
+      );
+    }
+
     members.forEach((name) => loaded.add(name));
     // A hidden set is one a game can be played with that the page doesn't offer yet, unless the player has imported
     //  one of the art packs it names (`tileset`). Both its own settings, not the one it extends', so a set built on a
@@ -195,6 +210,8 @@ const resolvePluginSets = (
       rules,
       hidden: sets[id].hidden === true,
       tilesets: tilesetsOf(sets[id]) ?? [],
+      original:
+        typeof sets[id].original === 'string' ? sets[id].original : null,
     });
   });
 

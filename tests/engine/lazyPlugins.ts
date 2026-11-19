@@ -41,6 +41,7 @@ new Game(transport, {
       manifest: {},
       hidden: false,
       tilesets: [],
+      original: null,
       load: () => {
         loads++;
 

@@ -22,6 +22,11 @@ export type PluginSet = {
    *  set drawn with whatever the player picks.
    */
   tilesets: string[];
+  /**
+   * The set that plays the same game as the original plays it, when this one is that game with its fixes (#1248): the
+   *  setup offers the two as one game, with Original and Enhanced rules. Null for a set that is a game of its own.
+   */
+  original: string | null;
   /** Imports the set's plugins, which registers their rules: resolves once they are all in. Once is enough. */
   load: () => Promise<unknown>;
 };
@@ -50,6 +55,8 @@ export type PluginSetData = {
     hidden?: boolean;
     /** The art packs its games are drawn with, in the order it prefers them (`civ-clone.sets.<id>.tileset`). */
     tilesets?: string[];
+    /** The set it is the enhanced rules of (`civ-clone.sets.<id>.original`), when it is. */
+    original?: string | null;
     manifest: PluginManifest;
   }[];
   default: string;
@@ -63,7 +70,15 @@ export type PluginSetData = {
  */
 export const pluginsFrom = (data: PluginSetData): Plugins => ({
   sets: data.sets.map(
-    ({ id, plugins, rules, hidden, tilesets, manifest }): PluginSet => {
+    ({
+      id,
+      plugins,
+      rules,
+      hidden,
+      tilesets,
+      original,
+      manifest,
+    }): PluginSet => {
       let loading: Promise<unknown> | null = null;
 
       return {
@@ -71,6 +86,7 @@ export const pluginsFrom = (data: PluginSetData): Plugins => ({
         manifest,
         hidden: hidden === true,
         tilesets: Array.isArray(tilesets) ? [...tilesets] : [],
+        original: typeof original === 'string' ? original : null,
         load: (): Promise<unknown> => {
           if (loading === null) {
             loading = [...plugins, rules].reduce(

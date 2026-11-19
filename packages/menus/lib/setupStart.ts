@@ -8,7 +8,11 @@ import Window from '@civ-clone/ui-component-window/Window';
 
 /** Calls the start off if `window` closes while it waits: once it has gone ahead, closing the window is its own doing. */
 export const cancelStartOnClose = (window: Window, setup: GameSetup): void =>
-  window.on('close', () => setup.cancelStart());
+  window.on('close', () => {
+    setup.cancelStart();
+    // And a switch on its way (#1248): nothing opens in its place.
+    setup.closed = true;
+  });
 
 /**
  * Holds `window`'s setup while `begin` waits, and lets it go if the start doesn't go ahead. `begin` is given what closes

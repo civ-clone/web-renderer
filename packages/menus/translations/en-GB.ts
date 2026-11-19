@@ -7,6 +7,8 @@ i18next.addResources('en-GB', 'default', {
     'Retiring ends the game now, and you see your Civilisation Score. You can keep playing afterwards, but nothing more is scored.',
   'GameMenu.civilization-score': 'Civilisation Score',
   'GameSetup.civilization': 'Civilisation',
+  'GameSetup.rules-original-description':
+    'The rules and civilisations as the original game has them.',
   'ResumeGame.intro':
     'Who plays each civilisation? Take over a computer seat, or hand yours to the computer, before the game goes on.',
   'ImportAssetsWindow.brave':

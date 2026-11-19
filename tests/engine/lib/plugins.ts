@@ -16,6 +16,7 @@ export const civOnePlugins: Plugins = {
       manifest: civOneManifest,
       hidden: false,
       tilesets: [],
+      original: null,
       load: () => import('../../../src/js/plugins'),
     },
   ],

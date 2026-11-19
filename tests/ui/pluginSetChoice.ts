@@ -30,7 +30,11 @@ import Request from '@civ-clone/core-data-client/Request';
 import Transport from '@civ-clone/ui-client/Transport';
 import i18next from 'i18next';
 import { installTilesets, mapTileset } from '@civ-clone/ui-assets/lib/tilesets';
-import { mayOfferOtherGames } from '@civ-clone/ui-menus/lib/pluginSets';
+import {
+  gameChoices,
+  mayOfferOtherGames,
+  preselectedGame,
+} from '@civ-clone/ui-menus/lib/pluginSets';
 
 const failures: string[] = [];
 let checks = 0,
@@ -105,7 +109,42 @@ const text = (element: Element | null): string =>
       new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' })
     );
   },
-  closeAll = () => openDialogs().forEach((dialog) => dialog.remove());
+  closeAll = () => openDialogs().forEach((dialog) => dialog.remove()),
+  // The setup's games (#1248): a card each, and the chosen game's Original and Enhanced rules beneath it.
+  gameCards = (root: Element | undefined): HTMLInputElement[] =>
+    Array.from(root?.querySelectorAll('input[name=rule-game]') ?? []),
+  // The set the setup is for: its rules' radio button where the game has two, and its card's otherwise.
+  setupSet = (root: Element | undefined): string | undefined =>
+    (
+      [
+        ...(root?.querySelectorAll<HTMLInputElement>(
+          'input[name=rule-variant]'
+        ) ?? []),
+      ].find(({ checked }) => checked) ??
+      gameCards(root).find(({ checked }) => checked)
+    )?.value,
+  // Ticks or clears the rule set `id`'s checkbox in the setup, as a player does.
+  tick2 = (root: Element, id: string): void => {
+    const box = root.querySelector(
+      `input[data-rule-set="${id}"]`
+    ) as HTMLInputElement;
+
+    box.checked = !box.checked;
+    box.dispatchEvent(new Event('change'));
+  },
+  // Picks the set `id` in the setup, as a player does: its rules' radio button, or its game's card.
+  pickSet = (root: Element, id: string): HTMLInputElement => {
+    const control = [
+      ...root.querySelectorAll<HTMLInputElement>(
+        'input[name=rule-variant], input[name=rule-game]'
+      ),
+    ].find(({ value }) => value === id)!;
+
+    control.checked = true;
+    control.dispatchEvent(new Event('change'));
+
+    return control;
+  };
 
 /**
  * A page's transport to a worker civ.one's way: which sets there are for the art named, the one loaded, and a new
@@ -121,16 +160,36 @@ const fakeWorkers = () => {
       broken: false,
       // `choosePluginSet` waits on it, when given.
       hold: null as Promise<void> | null,
+      // A rule set the rule sets' answer says is in a conflict, when given (#954).
+      conflict: null as string | null,
+      // The rule sets' answer waits on it, when given.
+      holdRules: null as Promise<void> | null,
     },
     // Each with its art in the order it prefers it, as civ.one's are: Civ2's own, then the isometric pixel art.
     sets = [
-      { id: 'civ1', tilesets: [] as string[] },
-      { id: 'civ1-enhanced', tilesets: [] as string[] },
-      { id: 'civ2', tilesets: ['civ2', 'iso-pixelart'] },
+      { id: 'civ1', tilesets: [] as string[], original: null },
+      // Civ1 with civ.one's fixes and additions, whose original rules are `civ1` (#1248).
+      { id: 'civ1-enhanced', tilesets: [] as string[], original: 'civ1' },
+      { id: 'civ2', tilesets: ['civ2', 'iso-pixelart'], original: null },
+      // Civ2 with civ.one's fixes, whose original rules are `civ2` (#1248).
+      {
+        id: 'civ2-enhanced',
+        tilesets: ['civ2', 'iso-pixelart'],
+        original: 'civ2',
+      },
     ],
     levels = {
+      civ1: ['Chieftain', 'Warlord', 'Prince', 'King', 'Emperor'],
       'civ1-enhanced': ['Chieftain', 'Warlord', 'Prince', 'King', 'Emperor'],
       civ2: ['Chieftain', 'Warlord', 'Prince', 'King', 'Emperor', 'Deity'],
+      'civ2-enhanced': [
+        'Chieftain',
+        'Warlord',
+        'Prince',
+        'King',
+        'Emperor',
+        'Deity',
+      ],
     } as { [id: string]: string[] },
     // What a setup request loads: the set chosen, or the default.
     load = (): string => (worker.chosen ??= 'civ1-enhanced'),
@@ -152,9 +211,10 @@ const fakeWorkers = () => {
           case 'pluginSets':
             return Promise.resolve({
               sets: sets
-                .map(({ id, tilesets }) => ({
+                .map(({ id, tilesets, original }) => ({
                   id,
                   tilesets,
+                  original,
                   tileset:
                     tilesets.find((tileset) =>
                       (args as string[]).includes(tileset)
@@ -164,7 +224,11 @@ const fakeWorkers = () => {
                   ({ tilesets, tileset }) =>
                     tilesets.length === 0 || tileset !== null
                 )
-                .map(({ id, tileset }) => ({ id, tileset })),
+                .map(({ id, tileset, original }) => ({
+                  id,
+                  tileset,
+                  original,
+                })),
               default: 'civ1-enhanced',
               chosen: worker.chosen,
             });
@@ -198,14 +262,87 @@ const fakeWorkers = () => {
             load();
 
             return Promise.resolve(['SimpleAIClient']);
-          case 'ruleSets':
-            load();
+          // Civ1's own set, and with its enhanced rules, their set with one of its fixes (#1248).
+          // The choices it is asked with and the one change, as the sets it knows hold them.
+          case 'ruleSets': {
+            const query = args as {
+                choices: { id: string; value: boolean }[];
+                change?: { id: string; value: boolean };
+              } | null,
+              known =
+                load() === 'civ1-enhanced'
+                  ? [
+                      'civ1-enhanced',
+                      'civ1-enhanced:obsolete-builds',
+                      'civ1-enhanced:ages',
+                      'civ1-enhanced:research-cost-by-age',
+                      'civ1-unit:obsolescence',
+                    ]
+                  : load() === 'civ1'
+                  ? ['civ1-unit:obsolescence']
+                  : [],
+              choices = [
+                ...(query?.choices ?? []),
+                ...(query?.change ? [query.change] : []),
+              ]
+                .filter(({ id }) => known.includes(id))
+                // The last word on each.
+                .filter(
+                  ({ id }, index, all) =>
+                    !all.slice(index + 1).some((later) => later.id === id)
+                ),
+              set = (id: string, members: any[] = [], state?: 'mixed') => ({
+                id,
+                kind: 'set',
+                state:
+                  state ??
+                  (choices.find((choice) => choice.id === id)?.value === false
+                    ? 'off'
+                    : 'on'),
+                active: true,
+                switchable: true,
+                members,
+              }),
+              own = set('civ1-unit:obsolescence');
 
-            return Promise.resolve({ sets: [], choices: [], problems: [] });
+            return (worker.holdRules ?? Promise.resolve()).then(() => ({
+              sets:
+                load() === 'civ1-enhanced'
+                  ? [
+                      set('civ1-enhanced', [
+                        set('civ1-enhanced:obsolete-builds'),
+                        // Some of what is beneath it on.
+                        set(
+                          'civ1-enhanced:ages',
+                          [set('civ1-enhanced:research-cost-by-age')],
+                          'mixed'
+                        ),
+                      ]),
+                      own,
+                    ]
+                  : load() === 'civ1'
+                  ? [own]
+                  : [],
+              choices,
+              problems:
+                worker.conflict === null
+                  ? []
+                  : [
+                      {
+                        kind: 'conflict',
+                        ids: [worker.conflict, 'civ1-unit:obsolescence'],
+                        message: 'They conflict.',
+                        blocking: true,
+                      },
+                    ],
+            }));
+          }
           // Civ2's rules offer their own sizes, as civ2-world registers them (#1175); Civ1's offer none.
           case 'worldSizes':
             return Promise.resolve(
-              load() === 'civ2' ? civ2WorldSizes : { sizes: [], custom: null }
+              load().startsWith('civ2')
+                ? civ2WorldSizes
+                : { sizes: [], custom: null }
             );
           default:
             return Promise.resolve({});
@@ -442,10 +579,7 @@ const civ2Metadata: PackMetadata = {
 
     expect(
       'and the setup asks only what it always has, with no game to choose',
-      [
-        channels(log),
-        setup.element().querySelector('select[name=pluginSet]') === null,
-      ],
+      [channels(log), gameCards(setup.element()).length === 0],
       [
         [
           'civilizations',
@@ -513,7 +647,7 @@ const civ2Metadata: PackMetadata = {
       ]
     );
 
-    choose('civ2');
+    choose('civ2-enhanced');
     await settle();
 
     expect(
@@ -526,10 +660,10 @@ const civ2Metadata: PackMetadata = {
       ],
       [
         [
-          ['choosePluginSet', 'civ2'],
+          ['choosePluginSet', 'civ2-enhanced'],
           ['worldSizes', null],
         ],
-        'civ2',
+        'civ2-enhanced',
         'iso-pixelart',
         'How big a world?',
       ]
@@ -566,7 +700,7 @@ const civ2Metadata: PackMetadata = {
       ]
     );
 
-    choose('civ2');
+    choose('civ2-enhanced');
     await settle();
 
     expect(
@@ -580,10 +714,10 @@ const civ2Metadata: PackMetadata = {
       ],
       [
         [
-          ['choosePluginSet', 'civ2'],
+          ['choosePluginSet', 'civ2-enhanced'],
           ['worldSizes', null],
         ],
-        'civ2',
+        'civ2-enhanced',
         'How big a world?',
         ['Small (40 × 50)', 'Normal (50 × 80)', 'Large (75 × 120)'],
         'normal',
@@ -647,7 +781,7 @@ const civ2Metadata: PackMetadata = {
     expect(
       'asked again, New Game starts on the game chosen last',
       latest().querySelector('option[selected]')?.getAttribute('value'),
-      'civ2'
+      'civ2-enhanced'
     );
 
     choose('civ1-enhanced');
@@ -658,7 +792,7 @@ const civ2Metadata: PackMetadata = {
       [log.slice(1), worker.chosen, shown().title],
       [
         [
-          ['replace', 'civ2'],
+          ['replace', 'civ2-enhanced'],
           ['worldSizes', null],
         ],
         'civ1-enhanced',
@@ -680,7 +814,7 @@ const civ2Metadata: PackMetadata = {
     closeAll();
 
     // Earth with Civ2 to play (#1176): which game first, then that game's Earth.
-    worker.chosen = 'civ2';
+    worker.chosen = 'civ2-enhanced';
     log.length = 0;
 
     askEarth(transport);
@@ -699,7 +833,7 @@ const civ2Metadata: PackMetadata = {
           title: 'Which game?',
           options: ['Civilization', 'Civilization II (preview)'],
         },
-        'civ2',
+        'civ2-enhanced',
       ]
     );
 
@@ -757,7 +891,7 @@ const civ2Metadata: PackMetadata = {
     askEarth(transport);
     await settle();
 
-    const civ2 = await playEarth('civ2');
+    const civ2 = await playEarth('civ2-enhanced');
 
     expect(
       "Civilization II's Earth is its own, in its three sizes, on its own grid",
@@ -787,11 +921,11 @@ const civ2Metadata: PackMetadata = {
     const withEarth = civ2WorldSizes.sizes.map((size) => size.earth);
 
     civ2WorldSizes.sizes.forEach((size) => (size.earth = false));
-    worker.chosen = 'civ2';
+    worker.chosen = 'civ2-enhanced';
 
     askEarth(transport);
     await settle();
-    choose('civ2');
+    choose('civ2-enhanced');
     await settle();
 
     expect(
@@ -815,29 +949,26 @@ const civ2Metadata: PackMetadata = {
   ] as const) {
     const { log, transport, worker } = fakeWorkers(),
       setup = await Setup.ask(transport, () => {}, { pluginSet: 'civ2' }),
-      element = setup.element(),
-      games = element.querySelector(
-        'select[name=pluginSet]'
-      ) as HTMLSelectElement | null;
+      element = setup.element();
 
     expect(
-      `${name}: the setup for Civ2 has the game to choose, Civ2 chosen, and loads it before asking the rest`,
+      `${name}: the setup for Civ2's original rules has the games to choose, Civilization II chosen, on its Original rules, and loads them before asking the rest`,
       [
-        games === null
-          ? null
-          : Array.from(games.querySelectorAll('option'), (option) => [
-              option.getAttribute('value'),
-              text(option),
-              option.hasAttribute('selected') || option.selected,
-            ]),
+        gameCards(element).map((card) => [
+          card.value,
+          text(card.closest('label')),
+          card.checked,
+        ]),
+        setupSet(element),
         channels(log).slice(0, 3),
         worker.chosen,
       ],
       [
         [
           ['civ1-enhanced', 'Civilization', false],
-          ['civ2', 'Civilization II (preview)', true],
+          ['civ2-enhanced', 'Civilization II (preview)', true],
         ],
+        'civ2',
         ['pluginSets', 'choosePluginSet', 'civilizations'],
         'civ2',
       ]
@@ -903,11 +1034,20 @@ const civ2Metadata: PackMetadata = {
       );
     }
 
+    // Civ2's Earth, at its Small (#1248): Civilization's Earth has no Small, and is square.
+    const map = element.querySelector('select[name=map]') as HTMLSelectElement;
+
+    map.value = 'earth:small';
+    map.dispatchEvent(new Event('change', { bubbles: true }));
+    await settle();
+
     log.length = 0;
 
-    games!.value = 'civ1-enhanced';
-    games!.dispatchEvent(new Event('change'));
-    await settle();
+    pickSet(element, 'civ1-enhanced');
+
+    for (let index = 0; index < 5; index++) {
+      await settle();
+    }
 
     const reopened = openDialogs().filter((dialog) =>
       dialog.classList.contains('game-setup-window')
@@ -918,9 +1058,7 @@ const civ2Metadata: PackMetadata = {
       [
         channels(log).slice(0, 2),
         reopened.length,
-        reopened[0]
-          ?.querySelector('select[name=pluginSet] option[selected]')
-          ?.getAttribute('value'),
+        setupSet(reopened[0]),
         Array.from(
           reopened[0]?.querySelectorAll('select[name=map] option') ?? [],
           (option) => option.getAttribute('value')
@@ -928,6 +1066,19 @@ const civ2Metadata: PackMetadata = {
         reopened[0]?.querySelectorAll('select[name=difficulty] option').length,
       ],
       [['pluginSets', 'replace'], 1, 'civ1-enhanced', true, 5]
+    );
+    expect(
+      `${name}: Civ2's Earth at its Small switched to Civilization is Civilization's own Earth, on the square grid, at its own size, and no grid of Civ2's is carried`,
+      [
+        (reopened[0]?.querySelector('select[name=map]') as HTMLSelectElement)
+          ?.value,
+        (
+          reopened[0]?.querySelector(
+            'select[name=topologyId]'
+          ) as HTMLSelectElement | null
+        )?.value,
+      ],
+      ['earth:normal', 'square']
     );
 
     if (name === 'modern') {
@@ -948,6 +1099,422 @@ const civ2Metadata: PackMetadata = {
     closeAll();
   }
 
+  // A game's Original and Enhanced rules (#1248), both interfaces': beneath the chosen game's card, Enhanced to start
+  //  with and its own fixes beneath it; Original is the game's original set, another setup on a worker of its own,
+  //  under the same card.
+  for (const [name, Setup] of [
+    ['classic', GameSetupWindow],
+    ['modern', GameSetupForm],
+  ] as const) {
+    const { log, transport, worker } = fakeWorkers(),
+      setups = () =>
+        openDialogs().filter((dialog) =>
+          dialog.classList.contains('game-setup-window')
+        ),
+      variants = (root: Element | undefined) =>
+        Array.from(
+          root?.querySelectorAll<HTMLInputElement>(
+            'input[name=rule-variant]'
+          ) ?? [],
+          (control) => [
+            control.value,
+            text(control.closest('label')),
+            control.checked,
+          ]
+        ),
+      // The rule sets drawn beneath Enhanced, and those after it.
+      beneath = (root: Element | undefined) => [
+        Array.from(
+          root?.querySelectorAll('.rule-variant-sets .rule-set-name') ?? [],
+          text
+        ),
+        Array.from(
+          root?.querySelectorAll(
+            '.rule-game-rules > div > .rule-sets > .rule-set > label .rule-set-name'
+          ) ?? [],
+          text
+        ),
+      ];
+
+    closeAll();
+    await Setup.ask(transport, () => {});
+
+    expect(
+      `${name}: Civilization is chosen, on its Enhanced rules, with their fixes beneath and its own set after`,
+      [
+        gameCards(setups()[0]).map((card) => [
+          card.value,
+          text(card.closest('label')),
+          card.checked,
+        ]),
+        variants(setups()[0]),
+        beneath(setups()[0]),
+        // The enhanced rules' own set is Enhanced, not a checkbox of its own; its changes are folded beneath it.
+        setups()[0]?.querySelector('[data-rule-set="civ1-enhanced"]') ?? null,
+        text(
+          setups()[0]?.querySelector('.rule-variant-changes > summary') ?? null
+        ),
+      ],
+      [
+        [
+          ['civ1-enhanced', 'Civilization', true],
+          ['civ2-enhanced', 'Civilization II (preview)', false],
+        ],
+        [
+          ['civ1', 'Original rules', false],
+          ['civ1-enhanced', 'Enhanced rules', true],
+        ],
+        [
+          [
+            'civ1-enhanced:obsolete-builds',
+            'civ1-enhanced:ages',
+            'civ1-enhanced:research-cost-by-age',
+          ],
+          ['civ1-unit:obsolescence'],
+        ],
+        null,
+        // One with only some of what is beneath it on counts as on.
+        'Changes from the original: 2 of 2 on',
+      ]
+    );
+
+    // What the player has set before switching: the map, the level, the land, the first seat's civilization and the
+    //  second's AI, a change switched off under Enhanced, and a set both rules have switched off.
+    const before = setups()[0]!,
+      field = <T extends HTMLElement>(selector: string): T =>
+        before.querySelector(selector) as T,
+      changeTo = (selector: string, value: string): void => {
+        const element = field<HTMLSelectElement | HTMLInputElement>(selector);
+
+        element.value = value;
+        element.dispatchEvent(new Event('change', { bubbles: true }));
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+      },
+      tick = (id: string): void => {
+        const box = field<HTMLInputElement>(`input[data-rule-set="${id}"]`);
+
+        box.checked = !box.checked;
+        box.dispatchEvent(new Event('change'));
+      };
+
+    changeTo('select[name=map]', 'size:large');
+    changeTo('select[name=difficulty]', 'King');
+    changeTo('input[name=landCoverage]', '0.55');
+    tick('civ1-enhanced:obsolete-builds');
+    tick('civ1-unit:obsolescence');
+    await settle();
+
+    const seatSelects = (root: Element, name: string) =>
+      Array.from(
+        root.querySelectorAll<HTMLSelectElement>(`select[name^="${name}"]`)
+      );
+
+    changeTo('select[name^="civilization"]', 'Roman');
+    await settle();
+
+    // The test page's `focus` does nothing: what is focused is noted instead.
+    //  Every element's, the dialogs' too: closing a window focuses the one beneath it, and the radio button has to be
+    //  the last thing focused.
+    const elementFocus = HTMLElement.prototype.focus,
+      ownInputFocus = Object.prototype.hasOwnProperty.call(
+        HTMLInputElement.prototype,
+        'focus'
+      )
+        ? HTMLInputElement.prototype.focus
+        : null;
+    let focused: HTMLElement | null = null;
+
+    HTMLElement.prototype.focus = function (this: HTMLElement) {
+      focused = this;
+    };
+
+    if (ownInputFocus !== null) {
+      HTMLInputElement.prototype.focus = HTMLElement.prototype.focus;
+    }
+
+    expect(
+      `${name}: the changes are folded until there is a problem about one of them`,
+      setups()[0]?.querySelector('.rule-variant-changes')?.hasAttribute('open'),
+      false
+    );
+
+    log.length = 0;
+    pickSet(setups()[0]!, 'civ1');
+
+    for (let index = 0; index < 5; index++) {
+      await settle();
+    }
+
+    const after = setups()[0]!,
+      value = (selector: string): string | undefined =>
+        (after.querySelector(selector) as HTMLInputElement | null)?.value;
+
+    expect(
+      `${name}: switching to Original keeps the map, the level, the land, the seat's civilization and the set both have switched off, and the keyboard is back on Original rules`,
+      [
+        value('select[name=map]'),
+        value('select[name=difficulty]'),
+        value('input[name=landCoverage]'),
+        seatSelects(after, 'civilization')[0]?.value,
+        (
+          after.querySelector(
+            'input[data-rule-set="civ1-unit:obsolescence"]'
+          ) as HTMLInputElement | null
+        )?.checked,
+        (focused as HTMLInputElement | null)?.value,
+        (focused as HTMLInputElement | null)?.name,
+        (focused as HTMLInputElement | null)?.isConnected,
+      ],
+      [
+        'size:large',
+        'King',
+        '0.55',
+        'Roman',
+        false,
+        'civ1',
+        'rule-variant',
+        true,
+      ]
+    );
+
+    HTMLElement.prototype.focus = elementFocus;
+
+    if (ownInputFocus !== null) {
+      HTMLInputElement.prototype.focus = ownInputFocus;
+    }
+
+    expect(
+      `${name}: Original rules is Civ1's original set, on a worker of its own, still under the Civilization card, with only its own set`,
+      [
+        channels(log).filter((channel) =>
+          ['replace', 'choosePluginSet'].includes(channel)
+        ),
+        worker.chosen,
+        setups().length,
+        gameCards(setups()[0])
+          .filter(({ checked }) => checked)
+          .map(({ value }) => value),
+        variants(setups()[0]),
+        beneath(setups()[0]),
+      ],
+      [
+        ['replace', 'choosePluginSet'],
+        'civ1',
+        1,
+        ['civ1-enhanced'],
+        [
+          ['civ1', 'Original rules', true],
+          ['civ1-enhanced', 'Enhanced rules', false],
+        ],
+        [[], ['civ1-unit:obsolescence']],
+      ]
+    );
+
+    pickSet(setups()[0]!, 'civ1-enhanced');
+
+    for (let index = 0; index < 5; index++) {
+      await settle();
+    }
+
+    expect(
+      `${name}: and Enhanced rules back again, the change switched off under Enhanced still off after the look at Original`,
+      [
+        worker.chosen,
+        setupSet(setups()[0]),
+        (
+          setups()[0]?.querySelector(
+            'input[data-rule-set="civ1-enhanced:obsolete-builds"]'
+          ) as HTMLInputElement | null
+        )?.checked,
+      ],
+      ['civ1-enhanced', 'civ1-enhanced', false]
+    );
+
+    // A change switched and Original picked at once, before the change is answered: the switch waits for it, so the
+    //  change goes with the setup for Original, as the player left it.
+    let releaseRules = (): void => {};
+
+    worker.holdRules = new Promise<void>((resolve) => {
+      releaseRules = resolve;
+    });
+    log.length = 0;
+    tick2(setups()[0]!, 'civ1-enhanced:ages');
+    pickSet(setups()[0]!, 'civ1');
+    await settle();
+    worker.holdRules = null;
+    releaseRules();
+
+    for (let index = 0; index < 5; index++) {
+      await settle();
+    }
+
+    expect(
+      `${name}: switching while a change is on its way waits for it, and the change goes with the switch`,
+      [
+        worker.chosen,
+        (
+          log.filter(([channel]) => channel === 'ruleSets').pop()?.[1] as {
+            choices: { id: string; value: boolean }[];
+          } | null
+        )?.choices.some(
+          // Some of it on, so ticking it switches it all on.
+          ({ id, value }) => id === 'civ1-enhanced:ages' && value === true
+        ),
+      ],
+      ['civ1', true]
+    );
+
+    pickSet(setups()[0]!, 'civ1-enhanced');
+
+    for (let index = 0; index < 5; index++) {
+      await settle();
+    }
+
+    // A rule ticked while a switch waits on the other game's worker: held, and nothing is asked of the worker; nor after
+    //  a change answered meanwhile is drawn again.
+    let releaseSwitch = (): void => {};
+
+    worker.hold = new Promise<void>((resolve) => {
+      releaseSwitch = resolve;
+    });
+    worker.holdRules = new Promise<void>((resolve) => {
+      releaseRules = resolve;
+    });
+    tick2(setups()[0]!, 'civ1-enhanced:obsolete-builds');
+    pickSet(setups()[0]!, 'civ1');
+    worker.holdRules = null;
+    releaseRules();
+
+    for (let index = 0; index < 5; index++) {
+      await settle();
+    }
+
+    const waiting = setups()[0]!,
+      box = waiting.querySelector(
+        'input[data-rule-set="civ1-enhanced:obsolete-builds"]'
+      ) as HTMLInputElement;
+
+    log.length = 0;
+    tick2(waiting, 'civ1-enhanced:obsolete-builds');
+    await settle();
+
+    expect(
+      `${name}: while a switch waits, the rules are held, drawn again held, and a tick reaches no worker`,
+      [box.disabled, channels(log).filter((channel) => channel === 'ruleSets')],
+      [true, []]
+    );
+
+    worker.hold = null;
+    releaseSwitch();
+
+    for (let index = 0; index < 5; index++) {
+      await settle();
+    }
+
+    pickSet(setups()[0]!, 'civ1-enhanced');
+
+    for (let index = 0; index < 5; index++) {
+      await settle();
+    }
+
+    // Closed while the switch waits, on the rule sets or on the other game: nothing opens in its place.
+    for (const waitOn of ['rules', 'game'] as const) {
+      let release = (): void => {};
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+
+      if (waitOn === 'rules') {
+        worker.holdRules = held;
+        tick2(setups()[0]!, 'civ1-enhanced:obsolete-builds');
+      } else {
+        worker.hold = held;
+      }
+
+      log.length = 0;
+      pickSet(setups()[0]!, 'civ1');
+      await settle();
+      (
+        setups()[0]!.querySelector('header .close') as HTMLButtonElement
+      ).click();
+      worker.holdRules = null;
+      worker.hold = null;
+      release();
+
+      for (let index = 0; index < 10; index++) {
+        await settle();
+      }
+
+      expect(
+        `${name}: closed while the switch waits on the ${
+          waitOn === 'rules' ? 'rule sets' : 'other game'
+        }, no setup opens in its place`,
+        setups().length,
+        0
+      );
+
+      closeAll();
+      await Setup.ask(transport, () => {}, { pluginSet: 'civ1-enhanced' });
+      await settle();
+    }
+
+    // A change that conflicts with another: the fold opens on it.
+    worker.conflict = 'civ1-enhanced:obsolete-builds';
+    tick2(setups()[0]!, 'civ1-unit:obsolescence');
+
+    for (let index = 0; index < 5; index++) {
+      await settle();
+    }
+
+    expect(
+      `${name}: a problem about a folded change opens the fold`,
+      setups()[0]?.querySelector('.rule-variant-changes')?.hasAttribute('open'),
+      true
+    );
+
+    worker.conflict = null;
+
+    closeAll();
+  }
+
+  // New Game offers each game once (#1248, the first part of #1247): a set that is another's original rules is
+  //  offered beneath that game in the setup, and not as a game of its own, while a save of it still names it.
+  {
+    const choices = gameChoices({
+      sets: [
+        { id: 'civ1', tileset: null, original: null },
+        { id: 'civ1-enhanced', tileset: null, original: 'civ1' },
+        { id: 'civ2', tileset: 'iso-pixelart', original: null },
+        { id: 'civ2-enhanced', tileset: 'iso-pixelart', original: 'civ2' },
+      ],
+      default: 'civ1-enhanced',
+      chosen: 'civ2',
+    });
+
+    expect(
+      'New Game offers Civilization and Civilization II by their enhanced rules, and every set is still there to load',
+      [
+        choices.games.map(({ id }) => id),
+        choices.sets.map(({ id }) => id),
+        choices.chosen,
+      ],
+      [
+        ['civ1-enhanced', 'civ2-enhanced'],
+        ['civ1', 'civ1-enhanced', 'civ2', 'civ2-enhanced'],
+        'civ2',
+      ]
+    );
+    expect(
+      "with Civ2's original rules chosen last, New Game starts on Civilization II, and the setup on its Original rules",
+      [
+        preselectedGame(choices),
+        preselectedGame(choices, undefined, choices.sets),
+        preselectedGame(choices, 'civ1'),
+      ],
+      ['civ2-enhanced', 'civ2', 'civ1-enhanced']
+    );
+  }
+
   // Choosing another game in the setup: the seats go with it; a game that can't be set up leaves the setup for the one
   //  it was; and with nothing to be set up at all, the player is told.
   {
@@ -957,12 +1524,7 @@ const civ2Metadata: PackMetadata = {
           dialog.classList.contains('game-setup-window')
         ),
       switchTo = async (pluginSet: string): Promise<void> => {
-        const games = setups()[0]!.querySelector(
-          'select[name=pluginSet]'
-        ) as HTMLSelectElement;
-
-        games.value = pluginSet;
-        games.dispatchEvent(new Event('change'));
+        pickSet(setups()[0]!, pluginSet);
 
         for (let index = 0; index < 5; index++) {
           await settle();
@@ -1003,42 +1565,34 @@ const civ2Metadata: PackMetadata = {
     name.value = 'Dom';
     name.dispatchEvent(new Event('input', { bubbles: true }));
 
-    await switchTo('civ2');
+    await switchTo('civ2-enhanced');
 
     expect(
       'switching to Civ2 keeps the seats: the name typed is still there',
       [
         setups().length,
-        (
-          setups()[0]?.querySelector(
-            'select[name=pluginSet] option[selected]'
-          ) as HTMLOptionElement | null
-        )?.value,
+        setupSet(setups()[0]),
         (
           setups()[0]?.querySelector(
             'input[name="name"]'
           ) as HTMLInputElement | null
         )?.value,
       ],
-      [1, 'civ2', 'Dom']
+      [1, 'civ2-enhanced', 'Dom']
     );
 
     // Back, then Civ2 again with the worker refusing it.
     await switchTo('civ1-enhanced');
-    worker.refuse = 'civ2';
+    worker.refuse = 'civ2-enhanced';
     log.length = 0;
 
-    await switchTo('civ2');
+    await switchTo('civ2-enhanced');
 
     expect(
       "a game the worker can't load leaves the setup for the game it was, the worker put back to it",
       [
         setups().length,
-        (
-          setups()[0]?.querySelector(
-            'select[name=pluginSet] option[selected]'
-          ) as HTMLOptionElement | null
-        )?.value,
+        setupSet(setups()[0]),
         channels(log).filter((channel) =>
           ['replace', 'choosePluginSet'].includes(channel)
         ),
@@ -1057,26 +1611,20 @@ const civ2Metadata: PackMetadata = {
     });
 
     const before = setups()[0]!,
-      games = before.querySelector(
-        'select[name=pluginSet]'
-      ) as HTMLSelectElement;
+      civ2 = pickSet(before, 'civ2-enhanced');
 
-    games.value = 'civ2';
-    games.dispatchEvent(new Event('change'));
     await settle();
 
     const held = [
-      games.disabled,
+      civ2.disabled,
       (before.querySelector('.start') as HTMLButtonElement).disabled,
       (before.querySelector('select[name=difficulty]') as HTMLSelectElement)
         .disabled,
     ];
 
     // Back to the game it is, and to Civ2 again: with two games, the second switch a held setup would otherwise start.
-    games.value = 'civ1-enhanced';
-    games.dispatchEvent(new Event('change'));
-    games.value = 'civ2';
-    games.dispatchEvent(new Event('change'));
+    pickSet(before, 'civ1-enhanced');
+    pickSet(before, 'civ2-enhanced');
     (before.querySelector('.start') as HTMLButtonElement).click();
     before.dispatchEvent(
       new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' })
@@ -1092,17 +1640,13 @@ const civ2Metadata: PackMetadata = {
       [
         held,
         setups().length,
-        (
-          setups()[0]?.querySelector(
-            'select[name=pluginSet] option[selected]'
-          ) as HTMLOptionElement | null
-        )?.value,
+        setupSet(setups()[0]),
         worker.chosen,
         channels(log).filter((channel) =>
           ['setOptions', 'start'].includes(channel)
         ),
       ],
-      [[true, true, true], 1, 'civ2', 'civ2', []]
+      [[true, true, true], 1, 'civ2-enhanced', 'civ2-enhanced', []]
     );
 
     worker.broken = true;
@@ -1119,6 +1663,118 @@ const civ2Metadata: PackMetadata = {
     );
 
     closeAll();
+  }
+
+  // What a switch carries (#1248): the player's grid between games played on any, never a grid of a game's own, and
+  //  never a size typed in onto a game with a grid of its own.
+  {
+    const data = (worldSizes?: unknown) =>
+        ({
+          aiClients: ['SimpleAIClient'],
+          civilizations: [{ name: 'Roman', leaders: ['JuliusCaesar'] }],
+          difficulties: [],
+          existing: {},
+          ...(worldSizes === undefined ? {} : { worldSizes }),
+        } as any),
+      civ1 = new GameSetup(data(), {
+        topologyId: 'staggered-iso',
+        map: 'size:large',
+      }),
+      civ2 = new GameSetup(data(civ2WorldSizes), {
+        topologyId: 'square',
+        map: 'custom',
+        width: 30,
+        height: 30,
+      });
+
+    expect(
+      "the player's grid and size are carried to a game on any grid; a game with a grid of its own keeps it, and a size typed in isn't carried to it",
+      [
+        [civ1.topologyId, civ1.map()],
+        [civ2.topologyId, civ2.map()],
+        'topologyId' in civ2.carried(),
+        civ1.carried().topologyId,
+      ],
+      [
+        ['staggered-iso', 'size:large'],
+        ['staggered-iso', 'size:normal'],
+        false,
+        'staggered-iso',
+      ]
+    );
+
+    // A size typed in on Civ2's grid isn't carried out of it either: its shape is that grid's.
+    const civ2Custom = new GameSetup(data(civ2WorldSizes));
+
+    civ2Custom.setCustomSize(40, 100);
+
+    const fromCiv2 = new GameSetup(data(), civ2Custom.carried());
+
+    expect(
+      "a size typed in on Civ2's own grid isn't carried to Civilization: it opens on its own default map",
+      [
+        'map' in civ2Custom.carried(),
+        fromCiv2.map(),
+        [fromCiv2.width, fromCiv2.height],
+      ],
+      [false, 'size:normal', [80, 50]]
+    );
+
+    // Earth: carried to the other game's Earth nearest in area, on that Earth's grid, whatever grid was carried.
+    const civ1Huge = new GameSetup(data(), { earth: true });
+
+    civ1Huge.chooseMap('earth:huge');
+
+    const civ2Earth = new GameSetup(data(civ2WorldSizes), civ1Huge.carried()),
+      civ1Earth = new GameSetup(data(), {
+        earth: true,
+        topologyId: 'hex-odd-r',
+        map: 'earth:small',
+        width: 40,
+        height: 50,
+      });
+
+    expect(
+      "Civilization's Earth at Huge is Civ2's Earth at Large, the nearest; Earth with a hex grid carried is Civilization's Earth on the square grid",
+      [
+        [civ1Huge.map(), civ2Earth.map(), civ2Earth.topologyId],
+        [civ1Earth.map(), civ1Earth.topologyId],
+      ],
+      [
+        ['earth:huge', 'earth:large', 'staggered-iso'],
+        ['earth:normal', 'square'],
+      ]
+    );
+
+    // There and back, each setup opened with what the one before carried (`...preset`, as the forms open them): the size
+    //  by name and the rules switched come back, and Civilization is back on the grid the player chose for it: Civ2's
+    //  own grid isn't carried, and the player's choice passes through Civ2's setup untouched.
+    const startPreset = {
+        topologyId: 'hex-odd-r' as const,
+        map: 'size:large',
+        ruleSetChoices: [{ id: 'civ1-enhanced:ages', value: true }],
+      },
+      start = new GameSetup(data(), startPreset),
+      therePreset = { ...startPreset, ...start.carried(startPreset) },
+      there = new GameSetup(data(civ2WorldSizes), therePreset),
+      backPreset = { ...therePreset, ...there.carried(therePreset) },
+      back = new GameSetup(data(), backPreset);
+
+    expect(
+      "Civilization to Civ2 and back: the size by name and the rules switched come back, and Civilization is on the player's grid again, not Civ2's",
+      [
+        [start.topologyId, start.map()],
+        [there.topologyId, there.map()],
+        [back.topologyId, back.map()],
+        backPreset.ruleSetChoices,
+      ],
+      [
+        ['hex-odd-r', 'size:large'],
+        ['staggered-iso', 'size:large'],
+        ['hex-odd-r', 'size:large'],
+        [{ id: 'civ1-enhanced:ages', value: true }],
+      ]
+    );
   }
 
   // Civ2's rules' own sizes in the setup (#1175): what a size typed in may be, and how many civilizations it has room for.
