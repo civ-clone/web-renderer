@@ -22,7 +22,14 @@ import overlayFor, {
   OverlayNeighbour,
   SquareOverlay,
 } from './overlay/overlayFor';
-import overlayMesh, { OverlayMesh, OverlayPlace } from './overlay/overlayMesh';
+import overlayMesh, {
+  OverlayMesh,
+  OverlayPlace,
+  Soup,
+  layOverlay,
+  meshOf,
+  soup,
+} from './overlay/overlayMesh';
 
 export class Land {
   readonly layout: GroundLayout;
@@ -35,6 +42,14 @@ export class Land {
   #world: World;
   // The chunks whose overlays are to be made again, and which squares' middles each has, worked out once.
   #overlaysDue = new Set<string>();
+  // The chunk whose overlay's being made, a few squares a frame: which, its squares, how many are laid, and what so far.
+  #making: {
+    key: string;
+    squares: [number, number][];
+    done: number;
+    laid: Soup;
+    heights: Map<string, number>;
+  } | null = null;
   #squaresByChunk: Map<string, [number, number][]> | null = null;
   // What was last laid on each square, by `x,y`, as `overlayFor` said: a chunk's made again only when one changes.
   #laid = new Map<string, string>();
@@ -225,11 +240,17 @@ export class Land {
       ? [...this.#chunksOfSquares().values()].flat()
       : this.#besides(squares)
     ).forEach(([x, y]) => {
-      const key = `${x},${y}`,
-        signature = JSON.stringify(this.#overlayAt(x, y));
+      const chunk = this.#chunkOf(x, y);
 
-      if (signature !== (this.#laid.get(key) ?? 'null')) {
-        this.#overlaysDue.add(this.#chunkOf(x, y));
+      // Its chunk's to be made again anyway: no need to look.
+      if (this.#overlaysDue.has(chunk)) {
+        return;
+      }
+
+      const signature = JSON.stringify(this.#overlayAt(x, y));
+
+      if (signature !== (this.#laid.get(`${x},${y}`) ?? 'null')) {
+        this.#overlaysDue.add(chunk);
       }
     });
 
@@ -262,9 +283,9 @@ export class Land {
     return this.#queue.length;
   }
 
-  /** How many chunks wait to have what's laid on them made again. */
+  /** How many chunks wait to have what's laid on them made again, one being made among them. */
   overlaysPending(): number {
-    return this.#overlaysDue.size;
+    return this.#overlaysDue.size + (this.#making === null ? 0 : 1);
   }
 
   /**
@@ -288,18 +309,58 @@ export class Land {
       this.#overlaysDue.add(key);
     }
 
-    for (const key of this.#nearestFirst(
-      [...this.#overlaysDue],
-      ...this.#focus
-    )) {
-      if (spent()) {
-        return;
+    // What's laid on the chunks, the nearest first, a square at a time, so a busy chunk is made over a few frames
+    //  rather than holding one up. One that's changed again while it's being made is begun again.
+    while (this.#overlaysDue.size > 0 || this.#making !== null) {
+      if (this.#making !== null && this.#overlaysDue.has(this.#making.key)) {
+        this.#making = null;
       }
 
-      const [i, j] = key.split(',').map(Number) as [number, number];
+      if (this.#making === null) {
+        const key = this.#nearestFirst(
+          [...this.#overlaysDue],
+          ...this.#focus
+        )[0]!;
 
-      this.#overlaysDue.delete(key);
-      stage.setOverlay(i, j, this.overlayOf(i, j));
+        this.#overlaysDue.delete(key);
+        this.#making = {
+          key,
+          squares: this.#chunksOfSquares().get(key) ?? [],
+          done: 0,
+          laid: soup(),
+          heights: new Map(),
+        };
+      }
+
+      const making = this.#making;
+
+      // A square at least, every time, so even the smallest budget gets it made.
+      while (making.done < making.squares.length) {
+        const [x, y] = making.squares[making.done]!,
+          square = this.#square(x, y, making.heights);
+
+        making.done++;
+
+        if (square !== null) {
+          layOverlay(square.overlay, square.place, making.laid);
+        }
+
+        if (making.done < making.squares.length && spent()) {
+          return;
+        }
+      }
+
+      const [i, j] = making.key.split(',').map(Number) as [number, number],
+        { stepsU, stepsV, spacingU, spacingV } = this.#grid;
+
+      this.#making = null;
+      stage.setOverlay(
+        i,
+        j,
+        making.laid.positions.length === 0
+          ? null
+          : meshOf(i * stepsU * spacingU, j * stepsV * spacingV, making.laid)
+      );
     }
   }
 
@@ -327,39 +388,48 @@ export class Land {
   /** What's laid on the land of chunk `i` across and `j` down: its squares' roads, fields and the rest, or nothing. */
   overlayOf(i: number, j: number): OverlayMesh | null {
     const { stepsU, stepsV, spacingU, spacingV } = this.#grid,
-      squares = this.#chunksOfSquares().get(`${i},${j}`) ?? [],
-      extentV = this.extentV(),
       // The land's heights at its points, each read once for the chunk.
       heights = new Map<string, number>(),
-      laid = squares.flatMap(([x, y]) => {
-        const overlay = this.#overlayAt(x, y);
-
-        this.#laid.set(`${x},${y}`, JSON.stringify(overlay));
-
-        if (overlay === null) {
-          return [];
-        }
-
-        // Where it is, as its marker is, even where that's at the world's edge (an odd row's last square, the last row
-        //  of a world that wraps over the poles): the chunk's drawn at every copy of the world, so its overlay lies
-        //  where it is in each, a chunk's corner or not. Its neighbours as the nearest copy of each.
-        const [u, v] = this.layout.centre(x, y),
-          place: OverlayPlace = {
-            centre: [u, v],
-            toward: ([dx, dy]) => this.layout.centre(x + dx, y + dy),
-            radius: this.#radius,
-            inner: this.#inner,
-            heightAt: (pu, pv) => this.surfaceAt(pu, pv, heights),
-            seed: Math.imul(x, 73856093) ^ Math.imul(y, 19349663),
-            latitude: Math.min(1, Math.abs((2 * v) / extentV - 1)),
-          };
-
-        return [{ overlay, place }];
-      });
+      laid = (this.#chunksOfSquares().get(`${i},${j}`) ?? []).flatMap(
+        ([x, y]) => this.#square(x, y, heights) ?? []
+      );
 
     return laid.length === 0
       ? null
       : overlayMesh(i * stepsU * spacingU, j * stepsV * spacingV, laid);
+  }
+
+  // What's laid on the square at (`x`, `y`), and where, or nothing; kept as what was last laid there.
+  #square(
+    x: number,
+    y: number,
+    heights: Map<string, number>
+  ): { overlay: SquareOverlay; place: OverlayPlace } | null {
+    const overlay = this.#overlayAt(x, y);
+
+    this.#laid.set(`${x},${y}`, JSON.stringify(overlay));
+
+    if (overlay === null) {
+      return null;
+    }
+
+    // Where it is, as its marker is, even where that's at the world's edge (an odd row's last square, the last row of
+    //  a world that wraps over the poles): the chunk's drawn at every copy of the world, so its overlay lies where it
+    //  is in each, a chunk's corner or not. Its neighbours as the nearest copy of each.
+    const [u, v] = this.layout.centre(x, y);
+
+    return {
+      overlay,
+      place: {
+        centre: [u, v],
+        toward: ([dx, dy]) => this.layout.centre(x + dx, y + dy),
+        radius: this.#radius,
+        inner: this.#inner,
+        heightAt: (pu, pv) => this.surfaceAt(pu, pv, heights),
+        seed: Math.imul(x, 73856093) ^ Math.imul(y, 19349663),
+        latitude: Math.min(1, Math.abs((2 * v) / this.extentV() - 1)),
+      },
+    };
   }
 
   /** The chunk whose overlay has the square at (`x`, `y`), by `i,j`: the one its middle is in. */
@@ -402,15 +472,20 @@ export class Land {
 
   // `squares`, and the squares beside each.
   #besides(squares: [number, number][]): [number, number][] {
-    const topology = this.#world.topology();
+    const topology = this.#world.topology(),
+      found = new Map<string, [number, number]>();
 
-    return squares.flatMap(([x, y]) => [
-      [x, y] as [number, number],
-      ...topology
-        .directions()
-        .map((direction) => topology.neighbour(x, y, direction))
-        .filter((at): at is [number, number] => at !== null),
-    ]);
+    squares.forEach(([x, y]) =>
+      [
+        [x, y] as [number, number],
+        ...topology
+          .directions()
+          .map((direction) => topology.neighbour(x, y, direction))
+          .filter((at): at is [number, number] => at !== null),
+      ].forEach((square) => found.set(square.join(), square))
+    );
+
+    return [...found.values()];
   }
 
   // The chunks, nearest to (`u`, `v`) first, measuring round the world's period.

@@ -163,8 +163,8 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
       roughness: 0.9,
       metalness: 0,
       polygonOffset: true,
-      polygonOffsetFactor: -1,
-      polygonOffsetUnits: -2,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -6,
       // Its shadows clipped with it.
       clipShadows: true,
     }),

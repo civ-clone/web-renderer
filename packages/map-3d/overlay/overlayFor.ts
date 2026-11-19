@@ -44,12 +44,19 @@ const NOT_SPECIALS = ['River'];
 const has = (tile: Pick<Tile, 'improvements'>, name: string): boolean =>
   (tile.improvements ?? []).some(({ _ }) => _ === name);
 
-/** What's laid on `tile`'s land, its `neighbours` all round it: nothing, for a square with none of it. */
+/**
+ * What's laid on `tile`'s land, its `neighbours` all round it: nothing, for a square with none of it, or a city's lot,
+ *  which its buildings and the unit in front of them take, as the 2D map's city covers its square's road and fields.
+ */
 export const overlayFor = (
   tile: Pick<Tile, 'improvements' | 'terrain' | 'goodyHut'> &
     Partial<Pick<Tile, 'city'>>,
   neighbours: readonly OverlayNeighbour[]
 ): SquareOverlay | null => {
+  if (tile.city) {
+    return null;
+  }
+
   const road = has(tile, 'Road'),
     railroad = has(tile, 'Railroad'),
     roadNeighbours = road
@@ -100,7 +107,7 @@ export const overlayFor = (
         .map((feature): [string, string] => [tile.terrain._, feature]),
       hut: tile.goodyHut !== null && tile.goodyHut !== undefined,
       terrain: tile.terrain?._ ?? 'Unknown',
-      vegetation: !tile.city && growthOf(tile.terrain?._ ?? 'Unknown') !== null,
+      vegetation: growthOf(tile.terrain?._ ?? 'Unknown') !== null,
     };
 
   const empty =

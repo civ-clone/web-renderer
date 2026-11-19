@@ -388,7 +388,10 @@ Plants are scattered by seed, each where it has room. They stay clear of a unit'
 - mines, fortresses, airbases, specials (`packages/models-builtin/specials.ts`, every feature Civ1 and Civ2 name) and huts are small solids, standing clear of a unit's stand;
 - a chunk's overlay is made again with its land, or when what's laid on a square in it or next to it changes. A unit moving changes nothing laid, so it remakes nothing, and a road built rebuilds no land. Chunks are made nearest the camera first;
 - it's draped over the land as drawn (the chunks' flat triangles), so it never sinks into a hill, and read from the chunks' points, which also makes it cheap: about 15 ms a chunk on a populated world;
-- a unit's stand is thick enough to stand over all of it, and fields fit inside their square, whether a square, a diamond or a hex.
+- a unit's stand is thick enough to stand over all of it, and fields fit inside their square, whether a square, a diamond or a hex;
+- a city's lot has nothing laid on it, as the 2D map's city covers its square;
+- a square's mine, specials and hut each claim a spot clear of its roads, a fortress's walls, an airbase's runway and each other, and plants keep clear of all of them;
+- a chunk's overlay is made a few squares a frame within the frame's budget, so no frame waits on a busy chunk.
 
 Still to do in 3.4: improvements as models from a hosted set, and Fortress and Airbase models that read better from afar.
 

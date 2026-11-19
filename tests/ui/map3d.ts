@@ -52,6 +52,7 @@ import {
 } from '@civ-clone/ui-game/lib/map3d';
 import { Stage } from '@civ-clone/ui-map-3d/stage';
 import markerFor, { TileMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
+import overlayFor from '@civ-clone/ui-map-3d/overlay/overlayFor';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { unitStatus } from '@civ-clone/ui-assets/lib/renderUnit';
 import { setBuild } from '@civ-clone/ui-client/lib/build';
@@ -861,14 +862,37 @@ expect(
     winner: 'attacker',
   });
   faced.push(round(facing()));
+  // Attacked from the west, where it stands: it turns to face its attacker.
+  view.mapEvent({
+    kind: 'battle',
+    attacker: {
+      id: 'Unit-Rival',
+      type: 'Warriors',
+      player: 'Player-2',
+      tile: { x: 1, y: 0 },
+    },
+    defender: {
+      id: 'Unit-P',
+      type: 'Phalanx',
+      player: 'Player-1',
+      tile: { x: 2, y: 0 },
+    },
+    winner: 'defender',
+  });
+  faced.push(round(facing()));
 
-  expect('a unit faces the way it last moved, and the way it attacked', faced, [
-    round(Math.PI / 2),
-    round(-Math.PI / 2),
-    round(Math.PI / 2),
-    round(Math.PI / 4),
-    0,
-  ]);
+  expect(
+    'a unit faces the way it last moved, and the way it attacked; a defender faces its attacker',
+    faced,
+    [
+      round(Math.PI / 2),
+      round(-Math.PI / 2),
+      round(Math.PI / 2),
+      round(Math.PI / 4),
+      0,
+      round(-Math.PI / 2),
+    ]
+  );
 
   expect(
     'a city is named as the page names it, or by its own name where the page gives none',
@@ -879,25 +903,29 @@ expect(
     ['Rome', 'Roma']
   );
 
-  // A road built on the town's square: what's laid on its chunk is made again, by the frames the view draws, without
-  //  building the land again.
+  // A road built on the square beside the town: what's laid on its chunk is made again, by the frames the view draws,
+  //  without building the land again. On the town's own square, a city's lot, nothing's laid.
   overlaysSet.clear();
 
-  const landBuilt = chunkBuilds.length;
+  const landBuilt = chunkBuilds.length,
+    beside = tiles[1] as Tile;
 
-  town.improvements = [{ _: 'Road' }] as Tile['improvements'];
-  view.queueTile(town);
+  [beside, town].forEach((tile) => {
+    tile.improvements = [{ _: 'Road' }] as Tile['improvements'];
+    view.queueTile(tile);
+  });
   view.releaseTiles();
   view.flush();
 
   expect(
-    'a road built: what’s laid on its chunk made again, with the road, and no land built',
+    'a road built: what’s laid on its chunk made again, with the road, and no land built; none on a city’s lot',
     [
-      (overlaysSet.get(view.land().overlayKeyOf(town.x, town.y)) ?? 0) > 0,
+      (overlaysSet.get(view.land().overlayKeyOf(beside.x, beside.y)) ?? 0) > 0,
       view.land().overlaysPending(),
       chunkBuilds.length === landBuilt,
+      view.land().overlayOf(0, 0) !== null && overlayFor(town, []) === null,
     ],
-    [true, 0, true]
+    [true, 0, true, true]
   );
 
   staged.splice(0);

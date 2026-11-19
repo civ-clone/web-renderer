@@ -58,18 +58,25 @@ export type OverlayMesh = {
 };
 
 // Triangles as they're made: three numbers a point for each.
-type Soup = { positions: number[]; normals: number[]; colours: number[] };
+export type Soup = {
+  positions: number[];
+  normals: number[];
+  colours: number[];
+};
+
+/** An empty soup of triangles, for squares to be laid into one at a time. */
+export const soup = (): Soup => ({ positions: [], normals: [], colours: [] });
 
 // How far over the land each kind is laid, so the later is over the earlier: fields, then roads, railroads, pollution.
 const LIFT = {
-    field: 0.008,
-    road: 0.012,
-    ballast: 0.014,
-    rail: 0.018,
-    smear: 0.022,
+    field: 0.01,
+    road: 0.014,
+    ballast: 0.016,
+    rail: 0.02,
+    smear: 0.024,
   },
-  // How finely a draped strip follows the land.
-  STEP = 0.08,
+  // How finely a draped strip follows the land: finer than the land's points are apart (0.125).
+  STEP = 0.06,
   ROAD = '#8c7a58',
   BALLAST = '#5f5953',
   RAIL = '#a9abae',
@@ -223,28 +230,34 @@ class Layer {
       return;
     }
 
+    // Cut along it and across it finer than the land's points are apart, so it follows the land between them too.
     const steps = Math.max(1, Math.ceil(length / STEP)),
-      // Across the strip, to its left.
-      across = [
-        (-(to[1] - from[1]) / length) * (width / 2),
-        ((to[0] - from[0]) / length) * (width / 2),
+      strands = Math.max(1, Math.ceil(width / STEP)),
+      // Across the strip, from its right edge to its left.
+      side = [
+        (-(to[1] - from[1]) / length) * width,
+        ((to[0] - from[0]) / length) * width,
+      ],
+      at = (t: number, w: number): [number, number] => [
+        from[0] + (to[0] - from[0]) * t + side[0]! * (w - 0.5),
+        from[1] + (to[1] - from[1]) * t + side[1]! * (w - 0.5),
       ];
 
     for (let step = 0; step < steps; step++) {
-      const at = (t: number): [number, number] => [
-          from[0] + (to[0] - from[0]) * t,
-          from[1] + (to[1] - from[1]) * t,
-        ],
-        [u0, v0] = at(step / steps),
-        [u1, v1] = at((step + 1) / steps);
+      for (let strand = 0; strand < strands; strand++) {
+        const [u0, v0] = at(step / steps, (strand + 1) / strands),
+          [u1, v1] = at((step + 1) / steps, (strand + 1) / strands),
+          [u2, v2] = at(step / steps, strand / strands),
+          [u3, v3] = at((step + 1) / steps, strand / strands);
 
-      // Two triangles, wound anticlockwise seen from above (`v` runs south), so they face up and aren't culled.
-      this.#point(u0 + across[0]!, v0 + across[1]!, lift, colour);
-      this.#point(u1 + across[0]!, v1 + across[1]!, lift, colour);
-      this.#point(u0 - across[0]!, v0 - across[1]!, lift, colour);
-      this.#point(u1 + across[0]!, v1 + across[1]!, lift, colour);
-      this.#point(u1 - across[0]!, v1 - across[1]!, lift, colour);
-      this.#point(u0 - across[0]!, v0 - across[1]!, lift, colour);
+        // Two triangles, wound anticlockwise seen from above (`v` runs south), so they face up and aren't culled.
+        this.#point(u0, v0, lift, colour);
+        this.#point(u1, v1, lift, colour);
+        this.#point(u2, v2, lift, colour);
+        this.#point(u1, v1, lift, colour);
+        this.#point(u3, v3, lift, colour);
+        this.#point(u2, v2, lift, colour);
+      }
     }
   }
 
@@ -257,25 +270,37 @@ class Layer {
     sides = 12
   ): void {
     const colour = colourOf(css),
-      [u, v] = centre;
+      [u, v] = centre,
+      // In rings no further apart than the land's points, so a wide one follows the land too.
+      rings = Math.max(1, Math.ceil(radius / STEP)),
+      at = (ring: number, side: number): [number, number] => {
+        const angle = (side / sides) * Math.PI * 2,
+          out = (ring / rings) * radius;
 
-    for (let side = 0; side < sides; side++) {
-      const a = (side / sides) * Math.PI * 2,
-        b = ((side + 1) / sides) * Math.PI * 2;
+        return [u + Math.cos(angle) * out, v + Math.sin(angle) * out];
+      };
 
-      this.#point(u, v, lift, colour);
-      this.#point(
-        u + Math.cos(b) * radius,
-        v + Math.sin(b) * radius,
-        lift,
-        colour
-      );
-      this.#point(
-        u + Math.cos(a) * radius,
-        v + Math.sin(a) * radius,
-        lift,
-        colour
-      );
+    for (let ring = 0; ring < rings; ring++) {
+      for (let side = 0; side < sides; side++) {
+        const outerA = at(ring + 1, side),
+          outerB = at(ring + 1, side + 1);
+
+        if (ring === 0) {
+          this.#point(u, v, lift, colour);
+          this.#point(...outerB, lift, colour);
+          this.#point(...outerA, lift, colour);
+        } else {
+          const innerA = at(ring, side),
+            innerB = at(ring, side + 1);
+
+          this.#point(...innerA, lift, colour);
+          this.#point(...innerB, lift, colour);
+          this.#point(...outerA, lift, colour);
+          this.#point(...innerB, lift, colour);
+          this.#point(...outerB, lift, colour);
+          this.#point(...outerA, lift, colour);
+        }
+      }
     }
   }
 
@@ -330,6 +355,56 @@ class Layer {
       u + Math.cos(angle) * distance * this.place.radius,
       v + Math.sin(angle) * distance * this.place.radius,
     ];
+  }
+
+  // The lines across the square that what stands on it keeps clear of: its roads and railroads, a fortress's walls,
+  //  an airbase's runway. And what stands there already: where, and how much room it takes.
+  readonly lines: [readonly [number, number], readonly [number, number]][] = [];
+  readonly taken: [number, number, number][] = [];
+
+  /** Whether (`u`, `v`) has `room` clear of the square's lines and of what stands there already. */
+  hasRoom(u: number, v: number, room: number): boolean {
+    return (
+      this.lines.every(([a, b]) => clearOf(u, v, a, b, 0.05 + room)) &&
+      this.taken.every(
+        ([tu, tv, other]) => Math.hypot(u - tu, v - tv) >= other + room
+      )
+    );
+  }
+
+  /**
+   * A place for something taking `room`, `distance` of the square's reach from its middle (or a little nearer, if
+   *  that's full), at the first of 24 angles round from its `n`th seeded one with room for it (that one, if none has),
+   *  taken for it.
+   */
+  claim(n: number, distance: number, room: number): [number, number] {
+    const first = fraction(this.place.seed, n) * Math.PI * 2,
+      [u, v] = this.place.centre,
+      around = (k: number, out: number): [number, number] => {
+        const angle = first + (k / 24) * Math.PI * 2;
+
+        return [
+          u + Math.cos(angle) * out * this.place.radius,
+          v + Math.sin(angle) * out * this.place.radius,
+        ];
+      };
+    let chosen: [number, number] | null = null;
+
+    for (const out of [distance, distance * 0.88]) {
+      for (let k = 0; k < 24 && chosen === null; k++) {
+        const at = around(k, out);
+
+        if (this.hasRoom(at[0], at[1], room)) {
+          chosen = at;
+        }
+      }
+    }
+
+    const at = chosen ?? around(0, distance);
+
+    this.taken.push([at[0], at[1], room]);
+
+    return at;
   }
 }
 
@@ -447,9 +522,8 @@ const fields = (layer: Layer, kind: 'irrigation' | 'farmland'): void => {
   }
 };
 
-const mine = (layer: Layer): void => {
-  const [u, v] = layer.spot(...SPOTS.mine),
-    y = layer.ground(u, v);
+const mine = (layer: Layer, [u, v]: readonly [number, number]): void => {
+  const y = layer.ground(u, v);
 
   // A headframe: two legs leaning together, and its wheel.
   layer.solid(
@@ -531,7 +605,7 @@ const fortress = (layer: Layer): void => {
 const airbase = (layer: Layer): void => {
   const [u, v] = layer.place.centre,
     reach = layer.place.radius * 0.75,
-    [hu, hv] = layer.spot(5, 0.6);
+    [hu, hv] = layer.claim(5, 0.6, 0.08);
 
   layer.strip(
     [u - reach, v + 0.12],
@@ -725,9 +799,7 @@ const special = (
   }
 };
 
-const hut = (layer: Layer): void => {
-  const at = layer.spot(...SPOTS.hut);
-
+const hut = (layer: Layer, at: readonly [number, number]): void => {
   // Three round huts, thatched.
   [0, 1, 2].forEach((index) => {
     const angle =
@@ -938,35 +1010,11 @@ const plants = (layer: Layer, overlay: SquareOverlay): void => {
     return;
   }
 
-  const { place } = layer,
-    { centre, radius, seed, latitude } = place,
-    // The roads' lines, from the middle halfway to each neighbour they join.
-    routes = [
-      ...(overlay.road?.joins ?? []),
-      ...(overlay.railroad?.joins ?? []),
-    ].map((offset): [readonly [number, number], readonly [number, number]] => [
-      centre,
-      halfway(place, offset),
-    ]),
-    // What's there already: where, and how much room it takes.
-    taken: [number, number, number][] = [
-      ...(overlay.mine
-        ? [[...layer.spot(...SPOTS.mine), 0.1] as [number, number, number]]
-        : []),
-      ...(overlay.hut
-        ? [[...layer.spot(...SPOTS.hut), 0.13] as [number, number, number]]
-        : []),
-      ...overlay.specials.map((_, index): [number, number, number] => [
-        ...layer.spot(...SPOTS.special(index)),
-        0.12,
-      ]),
-    ],
+  const { centre, radius, seed, latitude } = layer.place,
+    // Clear of the unit's stand at the middle, too.
     hasRoom = (u: number, v: number, room: number): boolean =>
       Math.hypot(u - centre[0], v - centre[1]) >= 0.22 + room &&
-      routes.every(([a, b]) => clearOf(u, v, a, b, 0.05 + room)) &&
-      taken.every(
-        ([tu, tv, other]) => Math.hypot(u - tu, v - tv) >= other + room
-      );
+      layer.hasRoom(u, v, room);
 
   growth.plants.forEach((plant, which) => {
     for (let index = 0; index < plant.count; index++) {
@@ -992,7 +1040,7 @@ const plants = (layer: Layer, overlay: SquareOverlay): void => {
 
         if (hasRoom(u, v, room)) {
           grow(layer, plant, kind, u, v, size, angle);
-          taken.push([u, v, room]);
+          layer.taken.push([u, v, room]);
           break;
         }
       }
@@ -1000,13 +1048,59 @@ const plants = (layer: Layer, overlay: SquareOverlay): void => {
   });
 };
 
-/** Lays `overlay` for the square at `place` into `soup`. */
+/**
+ * Lays `overlay` for the square at `place` into `soup`. What stands on it (its mine, specials, hut, plants), where and
+ *  with how much room, and the lines across it they keep clear of.
+ */
 export const layOverlay = (
   overlay: SquareOverlay,
   place: OverlayPlace,
   soup: Soup
-): void => {
-  const layer = new Layer(soup, place);
+): {
+  taken: readonly (readonly [number, number, number])[];
+  lines: readonly (readonly [
+    readonly [number, number],
+    readonly [number, number]
+  ])[];
+} => {
+  const layer = new Layer(soup, place),
+    { centre, radius } = place;
+
+  // The lines across it, which what stands on it keeps clear of.
+  [overlay.road, overlay.railroad].forEach((route) => {
+    if (route !== null && drawn(route)) {
+      route.joins.forEach((offset) =>
+        layer.lines.push([centre, halfway(place, offset)])
+      );
+
+      if (route.alone) {
+        layer.lines.push([centre, centre]);
+      }
+    }
+  });
+
+  if (overlay.fortress) {
+    const half = radius * 0.62,
+      corners: [number, number][] = [
+        [-half, -half],
+        [half, -half],
+        [half, half],
+        [-half, half],
+      ].map(([du, dv]) => [centre[0] + du!, centre[1] + dv!]);
+
+    corners.forEach((corner, index) =>
+      layer.lines.push([corner, corners[(index + 1) % 4]!])
+    );
+  }
+
+  if (overlay.airbase) {
+    const reach = radius * 0.75;
+
+    layer.lines.push([
+      [centre[0] - reach, centre[1] + 0.12],
+      [centre[0] + reach, centre[1] + 0.12],
+    ]);
+  }
 
   if (overlay.irrigation !== null) {
     fields(layer, overlay.irrigation);
@@ -1021,7 +1115,7 @@ export const layOverlay = (
   }
 
   if (overlay.mine) {
-    mine(layer);
+    mine(layer, layer.claim(...SPOTS.mine, 0.1));
   }
 
   if (overlay.fortress) {
@@ -1040,13 +1134,13 @@ export const layOverlay = (
     special(
       layer,
       specialLook(terrain, feature),
-      layer.spot(...SPOTS.special(index)),
+      layer.claim(...SPOTS.special(index), 0.1),
       index + 1
     )
   );
 
   if (overlay.hut) {
-    hut(layer);
+    hut(layer, layer.claim(...SPOTS.hut, 0.13));
   }
 
   // What grows there, but not on cleared ground: fields, a fortress, an airbase.
@@ -1058,6 +1152,8 @@ export const layOverlay = (
   ) {
     plants(layer, overlay);
   }
+
+  return { taken: layer.taken, lines: layer.lines };
 };
 
 /** The overlay of a chunk whose corner is at (`u`, `v`): each of its squares' laid together, relative to the corner. */
@@ -1066,11 +1162,16 @@ export const overlayMesh = (
   v: number,
   squares: readonly { overlay: SquareOverlay; place: OverlayPlace }[]
 ): OverlayMesh => {
-  const soup: Soup = { positions: [], normals: [], colours: [] };
+  const laid = soup();
 
-  squares.forEach(({ overlay, place }) => layOverlay(overlay, place, soup));
+  squares.forEach(({ overlay, place }) => layOverlay(overlay, place, laid));
 
-  const positions = new Float32Array(soup.positions);
+  return meshOf(u, v, laid);
+};
+
+/** The overlay of a chunk whose corner is at (`u`, `v`), from what's been laid into `laid`, relative to the corner. */
+export const meshOf = (u: number, v: number, laid: Soup): OverlayMesh => {
+  const positions = new Float32Array(laid.positions);
 
   for (let point = 0; point < positions.length; point += 3) {
     positions[point] = positions[point]! - u;
@@ -1081,8 +1182,8 @@ export const overlayMesh = (
     u,
     v,
     positions,
-    normals: new Float32Array(soup.normals),
-    colours: new Float32Array(soup.colours),
+    normals: new Float32Array(laid.normals),
+    colours: new Float32Array(laid.colours),
   };
 };
 

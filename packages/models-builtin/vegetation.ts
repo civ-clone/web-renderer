@@ -3,7 +3,8 @@
 //  nothing: the land's own colour says what it is.
 //
 // For each kind that grows there: how many to a square, how big against their usual, and their colours. Forests are
-//  conifers towards the poles and broadleaf towards the equator (`conifers`, at the poles and at the equator).
+//  conifers towards the poles and broadleaf towards the equator (`conifers`, the share at the equator, then at the
+//  poles).
 
 /** What grows. */
 export type PlantKind =

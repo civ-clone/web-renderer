@@ -13,6 +13,7 @@
 
 import * as Civ1Features from '@civ-clone/civ1-world/TerrainFeatures';
 import * as Civ2Features from '@civ-clone/civ2-world/TerrainFeatures';
+import { Color } from 'three';
 import { Tile } from '@civ-clone/ui-protocol/types';
 import {
   specialLook,
@@ -25,6 +26,8 @@ import overlayFor, {
 import overlayMesh, {
   OverlayMesh,
   OverlayPlace,
+  layOverlay,
+  soup,
 } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
 import { Stage } from '@civ-clone/ui-map-3d/stage';
 import { TopologyId } from '@civ-clone/ui-protocol/topology';
@@ -47,6 +50,24 @@ const expect = (description: string, actual: unknown, expected: unknown) => {
       )}\n    actual:   ${JSON.stringify(actual)}`
     );
   }
+};
+
+// Whether any point of `mesh` is `css`, the colour a road is laid in, say.
+const hasColour = (mesh: OverlayMesh, css: string): boolean => {
+  const { r, g, b } = new Color(css),
+    c = mesh.colours;
+
+  for (let at = 0; at < c.length; at += 3) {
+    if (
+      Math.abs(c[at]! - r) < 1e-4 &&
+      Math.abs(c[at + 1]! - g) < 1e-4 &&
+      Math.abs(c[at + 2]! - b) < 1e-4
+    ) {
+      return true;
+    }
+  }
+
+  return false;
 };
 
 // The specials.
@@ -280,7 +301,7 @@ expect(
   'a road is draped over the land, a little above it, and reaches halfway to the neighbour it joins',
   [
     roadPoints.every(
-      ([u, y]) => y - heightAt(u) > 0.011 && y - heightAt(u) < 0.013
+      ([u, y]) => y - heightAt(u) > 0.013 && y - heightAt(u) < 0.015
     ),
     Math.round(Math.max(...roadPoints.map(([u]) => u)) * 1e6) / 1e6,
   ],
@@ -359,6 +380,58 @@ expect(
   'what stands on a square, every special, a mine and a hut, stands clear of the unit’s stand at its middle, wherever the square',
   onTheStand,
   []
+);
+
+// On a square with a road through it east to west, a mine, Coal and a hut: none of them on the road, nor on each other,
+//  on 400 squares, as where they stand is seeded from the square.
+const crowded = overlayFor(
+    square(['Road', 'Mine'], {
+      terrain: 'Hills',
+      features: ['Coal'],
+      hut: true,
+    }),
+    [neighbour([1, 0], ['Road']), neighbour([-1, 0], ['Road'])]
+  )!,
+  segmentGap = (
+    [u, v]: readonly [number, number],
+    [a, b]: readonly [readonly [number, number], readonly [number, number]]
+  ): number => {
+    const du = b[0] - a[0],
+      dv = b[1] - a[1],
+      length = du * du + dv * dv,
+      t =
+        length === 0
+          ? 0
+          : Math.max(
+              0,
+              Math.min(1, ((u - a[0]) * du + (v - a[1]) * dv) / length)
+            );
+
+    return Math.hypot(u - (a[0] + du * t), v - (a[1] + dv * t));
+  },
+  clashes = Array.from({ length: 400 }, (_, at) => {
+    const { taken, lines } = layOverlay(
+        crowded,
+        place(at % 40, Math.floor(at / 40)),
+        soup()
+      ),
+      // The mine, the special and the hut: the first three taken, before what grows.
+      things = taken.slice(0, 3);
+
+    return things.some(
+      ([u, v, room], index) =>
+        lines.some((line) => segmentGap([u, v], line) < 0.035 + room * 0.5) ||
+        things.some(
+          ([ou, ov, other], otherIndex) =>
+            otherIndex > index && Math.hypot(u - ou, v - ov) < room + other
+        )
+    );
+  }).filter(Boolean).length;
+
+expect(
+  'a mine, a special and a hut stand off the road and apart, wherever the square',
+  clashes,
+  0
 );
 
 const standing = overlayFor(
@@ -488,7 +561,7 @@ expect(
           ([key, mesh]) =>
             mesh !== null &&
             key === land.overlayKeyOf(30, 20) &&
-            mesh.positions.length > 0
+            hasColour(mesh, '#8c7a58')
         ),
       ],
       [[0, true], 0, true]
@@ -643,18 +716,42 @@ const landOf = (
     return NaN;
   };
 
-  const below = [...laid.values()].flatMap((mesh) =>
-    mesh === null
-      ? []
-      : pointsOf(mesh).filter(
-          ([u, y, v]) =>
-            u > 0.1 &&
-            u < 31.9 &&
-            v > 0.1 &&
-            v < 15.9 &&
-            y < drawnAt(u, v) + 0.006
-        )
-  );
+  // Every triangle of every road and field: its corners, its middle and its edges' middles, which lie between the
+  //  land's points, all over the land as it's drawn, but for a rounding's worth (the polygon offset covers that).
+  const below = [...laid.values()].flatMap((mesh) => {
+    if (mesh === null) {
+      return [];
+    }
+
+    const corners = pointsOf(mesh),
+      samples: [number, number, number][] = [];
+
+    for (let at = 0; at + 2 < corners.length; at += 3) {
+      const [a, b, c] = [corners[at]!, corners[at + 1]!, corners[at + 2]!],
+        mix = (weights: [number, number, number]): [number, number, number] =>
+          [0, 1, 2].map(
+            (axis) =>
+              a[axis]! * weights[0] +
+              b[axis]! * weights[1] +
+              c[axis]! * weights[2]
+          ) as [number, number, number];
+
+      samples.push(
+        a,
+        b,
+        c,
+        mix([1 / 3, 1 / 3, 1 / 3]),
+        mix([0.5, 0.5, 0]),
+        mix([0, 0.5, 0.5]),
+        mix([0.5, 0, 0.5])
+      );
+    }
+
+    return samples.filter(
+      ([u, y, v]) =>
+        u > 0.1 && u < 31.9 && v > 0.1 && v < 15.9 && y < drawnAt(u, v) - 0.002
+    );
+  });
 
   expect(
     'roads and fields lie over the land as it’s drawn, even on hills, not under it',
@@ -741,6 +838,43 @@ const landOf = (
   );
 }
 
+// A busy chunk's overlay is made a few squares at a time within the frame's budget, and comes out as it would in one go.
+{
+  const { tiles, land, laid, stage } = landOf('square', 32, 16, () => ({
+    terrain: 'Forest',
+    improvements: ['Road'],
+  }));
+
+  land.queueAll(0, 0);
+  land.build(stage, null);
+  laid.clear();
+
+  // A road taken up: its chunk made again, with no time to spare, a square each call.
+  tiles[3 * 32 + 3]!.improvements = [];
+  land.changed([[3, 3]], 0, 0);
+
+  let calls = 0;
+
+  while (land.overlaysPending() > 0 && calls < 100000) {
+    land.build(stage, 0);
+    calls++;
+  }
+
+  const key = land.overlayKeyOf(3, 3),
+    whole = land.overlayOf(...(key.split(',').map(Number) as [number, number]));
+
+  expect(
+    'a busy chunk’s overlay is made over many small steps, and comes out as in one go',
+    [
+      calls > 10,
+      [...laid.keys()],
+      Array.from(laid.get(key)?.positions ?? []).join() ===
+        Array.from(whole?.positions ?? []).join(),
+    ],
+    [true, [key], true]
+  );
+}
+
 // Fields lie inside their square, a diamond or a hex as much as a square: every point of a lone square's fields is on it.
 (['staggered-iso', 'hex-odd-r'] as TopologyId[]).forEach((topologyId) => {
   const { land, laid, stage } = landOf(topologyId, 32, 16, (x, y) => ({
@@ -802,9 +936,9 @@ const forest = (more: string[] = [], city = false) =>
         : []
     ),
   // The points of a square's overlay at (17, 3), at `latitude`, back on the ground.
-  laidAt = (overlay: SquareOverlay, latitude = 0.5) =>
+  laidAt = (overlay: SquareOverlay, latitude = 0.5, x = 17, y = 3) =>
     pointsOf(
-      overlayMesh(16, 0, [{ overlay, place: { ...place(17, 3), latitude } }])
+      overlayMesh(16, 0, [{ overlay, place: { ...place(x, y), latitude } }])
     );
 
 expect(
@@ -813,21 +947,29 @@ expect(
   [true, true, null]
 );
 
-const trees = laidAt(forest(['Road'])!),
-  // The road's lines: from the middle halfway east, and halfway south.
-  offRoad = ([u, , v]: [number, number, number]): boolean =>
-    // Points of the road itself lie on it: only what stands higher is a plant.
-    (u >= 17.5 - 0.036 && u <= 18 && Math.abs(v - 3.5) <= 0.036) ||
-    (v >= 3.5 - 0.036 && v <= 4 && Math.abs(u - 17.5) <= 0.036)
-      ? true
-      : Math.hypot(u - 17.5, v - 3.5) > 0.22 &&
-        !(u > 17.5 && Math.abs(v - 3.5) < 0.05) &&
-        !(v > 3.5 && Math.abs(u - 17.5) < 0.05);
+// On 60 squares, as where trees stand is seeded from the square: the road's lines run from the middle halfway east,
+//  and halfway south.
+const onRoad = Array.from({ length: 60 }, (_, at) => {
+  const x = at % 20,
+    y = Math.floor(at / 20),
+    [cu, cv] = [x + 0.5, y + 0.5],
+    offRoad = ([u, , v]: [number, number, number]): boolean =>
+      // Points of the road itself lie on it: only what stands higher is a plant.
+      (u >= cu - 0.036 && u <= cu + 0.5 && Math.abs(v - cv) <= 0.036) ||
+      (v >= cv - 0.036 && v <= cv + 0.5 && Math.abs(u - cu) <= 0.036)
+        ? true
+        : Math.hypot(u - cu, v - cv) > 0.22 &&
+          !(u > cu && Math.abs(v - cv) < 0.05) &&
+          !(v > cv && Math.abs(u - cu) < 0.05);
+
+  return laidAt(forest(['Road'])!, 0.5, x, y).filter((point) => !offRoad(point))
+    .length;
+}).filter((count) => count > 0);
 
 expect(
-  'its trees stand clear of the unit’s stand at the middle, and of the roads',
-  trees.filter((point) => !offRoad(point)).length,
-  0
+  'its trees stand clear of the unit’s stand at the middle, and of the roads, wherever the square',
+  onRoad,
+  []
 );
 expect(
   'fields, a fortress or an airbase clear the ground of it',
@@ -839,10 +981,16 @@ expect(
   ],
   [true, true]
 );
+// A conifer is fewer points than a broadleaf (two narrow tiers to a round crown): over 40 squares, a forest at the poles
+//  is far fewer points than one at the equator.
+const forestPoints = (latitude: number): number =>
+  Array.from({ length: 40 }, (_, at) =>
+    laidAt(forest()!, latitude, at % 20, Math.floor(at / 20))
+  ).reduce((sum, points) => sum + points.length, 0);
+
 expect(
-  'a forest’s trees are mostly broadleaf at the equator and conifers at the poles: different trees',
-  Array.from(laidAt(forest()!, 0).flat()).join() !==
-    Array.from(laidAt(forest()!, 1).flat()).join(),
+  'a forest’s trees are mostly broadleaf at the equator and conifers at the poles',
+  forestPoints(1) < forestPoints(0) * 0.8,
   true
 );
 expect(

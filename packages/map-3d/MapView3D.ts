@@ -40,6 +40,9 @@ import Minimap3D from './minimap/Minimap3D';
 //  has begun one: one takes 17–25 ms, so a frame builds one, and more only where they're quicker.
 const BUILD_BUDGET = 10;
 
+// How many units' facings are kept at most.
+const FACINGS_KEPT = 4000;
+
 // How long the camera takes to glide to a square it's centred on, or to turn, in ms.
 const GLIDE = 350;
 
@@ -377,8 +380,14 @@ export class MapView3D implements MapRenderer {
       return;
     }
 
-    // Rounded, so a marker's drawn again only for a turn that shows.
+    // Rounded, so a marker's drawn again only for a turn that shows. The longest unseen to move let go, past a few
+    //  thousand: units die, and their ids aren't seen again.
+    this.#facings.delete(id);
     this.#facings.set(id, Math.round(Math.atan2(du, dv) * 1000) / 1000);
+
+    if (this.#facings.size > FACINGS_KEPT) {
+      this.#facings.delete(this.#facings.keys().next().value!);
+    }
     [from, to].forEach(({ x, y }) => this.#mark(x, y));
     this.#draw();
   }
@@ -962,10 +971,11 @@ export class MapView3D implements MapRenderer {
         (unit) => this.#facings.get(unit.id) ?? 0
       );
 
+    // On the land as it's drawn, as what's laid on it is, so a unit's stand stands over that.
     const [u, v] = this.#land.layout.centre(x, y),
       at: [number, number, number] = [
         u,
-        Math.max(0, this.#land.heightAt(u, v)),
+        Math.max(0, this.#land.surfaceAt(u, v)),
         v,
       ],
       signature = marker === null ? null : JSON.stringify([marker, at]);
