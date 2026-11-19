@@ -310,7 +310,7 @@ export const createStage: StageFactory = (
     ),
     land = new Group(),
     // The land's colour at each point, and its surfaces' detail over it (`landMaterial.ts`).
-    { material, detail } = landMaterial(period),
+    { material, detail } = landMaterial(period, ground.rows * ground.spacingV),
     sun = new DirectionalLight(SUN, 2.6),
     // What's drawn at every copy of the world in sight: the land's chunks by `i,j`, and the squares' markers by `x,y`.
     //  Each has where it lies, how to make one copy of it, and the copies drawn now.
@@ -546,6 +546,8 @@ export const createStage: StageFactory = (
         'surfacesB',
         new BufferAttribute(mesh.surfacesB, 4, true)
       );
+      // How much of what the ground's blended from is water, for wet sand at the waterline.
+      geometry.setAttribute('shore', new BufferAttribute(mesh.shore, 1, true));
       geometry.setIndex(new BufferAttribute(mesh.indices, 1));
       geometry.computeBoundingSphere();
 

@@ -32,6 +32,8 @@ export type ChunkMesh = {
   // How much of each surface (`SURFACES`) the ground is at each point, from 0 to 255: the first four, then the last.
   surfacesA: Uint8Array;
   surfacesB: Uint8Array;
+  // How much of what the ground's blended from is water squares at each point, from 0 to 255 (`GroundSample#shore`).
+  shore: Uint8Array;
   // 1 at each point on a square never seen, and 0 elsewhere, for the cloud over them.
   unseen: Float32Array;
   indices: Uint32Array;
@@ -91,6 +93,7 @@ export const buildChunk = (
     colours = new Float32Array(points * 3),
     surfacesA = new Uint8Array(points * 4),
     surfacesB = new Uint8Array(points * 4),
+    shore = new Uint8Array(points),
     unseen = new Float32Array(points);
 
   // Each point sampled once: its height, and its colour if it's the chunk's own.
@@ -109,6 +112,7 @@ export const buildChunk = (
           (surface < 4 ? surfacesA : surfacesB)[point * 4 + (surface % 4)] =
             Math.round(share * 255);
         });
+        shore[point] = Math.round(sampled.shore * 255);
         unseen[point] = sampled.unseen ? 1 : 0;
       }
     }
@@ -164,6 +168,7 @@ export const buildChunk = (
     colours,
     surfacesA,
     surfacesB,
+    shore,
     unseen,
     indices,
   };

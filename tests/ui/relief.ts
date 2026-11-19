@@ -116,7 +116,8 @@ const stepsIn = (
           surface = Math.max(
             ...inSample.surfaces.map((share, at) =>
               Math.abs(share - (outSample.surfaces[at] ?? 0))
-            )
+            ),
+            Math.abs(inSample.shore - outSample.shore)
           );
 
         if (step > 1e-6 || shade > 1e-5 || surface > 1e-5) {
@@ -536,6 +537,17 @@ ids.forEach((topologyId) => {
     }),
     seaAt = (x: number) => coast.height(...layout.centre(x, 5));
 
+  expect(
+    'how much of the ground is blended from water: all at sea, none inland, some at the shore, falling away inland',
+    [
+      coast.sample(...layout.centre(6, 5)).shore,
+      // Two squares from the sea either way, as the world wraps round.
+      coast.sample(...layout.centre(1, 5)).shore,
+      coast.sample(3, 5.5).shore > 0.2 && coast.sample(3, 5.5).shore < 0.8,
+      coast.sample(2.9, 5.5).shore > coast.sample(2.6, 5.5).shore,
+    ],
+    [1, 0, true, true]
+  );
   expect(
     'the sea is shallow at the shore, deeper further out, and deepest three squares out',
     [

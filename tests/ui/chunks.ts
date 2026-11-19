@@ -318,7 +318,8 @@ ids.forEach((topologyId) => {
       a.normals.every((value, at) => value === b.normals[at]) &&
       a.colours.every((value, at) => value === b.colours[at]) &&
       a.surfacesA.every((value, at) => value === b.surfacesA[at]) &&
-      a.surfacesB.every((value, at) => value === b.surfacesB[at]),
+      a.surfacesB.every((value, at) => value === b.surfacesB[at]) &&
+      a.shore.every((value, at) => value === b.shore[at]),
     land = new Land(world);
 
   land.queueAll(0, 0);

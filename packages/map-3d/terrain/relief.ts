@@ -52,6 +52,9 @@ export type GroundSample = {
   // How much of each surface (`SURFACES`, in order) its ground is, blended as its colour is, summing to 1: or none, on
   //  a square never seen.
   surfaces: number[];
+  // How much of what its ground's blended from, as its surfaces are, is water squares: 1 at sea, 0 inland, between at
+  //  the shore.
+  shore: number;
   // Whether the point is on a square never seen, which cloud covers.
   unseen: boolean;
 };
@@ -92,6 +95,8 @@ type Square = {
   colour: [number, number, number];
   // Its surface, by its place in `SURFACES`: the sea's floor is sand.
   surface: number;
+  // Whether it's water, as the engine says.
+  water: boolean;
   unknown: boolean;
   peak: { u: number; v: number; scale: number };
 };
@@ -338,6 +343,7 @@ export const createRelief = ({
           relief: entry.relief,
           colour: linear(entry.colour),
           surface: SURFACES.indexOf(entry.surface),
+          water: false,
           unknown,
           peak,
         };
@@ -354,6 +360,7 @@ export const createRelief = ({
         relief: { ...entry.relief, base: depth },
         colour: linear(entry.colour),
         surface: SURFACES.indexOf('sand'),
+        water: true,
         unknown,
         peak,
       };
@@ -703,6 +710,7 @@ export const createRelief = ({
         height: 0,
         colour: linear(unknownTerrain.colour),
         surfaces: SURFACES.map(() => 0),
+        shore: 0,
         unseen: true,
       };
     }
@@ -723,6 +731,7 @@ export const createRelief = ({
       // Each surface's share, weighed as the colour is, but of squares seen alone: a square never seen has none.
       surfaces = SURFACES.map(() => 0),
       surfaced = 0,
+      watered = 0,
       red = 0,
       green = 0,
       blue = 0;
@@ -781,6 +790,7 @@ export const createRelief = ({
       if (!square.unknown) {
         surfaces[surface] = (surfaces[surface] ?? 0) + shade;
         surfaced += shade;
+        watered += square.water ? shade : 0;
       }
 
       red += shade * colour[0];
@@ -847,6 +857,7 @@ export const createRelief = ({
         surfaced > 0
           ? surfaces.map((share) => share / surfaced)
           : SURFACES.map((_, at) => (at === ownSquare.surface ? 1 : 0)),
+      shore: surfaced > 0 ? watered / surfaced : ownSquare.water ? 1 : 0,
       unseen: false,
     };
   };
