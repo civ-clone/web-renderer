@@ -14,8 +14,13 @@ let missingImagePlaceholder: HTMLCanvasElement | null = null;
 //  of the import graph.
 const invalidationHandlers = new Set<() => void>();
 
-export const onPreloadedImagesChanged = (handler: () => void): void => {
+export const onPreloadedImagesChanged = (handler: () => void): (() => void) => {
   invalidationHandlers.add(handler);
+
+  // What stops it, for a handler that lives no longer than a map.
+  return (): void => {
+    invalidationHandlers.delete(handler);
+  };
 };
 
 /** Replaces the sprites lookups draw from with `loaded`, and drops everything derived from the ones before. */

@@ -225,15 +225,16 @@ export class Land {
   /**
    * The world's tiles at `squares` have changed: its terrain read again, and the chunks round any whose terrain has
    *  changed queued with those waiting, the nearest to (`u`, `v`) first. With none, it's read again only if `always`.
+   *  Returns the squares whose terrain has changed, if any.
    */
   changed(
     squares: [number, number][],
     u: number,
     v: number,
     always = false
-  ): void {
+  ): [number, number][] {
     if (squares.length === 0 && !always) {
-      return;
+      return [];
     }
 
     this.#focus = [u, v];
@@ -266,7 +267,7 @@ export class Land {
     const terrain = this.#relief.refresh(always ? undefined : squares);
 
     if (terrain.length === 0) {
-      return;
+      return terrain;
     }
 
     const near = chunksNear(this.#grid, this.layout, terrain, this.#reach).map(
@@ -278,6 +279,8 @@ export class Land {
       u,
       v
     );
+
+    return terrain;
   }
 
   /** The chunks waiting, put in order again, the nearest to (`u`, `v`) first: the map has been centred elsewhere. */

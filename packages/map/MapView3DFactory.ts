@@ -93,6 +93,11 @@ export type MapView3DDeps = {
   unitStatus?: (unit: Unit) => string | null;
   // The player's world, made by the page, which tile patches are written to.
   world: World;
+  // The icon for a yield (`Food`, `Production`, `Trade`), as the 2D map draws it over a square with `y`: the map's
+  //  pack's own, or the interface's, or nothing where the art hasn't one. And what tells of the page's art changing
+  //  (an import, or other art chosen), returning what stops it.
+  yieldIcon?: (name: string) => CanvasImageSource | null;
+  artChanged?: (changed: () => void) => () => void;
 };
 
 export type CreateMapView3D = (deps: MapView3DDeps) => MapRenderer;

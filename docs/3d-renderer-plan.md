@@ -441,6 +441,23 @@ Still to do in 3.4: improvements as models from a hosted set, and Fortress and A
   - disorder, celebration, captured and destroyed;
   - yields over squares (`y`).
 
+**Yields (`y`): done.** The 2D map's icons for what each square yields (the map's pack's own, or the interface's) stand
+in the world over each square's middle, as strategy maps show them, rather than on the screen:
+- **Laid out** as the 2D map lays them in its tile (`tileYieldGrid`: two rows, more columns the more there are), in a
+  block that fits the circle inside the square, so it stays within the square from above however the camera's turned
+  (`packages/map-3d/yields.ts`). The lower the camera looks, the smaller the blocks are (by the sine of its pitch),
+  so they still fit their squares.
+- **Drawn** as one instance each of a quad that faces the camera, upright on the screen, its size in the world's units,
+  so the icons shrink with distance as the land does, down to dots far out, on every square in sight, at every copy of
+  the world (`packages/map-3d/yieldIcons.ts`). One draw call for each copy, faded by the haze.
+- **Hidden** by what's in front, as the land is, but drawn as if 0.6 nearer the camera than they are, so what stands on
+  their own square (its trees, its unit, its city) and its slope don't bury them.
+- **The art** is the page's (`yieldIcon`), as the 3D map's script keeps none of its own: drawn into an atlas, each icon
+  in a cell with room round it, crisp up close and smoothed smaller.
+- **Cost:** each square's icons are laid out once and kept until its land or yields change, so drawing them again after
+  a change costs well under 1 ms on an explored 80×50 world. The first time they're shown, laying them all out takes
+  about 16 ms.
+
 **M4 is done when** every row of spec §11 is in the 3D view but one: changing the art mid-game, which comes with model
 sets in 6.4.
 

@@ -33,6 +33,8 @@ import { TileMarker } from './markers/markerFor';
 import { OverlayMesh } from './overlay/overlayMesh';
 import { FIELD_OF_VIEW, Orbit, eye, sightFor } from './camera/orbit';
 import Water, { Clouds, Ground } from './water';
+import YieldIcons from './yieldIcons';
+import { YieldMesh } from './yields';
 
 /** What the stage has drawn, for the debug overlay. */
 export type StageStats = {
@@ -74,6 +76,8 @@ export interface Stage {
   markerAt(key: string, unit: string): [number, number, number] | null;
   /** Whether any marker's sliding, for frames to be drawn until none is. */
   sliding(): boolean;
+  /** What each square yields (`y`), drawn at every copy of the world in sight: what was drawn before is replaced. */
+  setYields(mesh: YieldMesh | null): void;
   /**
    * The camera, round its focus raised to `height`, the land's there; and the world drawn as far round as `period`
    *  says, if the view's stopped at the poles, rather than as the world wraps.
@@ -92,6 +96,9 @@ export type StageOptions = {
   period: { u: number; v: number | null };
   // How the land's points lie on the ground, for the sea's surface to read their heights.
   ground: Ground;
+  // The icon for a yield (`Food`, `Production`, `Trade`), the map's pack's own or the interface's, or nothing where the
+  //  art has none.
+  yieldIcon?: (name: string) => CanvasImageSource | null;
 };
 
 /** Something drawn at every copy of the world in sight: where it lies, how to make another of it, and those drawn now. */
@@ -288,7 +295,10 @@ export const overlayCopies = (
 const SHADOW_MAP = 2048,
   SUN_DISTANCE = Math.hypot(30, 40, 20);
 
-export const createStage: StageFactory = (canvas, { period, ground }) => {
+export const createStage: StageFactory = (
+  canvas,
+  { period, ground, yieldIcon }
+) => {
   const renderer = new WebGLRenderer({ antialias: true, canvas }),
     scene = new Scene(),
     camera = new PerspectiveCamera(
@@ -332,6 +342,9 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
     sliding = new Set<string>(),
     markersGroup = new Group(),
     kit = new MarkerKit(),
+    // What each square yields, over the land at every copy of the world, when they're shown.
+    yieldsGroup = new Group(),
+    yields = new YieldIcons(yieldIcon ?? ((): null => null)),
     water = new Water(ground, new Color(SKY)),
     clouds = new Clouds(water.texture(), ground),
     fog = new Fog(SKY, 30, 110);
@@ -343,7 +356,9 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
     markerCopies: [number, number][] = [[0, 0]],
     markerCopiesKey = '0,0',
     // Whether the view's stopped at the poles.
-    stopped = false;
+    stopped = false,
+    // The yields drawn now, at every copy of the world in sight, or none.
+    yieldsPlaced: Placed | null = null;
 
   renderer.outputColorSpace = SRGBColorSpace;
   // For what's laid on the land, to stop at a pole the view's stopped at.
@@ -359,6 +374,7 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
   scene.add(new HemisphereLight(SKY_LIGHT, GROUND_LIGHT, 0.9));
   scene.add(land);
   scene.add(markersGroup);
+  scene.add(yieldsGroup);
   scene.add(water.mesh);
   scene.add(clouds.mesh);
 
@@ -484,7 +500,15 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
         overlay.drawn.forEach((drawn) => land.remove(drawn));
         overlay.drawn = overlayCopiesOf(overlay);
       });
+
+      if (yieldsPlaced !== null) {
+        yieldsPlaced.drawn.forEach((drawn) => yieldsGroup.remove(drawn));
+        yieldsPlaced.drawn = copiesOf(yieldsPlaced, yieldsGroup);
+      }
     }
+
+    // The yields' icons are smaller, the lower the camera looks, so they still fit their squares.
+    yields.lean(orbit.pitch);
 
     if (markersKey !== markerCopiesKey) {
       markerCopies = markersInSight;
@@ -671,6 +695,18 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
         : unitOnMarkerAt(placed, unit, performance.now());
     },
     sliding: (): boolean => sliding.size > 0,
+    setYields: (mesh): void => {
+      yieldsPlaced?.drawn.forEach((drawn) => yieldsGroup.remove(drawn));
+      yieldsPlaced = null;
+
+      if (yields.set(mesh) === null) {
+        return;
+      }
+
+      // The whole world's, from its origin.
+      yieldsPlaced = { at: [0, 0, 0], make: () => yields.make(), drawn: [] };
+      yieldsPlaced.drawn = copiesOf(yieldsPlaced, yieldsGroup);
+    },
     view,
     stats: (): StageStats => ({
       drawCalls: renderer.info.render.calls,
@@ -685,6 +721,7 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
       overlayMaterial.dispose();
       markers.clear();
       kit.dispose();
+      yields.dispose();
       water.dispose();
       clouds.dispose();
       material.dispose();

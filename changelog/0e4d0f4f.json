@@ -1,0 +1,1 @@
+{"version":"0.1.0@0e4d0f4f","date":"2026-11-19T08:48:06.000Z","localChanges":["chore: work towards a 3D map, not offered yet: under ?3d=1 the keys that move a unit turn with the view, so up moves it the way the camera faces (#1217)"],"externalChanges":{}}

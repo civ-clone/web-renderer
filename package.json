@@ -192,6 +192,7 @@
     "test:single-choice": "node tools/run-suite.js ui singleChoice",
     "test:game-options": "node tools/run-suite.js ui gameOptions",
     "test:worker-sizes": "node tools/run-suite.js engine worldSizesData",
+    "test:yields-3d": "node tools/run-suite.js ui yields3d",
     "test:zoom": "node tools/run-suite.js ui zoom",
     "test:saved-game": "node tools/saved-game.js",
     "test:browser-saves": "node tools/saved-game.js browserSaves",
