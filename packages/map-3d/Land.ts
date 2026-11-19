@@ -5,6 +5,10 @@
 // A tile patch reads the world's terrain again, and builds again only the chunks round the squares whose terrain it
 //  changed: as far as the kernel reaches from each, and from each square of sea whose floor it moved. Most patches
 //  (a unit moving, a city growing) change no terrain, and build nothing.
+//
+// What's laid on the land (`overlay/`: roads, fields, mines, specials, huts) is a mesh for each chunk of the squares
+//  whose middles are in it. It's made again when its chunk's land is, or when a square in it or beside it is released,
+//  as roads join their neighbours: far cheaper than the land, so a road built rebuilds no land.
 
 import groundLayoutFor, { GroundLayout } from './layouts';
 import { REACH } from './terrain/kernel';
@@ -14,6 +18,8 @@ import { Stage } from './stage';
 import { Ground } from './water';
 import World from '@civ-clone/ui-map/components/World';
 import { seaFloor } from '@civ-clone/ui-models-builtin/terrain';
+import overlayFor, { OverlayNeighbour } from './overlay/overlayFor';
+import overlayMesh, { OverlayMesh, OverlayPlace } from './overlay/overlayMesh';
 
 export class Land {
   readonly layout: GroundLayout;
@@ -23,8 +29,16 @@ export class Land {
   #queue: string[] = [];
   // How far a change to a square reaches, in world units.
   #reach: number;
+  #world: World;
+  // The chunks whose overlays are to be made again, and which squares' middles each has, worked out once.
+  #overlaysDue = new Set<string>();
+  #squaresByChunk: Map<string, [number, number][]> | null = null;
+  // How far a square reaches from its middle every way: its outline's nearest edge.
+  #radius: number;
 
   constructor(world: World) {
+    this.#world = world;
+
     const topology = world.topology(),
       width = world.width(),
       height = world.height(),
@@ -74,6 +88,19 @@ export class Land {
     // And as far again as a peak or a colour wanders from its square's middle.
     this.#reach =
       REACH + corner + WANDER * Math.SQRT2 + (seaFloor.reach - 1) * step;
+
+    const outline = this.layout.outline(0, 0);
+
+    this.#radius = Math.min(
+      ...outline.map(([au, av], index) => {
+        const [bu, bv] = outline[(index + 1) % outline.length]!,
+          length = Math.hypot(bu - au, bv - av);
+
+        return length === 0
+          ? Infinity
+          : Math.abs((bu - au) * (cv - av) - (bv - av) * (cu - au)) / length;
+      })
+    );
   }
 
   /** How the land's points lie on the ground, for the sea's surface to read their heights (`water.ts`). */
@@ -111,6 +138,7 @@ export class Land {
     }
 
     this.#queue = this.#nearestFirst(all, u, v);
+    all.forEach((key) => this.#overlaysDue.add(key));
   }
 
   /**
@@ -125,6 +153,15 @@ export class Land {
   ): void {
     if (squares.length === 0 && !always) {
       return;
+    }
+
+    // What's laid on them, and beside them, as roads join their neighbours: every square's, for a world replaced.
+    if (always) {
+      this.#chunksOfSquares().forEach((_, key) => this.#overlaysDue.add(key));
+    } else {
+      this.#besides(squares).forEach(([x, y]) =>
+        this.#overlaysDue.add(this.#chunkOf(x, y))
+      );
     }
 
     // The squares released alone, unless the world itself may have been replaced.
@@ -155,22 +192,144 @@ export class Land {
     return this.#queue.length;
   }
 
-  /** Builds chunks from the queue for `stage` until `budget` ms have gone, or every one where there's no budget. */
+  /** How many chunks wait to have what's laid on them made again. */
+  overlaysPending(): number {
+    return this.#overlaysDue.size;
+  }
+
+  /**
+   * Builds chunks from the queue for `stage`, then what's laid on them, until `budget` ms have gone, or every one where
+   *  there's no budget.
+   */
   build(stage: Stage, budget: number | null): void {
-    const started = performance.now();
+    const started = performance.now(),
+      spent = (): boolean =>
+        budget !== null && performance.now() - started >= budget;
 
     while (this.#queue.length > 0) {
-      if (budget !== null && performance.now() - started >= budget) {
+      if (spent()) {
         return;
       }
 
-      const [i, j] = this.#queue.shift()!.split(',').map(Number) as [
-        number,
-        number
-      ];
+      const key = this.#queue.shift()!,
+        [i, j] = key.split(',').map(Number) as [number, number];
 
       stage.setChunk(i, j, buildChunk(this.#grid, this.#relief, i, j));
+      this.#overlaysDue.add(key);
     }
+
+    for (const key of [...this.#overlaysDue]) {
+      if (spent()) {
+        return;
+      }
+
+      const [i, j] = key.split(',').map(Number) as [number, number];
+
+      this.#overlaysDue.delete(key);
+      stage.setOverlay(i, j, this.overlayOf(i, j));
+    }
+  }
+
+  /** What's laid on the land of chunk `i` across and `j` down: its squares' roads, fields and the rest, or nothing. */
+  overlayOf(i: number, j: number): OverlayMesh | null {
+    const { stepsU, stepsV, spacingU, spacingV } = this.#grid,
+      { u: periodU, v: periodV } = this.layout.period(),
+      topology = this.#world.topology(),
+      squares = this.#chunksOfSquares().get(`${i},${j}`) ?? [],
+      laid = squares.flatMap(([x, y]) => {
+        const tile = this.#world.get(x, y),
+          neighbours = topology.directions().flatMap((direction) => {
+            const at = topology.neighbour(x, y, direction);
+
+            return at === null
+              ? []
+              : [
+                  {
+                    offset: topology.offset(direction, x, y),
+                    tile: this.#world.get(at[0], at[1]),
+                  } as OverlayNeighbour,
+                ];
+          }),
+          overlay = overlayFor(tile, neighbours);
+
+        if (overlay === null) {
+          return [];
+        }
+
+        // Its middle taken into the world's period, as its chunk is, and its neighbours with it, as they're the nearest.
+        const [u, v] = this.layout.centre(x, y),
+          du = -periodU * Math.floor(u / periodU),
+          dv = periodV === null ? 0 : -periodV * Math.floor(v / periodV),
+          place: OverlayPlace = {
+            centre: [u + du, v + dv],
+            toward: ([dx, dy]) => {
+              const [nu, nv] = this.layout.centre(x + dx, y + dy);
+
+              return [nu + du, nv + dv];
+            },
+            radius: this.#radius,
+            heightAt: (pu, pv) => this.heightAt(pu, pv),
+            seed: Math.imul(x, 73856093) ^ Math.imul(y, 19349663),
+          };
+
+        return [{ overlay, place }];
+      });
+
+    return laid.length === 0
+      ? null
+      : overlayMesh(i * stepsU * spacingU, j * stepsV * spacingV, laid);
+  }
+
+  /** The chunk whose overlay has the square at (`x`, `y`), by `i,j`: the one its middle is in. */
+  overlayKeyOf(x: number, y: number): string {
+    return this.#chunkOf(x, y);
+  }
+
+  // The chunk the square at (`x`, `y`) has its middle in, by `i,j`.
+  #chunkOf(x: number, y: number): string {
+    const { chunksU, chunksV, stepsU, stepsV, spacingU, spacingV } = this.#grid,
+      [u, v] = this.layout.centre(x, y),
+      i = Math.floor(u / (stepsU * spacingU)),
+      j = Math.floor(v / (stepsV * spacingV)),
+      wrapsV = this.layout.period().v !== null;
+
+    return `${((i % chunksU) + chunksU) % chunksU},${
+      wrapsV
+        ? ((j % chunksV) + chunksV) % chunksV
+        : Math.min(chunksV - 1, Math.max(0, j))
+    }`;
+  }
+
+  // Each chunk's squares, by the chunk their middles are in: worked out once, as squares don't move.
+  #chunksOfSquares(): Map<string, [number, number][]> {
+    if (this.#squaresByChunk === null) {
+      const byChunk = new Map<string, [number, number][]>();
+
+      for (let y = 0; y < this.#world.height(); y++) {
+        for (let x = 0; x < this.#world.width(); x++) {
+          const key = this.#chunkOf(x, y);
+
+          byChunk.set(key, [...(byChunk.get(key) ?? []), [x, y]]);
+        }
+      }
+
+      this.#squaresByChunk = byChunk;
+    }
+
+    return this.#squaresByChunk;
+  }
+
+  // `squares`, and the squares beside each.
+  #besides(squares: [number, number][]): [number, number][] {
+    const topology = this.#world.topology();
+
+    return squares.flatMap(([x, y]) => [
+      [x, y] as [number, number],
+      ...topology
+        .directions()
+        .map((direction) => topology.neighbour(x, y, direction))
+        .filter((at): at is [number, number] => at !== null),
+    ]);
   }
 
   // The chunks, nearest to (`u`, `v`) first, measuring round the world's period.

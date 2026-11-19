@@ -2,10 +2,11 @@
   "name": "@civ-clone/ui-models-builtin",
   "version": "0.1.0",
   "private": true,
-  "description": "The 3D map's built-in model set (docs/3d-renderer.md \u00a710, D3): what's made by code, so every name always has something. The terrain table, each terrain's relief and colour, and the unit table, what each unit type is drawn as.",
+  "description": "The 3D map's built-in model set (docs/3d-renderer.md \u00a710, D3): what's made by code, so every name always has something. The terrain table, each terrain's relief and colour; the unit table, what each unit type is drawn as; and the specials table, what each terrain feature looks like.",
   "license": "MIT",
   "exports": {
     "./terrain": "./terrain.ts",
-    "./units": "./units.ts"
+    "./units": "./units.ts",
+    "./specials": "./specials.ts"
   }
 }
