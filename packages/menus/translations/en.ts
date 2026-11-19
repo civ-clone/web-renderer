@@ -80,6 +80,12 @@ i18next.addResources('en', 'default', {
   'GameOptions.unit-marker-choice.both': 'Ring and blink',
   'GameOptions.unit-marker-choice.ring': 'Ring',
   'GameOptions.unit-marker-choice.theme': "The theme's way",
+  // How the 3D map's units move from square to square (`?3d=1`), and whether other players' are shown moving.
+  'GameOptions.walks': 'Units moving on the 3D map',
+  'GameOptions.walks-choice.fast': 'Walk quickly',
+  'GameOptions.walks-choice.normal': 'Walk',
+  'GameOptions.walks-choice.off': 'Move at once',
+  'GameOptions.rivals-walk': "Show other players' units moving on the 3D map",
   // How big the 3D map draws its units (`?3d=1`), and the size they're at: 1.25×.
   'GameOptions.unit-size': 'Size of units on the 3D map',
   'GameOptions.unit-size-value': '{{size}}×',

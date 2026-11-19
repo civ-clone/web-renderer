@@ -89,6 +89,12 @@ export type MapView3DDeps = {
     get(): number;
     onChange(changed: () => void): () => void;
   };
+  // How units move from square to square, as the player chose it: walking, walking quickly, or at once (`off`); and
+  //  whether other players' units are shown walking. Read at each move; walking, and shown, where there's none.
+  walks?: {
+    speed(): 'normal' | 'fast' | 'off';
+    rivals(): boolean;
+  };
   // The letter for what a busy unit is doing, as the 2D map writes it over the unit (the locale's), or nothing.
   unitStatus?: (unit: Unit) => string | null;
   // The player's world, made by the page, which tile patches are written to.

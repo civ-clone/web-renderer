@@ -1,0 +1,1 @@
+{"version":"0.1.0@6d90409c","date":"2026-11-19T20:43:15.000Z","localChanges":["chore: work towards a 3D map, not offered yet: under ?3d=1 the camera and the ring wait for your unit to finish walking before moving to the next (#1241)"],"externalChanges":{}}

@@ -920,8 +920,10 @@ mapEvent:
   - While they wait, whether a square's in sight is as the camera will look once they've moved on. The unit walking
     made active again, the camera's errand is dropped.
   - Others' walks hold nothing, nor do the player's other units' walks, as GoTos at the turn's start.
+- **Options** (third part), under `?3d=1` only, read at each move:
+  - **Units moving on the 3D map:** walk, walk quickly (twice as fast), or move at once (no walks);
+  - **Show other players' units moving:** off, their units are on their new squares at once.
 - **Still to come:**
-  - the options (speed, others' moves);
   - §6.4's paths: along roads, ships' wakes and aircraft's arcs (a walk goes straight between squares' middles now);
   - battles (2.4).
 

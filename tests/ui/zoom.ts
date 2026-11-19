@@ -25,8 +25,13 @@ import GameOptionsRegistry, {
 } from '@civ-clone/ui-platform/GameOptionsRegistry';
 import GameOptions, {
   unitSizeRow,
+  walkRows,
 } from '@civ-clone/ui-menus/components/GameOptions';
-import { MAP3D_UNIT_SIZE_OPTION } from '@civ-clone/ui-client/lib/map3dOptions';
+import {
+  MAP3D_RIVALS_WALK_OPTION,
+  MAP3D_UNIT_SIZE_OPTION,
+  MAP3D_WALKS_OPTION,
+} from '@civ-clone/ui-client/lib/map3dOptions';
 import GamePortal from '@civ-clone/ui-game/GamePortal';
 import MapPortal from '@civ-clone/ui-map/MapPortal';
 import { scaleOfZoom } from '@civ-clone/ui-map/components/Portal';
@@ -754,6 +759,53 @@ const run = async (): Promise<void> => {
     );
 
     options.set(MAP3D_UNIT_SIZE_OPTION, 1);
+
+    // How the 3D map's units move, and whether others' are shown moving: only under `?3d=1`, walking and shown as they
+    //  come, and kept as they're chosen. A way the page doesn't know is walking.
+    const walks = walkRows('?3d=1'),
+      select = walks[0]?.querySelector('select') as HTMLSelectElement,
+      rivals = walks[1]?.querySelector('input') as HTMLInputElement,
+      asFirst = [
+        [...select.querySelectorAll('option')].map(({ value }) => value),
+        select.value,
+        rivals.hasAttribute('checked'),
+      ];
+
+    // As the test's DOM keeps a select's choice: by the attribute.
+    select.querySelectorAll('option').forEach((option) => {
+      option.toggleAttribute('selected', option.value === 'fast');
+    });
+    select.dispatchEvent(new Event('change'));
+    rivals.checked = false;
+    rivals.dispatchEvent(new Event('change'));
+
+    const chosen = [
+      options.get(MAP3D_WALKS_OPTION),
+      options.get(MAP3D_RIVALS_WALK_OPTION),
+    ];
+
+    options.set(MAP3D_WALKS_OPTION, 'sideways');
+
+    const unknown = (
+      walkRows('?3d=1')[0]?.querySelector('select') as
+        | HTMLSelectElement
+        | undefined
+    )?.value;
+
+    options.set(MAP3D_WALKS_OPTION, 'normal');
+    options.set(MAP3D_RIVALS_WALK_OPTION, true);
+
+    expect(
+      "Options has how the 3D map's units move, and whether others' are shown moving, under ?3d=1 only: walking and shown at first, kept as chosen; a way it doesn't know is walking",
+      [walkRows('').length, walks.length, asFirst, chosen, unknown],
+      [
+        0,
+        2,
+        [['normal', 'fast', 'off'], 'normal', true],
+        ['fast', false],
+        'normal',
+      ]
+    );
 
     // The Options window has it on a page that asked for the 3D map, and not on one that didn't.
     const location = Object.getOwnPropertyDescriptor(globalThis, 'location'),

@@ -66,6 +66,13 @@ export const OWN_PACE: Pace = { step: 250, ramp: 100, most: 2000 };
 /** How other players' units walk, on the screen: twice as fast, and never longer than a second. */
 export const RIVALS_PACE: Pace = { step: 125, ramp: 50, most: 1000 };
 
+/** A pace twice as quick, as the player can choose (`walks` in `MapView3DDeps`). */
+export const quicker = (pace: Pace): Pace => ({
+  step: pace.step / 2,
+  ramp: pace.ramp / 2,
+  most: pace.most / 2,
+});
+
 /** How long after a walk's last step a unit making the same step rides along with it, in ms. */
 export const RIDE = 50;
 

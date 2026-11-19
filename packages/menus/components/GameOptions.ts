@@ -37,10 +37,14 @@ import {
 } from '@civ-clone/ui-platform/lib/interfaceMode';
 import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
 import {
+  MAP3D_RIVALS_WALK_OPTION,
   MAP3D_UNIT_SIZE_OPTION,
+  MAP3D_WALKS_OPTION,
   UNIT_SIZES,
+  WALK_SPEEDS,
   map3dAsked,
   unitSizeFor,
+  walkSpeedFor,
 } from '@civ-clone/ui-client/lib/map3dOptions';
 import { s } from '@dom111/element';
 import sendBuildPreferences from '@civ-clone/ui-client/lib/buildPreferences';
@@ -292,6 +296,49 @@ export const unitSizeRow = (
 };
 
 /**
+ * How the 3D map's units move from square to square, and whether other players' are shown moving, under `?3d=1` only
+ *  (docs/3d-renderer.md §8.2). The map reads them at each move.
+ */
+export const walkRows = (
+  search: string = globalThis.location?.search ?? ''
+): HTMLElement[] => {
+  if (!map3dAsked(search)) {
+    return [];
+  }
+
+  const current = walkSpeedFor(options.get(MAP3D_WALKS_OPTION, 'normal')),
+    select = s<HTMLSelectElement>(
+      `<select>${WALK_SPEEDS.map(
+        (speed) =>
+          `<option value="${speed}"${speed === current ? ' selected' : ''}>${t(
+            `GameOptions.walks-choice.${speed}`
+          )}</option>`
+      ).join('')}</select>`
+    ),
+    rivals = s<HTMLInputElement>(
+      `<input type="checkbox"${
+        options.get(MAP3D_RIVALS_WALK_OPTION, true) ? ' checked' : ''
+      }>`
+    );
+
+  return [
+    s(
+      `<label>${t('GameOptions.walks')}</label>`,
+      h(select, {
+        change: () =>
+          options.set(MAP3D_WALKS_OPTION, walkSpeedFor(select.value)),
+      })
+    ),
+    s(
+      `<label>${t('GameOptions.rivals-walk')}</label>`,
+      h(rivals, {
+        change: () => options.set(MAP3D_RIVALS_WALK_OPTION, rivals.checked),
+      })
+    ),
+  ];
+};
+
+/**
  * Interface (#735). Everything is put together for one interface as the page loads, so a change needs a new page: it
  *  loads at once from the main menu, and during a game the choice waits for the next load, with a hint saying so, as
  *  reloading would lose the game. Choosing also drops the visit's `?interface=`, which would otherwise outrank it.
@@ -465,6 +512,7 @@ export class GameOptions extends Window {
           stops.push(stop);
         }),
         ...unitSizeRow(),
+        ...walkRows(),
         s(
           `<label>${t('GameOptions.lock-vertical-edges')}</label>`,
           (() => {

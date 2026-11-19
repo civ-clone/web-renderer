@@ -58,6 +58,9 @@ export const setOptionDefaults = (): void => {
     map3dDistance: 0,
     // How big the 3D map draws its units: life size, unless the player chose otherwise. See `MAP3D_UNIT_SIZE_OPTION`.
     map3dUnitSize: 1,
+    // How the 3D map's units move, and whether other players' are shown moving. See `MAP3D_WALKS_OPTION`.
+    map3dWalks: 'normal',
+    map3dRivalsWalk: true,
     // Civilization's music, with an ASOUND.CVL imported (#126): on, and its volume, 0 to 100. See `soundGain`.
     sound: true,
     soundVolume: 70,

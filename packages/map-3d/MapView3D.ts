@@ -37,7 +37,13 @@ import prefersReducedMotion from '@civ-clone/ui-map/lib/reducedMotion';
 import CameraInput from './camera/CameraInput';
 import markerFor, { MarkerWords, TileMarker } from './markers/markerFor';
 import { IN_FRONT_OF_CITY } from './markers/drawMarker';
-import Walks, { OWN_PACE, RIVALS_PACE, WalkPoint, Walker } from './walks';
+import Walks, {
+  OWN_PACE,
+  RIVALS_PACE,
+  WalkPoint,
+  Walker,
+  quicker,
+} from './walks';
 import pickGround from './camera/pick';
 import Minimap3D from './minimap/Minimap3D';
 import { LaidYields, innerOf, laidYields, yieldMesh } from './yields';
@@ -153,6 +159,8 @@ export class MapView3D implements MapRenderer {
   #queued = 0;
   #queuedAt = new Map<string, number>();
   #releasedAt = new Map<string, number>();
+  // How the player chose units to move, and whether others' are shown walking.
+  #walkOptions: MapView3DDeps['walks'];
   // The unit whose ring is shown, and the square it's on as the map has it: the active unit, but while it walks on after
   //  the game's chosen another, its moves spent, the ring and the camera wait for it to get there (§8.2), so the next unit
   //  isn't shown picked while the last is still walking. Where the camera was asked to go meanwhile, the last asked for.
@@ -263,6 +271,7 @@ export class MapView3D implements MapRenderer {
     this.world = deps.world;
     this.#land = new Land(deps.world);
     this.#walks = new Walks(this.#land.layout.period());
+    this.#walkOptions = deps.walks;
     this.#inner = innerOf(this.#land.layout, deps.world.topology());
     // Read just now, by the land.
     this.#worldTiles = deps.world.tiles();
@@ -525,11 +534,19 @@ export class MapView3D implements MapRenderer {
   }
 
   // The unit `unit` steps from the square `from` to `to`: it walks there (`walks.ts`), drawn on its own, and is left off
-  //  the squares it's on till it's there. Not where there are no frames to walk it over, or the player has asked for
-  //  less motion; nor a rival's off the screen, unless it's walking already; nor one the page doesn't have where it set
-  //  off from, as one stepping out of the dark: those are drawn where the patch puts them, at once.
+  //  the squares it's on till it's there, at the pace the player chose, twice as quick for other players' units. Not
+  //  where there are no frames to walk it over, or the player has asked for less motion, or for units to move at once;
+  //  nor a rival's off the screen, or with others' units' moves not shown, unless it's walking already; nor one the
+  //  page doesn't have where it set off from, as one stepping out of the dark: those are drawn where the patch puts
+  //  them, at once.
   #walk(unit: MapEventUnit, from: Coordinate, to: Coordinate): void {
-    if (typeof requestAnimationFrame !== 'function' || prefersReducedMotion()) {
+    const speed = this.#walkOptions?.speed() ?? 'normal';
+
+    if (
+      typeof requestAnimationFrame !== 'function' ||
+      prefersReducedMotion() ||
+      speed === 'off'
+    ) {
       return;
     }
 
@@ -543,11 +560,14 @@ export class MapView3D implements MapRenderer {
       seen === undefined ||
       (!own &&
         !walking &&
-        !this.#visible(from.x, from.y, -0.5) &&
-        !this.#visible(to.x, to.y, -0.5))
+        (!(this.#walkOptions?.rivals() ?? true) ||
+          (!this.#visible(from.x, from.y, -0.5) &&
+            !this.#visible(to.x, to.y, -0.5))))
     ) {
       return;
     }
+
+    const pace = own ? OWN_PACE : RIVALS_PACE;
 
     this.#walkingUnits.set(unit.id, seen);
     this.#awaiting.set(unit.id, {
@@ -568,7 +588,7 @@ export class MapView3D implements MapRenderer {
       this.#standing(from),
       this.#standing(to),
       performance.now(),
-      own ? OWN_PACE : RIVALS_PACE
+      speed === 'fast' ? quicker(pace) : pace
     );
     // Off the square it set off from, now: `#face` marks it again.
     this.#draw();
