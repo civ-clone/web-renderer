@@ -331,19 +331,14 @@ ids.forEach((topologyId) => {
     0
   );
 
-  [
-    [20, 20, 'Mountains'],
-    [33, 11, 'Ocean'],
-    [12, 30, 'Grassland'],
-  ].forEach(([x, y, wanted]) => {
-    const tile = tiles.find((each) => each.x === x && each.y === y)!,
-      // Something other than it is.
-      name = tile.terrain._ === wanted ? 'Plains' : wanted;
+  // The square at (`x`, `y`) made `name`: every chunk whose mesh that changes is built again, and not the whole world.
+  const change = (x: number, y: number, name: string): void => {
+    const tile = tiles.find((each) => each.x === x && each.y === y)!;
 
-    tile.terrain = { _: name as string, __: [name as string], id: 'changed' };
+    tile.terrain = { _: name, __: [name], id: 'changed' };
     tile.isWater = name === 'Ocean';
 
-    land.changed([[x as number, y as number]], 0, 0);
+    land.changed([[x, y]], 0, 0);
 
     const rebuilt = meshes(land),
       fresh = new Land(world);
@@ -366,7 +361,47 @@ ids.forEach((topologyId) => {
     );
 
     after.forEach((mesh, key) => before.set(key, mesh));
+  };
+
+  (
+    [
+      [20, 20, 'Mountains'],
+      [33, 11, 'Ocean'],
+      [12, 30, 'Grassland'],
+    ] as const
+  ).forEach(([x, y, wanted]) => {
+    const tile = tiles.find((each) => each.x === x && each.y === y)!;
+
+    // Something other than it is.
+    change(x, y, tile.terrain._ === wanted ? 'Plains' : wanted);
   });
+
+  // A range made across the first chunk's border, a mountain at a time: one either side of it on a row, joined, then
+  //  one beside the second on the next row, then the first taken away. Plains first, where they're not already.
+  const grid = chunkGrid(land.layout, landHeight),
+    border = grid.stepsU * grid.spacingU,
+    row = 20,
+    west = Array.from({ length: landWidth - 1 }, (_, x) => x).find(
+      (x) =>
+        land.layout.centre(x, row)[0] < border &&
+        land.layout.centre(x + 1, row)[0] >= border
+    )!,
+    topology = world.topology(),
+    below = topology
+      .directions()
+      .map((direction) => topology.neighbour(west + 1, row, direction))
+      .find((square) => square !== null && square[1] > row)!,
+    range: [number, number][] = [[west, row], [west + 1, row], below];
+
+  range.forEach(([x, y]) => {
+    if (
+      tiles.find((each) => each.x === x && each.y === y)!.terrain._ !== 'Plains'
+    ) {
+      change(x, y, 'Plains');
+    }
+  });
+  range.forEach(([x, y]) => change(x, y, 'Mountains'));
+  change(west, row, 'Plains');
 });
 
 // Land rising from an empty sea, where the floor it moves is what reaches the next chunk: two squares out, the floor

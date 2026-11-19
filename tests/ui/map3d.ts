@@ -1000,6 +1000,75 @@ expect(
     1.25
   );
 
+  // A city and its units on a mountain, and a mountain made beside it, with only that square released: the land under
+  //  the city moves, and the city's marked again on the land as it's drawn now, not left buried or floating. Here it's
+  //  the neighbour's own relief that moves it, by a little, as the city's middle lies behind its peak each way; a ridge
+  //  can move it by up to 0.04, and `relief` checks that it moves only the squares beside those `refresh` gives back.
+  //  Each neighbour that isn't a mountain already, in turn, till one moves the land under the city; then as it was.
+  {
+    const land = view.land(),
+      [townU, townV] = land.layout.centre(town.x, town.y),
+      ground = (): number => Math.max(0, land.surfaceAt(townU, townV)),
+      standing = (): number | undefined => markedAt.get(townKey)?.[1],
+      raise = (tile: Tile, name: string): void => {
+        (
+          tile as unknown as { terrain: { _: string; features: never[] } }
+        ).terrain = {
+          _: name,
+          features: [],
+        };
+        view.queueTile(tile);
+        view.releaseTiles();
+      };
+
+    raise(town, 'Mountains');
+
+    const onMountain = [standing() === ground()],
+      neighbours = [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [1, 1],
+        [-1, 1],
+      ].map(
+        ([dx, dy]) =>
+          tiles[
+            ((town.y + dy! + height) % height) * width +
+              ((town.x + dx! + width) % width)
+          ] as Tile
+      );
+    let moved: boolean[] = [];
+
+    for (const beside of neighbours) {
+      const was = beside.terrain._,
+        before = ground();
+
+      if (was === 'Mountains') {
+        continue;
+      }
+
+      raise(beside, 'Mountains');
+
+      if (ground() !== before) {
+        moved = [true, standing() === ground()];
+        raise(beside, was);
+        moved.push(standing() === ground());
+
+        break;
+      }
+
+      raise(beside, was);
+    }
+
+    raise(town, 'Grassland');
+
+    expect(
+      'a city on a mountain stands on the land as it is when a mountain made beside it, the only square released, moves the land under it, and when that mountain goes again',
+      [onMountain, moved, standing() === ground()],
+      [[true], [true, true, true], true]
+    );
+  }
+
   // Listened to only while there's a map: none once it's taken down, and none from one whose stage can't be made, the
   //  game falling back to the 2D map.
   {

@@ -2,9 +2,10 @@
 //  time and handed to the stage that draws them. The nearest to where the map is centred are built first, so the land
 //  under the camera is there at once and the rest follows over the next frames.
 //
-// A tile patch reads the world's terrain again, and builds again only the chunks round the squares whose terrain it
-//  changed: as far as the kernel reaches from each, and from each square of sea whose floor it moved. Most patches
-//  (a unit moving, a city growing) change no terrain, and build nothing.
+// A tile patch reads the world's terrain again, and builds again only the chunks round the squares whose land it
+//  changed (those whose terrain it changed, and the mountains a range joins to them): as far as the kernel reaches
+//  from each, along a range's ridge, and from each square of sea whose floor it moved. Most patches (a unit moving, a
+//  city growing) change no terrain, and build nothing.
 //
 // What's laid on the land (`overlay/`: roads, fields, mines, specials, huts) is a mesh for each chunk of the squares
 //  whose middles are in it. It's made again when its chunk's land is, or when a square in it or beside it is released,
@@ -12,7 +13,7 @@
 
 import groundLayoutFor, { GroundLayout } from './layouts';
 import { REACH } from './terrain/kernel';
-import createRelief, { ReliefMap, WANDER } from './terrain/relief';
+import createRelief, { BEND, ReliefMap, WANDER } from './terrain/relief';
 import { ChunkGrid, buildChunk, chunkGrid, chunksNear } from './terrain/chunks';
 import { Stage } from './stage';
 import { Ground } from './water';
@@ -113,9 +114,17 @@ export class Land {
           })
       );
 
-    // And as far again as a peak or a colour wanders from its square's middle.
+    // And as far again as a peak or a colour wanders from its square's middle. A range's ridge runs from a square's
+    //  peak to its neighbour's, and both are among the squares whose land a change reshapes (`ReliefMap#refresh`): so
+    //  from one or the other, as far again as halfway between their peaks and the ridge's bend.
     this.#reach =
-      REACH + corner + WANDER * Math.SQRT2 + (seaFloor.reach - 1) * step;
+      REACH +
+      corner +
+      WANDER * Math.SQRT2 +
+      Math.max(
+        (seaFloor.reach - 1) * step,
+        step / 2 + WANDER * Math.SQRT2 + BEND
+      );
 
     // Each edge of a square's outline: how far it is from the middle, and which way it faces.
     const outline = this.layout.outline(0, 0),
@@ -223,9 +232,10 @@ export class Land {
   }
 
   /**
-   * The world's tiles at `squares` have changed: its terrain read again, and the chunks round any whose terrain has
+   * The world's tiles at `squares` have changed: its terrain read again, and the chunks round any whose land has
    *  changed queued with those waiting, the nearest to (`u`, `v`) first. With none, it's read again only if `always`.
-   *  Returns the squares whose terrain has changed, if any.
+   *  Returns the squares whose land has changed, if any: those whose terrain has, and the mountains a range joins to
+   *  them, or did.
    */
   changed(
     squares: [number, number][],
