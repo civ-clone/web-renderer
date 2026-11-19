@@ -377,10 +377,13 @@ export class Walks {
     return soonest;
   }
 
-  /** Every walk ended now, wherever it is: each, as it was. */
+  /**
+   * Every walk ended now, there at once: each as it is at its end, so one that waits there for its patch stands where it
+   *  was bound, not mid-way.
+   */
   endAll(now: number): Walker[] {
     const ended = [...this.#walks.values()].map((walk) =>
-      this.#walker(walk, now)
+      this.#walker(walk, Math.max(now, motionEnds(walk.motion)))
     );
 
     this.#walks.clear();

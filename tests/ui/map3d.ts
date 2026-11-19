@@ -2519,6 +2519,40 @@ expect(
     ]
   );
 
+  // A move typed ahead straight back: the patch for the step before, with both its squares, comes, not yet drawn, as
+  //  the step back's event does, and that step's patch is held. It waits, at the square it went back to.
+  repatched([0, 2, [walker]], [1, 2, []], [2, 2, []]);
+  walkersSet.length = 0;
+  walkersPlaced.clear();
+  stepped(walker, [0, 2], [1, 2]);
+  patch([0, 2, []], [1, 2, [walker]]);
+  stepped(walker, [1, 2], [0, 2]);
+  runFrames();
+
+  const [backWay] = [...walkersPlaced.values()],
+    straightBack: unknown[] = [
+      unitOn(0, 2),
+      unitOn(1, 2),
+      walkers.size,
+      backWay!
+        .at(-1)!
+        .slice(0, 3)
+        .map((n) => Math.round(n * 100) / 100),
+    ];
+
+  patch([1, 2, []], [0, 2, [walker]]);
+  runFrames();
+  straightBack.push(unitOn(0, 2), unitOn(1, 2), walkers.size);
+  repatched([0, 2, []]);
+  walkersSet.length = 0;
+  walkersPlaced.clear();
+
+  expect(
+    'a move typed ahead straight back waits for its own step’s patch, though the one before has both its squares, standing where it went back to',
+    straightBack,
+    [null, null, 1, groundAt(0, 2), ['Unit-A', 1], null, 0]
+  );
+
   // A move typed ahead: the patch for the step before comes, not yet drawn, as the next step's event does, and that
   //  step's patch is held. The walk waits for its own step's patch, not the one before it, which has a square in common.
   //  And a held step whose patch touches only where it set off, as when the unit's lost there: over, the unit nowhere.

@@ -395,7 +395,7 @@ const point = (u: number, v: number, lift = 0): WalkPoint => ({
   );
 }
 
-// Ending them all, as when the world's replaced: each where it is, and none left.
+// Ending them all, as when less motion's asked for mid-walk: each there at once, at its end, and none left.
 {
   const walks = new Walks({ u: 10, v: null });
 
@@ -412,13 +412,13 @@ const point = (u: number, v: number, lift = 0): WalkPoint => ({
   const all = walks.endAll(0);
 
   expect(
-    'all ended at once: each where it is, and none walking',
+    'all ended at once: each there at once, at its end, and none walking',
     [
       all.map(({ units, at }) => [units, at]),
       walks.size(),
       walks.walking('goer'),
     ],
-    [[[['goer'], [1, 1]]], 0, false]
+    [[[['goer'], [2, 1]]], 0, false]
   );
 }
 
