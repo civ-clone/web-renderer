@@ -414,24 +414,30 @@ export const createRelief = ({
     return found;
   };
 
-  // The way from the square at (`x`, `y`) to its neighbour at (`nx`, `ny`) on the world, as the nearest copy of it,
-  //  across the world's seam or over its poles if that's nearer.
-  const stepTo = (
+  // The ways from the square at (`x`, `y`) to its neighbour at (`nx`, `ny`) on the world: to the nearest copy of it,
+  //  across the world's seam or over its poles if that's nearer, or to both, where two are as near (on a world two
+  //  squares across, or down).
+  const stepsTo = (
     x: number,
     y: number,
     nx: number,
     ny: number
-  ): [number, number] | null => {
-    const nearest = (delta: number, period: number): number =>
-        delta > period / 2
-          ? delta - period
-          : delta < -period / 2
-          ? delta + period
-          : delta,
-      dx = nearest(nx - x, width),
-      dy = wrapsY ? nearest(ny - y, height) : ny - y;
+  ): [number, number][] => {
+    const nearest = (delta: number, period: number): number[] => {
+        const ahead = ((delta % period) + period) % period;
 
-    return dx === 0 && dy === 0 ? null : [dx, dy];
+        return ahead * 2 === period
+          ? [ahead, ahead - period]
+          : [ahead * 2 < period ? ahead : ahead - period];
+      },
+      across = nearest(nx - x, width),
+      down = wrapsY ? nearest(ny - y, height) : [ny - y];
+
+    return across.flatMap((dx) =>
+      down.flatMap((dy): [number, number][] =>
+        dx === 0 && dy === 0 ? [] : [[dx, dy]]
+      )
+    );
   };
 
   // How far a square's furthest neighbour's middle is from its own, on a row of either parity.
@@ -439,17 +445,13 @@ export const createRelief = ({
     ...[0, 1].flatMap((parity) => {
       const [cu, cv] = layout.centre(0, parity);
 
-      return source.neighbours(0, parity).flatMap(([nx, ny]) => {
-        const step = stepTo(0, parity, nx, ny);
+      return source.neighbours(0, parity).flatMap(([nx, ny]) =>
+        stepsTo(0, parity, nx, ny).map(([dx, dy]) => {
+          const [u, v] = layout.centre(dx, parity + dy);
 
-        if (step === null) {
-          return [];
-        }
-
-        const [u, v] = layout.centre(step[0], parity + step[1]);
-
-        return [Math.hypot(u - cu, v - cv)];
-      });
+          return Math.hypot(u - cu, v - cv);
+        })
+      );
     }),
     1
   );
@@ -520,21 +522,25 @@ export const createRelief = ({
         y = Math.floor(at / width),
         [cu, cv] = layout.centre(x, y);
 
-      source.neighbours(x, y).forEach(([nx, ny]) => {
-        const there = index(nx, ny),
-          other = there === null ? undefined : squares[there],
-          step = there === null ? null : stepTo(x, y, nx, ny);
+      // The way to each ranged neighbour, once each, with its index on the world.
+      const steps = new Map<string, [number, number, number]>();
 
-        if (
-          there === null ||
-          other === undefined ||
-          ranged[there] !== true ||
-          step === null
-        ) {
+      source.neighbours(x, y).forEach(([nx, ny]) => {
+        const there = index(nx, ny);
+
+        if (there !== null && ranged[there] === true) {
+          stepsTo(x, y, nx, ny).forEach(([dx, dy]) =>
+            steps.set(`${dx},${dy}`, [dx, dy, there])
+          );
+        }
+      });
+
+      steps.forEach(([dx, dy, there]) => {
+        const other = squares[there];
+
+        if (other === undefined) {
           return;
         }
-
-        const [dx, dy] = step;
 
         // Made by the other end.
         if (dy < 0 || (dy === 0 && dx < 0)) {
