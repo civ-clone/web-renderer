@@ -1696,6 +1696,7 @@ expect(
         { _: 'Food', x: 10, y: 20, size: 14 },
         { _: 'Food', x: 30, y: 20, size: 7 },
         { _: 'Food', x: 50, y: 20, size: 9 },
+        { _: 'Food', x: 70, y: 20, size: 5 },
         { _: 'Production', x: 10, y: 40, size: 14 },
         { _: 'Trade', x: 30, y: 40, size: 14 },
         { _: 'Luxuries', x: 50, y: 40, size: 14 },
@@ -1714,6 +1715,8 @@ expect(
         ['drawImage', 'food', 10, 20, 14, 14, false],
         ['drawImage', 'food', 30, 20, 7, 7, false],
         ['drawImage', 'food', 50, 20, 9, 9, false],
+        // 10 device px for 14: smoothed.
+        ['drawImage', 'food', 70, 20, 5, 5, true],
         ['drawImage', 'shield', 10, 43.5, 14, 7, false],
         ['drawImage', 'trade', 30, 40, 14, 14, false],
       ]

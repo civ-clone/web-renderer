@@ -786,38 +786,53 @@ export class MapView3D implements MapRenderer {
       });
     });
 
-    // The nearest of them, as many as are worth drawing a frame: zoomed out on a big screen, thousands more would be
-    //  too small to tell apart, and each a draw.
-    nearby
-      .sort((a, b) => a.depth - b.depth)
-      .slice(0, YIELD_SQUARES)
-      .forEach(({ tile, u, v, atU, atV, yields }) => {
-        const up = this.#heightOf(tile.x, tile.y, u, v);
+    // Nearest first, each on the screen at its real height with icons big enough to read, until there are as many as
+    //  are worth drawing a frame: zoomed out on a big screen, thousands more would be too small to tell apart, and each
+    //  a draw.
+    const blocks: YieldIcon[][] = [];
 
-        if (depthOf(atU, up, atV) > deepest) {
-          return;
-        }
+    nearby.sort((a, b) => a.depth - b.depth);
 
-        const middle = project([atU, up, atV]);
+    for (const { tile, u, v, atU, atV, yields } of nearby) {
+      if (blocks.length >= YIELD_SQUARES) {
+        break;
+      }
 
-        if (middle === null || !onScreen(middle, 0.1)) {
-          return;
-        }
+      const up = this.#heightOf(tile.x, tile.y, u, v);
 
-        // The square's box on the screen: from its middle to the middle of a side, across and away, in px.
-        const [x, y] = toPx(middle),
-          half = ([du, dv]: [number, number]): [number, number] => {
-            const side = project([atU + du * inner, up, atV + dv * inner]);
+      if (depthOf(atU, up, atV) > deepest) {
+        continue;
+      }
 
-            return side === null
-              ? [0, 0]
-              : [toPx(side)[0] - x, toPx(side)[1] - y];
-          };
+      const middle = project([atU, up, atV]);
 
-        icons.push(
-          ...yieldIconsAt(yields, [x, y], [half(across), half(away)], biggest)
+      if (middle === null || !onScreen(middle, 0.1)) {
+        continue;
+      }
+
+      // The square's box on the screen: from its middle to the middle of a side, across and away, in px.
+      const [x, y] = toPx(middle),
+        half = ([du, dv]: [number, number]): [number, number] => {
+          const side = project([atU + du * inner, up, atV + dv * inner]);
+
+          return side === null
+            ? [0, 0]
+            : [toPx(side)[0] - x, toPx(side)[1] - y];
+        },
+        squareIcons = yieldIconsAt(
+          yields,
+          [x, y],
+          [half(across), half(away)],
+          biggest
         );
-      });
+
+      if (squareIcons.length > 0) {
+        blocks.push(squareIcons);
+      }
+    }
+
+    // The furthest drawn first, so a nearer square's icons are over it, as its land is.
+    blocks.reverse().forEach((squareIcons) => icons.push(...squareIcons));
 
     return icons;
   }
