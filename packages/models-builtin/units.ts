@@ -32,7 +32,7 @@ export type UnitEra =
   | 'industrial'
   | 'modern';
 
-/** What a figure on foot or mounted carries. */
+/** What a figure on foot or mounted carries: a diplomat's case, and an explorer's pack and staff, among them. */
 export type UnitGear =
   | 'club'
   | 'spear'
@@ -42,7 +42,15 @@ export type UnitGear =
   | 'lance'
   | 'musket'
   | 'rifle'
+  | 'case'
+  | 'pack'
   | 'none';
+
+/** How a figure on foot is dressed, where it isn't its era's uniform: for snow, as irregulars, or with a parachute. */
+export type UnitDress = 'snow' | 'irregular' | 'parachute';
+
+/** What a cart is: settlers' covered wagon, a caravan's goods, or a war chariot. */
+export type CartKind = 'wagon' | 'goods' | 'chariot';
 
 /** What ships look like: oars, sails, funnels, a flat deck, or under the water. */
 export type HullKind = 'oars' | 'sail' | 'steam' | 'carrier' | 'submarine';
@@ -52,8 +60,15 @@ export type UnitLook = {
   era: UnitEra;
   // For figures.
   gear?: UnitGear;
-  // For ships.
+  dress?: UnitDress;
+  // For carts.
+  cart?: CartKind;
+  // For ships: the hull, and the guns on it (turrets on a steel hull, a row of ports on a sailing ship), or missiles.
   hull?: HullKind;
+  guns?: number;
+  missiles?: boolean;
+  // For aircraft: dark and flat, made not to be seen.
+  stealth?: boolean;
   // How many figures stand for one unit (D6): a squad for soldiers, one for most else.
   squad: number;
   // Bigger than its shape's usual: a battleship, a bomber, a howitzer.
@@ -72,18 +87,33 @@ const foot = (era: UnitEra, gear: UnitGear, squad: number = 3): UnitLook => ({
     gear,
     squad,
   }),
-  ship = (era: UnitEra, hull: HullKind, large = false): UnitLook => ({
+  ship = (
+    era: UnitEra,
+    hull: HullKind,
+    large = false,
+    guns = 0,
+    missiles = false
+  ): UnitLook => ({
     shape: 'ship',
     era,
     hull,
     squad: 1,
     large,
+    guns,
+    missiles,
   }),
-  aircraft = (era: UnitEra, large = false): UnitLook => ({
+  aircraft = (era: UnitEra, large = false, stealth = false): UnitLook => ({
     shape: 'aircraft',
     era,
     squad: 1,
     large,
+    stealth,
+  }),
+  cart = (era: UnitEra, kind: CartKind): UnitLook => ({
+    shape: 'cart',
+    era,
+    cart: kind,
+    squad: 1,
   });
 
 export const unitTable: { readonly [type: string]: UnitLook } = {
@@ -93,14 +123,14 @@ export const unitTable: { readonly [type: string]: UnitLook } = {
   Swordman: foot('ancient', 'sword'),
   Archer: foot('ancient', 'bow'),
   Horseman: mounted('ancient', 'spear'),
-  Chariot: { shape: 'cart', era: 'ancient', squad: 1 },
+  Chariot: cart('ancient', 'chariot'),
   Elephant: { shape: 'elephant', era: 'ancient', squad: 1 },
   Catapult: { shape: 'siege', era: 'ancient', squad: 1 },
   Trireme: ship('ancient', 'oars'),
-  Settlers: { shape: 'cart', era: 'ancient', squad: 1 },
-  Diplomat: foot('ancient', 'none', 1),
-  Caravan: { shape: 'cart', era: 'ancient', squad: 1 },
-  Explorer: foot('ancient', 'none', 1),
+  Settlers: cart('ancient', 'wagon'),
+  Diplomat: foot('ancient', 'case', 1),
+  Caravan: cart('ancient', 'goods'),
+  Explorer: foot('ancient', 'pack', 1),
   // Medieval.
   Pikeman: foot('medieval', 'pike'),
   Knight: mounted('medieval', 'lance'),
@@ -111,35 +141,35 @@ export const unitTable: { readonly [type: string]: UnitLook } = {
   Musketman: foot('renaissance', 'musket'),
   Dragoon: mounted('renaissance', 'musket'),
   Cannon: { shape: 'siege', era: 'renaissance', squad: 1 },
-  Frigate: ship('renaissance', 'sail', true),
+  Frigate: ship('renaissance', 'sail', true, 1),
   Galleon: ship('renaissance', 'sail', true),
   // Industrial.
   Rifleman: foot('industrial', 'rifle'),
-  AlpineTrooper: foot('industrial', 'rifle'),
-  Partisan: foot('industrial', 'rifle'),
+  AlpineTrooper: { ...foot('industrial', 'rifle'), dress: 'snow' },
+  Partisan: { ...foot('industrial', 'rifle'), dress: 'irregular' },
   Cavalry: mounted('industrial', 'rifle'),
   Artillery: { shape: 'siege', era: 'industrial', squad: 1 },
   Engineer: foot('industrial', 'none', 2),
-  Ironclad: ship('industrial', 'steam'),
+  Ironclad: ship('industrial', 'steam', false, 1),
   Transport: ship('industrial', 'steam', true),
   Freight: { shape: 'vehicle', era: 'industrial', squad: 1 },
   Spy: foot('industrial', 'none', 1),
   // Modern.
   MechanizedInfantry: { shape: 'vehicle', era: 'modern', squad: 1 },
   Marine: foot('modern', 'rifle'),
-  Paratrooper: foot('modern', 'rifle'),
+  Paratrooper: { ...foot('modern', 'rifle'), dress: 'parachute' },
   Tank: { shape: 'vehicle', era: 'modern', squad: 1, large: true },
   Howitzer: { shape: 'siege', era: 'modern', squad: 1, large: true },
-  Destroyer: ship('modern', 'steam'),
-  Cruiser: ship('modern', 'steam', true),
-  MissileCruiser: ship('modern', 'steam', true),
-  Battleship: ship('modern', 'steam', true),
+  Destroyer: ship('modern', 'steam', false, 1),
+  Cruiser: ship('modern', 'steam', true, 2),
+  MissileCruiser: ship('modern', 'steam', true, 1, true),
+  Battleship: ship('modern', 'steam', true, 3),
   Submarine: ship('modern', 'submarine'),
   Carrier: ship('modern', 'carrier', true),
   Fighter: aircraft('modern'),
-  StealthFighter: aircraft('modern'),
+  StealthFighter: aircraft('modern', false, true),
   Bomber: aircraft('modern', true),
-  StealthBomber: aircraft('modern', true),
+  StealthBomber: aircraft('modern', true, true),
   Helicopter: { shape: 'helicopter', era: 'modern', squad: 1 },
   CruiseMissile: { shape: 'missile', era: 'modern', squad: 1 },
   Nuclear: { shape: 'missile', era: 'modern', squad: 1, large: true },

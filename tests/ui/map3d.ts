@@ -55,6 +55,8 @@ import markerFor, { TileMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { unitStatus } from '@civ-clone/ui-assets/lib/renderUnit';
 import { setBuild } from '@civ-clone/ui-client/lib/build';
+import i18next from 'i18next';
+import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import { sourcesUnder, specifiersOf } from './lib/imports';
 import { createRequire } from 'module';
 import { join } from 'path';
@@ -671,6 +673,10 @@ expect(
 
   staged.splice(0);
 
+  // The page's words from here on: a city's name in the locale, and a busy unit's letter.
+  await i18next.init({ ...i18nOptions, lng: 'en' });
+  i18next.addResource('en', 'city', 'Romans.Roma.name', 'Rome');
+
   // A city and a stack on a square: marked, with the best defender on top, until `t` hides them, and the active unit
   //  on top, marked as active, even hidden.
   const owner = {
@@ -709,8 +715,8 @@ expect(
       walled: true,
       civilDisorderDeclared: false,
     },
-    // As the page names it.
-    romaName = cityName(roma as unknown as City);
+    // As the page names it, in the locale.
+    romaName = 'Rome';
 
   Object.assign(town, {
     city: roma,
@@ -752,7 +758,8 @@ expect(
         fortified: true,
         veteran: true,
         health: 0.6,
-        status: unitStatus(phalanx as unknown as Unit) || null,
+        // The page's letter for Fortified.
+        status: 'F',
       },
     ]
   );

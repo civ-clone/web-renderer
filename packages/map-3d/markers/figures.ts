@@ -21,6 +21,8 @@ import {
 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {
+  CartKind,
+  UnitDress,
   UnitEra,
   UnitGear,
   UnitLook,
@@ -43,19 +45,26 @@ const SKIN = '#c79a72',
   HULL = '#5b3e27',
   GREY = '#7d858c';
 
+// The vertical, about which a figure's parts are turned with it.
+const UP = new Vector3(0, 1, 0);
+
 // The shapes parts are made from: each a unit across, cut to size by its transform.
 const box = new BoxGeometry(1, 1, 1),
   cylinder = new CylinderGeometry(0.5, 0.5, 1, 10),
   cone = new ConeGeometry(0.5, 1, 10),
   sphere = new SphereGeometry(0.5, 10, 8);
 
-/** A part: a shape, its colour, where its middle is, how big it is, and how it's turned. */
-type Part = {
+/**
+ * A part: a shape, its colour, where its middle is, how big it is, how it's turned, and then how far it's turned about
+ *  the vertical with the figure it's part of.
+ */
+export type Part = {
   shape: BufferGeometry;
   colour: string;
   at: [number, number, number];
   size: [number, number, number];
   turn?: [number, number, number];
+  yaw?: number;
 };
 
 // Parts in the order they're added to, with an offset and a turn about the vertical for the whole of them.
@@ -74,9 +83,9 @@ class Parts {
       sin = Math.sin(yaw);
 
     other.parts.forEach((part) => {
-      const [x, y, z] = part.at,
-        [tx = 0, ty = 0, tz = 0] = part.turn ?? [];
+      const [x, y, z] = part.at;
 
+      // Turned about the vertical after its own turn, so a tilted shield or sword turns with the soldier.
       this.parts.push({
         ...part,
         at: [
@@ -84,7 +93,7 @@ class Parts {
           offset[1] + y,
           offset[2] - x * sin + z * cos,
         ],
-        turn: [tx, ty + yaw, tz],
+        yaw: (part.yaw ?? 0) + yaw,
       });
     });
 
@@ -218,6 +227,31 @@ const carried = (
         turn: [0, 0, 0.4],
       });
       break;
+    case 'case':
+      // A diplomat's case, in hand.
+      parts.add({
+        shape: box,
+        colour: '#3b2a1e',
+        at: [0.042, 0.072, 0.008],
+        size: [0.03, 0.022, 0.009],
+      });
+      break;
+    case 'pack':
+      // An explorer's pack, and a staff.
+      parts
+        .add({
+          shape: box,
+          colour: '#7a6a48',
+          at: [0, 0.115, -0.025],
+          size: [0.042, 0.05, 0.022],
+        })
+        .add({
+          shape: cylinder,
+          colour: WOOD,
+          at: [0.042, 0.1, 0.012],
+          size: [0.006, 0.19, 0.006],
+        });
+      break;
     default:
   }
 
@@ -233,16 +267,25 @@ const carried = (
   }
 };
 
+// What a figure dressed otherwise than in its era's uniform wears: white for snow, plain clothes for irregulars.
+const dressed: { [dress in UnitDress]?: { coat: string; legs: string } } = {
+  snow: { coat: '#e8eaec', legs: '#d4d7da' },
+  irregular: { coat: '#6a5a40', legs: '#4a4036' },
+};
+
 /** One person on foot, about a fifth of a square tall, facing south (towards `+z`). */
 const person = (
   era: UnitEra,
   gear: UnitGear,
   colours: FigureColours,
-  { legs = true }: { legs?: boolean } = {}
+  { legs = true, dress }: { legs?: boolean; dress?: UnitDress } = {}
 ): Parts => {
   const parts = new Parts(),
-    uniform = era === 'modern' ? DRAB : colours[0],
-    trousers = era === 'ancient' ? SKIN : era === 'modern' ? DRAB : CLOTH;
+    clothes = dress === undefined ? undefined : dressed[dress],
+    uniform = clothes?.coat ?? (era === 'modern' ? DRAB : colours[0]),
+    trousers =
+      clothes?.legs ??
+      (era === 'ancient' ? SKIN : era === 'modern' ? DRAB : CLOTH);
 
   if (legs) {
     parts.add({
@@ -290,7 +333,35 @@ const person = (
     at: [0, 0.16, 0],
     size: [0.034, 0.038, 0.034],
   });
-  headgear(era, colours, parts);
+  // A hood for snow, a cap in the owner's colour for irregulars, or the era's.
+  if (dress === 'snow') {
+    parts.add({
+      shape: sphere,
+      colour: '#f2f3f4',
+      at: [0, 0.172, -0.002],
+      size: [0.044, 0.034, 0.044],
+    });
+  } else if (dress === 'irregular') {
+    parts.add({
+      shape: sphere,
+      colour: colours[1],
+      at: [0, 0.176, 0],
+      size: [0.042, 0.016, 0.042],
+    });
+  } else {
+    headgear(era, colours, parts);
+  }
+
+  // A parachute's pack on the back.
+  if (dress === 'parachute') {
+    parts.add({
+      shape: box,
+      colour: '#4d5340',
+      at: [0, 0.112, -0.026],
+      size: [0.046, 0.06, 0.026],
+    });
+  }
+
   carried(gear, era, colours, parts);
 
   return parts;
@@ -431,12 +502,28 @@ const wheel = (at: [number, number, number], size = 0.05): Part => ({
   turn: [0, 0, Math.PI / 2],
 });
 
-// A cart drawn by a beast: settlers' covered wagon, a caravan's or a chariot's.
-const cart = (
-  colours: FigureColours,
-  covered: boolean,
-  era: UnitEra
-): Parts => {
+// A cart drawn by a beast: settlers' covered wagon, a caravan's laden with goods, or a war chariot and its spearman.
+const cart = (colours: FigureColours, kind: CartKind, era: UnitEra): Parts => {
+  if (kind === 'chariot') {
+    return new Parts()
+      .addAll(horse(), [0, 0, 0.09])
+      .add({
+        shape: box,
+        colour: WOOD,
+        at: [0, 0.055, -0.04],
+        size: [0.064, 0.035, 0.05],
+      })
+      .add({
+        shape: box,
+        colour: colours[0],
+        at: [0, 0.075, -0.016],
+        size: [0.066, 0.012, 0.006],
+      })
+      .add(wheel([-0.042, 0.035, -0.045], 0.065))
+      .add(wheel([0.042, 0.035, -0.045], 0.065))
+      .addAll(person(era, 'spear', colours, { legs: false }), [0, 0.0, -0.045]);
+  }
+
   const parts = new Parts()
     .addAll(horse(era === 'ancient' ? '#8a7a64' : HORSE), [0, 0, 0.1])
     .add({
@@ -456,7 +543,7 @@ const cart = (
     .add(wheel([-0.042, 0.03, -0.09]))
     .add(wheel([0.042, 0.03, -0.09]));
 
-  if (covered) {
+  if (kind === 'wagon') {
     parts.add({
       shape: cylinder,
       colour: CANVAS,
@@ -464,6 +551,27 @@ const cart = (
       size: [0.07, 0.1, 0.07],
       turn: [Math.PI / 2, 0, 0],
     });
+  } else {
+    // Bales and a chest, roped on.
+    parts
+      .add({
+        shape: box,
+        colour: CANVAS,
+        at: [-0.016, 0.112, -0.04],
+        size: [0.032, 0.03, 0.04],
+      })
+      .add({
+        shape: box,
+        colour: colours[0],
+        at: [0.018, 0.11, -0.08],
+        size: [0.03, 0.026, 0.036],
+      })
+      .add({
+        shape: box,
+        colour: '#8a5a2a',
+        at: [0.014, 0.112, -0.035],
+        size: [0.026, 0.03, 0.03],
+      });
   }
 
   return parts;
@@ -659,6 +767,16 @@ const ship = (look: UnitLook, colours: FigureColours): Parts => {
           });
       }
 
+      // A row of gun ports along each side.
+      if ((look.guns ?? 0) > 0) {
+        parts.add({
+          shape: box,
+          colour: '#1f1f1f',
+          at: [0, 0.036, 0],
+          size: [beam + 0.006, 0.009, length * 0.66],
+        });
+      }
+
       if (look.hull === 'oars') {
         parts
           .add({
@@ -761,21 +879,36 @@ const ship = (look: UnitLook, colours: FigureColours): Parts => {
           size: [beam + 0.004, 0.006, length * 0.86],
         });
 
-      if (look.large) {
+      // Its guns' turrets, fore, aft and fore again, their barrels pointing out; and a missile cruiser's launchers.
+      [0.3, -0.34, 0.14].slice(0, look.guns ?? 0).forEach((along) => {
+        const way = along > 0 ? 1 : -1;
+
         parts
           .add({
             shape: box,
             colour: '#5f666c',
-            at: [0, 0.066, length * 0.27],
+            at: [0, 0.066, length * along],
             size: [0.035, 0.02, 0.035],
           })
           .add({
             shape: cylinder,
             colour: '#5f666c',
-            at: [0, 0.07, length * 0.35],
+            at: [0, 0.07, length * along + way * 0.04],
             size: [0.008, 0.06, 0.008],
             turn: [Math.PI / 2, 0, 0],
           });
+      });
+
+      if (look.missiles) {
+        [-1, 1].forEach((side) =>
+          parts.add({
+            shape: box,
+            colour: '#4a5056',
+            at: [side * beam * 0.22, 0.072, -length * 0.3],
+            size: [0.022, 0.022, 0.05],
+            turn: [-0.5, 0, 0],
+          })
+        );
       }
 
       return parts;
@@ -785,7 +918,7 @@ const ship = (look: UnitLook, colours: FigureColours): Parts => {
 
 const aircraft = (look: UnitLook, colours: FigureColours): Parts => {
   const scale = look.large ? 1.3 : 1,
-    body = look.large ? '#6e7378' : '#7d8890';
+    body = look.stealth ? '#2c3034' : look.large ? '#6e7378' : '#7d8890';
 
   return new Parts()
     .add({
@@ -899,7 +1032,7 @@ export const figureParts = (look: UnitLook, colours: FigureColours): Parts => {
 
       formation(look.squad).forEach(([x, z], index) =>
         parts.addAll(
-          person(look.era, look.gear ?? 'none', colours),
+          person(look.era, look.gear ?? 'none', colours, { dress: look.dress }),
           [x, 0, z],
           index * 0.3 - 0.3
         )
@@ -923,7 +1056,7 @@ export const figureParts = (look: UnitLook, colours: FigureColours): Parts => {
     case 'elephant':
       return elephant(colours);
     case 'cart':
-      return cart(colours, look.era !== 'ancient' || look.squad > 1, look.era);
+      return cart(colours, look.cart ?? 'wagon', look.era);
     case 'siege':
       return siege(look.era, colours, look.large === true);
     case 'vehicle':
@@ -940,6 +1073,23 @@ export const figureParts = (look: UnitLook, colours: FigureColours): Parts => {
 };
 
 /**
+ * Where a part goes: cut to size, turned as it says, then about the vertical with its figure, and moved to its place.
+ */
+export const partMatrix = ({
+  at,
+  size,
+  turn = [0, 0, 0],
+  yaw = 0,
+}: Part): Matrix4 =>
+  new Matrix4().compose(
+    new Vector3(...at),
+    new Quaternion()
+      .setFromAxisAngle(UP, yaw)
+      .multiply(new Quaternion().setFromEuler(new Euler(...turn))),
+    new Vector3(...size)
+  );
+
+/**
  * One geometry for a unit that looks like `look`, in `colours`: its parts merged, their colours in its vertices, with
  *  its bounds worked out. Each call makes a new one, which the caller lets go.
  */
@@ -947,27 +1097,22 @@ export const figureGeometry = (
   look: UnitLook,
   colours: FigureColours
 ): BufferGeometry => {
-  const matrix = new Matrix4(),
-    rotation = new Quaternion(),
-    pieces = figureParts(look, colours).parts.map(
-      ({ shape, colour, at, size, turn = [0, 0, 0] }) => {
-        const piece = shape.clone(),
-          linear = new Color(colour),
-          count = piece.getAttribute('position').count,
-          colours = new Float32Array(count * 3);
+  const pieces = figureParts(look, colours).parts.map((part) => {
+    const { shape, colour } = part,
+      piece = shape.clone(),
+      linear = new Color(colour),
+      count = piece.getAttribute('position').count,
+      colours = new Float32Array(count * 3);
 
-        for (let at = 0; at < count; at++) {
-          colours.set([linear.r, linear.g, linear.b], at * 3);
-        }
+    for (let at = 0; at < count; at++) {
+      colours.set([linear.r, linear.g, linear.b], at * 3);
+    }
 
-        rotation.setFromEuler(new Euler(...turn));
-        matrix.compose(new Vector3(...at), rotation, new Vector3(...size));
-        piece.applyMatrix4(matrix);
-        piece.setAttribute('color', new BufferAttribute(colours, 3));
+    piece.applyMatrix4(partMatrix(part));
+    piece.setAttribute('color', new BufferAttribute(colours, 3));
 
-        return piece;
-      }
-    );
+    return piece;
+  });
 
   const geometry = mergeGeometries(pieces) ?? new BufferGeometry();
 

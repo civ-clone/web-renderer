@@ -14,7 +14,7 @@ import Land from '@civ-clone/ui-map-3d/Land';
 import World from '@civ-clone/ui-map/components/World';
 import generateWorld from '@civ-clone/ui-map-3d/debug/generateWorld';
 import pageOptions from '@civ-clone/ui-map-3d/debug/pageOptions';
-import { gallery } from '@civ-clone/ui-map-3d/debug/populate';
+import populate, { gallery } from '@civ-clone/ui-map-3d/debug/populate';
 import { unitTable } from '@civ-clone/ui-models-builtin/units';
 import { Tile } from '@civ-clone/ui-protocol/types';
 
@@ -317,6 +317,39 @@ expect(
     shelf[6 * 20 + 10]!.units[0]?._,
   ],
   [Object.keys(unitTable).sort(), [], 0, Object.keys(unitTable)[0]]
+);
+
+// Its seeded cities, units and ships: none on squares never seen, on a world mostly unseen.
+const mostlyUnseen = Array.from({ length: 4000 }, (_, index) => {
+  const x = index % 80,
+    y = Math.floor(index / 80),
+    terrain = x < 60 ? 'Unknown' : y % 2 === 0 ? 'Ocean' : 'Grassland';
+
+  return {
+    x,
+    y,
+    terrain: { _: terrain },
+    isLand: terrain === 'Grassland',
+    city: null,
+    units: [],
+  } as unknown as Tile;
+});
+
+populate(mostlyUnseen, 3);
+
+expect(
+  'its seeded cities, units and ships are only on squares that have been seen',
+  [
+    mostlyUnseen.some(
+      (tile) => tile.terrain._ !== 'Unknown' && (tile.units ?? []).length > 0
+    ),
+    mostlyUnseen.filter(
+      (tile) =>
+        tile.terrain._ === 'Unknown' &&
+        (tile.city !== null || (tile.units ?? []).length > 0)
+    ).length,
+  ],
+  [true, 0]
 );
 
 if (failures.length > 0) {

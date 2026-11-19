@@ -10,7 +10,16 @@
 
 import * as Civ1Units from '@civ-clone/civ1-unit/Units';
 import * as Civ2Units from '@civ-clone/civ2-unit/Units';
-import { BufferGeometry, Color, Group, Mesh, Object3D, Sprite } from 'three';
+import {
+  BufferGeometry,
+  Color,
+  Group,
+  Mesh,
+  Object3D,
+  Sprite,
+  SpriteMaterial,
+  Vector3,
+} from 'three';
 import {
   UnitLook,
   unitLook,
@@ -18,8 +27,10 @@ import {
 } from '@civ-clone/ui-models-builtin/units';
 import { MarkerKit, drawMarker } from '@civ-clone/ui-map-3d/markers/drawMarker';
 import {
+  Part,
   figureGeometry,
   figureParts,
+  partMatrix,
 } from '@civ-clone/ui-map-3d/markers/figures';
 import { UnitMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
 import { landTypes, seaTypes } from '@civ-clone/ui-map-3d/debug/populate';
@@ -39,7 +50,7 @@ const expect = (description: string, actual: unknown, expected: unknown) => {
   }
 };
 
-// Labels are drawn on canvases: a context that measures every letter as 10 px and draws nothing.
+// Labels and the pointer are drawn on canvases: a context that measures every letter as 10 px and draws nothing.
 Object.assign(globalThis, {
   document: {
     createElement: () => ({
@@ -51,10 +62,17 @@ Object.assign(globalThis, {
         roundRect: () => undefined,
         fill: () => undefined,
         fillText: () => undefined,
+        moveTo: () => undefined,
+        lineTo: () => undefined,
+        closePath: () => undefined,
+        stroke: () => undefined,
       }),
     }),
   },
 });
+
+// How much bigger the map draws units than their figures are made.
+const DRAWN = 1.5;
 
 const colours = ['#aa0000', '#ffffff'] as const,
   others = ['#0000aa', '#ffff00'] as const;
@@ -126,12 +144,13 @@ const faultsOf = (type: string, look: UnitLook): string[] => {
     faults.push(`${type}: not a colour and a normal for every point`);
   }
 
-  // On its square, standing on it (a submarine a little under the water), and no taller than half a square.
+  // Drawn half as big again: on its square, standing on it (a submarine a little under the water), no taller than
+  //  half a square and no more than a third of one from its middle, so it stays in its square in front of a city.
   if (
     box === null ||
-    box.min.y < -0.03 ||
-    box.max.y > 0.5 ||
-    Math.max(-box.min.x, box.max.x, -box.min.z, box.max.z) > 0.3
+    box.min.y * DRAWN < -0.03 ||
+    box.max.y * DRAWN > 0.6 ||
+    Math.max(-box.min.x, box.max.x, -box.min.z, box.max.z) * DRAWN > 0.36
   ) {
     faults.push(`${type}: outside its square`);
   }
@@ -151,6 +170,29 @@ expect(
   []
 );
 
+// Every type looks unlike every other: its points and colours, as drawn.
+const drawnAs = new Map<string, string[]>();
+
+Object.entries(unitTable).forEach(([type, look]) => {
+  const geometry = figureGeometry(look, colours),
+    key = [
+      ...Array.from(geometry.getAttribute('position').array, (n) =>
+        n.toFixed(4)
+      ),
+      '|',
+      ...Array.from(geometry.getAttribute('color').array, (n) => n.toFixed(3)),
+    ].join(',');
+
+  drawnAs.set(key, [...(drawnAs.get(key) ?? []), type]);
+  geometry.dispose();
+});
+
+expect(
+  'no two unit types look the same: settlers, a caravan and a chariot, a cruiser and a battleship, and the rest',
+  [...drawnAs.values()].filter((types) => types.length > 1),
+  []
+);
+
 const one = (look: UnitLook): number => figureParts(look, colours).parts.length;
 
 expect(
@@ -165,6 +207,27 @@ expect(
     unitTable['Battleship']!.squad,
   ],
   [3, 2, 3, 2, 1]
+);
+
+// A soldier turned in its squad turns its tilted shield with it: the shield's face turned as the soldier is, not rolled.
+const shield = figureParts(
+    { ...unitTable['Spearman']!, squad: 3 },
+    colours
+  ).parts.find(({ turn }) => turn !== undefined && turn[0] === Math.PI / 2),
+  faceOf = (part: Part | undefined): Vector3 =>
+    part === undefined
+      ? new Vector3()
+      : new Vector3(0, 1, 0).transformDirection(partMatrix(part)),
+  turned = faceOf(shield),
+  // The same shield on a soldier not turned, then turned about the vertical as the soldier is.
+  expectedFace = faceOf(
+    shield === undefined ? undefined : { ...shield, yaw: 0 }
+  ).applyAxisAngle(new Vector3(0, 1, 0), shield?.yaw ?? 0);
+
+expect(
+  'a soldier turned in its squad turns its tilted shield with it',
+  [Math.abs(shield?.yaw ?? 0) > 0, turned.distanceTo(expectedFace) < 1e-9],
+  [true, true]
 );
 
 const theirs = figureGeometry(unitTable['Musketman']!, others),
@@ -236,23 +299,31 @@ const unit = (type: string, more: Partial<UnitMarker> = {}): UnitMarker => ({
       (object): object is Mesh =>
         object instanceof Mesh && object.material === kit.figureMaterial
     ),
-  { stand, bank, flag, bar, ring, pointer } = kit.geometries;
+  spriteOf = (
+    found: Object3D[],
+    material: SpriteMaterial
+  ): Sprite | undefined =>
+    found.find(
+      (object): object is Sprite =>
+        object instanceof Sprite && object.material === material
+    ),
+  { stand, bank, ring } = kit.geometries;
 
 const soldiers = drawn(unit('Spearman')),
   soldiersFigure = figureOf(soldiers),
-  soldiersFlag = meshOf(soldiers, flag),
+  soldiersFlag = spriteOf(soldiers, kit.flat(colours[0])),
   soldiersTop =
     (soldiersFigure?.position.y ?? 0) +
     (soldiersFigure?.geometry.boundingBox?.max.y ?? 0) *
       (soldiersFigure?.scale.y ?? 1);
 
 expect(
-  'a unit is its figures on a stand in its owner’s second colour, its owner’s flag over them, and nothing else',
+  'a unit is its figures on a stand in its owner’s second colour, its owner’s flag over them, facing the camera, and nothing else',
   [
     soldiersFigure?.geometry === spearmen,
     meshOf(soldiers, stand)?.material === kit.material(colours[1]),
     (soldiersFigure?.position.y ?? 0) > 0,
-    soldiersFlag?.material === kit.material(colours[0]),
+    soldiersFlag?.material.sizeAttenuation,
     (soldiersFlag?.position.y ?? 0) > soldiersTop,
     soldiers.length,
   ],
@@ -272,7 +343,7 @@ const fighter = drawn(unit('Fighter')),
 
 expect(
   'an aircraft’s flag flies over it, high as it is',
-  (meshOf(fighter, flag)?.position.y ?? 0) >
+  (spriteOf(fighter, kit.flat(colours[0]))?.position.y ?? 0) >
     (fighterFigure?.geometry.boundingBox?.max.y ?? 1) *
       (fighterFigure?.scale.y ?? 1) +
       (fighterFigure?.position.y ?? 0),
@@ -289,44 +360,81 @@ const veterans = drawn(
       health: 0.2,
     })
   ),
-  label = veterans.find((object): object is Sprite => object instanceof Sprite),
-  bars = veterans.filter(
-    (object): object is Mesh =>
-      object instanceof Mesh && object.geometry === bar
-  );
+  label = spriteOf(veterans, kit.label('3 F ★', colours[0], '#ffffff')),
+  back = spriteOf(veterans, kit.flat('#202020')),
+  front = spriteOf(veterans, kit.flat('#d04030')),
+  // Where the bar's ends are, across the screen, from the point both stand at: a sprite's `center` is that point.
+  ends = (sprite: Sprite | undefined): [number, number] => [
+    Math.round(-(sprite?.center.x ?? 0) * (sprite?.scale.x ?? 0) * 1000),
+    Math.round((1 - (sprite?.center.x ?? 0)) * (sprite?.scale.x ?? 0) * 1000),
+  ];
 
 expect(
-  'fortified, behind a low wall; its flag says the stack’s size, its letter and a veteran’s star; a short red bar for few hit points',
+  'fortified, behind a low wall; its flag says the stack’s size, its letter and a veteran’s star; a short red bar for few hit points, from the bar’s left, facing the camera',
   [
     meshOf(veterans, bank) !== undefined,
-    label?.material === kit.label('3 F ★', colours[0], '#ffffff'),
-    bars.length,
-    bars[1]?.material === kit.material('#d04030'),
-    Math.round((bars[1]?.scale.x ?? 0) * 1000),
+    label !== undefined,
+    ends(back),
+    ends(front),
+    front !== undefined && front.position.equals(back!.position),
+    (front?.renderOrder ?? 0) > (back?.renderOrder ?? 0),
   ],
-  [true, true, 2, true, 22]
+  [true, true, [-55, 55], [-55, -33], true, true]
 );
 
 expect(
   'unhurt, alone and idle: no bar, no label, no wall',
   [
-    soldiers.some((object) => object instanceof Sprite),
-    meshOf(soldiers, bar),
+    soldiers.filter((object) => object instanceof Sprite).length,
     meshOf(soldiers, bank),
   ],
-  [false, undefined, undefined]
+  // Its flag alone.
+  [1, undefined]
 );
 
-const active = drawn(unit('Spearman', { active: true })),
-  activeFlag = meshOf(active, flag);
+const active = drawn(unit('Spearman', { active: true, count: 2 })),
+  activeLabel = spriteOf(active, kit.label('2', colours[0], '#ffffff')),
+  pointer = spriteOf(active, kit.pointer()),
+  // How far over the point it stands at a sprite starts, and ends, on the screen.
+  span = (sprite: Sprite | undefined): [number, number] => [
+    -(sprite?.center.y ?? 0) * (sprite?.scale.y ?? 0),
+    (1 - (sprite?.center.y ?? 0)) * (sprite?.scale.y ?? 0),
+  ];
 
 expect(
-  'the unit awaiting orders has a ring at its feet and a pointer over its flag',
+  'the unit awaiting orders has a ring at its feet, and a pointer the same size on the screen however far away, over its label and drawn over it',
   [
     meshOf(active, ring) !== undefined,
-    (meshOf(active, pointer)?.position.y ?? 0) > (activeFlag?.position.y ?? 1),
+    pointer?.material.sizeAttenuation,
+    pointer?.position.equals(activeLabel!.position),
+    span(pointer)[0] > span(activeLabel)[1],
+    (pointer?.renderOrder ?? 0) > (activeLabel?.renderOrder ?? 0),
   ],
-  [true, true]
+  [true, false, true, true, true]
+);
+
+// In a city: the unit's label under the city's name, which stands clear of it.
+const inCity = (garrisoned: boolean): Sprite | undefined => {
+  const found: Object3D[] = [];
+
+  drawMarker(kit, {
+    city: {
+      name: 'Roma',
+      size: 3,
+      colours,
+      walled: false,
+      disorder: false,
+    },
+    unit: garrisoned ? unit('Spearman', { count: 2, active: true }) : null,
+  }).traverse((object) => void found.push(object));
+
+  return spriteOf(found, kit.label('Roma  3', colours[0], '#ffffff'));
+};
+
+expect(
+  'a city’s name stands clear of a unit’s label and pointer when one is in it, and where it is otherwise',
+  [span(inCity(true))[0] > span(pointer)[1], span(inCity(false))[0]],
+  [true, 0]
 );
 
 kit.dispose();

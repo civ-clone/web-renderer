@@ -91,7 +91,6 @@ const chance = (x: number, y: number, seed: number, salt: number): number => {
   return (h >>> 0) / 4294967296;
 };
 
-/** Puts cities and units on some of `tiles`' land, from `seed`: only on squares that have been seen. */
 // The civilizations' players, as the client gets them: only what the 3D map reads.
 const playersOf = () =>
   civilizations.map(({ colours }, index) => ({
@@ -114,6 +113,10 @@ const playersOf = () =>
     },
   }));
 
+/**
+ * Puts cities and units on some of `tiles`' land, and ships on some of its sea, from `seed`: only on squares that have
+ *  been seen.
+ */
 export const populate = (tiles: Tile[], seed: number): void => {
   const players = playersOf(),
     named = civilizations.map(() => 0);
@@ -123,7 +126,8 @@ export const populate = (tiles: Tile[], seed: number): void => {
 
     // A ship now and then at sea.
     if (!tile.isLand) {
-      if (chance(x, y, seed, 40) < 0.012) {
+      // Squares never seen are neither land nor sea.
+      if (tile.terrain._ !== 'Unknown' && chance(x, y, seed, 40) < 0.012) {
         const player =
             players[Math.floor(chance(x, y, seed, 1) * players.length)]!,
           type =
