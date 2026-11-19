@@ -163,7 +163,7 @@ expect(
           v = aroundV + Math.sin(angle) * reach,
           sample = frontier.sample(u, v);
 
-        if (!sample.unseen && sample.shore !== 1) {
+        if (!sample.unseen && Math.abs(sample.shore - 1) > 1e-6) {
           notAllWater.push(`${u},${v}: ${sample.shore}`);
         }
       });
@@ -219,7 +219,9 @@ expect(
       wetFar: string[] = [],
       rockFar: string[] = [],
       snowFar: string[] = [];
-    let polarSnow = 0,
+    let coastPoints = 0,
+      coastWet = 0,
+      polarSnow = 0,
       polarMountains = 0,
       tropicalSnow = 0,
       tropicalMountains = 0;
@@ -257,8 +259,8 @@ expect(
             }
           }
 
-          // Rock only on mountains or hills, or a square beside one; snow only on mountains, or beside one, where a peak's
-          //  shoulder reaches.
+          // Rock only on mountains or hills, or a square beside one; snow only on mountains, or beside one, where a
+          //  peak's shoulder reaches.
           const square = [
             ((x % width) + width) % width,
             ((y % height) + height) % height,
@@ -282,16 +284,20 @@ expect(
             snowFar.push(`${name} at ${u},${v}`);
           }
 
-          // Wet only on water, or on a square beside it.
-          if (
-            wet > 0 &&
+          // Wet only on water, or on a square beside it; and how much of the land beside it is.
+          const coast =
             name !== 'Ocean' &&
-            !neighbours(
-              ((x % width) + width) % width,
-              ((y % height) + height) % height
-            ).some(([nx, ny]) => terrainAt(nx, ny) === 'Ocean')
-          ) {
+            neighbours(...square).some(
+              ([nx, ny]) => terrainAt(nx, ny) === 'Ocean'
+            );
+
+          if (wet > 0 && name !== 'Ocean' && !coast) {
             wetFar.push(`${name} at ${u},${v}`);
+          }
+
+          if (coast) {
+            coastPoints++;
+            coastWet += wet > 0.5 ? 1 : 0;
           }
         }
       }
@@ -302,12 +308,6 @@ expect(
 
       return count === undefined ? 0 : count[of] / count.points;
     };
-
-    // The land beside the sea that's wet, by its points: many, on a world with coasts.
-    const wetLand = [...counts].reduce(
-      (wet, [name, count]) => wet + (name === 'Ocean' ? 0 : count.wet),
-      0
-    );
 
     expect(
       `${topologyId}: snow lies on mountains, or a peak's shoulder beside one, more of them towards the poles; rock on mountains' flanks, a little on hills, and nowhere but on them or the foot of one reaching into a neighbour; wet ground on plenty of the land beside water, and nowhere else, never on a swamp or a river inland`,
@@ -320,7 +320,8 @@ expect(
         share('Mountains', 'rock') > 0.05,
         share('Hills', 'rock') < share('Mountains', 'rock'),
         rockFar.slice(0, 3),
-        wetLand > 500,
+        // About 4 to 6 in a hundred, on worlds of every seed tried.
+        coastWet / coastPoints > 0.02,
         wetFar.slice(0, 3),
       ],
       [[], true, true, true, true, [], true, []]

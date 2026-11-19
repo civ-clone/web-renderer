@@ -499,8 +499,8 @@ blended across squares.
   - **By where it lies** (`packages/map-3d/terrain/cover.ts`, the same numbers in the land's shader):
     - **rock** where the ground's steep: from about 14° from level, whole by about 28°. So it's on mountains' flanks,
       the steepest hills, and a mountain's foot where its slope reaches into a neighbour. Mountains' sides reach about
-      43° at their steepest (37° for most of the steepest), hills about 35°, most under 13°. A texture laid flat
-      stretches 1.37 times at 43°: rock mapped from three sides would fix that, and is still to do;
+      43° to 45° at their steepest (37° for most of the steepest), hills 35° to 38°, most under 13°. A texture laid flat
+      stretches about 1.4 times at 45°: rock mapped from three sides would fix that, and is still to do;
     - **snow** above a snowline, 0.40 high at the equator and 0.26 at the poles, on ground level enough to hold it. A
       mountain's top is 0.32 to 0.47 high, about 0.40 for most, so near the equator about half the peaks are capped and
       two thirds have some snow, and from halfway to the poles nearly every peak is capped. Its latitude is the same at
