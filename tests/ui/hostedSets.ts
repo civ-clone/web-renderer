@@ -1449,6 +1449,59 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
       [true, [sheets['civ1-pixelart']!.sheet, sheets['civ1-pixelart']!.index]]
     );
 
+    // A save whose rules are drawn with an imported set or else a hosted one (as Civ2's are with Civ2's art or the
+    //  isometric pixel art), with neither installed as the hosted sheet failed as the page started, tries that sheet
+    //  again before it's refused, so it loads once the sheet can be. The worker here draws its `pixel` rules with
+    //  Civ1's art or else the square pixel art, the first of them the page has.
+    {
+      offline = true;
+      await installPacks(new AssetStore(civ1));
+
+      const missingAtStart = !ids(installedTilesets()).includes(
+          'civ1-pixelart'
+        ),
+        pixelRules = {
+          request: async (request: { args: () => unknown[] }) => {
+            const here = request.args()[0] as string[],
+              tileset =
+                ['civ1', 'civ1-pixelart'].find((id) => here.includes(id)) ??
+                null;
+
+            return {
+              sets: [
+                { id: 'civ1', tileset: null },
+                ...(tileset === null ? [] : [{ id: 'pixel', tileset }]),
+              ],
+              default: 'civ1',
+              chosen: null,
+            };
+          },
+        } as any,
+        pixelSave = {
+          pluginSet: 'pixel',
+          entities: [{ type: 'World', state: { _topologyId: 'square' } }],
+        };
+
+      offline = false;
+
+      const onlineLoad = await prepareSavedMapArt(pixelRules, pixelSave).then(
+        ({ tileset }) => tileset.id,
+        (error: Error) => error.message
+      );
+
+      setRuleSetTileset(null);
+
+      expect(
+        'a save drawn with a hosted set whose sheet failed as the page started loads with it once it can be loaded, rather than being refused for the art to import',
+        [
+          missingAtStart,
+          onlineLoad,
+          ids(installedTilesets()).includes('civ1-pixelart'),
+        ],
+        [true, 'civ1-pixelart', true]
+      );
+    }
+
     // The game setup's Start waits for it too, and stays open without it.
     {
       const sent: string[] = [],
