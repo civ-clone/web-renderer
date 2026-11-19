@@ -53,6 +53,7 @@ import {
 import { Stage } from '@civ-clone/ui-map-3d/stage';
 import markerFor, { TileMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
 import { OverlayMesh } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
+import yieldIconsAt from '@civ-clone/ui-map-3d/yields';
 import { Color } from 'three';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { unitStatus } from '@civ-clone/ui-assets/lib/renderUnit';
@@ -1591,6 +1592,96 @@ expect(
     );
   }
 
+  // What each square yields, over it (`y`): laid out as the 2D map lays them, centred on its middle on the screen,
+  //  smaller further away, none too small to read; shown and hidden by the key, on a canvas over the map's.
+  expect(
+    'a square’s yields are laid out in two rows centred over its middle, as big as the square allows, and none too small to read or with nothing',
+    [
+      yieldIconsAt(
+        [
+          { _: 'Food', value: 2 },
+          { _: 'Production', value: 1 },
+          { _: 'Trade', value: 1 },
+        ],
+        [100, 100],
+        64
+      ),
+      yieldIconsAt([{ _: 'Food', value: 2 }], [100, 100], 12),
+      yieldIconsAt([], [100, 100], 64),
+      yieldIconsAt([{ _: 'Food', value: 1 }], [100, 100], 200)[0]?.size,
+    ],
+    [
+      [
+        { _: 'Food', x: 84, y: 84, size: 16 },
+        { _: 'Food', x: 100, y: 84, size: 16 },
+        { _: 'Production', x: 84, y: 100, size: 16 },
+        { _: 'Trade', x: 100, y: 100, size: 16 },
+      ],
+      [],
+      [],
+      16,
+    ]
+  );
+
+  {
+    const yielding = tiles[1 * 4 + 1] as Tile;
+
+    yielding.yields = [
+      { _: 'Food', value: 2 },
+      { _: 'Production', value: 1 },
+      { _: 'Trade', value: 1 },
+    ] as unknown as Tile['yields'];
+    glider.queueTile(yielding);
+    glider.releaseTiles();
+    glider.centre(yielding);
+    runFrames();
+
+    const hidden = glider.yieldIcons();
+
+    glider.toggleYields();
+    runFrames();
+
+    const shown = glider.yieldIcons(),
+      overlay = document.querySelector('.map3d-yields') as HTMLElement | null,
+      // Where the icons are, as a block: its middle.
+      middleOfIcons =
+        shown.length === 0
+          ? null
+          : [
+              (Math.min(...shown.map(({ x }) => x)) +
+                Math.max(...shown.map(({ x, size }) => x + size))) /
+                2,
+              (Math.min(...shown.map(({ y }) => y)) +
+                Math.max(...shown.map(({ y, size }) => y + size))) /
+                2,
+            ],
+      shownAt = overlay?.style.display;
+
+    glider.toggleYields();
+    runFrames();
+
+    expect(
+      'yields over the squares: shown with `y`, over the square’s middle where the camera looks at it, on a canvas over the map’s; and hidden again',
+      [
+        hidden,
+        shown.map(({ _ }) => _),
+        middleOfIcons !== null &&
+          Math.abs(middleOfIcons[0]! - box.width / 2) < 20 &&
+          Math.abs(middleOfIcons[1]! - box.height / 2) < 20,
+        overlay?.previousElementSibling === mapCanvas,
+        shownAt,
+        glider.yieldIcons(),
+        overlay?.style.display,
+      ],
+      [[], ['Food', 'Food', 'Production', 'Trade'], true, true, '', [], 'none']
+    );
+
+    yielding.yields = [] as unknown as Tile['yields'];
+    glider.queueTile(yielding);
+    glider.releaseTiles();
+    runFrames();
+  }
+
   // Five quick turns clockwise, before a frame's drawn: the camera turns clockwise all the way, five eighths of a turn,
   //  never back the short way round. Then north, the short way from there.
   const turn = Math.PI / 4,
@@ -1865,9 +1956,11 @@ expect(
     );
 
   expect(
-    'map3d.js bundles three.js, its own code, the built-in model set, the emitter, and from the rest only the factory’s name, reduced motion and the shared gestures',
+    'map3d.js bundles three.js, its own code, the built-in model set, the emitter, and from the rest only the factory’s name, reduced motion, the shared gestures and the yields’ layout, none with state of its own',
     others.sort(),
     [
+      'packages/client/lib/instanceOf.ts',
+      'packages/client/lib/yieldMap.ts',
       'packages/map/MapView3DFactory.ts',
       'packages/map/lib/reducedMotion.ts',
       'packages/widgets/lib/drag.ts',

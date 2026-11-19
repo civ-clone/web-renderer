@@ -35,6 +35,8 @@ import CameraInput from './camera/CameraInput';
 import markerFor, { MarkerWords } from './markers/markerFor';
 import pickGround from './camera/pick';
 import Minimap3D from './minimap/Minimap3D';
+import yieldIconsAt, { YieldIcon } from './yields';
+import { squareCity, squareYields } from '@civ-clone/ui-client/lib/yieldMap';
 
 // How long, in ms, each frame may go on building the land's chunks while any wait. A chunk is built whole, once a frame
 //  has begun one: one takes 17–25 ms, so a frame builds one, and more only where they're quicker.
@@ -172,6 +174,9 @@ export class MapView3D implements MapRenderer {
   #pendingTile: Coordinate | null = null;
   #unitsShown = true;
   #yieldsShown = false;
+  // The yields over the squares (`y`), on a canvas of their own over the map's, made the first time they're shown.
+  #yieldsCanvas: HTMLCanvasElement | null = null;
+  #yieldIcon: MapView3DDeps['yieldIcon'];
   #waiting = false;
   // The 2D art the city screen and windows draw with, as it was when last asked.
   #art: MapView3DDeps['art'];
@@ -186,6 +191,7 @@ export class MapView3D implements MapRenderer {
     this.#canvas = deps.mapCanvas;
     this.#coveredBy = deps.coveredBy;
     this.#art = deps.art;
+    this.#yieldIcon = deps.yieldIcon;
     this.#words = { cityName: deps.cityName, unitStatus: deps.unitStatus };
     this.#artId = deps.art.id();
     this.world = deps.world;
@@ -358,6 +364,7 @@ export class MapView3D implements MapRenderer {
 
     this.#frame = null;
     this.#stats?.remove();
+    this.#yieldsCanvas?.remove();
     this.#stage.dispose();
 
     const page = window as unknown as { civMap3DView?: MapView3D };
@@ -617,6 +624,69 @@ export class MapView3D implements MapRenderer {
 
   toggleYields(): void {
     this.#yieldsShown = !this.#yieldsShown;
+    this.#draw();
+  }
+
+  /**
+   * The yields' icons over the squares as the camera sees them now, in the canvas's px, while they're shown (`y`):
+   *  each square's at its copy nearest the camera's focus, on the land as it's drawn, if it's on the screen.
+   */
+  yieldIcons(): YieldIcon[] {
+    const width = this.#canvas.clientWidth,
+      height = this.#canvas.clientHeight;
+
+    if (!this.#yieldsShown || width <= 0 || height <= 0) {
+      return [];
+    }
+
+    const orbit = this.#orbit,
+      look = this.#lookHeight ?? 0,
+      aspect = width / height,
+      { u: periodU, v: periodV } = this.#period(),
+      [focusU, focusV] = orbit.focus,
+      nearest = (value: number, focus: number, period: number | null) =>
+        period === null
+          ? value
+          : value + period * Math.round((focus - value) / period),
+      // A square's width along the screen, from its middle.
+      [acrossU, acrossV] = [Math.cos(orbit.yaw), Math.sin(orbit.yaw)];
+
+    return this.world.tiles().flatMap((tile) => {
+      const yields = squareYields(tile, squareCity(tile));
+
+      if (yields.length === 0) {
+        return [];
+      }
+
+      const [u, v] = this.#land.layout.centre(tile.x, tile.y),
+        at: [number, number, number] = [
+          nearest(u, focusU, periodU),
+          Math.max(0, this.#land.surfaceAt(u, v)),
+          nearest(v, focusV, periodV),
+        ],
+        middle = toScreen(orbit, look, at, aspect),
+        beside = toScreen(
+          orbit,
+          look,
+          [at[0] + acrossU, at[1], at[2] + acrossV],
+          aspect
+        );
+
+      if (middle === null || beside === null) {
+        return [];
+      }
+
+      const x = ((middle[0] + 1) / 2) * width,
+        y = ((1 - middle[1]) / 2) * height,
+        side = Math.hypot(
+          ((beside[0] - middle[0]) * width) / 2,
+          ((beside[1] - middle[1]) * height) / 2
+        );
+
+      return x < -side || x > width + side || y < -side || y > height + side
+        ? []
+        : yieldIconsAt(yields, [x, y], side);
+    });
   }
 
   /** Brings the camera `steps` nearer, or further away for fewer than none, about the point it looks at. */
@@ -1160,6 +1230,7 @@ export class MapView3D implements MapRenderer {
 
     this.#stage.view(this.#orbit, this.#lookHeight ?? 0, this.#period());
     this.#stage.render();
+    this.#showYields();
     this.#showMinimap();
     this.#keepDistance();
     this.#frameTime = performance.now() - started;
@@ -1303,6 +1374,67 @@ export class MapView3D implements MapRenderer {
       this.#frame = null;
       this.#frameDrawn(BUILD_BUDGET);
     });
+  }
+
+  // The yields over the squares, drawn again with each frame while they're shown, and cleared away when they're not.
+  #showYields(): void {
+    if (!this.#yieldsShown && this.#yieldsCanvas === null) {
+      return;
+    }
+
+    const canvas = (this.#yieldsCanvas ??= this.#yieldsOverlay()),
+      width = this.#canvas.clientWidth,
+      height = this.#canvas.clientHeight,
+      ratio = window.devicePixelRatio || 1;
+
+    canvas.style.display = this.#yieldsShown ? '' : 'none';
+
+    // Sizing a canvas clears it, even to the size it has.
+    if (
+      canvas.width !== Math.round(width * ratio) ||
+      canvas.height !== Math.round(height * ratio)
+    ) {
+      canvas.width = Math.round(width * ratio);
+      canvas.height = Math.round(height * ratio);
+    }
+
+    const context = canvas.getContext('2d');
+
+    if (context === null) {
+      return;
+    }
+
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    context.clearRect(0, 0, width, height);
+    // The interface's art is pixel art: drawn crisp, as the 2D map draws it.
+    context.imageSmoothingEnabled = false;
+    this.yieldIcons().forEach(({ _, x, y, size }) => {
+      const image = this.#yieldIcon?.(_) ?? null;
+
+      if (image !== null) {
+        context.drawImage(image, x, y, size, size);
+      }
+    });
+  }
+
+  // Over the map, the same size, straight after its canvas, so what else is over the map stays over it too; never in
+  //  the way of a click.
+  #yieldsOverlay(): HTMLCanvasElement {
+    const canvas = document.createElement('canvas');
+
+    canvas.className = 'map3d-yields';
+    canvas.setAttribute('aria-hidden', 'true');
+    Object.assign(canvas.style, {
+      height: '100%',
+      left: '0',
+      pointerEvents: 'none',
+      position: 'absolute',
+      top: '0',
+      width: '100%',
+    });
+    this.#canvas.after(canvas);
+
+    return canvas;
   }
 
   // Over the map's bottom left corner, after the canvas so it's drawn over it.
