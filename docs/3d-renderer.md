@@ -505,7 +505,7 @@ blended across squares.
     from noise that repeats with it, so it tiles. Each texel says how much the land's colour is scaled (by 1 on
     average), which way its bumps tilt the ground, and how rough it is. Grass has patches and blades; plains dry grass
     and soil; sand ripples; rock cracks; snow soft drifts; forest floor leaf litter; mud wet patches, shinier; tundra
-    lichen. All eight take about 70 ms to make, once for the page. Their bumps are as steep made at any size.
+    lichen. All eight take about 70 ms to make, once for the page. Their bumps scale with their size, but for the finest, which a smaller texture can't hold (only the tests make one).
   - **Drawn** (`packages/map-3d/landMaterial.ts`): three.js's standard material, its colour the land's at each point,
     with the surfaces' detail sampled from a texture array, by where the point is on the ground, and blended by their
     weights. Each texture repeats every half a square or so, as many whole times as fit the world's period, so every

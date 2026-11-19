@@ -76,6 +76,8 @@ export const landMaterial = (period: {
   detail.magFilter = LinearFilter;
   detail.minFilter = LinearMipmapLinearFilter;
   detail.generateMipmaps = true;
+  // Sharper on the camera's slanting view of the ground: as much as the GPU allows, up to 4.
+  detail.anisotropy = 4;
   // Numbers, not colours: kept as they are.
   detail.colorSpace = NoColorSpace;
   detail.needsUpdate = true;
@@ -110,7 +112,6 @@ ${shader.fragmentShader
   float surfaceTotal = dot(vSurfacesA, vec4(1.0)) + dot(vSurfacesB, vec4(1.0));
   vec4 surface = vec4(0.0);
   ${layers}
-  // None on a square never seen: the colour alone.
   // Fading to none (the colour alone) as the ground nears a square never seen, whose points have no surface.
   surface = surface / max(surfaceTotal, 1.0) + max(0.0, 1.0 - surfaceTotal) * vec4(0.5, 0.5, 0.5, roughness);
   diffuseColor.rgb *= 0.5 + surface.r;`

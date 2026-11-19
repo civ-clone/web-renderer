@@ -841,6 +841,8 @@ export const createRelief = ({
         shades > 0
           ? [red / shades, green / shades, blue / shades]
           : ownSquare.colour,
+      // Never none at a point seen: its own square's middle is within the kernel's reach of where the colour's taken
+      //  from (its furthest corner and `WANDER` along both ways, 1.02 at most, against `REACH`, 1.2).
       surfaces:
         surfaced > 0
           ? surfaces.map((share) => share / surfaced)

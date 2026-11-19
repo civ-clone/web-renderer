@@ -446,6 +446,56 @@ ids.forEach((topologyId) => {
     [true, 'sand']
   );
 
+  // Surfaces blended as the colour is: in a world of grassland and desert, all seen, how much of the point's ground
+  //  is grass is how much of its colour is grassland's, everywhere, by the channel the two differ in most.
+  const twoLands = createRelief({
+      layout,
+      source: sourceFor(topology, (x, y) =>
+        (x * 3 + y * 7 + ((x * y) % 3)) % 5 < 2 ? 'Desert' : 'Grassland'
+      ),
+    }),
+    unlike: string[] = [];
+
+  // The two colours as the table has them, linear: grassland's and desert's.
+  const linear = (hex: string): number[] =>
+      [1, 3, 5].map((offset) => {
+        const value = parseInt(hex.slice(offset, offset + 2), 16) / 255;
+
+        return value <= 0.04045
+          ? value / 12.92
+          : ((value + 0.055) / 1.055) ** 2.4;
+      }),
+    grass = linear(terrainEntry('Grassland').colour),
+    desert = linear(terrainEntry('Desert').colour),
+    // The channel they differ in most.
+    most = [0, 1, 2].reduce((best, at) =>
+      Math.abs((grass[at] ?? 0) - (desert[at] ?? 0)) >
+      Math.abs((grass[best] ?? 0) - (desert[best] ?? 0))
+        ? at
+        : best
+    );
+
+  for (let at = 0; at < 2000; at++) {
+    const u = (at * 0.6180339) % 12,
+      v = (at * 0.381966 * 7) % 10,
+      { colour, surfaces } = twoLands.sample(u, v),
+      grassy =
+        ((colour[most] ?? 0) - (desert[most] ?? 0)) /
+        ((grass[most] ?? 0) - (desert[most] ?? 0));
+
+    if (Math.abs((surfaces[SURFACES.indexOf('grass')] ?? 0) - grassy) > 1e-9) {
+      unlike.push(
+        `${u},${v}: ${surfaces[SURFACES.indexOf('grass')]} ${grassy}`
+      );
+    }
+  }
+
+  expect(
+    'in grassland and desert, all seen, how much of a point’s ground is grass is how much of its colour is grassland’s',
+    unlike.slice(0, 3),
+    []
+  );
+
   // Beside a square never seen: none of its surface. A square of arctic beside one, every way the grid has: snow, all
   //  through it, to its edge.
   const edging = topology

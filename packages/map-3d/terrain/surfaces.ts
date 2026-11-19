@@ -1,6 +1,6 @@
 // The land's surfaces' detail (docs/3d-renderer.md §4.3): for each surface (`SURFACES`), a texture made by code, drawn
 //  over the land's colour close to: how much lighter or darker the ground is from point to point, which way its bumps
-//  tilt it, and how rough it is. Made when the map's made, the same every time, each tiling seamlessly. Pure: the
+//  tilt it, and how rough it is. Made once for the page, the same every time, each tiling seamlessly. Pure: the
 //  stage turns them into a texture array, and its land's shader blends them by the surfaces' weights at each point.
 //
 // Each texel is four bytes:
@@ -47,7 +47,7 @@ const recipes: { [surface in Surface]: Recipe } = {
   // Patches of lusher and drier grass, and its blades.
   grass: {
     grain: ({ noise }) =>
-      fractalNoise([noise(96, 1), noise(16, 2), noise(4, 25)]),
+      fractalNoise([noise(64, 1), noise(16, 2), noise(4, 25)]),
     shade: 0.3,
     bumps: ({ noise }) => fractalNoise([noise(4, 3), noise(12, 4)]),
     steep: 2.5,

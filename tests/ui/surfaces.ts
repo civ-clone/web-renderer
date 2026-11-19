@@ -182,7 +182,7 @@ expect(
 // How rough each surface is, on average: snow and mud shinier, rock a little. And their bumps as steep made small as
 //  made at the usual size: the spread of each surface's tilt within two fifths of the usual's. Not closer, as the
 //  finest bumps (grass's, a couple of texels across made small) are too fine to measure alike; unscaled, they'd be
-//  twice as steep.
+//  twice as steep. And they have bumps: a tilt spread of 2 at least, each way.
 {
   const shipped = surfaceTextures(),
     spread = (data: Uint8Array, side: number, layer: number): number => {
@@ -221,10 +221,65 @@ expect(
         const small = spread(made, size, layer),
           usual = spread(shipped, SURFACE_SIZE, layer);
 
-        return Math.abs(small - usual) > usual * 0.4;
+        return Math.abs(small - usual) > usual * 0.4 || usual < 2;
       }),
     ],
     [[0.9, 0.92, 0.88, 0.75, 0.55, 0.9, 0.65, 0.9], []]
+  );
+}
+
+// Which way the bumps tilt: rock's bumps and grain are one, so where its colour lightens eastward, its ground rises
+//  that way, and its tilt is to the west (its green below 127.5), and likewise down (blue). The tilt as it
+//  should run against the colour's slope, closely, at the usual size.
+{
+  const shipped = surfaceTextures(),
+    side = SURFACE_SIZE,
+    rock = SURFACES.indexOf('rock'),
+    at = (x: number, y: number, channel: number): number =>
+      shipped[
+        rock * side * side * 4 +
+          (((y + side) % side) * side + ((x + side) % side)) * 4 +
+          channel
+      ] ?? 0,
+    // How closely two lists run together, from -1 to 1.
+    correlation = (a: number[], b: number[]): number => {
+      const mean = (list: number[]) =>
+          list.reduce((sum, value) => sum + value, 0) / list.length,
+        ma = mean(a),
+        mb = mean(b);
+      let both = 0,
+        ofA = 0,
+        ofB = 0;
+
+      a.forEach((value, index) => {
+        both += (value - ma) * ((b[index] ?? 0) - mb);
+        ofA += (value - ma) ** 2;
+        ofB += ((b[index] ?? 0) - mb) ** 2;
+      });
+
+      return both / Math.sqrt(ofA * ofB);
+    },
+    tiltAcross: number[] = [],
+    lighterAcross: number[] = [],
+    tiltDown: number[] = [],
+    lighterDown: number[] = [];
+
+  for (let y = 0; y < side; y++) {
+    for (let x = 0; x < side; x++) {
+      tiltAcross.push(at(x, y, 1));
+      lighterAcross.push(at(x + 1, y, 0) - at(x - 1, y, 0));
+      tiltDown.push(at(x, y, 2));
+      lighterDown.push(at(x, y + 1, 0) - at(x, y - 1, 0));
+    }
+  }
+
+  expect(
+    'rock’s ground tilts away from where it rises, across and down, as its colour lightens',
+    [
+      correlation(tiltAcross, lighterAcross) < -0.6,
+      correlation(tiltDown, lighterDown) < -0.6,
+    ],
+    [true, true]
   );
 }
 
