@@ -429,7 +429,7 @@ export class MapView3D implements MapRenderer {
       [drawnU, drawnY, drawnV] = (pending !== undefined && pending.until >= now
         ? pending.from
         : null) ??
-        this.#stage.markerAt(`${from.x},${from.y}`) ?? [
+        this.#stage.markerAt(`${from.x},${from.y}`, id) ?? [
           fromU,
           Math.max(0, this.#land.surfaceAt(fromU, fromV)),
           fromV,

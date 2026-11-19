@@ -207,7 +207,7 @@ const staged: string[] = [],
       slid.push([key, ...from.map((n) => Math.round(n * 100) / 100)]);
       slideFrames.left = 6;
     },
-    // Where each marker stands: none slides here.
+    // Where each marker stands, for its own unit or another: none slides here.
     markerAt: (key) => {
       const at = markedAt.get(key);
 

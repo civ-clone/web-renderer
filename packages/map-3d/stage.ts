@@ -67,8 +67,11 @@ export interface Stage {
    *  its square does, starting now; its city stays put. Made again mid-slide with the same unit on top, it slides on.
    */
   slideMarker(key: string, from: readonly [number, number, number]): void;
-  /** Where the marker `key`'s unit is drawn now (or the marker, with none), sliding or not; nothing with no marker. */
-  markerAt(key: string): [number, number, number] | null;
+  /**
+   * Where the unit `unit` is drawn on the marker `key` now: sliding there still, if it's the unit on top, or where the
+   *  square's stack stands, if it's under another; nothing with no marker.
+   */
+  markerAt(key: string, unit: string): [number, number, number] | null;
   /** Whether any marker's sliding, for frames to be drawn until none is. */
   sliding(): boolean;
   /**
@@ -128,6 +131,17 @@ const unitStands = (placed: Placed): [number, number, number] => {
 
   return [placed.at[0] + du, placed.at[1] + dy, placed.at[2] + dv];
 };
+
+/**
+ * Where the unit `unit` is drawn on a marker at `now`: sliding there still, if it's the marker's unit on top, or
+ *  standing where the stack does, if it's under another.
+ */
+export const unitOnMarkerAt = (
+  placed: Placed,
+  unit: string,
+  now: number
+): [number, number, number] =>
+  placed.unit?.id === unit ? unitDrawnAt(placed, now) : unitStands(placed);
 
 /** Where a marker's unit is drawn at `now`, sliding or standing in its place (or the marker's place, with none). */
 export const unitDrawnAt = (
@@ -637,12 +651,12 @@ export const createStage: StageFactory = (canvas, { period, ground }) => {
       sliding.add(key);
       slideAlong(placed, placed.slide.started);
     },
-    markerAt: (key): [number, number, number] | null => {
+    markerAt: (key, unit): [number, number, number] | null => {
       const placed = markers.get(key);
 
       return placed === undefined
         ? null
-        : unitDrawnAt(placed, performance.now());
+        : unitOnMarkerAt(placed, unit, performance.now());
     },
     sliding: (): boolean => sliding.size > 0,
     view,

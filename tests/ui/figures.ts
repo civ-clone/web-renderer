@@ -37,6 +37,7 @@ import {
   carriedSlide,
   slideAlong,
   unitDrawnAt,
+  unitOnMarkerAt,
 } from '@civ-clone/ui-map-3d/stage';
 import {
   Part,
@@ -555,6 +556,9 @@ expect(
       (slideAlong(sliding, 1000 + SLIDE / 4), partsAt(sliding, UNIT_PART)),
     cityStill = cityOf(sliding.drawn[1] as Group).position.toArray(),
     drawnMidway = unitDrawnAt(sliding, 1000 + SLIDE / 2),
+    // Asked after by its own unit, or by another under it, setting off from there.
+    forItsUnit = unitOnMarkerAt(sliding, 'Unit-1', 1000 + SLIDE / 2),
+    forAnother = unitOnMarkerAt(sliding, 'Unit-9', 1000 + SLIDE / 2),
     // Made again mid-slide, the same unit on top; then another unit; then once the slide's over.
     again = placedAt(
       [5, 0, 5],
@@ -575,7 +579,7 @@ expect(
   again.slide = carried;
 
   expect(
-    'a slide moves only the unit’s part, in every copy, eased in and out, and puts it in its place at the end; made again mid-slide with the same unit, it goes on from where it’s drawn, but not for another unit, or once it’s over',
+    'a slide moves only the unit’s part, in every copy, eased in and out, and puts it in its place at the end; made again mid-slide with the same unit, it goes on from where it’s drawn, but not for another unit, or once it’s over; a unit under the one sliding sets off from where the stack stands',
     [
       atStart,
       // Smoothstep at a quarter: 0.15625 of the way.
@@ -590,6 +594,8 @@ expect(
       carried?.started,
       [other, over],
       unitDrawnAt(placedAt([2, 0, 3], walled, null), 0),
+      forItsUnit.join() === drawnMidway.join(),
+      forAnother.map((n) => Math.round(n * 1000) / 1000),
     ],
     [
       [
@@ -610,6 +616,8 @@ expect(
       1000 + SLIDE / 2,
       [undefined, undefined],
       [2, 0, 3],
+      true,
+      [5, 0, 5.26],
     ]
   );
 }
