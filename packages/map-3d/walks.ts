@@ -378,6 +378,22 @@ export class Walks {
   }
 
   /**
+   * The walks whose units `test` picks ended now, there at once: each as it is at its end, as `endAll` has them.
+   */
+  endWhere(test: (units: readonly string[]) => boolean, now: number): Walker[] {
+    const ended: Walker[] = [];
+
+    this.#walks.forEach((walk) => {
+      if (test(walk.units)) {
+        ended.push(this.#walker(walk, Math.max(now, motionEnds(walk.motion))));
+        this.#end(walk);
+      }
+    });
+
+    return ended;
+  }
+
+  /**
    * Every walk ended now, there at once: each as it is at its end, so one that waits there for its patch stands where it
    *  was bound, not mid-way.
    */

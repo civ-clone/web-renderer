@@ -807,6 +807,42 @@ const point = (u: number, v: number, lift = 0): WalkPoint => ({
   );
 }
 
+// Ending those whose units are picked: only those, each there at once, at its end; the rest walk on.
+{
+  const walks = new Walks({ u: 10, v: null });
+
+  walks.step(
+    'a',
+    { x: 0, y: 1 },
+    { x: 1, y: 1 },
+    point(0, 1),
+    point(1, 1),
+    0,
+    pace
+  );
+  walks.step(
+    'b',
+    { x: 4, y: 1 },
+    { x: 5, y: 1 },
+    point(4, 1),
+    point(5, 1),
+    0,
+    pace
+  );
+
+  const ended = walks.endWhere((units) => units.includes('a'), 50);
+
+  expect(
+    'ending the walks whose units are picked ends those alone, there at once, at their ends',
+    [
+      ended.map(({ units, at }) => [units, at]),
+      walks.walking('a'),
+      walks.walking('b'),
+    ],
+    [[[['a'], [1, 1]]], false, true]
+  );
+}
+
 if (failures.length > 0) {
   process.stderr.write(
     `FAIL walks: ${
