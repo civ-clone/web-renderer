@@ -569,7 +569,7 @@ export const drawMarker = (
               over: CITY_LABEL + SPACE,
             },
         flying,
-        // In front of a city's buildings, its marker shown or hidden, not out at sea.
+        // In front of a city's buildings, or where they stand with the towns hidden: in port, not out at sea.
         inFront === 0
       );
 

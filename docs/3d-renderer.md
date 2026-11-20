@@ -691,11 +691,13 @@ Each is looked up by its type name in the model set.
 - **The active unit:** a ring laid on the land under it. It follows the unit marker option (ring, blink or both) and the
   theme's colours [verified: `UnitMarker` and the `--ui-unit-ring` tokens, `packages/game/MapView2D.ts`].
 - **Hidden units:** `t` hides units and cities, as it does on the 2D map, so the land shows as it is. A city's walls and
-  name go, and its town: its buildings, on its square and round it, are laid with the land (§7.2), so every square
-  with a city on it or beside it is laid again as though none stood there, its woods and fields whole, and its roads
-  as they run (`Land#showTowns`). Shown again, by `t` or for a unit to give orders to, they're laid again with the
-  town. A unit in a city still stands where it would in front of its buildings. (Chosen on 2026-11-20: `t` shows the
-  terrain.)
+  name go, and its town: its buildings, on its square and round it, are laid with the land (§7.2), so every square with
+  a city on it or beside it is laid again as though none stood there, its woods and fields whole (but for one spot,
+  below), and its roads as they run (`Land#showTowns`). Shown again, by `t` or for a unit to give orders to, they're
+  laid again with the town. A unit in a city still stands where it would in front of its buildings, so what grows on its
+  square keeps clear of that spot too, as of the middle (`front`), and a ship there is still in port. On the square
+  grid, where the spot is 0.24 from the square's edge, the trees of the square beside it can reach within about 0.13 of
+  it, clear of the unit's stand. (Chosen on 2026-11-20: `t` shows the terrain.)
 
 ### 6.4 Animation
 
