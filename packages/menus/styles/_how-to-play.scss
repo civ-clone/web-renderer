@@ -117,3 +117,21 @@
     padding: 0 0.25em;
   }
 }
+
+// The help as the game is played (#1295): a sentence or two, and the box that turns it off.
+.game-tip {
+  max-width: 28em;
+  padding: 0.5em 0.75em;
+
+  p {
+    margin: 0 0 0.75em;
+  }
+}
+
+.game-tip-stop {
+  align-items: center;
+  color: var(--ui-fg-muted);
+  cursor: pointer;
+  display: flex;
+  gap: 0.4em;
+}

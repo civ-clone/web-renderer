@@ -14,6 +14,7 @@ import {
 } from '@civ-clone/ui-hud/components/Actions/AdjustTradeRates';
 import { redrawWindowUnits } from '@civ-clone/ui-hud/components/Unit';
 import GameMenu from '@civ-clone/ui-menus/components/GameMenu';
+import GameTips from '@civ-clone/ui-menus/components/GameTips';
 import { GameMenuItem } from '@civ-clone/ui-menus/components/mapMenus';
 import cheatRows from './debug/cheats';
 import openFindCity from '@civ-clone/ui-city/components/FindCity';
@@ -149,6 +150,8 @@ export class GameSession {
   #turnShown: number = 0;
   // The first turn handed over is saved only for a new game (#653): see `autosaveDue`.
   #firstTurnStarted: boolean = true;
+  // The help as the game is played (#1295), for a game of the player's own: made with the interface.
+  #tips: GameTips | null = null;
 
   constructor(deps: GameSessionDeps) {
     this.#deps = deps;
@@ -190,6 +193,7 @@ export class GameSession {
       this.#followMapArt();
       this.#begin();
       this.#welcome();
+      this.#helpAsItsPlayed();
       this.#buildInterface(observer);
 
       const debugPanel = this.#buildDebugPanel();
@@ -280,6 +284,22 @@ export class GameSession {
     followMapArt(this.#mapArt());
     setTilesetSizes(interfaceArt());
     void setCursor();
+  }
+
+  // The help as the game is played (#1295): for a game of the player's own, each tip once a game, so a new game starts
+  //  them again. A save carried on keeps what it's had, the carry-over to new art (#1063) included.
+  #helpAsItsPlayed(): void {
+    if (this.#observing || this.#tips !== null) {
+      return;
+    }
+
+    const tips = new GameTips(
+      this.#deps.notifications,
+      this.#deps.pendingSave === null
+    );
+
+    this.#tips = tips;
+    this.#deps.transportDisposers.push((): void => tips.dispose());
   }
 
   // The welcome window, for a new game.
@@ -704,6 +724,12 @@ export class GameSession {
 
       this.#scheduleRender();
 
+      this.#tips?.update(
+        gameState.data().player,
+        unitController.active(),
+        this.#turn()
+      );
+
       // Keys kept while the unit's orders were on their way. Those kept
       // behind a move or another order wait for its `actionHandled`
       // (#326, #543).
@@ -933,14 +959,15 @@ export class GameSession {
 
     if (!notification.bubble) {
       notifications.receive(notification);
+    } else {
+      notices.add(notification);
+      this.#sounds?.noticeAdded(notification);
 
-      return;
+      this.#scheduleRender();
     }
 
-    notices.add(notification);
-    this.#sounds?.noticeAdded(notification);
-
-    this.#scheduleRender();
+    // After the notice it's about, which is read first (#1295).
+    this.#tips?.notification(notification.key, this.#gameState.data().player);
   }
 
   // The observer's bar (#607), redrawn as the worker's `observer` state changes: a new view's `gameData` follows,

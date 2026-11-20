@@ -1,4 +1,5 @@
 import NotificationWindow from '@civ-clone/ui-component-window/NotificationWindow';
+import type Window from '@civ-clone/ui-component-window/Window';
 import { heldNoticeData } from '@civ-clone/ui-client/components/lib/cityBuild';
 import { t } from 'i18next';
 
@@ -7,7 +8,21 @@ export interface Notification {
   bubble?: boolean;
   data: any;
   key: string;
+  // A window of its own rather than the key's title and body: the game's help (#1295), which waits its turn as the
+  //  game's notices do. Not one of the game's notices, so not heard as one.
+  open?: (container: HTMLElement) => Window;
 }
+
+// The windows the help waits behind, besides the notices: choices (classic's selections are action windows), questions,
+//  and anything modal. Never the copy a closing one leaves to fade out.
+const helpWaitsFor = [
+  '.actionWindow',
+  '.confirmationWindow',
+  '.ui-choice-window',
+  'dialog.window.modal[open]',
+]
+  .map((selector) => `${selector}:not(.ui-window-ghost)`)
+  .join(', ');
 
 export class Notifications {
   #container: HTMLElement;
@@ -50,6 +65,14 @@ export class Notifications {
       return;
     }
 
+    // The help waits for any choice or question too (#1295): it's never the thing to answer first.
+    if (
+      this.#notifications[0]?.open &&
+      document.querySelector(helpWaitsFor) !== null
+    ) {
+      return;
+    }
+
     const notification = this.#notifications.shift() as Notification;
 
     this.publish(notification);
@@ -78,7 +101,20 @@ export class Notifications {
     this.check();
   }
 
+  /** Drops those waiting that `predicate` matches: the help, turned off with some of it still to come. */
+  discard(predicate: (notification: Notification) => boolean): void {
+    this.#notifications = this.#notifications.filter(
+      (notification) => !predicate(notification)
+    );
+  }
+
   private publish(notification: Notification): void {
+    if (notification.open) {
+      notification.open(this.#container).on('close', () => this.check());
+
+      return;
+    }
+
     const message = t(`${notification.key}.body`, {
         ...notification.data,
         ...heldNoticeData(notification),

@@ -487,6 +487,20 @@ export class GameOptions extends Window {
           })()
         ),
         s(
+          `<label>${t('GameOptions.show-help')}</label>`,
+          (() => {
+            const input = s<HTMLInputElement>(
+              `<input type="checkbox"${
+                options.get('showHelp', true) ? ' checked' : ''
+              }>`
+            );
+
+            return h(input, {
+              change: () => options.set('showHelp', input.checked),
+            });
+          })()
+        ),
+        s(
           `<label>${t('GameOptions.unit-edge-margin')}</label>`,
           (() => {
             const input = s<HTMLInputElement>(

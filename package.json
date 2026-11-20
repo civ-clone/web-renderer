@@ -194,6 +194,7 @@
     "test:civ2-cities": "node tools/run-suite.js ui civ2Cities",
     "test:report-table": "node tools/run-suite.js ui reportTable",
     "test:choice-window": "node tools/run-suite.js ui choiceWindow",
+    "test:game-tips": "node tools/run-suite.js ui gameTips",
     "test:how-to-play": "node tools/run-suite.js ui howToPlay",
     "test:choice-lists": "node tools/run-suite.js ui choiceLists",
     "test:cities-list": "node tools/run-suite.js ui citiesList",

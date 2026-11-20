@@ -39,6 +39,7 @@ i18next.addResources('en', 'default', {
   'GameMenu.wonders-report': 'Wonders of the World',
   'GameOptions.title': '$t(GameMenu.options)',
   'GameOptions.auto-end-turn': 'Auto End of Turn?',
+  'GameOptions.show-help': 'Show help as you play',
   // The new interface's Assets row (#749): whether the tileset's sprites are imported, and the import.
   'GameOptions.assets': 'Assets',
   'GameOptions.assets-checking': 'Checking…',
@@ -382,6 +383,35 @@ i18next.addResources('en', 'default', {
   'HowToPlay.prompt.question': 'New to the game?',
   'HowToPlay.prompt.open': 'How to play',
   'HowToPlay.prompt.dismiss': 'Dismiss',
+  // The help as the game is played (#1295): a sentence or two at each moment, How to play holding the rest.
+  'GameTip.title': 'Help',
+  'GameTip.stop': 'Don’t show help again',
+  'GameTip.found-city_desktop':
+    'Your Settlers can build your first city where they stand: press {{key}}, or choose “$t(unit:Action.FoundCity.name)”. How to play, in the Game menu, has the rest of the controls.',
+  'GameTip.found-city_touch':
+    'Your Settlers can build your first city where they stand: choose “$t(unit:Action.FoundCity.name)” from their buttons. How to play, in the Game menu, has the rest of the controls.',
+  'GameTip.city-founded_desktop':
+    'Your first city. Click it to choose what it builds and which squares its people work.',
+  'GameTip.city-founded_touch':
+    'Your first city. Tap it to choose what it builds and which squares its people work.',
+  'GameTip.unit-built_desktop':
+    'A new unit is ready. Move it with the arrow keys or the numeric keypad, or press and hold on a square further away and choose Go to.',
+  'GameTip.unit-built_touch':
+    'A new unit is ready. Press and hold a square next to it to move there, or one further away and choose Go to.',
+  'GameTip.fortify_desktop':
+    'A unit fortified in a city defends it better: press {{key}}, or choose “$t(unit:Action.Fortify.name)”. Keep one in each city.',
+  'GameTip.fortify_touch':
+    'A unit fortified in a city defends it better: choose “$t(unit:Action.Fortify.name)”. Keep one in each city.',
+  'GameTip.research':
+    'Choose what your people study next. Each advance brings new units, buildings or ways to govern.',
+  'GameTip.expand':
+    'More cities mean more of everything. Build Settlers to found them, and to farm, mine and build roads on the land between.',
+  'GameTip.disorder':
+    'A city in disorder builds nothing. Open it and make some of its people entertainers, or build a Temple there.',
+  'GameTip.starving':
+    'A city with no food left shrinks. Open it and have its people work squares with more food, or irrigate the land around it.',
+  'GameTip.barbarians':
+    'Barbarians attack the cities nearest them. Keep a defender fortified in each city.',
 });
 
 // What the setup says about the rule sets themselves (#954), beside the sets' own names, which are their packages'.
