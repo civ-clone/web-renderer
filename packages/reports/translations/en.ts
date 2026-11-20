@@ -94,9 +94,10 @@ i18next.addResources('en', 'default', {
   'Civilopedia.effect.tile_yield_percent_roads':
     '+{{percent}}% {{yield}} on squares with a road or railroad, and the city’s own square',
   'Civilopedia.effect.acts_as': 'Has the effect of {{improvement}}',
-  'Civilopedia.effect.veteran_units': 'New {{unit}} built here are veterans',
+  'Civilopedia.effect.veteran_units':
+    'New military {{unit}} built here are veterans',
   'Civilopedia.effect.veteran_units_scope_player':
-    'New {{unit}} built in any of your cities are veterans',
+    'New military {{unit}} built in any of your cities are veterans',
   'Civilopedia.effect.heals': 'Fully repairs {{unit}} here',
   'Civilopedia.effect.airlift':
     'Lets {{unit}} fly between two cities that both have one',

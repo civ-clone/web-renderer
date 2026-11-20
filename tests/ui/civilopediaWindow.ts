@@ -636,7 +636,7 @@ const run = async (): Promise<void> => {
     text(entryHtml(civ2, data))
       .split('What it does')[1]
       ?.split('Requirements')[0],
-    'New land units built in any of your cities are veterans' +
+    'New military land units built in any of your cities are veterans' +
       'Content citizens ×2, from each Temple, in all your cities' +
       'Defense of the units in the city ×2, against ships, except when ships defend'
   );
