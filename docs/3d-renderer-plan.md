@@ -364,10 +364,9 @@ before going to the next unit, which is chosen at once as before; a key or a pre
 **Third part, the options: done.** Under `?3d=1`, Options has how units move (walk, walk quickly, or at once) and
 whether other players' units are shown moving.
 
-**Fourth part, paths: done.** Aircraft fly an arc, climbing off their stands and landing at the walk's end. Ships sit
+**Fourth part, paths: done, but for walks along winding roads.** Aircraft fly an arc, climbing off their stands and landing at the walk's end. Ships sit
 in rings of ripples out at sea, and leave a wake of foam as they sail, spreading out in a V and thinning away. Walks
-already keep to roads, which are drawn straight between squares' middles, as walks go; roads that wind would need
-walks to follow them.
+keep to roads at squares' middles and edges; roads now wind between (3.4), and walks following them is still to do.
 
 - **What:**
   - the shown state and held patches (spec §8.2);
@@ -428,7 +427,7 @@ Plants are scattered by seed, each where it has room. They stay clear of a unit'
 **Woods: done.** Forest, jungle and swamp grow as one canopy across their squares, as Civ1's forests run together (spec §5.1): trees stand at the points of a lattice over the whole ground, whole across the edge to the same woods and thinning to a fringe at the edge to other ground, so a forest is a wood rather than a clump on each square. An all-forest chunk is 48,000–58,000 triangles and 35–50 ms to lay, a few squares a frame.
 
 **3.4, first part: done.** What's laid on the land is made by code (`packages/map-3d/overlay/`), one vertex-coloured mesh a chunk, so it costs a draw call a chunk:
-- roads and railroads are draped over the land, joined to their neighbours as the 2D map joins them, along the topology's directions, and at the nearest copy across the world's seams;
+- roads and railroads are draped over the land, joined to their neighbours as the 2D map joins them, along the topology's directions, and at the nearest copy across the world's seams. Roads wind like country lanes, each half bowing its own way and meeting its neighbour's at the edge; railroads are straight;
 - irrigation and farmland are rows of crops with ditches; pollution is a dark smear;
 - mines, fortresses, airbases, specials (`packages/models-builtin/specials.ts`, every feature Civ1 and Civ2 name) and huts are small solids, standing clear of a unit's stand;
 - a chunk's overlay is made again with its land, or when what's laid on a square in it or next to it changes. A unit moving changes nothing laid, so it remakes nothing, and a road built rebuilds no land. Chunks are made nearest the camera first;
