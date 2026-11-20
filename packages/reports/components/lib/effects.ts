@@ -13,8 +13,11 @@ import { EntriesByKey, classLink } from './requirements';
 import i18next, { t } from 'i18next';
 import { escape } from '@civ-clone/ui-widgets/lib/html';
 
-// The fields a clause says, in the order they're said.
+// The fields a clause says, in the order they're said. `scope` (where it acts: `player`, every city of its owner;
+//  `continent`, its owner's cities on its continent; none, its own city) is said last, by its own wording.
 export const clauses: string[] = [
+  'per',
+  'inCitiesWith',
   'needs',
   'with',
   'replaces',
@@ -92,7 +95,9 @@ export const effectLine = (
     words = Object.entries(effect)
       .filter(
         ([field, fieldValue]) =>
-          field !== 'type' && typeof fieldValue === 'string'
+          field !== 'type' &&
+          field !== 'scope' &&
+          typeof fieldValue === 'string'
       )
       .map(([, fieldValue]) => fieldValue as string),
     sign = value !== null && value < 0 ? ['negative'] : [],
@@ -116,7 +121,10 @@ export const effectLine = (
   // The fields as interpolation values only, so none can be read as one of `t`'s own options (`ns`, `count`…).
   const replace = Object.fromEntries(
       Object.entries(effect)
-        .filter(([field]) => field !== 'type' && !clauses.includes(field))
+        .filter(
+          ([field]) =>
+            field !== 'type' && field !== 'scope' && !clauses.includes(field)
+        )
         .map(([field, fieldValue]) => [field, said(fieldValue, entries) ?? ''])
     ),
     main = t(keys, {
@@ -133,26 +141,61 @@ export const effectLine = (
       count,
       interpolation: { escapeValue: false },
     }),
+    // A clause may say the scope with it ("in all your cities with a Temple", `clause.inCitiesWith_player`), and
+    //  then the scope isn't said again.
+    scoped = (field: string): string | undefined =>
+      typeof effect.scope === 'string'
+        ? [`Civilopedia.effect.clause.${field}_${effect.scope}`].find((key) =>
+            i18next.exists(key)
+          )
+        : undefined,
+    scopeSaid = clauses.some(
+      (field) => effect[field] !== undefined && scoped(field) !== undefined
+    ),
     qualified = clauses
       .map((field) => {
         const targets = said(
           effect[field] ?? null,
           entries,
-          field === 'needs' || field === 'notWith'
+          field === 'needs' || field === 'notWith' || field === 'inCitiesWith'
             ? 'Civilopedia.list_or'
             : 'Civilopedia.list'
         );
 
         return targets === null
           ? null
-          : t(`Civilopedia.effect.clause.${field}`, {
+          : t(scoped(field) ?? `Civilopedia.effect.clause.${field}`, {
               targets,
               interpolation: { escapeValue: false },
             });
       })
-      .filter((clause): clause is string => clause !== null);
+      .filter((clause): clause is string => clause !== null),
+    // A type may word its scope its own way (`scope.player_unit_movement`), or not at all (an empty wording).
+    scopeKey =
+      typeof effect.scope === 'string'
+        ? [
+            `Civilopedia.effect.scope.${effect.scope}_${effect.type}`,
+            `Civilopedia.effect.scope.${effect.scope}`,
+          ].find((key) => i18next.exists(key))
+        : undefined;
 
-  return [main, ...qualified].join(', ');
+  // A scope with no wording would read as the effect's own city, so it's said to be missing.
+  if (typeof effect.scope === 'string' && scopeKey === undefined) {
+    const missing = `Civilopedia.effect.scope.${effect.scope}`;
+
+    if (!warned.has(missing)) {
+      warned.add(missing);
+
+      console.warn(`Civilopedia: no wording for the scope '${missing}'.`);
+    }
+  }
+
+  const scope =
+    scopeSaid || scopeKey === undefined || t(scopeKey) === ''
+      ? []
+      : [t(scopeKey)];
+
+  return [main, ...qualified, ...scope].join(', ');
 };
 
 // What a city pays for an entry, said after what it does.

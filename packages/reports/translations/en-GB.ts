@@ -3,6 +3,10 @@ import i18next from 'i18next';
 
 i18next.addResources('en-GB', 'default', {
   'Civilopedia.section.advance': 'Civilisation Advances',
+  'Civilopedia.effect.shared_advances_one':
+    'Gives you any advance that {{count}} other civilisation knows',
+  'Civilopedia.effect.shared_advances_other':
+    'Gives you any advance that {{count}} other civilisations know',
   'Civilopedia.effect.defence_multiplier':
     'Defence of the units in the city ×{{value}}',
   'Civilopedia.kind.advance': 'Civilisation Advance',
