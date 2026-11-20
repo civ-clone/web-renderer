@@ -120,11 +120,14 @@ export const gameKeyRows = (): [string[], string][] =>
 export const unitKeyRows = (): [string[], string][] =>
   Object.entries(keyToActionsMap).map(([key, actions]): [string[], string] => [
     [key],
-    actions
-      .map((action) =>
-        t(`Action.${action}.name`, { defaultValue: action, ns: 'unit' })
+    // Once each: two orders can share a name (Pillage, and a Spy's).
+    Array.from(
+      new Set(
+        actions.map((action) =>
+          t(`Action.${action}.name`, { defaultValue: action, ns: 'unit' })
+        )
       )
-      .join(t('HowToPlay.or')),
+    ).join(t('HowToPlay.or')),
   ]);
 
 const keys = (): HTMLElement =>
@@ -218,6 +221,8 @@ let open: HowToPlay | null = null;
 export class HowToPlay extends Window {
   #device: Device;
   #media: MediaQueryList | null = window.matchMedia?.('(hover: none)') ?? null;
+  // Whether the touch screen's keyboard shortcuts are open.
+  #keysOpen = false;
   // Chosen by the player, the device stays as chosen: a tablet docked to a keyboard doesn't switch it back.
   #chosen = false;
   #mediaListener = (): void => {
@@ -253,6 +258,19 @@ export class HowToPlay extends Window {
 
   /** Describes `device`. */
   show(device: Device): void {
+    // The keyboard shortcuts stay open, if they were, and the focus where it was, if it was in here.
+    const shownFold = this.element().querySelector('.how-to-play-more-keys');
+
+    // Kept while a view without the fold is shown, for when the touch screen's is shown again.
+    if (shownFold !== null) {
+      this.#keysOpen = shownFold.hasAttribute('open');
+    }
+
+    const focusedDevice =
+      (document.activeElement as HTMLElement | null)?.closest?.(
+        '.how-to-play-device-option'
+      ) ?? null;
+
     this.#device = device;
 
     const switcher = s(
@@ -268,12 +286,6 @@ export class HowToPlay extends Window {
             click: () => {
               this.#chosen = true;
               this.show(option);
-
-              (
-                this.element().querySelector(
-                  `.how-to-play-device-option[data-device="${option}"]`
-                ) as HTMLButtonElement | null
-              )?.focus();
             },
           }
         );
@@ -293,6 +305,20 @@ export class HowToPlay extends Window {
         ...content(device)
       )
     );
+
+    const fold = this.element().querySelector<HTMLDetailsElement>(
+      '.how-to-play-more-keys'
+    );
+
+    fold?.toggleAttribute('open', this.#keysOpen);
+
+    if (focusedDevice !== null) {
+      this.element()
+        .querySelector<HTMLButtonElement>(
+          `.how-to-play-device-option[data-device="${device}"]`
+        )
+        ?.focus();
+    }
   }
 
   /** Opens How to play, or brings the one open to the front. */

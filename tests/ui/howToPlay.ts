@@ -108,6 +108,11 @@ const run = async (): Promise<void> => {
     [true, true]
   );
   expect(
+    'Found City by the name its button has',
+    body(help).textContent!.includes('choose “Found a new city”'),
+    true
+  );
+  expect(
     'and no keys outside the Keyboard shortcuts fold',
     [
       keyCaps(body(help)) - keyCaps(body(help).querySelector('details')),
@@ -118,6 +123,19 @@ const run = async (): Promise<void> => {
   expect(
     'opening it again brings the one open forward',
     HowToPlay.open() === help,
+    true
+  );
+
+  // The keyboard shortcuts, opened, stay open when the device changes.
+  body(help).querySelector('details')!.setAttribute('open', '');
+  touch = false;
+  listeners.forEach((listener) => listener());
+  touch = true;
+  listeners.forEach((listener) => listener());
+
+  expect(
+    'the keyboard shortcuts, opened, stay open across a change',
+    body(help).querySelector('details')?.hasAttribute('open'),
     true
   );
 
@@ -210,6 +228,13 @@ const run = async (): Promise<void> => {
     'named as the unit’s buttons name them',
     unitKeyRows().find(([[key]]) => key === 'b')?.[1],
     'Found a new city or Join city'
+  );
+  expect(
+    'each name once, where two orders share one',
+    unitKeyRows()
+      .find(([[key]]) => key === 'P')?.[1]
+      .split(' or ').length,
+    1
   );
   expect(
     'and the game’s keys each have their words',

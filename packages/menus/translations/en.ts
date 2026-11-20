@@ -306,28 +306,28 @@ i18next.addResources('en', 'default', {
   'HowToPlay.first.move_touch':
     'Move the active unit by pressing and holding a square next to it, and choosing what to do there. Press and hold a square further away, and choose Go to, to send it there.',
   'HowToPlay.first.city':
-    'Settlers build cities: with your Settlers active, choose Found City, from the unit’s buttons or its menu, and a city is built where they stand.',
+    'Settlers build cities: with your Settlers active, choose “$t(unit:Action.FoundCity.name)”, from the unit’s buttons or its menu, and a city is built where they stand.',
   'HowToPlay.first.production':
     'Each city builds one thing at a time. Open a city, on the map or from the Cities list, to choose what it builds and which squares its people work.',
   'HowToPlay.first.end-turn':
     'To end the turn yourself, use the end-of-turn button.',
   'HowToPlay.first.screen':
-    'The top bar shows your treasury, your research and your government, and each opens more about it. The sidebar has the map of the world, the active unit, your cities and how you compare with the other civilizations.',
+    'The top bar shows your treasury, your research and your government. The sidebar has the map of the world, the active unit, your cities and how you compare with the other civilizations.',
   'HowToPlay.touch.tap-city': 'Tap one of your cities to open it.',
   'HowToPlay.touch.tap-units':
     'Tap a square with your units on it to choose which of them to give orders.',
-  'HowToPlay.touch.tap-elsewhere': 'Tap anywhere else to centre the map there.',
+  'HowToPlay.touch.tap-elsewhere': 'Tap anywhere else to center the map there.',
   'HowToPlay.touch.hold':
     'Press and hold a square to see what the active unit can do there: move, attack, or go further.',
   'HowToPlay.touch.drag': 'Drag the map to move it.',
   'HowToPlay.touch.buttons':
-    'The buttons in the Active Unit panel give the unit its orders.',
+    'The active unit’s order buttons give it its orders.',
   'HowToPlay.touch.show-keys': 'Keyboard shortcuts',
   'HowToPlay.desktop.click-city': 'Click one of your cities to open it.',
   'HowToPlay.desktop.click-units':
     'Click a square with your units on it to choose which of them to give orders.',
   'HowToPlay.desktop.click-elsewhere':
-    'Click anywhere else to centre the map there.',
+    'Click anywhere else to center the map there.',
   'HowToPlay.desktop.hold':
     'Press and hold on a square to see what the active unit can do there: move, attack, or go further.',
   'HowToPlay.desktop.hold_right':
@@ -341,16 +341,17 @@ i18next.addResources('en', 'default', {
     'Rest the pointer on one of your cities to see what it’s building, or on a square to see what’s there.',
   'HowToPlay.keys.intro':
     'The arrow keys, and the numeric keypad, move the active unit.',
-  'HowToPlay.keys.move.straight': 'Move up, down, left or right',
+  'HowToPlay.keys.move.straight':
+    'Move up, down, left or right (on a hex map, up and down don’t move)',
   'HowToPlay.keys.move.diagonal': 'Move diagonally',
   'HowToPlay.keys.game': 'On the map:',
   'HowToPlay.keys.unit':
-    'The active unit’s orders, which its buttons show too:',
+    'The active unit’s orders, which its buttons show too (some are Civilization II’s alone):',
   'HowToPlay.keys.windows':
     'A city and the lists have keys of their own, shown on their buttons, and Escape closes a window.',
   'HowToPlay.key.endTurn': 'End the turn, or go on to what’s waiting',
   'HowToPlay.key.wait': 'Wait, and give the next unit its orders',
-  'HowToPlay.key.centre': 'Centre the map on the active unit',
+  'HowToPlay.key.centre': 'Center the map on the active unit',
   'HowToPlay.key.findCity': 'Find a city',
   'HowToPlay.key.zoomIn': 'Zoom in and out',
   'HowToPlay.key.toggleUnits': 'Show or hide the units',
@@ -373,7 +374,7 @@ i18next.addResources('en', 'default', {
   'HowToPlay.more.reports':
     'The reports, in the Game menu, show your cities, your armies, your trade, your research and how you stand.',
   'HowToPlay.more.saves':
-    'The game is saved as you play, and Continue on the title screen picks up where you left off. Save Game, in the Game menu, keeps a copy as a file.',
+    'The game is saved as you play, and the title screen picks it up where you left off. Save Game, in the Game menu, keeps a copy as a file.',
   'HowToPlay.more.new-game':
     'A new game asks for a level of difficulty, from the easiest to the toughest. $t(NewGameWindow.customize) chooses your civilization, the world and the rules too.',
   'HowToPlay.more.options':

@@ -4,7 +4,11 @@ import i18next from 'i18next';
 i18next.addResources('en-GB', 'default', {
   'GameOptions.colour-scheme': 'Colours',
   'HowToPlay.first.screen':
-    'The top bar shows your treasury, your research and your government, and each opens more about it. The sidebar has the map of the world, the active unit, your cities and how you compare with the other civilisations.',
+    'The top bar shows your treasury, your research and your government. The sidebar has the map of the world, the active unit, your cities and how you compare with the other civilisations.',
+  'HowToPlay.touch.tap-elsewhere': 'Tap anywhere else to centre the map there.',
+  'HowToPlay.desktop.click-elsewhere':
+    'Click anywhere else to centre the map there.',
+  'HowToPlay.key.centre': 'Centre the map on the active unit',
   'HowToPlay.more.new-game':
     'A new game asks for a level of difficulty, from the easiest to the toughest. $t(NewGameWindow.customize) chooses your civilisation, the world and the rules too.',
   'GameMenu.retire-confirm':

@@ -36,8 +36,16 @@ export const howToPlayPrompt = (): HTMLElement | null => {
   const element = s('<p class="how-to-play-prompt"></p>'),
     question = document.createElement('span'),
     answered = (): void => {
+      const host = element.parentElement,
+        hadFocus = element.contains(document.activeElement);
+
       markHowToPlaySeen();
       element.remove();
+
+      // The focus back on the menu it was in, for its keys: the button it was on is gone.
+      if (hadFocus) {
+        host?.querySelector<HTMLButtonElement>('button:not([hidden])')?.focus();
+      }
     };
 
   question.textContent = t('HowToPlay.prompt.question');
