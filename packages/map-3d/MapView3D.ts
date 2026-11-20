@@ -363,6 +363,18 @@ export class MapView3D implements MapRenderer {
     this.#artId = deps.art.id();
     this.world = deps.world;
     this.#land = new Land(deps.world);
+    // A city attacked is laid as it was till the blow, as its marker shows it (`#before`): the first battle there's.
+    this.#land.keepCities((x, y) => {
+      const square = `${x},${y}`;
+
+      for (const before of this.#before.values()) {
+        if (before.square === square) {
+          return before.city;
+        }
+      }
+
+      return undefined;
+    });
     this.#walks = new Walks(this.#land.layout.period());
     this.#walkOptions = deps.walks;
     this.#inner = innerOf(this.#land.layout, deps.world.topology());
@@ -1255,6 +1267,8 @@ export class MapView3D implements MapRenderer {
       );
 
     this.#before.delete(battle.id);
+    // Its city laid as it is now, or as the next battle there kept it.
+    this.#land.changed([[x, y]], ...this.#focus());
 
     if (this.#awaiting.has(loser)) {
       this.#gone.add(loser);
@@ -1507,7 +1521,13 @@ export class MapView3D implements MapRenderer {
 
       this.#takeAway(`${id}-fallen`);
       this.#fallen.delete(id);
-      this.#before.delete(id);
+
+      if (this.#before.delete(id)) {
+        this.#land.changed(
+          [[battle.defenderSquare.x, battle.defenderSquare.y]],
+          ...this.#focus()
+        );
+      }
 
       if (this.#awaiting.has(attacker) && !this.#leftOff(attacker)) {
         if (!won) {

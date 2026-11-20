@@ -411,13 +411,15 @@ const drawCity = (kit: MarkerKit, city: CityMarker): Group => {
  * The unit on top of a stack, as the built-in set draws its type, standing on its square's middle. What stands over it
  *  (its bar, flag, label and pointer) stands over the point `badges.at` says, from `badges.over` up the screen: over
  *  the unit, or over a city's name. Drawn to fly (`flying`), an aircraft's figures and what stands over them are a
- *  part of their own (`ALOFT_PART`), to climb off its stand and ring, which stay on the ground.
+ *  part of their own (`ALOFT_PART`), to climb off its stand and ring, which stay on the ground. A ship `atSea`, not in
+ *  front of a city's buildings, sits in rings of ripples.
  */
 const drawUnit = (
   kit: MarkerKit,
   unit: UnitMarker,
   badges: { at: [number, number, number]; over: number } | null = null,
-  flying = false
+  flying = false,
+  atSea = badges === null
 ): Group => {
   const group = new Group(),
     { ring } = kit.geometries,
@@ -430,7 +432,7 @@ const drawUnit = (
       unit.size,
       apart ? 'figures' : 'whole',
       // Out at sea, not in front of a city's buildings: in rings of ripples.
-      badges === null
+      atSea
     ),
     aloft = apart ? new Group() : group,
     top = body.boundingBox?.max.y ?? 0.3,
@@ -566,7 +568,9 @@ export const drawMarker = (
               at: [CITY_NAME_AT[0], CITY_NAME_AT[1], CITY_NAME_AT[2] - inFront],
               over: CITY_LABEL + SPACE,
             },
-        flying
+        flying,
+        // In front of a city's buildings, its marker shown or hidden, not out at sea.
+        inFront === 0
       );
 
     pawn.name = UNIT_PART;

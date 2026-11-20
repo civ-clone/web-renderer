@@ -1,5 +1,5 @@
 // A city's sprawl on its own square on the 3D map (docs/3d-renderer.md §7.2, plan 4.1): a plaza at its middle, streets
-//  from it out to each way a road comes in and to its quay, and lots along them and round them, each holding a
+//  from it out to each way a road comes in and down to its quay, and lots along them and round them, each holding a
 //  building. Pure, and seeded from the city: the same city at the same size, on the same roads, is laid out the same
 //  every time.
 //
@@ -43,13 +43,15 @@ export type CityLayout = {
 
 /**
  * What a city's sprawl is laid out from: its seed, how many lots it has built (`lotsFor`), how many storeys taller
- *  those near its middle stand (`tierFor`), and the ways its streets go out, by its neighbours' offsets.
+ *  those near its middle stand (`tierFor`), the ways its streets go out, and its neighbours of sea, one of which its
+ *  quay's street goes down to, by their offsets.
  */
 export type CityPlan = {
   seed: number;
   lots: number;
   tier: number;
   ways: (readonly [number, number])[];
+  sea: (readonly [number, number])[];
 };
 
 /** A city's walls: the ring they stand on, from the square's middle, and how thick they are, from it each way. */
@@ -110,17 +112,52 @@ export const citySeed = (id: string): number => {
   return hash >>> 0;
 };
 
-/** What a city seeded `seed` of `size` is laid out from, with its streets out the `ways`. */
+/** What a city seeded `seed` of `size` is laid out from, with its streets out the `ways`, and the `sea` beside it. */
 export const planFor = (
   seed: number,
   size: number,
-  ways: readonly (readonly [number, number])[]
+  ways: readonly (readonly [number, number])[],
+  sea: readonly (readonly [number, number])[] = []
 ): CityPlan => ({
   seed,
   lots: lotsFor(size),
   tier: tierFor(size),
   ways: [...ways],
+  sea: [...sea],
 });
+
+/**
+ * The way down to the quay of a city on the square at `place`, beside the `sea` (its neighbours' offsets): the one most
+ *  nearly the way they lie on the ground, taken together, so it has one quay however much sea's beside it. None, with
+ *  none.
+ */
+export const quayOf = (
+  place: SprawlPlace,
+  sea: readonly (readonly [number, number])[]
+): (readonly [number, number])[] => {
+  const [u, v] = place.centre,
+    ways = sea.map((offset) => {
+      const [nu, nv] = place.toward(offset),
+        length = Math.hypot(nu - u, nv - v);
+
+      return {
+        offset,
+        du: length === 0 ? 0 : (nu - u) / length,
+        dv: length === 0 ? 0 : (nv - v) / length,
+      };
+    }),
+    su = ways.reduce((sum, { du }) => sum + du, 0),
+    sv = ways.reduce((sum, { dv }) => sum + dv, 0),
+    most = ({ du, dv }: { du: number; dv: number }): number =>
+      du * su + dv * sv;
+
+  return ways.length === 0
+    ? []
+    : [
+        ways.reduce((best, way) => (most(way) > most(best) ? way : best))
+          .offset,
+      ];
+};
 
 // A share, 0 to 1, from a seed and a number: the same each time.
 const share = (seed: number, n: number): number => {
@@ -218,21 +255,23 @@ export const fromFootprint = (at: Point, corners: Point[]): number => {
  */
 export const sprawl = (
   place: SprawlPlace,
-  { seed, lots: built, tier, ways }: CityPlan,
+  { seed, lots: built, tier, ways, sea }: CityPlan,
   inFront: Point
 ): CityLayout => {
   const [u, v] = place.centre,
-    streets = ways.flatMap((offset): [Point, Point][] => {
-      const [nu, nv] = place.toward(offset),
-        edge: [number, number] = [(u + nu) / 2, (v + nv) / 2],
-        du = edge[0] - u,
-        dv = edge[1] - v,
-        length = Math.hypot(du, dv);
+    streets = [...ways, ...quayOf(place, sea)].flatMap(
+      (offset): [Point, Point][] => {
+        const [nu, nv] = place.toward(offset),
+          edge: [number, number] = [(u + nu) / 2, (v + nv) / 2],
+          du = edge[0] - u,
+          dv = edge[1] - v,
+          length = Math.hypot(du, dv);
 
-      return length === 0
-        ? []
-        : [[[u + (du / length) * PLAZA, v + (dv / length) * PLAZA], edge]];
-    }),
+        return length === 0
+          ? []
+          : [[[u + (du / length) * PLAZA, v + (dv / length) * PLAZA], edge]];
+      }
+    ),
     strips = streets.map(stripOf),
     // Which way a lot at `at` faces: square to the street it's beside, towards it, if it's beside one, or else to the
     //  plaza.

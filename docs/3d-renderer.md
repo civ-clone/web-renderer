@@ -756,7 +756,8 @@ All of these are driven by map events (§8):
   - A city's lot is laid with the land, as its overlay (`overlayFor`'s `city`): it follows the land and casts shadows,
     and nothing else is laid there. Its marker keeps its walls, a ring round the buildings, and its name and size.
   - A paved plaza at its middle, and streets from it to the edge it shares with each neighbour whose road or railroad
-    comes in (where the neighbour's half arrives), and one to its quay, towards the neighbours of sea taken together.
+    comes in (where the neighbour's half arrives), and one down to its quay, to the neighbour of sea most nearly the way
+    they all lie on the ground.
   - Lots: one sequence seeded from the city's id, from a jostled grid over the square, nearest the middle first. A city
     of a size has that many from the front, 5 at size 1 and 2 more each size, up to 30 or as many as fit, so one that
     grows keeps its buildings and adds the next out, and one that shrinks loses the outermost. Thirty fit with few
@@ -767,8 +768,9 @@ All of these are driven by map events (§8):
     buildings stand round the plaza and behind the unit, which stands in the open.
   - Each lot a house: beside a street, facing it, square to it, so the houses line it; otherwise facing the plaza. A
     storey or two, taller near the middle each six sizes, sunk to its lowest corner on a slope, roofed in a seeded
-    colour, none the owner's. A city taken keeps its look till its battle's blow, as its marker does, unless it shrinks
-    as it's taken, when it loses its outer houses as the patch comes.
+    colour of its own lot's, none the owner's.
+  - A city attacked is laid as it was till the battle's blow, as its marker shows it: one that shrinks loses its outer
+    houses then, and one destroyed its whole town.
   - Still to come: neighbouring squares (about size 4 on), side streets following the land, eras' buildings,
     landmarks and the palace, docks.
 

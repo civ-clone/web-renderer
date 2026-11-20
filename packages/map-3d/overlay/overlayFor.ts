@@ -43,42 +43,14 @@ export type SquareOverlay = {
   // For woods, its neighbours with a road or a city, by offset: a road between two of them that crosses this square's
   //  corner, a diagonal road beside it, is one its trees keep clear of too.
   paths: (readonly [number, number])[];
-  // A city's lot, laid out as its sprawl (`sprawl.ts`): its seed, how many lots it's built and how tall, and the ways
-  //  its streets go out, by its neighbours' offsets (a road coming in, or its quay). Nothing else is laid on a city's
-  //  lot.
+  // A city's lot, laid out as its sprawl (`sprawl.ts`): its seed, how many lots it's built and how tall, the ways its
+  //  streets go out, by its neighbours' offsets (a road coming in), and its neighbours of sea, the way its quay's to
+  //  be. Nothing else is laid on a city's lot.
   city: CityPlan | null;
 };
 
 // Terrain a city's quay runs down to.
 const SEA = ['Ocean'];
-
-// The way a city's street goes down to its quay, if it's beside the sea: the one of its neighbours of sea most nearly
-//  the way they lie, taken together, so a city has one quay however much sea it has beside it.
-const quayOf = (
-  neighbours: readonly OverlayNeighbour[]
-): (readonly [number, number])[] => {
-  const sea = neighbours
-      .filter(({ tile }) => SEA.includes(tile.terrain?._ ?? ''))
-      .map(({ offset }) => offset),
-    [su, sv] = sea.reduce(
-      ([su, sv], [du, dv]) => {
-        const length = Math.hypot(du, dv);
-
-        return [su + du / length, sv + dv / length];
-      },
-      [0, 0]
-    ),
-    most = (offset: readonly [number, number]): number =>
-      (offset[0] * su + offset[1] * sv) / Math.hypot(offset[0], offset[1]);
-
-  return sea.length === 0
-    ? []
-    : [
-        sea.reduce((best, offset) =>
-          most(offset) > most(best) ? offset : best
-        ),
-      ];
-};
 
 // Features drawn otherwise than as a special: Civ2's rivers, which are drawn as rivers (§5.3).
 const NOT_SPECIALS = ['River'];
@@ -125,20 +97,22 @@ export const overlayFor = (
       paths: [],
       // From its id, as the engine has it: the same city whoever holds it. Out to each neighbour whose road or railroad
       //  comes in, as it lays its half (a road where the city's square has one too, or a railroad, which joins a city),
-      //  and to its quay.
+      //  and towards the sea.
       city: planFor(
         citySeed(String(city.id ?? city.name ?? '')),
         city.growth?.size ?? 1,
-        [
-          ...neighbours
-            .filter(
-              ({ tile: neighbour }) =>
-                has(neighbour, 'Road') &&
-                (has(tile, 'Road') || has(neighbour, 'Railroad'))
-            )
-            .map(({ offset }) => offset),
-          ...quayOf(neighbours),
-        ]
+        neighbours
+          .filter(
+            ({ tile: neighbour }) =>
+              has(neighbour, 'Road') &&
+              (has(tile, 'Road') || has(neighbour, 'Railroad'))
+          )
+          .map(({ offset }) => offset),
+        neighbours
+          .filter(({ tile: neighbour }) =>
+            SEA.includes(neighbour.terrain?._ ?? '')
+          )
+          .map(({ offset }) => offset)
       ),
     };
   }

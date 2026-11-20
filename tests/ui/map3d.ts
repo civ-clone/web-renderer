@@ -72,7 +72,7 @@ import {
   spriteKey,
 } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import markerFor, { TileMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
-import { OverlayMesh } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
+import { OverlayMesh, ROOFS } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
 import { IN_FRONT_OF_CITY } from '@civ-clone/ui-map-3d/markers/drawMarker';
 import { Color } from 'three';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
@@ -4291,7 +4291,8 @@ expect(
   );
 
   // Walking quickly, the blow falls in half the time. And the square attacked shows its city as it was till the blow, as
-  //  its units are: a city shrunk by the battle shows its new size then.
+  //  its units are, its town laid with the land too: a city shrunk by the battle shows its new size then, and one gone,
+  //  its town till then.
   optionsRegistry.set(MAP3D_WALKS_OPTION, 'fast');
   const battleton = {
     id: 'City-B',
@@ -4301,16 +4302,50 @@ expect(
     growth: { size: 3 },
   };
 
+  // How many points of roof are laid on the square attacked: its town's houses.
+  const roofsOn = (): number => {
+    const mesh = overlaysSet.get(glider.land().overlayKeyOf(2, 1)),
+      [cu, cv] = middleOf(square(2, 1)),
+      roofs = ROOFS.map((css) => new Color(css));
+    let found = 0;
+
+    for (let at = 0; mesh && at < mesh.positions.length; at += 3) {
+      if (
+        Math.hypot(
+          mesh.positions[at]! + mesh.u - cu,
+          mesh.positions[at + 2]! + mesh.v - cv
+        ) < 0.5 &&
+        roofs.some(
+          ({ r, g, b }) =>
+            Math.abs(mesh.colours[at]! - r) < 1e-4 &&
+            Math.abs(mesh.colours[at + 1]! - g) < 1e-4 &&
+            Math.abs(mesh.colours[at + 2]! - b) < 1e-4
+        )
+      ) {
+        found++;
+      }
+    }
+
+    return found;
+  };
+
   square(2, 1).city = battleton as unknown as Tile['city'];
   repatched([1, 1, [walker]], [2, 1, [rival]]);
   walkersSet.length = 0;
+
+  const roofsBefore = roofsOn();
+
   fought(walker, [1, 1], rival, [2, 1], 'attacker');
   // Shrunk in place, as the page fills what it holds.
   battleton.growth.size = 2;
   patch([1, 1, [walker]], [2, 1, []]);
   runFrames(1);
 
-  const cityBefore = [markers.get('2,1')?.city?.size, unitOn(2, 1)];
+  const cityBefore = [
+    markers.get('2,1')?.city?.size,
+    unitOn(2, 1),
+    roofsOn() === roofsBefore,
+  ];
 
   runFrames(6);
 
@@ -4321,16 +4356,52 @@ expect(
   ];
 
   runFrames();
+
+  const shrunk = roofsOn() < roofsBefore;
+
+  // A city of 1 its defender's beaten in: gone in the battle's patch, its town laid till the blow, then none.
+  const hamlet = {
+    ...battleton,
+    id: 'City-H',
+    name: 'Hamlet',
+    growth: { size: 1 },
+  };
+
+  square(2, 1).city = hamlet as unknown as Tile['city'];
+  repatched([1, 1, [walker]], [2, 1, [rival]]);
+  walkersSet.length = 0;
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  square(2, 1).city = null;
+  patch([1, 1, [walker]], [2, 1, []]);
+  runFrames(1);
+
+  const hamletTillTheBlow = [markers.get('2,1')?.city?.size, roofsOn() > 0];
+
+  runFrames();
+
+  const hamletAfter = [markers.get('2,1')?.city ?? null, roofsOn()];
+
   optionsRegistry.set(MAP3D_WALKS_OPTION, 'normal');
   square(2, 1).city = null;
   repatched([1, 1, []], [2, 1, []]);
 
   expect(
-    'walking quickly, the blow falls in half the time; the square attacked shows its city as it was till the blow, then as it is',
-    [cityBefore, quickBlow],
+    'walking quickly, the blow falls in half the time; the square attacked shows its city as it was till the blow, its town too, then as it is; a city taken and gone, its town till the blow',
     [
-      [3, ['Unit-R', 1]],
+      cityBefore,
+      quickBlow,
+      shrunk,
+      roofsBefore > 0,
+      hamletTillTheBlow,
+      hamletAfter,
+    ],
+    [
+      [3, ['Unit-R', 1], true],
       [2, null, ['battle', 'battle-fallen']],
+      true,
+      true,
+      [1, true],
+      [null, 0],
     ]
   );
 

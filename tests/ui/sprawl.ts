@@ -74,13 +74,42 @@ const squareAt = (x: number, y: number): SprawlPlace => ({
   south = [0, 1] as const,
   inFrontOf = ([u, v]: Point): Point => [u, v + IN_FRONT_OF_CITY],
   positions = (lots: Lot[]) => lots.map(({ at }) => at.join(',')),
-  // How far out the inside of the walls is, as they're drawn: their nearest point to the middle, across the ground.
+  // How far out the inside of the walls is, as they're drawn: the nearest any of their faces comes to the middle, across
+  //  the ground.
   wallsInside = (() => {
-    const at = wallsGeometry().getAttribute('position');
+    const geometry = wallsGeometry(),
+      at = geometry.getAttribute('position'),
+      corners =
+        geometry.index === null
+          ? Array.from({ length: at.count }, (_, index) => index)
+          : Array.from(geometry.index.array),
+      // How near the middle the edge from one point to another comes, across the ground.
+      edge = (a: number, b: number): number => {
+        const au = at.getX(a),
+          av = at.getZ(a),
+          du = at.getX(b) - au,
+          dv = at.getZ(b) - av,
+          t =
+            du === 0 && dv === 0
+              ? 0
+              : Math.max(
+                  0,
+                  Math.min(1, -(au * du + av * dv) / (du * du + dv * dv))
+                );
+
+        return Math.hypot(au + du * t, av + dv * t);
+      };
     let nearest = Infinity;
 
-    for (let index = 0; index < at.count; index++) {
-      nearest = Math.min(nearest, Math.hypot(at.getX(index), at.getZ(index)));
+    // Along each side of each of its faces, not only at their corners.
+    for (let face = 0; face < corners.length; face += 3) {
+      const [a, b, c] = corners.slice(face, face + 3) as [
+        number,
+        number,
+        number
+      ];
+
+      nearest = Math.min(nearest, edge(a, b), edge(b, c), edge(c, a));
     }
 
     return nearest;
@@ -239,7 +268,7 @@ const squareAt = (x: number, y: number): SprawlPlace => ({
 // What's drawn round a city that its lots keep clear of: a unit's feet reach no further than the room kept, and the
 //  walls stand out beyond where the lots reach.
 expect(
-  'a unit’s stand, ring and bank are within the room kept for them, and the plaza’s as wide as the room kept',
+  'a unit’s stand, ring and bank are within the room kept for them, and the walls stand well out from the middle',
   [unitsFeet > 0.2, unitsFeet <= UNIT_ROOM, wallsInside > 0.3],
   [true, true, true]
 );
@@ -424,6 +453,107 @@ expect(
       `${topologyId}: every building on its own square, inside the walls, clear of the others, the streets, the plaza and the unit’s feet; plenty with a street out every way`,
       [faults.slice(0, 5), most >= 20, fewestAllWays >= 12],
       [[], true, true]
+    );
+  }
+);
+
+// One quay, whatever sea's beside it, on every grid: for every run of neighbours of sea round every square, its street
+//  goes the way the run lies on the ground, within half the way between two neighbours of its middle.
+(['square', 'staggered-iso', 'hex-odd-r'] as TopologyId[]).forEach(
+  (topologyId) => {
+    const size = 8,
+      world = new World({
+        _: 'World',
+        __: ['World', 'DataObject'],
+        id: 'world',
+        width: size,
+        height: size,
+        topologyId,
+        tiles: Array.from({ length: size * size }, (_, index) => ({
+          x: index % size,
+          y: Math.floor(index / size),
+          terrain: { _: 'Grassland', __: ['Grassland'], features: [] },
+          improvements: [],
+          units: [],
+          city: null,
+        })) as never,
+      }),
+      { layout } = new Land(world),
+      topology = world.topology(),
+      astray: string[] = [];
+
+    [
+      [3, 3],
+      [4, 3],
+      [3, 4],
+      [4, 4],
+    ].forEach(([x, y]) => {
+      const centre = layout.centre(x!, y!),
+        place: SprawlPlace = {
+          centre,
+          toward: ([dx, dy]) => layout.centre(x! + dx, y! + dy),
+          owns: () => true,
+        },
+        angleOf = ([du, dv]: Point) => Math.atan2(dv, du),
+        // Its neighbours round it on the ground, in order, each with the way to it.
+        round = topology
+          .directions()
+          .map((direction) => {
+            const offset = topology.offset(direction, x!, y!),
+              [nu, nv] = layout.centre(x! + offset[0], y! + offset[1]);
+
+            return {
+              offset,
+              angle: angleOf([nu - centre[0], nv - centre[1]]),
+            };
+          })
+          .sort((a, b) => a.angle - b.angle),
+        step = (Math.PI * 2) / round.length;
+
+      for (let length = 1; length < round.length; length++) {
+        for (let start = 0; start < round.length; start++) {
+          const run = Array.from(
+              { length },
+              (_, index) => round[(start + index) % round.length]!
+            ),
+            // The way the run lies: the way round to its middle.
+            middle = Math.atan2(
+              run.reduce((sum, { angle }) => sum + Math.sin(angle), 0),
+              run.reduce((sum, { angle }) => sum + Math.cos(angle), 0)
+            ),
+            { streets } = sprawl(
+              place,
+              planFor(
+                citySeed('Quay'),
+                1,
+                [],
+                run.map(({ offset }) => offset)
+              ),
+              inFrontOf(centre)
+            ),
+            [from, to] = streets[0]!,
+            quay = angleOf([to[0] - from[0], to[1] - from[1]]),
+            off = Math.abs(
+              Math.atan2(Math.sin(quay - middle), Math.cos(quay - middle))
+            );
+
+          if (streets.length !== 1 || off > step / 2 + 0.02) {
+            astray.push(
+              `${x},${y} sea ${run
+                .map(({ offset }) => offset.join(','))
+                .join(' ')}: ${streets.length} streets, ${Math.round(
+                (off * 180) / Math.PI
+              )}° off`
+            );
+          }
+        }
+      }
+    });
+
+    expect(
+      `${topologyId}: one quay, the way the sea beside it lies on the ground`,
+      astray.slice(0, 5),
+      []
     );
   }
 );

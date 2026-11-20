@@ -710,7 +710,8 @@ const fields = (layer: Layer, kind: 'irrigation' | 'farmland'): void => {
 export const ROOFS = ['#9c5a3c', '#7d4a36', '#6f6a64', '#8b6b4a'] as const;
 
 // A city's paving, its buildings' walls, and their roofs, each building's seeded: none in its owner's colours, which its
-//  name and walls carry, so a city taken keeps its look till its battle's blow, as its marker does, unless it shrinks.
+//  name and walls carry, so a city taken looks the same, as its marker does, till its battle's blow, as it's laid till
+//  then (`Land#keepCities`).
 const PAVING = '#a39a88',
   HOUSE = '#c4b8a2',
   // How tall a building's storey is, and how wide its walls are, under the eaves of a roof its lot's width.

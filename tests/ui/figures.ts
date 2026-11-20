@@ -1115,8 +1115,8 @@ expect(
 );
 
 // A ship out at sea sits in rings of ripples (`RIPPLES`): ovals of foam round its hull, wider and longer than it, just
-//  over the water, in its own mesh, turning with it. In front of a city's buildings, in port, none; nor round a unit on
-//  land.
+//  over the water, in its own mesh, turning with it. In front of a city's buildings, in port, none, its marker shown or
+//  hidden; nor round a unit on land.
 {
   const look = unitLook('Trireme'),
     plain = kit.body(look, colours, false, 1),
@@ -1130,10 +1130,16 @@ expect(
       city: { name: 'Ostia', size: 2, colours, walled: false, disorder: false },
       unit: unit('Trireme'),
     }),
+    // In port with cities hidden (`t`): still in front of the buildings.
+    inHiddenPort = drawMarker(kit, {
+      city: null,
+      unit: unit('Trireme'),
+      inCity: true,
+    }),
     spearman = unitLook('Spearman');
 
   expect(
-    'a ship out at sea in rings of ripples, wider and longer than its hull, just over the water, turning with it; in port, none; none round a unit on land',
+    'a ship out at sea in rings of ripples, wider and longer than its hull, just over the water, turning with it; in port, none, its city shown or hidden; none round a unit on land',
     [
       points(rippled) > points(plain),
       rippled.boundingBox!.max.x > plain.boundingBox!.max.x,
@@ -1142,10 +1148,11 @@ expect(
         rippled.boundingBox!.min.y < plain.boundingBox!.min.y,
       figuresOf(atSea) === rippled,
       figuresOf(inPort) === plain,
+      figuresOf(inHiddenPort) === plain,
       kit.body(spearman, colours, false, 1, 'whole', true) ===
         kit.body(spearman, colours, false, 1),
     ],
-    [true, true, true, true, true, true, true]
+    [true, true, true, true, true, true, true, true]
   );
 }
 

@@ -908,8 +908,8 @@ const landOf = (
 
 // A city's lot: its sprawl (`sprawl.ts`), seeded from the city, as many lots as its size has built and as tall, its
 //  streets out to each neighbour whose road or railroad comes in (a road where the city's square has one too, or a
-//  railroad, which joins a city) and to its one quay, and not to a neighbour with nothing, nor a road that doesn't join
-//  it. Laid as paving and houses, not a road, each house's roof out to its lot's edges, its walls under the eaves.
+//  railroad, which joins a city), and the sea beside it, for its quay, and not to a neighbour with nothing, nor a road
+//  that doesn't join it. Laid as paving and houses, not a road.
 {
   const cityOn = (improvements: string[], size = 6) =>
       ({
@@ -932,13 +932,10 @@ const landOf = (
     ],
     roaded = overlayFor(cityOn(['Road']), ringed)!,
     unroaded = overlayFor(cityOn([]), ringed)!,
-    // One quay however much sea: the way the sea lies, taken together.
-    quayTo = (...offsets: [number, number][]) =>
-      overlayFor(cityOn([]), offsets.map(sea))!.city?.ways,
     laid = overlayMesh(16, 0, [{ overlay: roaded, place: place(17, 3) }]);
 
   expect(
-    'a city’s lot: seeded from the city, as many lots as its size has built and as tall, streets out to roads that join it and one quay; laid as paving and houses, not a road',
+    'a city’s lot: seeded from the city, as many lots as its size has built and as tall, streets out to roads that join it, and the sea beside it, for its quay; laid as paving and houses, not a road',
     [
       roaded.city?.seed === unroaded.city?.seed,
       [roaded.city?.lots, roaded.city?.tier],
@@ -951,9 +948,9 @@ const landOf = (
         JSON.stringify(overlayFor(cityOn(['Road'], 16), ringed)),
       roaded.city?.ways,
       unroaded.city?.ways,
-      quayTo([0, 1], [1, 1], [-1, 1]),
-      quayTo([1, 0], [1, 1], [0, 1]),
-      quayTo([-1, 0], [1, 0]),
+      roaded.city?.sea,
+      overlayFor(cityOn([]), [sea([1, 0]), sea([1, 1]), sea([0, 1])])!.city
+        ?.sea,
       [roaded.road, roaded.vegetation, roaded.specials.length],
       hasColour(laid, '#a39a88'),
       hasColour(laid, '#c4b8a2'),
@@ -967,15 +964,14 @@ const landOf = (
       [
         [0, -1],
         [1, 0],
-        [0, 1],
       ],
+      [[1, 0]],
+      [[0, 1]],
       [
         [1, 0],
+        [1, 1],
         [0, 1],
       ],
-      [[0, 1]],
-      [[1, 1]],
-      [[-1, 0]],
       [null, false, 0],
       true,
       true,
@@ -1158,10 +1154,20 @@ const landOf = (
     }
   }
 
-  const floating = lots.filter(({ at: [lu, lv], width }) => {
-    const own = walls.filter(
-        ([u, , v]) => Math.max(Math.abs(u - lu), Math.abs(v - lv)) < width
-      ),
+  const floating = lots.filter(({ at: [lu, lv], width, facing }) => {
+    // Its own walls: within its footprint along its own sides, not a neighbour's.
+    const own = walls.filter(([u, , v]) => {
+        const du = u - lu,
+          dv = v - lv;
+
+        return (
+          Math.max(
+            Math.abs(du * Math.cos(facing) - dv * Math.sin(facing)),
+            Math.abs(du * Math.sin(facing) + dv * Math.cos(facing))
+          ) <
+          width / 2
+        );
+      }),
       bottom = Math.min(...own.map(([, y]) => y));
 
     return own
