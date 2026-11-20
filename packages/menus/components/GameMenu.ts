@@ -10,6 +10,7 @@ import {
   openWondersReport,
 } from '@civ-clone/ui-reports/components/reports';
 import Civilopedia from '@civ-clone/ui-reports/components/Civilopedia';
+import HowToPlay from './HowToPlay';
 import { openSpaceshipWindow } from '@civ-clone/ui-hud/components/Actions/Spaceship';
 import ConfirmationWindow from '@civ-clone/ui-component-window/ConfirmationWindow';
 import GameOptions from './GameOptions';
@@ -286,6 +287,13 @@ export class GameMenu extends Element {
           key: '?',
           action: () => {
             Civilopedia.open(this.#transport);
+          },
+        },
+        {
+          label: t('HowToPlay.title'),
+          key: null,
+          action: () => {
+            HowToPlay.open();
           },
         },
       ],

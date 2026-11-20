@@ -5,6 +5,8 @@ import ReleaseWindow, {
 } from '@civ-clone/ui-menus/components/ReleaseWindow';
 import { askEarth, askNewGame } from '@civ-clone/ui-menus/components/newGame';
 import GameOptions from '@civ-clone/ui-menus/components/GameOptions';
+import HowToPlay from '@civ-clone/ui-menus/components/HowToPlay';
+import howToPlayPrompt from '@civ-clone/ui-menus/components/howToPlayPrompt';
 import GameSetupForm from './GameSetupForm';
 import HallOfFameWindow, {
   yearLabel,
@@ -178,6 +180,13 @@ export class TitleMenu extends Element {
         hotkey: t('TitleMenu.key.hall-of-fame'),
         action: (): void => void new HallOfFameWindow(),
       },
+      // How to play (#1270), for a new player as much as for the keys.
+      {
+        name: 'how-to-play',
+        label: t('HowToPlay.title'),
+        hotkey: t('TitleMenu.key.how-to-play'),
+        action: (): void => void HowToPlay.open(),
+      },
       {
         name: 'options',
         label: t('TitleMenu.options'),
@@ -202,6 +211,10 @@ export class TitleMenu extends Element {
       s(
         '<div class="ui-title-menu-panel"></div>',
         ...(reason === null ? [] : [this.#noArt(reason)]),
+        // Offered to a newcomer until answered (#1270).
+        ...[howToPlayPrompt()].filter(
+          (prompt): prompt is HTMLElement => prompt !== null
+        ),
         s(
           `<ul class="ui-title-menu-items" aria-label="${t(
             'TitleMenu.label'

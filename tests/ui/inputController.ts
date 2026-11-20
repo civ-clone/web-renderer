@@ -15,6 +15,7 @@ import './lib/artPacks';
 import { GameData, Tile, Unit } from '@civ-clone/ui-protocol/types';
 import i18next from 'i18next';
 import InputController from '@civ-clone/ui-game/InputController';
+import gameKeys, { helpCommands } from '@civ-clone/ui-client/lib/gameKeys';
 import MapPortal from '@civ-clone/ui-map/MapPortal';
 import Transport from '@civ-clone/ui-client/Transport';
 
@@ -1034,6 +1035,63 @@ const run = async (): Promise<void> => {
   report.remove();
   nextTurnElement.remove();
   nextTurnButton = null;
+
+  // How to play's keys (#1270): every key it shows does something here, so a key the game stops binding fails this.
+
+  focused = document.body;
+  activeUnit = unit;
+  waiting = false;
+  mandatoryActions = [{ _: 'EndTurn' }];
+  actions = [
+    {
+      _: 'AdjustTradeRates',
+      value: {
+        id: 'trade-rates-1',
+        all: [
+          { _: 'Tax', value: 0.5 },
+          { _: 'Research', value: 0.5 },
+        ],
+      },
+    },
+  ];
+  actionArea.innerHTML = '<div class="action"><button>First</button></div>';
+
+  const unbound = helpCommands.flat().filter((command): boolean => {
+    const key = gameKeys[command],
+      dialogs = document.querySelectorAll('dialog').length,
+      zoomed = zooms.length,
+      ended = endTurnEvents;
+
+    reset();
+
+    let event: KeyboardEvent | null = null;
+
+    // A screen that can't open on the stub data (City Status) throws from its handler: the key was answered all
+    //  the same.
+    try {
+      event = press({ key, shiftKey: /^[A-Z]$/.test(key) });
+    } catch {
+      return false;
+    }
+
+    const acted =
+      event.defaultPrevented ||
+      sent.length > 0 ||
+      calls.length > 0 ||
+      zooms.length > zoomed ||
+      endTurnEvents > ended ||
+      document.querySelectorAll('dialog').length > dialogs;
+
+    // What it opened, closed again, so the next key isn't under a window.
+    document.querySelectorAll('dialog').forEach((dialog) => dialog.remove());
+
+    return !acted;
+  });
+
+  expect('every key How to play shows is bound', unbound, []);
+
+  actionArea.innerHTML = '';
+  actions = [];
 
   // `dispose`.
 

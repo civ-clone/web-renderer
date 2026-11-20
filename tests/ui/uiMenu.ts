@@ -927,6 +927,7 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
           ['Civilization Score', 'F9', false],
           ['Find City', '/', false],
           ['Civilopedia', '?', false],
+          ['How to play', null, false],
           ['Retire', null, true],
           ['Quit', null, true],
         ],
