@@ -132,22 +132,31 @@ export const advanceAges = (
   return { ages, ageOf: of };
 };
 
-// A described value as the page is sent it: a class by its key and name, lists and records the same all the way down.
-const effectValue = (value: unknown): CivilopediaEffectValue => {
+// A described value as the page is sent it: a class by its key and name, and whether it is the class an entry is about
+//  (`entry`): keys can be shared across kinds (the Trade yield and the Trade advance are both `Trade`), so a key alone
+//  can't say that. Lists and records the same all the way down.
+const effectValue = (
+  value: unknown,
+  entryClasses: Set<Function> = new Set()
+): CivilopediaEffectValue => {
   if (typeof value === 'function') {
     return {
       class: typeNameOf(value as Class),
       name: (value as Class).name,
+      entry: entryClasses.has(value),
     } as CivilopediaClass;
   }
 
   if (Array.isArray(value)) {
-    return value.map(effectValue);
+    return value.map((item) => effectValue(item, entryClasses));
   }
 
   if (value !== null && typeof value === 'object') {
     return Object.fromEntries(
-      Object.entries(value).map(([field, item]) => [field, effectValue(item)])
+      Object.entries(value).map(([field, item]) => [
+        field,
+        effectValue(item, entryClasses),
+      ])
     );
   }
 
@@ -173,7 +182,8 @@ export const describedEffects = (rules: RuleRegistry): Described[] =>
 /** `Item`'s effects among `described`: those about it, or about one of its base classes. */
 export const effectsOf = (
   Item: Class,
-  described: Described[]
+  described: Described[],
+  entryClasses: Set<Function> = new Set()
 ): CivilopediaEffect[] =>
   described
     .filter(
@@ -183,7 +193,7 @@ export const effectsOf = (
     )
     .map(
       ({ subject, ...fields }) =>
-        effectValue(fields) as unknown as CivilopediaEffect
+        effectValue(fields, entryClasses) as unknown as CivilopediaEffect
     );
 
 export const civilopediaData = (
@@ -195,22 +205,33 @@ export const civilopediaData = (
     ) as (typeof Advance)[],
     { ages, ageOf: agesOf } = advanceAges(advances, game.rules),
     described = describedEffects(game.rules),
+    // Every class with an entry, and each entry's class by its key, so its effects can say which classes they name
+    //  have entries of their own once all are known.
+    entryClasses = new Set<Function>(),
+    itemOf = new Map<string, Class>(),
     entry = (
       Item: Class,
       kind: CivilopediaKind,
       buildable: boolean = false
-    ): CivilopediaEntry => ({
-      key: typeNameOf(Item),
-      name: Item.name,
-      kind,
-      requires: ids(game.requirements.for(Item as any), kept),
-      leadsTo: ids(game.requirements.leadsTo(Item as any), kept),
-      cost: buildable ? costOf(Item, game) : null,
-      stats: kind === 'unit' ? unitStats(Item, game.rules) : null,
-      effects: effectsOf(Item, described),
-    });
+    ): CivilopediaEntry => {
+      const made: CivilopediaEntry = {
+        key: typeNameOf(Item),
+        name: Item.name,
+        kind,
+        requires: ids(game.requirements.for(Item as any), kept),
+        leadsTo: ids(game.requirements.leadsTo(Item as any), kept),
+        cost: buildable ? costOf(Item, game) : null,
+        stats: kind === 'unit' ? unitStats(Item, game.rules) : null,
+        effects: [],
+      };
 
-  return [
+      entryClasses.add(Item);
+      itemOf.set(made.key, Item);
+
+      return made;
+    };
+
+  const all: CivilopediaEntry[] = [
     ...advances.map((AdvanceType) => {
       const age = agesOf.get(AdvanceType);
 
@@ -243,6 +264,13 @@ export const civilopediaData = (
       .filter((Item) => Item.prototype instanceof Terrain)
       .map((Item) => entry(Item, 'terrain')),
   ];
+
+  // On the entries as sent, some of which are copies with more fields (an advance's age): by key, which is unique.
+  all.forEach((made: CivilopediaEntry): void => {
+    made.effects = effectsOf(itemOf.get(made.key)!, described, entryClasses);
+  });
+
+  return all;
 };
 
 /**

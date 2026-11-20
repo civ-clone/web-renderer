@@ -45,6 +45,8 @@ export interface CivilopediaEntry {
 export interface CivilopediaClass {
   class: string;
   name: string;
+  /** Whether the class is the one an entry is about: another kind's class can share its key (the Trade yield, Trade). */
+  entry?: boolean;
 }
 
 export type CivilopediaEffectValue =
