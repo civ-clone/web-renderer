@@ -165,14 +165,29 @@ const round = (value: number, places = 3): number =>
 
   wakes.trail('ship', [0.02, 0], WAKE_LIFE + 310);
 
+  // Gone far meanwhile, as round a corner: still afresh, with no straight line laid from where it was across it.
+  const far = new Wakes();
+
+  far.trail('ship', [0, 0], 0);
+  far.trail('ship', [1, 1], WAKE_LIFE + 300);
+
   expect(
-    'still sailing after longer than a wake lasts: afresh from where the ship is',
-    [left, wakes.at(WAKE_LIFE + 310).going[0]?.points],
+    'still sailing after longer than a wake lasts: afresh from where the ship is, however far it’s gone meanwhile',
     [
-      1,
+      left,
+      wakes.at(WAKE_LIFE + 310).going[0]?.points,
+      far.at(WAKE_LIFE + 300).going[0]?.points,
+    ],
+    [
+      // Afresh at once, where it is: its point laid long ago let go.
+      2,
       [
         { at: [0.02, 0], age: 0 },
-        { at: [0.02, 0], age: 0 },
+        { at: [0.01, 0], age: 10 },
+      ],
+      [
+        { at: [1, 1], age: 0 },
+        { at: [1, 1], age: 0 },
       ],
     ]
   );

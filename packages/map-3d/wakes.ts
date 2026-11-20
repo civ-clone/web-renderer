@@ -41,8 +41,14 @@ export class Wakes {
     const wake = this.#wakes.get(id),
       [head, laid] = wake?.points ?? [];
 
-    // Setting off, or still with every point laid gone: from here.
-    if (wake === undefined || head === undefined || laid === undefined) {
+    // Setting off, or with every point laid gone, or as good as gone, past its life, as after frames stopped a while:
+    //  from here, not along a straight line from where it was then.
+    if (
+      wake === undefined ||
+      head === undefined ||
+      laid === undefined ||
+      now - laid.time >= WAKE_LIFE
+    ) {
       this.#wakes.set(id, {
         points: [
           { at, time: now },
