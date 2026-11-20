@@ -41,6 +41,7 @@ import {
   registerTileset,
   ruleSetMapTileset,
   setRuleSetTileset,
+  setSheetFailed,
   sheetFailure,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import {
@@ -1842,6 +1843,15 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
       ['civ2', 'civ1-pixelart', 'civ1-pixelart']
     );
 
+    setSheetFailed('civ1-pixelart', 'offline');
+
+    expect(
+      "and its own art there, should its sheet fail, rather than the player's imported set, to be fetched again",
+      mapTileset('square').id,
+      'civ1-pixelart'
+    );
+
+    setSheetFailed('civ1-pixelart', null);
     setRuleSetTileset(['civ2', 'hosted-iso']);
 
     expect(

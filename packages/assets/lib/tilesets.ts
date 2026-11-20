@@ -349,6 +349,10 @@ const settleMapTileset = (
 
   return (
     ruleSetTilesetsOn(topologyId, false)[0] ??
+    // A grid the rule set names art for is drawn with none but its own (#1249), even one whose sheet failed, to be
+    //  fetched again (`ensureMapArt`): Civ2 on the square grid never falls back to Civ1's imported art, which lacks its
+    //  terrain and units.
+    ruleSetTilesetsOn(topologyId)[0] ??
     (chosen === null || unloadedSheets.has(chosen.id) ? null : chosen) ??
     installed.find((tileset) => !isHosted(tileset)) ??
     installed[0] ??
