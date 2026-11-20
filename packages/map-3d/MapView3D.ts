@@ -2193,10 +2193,13 @@ export class MapView3D implements MapRenderer {
 
     this.#releasedFrom = new Map();
     this.#markedAtRelease = null;
-    // Drawn fading out, too: one come back, its fade cut as it's marked again, was drawn, so doesn't fade in.
-    this.#fadingOut.forEach(({ units }) =>
-      units.forEach(({ id }) => markedBefore?.add(id))
-    );
+    // Drawn fading out, too, the unit shown on top (first): one come back, its fade cut as it's marked again, was drawn,
+    //  so doesn't fade in. Those beneath it weren't.
+    this.#fadingOut.forEach(({ units: [drawn] }) => {
+      if (drawn !== undefined) {
+        markedBefore?.add(drawn.id);
+      }
+    });
 
     squares.forEach(([x, y]) => this.#mark(x, y));
     // What stands on them, marked again on the land as it is now: only where something's marked, and not released. A

@@ -4729,7 +4729,9 @@ expect(
   );
   runFrames(1);
 
-  const crowdArrived = fadesSeen();
+  const crowdArrived: unknown[] = [unitOn(1, 1)];
+
+  crowdArrived.push(fadesSeen());
 
   repatched(
     ...crowd.map(([x, y]): [number, number, Tile['units'][number][]] => [
@@ -4751,7 +4753,9 @@ expect(
   patch([3, 2, [recruit]]);
   runFrames(1);
 
-  const arrivedOffScreen = fadesSeen();
+  const arrivedOffScreen: unknown[] = [unitOn(3, 2)];
+
+  arrivedOffScreen.push(fadesSeen());
 
   glider.setOrbit(lookedFromHere);
   runFrames();
@@ -4765,7 +4769,19 @@ expect(
   patch([3, 1, [rival]]);
   runFrames(1);
 
-  const backOnEmpty = fadesSeen();
+  const backOnEmpty: unknown[] = [unitOn(3, 1)];
+
+  backOnEmpty.push(fadesSeen());
+  repatched([3, 1, []]);
+
+  // A stack gone into the fog, the one beneath back alone: it wasn't drawn, so it fades in.
+  repatched([2, 1, [rival, rivalMate]]);
+  patch([2, 1, []]);
+  runFrames(3);
+  patch([3, 1, [rivalMate]]);
+  runFrames(1);
+  backOnEmpty.push(unitOn(3, 1), (markersFaded.get('3,1') ?? 1) < 1);
+  runFrames();
 
   repatched([3, 1, []]);
 
@@ -4785,9 +4801,14 @@ expect(
       [1, 0],
       [1, [], 0],
       { out: [], in: [], twice: [], left: 0 },
-      { out: [], in: [], twice: [], left: 0 },
-      { out: [], in: [], twice: [], left: 0 },
-      { out: [], in: [], twice: [], left: 0 },
+      [['Unit-D11', 1], { out: [], in: [], twice: [], left: 0 }],
+      [['Unit-J', 1], { out: [], in: [], twice: [], left: 0 }],
+      [
+        ['Unit-R', 1],
+        { out: [], in: [], twice: [], left: 0 },
+        ['Unit-T', 1],
+        true,
+      ],
     ]
   );
 
@@ -4815,6 +4836,19 @@ expect(
   glider.toggleUnits();
   runFrames(1);
   hiddenFade.push(walkers.size);
+  runFrames();
+
+  // The active unit's ghost is drawn with units hidden, as the active unit is: it fades on.
+  repatched([1, 1, [recruit]]);
+  glider.setActiveUnit(placed(recruit, 1, 1));
+  runFrames();
+  patch([1, 1, []]);
+  glider.setActiveUnit(null);
+  runFrames(1);
+  glider.toggleUnits();
+  runFrames(1);
+  hiddenFade.push(walkers.size);
+  glider.toggleUnits();
   runFrames();
 
   const fadeFrames = (speed: string) => {
@@ -4874,7 +4908,7 @@ expect(
       facedAway,
       firstTaken,
     ],
-    [[1, [], 1, 0, 0], true, [1.57], [1, []]]
+    [[1, [], 1, 0, 0, 1], true, [1.57], [1, []]]
   );
 
   // Turns, frame by frame: how far the camera turns in all, the way it turns, each frame's step taken the short way.
