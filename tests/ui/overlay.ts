@@ -5,8 +5,8 @@
 //    fortresses, airbases, pollution, specials (not rivers) and huts, or nothing;
 //  - its shapes: triangles with a normal and a colour at every point, relative to their chunk's corner; strips draped
 //    over the land; a road reaching halfway to the neighbour it joins, at the copy the place says, bending on its own
-//    square and meeting its neighbour's half there going the same way; specials at sea on
-//    the water; what stands on a square standing clear of the unit's stand at its middle; the same every time;
+//    square and meeting its neighbour's half there going the same way; specials at sea on the water; what stands on a
+//    square standing clear of the unit's stand at its middle; the same every time;
 //  - on the land: a chunk's overlay is its squares', roads at the world's edges and poles joined across them at the
 //    nearest copy, on every grid; a road built remakes its chunk's overlay, and its neighbours', and builds no land;
 //  - what grows: on each terrain the table says, not on a city's lot nor cleared ground, clear of the unit's stand and
@@ -878,6 +878,10 @@ const landOf = (
           })
         );
 
+    if (!facesUp(mesh)) {
+      offBend.push(`${x}: faces down`);
+    }
+
     pointsOf(mesh).forEach(([u, , v]) => {
       // The disc at the middle aside.
       if (Math.hypot(u - cu, v - cv) <= 0.036) {
@@ -893,7 +897,7 @@ const landOf = (
   }
 
   expect(
-    'a road’s drawn along its bend, within half its width of it, and some of them well off the straight line',
+    'a road’s drawn along its bend, within half its width of it, facing up, and some of them well off the straight line',
     [offBend.slice(0, 5), offStraight > 0.02],
     [[], true]
   );

@@ -530,7 +530,8 @@ const drawn = (route: Route): boolean => route.alone || route.joins.length > 0;
 /** How far a road's half bows from the straight line at most, as a share of its length. */
 export const ROAD_BOW = 0.09;
 
-// How many pieces a road's half is drawn in, along its bend.
+// How many pieces a road's half is drawn in, along its bend, at the fewest: more where it's long, so each is shorter
+//  than a draped strip's step, and the ribbon needn't cut them again.
 const ROAD_PIECES = 8;
 
 // A number of the square's own for each way out of it.
@@ -567,10 +568,8 @@ export const roadHalf = (
     handle = [u + du / 3 + side[0]! * reach, v + dv / 3 + side[1]! * reach],
     later = [u + (du * 2) / 3, v + (dv * 2) / 3];
 
-  const ts = Array.from(
-    { length: ROAD_PIECES + 1 },
-    (_, index) => index / ROAD_PIECES
-  );
+  const pieces = Math.max(ROAD_PIECES, Math.ceil((length * 1.02) / STEP)),
+    ts = Array.from({ length: pieces + 1 }, (_, index) => index / pieces);
 
   return {
     points: ts.map((t) => {
