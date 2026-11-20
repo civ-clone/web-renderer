@@ -108,6 +108,7 @@
     "test:requirements": "node tools/run-suite.js engine requirements",
     "test:rule-sets": "node tools/run-suite.js engine ruleSets",
     "test:civilopedia": "node tools/run-suite.js engine civilopedia",
+    "test:civ2-civilopedia": "node tools/run-suite.js engine civ2Civilopedia",
     "test:civilopedia-window": "node tools/run-suite.js ui civilopediaWindow",
     "test:incremental-reconstitute": "node tools/run-suite.js ui incrementalReconstitute",
     "test:data-changes": "node tools/run-suite.js ui dataChanges",

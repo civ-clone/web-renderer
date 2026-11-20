@@ -28,8 +28,7 @@ import {
 } from '@civ-clone/ui-worker-client/Client/requests';
 import { inBuildListOrder } from '@civ-clone/ui-worker-client/lib/buildList';
 import Player from '@civ-clone/core-player/Player';
-import { join } from 'path';
-import { readFileSync } from 'fs';
+import missingWording from './lib/effectWording';
 import setUpCity from '@civ-clone/civ1-city/tests/lib/setUpCity';
 
 const failures: string[] = [];
@@ -398,35 +397,6 @@ const check = async (): Promise<void> => {
   );
 
   // What the rules say each improvement does (#1196), from the rules in force.
-  const translations = readFileSync(
-      join(process.cwd(), 'packages/reports/translations/en.ts'),
-      'utf8'
-    ),
-    // Each effect's wording, as the page looks it up (`lib/effects`): its type and string fields, bar `scope`, and
-    //  `_negative` below 0. A plural or a `_zero` the page adds itself.
-    keys = Array.from(
-      new Set(
-        entries.flatMap((item) =>
-          item.effects.map((effect) =>
-            [
-              `Civilopedia.effect.${effect.type}`,
-              ...Object.entries(effect)
-                .filter(
-                  ([field, value]) =>
-                    field !== 'type' &&
-                    field !== 'scope' &&
-                    typeof value === 'string'
-                )
-                .map(([, value]) => value),
-              ...(typeof effect.value === 'number' && effect.value < 0
-                ? ['negative']
-                : []),
-            ].join('_')
-          )
-        )
-      )
-    );
-
   expect(
     'every city improvement says something it does',
     entries
@@ -444,31 +414,9 @@ const check = async (): Promise<void> => {
     ['ApolloProgram', 'ManhattanProject']
   );
   expect(
-    'every effect sent has wording in en',
-    keys.filter(
-      (key) =>
-        !translations.includes(`'${key}'`) &&
-        !(
-          translations.includes(`'${key}_one'`) &&
-          translations.includes(`'${key}_other'`)
-        )
-    ),
-    []
-  );
-  expect(
-    'every scope sent has wording in en',
-    Array.from(
-      new Set(
-        entries.flatMap((item) =>
-          item.effects.flatMap(({ scope }) =>
-            typeof scope === 'string' ? [scope] : []
-          )
-        )
-      )
-    ).filter(
-      (scope) => !translations.includes(`'Civilopedia.effect.scope.${scope}'`)
-    ),
-    []
+    'every effect, scope and class without an entry sent has wording in en',
+    missingWording(entries),
+    { effects: [], scopes: [], classes: [] }
   );
   expect(
     'a Library costs 1 gold a turn and adds half the base science',
@@ -479,12 +427,13 @@ const check = async (): Promise<void> => {
         yield: {
           class: 'CityImprovementMaintenanceGold',
           name: 'CityImprovementMaintenanceGold',
+          entry: false,
         },
         value: 1,
       },
       {
         type: 'yield_percent',
-        yield: { class: 'Research', name: 'Research' },
+        yield: { class: 'Research', name: 'Research', entry: false },
         value: 0.5,
         of: 'base',
       },
@@ -497,7 +446,7 @@ const check = async (): Promise<void> => {
       .map(({ value, with: advances }) => [value, advances ?? null]),
     [
       [1, null],
-      [1, [{ class: 'Mysticism', name: 'Mysticism' }]],
+      [1, [{ class: 'Mysticism', name: 'Mysticism', entry: true }]],
     ]
   );
 

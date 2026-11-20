@@ -22,14 +22,16 @@ export const clauses: string[] = [
   'with',
   'replaces',
   'notWith',
+  'against',
   'except',
+  'notFor',
   'from',
   'until',
 ];
 
 const isClass = (
   value: CivilopediaEffectValue
-): value is { class: string; name: string } =>
+): value is { class: string; name: string; entry?: boolean } =>
   value !== null &&
   typeof value === 'object' &&
   !Array.isArray(value) &&
@@ -58,7 +60,7 @@ const said = (
   // A class with no entry (a yield, a trait) by its own wording, under its save key or its class name, which
   //  differ for some (`GoldYield`, `Gold`), and otherwise by its class name.
   if (isClass(value)) {
-    return entries.has(value.class)
+    return value.entry !== false && entries.has(value.class)
       ? classLink(value.class, entries)
       : escape(
           t(
@@ -164,10 +166,18 @@ export const effectLine = (
 
         return targets === null
           ? null
-          : t(scoped(field) ?? `Civilopedia.effect.clause.${field}`, {
-              targets,
-              interpolation: { escapeValue: false },
-            });
+          : t(
+              scoped(field) ??
+                [
+                  // A type may word a clause its own way (`clause.notFor_defence_multiplier`).
+                  `Civilopedia.effect.clause.${field}_${effect.type}`,
+                  `Civilopedia.effect.clause.${field}`,
+                ].find((key) => i18next.exists(key))!,
+              {
+                targets,
+                interpolation: { escapeValue: false },
+              }
+            );
       })
       .filter((clause): clause is string => clause !== null),
     // A type may word its scope its own way (`scope.player_unit_movement`), or not at all (an empty wording).

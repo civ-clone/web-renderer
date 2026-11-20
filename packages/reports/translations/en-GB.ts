@@ -3,6 +3,9 @@ import i18next from 'i18next';
 
 i18next.addResources('en-GB', 'default', {
   'Civilopedia.section.advance': 'Civilisation Advances',
+  'Civilopedia.effect.scope.world': 'for every civilisation',
+  'Civilopedia.effect.embassy_with_all':
+    'Gives you an embassy with every civilisation',
   'Civilopedia.effect.shared_advances_one':
     'Gives you any advance that {{count}} other civilisation knows',
   'Civilopedia.effect.shared_advances_other':

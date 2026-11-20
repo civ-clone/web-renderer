@@ -59,11 +59,70 @@ i18next.addResources('en', 'default', {
   'Civilopedia.effect.clause.with': 'with {{targets}}',
   'Civilopedia.effect.clause.replaces': 'in place of {{targets}}',
   'Civilopedia.effect.clause.notWith': 'doesn’t stack with {{targets}}',
+  'Civilopedia.effect.clause.against': 'against {{targets}}',
   'Civilopedia.effect.clause.except': 'except against {{targets}}',
+  'Civilopedia.effect.clause.notFor': 'not for {{targets}}',
+  'Civilopedia.effect.clause.notFor_defence_multiplier':
+    'except when {{targets}} defend',
   'Civilopedia.effect.clause.from': 'from {{targets}}',
   'Civilopedia.effect.clause.until': 'until {{targets}}',
   'Civilopedia.effect.scope.player': 'in all your cities',
   'Civilopedia.effect.scope.continent': 'in your cities on the same continent',
+  'Civilopedia.effect.scope.world': 'for every civilization',
+  // Civilization II's (#1196).
+  'Civilopedia.effect.content_fewer_one':
+    'Makes {{count}} fewer unhappy citizen content',
+  'Civilopedia.effect.content_fewer_other':
+    'Makes {{count}} fewer unhappy citizens content',
+  'Civilopedia.effect.happy_more_one':
+    'Makes {{count}} more content citizen happy',
+  'Civilopedia.effect.happy_more_other':
+    'Makes {{count}} more content citizens happy',
+  'Civilopedia.effect.protects_from_defeat_size':
+    'The city loses no people when a defender is beaten',
+  'Civilopedia.effect.protects_from_nuclear_attack_area':
+    'Stops nuclear attacks within {{radius}} squares',
+  'Civilopedia.effect.pollution_source_removed_production':
+    'The city’s shields no longer cause pollution',
+  'Civilopedia.effect.tile_yield_land_producing':
+    '+{{value}} {{yield}} on each worked land square that already has {{yield}}',
+  'Civilopedia.effect.tile_yield_ocean':
+    '+{{value}} {{yield}} on each worked ocean square',
+  'Civilopedia.effect.tile_yield': '+{{value}} {{yield}} on each worked square',
+  'Civilopedia.effect.tile_yield_percent_farmland':
+    '+{{percent}}% {{yield}} on Farmland and the city’s own square',
+  'Civilopedia.effect.tile_yield_percent_roads':
+    '+{{percent}}% {{yield}} on squares with a road or railroad, and the city’s own square',
+  'Civilopedia.effect.acts_as': 'Has the effect of {{improvement}}',
+  'Civilopedia.effect.veteran_units': 'New {{unit}} built here are veterans',
+  'Civilopedia.effect.heals': 'Fully repairs {{unit}} here',
+  'Civilopedia.effect.airlift':
+    'Lets {{unit}} fly between two cities that both have one',
+  'Civilopedia.effect.content_multiplier': 'Content citizens ×{{value}}',
+  'Civilopedia.effect.tithe':
+    'Each citizen it makes content pays a tithe of gold',
+  'Civilopedia.effect.converts': 'Turns the city’s {{yield}} into {{into}}',
+  'Civilopedia.effect.meltdown': 'Can melt down while the city is in disorder',
+  'Civilopedia.effect.pays_upkeep_one':
+    'Pays the upkeep of every building that costs {{count}} gold',
+  'Civilopedia.effect.pays_upkeep_other':
+    'Pays the upkeep of every building that costs {{count}} gold',
+  'Civilopedia.effect.promotion_chance':
+    'Every unit that wins a battle becomes a veteran',
+  'Civilopedia.effect.unit_upgrade':
+    'Upgrades each of your units by one step whenever you gain an advance',
+  'Civilopedia.effect.anarchy_turns_one':
+    'Changing government takes only {{count}} turn of Anarchy',
+  'Civilopedia.effect.anarchy_turns_other':
+    'Changing government takes only {{count}} turns of Anarchy',
+  'Civilopedia.effect.embassy_with_all':
+    'Gives you an embassy with every civilization',
+  'Civilopedia.effect.reputation': 'Other leaders think better of you',
+  'Civilopedia.effect.reveals_map': 'Reveals the whole map',
+  'Civilopedia.effect.enables': 'Lets {{what}} be built',
+  // Where a type's own wording already says it (or its scope would read oddly), it says nothing more.
+  'Civilopedia.effect.scope.player_promotion_chance': '',
+  'Civilopedia.effect.scope.player_unit_upgrade': '',
   // The Wonders' effects (#1196).
   'Civilopedia.effect.content_all': 'Makes every unhappy citizen content',
   'Civilopedia.effect.tile_yield_producing':
@@ -141,9 +200,16 @@ i18next.addResources('en', 'default', {
   'Civilopedia.class.Luxuries': 'Luxuries',
   'Civilopedia.class.Production': 'Production',
   'Civilopedia.class.Research': 'Science',
+  'Civilopedia.class.Trade': 'Trade',
+  'Civilopedia.class.Food': 'Food',
   'Civilopedia.class.Veteran': 'Veterans',
   'Civilopedia.class.IgnoresFortifications': 'units that ignore City Walls',
   'Civilopedia.class.Naval': 'ships',
+  'Civilopedia.class.Land': 'land units',
+  'Civilopedia.class.Air': 'aircraft',
+  'Civilopedia.class.SingleUse': 'missiles',
+  'Civilopedia.class.CoastBound': 'ships that must stay by the coast',
+  'Civilopedia.class.Waste': 'Waste',
   'Civilopedia.class.Part': 'spaceship parts',
   // A condition a rule decides, by its name without the rule set's prefix, so every rule set that has one shares its
   //  wording (#1051). One rule set's own wording goes under its full id (`civ1-unit.coastal-city`), which comes first.
