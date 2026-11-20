@@ -1137,11 +1137,12 @@ expect(
       points(rippled) > points(plain),
       rippled.boundingBox!.max.x > plain.boundingBox!.max.x,
       rippled.boundingBox!.max.z > plain.boundingBox!.max.z,
-      rippled.boundingBox!.min.y >= 0 && rippled.boundingBox!.min.y < 0.01,
+      rippled.boundingBox!.min.y >= 0 &&
+        rippled.boundingBox!.min.y < plain.boundingBox!.min.y,
       figuresOf(atSea) === rippled,
       figuresOf(inPort) === plain,
-      points(kit.body(spearman, colours, false, 1, 'whole', true)) ===
-        points(kit.body(spearman, colours, false, 1)),
+      kit.body(spearman, colours, false, 1, 'whole', true) ===
+        kit.body(spearman, colours, false, 1),
     ],
     [true, true, true, true, true, true, true]
   );

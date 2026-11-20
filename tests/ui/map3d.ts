@@ -2287,8 +2287,10 @@ expect(
     [true, true, true, true, true, groundAt(2, 0)[0]]
   );
 
-  // A ship sailing two squares leaves a wake: foam behind it as it goes, which thins away once it's there, the frames
-  //  going on till it's gone. A unit on foot leaves none; nor does a ship moved at once.
+  // A ship sailing two squares leaves a wake: foam behind it as it goes, on the sea, though the land under it's higher,
+  //  as where it comes into port; thinning away once it's there, the frames going on till it's gone. A unit on foot
+  //  leaves none; nor does a ship moved at once. One carrying a stronger unit, shown on top, leaves one too. Units
+  //  hidden mid-sail, it's no longer laid, and thins away.
   const ship = {
     ...unitOf('Unit-S', 1),
     _: 'Trireme',
@@ -2306,7 +2308,7 @@ expect(
   const sailing = [...wakesDrawn.values()],
     // The frames go on till the wake's gone, and then stop.
     calm = runFrames(),
-    sailed = [wakesEver.size, wakesDrawn.size, calm < 300];
+    sailed: unknown[] = [wakesEver.size, wakesDrawn.size, calm < 300];
 
   // Moving at once chosen mid-sail: the wake's gone on the next frame.
   repatched([2, 1, []], [0, 1, [ship]]);
@@ -2335,16 +2337,68 @@ expect(
   optionsRegistry.set(MAP3D_WALKS_OPTION, 'normal');
   repatched([1, 1, []]);
 
+  const shipAtOnce = wakesEver.size,
+    // A stronger unit aboard, shown on top: the ship still leaves a wake.
+    soldier = unitOf('Unit-P', 5);
+
+  repatched([0, 1, [ship, soldier]]);
+  wakesEver.clear();
+  stepped(ship, [0, 1], [1, 1]);
+  stepped(soldier, [0, 1], [1, 1]);
+  patch([0, 1, []], [1, 1, [ship, soldier]]);
+  runFrames(3);
+
+  const carrying = [
+    [...walkers.values()].map((marker) => marker.unit?.id),
+    wakesEver.size,
+  ];
+
+  runFrames();
+
+  // Units hidden mid-sail: it's laid no further, and thins away.
+  wakesEver.clear();
+  stepped(ship, [1, 1], [2, 1]);
+  stepped(soldier, [1, 1], [2, 1]);
+  patch([1, 1, []], [2, 1, [ship, soldier]]);
+  runFrames(4);
+  glider.toggleUnits();
+
+  const hiddenFrom = [...wakesDrawn.values()][0]?.corners ?? 0;
+
+  runFrames(4);
+
+  const hiddenSince = [...wakesDrawn.values()][0]?.corners ?? 0,
+    hiddenCalm = runFrames();
+
+  glider.toggleUnits();
+  repatched([2, 1, []]);
+
   expect(
-    'a ship sailing leaves a wake, foam behind it, thinning away once it’s there, the frames stopping once it’s gone; moving at once chosen mid-sail, it’s gone; a unit on foot leaves none, nor a ship moved at once',
+    'a ship sailing leaves a wake, foam behind it on the sea, though the land under it’s higher; thinning away once it’s there, the frames stopping once it’s gone; moving at once chosen mid-sail, it’s gone; a unit on foot leaves none, nor a ship moved at once; one carrying a stronger unit leaves one; units hidden mid-sail, it’s laid no further and thins away',
     [
       sailing.length,
       (sailing[0]?.corners ?? 0) > 0,
+      sailing[0]?.at[1],
+      groundAt(1, 1)[1]! > 0,
       sailed,
       footWake,
-      wakesEver.size,
+      shipAtOnce,
+      carrying,
+      hiddenFrom > 0 && hiddenSince <= hiddenFrom,
+      [hiddenCalm < 300, wakesDrawn.size],
     ],
-    [1, true, [1, 0, true, 1, 0], 0, 0]
+    [
+      1,
+      true,
+      0,
+      true,
+      [1, 0, true, 1, 0],
+      0,
+      0,
+      [['Unit-P'], 1],
+      true,
+      [true, 0],
+    ]
   );
 
   // Out of a city: from where it stood, in front of the buildings, at the height of the square's middle, where a unit in

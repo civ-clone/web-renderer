@@ -81,14 +81,18 @@ const round = (value: number, places = 3): number =>
   }
 
   const heldOn: number[] = [],
+    // Where its oldest point left still is, as the ship was: further on each time one's gone.
+    oldestAt: number[] = [],
     told: string[][] = [];
 
   for (let now = 210; now <= 200 + WAKE_LIFE + 50; now += 10) {
     wakes.trail('sails', [now / 1000, 5], now);
 
-    const { going, gone } = wakes.at(now);
+    const { going, gone } = wakes.at(now),
+      stops = going.find(({ id }) => id === 'stops');
 
-    heldOn.push(going.find(({ id }) => id === 'stops')?.points.length ?? 0);
+    heldOn.push(stops?.points.length ?? 0);
+    oldestAt.push(stops?.points.at(-1)?.at[0] ?? Infinity);
     told.push(gone);
   }
 
@@ -102,12 +106,40 @@ const round = (value: number, places = 3): number =>
         (count, index) => index === 0 || count <= heldOn[index - 1]!
       ),
       heldOn.at(-1),
+      oldestAt.every(
+        (at, index) => index === 0 || at >= oldestAt[index - 1]!
+      ) && oldestAt[0]! < oldestAt.at(-2)!,
       told.flat(),
       sailing,
       ended,
       wakes.size(),
     ],
-    [true, 0, ['stops'], ['sails'], ['sails'], 0]
+    [true, 0, true, ['stops'], ['sails'], ['sails'], 0]
+  );
+}
+
+// Still sailing, though no point's been laid for longer than a wake lasts, as with a tab out of sight: from where the
+//  ship is now, afresh, not from where it was.
+{
+  const wakes = new Wakes();
+
+  wakes.trail('ship', [0, 0], 0);
+  wakes.trail('ship', [0.01, 0], WAKE_LIFE + 300);
+
+  const left = wakes.at(WAKE_LIFE + 300).going[0]?.points.length;
+
+  wakes.trail('ship', [0.02, 0], WAKE_LIFE + 310);
+
+  expect(
+    'still sailing after longer than a wake lasts: afresh from where the ship is',
+    [left, wakes.at(WAKE_LIFE + 310).going[0]?.points],
+    [
+      1,
+      [
+        { at: [0.02, 0], age: 0 },
+        { at: [0.02, 0], age: 0 },
+      ],
+    ]
   );
 }
 

@@ -933,13 +933,19 @@ export class MapView3D implements MapRenderer {
 
     this.#walksEnded(ended);
     going.forEach((walker) => {
-      const unit = this.#drawWalker(walker)?.unit;
+      const marker = this.#drawWalker(walker);
 
-      // A ship, drawn sailing: its wake laid behind it.
+      // Drawn sailing, a ship among its units, on top or carrying the one that is: its wake laid behind it.
       if (
-        unit !== null &&
-        unit !== undefined &&
-        unitLook(unit.type, unit.kinds).shape === 'ship'
+        marker !== null &&
+        walker.units.some((id) => {
+          const unit = this.#walkingUnits.get(id);
+
+          return (
+            unit !== undefined &&
+            unitLook(unit._, unit.__ ?? []).shape === 'ship'
+          );
+        })
       ) {
         this.#wakes.trail(walker.id, walker.at, now);
       }
@@ -975,7 +981,11 @@ export class MapView3D implements MapRenderer {
         return;
       }
 
-      this.#stage.wake(id, this.#onLand(newest.at, 0), wakeShape(points));
+      // On the sea, wherever the ship is: one coming into port doesn't lift its wake off the water behind it, and the
+      //  land hides what lies over it.
+      const [u, , v] = this.#onLand(newest.at, 0);
+
+      this.#stage.wake(id, [u, 0, v], wakeShape(points));
     });
   }
 
