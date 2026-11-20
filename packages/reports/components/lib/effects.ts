@@ -106,7 +106,16 @@ export const effectLine = (
     base = `Civilopedia.effect.${[effect.type, ...words].join('_')}`,
     // The wording with its whole context first; without `_zero` only if there's none for 0.
     whole = [base, ...sign, ...(value === 0 ? ['zero'] : [])].join('_'),
-    keys = value === 0 ? [whole, base] : [whole],
+    // A wording may say its scope itself (`veteran_units_scope_player`), and then it isn't said again.
+    scopedKey =
+      typeof effect.scope === 'string'
+        ? `${whole}_scope_${effect.scope}`
+        : undefined,
+    keys = [
+      ...(scopedKey === undefined ? [] : [scopedKey]),
+      whole,
+      ...(value === 0 ? [base] : []),
+    ],
     count = value === null ? undefined : Math.abs(value);
 
   // A wording may exist only with its plural (`content_one`), so it's looked for as it would be said.
@@ -151,8 +160,13 @@ export const effectLine = (
             i18next.exists(key)
           )
         : undefined,
+    typed = (field: string): boolean =>
+      i18next.exists(`Civilopedia.effect.clause.${field}_${effect.type}`),
     scopeSaid = clauses.some(
-      (field) => effect[field] !== undefined && scoped(field) !== undefined
+      (field) =>
+        effect[field] !== undefined &&
+        !typed(field) &&
+        scoped(field) !== undefined
     ),
     qualified = clauses
       .map((field) => {
@@ -167,12 +181,12 @@ export const effectLine = (
         return targets === null
           ? null
           : t(
-              scoped(field) ??
-                [
-                  // A type may word a clause its own way (`clause.notFor_defence_multiplier`).
-                  `Civilopedia.effect.clause.${field}_${effect.type}`,
-                  `Civilopedia.effect.clause.${field}`,
-                ].find((key) => i18next.exists(key))!,
+              // A type may word a clause its own way (`clause.notFor_defence_multiplier`), before its scope does.
+              [`Civilopedia.effect.clause.${field}_${effect.type}`].find(
+                (key) => i18next.exists(key)
+              ) ??
+                scoped(field) ??
+                `Civilopedia.effect.clause.${field}`,
               {
                 targets,
                 interpolation: { escapeValue: false },
@@ -201,7 +215,10 @@ export const effectLine = (
   }
 
   const scope =
-    scopeSaid || scopeKey === undefined || t(scopeKey) === ''
+    scopeSaid ||
+    (scopedKey !== undefined && i18next.exists(scopedKey, { count })) ||
+    scopeKey === undefined ||
+    t(scopeKey) === ''
       ? []
       : [t(scopeKey)];
 

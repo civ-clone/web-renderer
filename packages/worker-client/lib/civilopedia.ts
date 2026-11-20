@@ -205,10 +205,10 @@ export const civilopediaData = (
     ) as (typeof Advance)[],
     { ages, ageOf: agesOf } = advanceAges(advances, game.rules),
     described = describedEffects(game.rules),
-    // Every class with an entry, and each entry with its class, so its effects can say which classes they name have
-    //  entries of their own once all are known.
+    // Every class with an entry, and each entry's class by its key, so its effects can say which classes they name
+    //  have entries of their own once all are known.
     entryClasses = new Set<Function>(),
-    entered: [CivilopediaEntry, Class][] = [],
+    itemOf = new Map<string, Class>(),
     entry = (
       Item: Class,
       kind: CivilopediaKind,
@@ -226,7 +226,7 @@ export const civilopediaData = (
       };
 
       entryClasses.add(Item);
-      entered.push([made, Item]);
+      itemOf.set(made.key, Item);
 
       return made;
     };
@@ -265,8 +265,9 @@ export const civilopediaData = (
       .map((Item) => entry(Item, 'terrain')),
   ];
 
-  entered.forEach(([made, Item]): void => {
-    made.effects = effectsOf(Item, described, entryClasses);
+  // On the entries as sent, some of which are copies with more fields (an advance's age): by key, which is unique.
+  all.forEach((made: CivilopediaEntry): void => {
+    made.effects = effectsOf(itemOf.get(made.key)!, described, entryClasses);
   });
 
   return all;

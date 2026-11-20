@@ -95,10 +95,14 @@ i18next.addResources('en', 'default', {
     '+{{percent}}% {{yield}} on squares with a road or railroad, and the city’s own square',
   'Civilopedia.effect.acts_as': 'Has the effect of {{improvement}}',
   'Civilopedia.effect.veteran_units': 'New {{unit}} built here are veterans',
+  'Civilopedia.effect.veteran_units_scope_player':
+    'New {{unit}} built in any of your cities are veterans',
   'Civilopedia.effect.heals': 'Fully repairs {{unit}} here',
   'Civilopedia.effect.airlift':
     'Lets {{unit}} fly between two cities that both have one',
   'Civilopedia.effect.content_multiplier': 'Content citizens ×{{value}}',
+  'Civilopedia.effect.clause.inCitiesWith_content_multiplier':
+    'from each {{targets}}',
   'Civilopedia.effect.tithe':
     'Each citizen it makes content pays a tithe of gold',
   'Civilopedia.effect.converts': 'Turns the city’s {{yield}} into {{into}}',

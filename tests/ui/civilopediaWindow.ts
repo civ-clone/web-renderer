@@ -608,6 +608,39 @@ const run = async (): Promise<void> => {
       'Makes 2 more unhappy citizens content, in all your cities with a Temple, with Mysticism'
   );
 
+  // Civilization II's (#1196): a wording that says its own scope, and a clause worded for its type.
+  const civ2 = entry('SunTzusWarAcademy', 'wonder', {
+    effects: [
+      {
+        type: 'veteran_units',
+        unit: { class: 'Land', name: 'Land', entry: false },
+        scope: 'player',
+      },
+      {
+        type: 'content_multiplier',
+        value: 2,
+        inCitiesWith: [{ class: 'Temple', name: 'Temple' }],
+        scope: 'player',
+      },
+      {
+        type: 'defence_multiplier',
+        value: 2,
+        against: { class: 'Naval', name: 'Naval', entry: false },
+        notFor: { class: 'Naval', name: 'Naval', entry: false },
+      },
+    ],
+  });
+
+  expect(
+    'Civilization II’s effects say their scope once, and clauses worded for their type',
+    text(entryHtml(civ2, data))
+      .split('What it does')[1]
+      ?.split('Requirements')[0],
+    'New land units built in any of your cities are veterans' +
+      'Content citizens ×2, from each Temple, in all your cities' +
+      'Defense of the units in the city ×2, against ships, except when ships defend'
+  );
+
   finished = true;
 
   if (failures.length > 0) {
