@@ -203,6 +203,8 @@ const staged: string[] = [],
   walkersPlaced = new Map<string, number[][]>(),
   // How solid each walker was last drawn, by its id, from 1 down to 0, once it's been faded.
   walkersFaded = new Map<string, number>(),
+  // How solid each square's unit was last drawn, by the square, once it's been faded: marked again, it's solid.
+  markersFaded = new Map<string, number>(),
   // What's marked on each square, by `x,y`, and where it stands.
   markers = new Map<string, TileMarker>(),
   markedAt = new Map<string, readonly [number, number, number]>(),
@@ -218,6 +220,8 @@ const staged: string[] = [],
     },
     setOverlay: (i, j, mesh) => void overlaysSet.set(`${i},${j}`, mesh),
     setMarker: (key, at, marker) => {
+      markersFaded.delete(key);
+
       if (marker === null) {
         markers.delete(key);
         markedAt.delete(key);
@@ -245,6 +249,11 @@ const staged: string[] = [],
         ...(walkersPlaced.get(id) ?? []),
         [...at, facing],
       ]),
+    fadeMarker: (key, opacity) => {
+      if (opacity < 1 || markersFaded.has(key)) {
+        markersFaded.set(key, opacity);
+      }
+    },
     fadeWalker: (id, opacity) => {
       if (opacity < 1 || walkersFaded.has(id)) {
         walkersFaded.set(id, opacity);
@@ -3425,7 +3434,8 @@ expect(
     [
       [['Unit-A', 1], [], ['Unit-A', 1], null],
       [['Unit-A', 1], [], ['Unit-A', 1], null],
-      [['Unit-A', 1], [], ['Unit-A', 1], null],
+      // Not fought, but the loser, gone with no move, fades out where it stood.
+      [['Unit-A', 1], ['fade'], ['Unit-A', 1], null],
       [null, ['battle'], null, ['Unit-R', 1]],
       [['Unit-A', 1], [], ['Unit-A', 1], null],
     ]
@@ -4298,6 +4308,351 @@ expect(
         0,
       ],
     ]
+  );
+
+  // Units arriving or leaving with no move fade in and out (§6.4, `fades.ts`): one disbanded, lost, or gone out of sight
+  //  fades out where it stood, as it was; one built, or come into sight, fades in on its square. Never solid in two
+  //  places at once.
+  const solidTwice = () => {
+      const onSquares = [...markers.entries()]
+          .filter(([key]) => (markersFaded.get(key) ?? 1) >= 1)
+          .map(([, marker]) => marker.unit?.id)
+          .filter((id): id is string => id !== undefined),
+        onWalkers = [...walkers.entries()]
+          .filter(([id]) => (walkersFaded.get(id) ?? 1) >= 1)
+          .map(([, marker]) => marker.unit?.id);
+
+      return onWalkers.filter(
+        (id): id is string => id !== undefined && onSquares.includes(id)
+      );
+    },
+    // Frame by frame till it's all over: what fades on each square, out and in, and anything solid twice.
+    fadesSeen = () => {
+      const seen = { out: new Set<string>(), in: new Set<string>() },
+        twice = new Set<string>();
+
+      for (let frame = 0; frame < 60 && frames.size > 0; frame++) {
+        runFrames(1);
+        [...walkers.entries()]
+          .filter(([id]) => kind(id) === 'fade')
+          .forEach(([, marker]) => seen.out.add(marker.unit?.id ?? '?'));
+        [...markersFaded.entries()]
+          .filter(([, opacity]) => opacity < 1)
+          .forEach(([key]) =>
+            seen.in.add(`${key} ${markers.get(key)?.unit?.id}`)
+          );
+        solidTwice().forEach((id) => twice.add(id));
+      }
+
+      return {
+        out: [...seen.out],
+        in: [...seen.in],
+        twice: [...twice],
+        left: walkers.size,
+      };
+    },
+    recruit = unitOf('Unit-J', 1),
+    veteran = unitOf('Unit-V', 9);
+
+  repatched([1, 1, [recruit]], [2, 1, []]);
+  walkersSet.length = 0;
+  markersFaded.clear();
+
+  // Disbanded: it fades out where it stood.
+  patch([1, 1, []]);
+  runFrames(1);
+
+  const disbanded: unknown[] = [unitOn(1, 1), fighters()];
+
+  disbanded.push(fadesSeen());
+
+  // Built: it fades in on its square.
+  patch([1, 1, [recruit]]);
+  runFrames(1);
+
+  const built: unknown[] = [unitOn(1, 1), markersFaded.get('1,1')];
+
+  built.push(fadesSeen(), markersFaded.get('1,1') ?? 1);
+
+  // A stronger one built where it stands: the new one on top fades in; the one beneath stays, unfaded.
+  patch([1, 1, [recruit, veteran]]);
+  runFrames(1);
+
+  const overIt: unknown[] = [unitOn(1, 1)];
+
+  overIt.push(fadesSeen());
+  repatched([1, 1, []]);
+
+  expect(
+    'a unit disbanded fades out where it stood; one built fades in on its square, solid once it’s in; a stronger one built over another fades in, the other staying; never solid in two places',
+    [disbanded, built, overIt],
+    [
+      [
+        null,
+        [['fade', 'Unit-J', 1, 1]],
+        { out: ['Unit-J'], in: [], twice: [], left: 0 },
+      ],
+      [
+        ['Unit-J', 1],
+        0,
+        { out: [], in: ['1,1 Unit-J'], twice: [], left: 0 },
+        1,
+      ],
+      [['Unit-V', 2], { out: [], in: ['1,1 Unit-V'], twice: [], left: 0 }],
+    ]
+  );
+
+  // A rival's step not shown (others' moves hidden), from one square to the next in one batch: on its new square at once,
+  //  fading at neither. Into the fog, a square the player doesn't know: it fades out where it was. Out of the dark: it
+  //  fades in where it's come, the view's frame before the world's rebuilt drawing nothing of it.
+  optionsRegistry.set(MAP3D_RIVALS_WALK_OPTION, false);
+  repatched([1, 1, [rival]]);
+  walkersSet.length = 0;
+  stepped(rival, [1, 1], [2, 1], 'Player-2');
+  patch([1, 1, []], [2, 1, [rival]]);
+  runFrames(1);
+
+  const notWalked: unknown[] = [unitOn(2, 1)];
+
+  notWalked.push(fadesSeen());
+  optionsRegistry.set(MAP3D_RIVALS_WALK_OPTION, true);
+
+  // Into the fog: the patch has its square empty, and nowhere it's gone.
+  patch([2, 1, []]);
+  runFrames(1);
+
+  const intoTheFog: unknown[] = [unitOn(2, 1)];
+
+  intoTheFog.push(fadesSeen());
+
+  // Out of the dark, as a rival's turn sends it: its step, a frame, then the world rebuilt.
+  stepped(rival, [3, 3], [2, 1], 'Player-2');
+  glider.queueTile(square(2, 1));
+  runFrames(1);
+
+  const outOfTheDarkFade: unknown[] = [unitOn(2, 1), markersFaded.get('2,1')];
+
+  burstThen([2, 1, [rival]]);
+  runFrames(1);
+  outOfTheDarkFade.push(unitOn(2, 1), markersFaded.get('2,1'));
+  outOfTheDarkFade.push(fadesSeen());
+  repatched([2, 1, []]);
+
+  expect(
+    'a rival’s step not shown fades at neither square; one gone into the fog fades out where it was; one out of the dark fades in where it’s come, once the world has it',
+    [notWalked, intoTheFog, outOfTheDarkFade],
+    [
+      [['Unit-R', 1], { out: [], in: [], twice: [], left: 0 }],
+      [null, { out: ['Unit-R'], in: [], twice: [], left: 0 }],
+      [
+        null,
+        undefined,
+        ['Unit-R', 1],
+        0,
+        { out: [], in: ['2,1 Unit-R'], twice: [], left: 0 },
+      ],
+    ]
+  );
+
+  // A stack killed fades once, as what fell in the battle, not again as gone. Its patch held past the blow, as meeting a
+  //  leader holds it, the rest of the stack stays till the patch comes: then it fades out.
+  repatched([1, 1, [walker]], [2, 1, [rival, rivalMate]]);
+  walkersSet.length = 0;
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  patch([1, 1, [walker]], [2, 1, []]);
+
+  const stackKilled = fadesSeen();
+
+  repatched([1, 1, [walker]], [2, 1, [rival, rivalMate]]);
+  walkersSet.length = 0;
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  runFrames();
+
+  const heldStack: unknown[] = [unitOn(2, 1)];
+
+  patch([1, 1, [walker]], [2, 1, []]);
+  runFrames(1);
+  heldStack.push(unitOn(2, 1), fadesSeen());
+  repatched([1, 1, []]);
+
+  expect(
+    'a stack killed fades once, as what fell; its patch held past the blow, the rest of the stack fades out when the patch comes',
+    [stackKilled, heldStack],
+    [
+      { out: [], in: [], twice: [], left: 0 },
+      [['Unit-T', 1], null, { out: ['Unit-T'], in: [], twice: [], left: 0 }],
+    ]
+  );
+
+  // A unit fading in that steps at once, as one built and moved: its fade's over, and it walks from its square. Moving
+  //  at once chosen mid-fade, or less motion asked for, ends every fade on the next frame. In a tab out of sight, the
+  //  first frame drawn again ends them. Many coming and going at once, as a turn handed over sends, come and go at once.
+  repatched([1, 1, []]);
+  patch([1, 1, [recruit]]);
+  runFrames(2);
+  stepped(recruit, [1, 1], [2, 1]);
+  patch([1, 1, []], [2, 1, [recruit]]);
+  runFrames(1);
+
+  const steppedIn: unknown[] = [
+    markersFaded.get('1,1') ?? 1,
+    [...walkers.keys()].map(kind),
+  ];
+
+  steppedIn.push(fadesSeen());
+  repatched([2, 1, []]);
+
+  patch([1, 1, [recruit]]);
+  runFrames(2);
+  optionsRegistry.set(MAP3D_WALKS_OPTION, 'off');
+  runFrames(1);
+
+  const offMidFade = [markersFaded.get('1,1') ?? 1, frames.size];
+
+  optionsRegistry.set(MAP3D_WALKS_OPTION, 'normal');
+  repatched([1, 1, []]);
+  walkersSet.length = 0;
+
+  patch([1, 1, [recruit]]);
+  runFrames(1);
+  now += 5000;
+  runFrames(1);
+
+  const outOfSightFade = [
+    markersFaded.get('1,1') ?? 1,
+    drawnWalkers().ids,
+    frames.size,
+  ];
+
+  repatched([1, 1, []]);
+
+  const crowdOf = (name: string) =>
+      [0, 1, 2, 3].flatMap((x) =>
+        [0, 1, 2].map(
+          (y) => [x, y, [unitOf(`Unit-${name}${x}${y}`, 1)]] as const
+        )
+      ),
+    firstCrowd = crowdOf('C'),
+    crowd = crowdOf('D');
+
+  repatched(
+    ...firstCrowd.map(
+      ([x, y, units]): [number, number, Tile['units'][number][]] => [
+        x,
+        y,
+        [...units],
+      ]
+    )
+  );
+  // Each replaced by another: one going and one coming on every square.
+  patch(
+    ...crowd.map(([x, y, units]): [number, number, Tile['units'][number][]] => [
+      x,
+      y,
+      [...units],
+    ])
+  );
+  runFrames(1);
+
+  const crowded = fadesSeen();
+
+  repatched(
+    ...crowd.map(([x, y]): [number, number, Tile['units'][number][]] => [
+      x,
+      y,
+      [],
+    ])
+  );
+
+  expect(
+    'a unit fading in that steps at once walks, its fade over; moving at once chosen mid-fade ends it; a tab out of sight ends it on the first frame; many at once come at once',
+    [steppedIn, offMidFade, outOfSightFade, crowded],
+    [
+      [1, ['walk'], { out: [], in: [], twice: [], left: 0 }],
+      [1, 0],
+      [1, [], 0],
+      { out: [], in: [], twice: [], left: 0 },
+    ]
+  );
+
+  // With units hidden (`t`), nothing fades, and hiding them mid-fade ends it. Walking quickly, a fade takes half as long.
+  //  One fading out faces the way it last went. A view not yet drawn takes its first tiles as they are, fading nothing.
+  glider.toggleUnits();
+  walkersSet.length = 0;
+  patch([1, 1, [recruit]]);
+  runFrames(1);
+
+  const hiddenFade: unknown[] = [
+    markersFaded.get('1,1') ?? 1,
+    drawnWalkers().ids,
+  ];
+
+  glider.toggleUnits();
+  repatched([1, 1, [recruit]]);
+  patch([1, 1, []]);
+  runFrames(2);
+  hiddenFade.push(walkers.size);
+  glider.toggleUnits();
+  runFrames(1);
+  hiddenFade.push(walkers.size);
+  glider.toggleUnits();
+  runFrames();
+
+  const fadeFrames = (speed: string) => {
+    optionsRegistry.set(MAP3D_WALKS_OPTION, speed);
+    repatched([1, 1, [recruit]]);
+    patch([1, 1, []]);
+
+    let count = 0;
+
+    for (; count < 60 && runFrames(1) > 0 && walkers.size > 0; count++);
+
+    optionsRegistry.set(MAP3D_WALKS_OPTION, 'normal');
+    runFrames();
+
+    return count;
+  };
+
+  const normalFade = fadeFrames('normal'),
+    quickFade = fadeFrames('fast');
+
+  repatched([0, 1, [recruit]]);
+  stepped(recruit, [0, 1], [1, 1]);
+  repatched([0, 1, []], [1, 1, [recruit]]);
+  walkersPlaced.clear();
+  patch([1, 1, []]);
+  runFrames(2);
+
+  const facedAway = [...walkersPlaced.entries()]
+    .filter(([id]) => kind(id) === 'fade')
+    .map(([, placed]) => Math.round(placed[0]![3]! * 100) / 100);
+
+  runFrames();
+
+  const undrawn = makeMapView(deps2D) as MapView3D;
+
+  (tiles[1 * 4 + 2] as Tile).units = [recruit] as Tile['units'];
+  undrawn.queueTile(tiles[1 * 4 + 2] as Tile);
+  undrawn.releaseTiles();
+  markersFaded.clear();
+  walkersSet.length = 0;
+  runFrames(1);
+
+  const firstTaken = [markersFaded.get('2,1') ?? 1, drawnWalkers().ids];
+
+  undrawn.dispose();
+  (tiles[1 * 4 + 2] as Tile).units = [] as Tile['units'];
+  runFrames();
+
+  expect(
+    'with units hidden nothing fades, and hiding them mid-fade ends it; walking quickly, a fade takes half as long; one fading out faces the way it last went; a view not yet drawn fades nothing',
+    [
+      hiddenFade,
+      quickFade < normalFade * 0.7 && quickFade > 5,
+      facedAway,
+      firstTaken,
+    ],
+    [[1, [], 1, 0], true, [1.57], [1, []]]
   );
 
   // Turns, frame by frame: how far the camera turns in all, the way it turns, each frame's step taken the short way.

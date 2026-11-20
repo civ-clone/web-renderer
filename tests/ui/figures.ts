@@ -860,6 +860,49 @@ sea.dispose();
   );
 }
 
+// A unit arriving on a city's square fades in as the stage fades a marker: its unit's part alone, so the city stays
+//  solid, with materials of its own.
+{
+  const square = drawMarker(kit, {
+      city: {
+        name: 'Roma',
+        size: 3,
+        colours,
+        walled: false,
+        disorder: false,
+      },
+      unit: unit('Spearman'),
+    }),
+    unitPart = square.getObjectByName(UNIT_PART)!,
+    opacities = (object: Object3D) => {
+      const found: number[] = [];
+
+      object.traverse((part) => {
+        if (part instanceof Mesh || part instanceof Sprite) {
+          found.push((part.material as Material).opacity);
+        }
+      });
+
+      return found;
+    },
+    faded: Faded = new Map();
+
+  fade([unitPart], 0.25, faded);
+
+  const city = square.children.filter((child) => child !== unitPart);
+
+  expect(
+    'a square’s unit faded alone: its city stays solid, with the kit’s materials',
+    [
+      opacities(unitPart).every((opacity) => opacity <= 0.25),
+      city.every((part) => opacities(part).every((opacity) => opacity === 1)),
+      city.length > 0,
+    ],
+    [true, true, true]
+  );
+  unfade(faded);
+}
+
 kit.dispose();
 
 expect(

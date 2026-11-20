@@ -154,6 +154,7 @@
     "test:orbit": "node tools/run-suite.js ui orbit",
     "test:walks": "node tools/run-suite.js ui walks",
     "test:battles": "node tools/run-suite.js ui battles",
+    "test:fades": "node tools/run-suite.js ui fades",
     "test:camera-input": "node tools/run-suite.js ui cameraInput",
     "test:pick": "node tools/run-suite.js ui pick",
     "test:minimap3d": "node tools/run-suite.js ui minimap3d",
@@ -351,7 +352,10 @@
       "civ2": {
         "rules": "@civ-clone/ui-rules-civ2",
         "hidden": true,
-        "tileset": ["civ2", "iso-pixelart"],
+        "tileset": [
+          "civ2",
+          "iso-pixelart"
+        ],
         "plugins": [
           "@civ-clone/base-civilization-barbarian",
           "@civ-clone/base-strategy-victory",
@@ -391,7 +395,10 @@
         "extends": "civ2",
         "original": "civ2",
         "hidden": true,
-        "tileset": ["civ2", "iso-pixelart"],
+        "tileset": [
+          "civ2",
+          "iso-pixelart"
+        ],
         "plugins": [
           "@civ-clone/civ2-enhanced"
         ]

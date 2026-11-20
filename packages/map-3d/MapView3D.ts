@@ -35,7 +35,11 @@ import {
 } from './camera/orbit';
 import prefersReducedMotion from '@civ-clone/ui-map/lib/reducedMotion';
 import CameraInput from './camera/CameraInput';
-import markerFor, { MarkerWords, TileMarker } from './markers/markerFor';
+import markerFor, {
+  MarkerWords,
+  TileMarker,
+  unitOnTop,
+} from './markers/markerFor';
 import { IN_FRONT_OF_CITY } from './markers/drawMarker';
 import Walks, {
   OWN_PACE,
@@ -44,6 +48,7 @@ import Walks, {
   Walker,
   quicker,
 } from './walks';
+import Fades, { FADE } from './fades';
 import Battles, {
   BATTLE_PACE,
   Battle,
@@ -72,6 +77,10 @@ const GLIDE = 350;
 
 // How far behind a unit's battles may fall before those under way are over at once, as the spec has the queue (§8.2).
 const BATTLES_BEHIND = 2000;
+
+// The most units that may start fading in or out as one batch of tiles is taken: past that, as when a turn's handed over
+//  or a whole stretch of the map comes into sight, they come and go at once.
+const FADES_AT_ONCE = 8;
 
 // A unit as it's shown, kept: the page fills the objects it holds in place as patches come, so what a marker shows of it
 //  is copied, its hit points and all.
@@ -205,6 +214,18 @@ export class MapView3D implements MapRenderer {
   //  the order they came. Those that fell at a blow, drawn where they stood till they're gone; and units fallen whose
   //  patch hasn't come, left off.
   #battles = new Battles();
+  // Units arriving or leaving with no move (`fades.ts`): the units each square's marked with, and the square each unit's
+  //  marked on, to tell, as tiles are taken, which have come and which have gone; those fading out, drawn where they
+  //  stood as they were; and those fading in, by the square they're marked on. Not till the view's drawn once.
+  #fades = new Fades();
+  #squareUnits = new Map<string, Unit[]>();
+  #unitSquare = new Map<string, string>();
+  #fadingOut = new Map<
+    string,
+    { units: Unit[]; at: WalkPoint; facing: number }
+  >();
+  #fadingIn = new Map<string, { key: string; unit: string }>();
+  #settled = false;
   #before = new Map<string, Before>();
   #fallen = new Map<string, Unit[]>();
   #gone = new Set<string>();
@@ -518,6 +539,11 @@ export class MapView3D implements MapRenderer {
     this.#disposed = true;
     this.#walks.endAll(0);
     this.#battles.endAll(0);
+    this.#fades.endAll();
+    this.#fadingOut.clear();
+    this.#fadingIn.clear();
+    this.#squareUnits.clear();
+    this.#unitSquare.clear();
     this.#before.clear();
     this.#fallen.clear();
     this.#gone.clear();
@@ -1092,6 +1118,174 @@ export class MapView3D implements MapRenderer {
     }
 
     this.#mark(x, y);
+  }
+
+  // The units the square `key` is marked with now, for telling which come and go (`#fadeChanged`).
+  #drawnOn(key: string, units: Unit[]): void {
+    (this.#squareUnits.get(key) ?? []).forEach(({ id }) => {
+      if (this.#unitSquare.get(id) === key) {
+        this.#unitSquare.delete(id);
+      }
+    });
+
+    if (units.length === 0) {
+      this.#squareUnits.delete(key);
+    } else {
+      this.#squareUnits.set(key, units);
+    }
+
+    units.forEach(({ id }) => this.#unitSquare.set(id, key));
+  }
+
+  // Whether units coming and going fade: with frames, motion not asked against, walks not chosen to be at once, and
+  //  units shown.
+  #fadesShown(): boolean {
+    return (
+      typeof requestAnimationFrame === 'function' &&
+      !prefersReducedMotion() &&
+      (this.#walkOptions?.speed() ?? 'normal') !== 'off' &&
+      this.#unitsShown
+    );
+  }
+
+  // Whether the unit `id` is drawn anywhere: marked on a square, or walking or fighting, or waiting for its patch, as a
+  //  loser fallen in battle does. Those fading where they fell were taken off their square at the blow, not as tiles
+  //  were taken, so never count as gone.
+  #drawnAnywhere(id: string): boolean {
+    return this.#unitSquare.has(id) || this.#leftOff(id);
+  }
+
+  // Tiles taken: units that were marked on a released square, `before`, and aren't drawn anywhere now fade out where
+  //  they stood, as they were, as a unit disbanded or lost, or gone out of sight, does; and the unit on top of one now
+  //  that wasn't marked anywhere (`markedBefore`), nor drawn walking or fighting, fades in there, as one built or come
+  //  into sight does. On the screen only, and a few at once: more, as a turn handed over sends, come and go at once.
+  #fadeChanged(
+    before: ReadonlyMap<string, Unit[]>,
+    markedBefore: ReadonlySet<string>
+  ): void {
+    const gone: [string, Unit[]][] = [],
+      come: [string, Unit][] = [];
+
+    before.forEach((was, key) => {
+      const [x, y] = key.split(',').map(Number) as [number, number];
+
+      if (!this.#visible(x, y, 0)) {
+        return;
+      }
+
+      const left = was.filter(({ id }) => !this.#drawnAnywhere(id)),
+        top = unitOnTop(this.#squareUnits.get(key) ?? [], this.#ringed);
+
+      if (left.length > 0) {
+        gone.push([key, left]);
+      }
+
+      if (top !== null && !markedBefore.has(top.id)) {
+        come.push([key, top]);
+      }
+    });
+
+    if (
+      gone.length + come.length === 0 ||
+      gone.length + come.length > FADES_AT_ONCE
+    ) {
+      return;
+    }
+
+    const now = performance.now(),
+      duration =
+        (this.#walkOptions?.speed() ?? 'normal') === 'fast' ? FADE / 2 : FADE;
+
+    gone.forEach(([key, units]) => {
+      const [x, y] = key.split(',').map(Number) as [number, number],
+        top = unitOnTop(units, this.#ringed);
+
+      this.#fadingOut.set(this.#fades.add('out', now, duration), {
+        units,
+        at: this.#standing({ x, y }),
+        facing: (top && this.#facings.get(top.id)) ?? 0,
+      });
+    });
+    come.forEach(([key, unit]) => {
+      this.#fadingIn.set(this.#fades.add('in', now, duration), {
+        key,
+        unit: unit.id,
+      });
+      this.#stage.fadeMarker(key, 0);
+    });
+    this.#draw();
+  }
+
+  // The fades under way at `now`: those fading out drawn where they stood, as solid as they are; those fading in, as
+  //  solid as they are, while they're still the unit on top of their square; those over, solid or taken away. With
+  //  less motion asked for, units to move at once, or units hidden, all are over at once.
+  #placeFades(now: number): void {
+    if (this.#fades.size() === 0) {
+      return;
+    }
+
+    if (!this.#fadesShown()) {
+      this.#fadesOver(this.#fades.endAll());
+
+      return;
+    }
+
+    const { going, ended } = this.#fades.at(now),
+      cut: string[] = [];
+
+    going.forEach(({ id, opacity }) => {
+      const out = this.#fadingOut.get(id),
+        coming = this.#fadingIn.get(id);
+
+      if (out !== undefined) {
+        this.#drawFigure(
+          {
+            id,
+            at: [out.at.at[0], out.at.at[1]],
+            lift: out.at.lift,
+            facing: out.facing,
+          },
+          this.#unitsMarker(out.units),
+          opacity
+        );
+
+        return;
+      }
+
+      if (coming === undefined) {
+        return;
+      }
+
+      // Another on top there now, or the unit gone, walking say: its fade's over.
+      if (
+        unitOnTop(this.#squareUnits.get(coming.key) ?? [], this.#ringed)?.id !==
+        coming.unit
+      ) {
+        this.#fades.end(id);
+        cut.push(id);
+
+        return;
+      }
+
+      this.#stage.fadeMarker(coming.key, opacity);
+    });
+    this.#fadesOver([...ended, ...cut]);
+  }
+
+  // The fades `ids` over: those fading out taken away, and those fading in solid.
+  #fadesOver(ids: readonly string[]): void {
+    ids.forEach((id) => {
+      const coming = this.#fadingIn.get(id);
+
+      if (this.#fadingOut.delete(id)) {
+        this.#takeAway(id);
+      }
+
+      if (coming !== undefined) {
+        this.#fadingIn.delete(id);
+        this.#stage.fadeMarker(coming.key, 1);
+      }
+    });
   }
 
   // What's drawn of a battle: the attacker, as the patch has it now, or what fell, as it was.
@@ -1903,6 +2097,15 @@ export class MapView3D implements MapRenderer {
 
     this.#releasedAt.clear();
 
+    // What each released square was marked with, and every unit marked anywhere, to tell which have come and gone.
+    const fading = this.#settled && this.#fadesShown(),
+      before = fading
+        ? new Map(
+            [...released].map((key) => [key, this.#squareUnits.get(key) ?? []])
+          )
+        : null,
+      markedBefore = fading ? new Set(this.#unitSquare.keys()) : null;
+
     squares.forEach(([x, y]) => this.#mark(x, y));
     // What stands on them, marked again on the land as it is now: only where something's marked, and not released. A
     //  world replaced has every square marked again, below.
@@ -1938,6 +2141,10 @@ export class MapView3D implements MapRenderer {
 
         this.#mark(x, y);
       });
+    }
+
+    if (before !== null && markedBefore !== null) {
+      this.#fadeChanged(before, markedBefore);
     }
 
     // Walks that were waiting for their patch, over if it's come.
@@ -1979,19 +2186,22 @@ export class MapView3D implements MapRenderer {
       this.#walkingUnits.set(unit.id, unit);
     });
 
-    const marker = markerFor(
-      shownBefore === undefined && !units.some(({ id }) => this.#leftOff(id))
-        ? tile
-        : {
-            city: shownBefore === undefined ? tile.city : shownBefore.city,
-            units: units.filter(({ id }) => !this.#leftOff(id)),
-          },
-      this.#ringed,
-      this.#unitsShown,
-      this.#words,
-      (unit) => this.#facings.get(unit.id) ?? 0,
-      this.#unitSize
-    );
+    const drawn = units.filter(({ id }) => !this.#leftOff(id)),
+      marker = markerFor(
+        shownBefore === undefined && drawn.length === tile.units.length
+          ? tile
+          : {
+              city: shownBefore === undefined ? tile.city : shownBefore.city,
+              units: drawn,
+            },
+        this.#ringed,
+        this.#unitsShown,
+        this.#words,
+        (unit) => this.#facings.get(unit.id) ?? 0,
+        this.#unitSize
+      );
+
+    this.#drawnOn(key, drawn);
 
     // On the land as it's drawn, as what's laid on it is, so a unit's stand stands over that.
     const [u, v] = this.#land.layout.centre(x, y),
@@ -2131,6 +2341,7 @@ export class MapView3D implements MapRenderer {
     this.#takeTiles();
     this.#placeWalkers(started);
     this.#placeBattles(started);
+    this.#placeFades(started);
 
     // Centred elsewhere since: the chunks nearest the new centre are built first.
     if (`${u},${v}` !== this.#focused) {
@@ -2148,6 +2359,8 @@ export class MapView3D implements MapRenderer {
     this.#showMinimap();
     this.#keepDistance();
     this.#frameTime = performance.now() - started;
+    // Drawn once: units that come and go from now on fade.
+    this.#settled = true;
     this.#showStats();
 
     if (
@@ -2155,6 +2368,7 @@ export class MapView3D implements MapRenderer {
       this.#land.overlaysPending() > 0 ||
       this.#walks.size() > 0 ||
       this.#battles.size() > 0 ||
+      this.#fades.size() > 0 ||
       moving ||
       rising
     ) {
