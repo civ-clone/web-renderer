@@ -37,6 +37,7 @@ import {
   drawMarker,
   fade,
   unfade,
+  unfaded,
 } from './markers/drawMarker';
 import { TileMarker } from './markers/markerFor';
 import { OverlayMesh } from './overlay/overlayMesh';
@@ -334,7 +335,6 @@ export const createStage: StageFactory = (
       overlayCopies(copies, overlay.span, extent, period.v, stopped)
     );
 
-  // A walker's copies turned the way it faces: only its figures turn, its flag over them as ever.
   // The unit's part of each of a marker's copies, its city apart.
   const unitParts = (drawn: readonly Object3D[]): Object3D[] =>
     drawn.flatMap((copy) => {
@@ -343,6 +343,7 @@ export const createStage: StageFactory = (
       return part === undefined ? [] : [part];
     });
 
+  // A walker's copies turned the way it faces: only its figures turn, its flag over them as ever.
   const face = (walker: Placed & { facing: number }): void =>
     walker.drawn.forEach((drawn) => {
       const figures = drawn.getObjectByName(FIGURES_PART);
@@ -666,6 +667,14 @@ export const createStage: StageFactory = (
 
       marker.opacity = solid;
       marker.faded ??= new Map();
+
+      // Solid again: drawn with the kit's materials, as every other marker is, its own let go of.
+      if (solid === 1) {
+        unfaded(unitParts(marker.drawn), marker.faded);
+
+        return;
+      }
+
       fade(unitParts(marker.drawn), solid, marker.faded);
     },
     fadeWalker: (id, opacity): void => {

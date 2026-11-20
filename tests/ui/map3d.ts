@@ -4329,7 +4329,7 @@ expect(
     // Frame by frame till it's all over: what fades on each square, out and in, and anything solid twice.
     fadesSeen = () => {
       const seen = { out: new Set<string>(), in: new Set<string>() },
-        twice = new Set<string>();
+        twice = new Set<string>(solidTwice());
 
       for (let frame = 0; frame < 60 && frames.size > 0; frame++) {
         runFrames(1);
@@ -4358,34 +4358,65 @@ expect(
   walkersSet.length = 0;
   markersFaded.clear();
 
-  // Disbanded: it fades out where it stood.
+  // Disbanded: it fades out where it stood. As the game sends it: the patch, then the next unit made active straight
+  //  after, before a frame, which marks the squares again.
+  glider.setActiveUnit(placed(recruit, 1, 1));
+  runFrames();
+  walkersSet.length = 0;
   patch([1, 1, []]);
+  glider.setActiveUnit(null);
   runFrames(1);
 
   const disbanded: unknown[] = [unitOn(1, 1), fighters()];
 
   disbanded.push(fadesSeen());
 
-  // Built: it fades in on its square.
+  // Built, and made the active unit, as the game does: it fades in on its square.
   patch([1, 1, [recruit]]);
+  glider.setActiveUnit(placed(recruit, 1, 1));
   runFrames(1);
 
   const built: unknown[] = [unitOn(1, 1), markersFaded.get('1,1')];
 
   built.push(fadesSeen(), markersFaded.get('1,1') ?? 1);
+  glider.setActiveUnit(null);
+  runFrames();
 
-  // A stronger one built where it stands: the new one on top fades in; the one beneath stays, unfaded.
+  // A stronger one built where it stands: on top at once, the one beneath staying; neither fades. That one beneath
+  //  disbanded, unseen, goes unseen.
   patch([1, 1, [recruit, veteran]]);
   runFrames(1);
 
   const overIt: unknown[] = [unitOn(1, 1)];
 
   overIt.push(fadesSeen());
+  patch([1, 1, [veteran]]);
+  runFrames(1);
+  overIt.push(unitOn(1, 1), fadesSeen());
   repatched([1, 1, []]);
 
+  // One fading in that walks off, another come in its place in the same batch: the new one fades in, not cut solid as
+  //  the first's fade ends.
+  const newcomerHere = unitOf('Unit-K2', 1);
+
+  patch([1, 1, [recruit]]);
+  runFrames(2);
+  stepped(recruit, [1, 1], [2, 1]);
+  patch([1, 1, [newcomerHere]], [2, 1, [recruit]]);
+  runFrames(1);
+
+  const inItsPlace: unknown[] = [
+    unitOn(1, 1),
+    (markersFaded.get('1,1') ?? 1) < 0.1,
+  ];
+
+  runFrames();
+  inItsPlace.push(markersFaded.get('1,1') ?? 1);
+  repatched([1, 1, []], [2, 1, []]);
+
   expect(
-    'a unit disbanded fades out where it stood; one built fades in on its square, solid once it’s in; a stronger one built over another fades in, the other staying; never solid in two places',
-    [disbanded, built, overIt],
+    'a unit disbanded fades out where it stood, the next made active at once; one built and made active fades in, solid once it’s in; a stronger one built over another is on top at once, and one beneath going goes unseen; one fading in that walks off, another come in its place, the new one fades in; never solid in two places',
+    [disbanded, built, overIt, inItsPlace],
     [
       [
         null,
@@ -4398,7 +4429,13 @@ expect(
         { out: [], in: ['1,1 Unit-J'], twice: [], left: 0 },
         1,
       ],
-      [['Unit-V', 2], { out: [], in: ['1,1 Unit-V'], twice: [], left: 0 }],
+      [
+        ['Unit-V', 2],
+        { out: [], in: [], twice: [], left: 0 },
+        ['Unit-V', 1],
+        { out: [], in: [], twice: [], left: 0 },
+      ],
+      [['Unit-K2', 1], true, 1],
     ]
   );
 

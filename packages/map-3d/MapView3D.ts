@@ -226,6 +226,11 @@ export class MapView3D implements MapRenderer {
   >();
   #fadingIn = new Map<string, { key: string; unit: string }>();
   #settled = false;
+  // What each square released since tiles were last taken was marked with as it was first released, and every unit
+  //  marked anywhere then: what tiles taken are told against, as the game marks squares again (the active unit's, say)
+  //  after it releases them, before the frame takes them.
+  #releasedFrom = new Map<string, Unit[]>();
+  #markedAtRelease: Set<string> | null = null;
   #before = new Map<string, Before>();
   #fallen = new Map<string, Unit[]>();
   #gone = new Set<string>();
@@ -542,6 +547,8 @@ export class MapView3D implements MapRenderer {
     this.#fades.endAll();
     this.#fadingOut.clear();
     this.#fadingIn.clear();
+    this.#releasedFrom.clear();
+    this.#markedAtRelease = null;
     this.#squareUnits.clear();
     this.#unitSquare.clear();
     this.#before.clear();
@@ -1155,10 +1162,11 @@ export class MapView3D implements MapRenderer {
     return this.#unitSquare.has(id) || this.#leftOff(id);
   }
 
-  // Tiles taken: units that were marked on a released square, `before`, and aren't drawn anywhere now fade out where
-  //  they stood, as they were, as a unit disbanded or lost, or gone out of sight, does; and the unit on top of one now
-  //  that wasn't marked anywhere (`markedBefore`), nor drawn walking or fighting, fades in there, as one built or come
-  //  into sight does. On the screen only, and a few at once: more, as a turn handed over sends, come and go at once.
+  // Tiles taken: the unit shown on a released square, `before`, that isn't drawn anywhere now fades out where it stood,
+  //  with those gone with it, as one disbanded or lost, or gone out of sight, does; a unit beneath it going goes unseen.
+  //  On a square that showed none, the unit on top now, if it wasn't marked anywhere (`markedBefore`), nor drawn walking
+  //  or fighting, fades in, as one built or come into sight does; one shown over another comes at once. On the screen
+  //  only, and a few at once: more, anywhere, as a turn handed over sends, come and go at once.
   #fadeChanged(
     before: ReadonlyMap<string, Unit[]>,
     markedBefore: ReadonlySet<string>
@@ -1167,20 +1175,15 @@ export class MapView3D implements MapRenderer {
       come: [string, Unit][] = [];
 
     before.forEach((was, key) => {
-      const [x, y] = key.split(',').map(Number) as [number, number];
-
-      if (!this.#visible(x, y, 0)) {
-        return;
-      }
-
-      const left = was.filter(({ id }) => !this.#drawnAnywhere(id)),
+      const shown = unitOnTop(was, this.#ringed),
+        left = was.filter(({ id }) => !this.#drawnAnywhere(id)),
         top = unitOnTop(this.#squareUnits.get(key) ?? [], this.#ringed);
 
-      if (left.length > 0) {
+      if (shown !== null && left.some(({ id }) => id === shown.id)) {
         gone.push([key, left]);
       }
 
-      if (top !== null && !markedBefore.has(top.id)) {
+      if (was.length === 0 && top !== null && !markedBefore.has(top.id)) {
         come.push([key, top]);
       }
     });
@@ -1192,21 +1195,28 @@ export class MapView3D implements MapRenderer {
       return;
     }
 
+    const onScreen = ([key]: [string, unknown]): boolean => {
+      const [x, y] = key.split(',').map(Number) as [number, number];
+
+      return this.#visible(x, y, 0);
+    };
+
     const now = performance.now(),
       duration =
         (this.#walkOptions?.speed() ?? 'normal') === 'fast' ? FADE / 2 : FADE;
 
-    gone.forEach(([key, units]) => {
+    gone.filter(onScreen).forEach(([key, units]) => {
       const [x, y] = key.split(',').map(Number) as [number, number],
         top = unitOnTop(units, this.#ringed);
 
       this.#fadingOut.set(this.#fades.add('out', now, duration), {
-        units,
+        // Kept as they were: the page fills what it holds in place.
+        units: units.map(keptUnit),
         at: this.#standing({ x, y }),
         facing: (top && this.#facings.get(top.id)) ?? 0,
       });
     });
-    come.forEach(([key, unit]) => {
+    come.filter(onScreen).forEach(([key, unit]) => {
       this.#fadingIn.set(this.#fades.add('in', now, duration), {
         key,
         unit: unit.id,
@@ -1281,9 +1291,15 @@ export class MapView3D implements MapRenderer {
         this.#takeAway(id);
       }
 
+      // Solid, unless another's fading in there now.
       if (coming !== undefined) {
         this.#fadingIn.delete(id);
-        this.#stage.fadeMarker(coming.key, 1);
+
+        if (
+          ![...this.#fadingIn.values()].some(({ key }) => key === coming.key)
+        ) {
+          this.#stage.fadeMarker(coming.key, 1);
+        }
       }
     });
   }
@@ -1563,8 +1579,22 @@ export class MapView3D implements MapRenderer {
 
   /** The world has the queued tiles now: they're taken on the next frame, if a flush doesn't take them first. */
   releaseTiles(): void {
+    const fading = this.#settled && this.#fadesShown();
+
+    if (
+      fading &&
+      this.#incomingTiles.size > 0 &&
+      this.#markedAtRelease === null
+    ) {
+      this.#markedAtRelease = new Set(this.#unitSquare.keys());
+    }
+
     this.#incomingTiles.forEach((tile, key) => {
       const queuedAt = this.#queuedAt.get(key) ?? 0;
+
+      if (fading && !this.#releasedFrom.has(key)) {
+        this.#releasedFrom.set(key, this.#squareUnits.get(key) ?? []);
+      }
 
       this.#tilesToDraw.set(key, tile);
       this.#releasedAt.set(key, queuedAt);
@@ -2097,14 +2127,13 @@ export class MapView3D implements MapRenderer {
 
     this.#releasedAt.clear();
 
-    // What each released square was marked with, and every unit marked anywhere, to tell which have come and gone.
-    const fading = this.#settled && this.#fadesShown(),
-      before = fading
-        ? new Map(
-            [...released].map((key) => [key, this.#squareUnits.get(key) ?? []])
-          )
-        : null,
-      markedBefore = fading ? new Set(this.#unitSquare.keys()) : null;
+    // What each released square was marked with, and every unit marked anywhere, as they were released, to tell which
+    //  have come and gone.
+    const before = this.#releasedFrom,
+      markedBefore = this.#markedAtRelease;
+
+    this.#releasedFrom = new Map();
+    this.#markedAtRelease = null;
 
     squares.forEach(([x, y]) => this.#mark(x, y));
     // What stands on them, marked again on the land as it is now: only where something's marked, and not released. A
@@ -2143,7 +2172,7 @@ export class MapView3D implements MapRenderer {
       });
     }
 
-    if (before !== null && markedBefore !== null) {
+    if (markedBefore !== null && this.#fadesShown()) {
       this.#fadeChanged(before, markedBefore);
     }
 

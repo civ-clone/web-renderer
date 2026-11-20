@@ -631,6 +631,31 @@ export const fade = (
   });
 };
 
+/**
+ * Draws `drawn`, faded before (`fade`), solid again with the kit's materials and its shadows as they were, and lets go
+ *  of its own (`unfade`).
+ */
+export const unfaded = (drawn: readonly Object3D[], faded: Faded): void => {
+  drawn.forEach((copy) =>
+    copy.traverse((part) => {
+      const kits = kitMaterials.get(part);
+
+      if (
+        kits === undefined ||
+        !(part instanceof Mesh || part instanceof Sprite)
+      ) {
+        return;
+      }
+
+      part.material = kits;
+      part.castShadow = castShadows.get(part) ?? part.castShadow;
+      kitMaterials.delete(part);
+      castShadows.delete(part);
+    })
+  );
+  unfade(faded);
+};
+
 /** Lets go of a faded marker's own materials (`fade`): the kit's textures they share stay the kit's. */
 export const unfade = (faded: Faded): void => {
   faded.forEach((own) => own.dispose());
