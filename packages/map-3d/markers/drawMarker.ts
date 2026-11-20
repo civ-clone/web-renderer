@@ -636,6 +636,10 @@ export const SHADOW_GONE = 0.5;
  * Draws `drawn` (a marker's copies) `opacity` solid, from 1 down to 0, with materials of its own made from the kit's,
  *  kept in `faded` to be let go of with `unfade`: other markers drawn with the kit's stay as they are, and the kit's
  *  sweep still sees the marker's original use the kit's labels. Under half solid, it casts no shadow.
+ *
+ * Its figures, stand and ring fade by leaving out a share of their points (`alphaHash`), drawn with the land and units:
+ *  see-through, they'd be drawn before the sea, which a ship's hull would then cut a dark hole in. Its flag and labels,
+ *  drawn after the sea and cloud, fade as see-through.
  */
 export const fade = (
   drawn: readonly Object3D[],
@@ -653,7 +657,13 @@ export const fade = (
 
       if (own === undefined) {
         own = kits.clone();
-        own.transparent = true;
+
+        if (part instanceof Sprite) {
+          own.transparent = true;
+        } else {
+          own.alphaHash = true;
+        }
+
         faded.set(kits, own);
       }
 

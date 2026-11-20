@@ -246,6 +246,8 @@ export class MapView3D implements MapRenderer {
   #markedAtRelease: Set<string> | null = null;
   #before = new Map<string, Before>();
   #fallen = new Map<string, Unit[]>();
+  // The puffs of smoke drawn where losers fall, by id (`#puff`).
+  #puffs = new Set<string>();
   #gone = new Set<string>();
   // How the player chose units to move, and whether others' are shown walking.
   #walkOptions: MapView3DDeps['walks'];
@@ -1086,7 +1088,11 @@ export class MapView3D implements MapRenderer {
   // The battles under way at `now`: the blows that have fallen since, those that are over, and what's drawn of each,
   //  as `#placeWalkers` has walks. Less motion asked for mid-battle, or units to move at once: every battle's over now.
   #placeBattles(now: number): void {
+    const puffed = new Set<string>();
+
     if (this.#battles.size() === 0) {
+      this.#puffsOver(puffed);
+
       return;
     }
 
@@ -1095,6 +1101,7 @@ export class MapView3D implements MapRenderer {
       (this.#walkOptions?.speed() ?? 'normal') === 'off'
     ) {
       this.#battlesOver(this.#battles.endAll(now));
+      this.#puffsOver(puffed);
 
       return;
     }
@@ -1110,9 +1117,42 @@ export class MapView3D implements MapRenderer {
         return;
       }
 
-      this.#drawFighter(fighter);
+      if (this.#drawFighter(fighter)) {
+        puffed.add(this.#puff(fighter));
+      }
     });
     this.#battlesEnded(ended);
+    this.#puffsOver(puffed);
+  }
+
+  // A puff of smoke where the loser `fighter` falls (`markers/puff.ts`), as far through as it's faded: its id.
+  #puff({ battle, at, lift, opacity }: Fighter): string {
+    const id = `${battle}-puff`,
+      { u: periodU, v: periodV } = this.#land.layout.period(),
+      within = (value: number, period: number | null): number =>
+        period === null ? value : ((value % period) + period) % period,
+      u = within(at[0], periodU),
+      v = within(at[1], periodV);
+
+    this.#puffs.add(id);
+    this.#stage.puff(
+      id,
+      [u, Math.max(0, this.#land.surfaceAt(u, v)) + lift, v],
+      1 - opacity
+    );
+
+    return id;
+  }
+
+  // The puffs of smoke not in `puffed`, drawn this frame, taken away: their battles over, or their loser no longer
+  //  drawn, as with units hidden.
+  #puffsOver(puffed: ReadonlySet<string>): void {
+    this.#puffs.forEach((id) => {
+      if (!puffed.has(id)) {
+        this.#puffs.delete(id);
+        this.#stage.puff(id, null);
+      }
+    });
   }
 
   // Battles over at once, as `Battles#endWhere` has them: their blows fall now, with nothing left to fade.
@@ -1363,21 +1403,23 @@ export class MapView3D implements MapRenderer {
     });
   }
 
-  // What's drawn of a battle: the attacker, as the patch has it now, or what fell, as it was.
-  #drawFighter(fighter: Fighter): void {
+  // What's drawn of a battle: the attacker, as the patch has it now, or what fell, as it was. Whether it's the loser,
+  //  drawn fading, which a puff of smoke goes with.
+  #drawFighter(fighter: Fighter): boolean {
     const fallen = this.#fallen.get(fighter.battle);
 
     if (fighter.fallen && fallen === undefined) {
-      return;
+      return false;
     }
 
-    this.#drawFigure(
-      fighter,
-      fighter.fallen
-        ? this.#unitsMarker(fallen!)
-        : this.#walkerMarker([fighter.unit]),
-      fighter.opacity
-    );
+    const marker = fighter.fallen
+      ? this.#unitsMarker(fallen!)
+      : this.#walkerMarker([fighter.unit]);
+
+    this.#drawFigure(fighter, marker, fighter.opacity);
+
+    // The loser, drawn fading: what fell where it stood, or the attacker at the edge, having lost.
+    return marker !== null && (fighter.fallen || fighter.opacity < 1);
   }
 
   // Battles that are over, taken away: each attacker back on its square, or, won and waiting for the battle's patch,

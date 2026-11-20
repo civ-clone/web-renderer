@@ -948,6 +948,16 @@ mapEvent:
     that stood fades away where it stood over 0.6 s, from the blow, as what was drawn there: the stack's size with it,
     as a stack dies with its defender outside a city or fortress in Civ1; what's left there, as in a city, is shown at
     once. The defender turns to face its attacker as the battle comes, as it did before. Walking quickly halves it all.
+  - **A puff of smoke** (third part: `packages/map-3d/markers/puff.ts`) where the loser falls, from the blow, as it
+    fades: where what fell stood, or at the edge, for an attacker that lost. Seven grey blobs, lighter and darker, burst
+    out, rising and spreading, swelling at once to their biggest a quarter of the way through and shrinking away to
+    nothing as the loser's gone. They're solid shapes made by code, as the figures are, not see-through smoke, so
+    they're drawn with the land and the units, and neither the sea nor the cloud needs drawing in another order round
+    them. Not with nothing drawn falling (units hidden), and not for a battle shown at once; a battle ended at once
+    takes its puff with it.
+  - **Fading:** a unit's figures, stand and ring fade by leaving out a share of their points (`alphaHash`), drawn with
+    the solid models; see-through, they'd be drawn before the sea, and a ship's hull fading would cut a dark hole in it.
+    Its flag and labels, drawn after the sea and the cloud, fade as see-through.
   - **Left off, as walks are:** the attacker's left off its square, drawn on its own (a walker with a battle's id), till
     it's back. The square attacked isn't held: it's drawn with what was on it as the battle came, till the blow, the
     battle's patch notwithstanding, its city too, and then as the patch has it. What's kept is copied, as the page fills

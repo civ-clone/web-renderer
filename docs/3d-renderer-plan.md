@@ -386,8 +386,12 @@ attacked as it lunges, waits for its last. Rivals' battles that come together in
 the camera wait for a battle the active unit fought with its last move.
 
 **Second part, arriving and leaving: done.** Units that arrive or leave with no move, built, disbanded, lost, or going
-out of sight or coming into it, fade in or out over half a second. Still to do: ranged units firing, ships and aircraft
-as they fight, Civ2's rounds, a flash under reduced motion, and #1255's follow-ups.
+out of sight or coming into it, fade in or out over half a second.
+
+**Third part, a puff of smoke: done.** Where the loser falls, a puff of grey smoke bursts out from the blow, rising and
+spreading as the loser fades, and it's gone with it. Fading units are dithered rather than see-through, so a ship
+fading cuts no hole in the sea. Still to do: ranged units firing, ships and aircraft as they fight, Civ2's rounds, a
+flash under reduced motion, and #1255's follow-ups.
 
 - **What:**
   - melee, ranged, naval and air;
