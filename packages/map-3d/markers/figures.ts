@@ -1132,9 +1132,16 @@ const standShape = new CylinderGeometry(0.19, 0.2, 1, 28),
   bankShape = new TorusGeometry(0.22, 0.014, 4, 32);
 
 /**
+ * Which of a unit's body a geometry is: all of it, or its figures alone or its stand and wall alone, so an aircraft
+ *  flying can climb off its stand, which stays on the ground.
+ */
+export type BodyPart = 'whole' | 'figures' | 'base';
+
+/**
  * All that's drawn of a unit on the land, as one geometry: its figures as `look` says, `scale` times their size, on a
  *  stand `stand` thick in its owner's second colour (a ship rides the water without one), behind a low wall when
- *  `fortified`. One draw call.
+ *  `fortified`. One draw call. Or, as `part` says, its figures alone, standing as high as on the stand, or its stand
+ *  and wall alone.
  */
 export const unitBodyGeometry = (
   look: UnitLook,
@@ -1143,15 +1150,31 @@ export const unitBodyGeometry = (
     fortified,
     scale,
     stand,
-  }: { fortified: boolean; scale: number; stand: number }
+    part = 'whole',
+  }: { fortified: boolean; scale: number; stand: number; part?: BodyPart }
 ): BufferGeometry => {
   const afloat = look.shape === 'ship',
     lift = afloat ? 0 : stand,
-    parts: Part[] = figureParts(look, colours).parts.map((part) => ({
-      ...part,
-      at: [part.at[0] * scale, part.at[1] * scale + lift, part.at[2] * scale],
-      size: [part.size[0] * scale, part.size[1] * scale, part.size[2] * scale],
-    }));
+    parts: Part[] =
+      part === 'base'
+        ? []
+        : figureParts(look, colours).parts.map((part) => ({
+            ...part,
+            at: [
+              part.at[0] * scale,
+              part.at[1] * scale + lift,
+              part.at[2] * scale,
+            ],
+            size: [
+              part.size[0] * scale,
+              part.size[1] * scale,
+              part.size[2] * scale,
+            ],
+          }));
+
+  if (part === 'figures') {
+    return mergeParts(parts);
+  }
 
   if (!afloat) {
     parts.push({

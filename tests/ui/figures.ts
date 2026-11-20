@@ -6,7 +6,9 @@
 //  - the marker kit makes each look in each pair of colours once, and lets them all go when taken down;
 //  - a unit's marker: its figures on a stand (a ship without one), behind a low wall when fortified, under its flag
 //    with the stack's size, its letter and a veteran's star, a bar for its hit points when hurt, and a ring and a
-//    pointer when it awaits orders.
+//    pointer when it awaits orders;
+//  - an aircraft drawn to fly, as a walker is: its figures and all over them a part of their own, off its stand and
+//    ring.
 
 import * as Civ1Units from '@civ-clone/civ1-unit/Units';
 import * as Civ2Units from '@civ-clone/civ2-unit/Units';
@@ -27,6 +29,7 @@ import {
   unitTable,
 } from '@civ-clone/ui-models-builtin/units';
 import {
+  ALOFT_PART,
   FIGURES_PART,
   Faded,
   IN_FRONT_OF_CITY,
@@ -714,6 +717,83 @@ expect(
   ],
   [0.26, 0.26, 1, 0, Math.PI / 2, [FIGURES_PART]]
 );
+
+// Drawn to fly, as a walker is: an aircraft's figures, its hit points' bar, flag and label, and the pointer over it,
+//  are a part of their own, to climb off its stand and the ring at its feet, which stay on the ground; its figures as
+//  high on their own as on the stand, and the two together all of it. On its square, or a unit on foot drawn to fly,
+//  one part as ever.
+{
+  const flier = unit('Fighter', {
+      kinds: ['Air'],
+      count: 2,
+      active: true,
+      health: 0.5,
+    }),
+    flying = drawMarker(kit, { city: null, unit: flier }, true),
+    part = flying.getObjectByName(UNIT_PART)!,
+    aloft = flying.getObjectByName(ALOFT_PART),
+    kinds = (objects: readonly Object3D[]): string[] =>
+      objects.map((object) =>
+        object === aloft
+          ? 'aloft'
+          : object instanceof Sprite
+          ? 'sprite'
+          : object instanceof Mesh
+          ? object.name === FIGURES_PART
+            ? 'figures'
+            : 'mesh'
+          : 'other'
+      ),
+    look = unitLook('Fighter', ['Air']),
+    whole = kit.body(look, colours, false, 1),
+    figures = kit.body(look, colours, false, 1, 'figures'),
+    base = kit.body(look, colours, false, 1, 'base'),
+    count = (geometry: BufferGeometry): number =>
+      geometry.getAttribute('position').count,
+    rounded = (n: number | undefined): number =>
+      Math.round((n ?? NaN) * 1000) / 1000;
+
+  expect(
+    'drawn to fly, an aircraft’s figures, flag, label and pointer climb as a part of their own, off its stand and ring; its figures as high as on the stand, and with it all of it; on its square, or on foot, one part; helicopters and missiles fly too, not ships',
+    [
+      kinds(part.children).sort(),
+      aloft === undefined ? null : kinds(aloft.children).sort(),
+      (aloft?.getObjectByName(FIGURES_PART) as Mesh | undefined)?.geometry ===
+        figures,
+      rounded(figures.boundingBox?.max.y) === rounded(whole.boundingBox?.max.y),
+      rounded(figures.boundingBox?.min.y) > 0.02,
+      rounded(base.boundingBox?.max.y) < 0.05,
+      count(figures) + count(base) === count(whole),
+      drawMarker(kit, { city: null, unit: flier }).getObjectByName(ALOFT_PART),
+      drawMarker(
+        kit,
+        { city: null, unit: unit('Spearman') },
+        true
+      ).getObjectByName(ALOFT_PART),
+      ['Helicopter', 'CruiseMissile', 'Nuclear', 'Bomber', 'Carrier'].map(
+        (type) =>
+          drawMarker(
+            kit,
+            { city: null, unit: unit(type) },
+            true
+          ).getObjectByName(ALOFT_PART) !== undefined
+      ),
+    ],
+    [
+      ['aloft', 'mesh', 'mesh'],
+      // Its hit points' bar, back and front, its flag, label and pointer.
+      ['figures', 'sprite', 'sprite', 'sprite', 'sprite', 'sprite'],
+      true,
+      true,
+      true,
+      true,
+      true,
+      undefined,
+      undefined,
+      [true, true, true, true, false],
+    ]
+  );
+}
 
 garrisoned.updateMatrixWorld(true);
 garrisoned.traverse((object) => void inCity.push(object));

@@ -30,6 +30,7 @@ import {
 import { ChunkMesh } from './terrain/chunks';
 import landMaterial from './landMaterial';
 import {
+  ALOFT_PART,
   FIGURES_PART,
   Faded,
   MarkerKit,
@@ -81,12 +82,13 @@ export interface Stage {
   setWalker(id: string, marker: TileMarker | null): void;
   /**
    * Where the walker `id` is now (`u`, height, `v`, on the world's own copy) and the way its figures face, drawn there at
-   *  every copy of the world in sight.
+   *  every copy of the world in sight; and, for an aircraft, how high it's flown off its stand, which stays there.
    */
   placeWalker(
     id: string,
     at: readonly [number, number, number],
-    facing: number
+    facing: number,
+    aloft?: number
   ): void;
   /**
    * How solid the walker `id` is drawn, from 1 down to gone at 0, as a unit falling in battle fades (`battles.ts`): with
@@ -130,6 +132,15 @@ export type Placed = {
   drawn: Object3D[];
   // A marker as drawn, which its copies are cloned from.
   original?: Object3D;
+};
+
+// A walker as the stage has it: which way its figures face, how high an aircraft's flown off its stand, how solid it's
+//  drawn, and the materials of its own it's drawn with, faded.
+type Walking = Placed & {
+  facing: number;
+  aloft: number;
+  opacity: number;
+  faded: Faded;
 };
 
 export type StageFactory = (
@@ -254,10 +265,7 @@ export const createStage: StageFactory = (
     markers = new Map<string, Placed & { opacity?: number; faded?: Faded }>(),
     // The units walking, by their walk's id (`walks.ts`), and fighting, by their battle's (`battles.ts`), each drawn as
     //  its own marker, with no city; the way each faces, how solid it's drawn, and its own materials, once faded.
-    walkers = new Map<
-      string,
-      Placed & { facing: number; opacity: number; faded: Faded }
-    >(),
+    walkers = new Map<string, Walking>(),
     markersGroup = new Group(),
     kit = new MarkerKit(),
     // What each square yields, over the land at every copy of the world, when they're shown.
@@ -343,19 +351,26 @@ export const createStage: StageFactory = (
       return part === undefined ? [] : [part];
     });
 
-  // A walker's copies turned the way it faces: only its figures turn, its flag over them as ever.
-  const face = (walker: Placed & { facing: number }): void =>
+  // A walker's copies turned the way it faces: only its figures turn, its flag over them as ever. An aircraft's
+  //  figures and flag as high as it's flown, off its stand.
+  const pose = (walker: Walking): void =>
     walker.drawn.forEach((drawn) => {
-      const figures = drawn.getObjectByName(FIGURES_PART);
+      const figures = drawn.getObjectByName(FIGURES_PART),
+        aloft = drawn.getObjectByName(ALOFT_PART);
 
       if (figures !== undefined) {
         figures.rotation.y = walker.facing;
       }
+
+      if (aloft !== undefined) {
+        aloft.position.y = walker.aloft;
+      }
     });
 
-  // A marker's original, made from what it marks: casting shadows on the land, as the models will.
-  const markerOf = (marker: TileMarker): Object3D => {
-    const original = drawMarker(kit, marker);
+  // A marker's original, made from what it marks: casting shadows on the land, as the models will. A walker's drawn to
+  //  fly (`flying`).
+  const markerOf = (marker: TileMarker, flying = false): Object3D => {
+    const original = drawMarker(kit, marker, flying);
 
     original.traverse((object) => {
       object.castShadow = object instanceof Mesh;
@@ -465,7 +480,7 @@ export const createStage: StageFactory = (
         marker.drawn.forEach((drawn) => markersGroup.remove(drawn));
         marker.drawn = copiesOf(marker, markersGroup, markerCopies);
       });
-      walkers.forEach(face);
+      walkers.forEach(pose);
       // Copies made afresh, from the kit's materials: those faded, faded again.
       walkers.forEach((walker) => {
         if (walker.opacity < 1) {
@@ -625,10 +640,11 @@ export const createStage: StageFactory = (
         return;
       }
 
-      const original = markerOf(marker),
-        walker: Placed & { facing: number; opacity: number; faded: Faded } = {
+      const original = markerOf(marker, true),
+        walker: Walking = {
           at: old?.at ?? [0, 0, 0],
           facing: old?.facing ?? marker.unit?.facing ?? 0,
+          aloft: old?.aloft ?? 0,
           opacity: 1,
           faded: new Map(),
           make: () => original.clone(),
@@ -637,11 +653,11 @@ export const createStage: StageFactory = (
         };
 
       walker.drawn = copiesOf(walker, markersGroup, markerCopies);
-      face(walker);
+      pose(walker);
       walkers.set(id, walker);
       sweep();
     },
-    placeWalker: (id, at, facing): void => {
+    placeWalker: (id, at, facing, aloft = 0): void => {
       const walker = walkers.get(id);
 
       if (walker === undefined) {
@@ -650,12 +666,13 @@ export const createStage: StageFactory = (
 
       walker.at = at;
       walker.facing = facing;
+      walker.aloft = aloft;
       walker.drawn.forEach((drawn, copy) => {
         const [offsetU, offsetV] = markerCopies[copy] ?? [0, 0];
 
         drawn.position.set(at[0] + offsetU, at[1], at[2] + offsetV);
       });
-      face(walker);
+      pose(walker);
     },
     fadeMarker: (key, opacity): void => {
       const marker = markers.get(key),

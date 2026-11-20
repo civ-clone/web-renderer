@@ -192,4 +192,10 @@ export const unitLook = (
     ? aircraft('modern')
     : foot('ancient', 'spear'));
 
+/** Whether a unit that looks like `look` is drawn in the air, flying as it moves: aircraft, helicopters and missiles. */
+export const airborne = (look: UnitLook): boolean =>
+  look.shape === 'aircraft' ||
+  look.shape === 'helicopter' ||
+  look.shape === 'missile';
+
 export default unitTable;

@@ -362,8 +362,11 @@ together, as a ship and its cargo, walk as one.
 before going to the next unit, which is chosen at once as before; a key or a press for it ends the walk.
 
 **Third part, the options: done.** Under `?3d=1`, Options has how units move (walk, walk quickly, or at once) and
-whether other players' units are shown moving. Still to do from the spec: §6.4's paths (along roads, ships' wakes,
-aircraft's arcs).
+whether other players' units are shown moving.
+
+**Fourth part, paths: aircraft done.** Aircraft fly an arc, climbing off their stands and landing at the walk's end.
+Walks already keep to roads, which are drawn straight between squares' middles, as walks go. Still to do from §6.4:
+ships' wakes.
 
 - **What:**
   - the shown state and held patches (spec §8.2);
