@@ -400,12 +400,18 @@ export const createStage: StageFactory = (
     const blobs = puffAt(puff.through, puff.seed);
 
     puff.drawn.forEach((copy) =>
-      copy.children.forEach((blob, index) => {
-        const { at, size } = blobs[index] ?? { at: [0, 0, 0], size: 0 };
+      copy.children.forEach((part, index) => {
+        const blob = blobs[index];
 
-        blob.position.set(...at);
-        blob.scale.setScalar(Math.max(size, 1e-4));
-        blob.visible = size > 0;
+        if (blob === undefined) {
+          part.visible = false;
+
+          return;
+        }
+
+        part.position.set(...blob.at);
+        part.scale.setScalar(Math.max(blob.size, 1e-4));
+        part.visible = blob.size > 0;
       })
     );
   };
