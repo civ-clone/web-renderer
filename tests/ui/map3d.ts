@@ -4439,6 +4439,124 @@ expect(
     ]
   );
 
+  // In a stack, the active unit disbanded, the next made active at once as the game does: the one shown, it fades out,
+  //  ringed as it was. A lone Settlers founding a city fades out where it stood, not in front of the new city. Many
+  //  coming and going as an observer's view changes, the world replaced: none fade.
+  repatched([1, 1, [recruit, veteran]]);
+  glider.setActiveUnit(placed(recruit, 1, 1));
+  runFrames();
+  walkersSet.length = 0;
+  patch([1, 1, [veteran]]);
+  glider.setActiveUnit(placed(veteran, 1, 1));
+  runFrames(1);
+
+  const stackDisbanded: unknown[] = [
+    unitOn(1, 1),
+    [...walkers.entries()]
+      .filter(([id]) => kind(id) === 'fade')
+      .map(([, marker]) => [marker.unit?.id, marker.unit?.active]),
+  ];
+
+  stackDisbanded.push(fadesSeen());
+  glider.setActiveUnit(null);
+  repatched([1, 1, []]);
+
+  repatched([1, 1, [recruit]]);
+  walkersPlaced.clear();
+  square(1, 1).city = {
+    id: 'City-F',
+    name: 'Foundton',
+    player: { civilization: { attributes: [] } },
+    originalPlayer: { civilization: { _: 'Romans' } },
+    growth: { size: 1 },
+  } as unknown as Tile['city'];
+  patch([1, 1, []]);
+  runFrames(1);
+
+  const [, , middleV] = groundAt(1, 1),
+    founded = [...walkersPlaced.entries()]
+      .filter(([id]) => kind(id) === 'fade')
+      .map(([, placed]) => Math.abs(placed[0]![2]! - middleV!) < 0.05);
+
+  runFrames();
+  square(1, 1).city = null;
+  repatched([1, 1, []]);
+
+  repatched([1, 1, [recruit]]);
+  glider.world.setTiles([...glider.world.tiles()], true);
+  square(1, 1).units = [] as Tile['units'];
+  square(2, 2).units = [veteran] as Tile['units'];
+  tiles.forEach((tile) => glider.queueTile(tile as Tile));
+  glider.releaseTiles();
+  runFrames(1);
+
+  const viewChanged = fadesSeen();
+
+  repatched([2, 2, []]);
+
+  // Hurt and gone in the same patch, the page filling the unit it holds in place: it fades out as it was drawn.
+  const scratched = {
+    ...unitOf('Unit-W', 1),
+    hitPoints: { current: 10, max: 10 },
+  } as Tile['units'][number] & { hitPoints: { current: number; max: number } };
+
+  repatched([1, 1, [scratched]]);
+  scratched.hitPoints.current = 5;
+  patch([1, 1, []]);
+  runFrames(1);
+
+  const hurtAndGone = [...walkers.entries()]
+    .filter(([id]) => kind(id) === 'fade')
+    .map(([, marker]) => [marker.unit?.id, marker.unit?.health]);
+
+  runFrames();
+
+  // A rival gone into the fog, back within half a second over a stack-mate: its fade out's over, drawn where it's come.
+  repatched([2, 1, [rival]], [3, 1, [rivalMate]]);
+  patch([2, 1, []]);
+  runFrames(3);
+
+  const cameBack: unknown[] = [walkers.size];
+
+  patch([3, 1, [rivalMate, rival]]);
+  runFrames(1);
+  cameBack.push(walkers.size, unitOn(3, 1));
+  runFrames();
+  repatched([3, 1, []]);
+
+  // Walking, its walk ended by a key between its square's release and the frame: it's walked there, so doesn't fade in.
+  repatched([1, 1, [walker]], [3, 3, [nextUnit]]);
+  glider.setActiveUnit(placed(walker, 1, 1));
+  runFrames();
+  stepped(walker, [1, 1], [2, 1]);
+  patch([1, 1, []], [2, 1, [walker]]);
+  glider.setActiveUnit(placed(nextUnit, 3, 3));
+  runFrames(3);
+  patch([2, 1, [walker]]);
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'w' }));
+
+  const hurried = fadesSeen();
+
+  glider.setActiveUnit(null);
+  repatched([2, 1, []], [3, 3, []]);
+
+  expect(
+    'in a stack, the active unit disbanded fades out ringed, the next made active at once; a lone Settlers founding a city fades out where it stood; an observer’s change of view fades none; one hurt and gone in one patch fades as it was drawn; a rival back from the fog ends its fade out; a walk hurried between release and frame fades nothing in',
+    [stackDisbanded, founded, viewChanged, hurtAndGone, cameBack, hurried],
+    [
+      [
+        ['Unit-V', 1],
+        [['Unit-J', true]],
+        { out: ['Unit-J'], in: [], twice: [], left: 0 },
+      ],
+      [true],
+      { out: [], in: [], twice: [], left: 0 },
+      [['Unit-W', null]],
+      [1, 0, ['Unit-R', 2]],
+      { out: [], in: [], twice: [], left: 0 },
+    ]
+  );
+
   // A rival's step not shown (others' moves hidden), from one square to the next in one batch: on its new square at once,
   //  fading at neither. Into the fog, a square the player doesn't know: it fades out where it was. Out of the dark: it
   //  fades in where it's come, the view's frame before the world's rebuilt drawing nothing of it.
@@ -4679,6 +4797,9 @@ expect(
 
   undrawn.dispose();
   (tiles[1 * 4 + 2] as Tile).units = [] as Tile['units'];
+  // What it marked on the stage the tests share, let go of.
+  markers.delete('2,1');
+  markedAt.delete('2,1');
   runFrames();
 
   expect(

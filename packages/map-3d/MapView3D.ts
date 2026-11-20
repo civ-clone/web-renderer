@@ -124,6 +124,16 @@ type Before = {
 };
 
 // The square the mouse rests on: where the mouse is on the page, the timer before its tooltip opens, and whether it has.
+// What a square's marked with, for telling which units come and go (`MapView3D#fadeChanged`): its units, kept as they
+//  were drawn, as the page fills what it holds in place; the one shown on top, if any's shown; and whether it stood in
+//  front of a city there.
+type Marked = {
+  units: Unit[];
+  shown: string | null;
+  ringed: boolean;
+  inCity: boolean;
+};
+
 type Hover = {
   key: string;
   x: number;
@@ -218,18 +228,24 @@ export class MapView3D implements MapRenderer {
   //  marked on, to tell, as tiles are taken, which have come and which have gone; those fading out, drawn where they
   //  stood as they were; and those fading in, by the square they're marked on. Not till the view's drawn once.
   #fades = new Fades();
-  #squareUnits = new Map<string, Unit[]>();
+  #squareUnits = new Map<string, Marked>();
   #unitSquare = new Map<string, string>();
   #fadingOut = new Map<
     string,
-    { units: Unit[]; at: WalkPoint; facing: number }
+    {
+      units: Unit[];
+      // The one shown on top, ringed as it was, or nothing.
+      shown: string | null;
+      at: WalkPoint;
+      facing: number;
+    }
   >();
   #fadingIn = new Map<string, { key: string; unit: string }>();
   #settled = false;
   // What each square released since tiles were last taken was marked with as it was first released, and every unit
   //  marked anywhere then: what tiles taken are told against, as the game marks squares again (the active unit's, say)
   //  after it releases them, before the frame takes them.
-  #releasedFrom = new Map<string, Unit[]>();
+  #releasedFrom = new Map<string, Marked>();
   #markedAtRelease: Set<string> | null = null;
   #before = new Map<string, Before>();
   #fallen = new Map<string, Unit[]>();
@@ -835,10 +851,12 @@ export class MapView3D implements MapRenderer {
   // Where a unit stands on the square (`x`, `y`) as it's marked, on the land as it's drawn: at its middle, or in front
   //  of its city's buildings, where cities are shown. As a point to walk from or to, with how far above the land there
   //  that is, and the square's middle, which it faces between, as a unit standing does.
-  #standing({ x, y }: Coordinate): WalkPoint {
+  #standing(
+    { x, y }: Coordinate,
+    inCity: boolean = this.#unitsShown && this.world.get(x, y).city !== null
+  ): WalkPoint {
     const [u, v] = this.#land.layout.centre(x, y),
       stands = Math.max(0, this.#land.surfaceAt(u, v)),
-      inCity = this.#unitsShown && this.world.get(x, y).city,
       at: [number, number] = [u, v + (inCity ? IN_FRONT_OF_CITY : 0)];
 
     return {
@@ -975,10 +993,13 @@ export class MapView3D implements MapRenderer {
   }
 
   // What units on their own are drawn as, as a square's are marked, with no city.
-  #unitsMarker(units: Unit[]): TileMarker | null {
+  #unitsMarker(
+    units: Unit[],
+    ringed: string | null = this.#ringed
+  ): TileMarker | null {
     return markerFor(
       { city: null, units },
-      this.#ringed,
+      ringed,
       this.#unitsShown,
       this.#words,
       () => 0,
@@ -1127,9 +1148,15 @@ export class MapView3D implements MapRenderer {
     this.#mark(x, y);
   }
 
-  // The units the square `key` is marked with now, for telling which come and go (`#fadeChanged`).
-  #drawnOn(key: string, units: Unit[]): void {
-    (this.#squareUnits.get(key) ?? []).forEach(({ id }) => {
+  // What the square `key` is marked with now, for telling which units come and go (`#fadeChanged`): `units`, kept as
+  //  they are, the one shown on top, whether it's ringed, and whether it stands in front of a city. One fading out marked
+  //  again, come back, say, is over: it's drawn here.
+  #drawnOn(
+    key: string,
+    units: Unit[],
+    { shown, ringed, inCity }: Omit<Marked, 'units'>
+  ): void {
+    (this.#squareUnits.get(key)?.units ?? []).forEach(({ id }) => {
       if (this.#unitSquare.get(id) === key) {
         this.#unitSquare.delete(id);
       }
@@ -1138,20 +1165,35 @@ export class MapView3D implements MapRenderer {
     if (units.length === 0) {
       this.#squareUnits.delete(key);
     } else {
-      this.#squareUnits.set(key, units);
+      this.#squareUnits.set(key, {
+        units: units.map(keptUnit),
+        shown,
+        ringed,
+        inCity,
+      });
     }
 
     units.forEach(({ id }) => this.#unitSquare.set(id, key));
+
+    if (this.#fadingOut.size > 0) {
+      const back = [...this.#fadingOut.entries()]
+        .filter(([, out]) =>
+          out.units.some((unit) => units.some(({ id }) => id === unit.id))
+        )
+        .map(([id]) => id);
+
+      back.forEach((id) => this.#fades.end(id));
+      this.#fadesOver(back);
+    }
   }
 
-  // Whether units coming and going fade: with frames, motion not asked against, walks not chosen to be at once, and
-  //  units shown.
+  // Whether units coming and going fade: with frames, motion not asked against, and walks not chosen to be at once.
+  //  With units hidden (`t`), none's shown but the active one, so only it can.
   #fadesShown(): boolean {
     return (
       typeof requestAnimationFrame === 'function' &&
       !prefersReducedMotion() &&
-      (this.#walkOptions?.speed() ?? 'normal') !== 'off' &&
-      this.#unitsShown
+      (this.#walkOptions?.speed() ?? 'normal') !== 'off'
     );
   }
 
@@ -1168,22 +1210,21 @@ export class MapView3D implements MapRenderer {
   //  or fighting, fades in, as one built or come into sight does; one shown over another comes at once. On the screen
   //  only, and a few at once: more, anywhere, as a turn handed over sends, come and go at once.
   #fadeChanged(
-    before: ReadonlyMap<string, Unit[]>,
+    before: ReadonlyMap<string, Marked>,
     markedBefore: ReadonlySet<string>
   ): void {
-    const gone: [string, Unit[]][] = [],
-      come: [string, Unit][] = [];
+    const gone: [string, Marked, Unit[]][] = [],
+      come: [string, string][] = [];
 
     before.forEach((was, key) => {
-      const shown = unitOnTop(was, this.#ringed),
-        left = was.filter(({ id }) => !this.#drawnAnywhere(id)),
-        top = unitOnTop(this.#squareUnits.get(key) ?? [], this.#ringed);
+      const left = was.units.filter(({ id }) => !this.#drawnAnywhere(id)),
+        top = this.#squareUnits.get(key)?.shown ?? null;
 
-      if (shown !== null && left.some(({ id }) => id === shown.id)) {
-        gone.push([key, left]);
+      if (was.shown !== null && left.some(({ id }) => id === was.shown)) {
+        gone.push([key, was, left]);
       }
 
-      if (was.length === 0 && top !== null && !markedBefore.has(top.id)) {
+      if (was.units.length === 0 && top !== null && !markedBefore.has(top)) {
         come.push([key, top]);
       }
     });
@@ -1195,7 +1236,7 @@ export class MapView3D implements MapRenderer {
       return;
     }
 
-    const onScreen = ([key]: [string, unknown]): boolean => {
+    const onScreen = ([key]: [string, ...unknown[]]): boolean => {
       const [x, y] = key.split(',').map(Number) as [number, number];
 
       return this.#visible(x, y, 0);
@@ -1205,21 +1246,24 @@ export class MapView3D implements MapRenderer {
       duration =
         (this.#walkOptions?.speed() ?? 'normal') === 'fast' ? FADE / 2 : FADE;
 
-    gone.filter(onScreen).forEach(([key, units]) => {
-      const [x, y] = key.split(',').map(Number) as [number, number],
-        top = unitOnTop(units, this.#ringed);
+    gone.filter(onScreen).forEach(([key, was, units]) => {
+      const [x, y] = key.split(',').map(Number) as [number, number];
 
+      // As it was shown: where it stood, in front of a city it stood in front of, the one on top on top.
       this.#fadingOut.set(this.#fades.add('out', now, duration), {
-        // Kept as they were: the page fills what it holds in place.
-        units: units.map(keptUnit),
-        at: this.#standing({ x, y }),
-        facing: (top && this.#facings.get(top.id)) ?? 0,
+        units: [
+          ...units.filter(({ id }) => id === was.shown),
+          ...units.filter(({ id }) => id !== was.shown),
+        ],
+        shown: was.ringed ? was.shown : null,
+        at: this.#standing({ x, y }, was.inCity),
+        facing: was.shown === null ? 0 : this.#facings.get(was.shown) ?? 0,
       });
     });
     come.filter(onScreen).forEach(([key, unit]) => {
       this.#fadingIn.set(this.#fades.add('in', now, duration), {
         key,
-        unit: unit.id,
+        unit,
       });
       this.#stage.fadeMarker(key, 0);
     });
@@ -1255,7 +1299,7 @@ export class MapView3D implements MapRenderer {
             lift: out.at.lift,
             facing: out.facing,
           },
-          this.#unitsMarker(out.units),
+          this.#unitsMarker(out.units, out.shown),
           opacity
         );
 
@@ -1267,10 +1311,7 @@ export class MapView3D implements MapRenderer {
       }
 
       // Another on top there now, or the unit gone, walking say: its fade's over.
-      if (
-        unitOnTop(this.#squareUnits.get(coming.key) ?? [], this.#ringed)?.id !==
-        coming.unit
-      ) {
+      if ((this.#squareUnits.get(coming.key)?.shown ?? null) !== coming.unit) {
         this.#fades.end(id);
         cut.push(id);
 
@@ -1586,14 +1627,26 @@ export class MapView3D implements MapRenderer {
       this.#incomingTiles.size > 0 &&
       this.#markedAtRelease === null
     ) {
-      this.#markedAtRelease = new Set(this.#unitSquare.keys());
+      // Marked on a square, or drawn walking or fighting.
+      this.#markedAtRelease = new Set([
+        ...this.#unitSquare.keys(),
+        ...this.#walkingUnits.keys(),
+      ]);
     }
 
     this.#incomingTiles.forEach((tile, key) => {
       const queuedAt = this.#queuedAt.get(key) ?? 0;
 
       if (fading && !this.#releasedFrom.has(key)) {
-        this.#releasedFrom.set(key, this.#squareUnits.get(key) ?? []);
+        this.#releasedFrom.set(
+          key,
+          this.#squareUnits.get(key) ?? {
+            units: [],
+            shown: null,
+            ringed: false,
+            inCity: false,
+          }
+        );
       }
 
       this.#tilesToDraw.set(key, tile);
@@ -2172,7 +2225,13 @@ export class MapView3D implements MapRenderer {
       });
     }
 
-    if (markedBefore !== null && this.#fadesShown()) {
+    // A world replaced, most of it released at once, as an observer's change of view sends it: what comes and goes is a
+    //  whole new view, not units arriving or leaving.
+    if (
+      markedBefore !== null &&
+      this.#fadesShown() &&
+      !(replaced && released.size * 2 >= tiles.length)
+    ) {
       this.#fadeChanged(before, markedBefore);
     }
 
@@ -2230,7 +2289,11 @@ export class MapView3D implements MapRenderer {
         this.#unitSize
       );
 
-    this.#drawnOn(key, drawn);
+    this.#drawnOn(key, drawn, {
+      shown: marker?.unit?.id ?? null,
+      ringed: marker?.unit?.active === true,
+      inCity: (marker?.unit ?? null) !== null && marker?.city !== null,
+    });
 
     // On the land as it's drawn, as what's laid on it is, so a unit's stand stands over that.
     const [u, v] = this.#land.layout.centre(x, y),

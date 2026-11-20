@@ -894,6 +894,20 @@ sea.dispose();
       shadowsBefore.push(part.castShadow);
     }
   });
+  const cityKits = square.children
+    .filter((child) => child !== unitPart)
+    .flatMap((child) => {
+      const found: Material[] = [];
+
+      child.traverse((part) => {
+        if (part instanceof Mesh || part instanceof Sprite) {
+          found.push(part.material as Material);
+        }
+      });
+
+      return found;
+    });
+
   fade([unitPart], 0.25, faded);
 
   const city = square.children.filter((child) => child !== unitPart);
@@ -916,8 +930,24 @@ sea.dispose();
       opacities(unitPart).every((opacity) => opacity <= 0.25),
       city.every((part) => opacities(part).every((opacity) => opacity === 1)),
       city.length > 0,
+      (() => {
+        const now: Material[] = [];
+
+        city.forEach((child) =>
+          child.traverse((part) => {
+            if (part instanceof Mesh || part instanceof Sprite) {
+              now.push(part.material as Material);
+            }
+          })
+        );
+
+        return (
+          now.length === cityKits.length &&
+          now.every((material, at) => material === cityKits[at])
+        );
+      })(),
     ],
-    [true, true, true]
+    [true, true, true, true]
   );
 
   // Solid again: the kit's own materials back, its shadows as they were, and its own let go of.
