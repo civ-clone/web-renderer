@@ -10,7 +10,8 @@
 //  - an aircraft drawn to fly, as a walker is: its figures and all over them a part of their own, off its stand and
 //    ring;
 //  - fading, its figures, stand and ring dithered, and its flag and labels see-through;
-//  - a puff of smoke where a unit falls: grey blobs bursting out, rising and spreading, swelling and shrinking away.
+//  - a puff of smoke where a unit falls: grey blobs bursting out, rising and spreading, swelling and shrinking away;
+//  - a ship out at sea in rings of ripples, and not in front of a city's buildings.
 
 import * as Civ1Units from '@civ-clone/civ1-unit/Units';
 import * as Civ2Units from '@civ-clone/civ2-unit/Units';
@@ -389,16 +390,19 @@ expect(
 const trireme = drawn(unit('Trireme'));
 
 const tFigure = kit.figure(look('Trireme'), colours),
-  tBody = figureOf(trireme)?.geometry;
+  tBody = figureOf(trireme)?.geometry,
+  // Its body but for the rings of ripples round it, out at sea.
+  tHull = kit.body(look('Trireme'), colours, false);
 
 expect(
-  'a ship rides the water without a stand: only its figure, life size, on the water',
+  'a ship rides the water without a stand: only its figure, life size, on the water, in its ripples',
   [
-    pointsIn(tBody) === pointsIn(tFigure),
-    Math.round((tBody?.boundingBox?.min.y ?? 1) * 1000) ===
+    tBody === kit.body(look('Trireme'), colours, false, 1, 'whole', true),
+    pointsIn(tHull) === pointsIn(tFigure),
+    Math.round((tHull.boundingBox?.min.y ?? 1) * 1000) ===
       Math.round((tFigure.boundingBox?.min.y ?? 0) * 1000),
   ],
-  [true, true]
+  [true, true, true]
 );
 
 // As big as the player chooses: the figures that many times life size, on the same stand, its flag over them, and a
@@ -408,6 +412,8 @@ expect(
     bigFigure = figureOf(big),
     bigBox = bigFigure?.geometry.boundingBox,
     bigShip = figureOf(drawn(unit('Trireme', { size: 0.5 })))?.geometry,
+    // Its body but for its ripples.
+    bigHull = kit.body(look('Trireme'), colours, false, 0.5),
     flagOf = (found: Object3D[]) =>
       spriteOf(found, kit.plain(colours[0]))?.position.y ?? 0;
 
@@ -425,8 +431,10 @@ expect(
       ),
       flagOf(big) > (bigBox?.max.y ?? Infinity),
       flagOf(big) > flagOf(soldiers),
-      Math.round((bigShip?.boundingBox?.min.y ?? 1) * 1000) ===
-        Math.round((tFigure.boundingBox?.min.y ?? 0) * 0.5 * 1000),
+      bigShip ===
+        kit.body(look('Trireme'), colours, false, 0.5, 'whole', true) &&
+        Math.round((bigHull.boundingBox?.min.y ?? 1) * 1000) ===
+          Math.round((tFigure.boundingBox?.min.y ?? 0) * 0.5 * 1000),
     ],
     [true, true, 0, 0, true, true, true]
   );
@@ -1104,6 +1112,40 @@ expect(
   disposed.length,
   6
 );
+
+// A ship out at sea sits in rings of ripples (`RIPPLES`): ovals of foam round its hull, wider and longer than it, just
+//  over the water, in its own mesh, turning with it. In front of a city's buildings, in port, none; nor round a unit on
+//  land.
+{
+  const look = unitLook('Trireme'),
+    plain = kit.body(look, colours, false, 1),
+    rippled = kit.body(look, colours, false, 1, 'whole', true),
+    points = (geometry: BufferGeometry) =>
+      geometry.getAttribute('position').count,
+    figuresOf = (object: Object3D) =>
+      (object.getObjectByName(FIGURES_PART) as Mesh | undefined)?.geometry,
+    atSea = drawMarker(kit, { city: null, unit: unit('Trireme') }),
+    inPort = drawMarker(kit, {
+      city: { name: 'Ostia', size: 2, colours, walled: false, disorder: false },
+      unit: unit('Trireme'),
+    }),
+    spearman = unitLook('Spearman');
+
+  expect(
+    'a ship out at sea in rings of ripples, wider and longer than its hull, just over the water, turning with it; in port, none; none round a unit on land',
+    [
+      points(rippled) > points(plain),
+      rippled.boundingBox!.max.x > plain.boundingBox!.max.x,
+      rippled.boundingBox!.max.z > plain.boundingBox!.max.z,
+      rippled.boundingBox!.min.y >= 0 && rippled.boundingBox!.min.y < 0.01,
+      figuresOf(atSea) === rippled,
+      figuresOf(inPort) === plain,
+      points(kit.body(spearman, colours, false, 1, 'whole', true)) ===
+        points(kit.body(spearman, colours, false, 1)),
+    ],
+    [true, true, true, true, true, true, true]
+  );
+}
 
 // A puff of smoke where a unit falls (`markers/puff.ts`): nothing at the blow and nothing at its end; between, every
 //  blob over the ground, at their biggest a quarter of the way through; rising and spreading as it goes; turned round by

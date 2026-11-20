@@ -891,6 +891,18 @@ mapEvent:
   - Nothing on the ground rides along with a walk that flies: it walks on its own beneath. An aircraft a ship carries
     rides with the ship, on the water, and flying on alone from where the ship's bound, takes off. An aircraft rides
     along with another flying only at the same height; otherwise it flies on with a walk of its own.
+- **Ships** (`packages/map-3d/wakes.ts`, and `RIPPLES` in `markers/figures.ts`):
+  - Out at sea, not in front of a city's buildings, a ship sits in two rings of ripples, ovals of foam round its hull
+    just over the water, part of its own mesh, so they cost nothing and turn with it.
+  - Sailing, it leaves a wake: a point laid behind it each time it's gone 0.04 of a square, the newest following it,
+    drawn as two lines of foam, one each side of its path, spreading out in a V, wide open half a square behind it,
+    however fast it goes, and thinning away over 1.2 s.
+    A ship that's stopped, its walk over or no longer drawn, lays no more, and its wake thins away, the frames going on
+    till it's gone. Each wake's foam is made again every frame, and costs a draw call.
+  - The foam's solid, just over the sea, so it's drawn with the land and the units, and the sea needs drawing in no
+    other order round it.
+  - With less motion asked for, or units moved at once, there's no walk and no wake, and wakes under way are gone at
+    once.
 - **Left off, not held:** rather than holding patches, a unit walking is left off every square it's on until its walk's
   over, when those squares are marked again. Whatever else a patch changes (a city captured, the land) shows at once. A
   unit that joins a stack under a stronger one walks there and disappears into it.
@@ -1021,7 +1033,7 @@ mapEvent:
   - A stack killed in a battle whose patch was held past the blow fades as the patch comes, the rest of it gone then.
   - Two other players' battle with their moves not shown is shown at once, but its loser fades out: a fade isn't a move.
 - **Still to come:**
-  - §6.4's paths: ships' wakes;
+  - roads that wind, as the pixel art's do, with walks following them;
   - battles' rest (2.4): a ranged unit firing, ships and aircraft as they fight, Civ2's rounds once they're sent (§8.1),
     a flash under reduced motion, a unit gone with its battle won (a missile) fading rather than going at the end, and
     another player's unit walking onto the square it emptied rather than being put there (#1255);

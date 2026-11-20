@@ -46,6 +46,7 @@ import Walks, {
   quicker,
 } from './walks';
 import Fades, { FADE } from './fades';
+import Wakes, { wakeShape } from './wakes';
 import Battles, {
   BATTLE_PACE,
   Battle,
@@ -225,6 +226,8 @@ export class MapView3D implements MapRenderer {
   //  marked on, to tell, as tiles are taken, which have come and which have gone; those fading out, drawn where they
   //  stood as they were; and those fading in, by the square they're marked on. Not till the view's drawn once.
   #fades = new Fades();
+  // The wakes ships walking leave, by their walk's id (`wakes.ts`).
+  #wakes = new Wakes();
   #squareUnits = new Map<string, Marked>();
   #unitSquare = new Map<string, string>();
   #fadingOut = new Map<
@@ -929,12 +932,60 @@ export class MapView3D implements MapRenderer {
     const { going, ended } = this.#walks.at(now);
 
     this.#walksEnded(ended);
-    going.forEach((walker) => this.#drawWalker(walker));
+    going.forEach((walker) => {
+      const unit = this.#drawWalker(walker)?.unit;
+
+      // A ship, drawn sailing: its wake laid behind it.
+      if (
+        unit !== null &&
+        unit !== undefined &&
+        unitLook(unit.type, unit.kinds).shape === 'ship'
+      ) {
+        this.#wakes.trail(walker.id, walker.at, now);
+      }
+    });
   }
 
-  // A walker drawn as its units are now, where it is.
-  #drawWalker(walker: Walker): void {
-    this.#drawFigure(walker, this.#walkerMarker(walker.units));
+  // The wakes ships leave (`wakes.ts`), as they are at `now`: those of ships sailing followed, as `#placeWalkers` has
+  //  just laid them, the rest thinning away and taken off once they're gone. With less motion asked for, or units to
+  //  move at once, they're gone at once.
+  #placeWakes(now: number): void {
+    if (this.#wakes.size() === 0) {
+      return;
+    }
+
+    if (
+      prefersReducedMotion() ||
+      (this.#walkOptions?.speed() ?? 'normal') === 'off'
+    ) {
+      this.#wakes.endAll().forEach((id) => this.#stage.wake(id, null));
+
+      return;
+    }
+
+    const { going, gone } = this.#wakes.at(now);
+
+    gone.forEach((id) => this.#stage.wake(id, null));
+    going.forEach(({ id, points }) => {
+      const [newest] = points;
+
+      if (newest === undefined) {
+        this.#stage.wake(id, null);
+
+        return;
+      }
+
+      this.#stage.wake(id, this.#onLand(newest.at, 0), wakeShape(points));
+    });
+  }
+
+  // A walker drawn as its units are now, where it is: what it's drawn as.
+  #drawWalker(walker: Walker): TileMarker | null {
+    const marker = this.#walkerMarker(walker.units);
+
+    this.#drawFigure(walker, marker);
+
+    return marker;
   }
 
   // Something walking or fighting (`id`) drawn as `marker`, where it is, `opacity` solid; an aircraft flying, `aloft`
@@ -951,10 +1002,7 @@ export class MapView3D implements MapRenderer {
     marker: TileMarker | null,
     opacity = 1
   ): void {
-    const signature = marker === null ? null : JSON.stringify(marker),
-      { u: periodU, v: periodV } = this.#land.layout.period(),
-      within = (value: number, period: number | null): number =>
-        period === null ? value : ((value % period) + period) % period;
+    const signature = marker === null ? null : JSON.stringify(marker);
 
     if (signature !== (this.#walkersDrawn.get(id) ?? null)) {
       this.#stage.setWalker(id, marker);
@@ -970,16 +1018,23 @@ export class MapView3D implements MapRenderer {
       return;
     }
 
-    const u = within(at[0], periodU),
+    this.#stage.placeWalker(id, this.#onLand(at, lift), facing, aloft);
+    this.#stage.fadeWalker(id, opacity);
+  }
+
+  // Where the point `at` on the ground is, `lift` over the land there (the sea, where it's under the sea), on the world's
+  //  own copy: as the stage places what walks, fights, puffs and sails.
+  #onLand(
+    at: readonly [number, number],
+    lift: number
+  ): [number, number, number] {
+    const { u: periodU, v: periodV } = this.#land.layout.period(),
+      within = (value: number, period: number | null): number =>
+        period === null ? value : ((value % period) + period) % period,
+      u = within(at[0], periodU),
       v = within(at[1], periodV);
 
-    this.#stage.placeWalker(
-      id,
-      [u, Math.max(0, this.#land.surfaceAt(u, v)) + lift, v],
-      facing,
-      aloft
-    );
-    this.#stage.fadeWalker(id, opacity);
+    return [u, Math.max(0, this.#land.surfaceAt(u, v)) + lift, v];
   }
 
   // The walker `id` taken off the stage, if it's drawn.
@@ -1127,19 +1182,10 @@ export class MapView3D implements MapRenderer {
 
   // A puff of smoke where the loser `fighter` falls (`markers/puff.ts`), as far through as it's faded: its id.
   #puff({ battle, at, lift, opacity }: Fighter): string {
-    const id = `${battle}-puff`,
-      { u: periodU, v: periodV } = this.#land.layout.period(),
-      within = (value: number, period: number | null): number =>
-        period === null ? value : ((value % period) + period) % period,
-      u = within(at[0], periodU),
-      v = within(at[1], periodV);
+    const id = `${battle}-puff`;
 
     this.#puffs.add(id);
-    this.#stage.puff(
-      id,
-      [u, Math.max(0, this.#land.surfaceAt(u, v)) + lift, v],
-      1 - opacity
-    );
+    this.#stage.puff(id, this.#onLand(at, lift), 1 - opacity);
 
     return id;
   }
@@ -2500,6 +2546,7 @@ export class MapView3D implements MapRenderer {
 
     this.#takeTiles();
     this.#placeWalkers(started);
+    this.#placeWakes(started);
     this.#placeBattles(started);
     this.#placeFades(started);
 
@@ -2529,6 +2576,7 @@ export class MapView3D implements MapRenderer {
       this.#walks.size() > 0 ||
       this.#battles.size() > 0 ||
       this.#fades.size() > 0 ||
+      this.#wakes.size() > 0 ||
       moving ||
       rising
     ) {

@@ -364,9 +364,10 @@ before going to the next unit, which is chosen at once as before; a key or a pre
 **Third part, the options: done.** Under `?3d=1`, Options has how units move (walk, walk quickly, or at once) and
 whether other players' units are shown moving.
 
-**Fourth part, paths: aircraft done.** Aircraft fly an arc, climbing off their stands and landing at the walk's end.
-Walks already keep to roads, which are drawn straight between squares' middles, as walks go. Still to do from §6.4:
-ships' wakes.
+**Fourth part, paths: done.** Aircraft fly an arc, climbing off their stands and landing at the walk's end. Ships sit
+in rings of ripples out at sea, and leave a wake of foam as they sail, spreading out in a V and thinning away. Walks
+already keep to roads, which are drawn straight between squares' middles, as walks go; roads that wind would need
+walks to follow them.
 
 - **What:**
   - the shown state and held patches (spec §8.2);
