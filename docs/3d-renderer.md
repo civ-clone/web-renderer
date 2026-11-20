@@ -690,7 +690,8 @@ Each is looked up by its type name in the model set.
 - **Working (Settlers):** the `work` clip.
 - **The active unit:** a ring laid on the land under it. It follows the unit marker option (ring, blink or both) and the
   theme's colours [verified: `UnitMarker` and the `--ui-unit-ring` tokens, `packages/game/MapView2D.ts`].
-- **Hidden units:** `t` hides units and cities, as it does on the 2D map.
+- **Hidden units:** `t` hides units and cities, as it does on the 2D map. A city's buildings are laid with the land
+  (§7.2), so they stay, and only its walls and name go; a unit in a city still stands in front of them.
 
 ### 6.4 Animation
 
@@ -753,16 +754,21 @@ All of these are driven by map events (§8):
     once.
 - **As built (4.1, first part: the city's own square;** `overlay/sprawl.ts`, laid with the land by `overlayMesh.ts`):
   - A city's lot is laid with the land, as its overlay (`overlayFor`'s `city`): it follows the land and casts shadows,
-    and nothing else is laid there. Its marker keeps its walls, a ring, and its name and size.
+    and nothing else is laid there. Its marker keeps its walls, a ring round the buildings, and its name and size.
   - A paved plaza at its middle, and streets from it to the edge it shares with each neighbour whose road or railroad
-    comes in (where the neighbour's half arrives) and each neighbour of sea.
-  - Lots: one sequence seeded from the city's id, from a jostled grid over the square, nearest the middle first, each
-    clear of the streets, the plaza, the spot in front where a unit stands and the lots before it, inside the walls'
-    ring. A city of a size has that many from the front, 5 at size 1 and 2 more each size, up to as many as fit (about
-    15 to 20 on one square), so one that grows keeps its buildings and adds the next out, and one that shrinks loses
-    the outermost. A road built clears a street through the lots in its way rather than laying the city out afresh.
-  - Each lot a house, its front to the plaza, a storey or two, taller near the middle as the city grows, roofed in a
-    seeded colour, none the owner's: a city taken looks the same till its battle's blow, as its marker does.
+    comes in (where the neighbour's half arrives), and one to its quay, towards the neighbours of sea taken together.
+  - Lots: one sequence seeded from the city's id, from a jostled grid over the square, nearest the middle first. A city
+    of a size has that many from the front, 5 at size 1 and 2 more each size, up to 30 or as many as fit, so one that
+    grows keeps its buildings and adds the next out, and one that shrinks loses the outermost. Thirty fit with few
+    streets, and 14 or more with a street out every way. A road built clears a street through the lots in its way,
+    rather than laying the city out afresh.
+  - Each building's footprint, out to its roof's eaves, is inside the walls and clear of the streets, the plaza, the
+    lots before it, and the stand of a unit in front of the buildings, with the ring at its feet or its bank. So the
+    buildings stand round the plaza and behind the unit, which stands in the open.
+  - Each lot a house: beside a street, facing it, square to it, so the houses line it; otherwise facing the plaza. A
+    storey or two, taller near the middle each six sizes, sunk to its lowest corner on a slope, roofed in a seeded
+    colour, none the owner's. A city taken keeps its look till its battle's blow, as its marker does, unless it shrinks
+    as it's taken, when it loses its outer houses as the patch comes.
   - Still to come: neighbouring squares (about size 4 on), side streets following the land, eras' buildings,
     landmarks and the palace, docks.
 

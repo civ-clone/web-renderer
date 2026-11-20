@@ -1,25 +1,36 @@
 // A city's sprawl on its own square on the 3D map (docs/3d-renderer.md §7.2, plan 4.1, `overlay/sprawl.ts`):
 //  - its lots one seeded sequence, a size taking them from the front: grown, it keeps its buildings; shrunk, it loses
-//    the outermost; more lots as it grows, up to as many as fit;
-//  - each lot on its own square, inside its walls, clear of every other, the streets, the plaza and the spot in front
-//    where a unit stands, on every grid;
+//    the outermost; more lots as it grows, up to as many as fit, and plenty fit with a street out every way;
+//  - each building's footprint, its roof's eaves turned as it faces, on its own square, inside the walls as they're
+//    drawn, clear of every other, the streets, the plaza, and the stand of a unit in front and the ring at its feet as
+//    they're drawn, on every grid;
+//  - the houses beside a street facing it, square to it, lining it;
 //  - streets out to exactly the ways it's given, from the plaza to the edge, where a road's half comes in;
 //  - the same every time for the same city, and a road built clearing a street rather than laying it out afresh.
 
+import { Euler, Mesh, Vector3 } from 'three';
 import { TopologyId } from '@civ-clone/ui-protocol/topology';
 import Land from '@civ-clone/ui-map-3d/Land';
 import World from '@civ-clone/ui-map/components/World';
 import sprawl, {
-  LOT_ROOM,
+  CityLayout,
+  GAP,
   Lot,
   PLAZA,
-  SPRAWL_REACH,
+  SprawlPlace,
   STREET,
   UNIT_ROOM,
   citySeed,
   lotsFor,
+  planFor,
+  tierFor,
 } from '@civ-clone/ui-map-3d/overlay/sprawl';
-import { IN_FRONT_OF_CITY } from '@civ-clone/ui-map-3d/markers/drawMarker';
+import {
+  IN_FRONT_OF_CITY,
+  MarkerKit,
+  drawMarker,
+} from '@civ-clone/ui-map-3d/markers/drawMarker';
+import { wallsGeometry } from '@civ-clone/ui-map-3d/markers/figures';
 
 const failures: string[] = [];
 let checks = 0;
@@ -36,8 +47,22 @@ const expect = (description: string, actual: unknown, expected: unknown) => {
   }
 };
 
+// The pointer over the unit awaiting orders is drawn on a canvas: one that draws nothing.
+Object.assign(globalThis, {
+  document: {
+    createElement: () => ({
+      width: 0,
+      height: 0,
+      getContext: () =>
+        new Proxy({}, { get: () => () => ({ width: 0 }) }) as never,
+    }),
+  },
+});
+
+type Point = readonly [number, number];
+
 // A square on a square grid, at (`x`, `y`).
-const squareAt = (x: number, y: number) => ({
+const squareAt = (x: number, y: number): SprawlPlace => ({
     centre: [x + 0.5, y + 0.5] as const,
     toward: ([dx, dy]: readonly [number, number]) =>
       [x + dx + 0.5, y + dy + 0.5] as const,
@@ -47,9 +72,177 @@ const squareAt = (x: number, y: number) => ({
   north = [0, -1] as const,
   west = [-1, 0] as const,
   south = [0, 1] as const,
-  inFrontOf = ([u, v]: readonly [number, number]) =>
-    [u, v + IN_FRONT_OF_CITY] as const,
-  positions = (lots: Lot[]) => lots.map(({ at }) => at.join(','));
+  inFrontOf = ([u, v]: Point): Point => [u, v + IN_FRONT_OF_CITY],
+  positions = (lots: Lot[]) => lots.map(({ at }) => at.join(',')),
+  // How far out the inside of the walls is, as they're drawn: their nearest point to the middle, across the ground.
+  wallsInside = (() => {
+    const at = wallsGeometry().getAttribute('position');
+    let nearest = Infinity;
+
+    for (let index = 0; index < at.count; index++) {
+      nearest = Math.min(nearest, Math.hypot(at.getX(index), at.getZ(index)));
+    }
+
+    return nearest;
+  })(),
+  // How far out from where it stands a unit's stand, and the ring at its feet awaiting orders, and its bank fortified,
+  //  reach, as they're drawn: what's at its feet, low on the ground.
+  unitsFeet = (() => {
+    const group = drawMarker(new MarkerKit(), {
+      city: null,
+      unit: {
+        id: 'Unit-Spearman',
+        type: 'Spearman',
+        kinds: [],
+        colours: ['#aa0000', '#ffffff'],
+        count: 1,
+        active: true,
+        busy: false,
+        fortified: true,
+        veteran: false,
+        health: null,
+        status: null,
+        facing: 0,
+        size: 1,
+      },
+    });
+    let furthest = 0;
+
+    group.updateMatrixWorld(true);
+    group.traverse((part) => {
+      if (!(part instanceof Mesh)) {
+        return;
+      }
+
+      const at = part.geometry.getAttribute('position'),
+        point = new Vector3();
+
+      for (let index = 0; index < at.count; index++) {
+        point.fromBufferAttribute(at, index).applyMatrix4(part.matrixWorld);
+
+        if (point.y < 0.06) {
+          furthest = Math.max(furthest, Math.hypot(point.x, point.z));
+        }
+      }
+    });
+
+    return furthest;
+  })(),
+  // A building's footprint as it's drawn: a square its width across, turned to face its way, as the overlay turns it.
+  footprint = ({ at: [u, v], width, facing }: Lot): Point[] =>
+    [
+      [-1, -1],
+      [1, -1],
+      [1, 1],
+      [-1, 1],
+    ].map(([du, dv]) => {
+      const corner = new Vector3(
+        (du! * width) / 2,
+        0,
+        (dv! * width) / 2
+      ).applyEuler(new Euler(0, facing, 0));
+
+      return [u + corner.x, v + corner.z] as const;
+    }),
+  // A street as it's drawn: a strip its width across from end to end.
+  strip = ([a, b]: readonly [Point, Point]): Point[] => {
+    const length = Math.hypot(b[0] - a[0], b[1] - a[1]),
+      across = [
+        (-(b[1] - a[1]) / length) * (STREET / 2),
+        ((b[0] - a[0]) / length) * (STREET / 2),
+      ] as const;
+
+    return [
+      [a[0] + across[0], a[1] + across[1]],
+      [b[0] + across[0], b[1] + across[1]],
+      [b[0] - across[0], b[1] - across[1]],
+      [a[0] - across[0], a[1] - across[1]],
+    ];
+  },
+  // Whether two convex shapes overlap: no line between them, along any of their sides.
+  overlap = (p: Point[], q: Point[]): boolean =>
+    ![p, q].some((shape) =>
+      shape.some(([au, av], index) => {
+        const [bu, bv] = shape[(index + 1) % shape.length]!,
+          normal = [av - bv, bu - au] as const,
+          onto = (points: Point[]) =>
+            points.map(([u, v]) => u * normal[0] + v * normal[1]),
+          ps = onto(p),
+          qs = onto(q);
+
+        return (
+          Math.max(...ps) <= Math.min(...qs) + 1e-12 ||
+          Math.max(...qs) <= Math.min(...ps) + 1e-12
+        );
+      })
+    ),
+  // How far `point` is from the segment `a`–`b`.
+  fromSegment = ([u, v]: Point, [au, av]: Point, [bu, bv]: Point): number => {
+    const du = bu - au,
+      dv = bv - av,
+      t = Math.max(
+        0,
+        Math.min(1, ((u - au) * du + (v - av) * dv) / (du * du + dv * dv))
+      );
+
+    return Math.hypot(u - au - du * t, v - av - dv * t);
+  },
+  // How far `point` is from the convex shape `corners`, or none inside it.
+  fromShape = (point: Point, corners: Point[]): number => {
+    const sides = corners.map(
+        (corner, index) =>
+          [corner, corners[(index + 1) % corners.length]!] as const
+      ),
+      inside =
+        sides.every(
+          ([[au, av], [bu, bv]]) =>
+            (bu - au) * (point[1] - av) - (bv - av) * (point[0] - au) >= 0
+        ) ||
+        sides.every(
+          ([[au, av], [bu, bv]]) =>
+            (bu - au) * (point[1] - av) - (bv - av) * (point[0] - au) <= 0
+        );
+
+    return inside
+      ? 0
+      : Math.min(...sides.map(([a, b]) => fromSegment(point, a, b)));
+  },
+  // The faults in a city's layout on `place`, with its unit's spot at `spot`: each lot that isn't on its square,
+  //  inside the walls, clear of the plaza, the unit's feet, the streets and the lots before it, as they're drawn.
+  faultsIn = (
+    place: SprawlPlace,
+    { plaza, streets, lots }: CityLayout,
+    spot: Point
+  ): string[] => {
+    const [u, v] = place.centre,
+      strips = streets.map(strip),
+      footprints = lots.map(footprint);
+
+    return lots.flatMap((lot, index) => {
+      const corners = footprints[index]!,
+        faults = [
+          !place.owns(...lot.at) && 'off its square',
+          corners.some(
+            ([cu, cv]) => Math.hypot(cu - u, cv - v) > wallsInside
+          ) && 'through the walls',
+          fromShape(plaza.at, corners) < plaza.radius && 'on the plaza',
+          fromShape(spot, corners) < unitsFeet && 'at the unit’s feet',
+          strips.some((street) => overlap(corners, street)) && 'on a street',
+          footprints.slice(0, index).some((other) => overlap(corners, other)) &&
+            'on another',
+        ].filter(Boolean);
+
+      return faults.length === 0 ? [] : [`lot ${index}: ${faults.join(', ')}`];
+    });
+  };
+
+// What's drawn round a city that its lots keep clear of: a unit's feet reach no further than the room kept, and the
+//  walls stand out beyond where the lots reach.
+expect(
+  'a unit’s stand, ring and bank are within the room kept for them, and the plaza’s as wide as the room kept',
+  [unitsFeet > 0.2, unitsFeet <= UNIT_ROOM, wallsInside > 0.3],
+  [true, true, true]
+);
 
 // From the front: size by size, each one's lots are the next's first, for many cities and ways out.
 {
@@ -63,7 +256,7 @@ const squareAt = (x: number, y: number) => ({
 
     for (let size = 1; size <= 20; size++) {
       const lots = positions(
-        sprawl(place, seed, size, ways, inFrontOf(place.centre)).lots
+        sprawl(place, planFor(seed, size, ways), inFrontOf(place.centre)).lots
       );
 
       if (before.some((at, index) => lots[index] !== at)) {
@@ -88,9 +281,11 @@ const squareAt = (x: number, y: number) => ({
       [u, v] = place.centre,
       lots = sprawl(
         place,
-        citySeed(`City-${city}`),
-        30,
-        [[east], [east, west], []][city % 3]!,
+        planFor(
+          citySeed(`City-${city}`),
+          30,
+          [[east], [east, west], []][city % 3]!
+        ),
         inFrontOf(place.centre)
       ).lots,
       third = Math.floor(lots.length / 3),
@@ -111,18 +306,20 @@ const squareAt = (x: number, y: number) => ({
 }
 
 expect(
-  'more lots as a city grows, up to as many as fit',
+  'more lots as a city grows, up to as many as fit; taller near the middle each six sizes',
   [
     lotsFor(1),
     lotsFor(2) > lotsFor(1),
     lotsFor(10) > lotsFor(5),
     lotsFor(40) === lotsFor(80),
+    [1, 6, 7, 12, 13].map(tierFor),
   ],
-  [5, true, true, true]
+  [5, true, true, true, [0, 0, 1, 1, 2]]
 );
 
-// Room: on every grid, every lot on its own square, inside the walls' ring, clear of the others, the streets, the
-//  plaza and the unit's spot.
+// Room: on every grid, every building's footprint on its own square, inside the walls, clear of the others, the
+//  streets, the plaza and the unit's feet, as they're drawn; and with a street out every way, a city still has plenty,
+//  more than a city just founded.
 (['square', 'staggered-iso', 'hex-odd-r'] as TopologyId[]).forEach(
   (topologyId) => {
     const size = 12,
@@ -144,17 +341,17 @@ expect(
       }),
       { layout } = new Land(world),
       topology = world.topology(),
-      cramped: string[] = [];
-    let most = 0;
+      faults: string[] = [];
+    let most = 0,
+      fewestAllWays = Infinity;
 
     for (let y = 2; y < size - 2; y++) {
       for (let x = 2; x < size - 2; x++) {
         const centre = layout.centre(x, y),
-          place = {
+          place: SprawlPlace = {
             centre,
-            toward: ([dx, dy]: readonly [number, number]) =>
-              layout.centre(x + dx, y + dy),
-            owns: (u: number, v: number) => {
+            toward: ([dx, dy]) => layout.centre(x + dx, y + dy),
+            owns: (u, v) => {
               const [tx, ty] = layout.tileAt(u, v);
 
               return tx === x && ty === y;
@@ -163,69 +360,110 @@ expect(
           offsets = topology
             .directions()
             .map((direction) => topology.offset(direction, x, y)),
-          // A different handful of ways out for each square.
-          ways = offsets.filter(
-            (_, index) => (x * 7 + y * 3 + index) % 3 === 0
-          ),
-          spot = inFrontOf(centre),
-          { lots, streets } = sprawl(
-            place,
-            citySeed(`City-${x}-${y}`),
-            30,
-            ways,
-            spot
-          );
+          spot = inFrontOf(centre);
 
-        most = Math.max(most, lots.length);
-
-        lots.forEach((lot, index) => {
-          const [lu, lv] = lot.at,
-            corner = lot.width * 0.71,
-            fromStreet = Math.min(
-              Infinity,
-              ...streets.map(([a, b]) => {
-                const du = b[0] - a[0],
-                  dv = b[1] - a[1],
-                  t = Math.max(
-                    0,
-                    Math.min(
-                      1,
-                      ((lu - a[0]) * du + (lv - a[1]) * dv) /
-                        (du * du + dv * dv)
-                    )
-                  );
-
-                return Math.hypot(lu - a[0] - du * t, lv - a[1] - dv * t);
-              })
+        // A different handful of ways out for each square, and every way out.
+        [
+          offsets.filter((_, index) => (x * 7 + y * 3 + index) % 3 === 0),
+          offsets,
+        ].forEach((ways, all) => {
+          for (let city = 0; city < 3; city++) {
+            const laid = sprawl(
+              place,
+              planFor(citySeed(`City-${x}-${y}-${city}`), 30, ways),
+              spot
             );
 
-          if (
-            !place.owns(lu, lv) ||
-            Math.hypot(lu - centre[0], lv - centre[1]) > SPRAWL_REACH ||
-            Math.hypot(lu - centre[0], lv - centre[1]) < PLAZA + corner ||
-            Math.hypot(lu - spot[0], lv - spot[1]) < UNIT_ROOM + corner ||
-            fromStreet < STREET / 2 + corner ||
-            lots
-              .slice(0, index)
-              .some(
-                (other) =>
-                  Math.hypot(other.at[0] - lu, other.at[1] - lv) <
-                  (other.width + lot.width) * LOT_ROOM - 1e-9
+            most = Math.max(most, laid.lots.length);
+
+            if (all === 1) {
+              fewestAllWays = Math.min(fewestAllWays, laid.lots.length);
+            }
+
+            faults.push(
+              ...faultsIn(place, laid, spot).map(
+                (fault) => `${x},${y} city ${city}: ${fault}`
               )
-          ) {
-            cramped.push(`${x},${y} lot ${index}`);
+            );
           }
         });
       }
     }
 
     expect(
-      `${topologyId}: every lot on its own square, inside its walls, clear of the others, the streets, the plaza and the unit's spot; and a city has a good few`,
-      [cramped.slice(0, 5), most >= 12],
-      [[], true]
+      `${topologyId}: every building on its own square, inside the walls, clear of the others, the streets, the plaza and the unit’s feet; plenty with a street out every way`,
+      [faults.slice(0, 5), most >= 20, fewestAllWays >= 12],
+      [[], true, true]
     );
   }
 );
+
+// Houses line the streets: each beside a street faces it, square to it; the rest face the plaza.
+{
+  const place = squareAt(5, 5),
+    [u, v] = place.centre,
+    { streets, lots } = sprawl(
+      place,
+      planFor(citySeed('Lined'), 30, [east, north, west, south, [1, 1]]),
+      inFrontOf(place.centre)
+    ),
+    // The way a lot faces, and the way across a street.
+    facingOf = ({ facing }: Lot) => [Math.sin(facing), Math.cos(facing)],
+    // Beside a street: across from it, within its own width of the street's edge, and the room left round it.
+    beside = lots.filter((lot) =>
+      streets.some(([a, b]) => {
+        const du = b[0] - a[0],
+          dv = b[1] - a[1],
+          t =
+            ((lot.at[0] - a[0]) * du + (lot.at[1] - a[1]) * dv) /
+            (du * du + dv * dv);
+
+        return (
+          t >= 0 &&
+          t <= 1 &&
+          fromSegment(lot.at, a, b) <= STREET / 2 + lot.width + GAP
+        );
+      })
+    ),
+    square = beside.filter((lot) => {
+      const [fu, fv] = facingOf(lot);
+
+      return streets.some(([a, b]) => {
+        const length = Math.hypot(b[0] - a[0], b[1] - a[1]),
+          // How far along the street's way it faces: none, facing square to it.
+          along = Math.abs((fu * (b[0] - a[0]) + fv * (b[1] - a[1])) / length),
+          // Facing towards it, not away.
+          off = fromSegment(lot.at, a, b),
+          ahead = fromSegment(
+            [lot.at[0] + fu * off, lot.at[1] + fv * off],
+            a,
+            b
+          );
+
+        return along < 1e-9 && ahead < off;
+      });
+    }),
+    others = lots.filter((lot) => !beside.includes(lot)),
+    toPlaza = others.filter((lot) => {
+      const [fu, fv] = facingOf(lot),
+        out = Math.hypot(u - lot.at[0], v - lot.at[1]);
+
+      return (
+        Math.abs(fu - (u - lot.at[0]) / out) < 1e-9 &&
+        Math.abs(fv - (v - lot.at[1]) / out) < 1e-9
+      );
+    });
+
+  expect(
+    'houses line the streets: each beside a street faces it, square to it, and the rest face the plaza',
+    [
+      beside.length >= 8,
+      square.length === beside.length,
+      toPlaza.length === others.length,
+    ],
+    [true, true, true]
+  );
+}
 
 // Streets: out to exactly the ways it's given, from the plaza's edge to the edge of the square, where a road's half
 //  comes in.
@@ -233,9 +471,7 @@ expect(
   const place = squareAt(5, 5),
     { streets } = sprawl(
       place,
-      citySeed('Streets'),
-      8,
-      [east, north],
+      planFor(citySeed('Streets'), 8, [east, north]),
       inFrontOf(place.centre)
     );
 
@@ -263,10 +499,10 @@ expect(
 {
   const place = squareAt(5, 5),
     spot = inFrontOf(place.centre),
-    once = sprawl(place, citySeed('Roma'), 5, [east], spot),
-    again = sprawl(place, citySeed('Roma'), 5, [east], spot),
-    other = sprawl(place, citySeed('Antium'), 5, [east], spot),
-    roaded = sprawl(place, citySeed('Roma'), 5, [east, north], spot),
+    once = sprawl(place, planFor(citySeed('Roma'), 5, [east]), spot),
+    again = sprawl(place, planFor(citySeed('Roma'), 5, [east]), spot),
+    other = sprawl(place, planFor(citySeed('Antium'), 5, [east]), spot),
+    roaded = sprawl(place, planFor(citySeed('Roma'), 5, [east, north]), spot),
     before = positions(once.lots),
     after = positions(roaded.lots),
     kept = before.filter((at) => after.includes(at)).length;

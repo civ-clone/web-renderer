@@ -73,6 +73,7 @@ import {
 } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import markerFor, { TileMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
 import { OverlayMesh } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
+import { IN_FRONT_OF_CITY } from '@civ-clone/ui-map-3d/markers/drawMarker';
 import { Color } from 'three';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { unitStatus } from '@civ-clone/ui-assets/lib/renderUnit';
@@ -1256,11 +1257,43 @@ expect(
   );
 
   // A road built on the square beside the town: what's laid on its chunk is made again, by the frames the view draws,
-  //  without building the land again. On the town's own square, a city's lot, nothing's laid.
+  //  without building the land again. On the town's own square, a city's lot, its sprawl, now with a street out to it.
+  const beside = tiles[1] as Tile,
+    // How many points of paving are laid on the town's square out towards `other`'s, past its plaza: a street.
+    streetToward = (other: Tile): number => {
+      const mesh = overlaysSet.get(view.land().overlayKeyOf(town.x, town.y)),
+        [cu, cv] = view.land().layout.centre(town.x, town.y),
+        [ou, ov] = view.land().layout.centre(other.x, other.y),
+        length = Math.hypot(ou - cu, ov - cv),
+        { r, g, b } = new Color('#a39a88');
+      let found = 0;
+
+      for (let at = 0; mesh && at < mesh.positions.length; at += 3) {
+        const pu = mesh.positions[at]! + mesh.u - cu,
+          pv = mesh.positions[at + 2]! + mesh.v - cv,
+          along = (pu * (ou - cu) + pv * (ov - cv)) / length,
+          across = Math.abs(pu * (ov - cv) - pv * (ou - cu)) / length;
+
+        if (
+          along > 0.15 &&
+          along < 0.5 &&
+          across < 0.03 &&
+          Math.abs(mesh.colours[at]! - r) < 1e-4 &&
+          Math.abs(mesh.colours[at + 1]! - g) < 1e-4 &&
+          Math.abs(mesh.colours[at + 2]! - b) < 1e-4
+        ) {
+          found++;
+        }
+      }
+
+      return found;
+    },
+    streetBefore = streetToward(beside),
+    laidBefore = overlaysSet.has(view.land().overlayKeyOf(town.x, town.y));
+
   overlaysSet.clear();
 
-  const landBuilt = chunkBuilds.length,
-    beside = tiles[1] as Tile;
+  const landBuilt = chunkBuilds.length;
 
   [beside, town].forEach((tile) => {
     tile.improvements = [{ _: 'Road' }] as Tile['improvements'];
@@ -1311,10 +1344,10 @@ expect(
       laidNear(beside, 0.3).coloured('#8c7a58'),
       view.land().overlaysPending(),
       chunkBuilds.length === landBuilt,
-      laidNear(town, 0.3).points > 0,
       laidNear(town, 0.3).coloured('#8c7a58'),
+      [laidBefore, streetBefore, streetToward(beside) > 0],
     ],
-    [true, true, 0, true, true, false]
+    [true, true, 0, true, false, [true, 0, true]]
   );
 
   staged.splice(0);
@@ -2882,8 +2915,8 @@ expect(
   repatched([1, 3, []]);
   walkersSet.length = 0;
 
-  // With units and cities hidden (`t`), the active unit in a city stands at the square's middle, as it's drawn there,
-  //  and sets off from there.
+  // With units hidden, and cities' walls and names (`t`), the active unit in a city stands in front of its buildings,
+  //  which are laid with the land and stay, as it's drawn there, and sets off from there.
   const hiddenTown = tiles[1 * 4 + 1] as Tile,
     [hiddenU, hiddenV] = middleOf(hiddenTown);
 
@@ -2896,6 +2929,14 @@ expect(
   repatched([1, 1, [walker]]);
   glider.setActiveUnit({ ...walker, tile: hiddenTown } as unknown as Unit);
   glider.toggleUnits();
+
+  const hiddenMarker = markers.get(`${hiddenTown.x},${hiddenTown.y}`),
+    markedHidden = [
+      hiddenMarker?.city ?? null,
+      hiddenMarker?.unit?.id,
+      hiddenMarker?.inCity,
+    ];
+
   walkersPlaced.clear();
   stepped(walker, [1, 1], [2, 1]);
   patch([1, 1, []], [2, 1, [walker]]);
@@ -2904,7 +2945,7 @@ expect(
   const [hiddenFirst] = [...walkersPlaced.values()].map((frames) => frames[0]!),
     fromHiddenCity = [
       Math.abs(hiddenFirst![0]! - hiddenU) < 0.01,
-      Math.abs(hiddenFirst![2]! - hiddenV) < 0.01,
+      Math.abs(hiddenFirst![2]! - (hiddenV + IN_FRONT_OF_CITY)) < 0.01,
     ];
 
   runFrames();
@@ -2952,9 +2993,10 @@ expect(
   walkersPlaced.clear();
 
   expect(
-    'with units hidden, the active unit sets off from a city square’s middle, where it’s drawn; a walker hurt on the way is drawn hurt; less motion asked for mid-walk ends it on the next frame',
-    [fromHiddenCity, hurtWalking, lessMotionMidWalk],
+    'with units hidden, the active unit in a city is marked in front of its buildings, with no walls or name, and sets off from there; a walker hurt on the way is drawn hurt; less motion asked for mid-walk ends it on the next frame',
+    [markedHidden, fromHiddenCity, hurtWalking, lessMotionMidWalk],
     [
+      [null, 'Unit-A', true],
       [true, true],
       [1, 0.5],
       [0, ['Unit-A', 1]],

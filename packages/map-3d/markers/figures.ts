@@ -28,6 +28,7 @@ import {
   UnitGear,
   UnitLook,
 } from '@civ-clone/ui-models-builtin/units';
+import { WALLS } from '../overlay/sprawl';
 
 /** A unit's two colours, its owner's first and second. */
 export type FigureColours = readonly [string, string];
@@ -1229,10 +1230,10 @@ export const unitBodyGeometry = (
   return mergeParts(parts);
 };
 
-// A city's walls.
-const wallShape = new TorusGeometry(0.36, 0.025, 6, 24);
+// A city's walls, round its sprawl's buildings.
+const wallShape = new TorusGeometry(WALLS.radius, WALLS.thickness, 6, 24);
 
-/** A city's walls, a ring round its buildings, as one geometry. */
+/** A city's walls, a ring round its buildings (`sprawl.ts`'s `WALLS`), as one geometry. */
 export const wallsGeometry = (): BufferGeometry =>
   mergeParts([
     {

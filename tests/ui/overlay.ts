@@ -28,11 +28,14 @@ import overlayMesh, {
   OverlayMesh,
   OverlayPlace,
   ROAD_BOW,
+  ROOFS,
   layOverlay,
   roadHalf,
   soup,
 } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
 import { Stage, overlayCopies, polesAt } from '@civ-clone/ui-map-3d/stage';
+import sprawl, { Lot } from '@civ-clone/ui-map-3d/overlay/sprawl';
+import { IN_FRONT_OF_CITY } from '@civ-clone/ui-map-3d/markers/drawMarker';
 import { TopologyId } from '@civ-clone/ui-protocol/topology';
 import Land from '@civ-clone/ui-map-3d/Land';
 import { ChunkMesh } from '@civ-clone/ui-map-3d/terrain/chunks';
@@ -903,15 +906,15 @@ const landOf = (
   );
 }
 
-// A city's lot: its sprawl (`sprawl.ts`), seeded from the city, as big as it is, its streets out to each neighbour
-//  whose road or railroad comes in (a road where the city's square has one too, or a railroad, which joins a city) and
-//  to the sea, and not to a neighbour with nothing, nor a road that doesn't join it. Laid as paving and houses, not a
-//  road.
+// A city's lot: its sprawl (`sprawl.ts`), seeded from the city, as many lots as its size has built and as tall, its
+//  streets out to each neighbour whose road or railroad comes in (a road where the city's square has one too, or a
+//  railroad, which joins a city) and to its one quay, and not to a neighbour with nothing, nor a road that doesn't join
+//  it. Laid as paving and houses, not a road, each house's roof out to its lot's edges, its walls under the eaves.
 {
-  const cityOn = (improvements: string[]) =>
+  const cityOn = (improvements: string[], size = 6) =>
       ({
         ...square(improvements),
-        city: { id: 'City-Lanes', name: 'Lanes', growth: { size: 6 } },
+        city: { id: 'City-Lanes', name: 'Lanes', growth: { size } },
       } as unknown as Parameters<typeof overlayFor>[0]),
     sea = (offset: [number, number]): OverlayNeighbour => ({
       offset,
@@ -929,15 +932,28 @@ const landOf = (
     ],
     roaded = overlayFor(cityOn(['Road']), ringed)!,
     unroaded = overlayFor(cityOn([]), ringed)!,
+    // One quay however much sea: the way the sea lies, taken together.
+    quayTo = (...offsets: [number, number][]) =>
+      overlayFor(cityOn([]), offsets.map(sea))!.city?.ways,
     laid = overlayMesh(16, 0, [{ overlay: roaded, place: place(17, 3) }]);
 
   expect(
-    'a city’s lot: seeded from the city, as big as it is, streets out to roads that join it and the sea; laid as paving and houses, not a road',
+    'a city’s lot: seeded from the city, as many lots as its size has built and as tall, streets out to roads that join it and one quay; laid as paving and houses, not a road',
     [
       roaded.city?.seed === unroaded.city?.seed,
-      roaded.city?.size,
+      [roaded.city?.lots, roaded.city?.tier],
+      [
+        overlayFor(cityOn(['Road'], 14), ringed)!.city?.lots,
+        overlayFor(cityOn(['Road'], 14), ringed)!.city?.tier,
+      ],
+      // Grown with no more lots or storeys, nothing changes.
+      JSON.stringify(overlayFor(cityOn(['Road'], 15), ringed)) ===
+        JSON.stringify(overlayFor(cityOn(['Road'], 16), ringed)),
       roaded.city?.ways,
       unroaded.city?.ways,
+      quayTo([0, 1], [1, 1], [-1, 1]),
+      quayTo([1, 0], [1, 1], [0, 1]),
+      quayTo([-1, 0], [1, 0]),
       [roaded.road, roaded.vegetation, roaded.specials.length],
       hasColour(laid, '#a39a88'),
       hasColour(laid, '#c4b8a2'),
@@ -945,7 +961,9 @@ const landOf = (
     ],
     [
       true,
-      6,
+      [15, 0],
+      [30, 2],
+      true,
       [
         [0, -1],
         [1, 0],
@@ -955,11 +973,81 @@ const landOf = (
         [1, 0],
         [0, 1],
       ],
+      [[0, 1]],
+      [[1, 1]],
+      [[-1, 0]],
       [null, false, 0],
       true,
       true,
       false,
     ]
+  );
+}
+
+// A city's houses as they're laid on flat land: each roof out to its lot's footprint and no further, its corners at
+//  the footprint's, and its walls inside them, under the eaves.
+{
+  const city = overlayFor(
+      {
+        ...square(['Road']),
+        city: { id: 'City-Eaves', name: 'Eaves', growth: { size: 4 } },
+      } as unknown as Parameters<typeof overlayFor>[0],
+      []
+    )!,
+    at = place(17, 3),
+    laid = overlayMesh(16, 0, [{ overlay: city, place: at }]),
+    { lots } = sprawl(at, city.city!, [
+      at.centre[0],
+      at.centre[1] + IN_FRONT_OF_CITY,
+    ]),
+    roofs = ROOFS.map((css) => new Color(css)),
+    walls = new Color('#c4b8a2'),
+    // Each point of a colour, relative to the chunk's corner, back on the ground.
+    pointsOf = (colours: Color[]) => {
+      const found: [number, number][] = [];
+
+      for (let at = 0; at < laid.colours.length; at += 3) {
+        if (
+          colours.some(
+            ({ r, g, b }) =>
+              Math.abs(laid.colours[at]! - r) < 1e-4 &&
+              Math.abs(laid.colours[at + 1]! - g) < 1e-4 &&
+              Math.abs(laid.colours[at + 2]! - b) < 1e-4
+          )
+        ) {
+          found.push([laid.positions[at]! + 16, laid.positions[at + 2]! + 0]);
+        }
+      }
+
+      return found;
+    },
+    // How far out a point is from a lot's middle, along its own sides: half its width at its edges.
+    outOf = ([u, v]: [number, number], { at: [lu, lv], facing }: Lot) => {
+      const du = u - lu,
+        dv = v - lv;
+
+      return Math.max(
+        Math.abs(du * Math.cos(facing) - dv * Math.sin(facing)),
+        Math.abs(du * Math.sin(facing) + dv * Math.cos(facing))
+      );
+    },
+    // Each point as a share of the half-width out of the lot it's most within.
+    reach = (points: [number, number][]) =>
+      points.map((point) =>
+        Math.min(...lots.map((lot) => outOf(point, lot) / (lot.width / 2)))
+      ),
+    roofReach = reach(pointsOf(roofs)),
+    wallReach = reach(pointsOf([walls]));
+
+  expect(
+    'each roof out to its lot’s edges and no further, its walls under the eaves',
+    [
+      lots.length,
+      roofReach.every((share) => share <= 1 + 1e-4),
+      roofReach.some((share) => share > 1 - 1e-4),
+      wallReach.every((share) => share < 0.9),
+    ],
+    [11, true, true, true]
   );
 }
 

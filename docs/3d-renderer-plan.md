@@ -235,7 +235,8 @@ Building another world from the form starts it in the middle again.
   - hover tooltips with the 2D map's content;
   - `isVisible` with covered rectangles;
   - `MapPortal`'s `openCity`, `setCenter` and `render`, and the city screen's sizes from the 2D art;
-  - hiding units and cities (`t`), and waiting for the next turn (`setWaiting`), as on the 2D map.
+  - hiding units and cities (`t`), and waiting for the next turn (`setWaiting`), as on the 2D map: a city's buildings,
+    laid with the land, stay.
 - **Tests:** picking at every yaw and pitch over a known height function, the sea at 0 and a lake at its own height,
   including a square under water at a low pitch.
 - **Done when:** a whole turn can be played by mouse and keyboard, with units and cities drawn as plain markers.
@@ -461,9 +462,9 @@ Still to do in 3.4: improvements as models from a hosted set, and Fortress and A
   blocks first.
 
 **First part, the city's own square: done** (spec §7.2, "As built"). A city is laid with the land round a paved plaza,
-with streets out to the roads that come in and the sea, and houses on lots that fill in as it grows, seeded from the
-city, so it keeps its buildings as it grows. Its marker keeps its walls and name. Still to do: neighbouring squares,
-side streets, eras and modernising.
+with streets out to the roads that come in and to its quay, and houses lining them on lots that fill in as it grows,
+seeded from the city, so it keeps its buildings as it grows. They stand inside its walls, clear of a unit in front.
+Its marker keeps its walls and name. Still to do: neighbouring squares, side streets, eras and modernising.
 
 ### 4.2 The building kit
 

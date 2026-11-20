@@ -61,7 +61,7 @@ const STAND_HEIGHT = 0.03,
   PLENTY = '#4caf50',
   SOME = '#e0b030',
   FEW = '#d04030',
-  // How many labels and cities the kit holds before it first lets go of those no longer drawn.
+  // How many labels the kit holds before it first lets go of those no longer drawn.
   SWEEP_FROM = 256;
 
 /** What markers are drawn with, shared by all of them, and let go together. */
@@ -73,8 +73,8 @@ export class MarkerKit {
   #walls: BufferGeometry | null = null;
   #flats = new Map<string, SpriteMaterial>();
   #pointer: SpriteMaterial | null = null;
-  // Labels and cities are made for each name and size, so over a game they'd grow without end: how many were kept at
-  //  the last sweep.
+  // Labels are made for each name and size, so over a game they'd grow without end: how many were kept at the last
+  //  sweep.
   #kept = 0;
   // Units' figures carry their colours in their vertices.
   readonly figureMaterial = new MeshStandardMaterial({
@@ -256,14 +256,14 @@ export class MarkerKit {
   }
 
   /**
-   * Whether enough labels and cities have been made since the last sweep to let go of those no longer drawn: when
+   * Whether enough labels have been made since the last sweep to let go of those no longer drawn: when
    *  there are twice as many as were kept, so a sweep's cost is spread over what's made between them.
    */
   get sweepDue(): boolean {
     return this.#labels.size > Math.max(SWEEP_FROM, this.#kept * 2);
   }
 
-  /** Lets go of the labels and cities that none of `markers` uses: the markers drawn, and to be drawn. */
+  /** Lets go of the labels that none of `markers` uses: the markers drawn, and to be drawn. */
   sweep(markers: Iterable<Object3D>): void {
     const used = new Set<object>();
 
@@ -555,7 +555,8 @@ export const drawMarker = (
   }
 
   if (marker.unit !== null) {
-    const inFront = marker.city === null ? 0 : IN_FRONT_OF_CITY,
+    const inFront =
+        marker.inCity ?? marker.city !== null ? IN_FRONT_OF_CITY : 0,
       pawn = drawUnit(
         kit,
         marker.unit,

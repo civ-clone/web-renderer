@@ -862,11 +862,12 @@ export class MapView3D implements MapRenderer {
   }
 
   // Where a unit stands on the square (`x`, `y`) as it's marked, on the land as it's drawn: at its middle, or in front
-  //  of its city's buildings, where cities are shown. As a point to walk from or to, with how far above the land there
-  //  that is, and the square's middle, which it faces between, as a unit standing does.
+  //  of its city's buildings, whose marker's shown or hidden (`t`): they're laid with the land either way. As a point
+  //  to walk from or to, with how far above the land there that is, and the square's middle, which it faces between,
+  //  as a unit standing does.
   #standing(
     { x, y }: Coordinate,
-    inCity: boolean = this.#unitsShown && Boolean(this.world.get(x, y).city)
+    inCity: boolean = Boolean(this.world.get(x, y).city)
   ): WalkPoint {
     const [u, v] = this.#land.layout.centre(x, y),
       stands = Math.max(0, this.#land.surfaceAt(u, v)),
@@ -1869,7 +1870,10 @@ export class MapView3D implements MapRenderer {
     return this.#tilesToDraw.size;
   }
 
-  /** Hides the units, cities and their names, but the unit awaiting orders, or shows them again (`t`). */
+  /**
+   * Hides the units, and cities' walls and names, but the unit awaiting orders, or shows them again (`t`). A city's
+   *  buildings are laid with the land, so they stay.
+   */
   toggleUnits(): void {
     this.#unitsShown = !this.#unitsShown;
     this.#markAll();
@@ -2430,7 +2434,7 @@ export class MapView3D implements MapRenderer {
     this.#drawnOn(key, drawn, {
       shown: marker?.unit?.id ?? null,
       ringed: marker?.unit?.active === true,
-      inCity: (marker?.unit ?? null) !== null && marker?.city !== null,
+      inCity: (marker?.unit ?? null) !== null && marker?.inCity === true,
     });
 
     // On the land as it's drawn, as what's laid on it is, so a unit's stand stands over that.
