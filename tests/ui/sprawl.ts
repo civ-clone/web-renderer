@@ -317,6 +317,36 @@ expect(
   [5, true, true, true, [0, 0, 1, 1, 2]]
 );
 
+// Taller as it grows: each six sizes, the buildings near the middle a storey taller, and those well out the same.
+{
+  const place = squareAt(5, 5),
+    [u, v] = place.centre,
+    storeys = (size: number) =>
+      sprawl(
+        place,
+        planFor(citySeed('Tall'), size, []),
+        inFrontOf(place.centre)
+      ).lots.map(({ at, storeys }) => ({
+        out: Math.hypot(at[0] - u, at[1] - v),
+        storeys,
+      })),
+    small = storeys(1),
+    big = storeys(13);
+
+  expect(
+    'taller as it grows: near the middle two storeys taller at size 13, well out the same',
+    [
+      small.every(
+        ({ out, storeys }, index) =>
+          (out > 0.15 || big[index]!.storeys === storeys + 2) &&
+          (out < 0.2 || big[index]!.storeys === storeys)
+      ),
+      small.some(({ out }) => out < 0.15),
+    ],
+    [true, true]
+  );
+}
+
 // Room: on every grid, every building's footprint on its own square, inside the walls, clear of the others, the
 //  streets, the plaza and the unit's feet, as they're drawn; and with a street out every way, a city still has plenty,
 //  more than a city just founded.

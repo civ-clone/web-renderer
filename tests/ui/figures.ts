@@ -684,8 +684,9 @@ const garrisoned = drawMarker(kit, {
   }),
   inCity: Object3D[] = [];
 
-// Its unit's part: named, in front of the city, where a unit walking there arrives (`IN_FRONT_OF_CITY`); and its
-//  figures, a part of their own, turned the way it faces, which a walker turns as it goes.
+// Its unit's part: named, in front of the city, where a unit walking there arrives (`IN_FRONT_OF_CITY`), the city's
+//  marker shown or hidden; and its figures, a part of their own, turned the way it faces, which a walker turns as it
+//  goes.
 const facingEast = drawMarker(kit, {
   city: null,
   unit: unit('Spearman', { facing: Math.PI / 2 }),
@@ -712,8 +713,21 @@ expect(
 
       return turned;
     })(),
+    // Its city's walls and name hidden (`t`), still in front of the buildings, which stay, with nothing of the city.
+    (() => {
+      const hidden = drawMarker(kit, {
+        city: null,
+        unit: unit('Spearman'),
+        inCity: true,
+      });
+
+      return [
+        hidden.getObjectByName(UNIT_PART)?.position.z,
+        hidden.children.length,
+      ];
+    })(),
   ],
-  [0.26, 0.26, 1, 0, Math.PI / 2, [FIGURES_PART]]
+  [0.26, 0.26, 1, 0, Math.PI / 2, [FIGURES_PART], [0.26, 1]]
 );
 
 // Drawn to fly, as a walker is: an aircraft's figures, its hit points' bar, flag and label, and the pointer over it,

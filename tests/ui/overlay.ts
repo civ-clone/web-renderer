@@ -1051,6 +1051,58 @@ const landOf = (
   );
 }
 
+// A city's houses on a slope: each stands on the land at every corner, its walls down to the ground under the lowest,
+//  with no gap under any.
+{
+  const slope = (u: number, v: number) => 0.5 * (u + v),
+    city = overlayFor(
+      {
+        ...square(['Road']),
+        city: { id: 'City-Slope', name: 'Slope', growth: { size: 6 } },
+      } as unknown as Parameters<typeof overlayFor>[0],
+      []
+    )!,
+    at = place(17, 3, { height: slope }),
+    laid = overlayMesh(16, 0, [{ overlay: city, place: at }]),
+    { lots } = sprawl(at, city.city!, [
+      at.centre[0],
+      at.centre[1] + IN_FRONT_OF_CITY,
+    ]),
+    { r, g, b } = new Color('#c4b8a2'),
+    walls: [number, number, number][] = [];
+
+  for (let point = 0; point < laid.colours.length; point += 3) {
+    if (
+      Math.abs(laid.colours[point]! - r) < 1e-4 &&
+      Math.abs(laid.colours[point + 1]! - g) < 1e-4 &&
+      Math.abs(laid.colours[point + 2]! - b) < 1e-4
+    ) {
+      walls.push([
+        laid.positions[point]! + 16,
+        laid.positions[point + 1]!,
+        laid.positions[point + 2]!,
+      ]);
+    }
+  }
+
+  const floating = lots.filter(({ at: [lu, lv], width }) => {
+    const own = walls.filter(
+        ([u, , v]) => Math.max(Math.abs(u - lu), Math.abs(v - lv)) < width
+      ),
+      bottom = Math.min(...own.map(([, y]) => y));
+
+    return own
+      .filter(([, y]) => y < bottom + 1e-6)
+      .some(([u, y, v]) => y > slope(u, v));
+  });
+
+  expect(
+    'on a slope, every house’s walls reach down to the ground at every corner',
+    [lots.length, floating.length],
+    [15, 0]
+  );
+}
+
 // The way a unit walks along a road between two squares (`Land#roadPath`), relative to the middle of the one it's
 //  going to: from the other's middle along the half it draws to the edge they share, and on along this one's half to
 //  its middle; on a city's side, straight to or from the edge; nothing with no road between them, nor between squares
