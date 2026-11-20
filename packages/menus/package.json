@@ -21,6 +21,8 @@
   "exports": {
     "./components/GameMenu": "./components/GameMenu.ts",
     "./components/GameOptions": "./components/GameOptions.ts",
+    "./components/HowToPlay": "./components/HowToPlay.ts",
+    "./components/howToPlayPrompt": "./components/howToPlayPrompt.ts",
     "./components/LibraryWindow": "./components/LibraryWindow.ts",
     "./components/LoadGameWindow": "./components/LoadGameWindow.ts",
     "./components/ReleaseWindow": "./components/ReleaseWindow.ts",

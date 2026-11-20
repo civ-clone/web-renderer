@@ -290,6 +290,98 @@ i18next.addResources('en', 'default', {
   'SavedGame.no-decompression':
     'this browser cannot read compressed saves — it has no `DecompressionStream`',
   'SavedGame.not-a-save': 'the file is not a civ-clone save',
+  // How to play (#1270): the first turns and the controls, by device. Keys are shown from what the game binds.
+  'HowToPlay.title': 'How to play',
+  'HowToPlay.or': ' or ',
+  'HowToPlay.device.label': 'Describe the controls for',
+  'HowToPlay.device.touch': 'Touch screen',
+  'HowToPlay.device.desktop': 'Mouse and keyboard',
+  'HowToPlay.heading.first-turns': 'Your first turns',
+  'HowToPlay.heading.controls': 'Controls',
+  'HowToPlay.heading.more': 'Finding out more',
+  'HowToPlay.first.turns':
+    'Each turn, you give your units their orders and choose what your cities build. The unit waiting for its orders is shown in the Active Unit panel. Once every unit has had its orders, the turn ends by itself, unless you turn that off in Options.',
+  'HowToPlay.first.move_desktop':
+    'Move the active unit with the arrow keys or the numeric keypad. To send it further, press and hold on the square it should go to, and choose Go to.',
+  'HowToPlay.first.move_touch':
+    'Move the active unit by pressing and holding a square next to it, and choosing what to do there. Press and hold a square further away, and choose Go to, to send it there.',
+  'HowToPlay.first.city':
+    'Settlers build cities: with your Settlers active, choose “$t(unit:Action.FoundCity.name)”, from the unit’s buttons or its menu, and a city is built where they stand.',
+  'HowToPlay.first.production':
+    'Each city builds one thing at a time. Open a city, on the map or from the Cities list, to choose what it builds and which squares its people work.',
+  'HowToPlay.first.end-turn':
+    'To end the turn yourself, use the end-of-turn button.',
+  'HowToPlay.first.screen':
+    'The top bar shows your treasury, your research and your government. The sidebar has the map of the world, the active unit, your cities and how you compare with the other civilizations.',
+  'HowToPlay.touch.tap-city': 'Tap one of your cities to open it.',
+  'HowToPlay.touch.tap-units':
+    'Tap a square with your units on it to choose which of them to give orders.',
+  'HowToPlay.touch.tap-elsewhere': 'Tap anywhere else to center the map there.',
+  'HowToPlay.touch.hold':
+    'Press and hold a square to see what the active unit can do there: move, attack, or go further.',
+  'HowToPlay.touch.drag': 'Drag the map to move it.',
+  'HowToPlay.touch.buttons':
+    'The active unit’s order buttons give it its orders.',
+  'HowToPlay.touch.show-keys': 'Keyboard shortcuts',
+  'HowToPlay.desktop.click-city': 'Click one of your cities to open it.',
+  'HowToPlay.desktop.click-units':
+    'Click a square with your units on it to choose which of them to give orders.',
+  'HowToPlay.desktop.click-elsewhere':
+    'Click anywhere else to center the map there.',
+  'HowToPlay.desktop.hold':
+    'Press and hold on a square to see what the active unit can do there: move, attack, or go further.',
+  'HowToPlay.desktop.hold_right':
+    'Right-click a square, or press and hold on it, to see what the active unit can do there: move, attack, or go further.',
+  'HowToPlay.desktop.drag': 'Drag the map to move it.',
+  'HowToPlay.desktop.wheel':
+    'Scroll the mouse wheel, or pinch the trackpad, to zoom in and out.',
+  'HowToPlay.desktop.hover':
+    'Rest the pointer on one of your cities to see what it’s building.',
+  'HowToPlay.desktop.hover_squares':
+    'Rest the pointer on one of your cities to see what it’s building, or on a square to see what’s there.',
+  'HowToPlay.keys.intro':
+    'The arrow keys, and the numeric keypad, move the active unit.',
+  'HowToPlay.keys.move.straight':
+    'Move up, down, left or right (on a hex map, up and down don’t move)',
+  'HowToPlay.keys.move.diagonal': 'Move diagonally',
+  'HowToPlay.keys.game': 'On the map:',
+  'HowToPlay.keys.unit':
+    'The active unit’s orders, which its buttons show too (some are Civilization II’s alone):',
+  'HowToPlay.keys.windows':
+    'A city and the lists have keys of their own, shown on their buttons, and Escape closes a window.',
+  'HowToPlay.key.endTurn': 'End the turn, or go on to what’s waiting',
+  'HowToPlay.key.wait': 'Wait, and give the next unit its orders',
+  'HowToPlay.key.centre': 'Center the map on the active unit',
+  'HowToPlay.key.findCity': 'Find a city',
+  'HowToPlay.key.zoomIn': 'Zoom in and out',
+  'HowToPlay.key.toggleUnits': 'Show or hide the units',
+  'HowToPlay.key.toggleYields': 'Show or hide what each square yields',
+  'HowToPlay.key.firstAction': 'Go to the turn’s buttons',
+  'HowToPlay.key.tradeRates': 'Change your tax, luxuries and science rates',
+  'HowToPlay.key.civilopedia': 'The Civilopedia',
+  'HowToPlay.key.cityStatus': '$t(GameMenu.city-status)',
+  'HowToPlay.key.militaryReport': '$t(GameMenu.military-report)',
+  'HowToPlay.key.intelligenceReport': '$t(GameMenu.intelligence-report)',
+  'HowToPlay.key.happinessReport': '$t(GameMenu.happiness-report)',
+  'HowToPlay.key.tradeReport': '$t(GameMenu.trade-report)',
+  'HowToPlay.key.scienceReport': '$t(GameMenu.science-report)',
+  'HowToPlay.key.wondersReport': '$t(GameMenu.wonders-report)',
+  'HowToPlay.key.topCities': '$t(GameMenu.top-cities)',
+  'HowToPlay.key.civilizationScore': '$t(GameMenu.civilization-score)',
+  'HowToPlay.key.saveGame': 'Save the game',
+  'HowToPlay.more.civilopedia':
+    'The Civilopedia, in the Game menu, says what every advance, unit, building and Wonder does, and what each needs.',
+  'HowToPlay.more.reports':
+    'The reports, in the Game menu, show your cities, your armies, your trade, your research and how you stand.',
+  'HowToPlay.more.saves':
+    'The game is saved as you play, and the title screen picks it up where you left off. Save Game, in the Game menu, keeps a copy as a file.',
+  'HowToPlay.more.new-game':
+    'A new game asks for a level of difficulty, from the easiest to the toughest. $t(NewGameWindow.customize) chooses your civilization, the world and the rules too.',
+  'HowToPlay.more.options':
+    'Options changes how the game looks, sounds and plays.',
+  'HowToPlay.prompt.question': 'New to the game?',
+  'HowToPlay.prompt.open': 'How to play',
+  'HowToPlay.prompt.dismiss': 'Dismiss',
 });
 
 // What the setup says about the rule sets themselves (#954), beside the sets' own names, which are their packages'.

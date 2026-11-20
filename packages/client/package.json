@@ -52,6 +52,7 @@
     "./lib/startPreparation": "./lib/startPreparation.ts",
     "./lib/talksMenu": "./lib/talksMenu.ts",
     "./lib/topologyFor": "./lib/topologyFor.ts",
+    "./lib/gameKeys": "./lib/gameKeys.ts",
     "./lib/unitActionKeys": "./lib/unitActionKeys.ts",
     "./lib/unitActions": "./lib/unitActions.ts",
     "./lib/unlessRequestFailed": "./lib/unlessRequestFailed.ts",

@@ -1,3 +1,5 @@
+import HowToPlay from '@civ-clone/ui-menus/components/HowToPlay';
+import howToPlayPrompt from '@civ-clone/ui-menus/components/howToPlayPrompt';
 import { Element, s } from '@dom111/element';
 import GameSetupWindow from './GameSetupWindow';
 import HallOfFameWindow from '@civ-clone/ui-reports/components/HallOfFameWindow';
@@ -130,7 +132,15 @@ export class MainMenu extends Element {
           h(s(`<button class="btn-bare">${t('MainMenu.library')}</button>`), {
             // The library of art and sound (#1063), where each set is imported.
             click: () => new LibraryWindow(),
-          })
+          }),
+          // How to play (#1270).
+          h(s(`<button class="btn-bare">${t('HowToPlay.title')}</button>`), {
+            click: () => HowToPlay.open(),
+          }),
+          // Offered to a newcomer until answered (#1270).
+          ...[howToPlayPrompt()].filter(
+            (prompt): prompt is HTMLElement => prompt !== null
+          )
         ),
         {
           keydown(event: KeyboardEvent) {

@@ -127,6 +127,7 @@ i18next.addResources('en', 'default', {
   'TitleMenu.key.hall-of-fame': 'H',
   'TitleMenu.key.options': 'O',
   'TitleMenu.key.library': 'A',
+  'TitleMenu.key.how-to-play': 'P',
   'TitleMenu.version': 'civ.one v{{version}}',
   'TitleMenu.release-notes': 'Release notes',
   'CityWindow.garrison_zero': 'No units in the city',

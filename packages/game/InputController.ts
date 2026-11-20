@@ -1,3 +1,4 @@
+import gameKeys, { zoomKeys } from '@civ-clone/ui-client/lib/gameKeys';
 import { GameData, Unit } from '@civ-clone/ui-protocol/types';
 import { emit, off, on } from '@dom111/element';
 import { t } from 'i18next';
@@ -56,8 +57,6 @@ const takesEnter = (target: EventTarget | null): boolean =>
   takesText = (target: EventTarget | null): boolean =>
     target instanceof Element &&
     target.matches('input, select, textarea, [contenteditable]'),
-  // The map's zoom (#1101), a tenth at a time: Civilization II's keys. `+` and `-` are the trade rates'.
-  zoomKeys: { [key: string]: number } = { z: 1, x: -1 },
   // The keys that turn a map that turns (the 3D map, docs/3d-renderer.md §9.1), by eighths of a turn, and the one that
   //  turns it back to north. None is a unit's order, nor the numeric keypad's (`mappedKey`).
   turnKeys: { [key: string]: number } = { '[': -1, ']': 1 },
@@ -132,17 +131,22 @@ export class InputController {
     const { data, portal, transport } = deps;
 
     this.#leaderScreensMap = {
-      F1: () => openCityStatus(data().player, portal, transport),
-      F2: () => openMilitaryReport(transport),
-      F3: () => openIntelligenceReport(transport),
-      F4: () => openHappinessReport(data().player, portal, transport),
-      F5: () => openTradeReport(data().player, portal, transport),
-      F6: () => new ScienceReport(data().player),
-      F7: () => openWondersReport(data().player, portal, transport),
-      F8: () => openTopCities(data().player, portal, transport),
-      F9: () => openCivilizationScore(transport),
+      [gameKeys.cityStatus]: () =>
+        openCityStatus(data().player, portal, transport),
+      [gameKeys.militaryReport]: () => openMilitaryReport(transport),
+      [gameKeys.intelligenceReport]: () => openIntelligenceReport(transport),
+      [gameKeys.happinessReport]: () =>
+        openHappinessReport(data().player, portal, transport),
+      [gameKeys.tradeReport]: () =>
+        openTradeReport(data().player, portal, transport),
+      [gameKeys.scienceReport]: () => new ScienceReport(data().player),
+      [gameKeys.wondersReport]: () =>
+        openWondersReport(data().player, portal, transport),
+      [gameKeys.topCities]: () =>
+        openTopCities(data().player, portal, transport),
+      [gameKeys.civilizationScore]: () => openCivilizationScore(transport),
       // Civ1 opened its Civilopedia from the menu alone (#183).
-      '?': () => Civilopedia.open(transport),
+      [gameKeys.civilopedia]: () => Civilopedia.open(transport),
     };
 
     on(document, 'keydown', this.#listener);
@@ -207,7 +211,7 @@ export class InputController {
 
     // Save Game, as the game menu's, and not over a modal window either. `S`, as `s` is Sleep. Once for a key held
     //  down, not a file for each repeat.
-    if (key === 'S' && !modalWindow) {
+    if (key === gameKeys.saveGame && !modalWindow) {
       if (!event.repeat) {
         gameMenu.saveGame();
       }
@@ -222,7 +226,10 @@ export class InputController {
 
     // Find City, with no window open: one takes `/` for its own filter, and may be the list already (#346). Once for a
     //  key held down.
-    if (key === '/' && !document.querySelector('dialog.window[open]')) {
+    if (
+      key === gameKeys.findCity &&
+      !document.querySelector('dialog.window[open]')
+    ) {
       if (!event.repeat) {
         gameMenu.findCity();
       }
@@ -266,7 +273,8 @@ export class InputController {
     //  itself skips too: Enter alone there is the button's own click.
     if (
       button !== null &&
-      (key === 'Enter' || (event.key === 'Enter' && event.shiftKey)) &&
+      (key === gameKeys.endTurn ||
+        (event.key === gameKeys.endTurn && event.shiftKey)) &&
       !modalWindow &&
       (!waiting() || (button.hasMeeting?.() ?? false)) &&
       // Once for a key held down: not a run through the queue.
@@ -288,7 +296,7 @@ export class InputController {
 
     if (
       button === null &&
-      key === 'Enter' &&
+      key === gameKeys.endTurn &&
       !waiting() &&
       data().player.mandatoryActions.some((action) => action._ === 'EndTurn')
     ) {
@@ -300,7 +308,7 @@ export class InputController {
       return;
     }
 
-    if (key === 'Tab') {
+    if (key === gameKeys.firstAction) {
       const topAction = actionArea.querySelector(
         // The first orb, or the Next Turn button (#702).
         'div.action:first-child button, button.ui-next-turn'
@@ -318,13 +326,13 @@ export class InputController {
 
     const activeUnit = unitController.active();
 
-    if (key === 'c' && activeUnit) {
+    if (key === gameKeys.centre && activeUnit) {
       mapView.centre(activeUnit.tile);
 
       return;
     }
 
-    if (key === 'w' && activeUnit) {
+    if (key === gameKeys.wait && activeUnit) {
       unitController.wait();
 
       event.stopPropagation();
@@ -333,13 +341,13 @@ export class InputController {
       return;
     }
 
-    if (key === 't') {
+    if (key === gameKeys.toggleUnits) {
       mapView.toggleUnits();
 
       return;
     }
 
-    if (key === 'y') {
+    if (key === gameKeys.toggleYields) {
       mapView.toggleYields();
 
       return;
@@ -386,7 +394,10 @@ export class InputController {
 
     // Adjust trade rates, when the engine offers it (#274), and not over a modal window (#183). On the key typed, so
     //  Shift+= and the numeric keypad's both count, on any layout (#662). Once for a key held down.
-    if ((key === '+' || key === '-') && !modalWindow) {
+    if (
+      (key === gameKeys.tradeRates || key === gameKeys.tradeRatesDown) &&
+      !modalWindow
+    ) {
       const adjustTradeRates = data().player.actions.find(
         (action) => action._ === 'AdjustTradeRates'
       );
