@@ -983,7 +983,8 @@ mapEvent:
       than as tiles are taken (a battle's blow, a walk's end, `t`) don't count, so a battle's loser, a walker arriving
       and a unit hidden don't fade.
   - **How:** one that's left fades out where it stood, drawn as it was shown, ringed if it was, the units gone with it
-    its stack, over half a second; marked again within it, come back from the fog say, its fade out's over. One that's
+    its stack, over half a second; marked again within it, come back from the fog say, its fade out's over, and it's
+    there at once, as it was being drawn; units hidden (`t`) within it, it's over too. One that's
     arrived fades in where it's marked, its unit alone, the city there solid (`Stage#fadeMarker`, the kit's materials
     back once it's solid), and isn't left off its square: another on top there, or it walking away, ends its fade.
     Walking quickly halves it.

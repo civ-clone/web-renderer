@@ -35,11 +35,7 @@ import {
 } from './camera/orbit';
 import prefersReducedMotion from '@civ-clone/ui-map/lib/reducedMotion';
 import CameraInput from './camera/CameraInput';
-import markerFor, {
-  MarkerWords,
-  TileMarker,
-  unitOnTop,
-} from './markers/markerFor';
+import markerFor, { MarkerWords, TileMarker } from './markers/markerFor';
 import { IN_FRONT_OF_CITY } from './markers/drawMarker';
 import Walks, {
   OWN_PACE,
@@ -123,7 +119,6 @@ type Before = {
   patched: boolean;
 };
 
-// The square the mouse rests on: where the mouse is on the page, the timer before its tooltip opens, and whether it has.
 // What a square's marked with, for telling which units come and go (`MapView3D#fadeChanged`): its units, kept as they
 //  were drawn, as the page fills what it holds in place; the one shown on top, if any's shown; and whether it stood in
 //  front of a city there.
@@ -134,6 +129,7 @@ type Marked = {
   inCity: boolean;
 };
 
+// The square the mouse rests on: where the mouse is on the page, the timer before its tooltip opens, and whether it has.
 type Hover = {
   key: string;
   x: number;
@@ -853,7 +849,7 @@ export class MapView3D implements MapRenderer {
   //  that is, and the square's middle, which it faces between, as a unit standing does.
   #standing(
     { x, y }: Coordinate,
-    inCity: boolean = this.#unitsShown && this.world.get(x, y).city !== null
+    inCity: boolean = this.#unitsShown && Boolean(this.world.get(x, y).city)
   ): WalkPoint {
     const [u, v] = this.#land.layout.centre(x, y),
       stands = Math.max(0, this.#land.surfaceAt(u, v)),
@@ -1292,6 +1288,16 @@ export class MapView3D implements MapRenderer {
         coming = this.#fadingIn.get(id);
 
       if (out !== undefined) {
+        const marker = this.#unitsMarker(out.units, out.shown);
+
+        // Units hidden (`t`): it's over, not drawn again once they're shown.
+        if (marker === null) {
+          this.#fades.end(id);
+          cut.push(id);
+
+          return;
+        }
+
         this.#drawFigure(
           {
             id,
@@ -1299,7 +1305,7 @@ export class MapView3D implements MapRenderer {
             lift: out.at.lift,
             facing: out.facing,
           },
-          this.#unitsMarker(out.units, out.shown),
+          marker,
           opacity
         );
 
@@ -2187,6 +2193,10 @@ export class MapView3D implements MapRenderer {
 
     this.#releasedFrom = new Map();
     this.#markedAtRelease = null;
+    // Drawn fading out, too: one come back, its fade cut as it's marked again, was drawn, so doesn't fade in.
+    this.#fadingOut.forEach(({ units }) =>
+      units.forEach(({ id }) => markedBefore?.add(id))
+    );
 
     squares.forEach(([x, y]) => this.#mark(x, y));
     // What stands on them, marked again on the land as it is now: only where something's marked, and not released. A

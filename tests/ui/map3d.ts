@@ -4719,13 +4719,74 @@ expect(
     ])
   );
 
+  // As many arriving on empty squares, as a stretch of the map coming into sight sends: they come at once.
+  patch(
+    ...crowd.map(([x, y, units]): [number, number, Tile['units'][number][]] => [
+      x,
+      y,
+      [...units],
+    ])
+  );
+  runFrames(1);
+
+  const crowdArrived = fadesSeen();
+
+  repatched(
+    ...crowd.map(([x, y]): [number, number, Tile['units'][number][]] => [
+      x,
+      y,
+      [],
+    ])
+  );
+
+  // One arriving off the screen, the camera close in elsewhere: it doesn't fade in.
+  const lookedFromHere = glider.orbit();
+
+  glider.setOrbit({
+    ...lookedFromHere,
+    focus: middleOf(tiles[0] as Tile),
+    distance: 0,
+  });
+  runFrames();
+  patch([3, 2, [recruit]]);
+  runFrames(1);
+
+  const arrivedOffScreen = fadesSeen();
+
+  glider.setOrbit(lookedFromHere);
+  runFrames();
+  repatched([3, 2, []]);
+
+  // A rival gone into the fog, back within half a second on an empty square: its fade out's over, and it's there at
+  //  once, not fading in, as it was being drawn.
+  repatched([2, 1, [rival]]);
+  patch([2, 1, []]);
+  runFrames(3);
+  patch([3, 1, [rival]]);
+  runFrames(1);
+
+  const backOnEmpty = fadesSeen();
+
+  repatched([3, 1, []]);
+
   expect(
-    'a unit fading in that steps at once walks, its fade over; moving at once chosen mid-fade ends it; a tab out of sight ends it on the first frame; many at once come at once',
-    [steppedIn, offMidFade, outOfSightFade, crowded],
+    'a unit fading in that steps at once walks, its fade over; moving at once chosen mid-fade ends it; a tab out of sight ends it on the first frame; many going, or many arriving, at once come and go at once; one arriving off the screen, or back from the fog onto an empty square, doesn’t fade in',
+    [
+      steppedIn,
+      offMidFade,
+      outOfSightFade,
+      crowded,
+      crowdArrived,
+      arrivedOffScreen,
+      backOnEmpty,
+    ],
     [
       [1, ['walk'], { out: [], in: [], twice: [], left: 0 }],
       [1, 0],
       [1, [], 0],
+      { out: [], in: [], twice: [], left: 0 },
+      { out: [], in: [], twice: [], left: 0 },
+      { out: [], in: [], twice: [], left: 0 },
       { out: [], in: [], twice: [], left: 0 },
     ]
   );
@@ -4750,7 +4811,10 @@ expect(
   glider.toggleUnits();
   runFrames(1);
   hiddenFade.push(walkers.size);
+  // Shown again within the half-second: it's over, not drawn again.
   glider.toggleUnits();
+  runFrames(1);
+  hiddenFade.push(walkers.size);
   runFrames();
 
   const fadeFrames = (speed: string) => {
@@ -4810,7 +4874,7 @@ expect(
       facedAway,
       firstTaken,
     ],
-    [[1, [], 1, 0], true, [1.57], [1, []]]
+    [[1, [], 1, 0, 0], true, [1.57], [1, []]]
   );
 
   // Turns, frame by frame: how far the camera turns in all, the way it turns, each frame's step taken the short way.
