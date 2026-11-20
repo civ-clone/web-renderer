@@ -201,6 +201,8 @@ const staged: string[] = [],
   walkers = new Map<string, TileMarker>(),
   walkersSet: [string, TileMarker | null][] = [],
   walkersPlaced = new Map<string, number[][]>(),
+  // How high each walker was flown off its stand each frame it was put, by its id: an aircraft's.
+  walkersAloft = new Map<string, number[]>(),
   // How solid each walker was last drawn, by its id, from 1 down to 0, once it's been faded.
   walkersFaded = new Map<string, number>(),
   // How solid each square's unit was last drawn, by the square, once it's been faded: marked again, it's solid.
@@ -244,11 +246,13 @@ const staged: string[] = [],
 
       walkers.set(id, marker);
     },
-    placeWalker: (id, at, facing) =>
-      void walkersPlaced.set(id, [
+    placeWalker: (id, at, facing, aloft = 0) => {
+      walkersPlaced.set(id, [
         ...(walkersPlaced.get(id) ?? []),
         [...at, facing],
-      ]),
+      ]);
+      walkersAloft.set(id, [...(walkersAloft.get(id) ?? []), aloft]);
+    },
     fadeMarker: (key, opacity) => {
       if (opacity < 1 || markersFaded.has(key)) {
         markersFaded.set(key, opacity);
@@ -2220,6 +2224,39 @@ expect(
       true,
       groundAt(0, 2),
     ]
+  );
+
+  // An aircraft flying two squares, as a GoTo's steps come: it climbs off its stand and comes down to land on the
+  //  square it's bound for; the units walking so far, on foot, flew none of the way.
+  const onFoot = [...walkersAloft.values()].flat(),
+    fighter = {
+      ...unitOf('Unit-F', 1),
+      _: 'Fighter',
+      __: ['Air', 'Unit'],
+    } as unknown as Tile['units'][number];
+
+  repatched([0, 0, [fighter]]);
+  walkersAloft.clear();
+  walkersPlaced.clear();
+  stepped(fighter, [0, 0], [1, 0]);
+  patch([0, 0, []], [1, 0, [fighter]]);
+  stepped(fighter, [1, 0], [2, 0]);
+  repatched([1, 0, []], [2, 0, [fighter]]);
+
+  const [flight] = [...walkersAloft.values()],
+    [flightWay] = placedSince();
+
+  expect(
+    'an aircraft flies off its stand and lands on the square it’s bound for; units on foot fly none of the way',
+    [
+      onFoot.length > 0 && onFoot.every((aloft) => aloft === 0),
+      flight!.length > 5,
+      flight![0]! < 0.05,
+      Math.max(...flight!) > 0.25,
+      flight!.at(-1)! < 0.005,
+      flightWay!.at(-1)![0],
+    ],
+    [true, true, true, true, true, groundAt(2, 0)[0]]
   );
 
   // Out of a city: from where it stood, in front of the buildings, at the height of the square's middle, where a unit in

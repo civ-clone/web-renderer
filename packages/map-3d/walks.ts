@@ -16,6 +16,10 @@
 //   given up (`dropped`).
 // - It faces the way from one square's middle to the next (each point's `middle`), turning as it passes one, and,
 //   when a step's joined, from the way it faced then.
+// - Aircraft fly an arc: a walk whose units all fly climbs as it sets off and comes down to land at its end, a step's
+//   way each, so a hop of one square goes half as high as a longer flight. A step joined as it comes down climbs again
+//   from where it is. One that doesn't fly rides along with a walk only if that walk doesn't fly either: what a ship
+//   carries rides with it, but nothing on the ground is carried into the air.
 //
 // Where it walks is on the ground (`u`, `v`), each point with a `lift`: how far above the land there the unit stands,
 //  which the view sets, so a walk starts and ends where the unit's drawn standing.
@@ -51,6 +55,8 @@ export type Walker = {
   // Where it is on the ground, and how far above the land there.
   at: [number, number];
   lift: number;
+  // How high it's flown over where it would stand: nothing, for a walk that doesn't fly.
+  aloft: number;
   // Which way it faces, turned from south (`+v`) towards east (`+u`), in radians: the way it's going, turning as it
   //  passes a square's middle.
   facing: number;
@@ -75,6 +81,12 @@ export const quicker = (pace: Pace): Pace => ({
 
 /** How long after a walk's last step a unit making the same step rides along with it, in ms. */
 export const RIDE = 50;
+
+/** How high a walk that flies climbs over where its units would stand, at the most: about an aircraft's own height. */
+export const CRUISE = 0.3;
+
+/** How far a walk that flies goes as it climbs to `CRUISE`, and as it comes down from it, in steps. */
+export const CLIMB = 1;
 
 // How near, on the ground, a unit walking must be drawn to another walk to ride along with it.
 const BESIDE = 0.05;
@@ -108,6 +120,12 @@ type Walk = {
   // The way it faced as its last step was joined, when, and how long it takes to turn from it to the way its path
   //  goes, so it turns rather than snapping round.
   turned: { facing: number; at: number; over: number } | null;
+  // Whether its units fly; how many steps of its path have been let go as passed; and how high it was, as a share of
+  //  the climb (0 to 1), how far along its whole path, when it set off or its last step was joined: it climbs on from
+  //  there.
+  flies: boolean;
+  flown: number;
+  climb: { from: number; at: number };
 };
 
 const sameSquare = (a: WalkSquare, b: WalkSquare): boolean =>
@@ -241,6 +259,9 @@ const wayOf = (
 ): number | null =>
   a[0] === b[0] && a[1] === b[1] ? null : Math.atan2(b[0] - a[0], b[1] - a[1]);
 
+// How high a share of its climb (0 to 1) is drawn: easing off the ground and into its cruise.
+const eased = (t: number): number => t * t * (3 - 2 * t);
+
 // `a` turned towards `b` by `t`, the short way round.
 const turnTowards = (a: number, b: number, t: number): number => {
   const delta = b - a - Math.PI * 2 * Math.round((b - a) / (Math.PI * 2));
@@ -273,9 +294,9 @@ export class Walks {
   }
 
   /**
-   * `unit` steps from the square `from` to `to`, at `now`, at `pace`. Walking, it goes on from there, or rides along
-   *  with the walk that's just made that step; otherwise it sets off from `setOff`, where it's drawn. It arrives at
-   *  `arrive`, where it'll stand on `to`. The walk it's in.
+   * `unit` steps from the square `from` to `to`, at `now`, at `pace`, flying if `flies`. Walking, it goes on from
+   *  there, or rides along with the walk that's just made that step; otherwise it sets off from `setOff`, where it's
+   *  drawn. It arrives at `arrive`, where it'll stand on `to`. The walk it's in.
    */
   step(
     unit: string,
@@ -284,16 +305,18 @@ export class Walks {
     setOff: WalkPoint,
     arrive: WalkPoint,
     now: number,
-    pace: Pace
+    pace: Pace,
+    flies: boolean = false
   ): string {
     const ownId = this.#walkOf.get(unit),
       own = ownId === undefined ? undefined : this.#walks.get(ownId),
       drawn = own === undefined ? setOff : this.#drawn(own, now),
       // Another walk that's just made this step, drawn where this unit was as it made it: it rides along with it, as
-      //  what a ship carries does, stepping after the ship.
+      //  what a ship carries does, stepping after the ship. Not into the air, though.
       riding = [...this.#walks.values()].find(
         (walk) =>
           walk !== own &&
+          (flies || !walk.flies) &&
           this.#justMade(walk, from, to, now) &&
           this.#beside(
             this.#drawn(walk, walk.stepped),
@@ -332,17 +355,23 @@ export class Walks {
         own.units = [unit];
       }
 
-      this.#goOn(own, to, arrive, now, pace);
+      this.#goOn(own, to, arrive, now, pace, flies);
 
       return own.id;
     }
 
-    // Elsewhere, or not walking: it sets off from where it's drawn.
+    // Elsewhere, or not walking: it sets off from where it's drawn, as high as it's flown there.
+    const climbed =
+      own === undefined ? 0 : this.#climbed(own, this.#along(own, now));
+
     if (own !== undefined) {
       this.#leave(own, unit);
     }
 
-    return this.#setOff(unit, from, to, drawn, arrive, now, pace);
+    return this.#setOff(unit, from, to, drawn, arrive, now, pace, {
+      flies,
+      climbed,
+    });
   }
 
   /** The walks under way at `now`, and those that have ended since, taken off. */
@@ -447,7 +476,8 @@ export class Walks {
     setOff: WalkPoint,
     arrive: WalkPoint,
     now: number,
-    pace: Pace
+    pace: Pace,
+    { flies, climbed }: { flies: boolean; climbed: number }
   ): string {
     const id = `walk-${++this.#made}`,
       walk: Walk = {
@@ -459,24 +489,29 @@ export class Walks {
         stepped: now,
         motion: plan(now, 0, 0, 0, pace),
         turned: null,
+        flies,
+        flown: 0,
+        climb: { from: climbed, at: 0 },
       };
 
     this.#walks.set(id, walk);
     this.#walkOf.set(unit, id);
-    this.#goOn(walk, to, arrive, now, pace);
+    this.#goOn(walk, to, arrive, now, pace, flies);
 
     return id;
   }
 
   // `walk` goes on to `to`, arriving at `arrive`, taken to the copy of the world nearest where it's been, from where it
-  //  is now and at the pace it's going, turning from the way it faces. The points it's passed are let go, but the one
+  //  is now and at the pace it's going, turning from the way it faces, and climbing on from as high as it is, flying
+  //  if `flies`: a unit flying on alone from what carried it takes off. The points it's passed are let go, but the one
   //  before where it is, which it turns from.
   #goOn(
     walk: Walk,
     to: WalkSquare,
     arrive: WalkPoint,
     now: number,
-    pace: Pace
+    pace: Pace,
+    flies: boolean
   ): void {
     const { u, v } = this.#period,
       last = walk.points[walk.points.length - 1]!,
@@ -485,7 +520,18 @@ export class Walks {
       passed = Math.max(0, Math.floor(along) - 1),
       facing = walk.points.length > 1 ? this.#walker(walk, now).facing : null,
       end = walk.points.length - 1,
-      into = along - (end - 1);
+      into = along - (end - 1),
+      flown = this.#along(walk, now);
+
+    // As high as it is: a walk just set off is as high as it set off.
+    if (walk.points.length > 1) {
+      walk.climb = {
+        from: this.#climbed(walk, flown),
+        at: walk.flown + flown,
+      };
+    }
+
+    walk.flies = flies;
 
     // Where it was to stop is a square it passes through now: through its middle, not in front of a city there, where
     //  that moves it no more than a hundredth of a square from where it's drawn, as when a GoTo's steps come together.
@@ -500,6 +546,7 @@ export class Walks {
 
     walk.points.splice(0, passed);
     walk.squares.splice(0, passed);
+    walk.flown += passed;
     walk.points.push({
       at: [
         nearest(arrive.at[0], last.at[0], u),
@@ -563,10 +610,36 @@ export class Walks {
     return { at, lift };
   }
 
+  // How far along its path `walk` is drawn at `now`, in steps from the first point it has.
+  #along(walk: Walk, now: number): number {
+    return Math.min(
+      walk.points.length - 1,
+      Math.max(0, motionAt(walk.motion, now).along)
+    );
+  }
+
+  // How high `walk` is at `along`, as a share of its climb, 0 to 1: climbing from as high as it was when it set off or a
+  //  step was last joined, and coming down over its last `CLIMB` of a step, landing at its end. Nothing if it doesn't
+  //  fly.
+  #climbed(walk: Walk, along: number): number {
+    if (!walk.flies) {
+      return 0;
+    }
+
+    return Math.max(
+      0,
+      Math.min(
+        1,
+        walk.climb.from + (walk.flown + along - walk.climb.at) / CLIMB,
+        (walk.points.length - 1 - along) / CLIMB
+      )
+    );
+  }
+
   #walker(walk: Walk, now: number): Walker {
     const { points, squares, turned } = walk,
       last = points.length - 1,
-      along = Math.min(last, Math.max(0, motionAt(walk.motion, now).along)),
+      along = this.#along(walk, now),
       index = Math.min(last - 1, Math.floor(along)),
       t = along - index,
       a = points[index]!,
@@ -602,6 +675,7 @@ export class Walks {
       units: [...walk.units],
       at,
       lift: a.lift + (b.lift - a.lift) * t,
+      aloft: CRUISE * eased(this.#climbed(walk, along)),
       facing,
       from: walk.from,
       before: squares[last - 1] ?? squares[last]!,

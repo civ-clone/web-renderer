@@ -37,6 +37,7 @@ import prefersReducedMotion from '@civ-clone/ui-map/lib/reducedMotion';
 import CameraInput from './camera/CameraInput';
 import markerFor, { MarkerWords, TileMarker } from './markers/markerFor';
 import { IN_FRONT_OF_CITY } from './markers/drawMarker';
+import { airborne, unitLook } from '@civ-clone/ui-models-builtin/units';
 import Walks, {
   OWN_PACE,
   RIVALS_PACE,
@@ -838,7 +839,9 @@ export class MapView3D implements MapRenderer {
       this.#standing(from),
       this.#standing(to),
       performance.now(),
-      speed === 'fast' ? quicker(pace) : pace
+      speed === 'fast' ? quicker(pace) : pace,
+      // Drawn in the air, it flies an arc.
+      airborne(unitLook(seen._, seen.__ ?? []))
     );
     // Off the square it set off from, now: `#face` marks it again.
     this.#draw();
@@ -932,9 +935,17 @@ export class MapView3D implements MapRenderer {
     this.#drawFigure(walker, this.#walkerMarker(walker.units));
   }
 
-  // Something walking or fighting (`id`) drawn as `marker`, where it is, `opacity` solid.
+  // Something walking or fighting (`id`) drawn as `marker`, where it is, `opacity` solid; an aircraft flying, `aloft`
+  //  over its stand.
   #drawFigure(
-    { id, at, lift, facing }: Pick<Walker, 'id' | 'at' | 'lift' | 'facing'>,
+    {
+      id,
+      at,
+      lift,
+      facing,
+      aloft = 0,
+    }: Pick<Walker, 'id' | 'at' | 'lift' | 'facing'> &
+      Partial<Pick<Walker, 'aloft'>>,
     marker: TileMarker | null,
     opacity = 1
   ): void {
@@ -963,7 +974,8 @@ export class MapView3D implements MapRenderer {
     this.#stage.placeWalker(
       id,
       [u, Math.max(0, this.#land.surfaceAt(u, v)) + lift, v],
-      facing
+      facing,
+      aloft
     );
     this.#stage.fadeWalker(id, opacity);
   }
@@ -1393,6 +1405,7 @@ export class MapView3D implements MapRenderer {
             units: [attacker],
             at: [from.at[0], from.at[1]],
             lift: from.lift,
+            aloft: 0,
             facing,
             from: attackerSquare,
             before: attackerSquare,

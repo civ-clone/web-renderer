@@ -28,13 +28,18 @@ import {
 } from 'three';
 import { CityMarker, TileMarker, UnitMarker } from './markerFor';
 import {
+  BodyPart,
   Building,
   FigureColours,
   cityGeometry,
   figureGeometry,
   unitBodyGeometry,
 } from './figures';
-import { UnitLook, unitLook } from '@civ-clone/ui-models-builtin/units';
+import {
+  UnitLook,
+  airborne,
+  unitLook,
+} from '@civ-clone/ui-models-builtin/units';
 
 // The size of a square is about 1 (spec §3): a city fills half its square, and a soldier stands a fifth of a square,
 //  drawn as big as the player chooses (`UnitMarker.size`), life size unless they choose otherwise. A unit's stand is
@@ -105,15 +110,17 @@ export class MarkerKit {
 
   /**
    * All that's drawn of a unit on the land, as `look` says, in `colours`, fortified or not, its figures `size` times
-   *  life size: its figures, stand and wall, one geometry, made once for each.
+   *  life size: its figures, stand and wall, one geometry, made once for each. Or, as `part` says, its figures alone
+   *  or its stand and wall alone.
    */
   body(
     look: UnitLook,
     colours: FigureColours,
     fortified: boolean,
-    size: number = 1
+    size: number = 1,
+    part: BodyPart = 'whole'
   ): BufferGeometry {
-    const key = JSON.stringify([look, colours, fortified, size]);
+    const key = JSON.stringify([look, colours, fortified, size, part]);
     let geometry = this.#bodies.get(key);
 
     if (geometry === undefined) {
@@ -121,6 +128,7 @@ export class MarkerKit {
         fortified,
         scale: size,
         stand: STAND_HEIGHT,
+        part,
       });
       this.#bodies.set(key, geometry);
     }
@@ -446,17 +454,27 @@ const drawCity = (kit: MarkerKit, city: CityMarker): Group => {
 /**
  * The unit on top of a stack, as the built-in set draws its type, standing on its square's middle. What stands over it
  *  (its bar, flag, label and pointer) stands over the point `badges.at` says, from `badges.over` up the screen: over
- *  the unit, or over a city's name.
+ *  the unit, or over a city's name. Drawn to fly (`flying`), an aircraft's figures and what stands over them are a
+ *  part of their own (`ALOFT_PART`), to climb off its stand and ring, which stay on the ground.
  */
 const drawUnit = (
   kit: MarkerKit,
   unit: UnitMarker,
-  badges: { at: [number, number, number]; over: number } | null = null
+  badges: { at: [number, number, number]; over: number } | null = null,
+  flying = false
 ): Group => {
   const group = new Group(),
     { ring } = kit.geometries,
     look = unitLook(unit.type, unit.kinds),
-    body = kit.body(look, unit.colours, unit.fortified, unit.size),
+    apart = flying && airborne(look),
+    body = kit.body(
+      look,
+      unit.colours,
+      unit.fortified,
+      unit.size,
+      apart ? 'figures' : 'whole'
+    ),
+    aloft = apart ? new Group() : group,
     top = body.boundingBox?.max.y ?? 0.3,
     at = badges?.at ?? [0, top + FLAG_GAP, 0],
     // From the bottom up, on the screen.
@@ -472,13 +490,24 @@ const drawUnit = (
 
   figures.name = FIGURES_PART;
   figures.rotation.y = unit.facing;
-  group.add(figures);
+  aloft.add(figures);
+
+  if (apart) {
+    aloft.name = ALOFT_PART;
+    group.add(
+      new Mesh(
+        kit.body(look, unit.colours, unit.fortified, unit.size, 'base'),
+        kit.figureMaterial
+      ),
+      aloft
+    );
+  }
 
   // Its hit points, when it has lost some: a bar under its flag, shorter and redder as they go, from its left.
   if (unit.health !== null) {
     const left = Math.max(0, Math.min(1, unit.health));
 
-    group.add(
+    aloft.add(
       place(
         badge(kit.plain('#202020'), FLAG_WIDTH, BAR_HEIGHT, badges?.over ?? 0),
         ...at
@@ -496,12 +525,12 @@ const drawUnit = (
       // Over the back, at the same depth: made after it, it's drawn after it. Its left edge on the back's: a sprite
       //  stands `center` of its width from its left edge.
       front.center.x = 1 / (2 * left);
-      group.add(place(front, ...at));
+      aloft.add(place(front, ...at));
     }
   }
 
   // The owner's flag, and its label: the stack's size, what it's busy with, and a veteran's star.
-  group.add(
+  aloft.add(
     place(
       badge(kit.plain(unit.colours[0]), FLAG_WIDTH, FLAG_HEIGHT, flagOver),
       ...at
@@ -509,7 +538,7 @@ const drawUnit = (
   );
 
   if (text !== '') {
-    group.add(
+    aloft.add(
       place(
         label(
           kit.label(text, unit.colours[0], textOn(unit.colours[0])),
@@ -527,8 +556,8 @@ const drawUnit = (
 
     halo.rotation.x = Math.PI / 2;
     halo.position.y = 0.01;
-    group.add(
-      halo,
+    group.add(halo);
+    aloft.add(
       place(badge(kit.pointer(), POINTER, POINTER, pointerOver, POINTED), ...at)
     );
   }
@@ -542,14 +571,25 @@ export const UNIT_PART = 'unit';
 /** The name of a unit's figures, on their stand: what turns as a unit walking turns. */
 export const FIGURES_PART = 'figures';
 
+/**
+ * The name of an aircraft's part that climbs as it flies, drawn to fly: its figures, and its flag and all over them;
+ *  not its stand, nor the ring at its feet.
+ */
+export const ALOFT_PART = 'aloft';
+
 /** How far in front of its city's buildings (`+v`) a unit in a city stands, from the square's middle. */
 export const IN_FRONT_OF_CITY = 0.26;
 
 /**
  * A square's markers, standing on the ground at its middle: its city, and the unit on top of its stack in front of its
  *  buildings, its flag over the city's name, from the same point, so the two never cross however the camera's turned.
+ *  A walker's, `flying`, an aircraft can climb off its stand (`ALOFT_PART`).
  */
-export const drawMarker = (kit: MarkerKit, marker: TileMarker): Group => {
+export const drawMarker = (
+  kit: MarkerKit,
+  marker: TileMarker,
+  flying = false
+): Group => {
   const group = new Group();
 
   if (marker.city !== null) {
@@ -566,7 +606,8 @@ export const drawMarker = (kit: MarkerKit, marker: TileMarker): Group => {
           : {
               at: [CITY_NAME_AT[0], CITY_NAME_AT[1], CITY_NAME_AT[2] - inFront],
               over: CITY_LABEL + SPACE,
-            }
+            },
+        flying
       );
 
     pawn.name = UNIT_PART;
