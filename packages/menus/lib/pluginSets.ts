@@ -166,23 +166,55 @@ export const followSavedRuleSet = async (
     );
   }
 
-  setRuleSetTileset(tileset);
+  // Every pack of its own here, for the save's grid's to be found among them (#1249).
+  setRuleSetTileset(here === undefined ? tileset : gameTilesets(here));
 };
 
 // Named here too for what has always imported it from here.
 export { gameName };
 
+/** The art packs a game is drawn with on this page, first first: every one of its own (#1249), or, from an older worker, the one. */
+export const gameTilesets = (
+  game: Pick<PluginSetOption, 'tileset' | 'tilesets'> | undefined
+): string[] =>
+  game?.tilesets ??
+  (game?.tileset === null || game?.tileset === undefined ? [] : [game.tileset]);
+
+const gridOf = (id: string): TopologyId | null =>
+  (bundledTilesets().find((tileset) => tileset.id === id)?.grid ??
+    null) as TopologyId | null;
+
 /**
- * The grid a game with `game` is played on: its art pack's, when it has one of its own (Civ2's isometric grid), or null
- *  for one played on whatever grid the player picks.
+ * The grid a game with `game` starts on: its first art pack's, when it has art of its own (Civ2's isometric grid), or
+ *  null for one played on whatever grid the player picks.
  */
 export const gameGrid = (
-  game: Pick<PluginSetOption, 'tileset'> | undefined
-): TopologyId | null =>
-  game?.tileset === null || game?.tileset === undefined
-    ? null
-    : ((bundledTilesets().find(({ id }) => id === game.tileset)?.grid ??
-        null) as TopologyId | null);
+  game: Pick<PluginSetOption, 'tileset' | 'tilesets'> | undefined
+): TopologyId | null => {
+  const [first] = gameTilesets(game);
+
+  return first === undefined ? null : gridOf(first);
+};
+
+/**
+ * The grids a game with `game` can be played on (#1249): those its art packs here are for, its own first (Civ2's
+ *  isometric, then the pixel art's square and hex), or null for any.
+ */
+export const gameGrids = (
+  game: Pick<PluginSetOption, 'tileset' | 'tilesets'> | undefined
+): TopologyId[] | null => {
+  const ids = gameTilesets(game);
+
+  if (ids.length === 0) {
+    return null;
+  }
+
+  return ids.reduce((grids: TopologyId[], id) => {
+    const grid = gridOf(id);
+
+    return grid === null || grids.includes(grid) ? grids : [...grids, grid];
+  }, []);
+};
 
 /**
  * Makes the worker's set `id` before anything is asked of it. A worker that has fixed another set is replaced with a new
@@ -197,8 +229,9 @@ export const playGame = async (
 ): Promise<void> => {
   // Its map drawn with the art its rule set names, when it names some (#1063, decision 2 of docs/asset-library.md).
   setRuleSetTileset(
-    (choices.sets ?? choices.games)?.find((game) => game.id === id)?.tileset ??
-      null
+    gameTilesets(
+      (choices.sets ?? choices.games)?.find((game) => game.id === id)
+    )
   );
 
   if (
@@ -315,6 +348,7 @@ export const requestGameSetupData = async (
           games,
           originals,
           grid: gameGrid(choices.sets.find((game) => game.id === id)),
+          grids: gameGrids(choices.sets.find((game) => game.id === id)),
         },
       };
 };

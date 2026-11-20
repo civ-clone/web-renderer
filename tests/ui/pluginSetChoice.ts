@@ -175,16 +175,21 @@ const fakeWorkers = () => {
       // The rule sets' answer waits on it, when given.
       holdRules: null as Promise<void> | null,
     },
-    // Each with its art in the order it prefers it, as civ.one's are: Civ2's own, then the isometric pixel art.
+    // Each with its art in the order it prefers it, as civ.one's are: Civ2's own, then the isometric pixel art, then the
+    //  square and hex pixel art, for Civ2 on those grids (#1249).
     sets = [
       { id: 'civ1', tilesets: [] as string[], original: null },
       // Civ1 with civ.one's fixes and additions, whose original rules are `civ1` (#1248).
       { id: 'civ1-enhanced', tilesets: [] as string[], original: 'civ1' },
-      { id: 'civ2', tilesets: ['civ2', 'iso-pixelart'], original: null },
+      {
+        id: 'civ2',
+        tilesets: ['civ2', 'iso-pixelart', 'civ1-pixelart', 'hex-pixelart'],
+        original: null,
+      },
       // Civ2 with civ.one's fixes, whose original rules are `civ2` (#1248).
       {
         id: 'civ2-enhanced',
-        tilesets: ['civ2', 'iso-pixelart'],
+        tilesets: ['civ2', 'iso-pixelart', 'civ1-pixelart', 'hex-pixelart'],
         original: 'civ2',
       },
     ],
@@ -234,9 +239,13 @@ const fakeWorkers = () => {
                   ({ tilesets, tileset }) =>
                     tilesets.length === 0 || tileset !== null
                 )
-                .map(({ id, tileset, original }) => ({
+                .map(({ id, tilesets, tileset, original }) => ({
                   id,
                   tileset,
+                  // Every pack of its own the page has (#1249).
+                  tilesets: tilesets.filter((id) =>
+                    (args as string[]).includes(id)
+                  ),
                   original,
                 })),
               default: 'civ1-enhanced',
@@ -856,6 +865,39 @@ const civ2Metadata: PackMetadata = {
     );
 
     closeAll();
+    log.length = 0;
+
+    // Civilization II last started on the square grid (#1249): on it again, at Civilization's size there, with as many
+    //  civilizations as Civ2 has room for.
+    stored.set(
+      'civ.newGame',
+      JSON.stringify({
+        'civ2-enhanced': { topologyId: 'square', size: 'huge', players: 7 },
+      })
+    );
+
+    askNewGame(transport, undefined, noSetup);
+    await settle();
+
+    expect(
+      'Civilization II says it starts on the square grid, as it was last',
+      shown().options[1],
+      'Civilization II (preview): A huge world on the square grid, 7 civilizations'
+    );
+
+    choose('civ2-enhanced');
+    await settle();
+    choose('Prince');
+    await settle();
+    await settle();
+
+    expect(
+      "and starts there, on Civilization's huge square world, with Civ2's 7 civilizations",
+      started(),
+      ['square', 128, 80, 7, 'Prince']
+    );
+
+    closeAll();
 
     // Earth with Civ2 to play (#1176): which game first, then that game's Earth.
     worker.chosen = 'civ2-enhanced';
@@ -1018,16 +1060,26 @@ const civ2Metadata: PackMetadata = {
       ]
     );
     expect(
-      `${name}: on the isometric grid only, with no grid to choose, and Civ2's own Earth`,
+      `${name}: on its own isometric grid first, the square and hex grids its pixel art is for to choose too (#1249), and Civ2's own Earth`,
       [
-        element.querySelector('select[name=topologyId]') === null,
+        [
+          Array.from(
+            element.querySelectorAll('select[name=topologyId] option'),
+            (option) => option.getAttribute('value')
+          ),
+          (
+            element.querySelector(
+              'select[name=topologyId]'
+            ) as HTMLSelectElement
+          ).value,
+        ],
         Array.from(
           element.querySelectorAll('select[name=map] option'),
           (option) => option.getAttribute('value')
         ).some((value) => (value ?? '').startsWith('earth:')),
         element.querySelectorAll('select[name=difficulty] option').length,
       ],
-      [true, true, 6]
+      [[['square', 'staggered-iso', 'hex-odd-r'], 'staggered-iso'], true, 6]
     );
     expect(
       `${name}: its sizes are Civ2's own, from its rules, starting on Normal, which is what its inputs hold`,
@@ -1054,6 +1106,61 @@ const civ2Metadata: PackMetadata = {
         '80',
       ]
     );
+
+    // On the square grid (#1249): Civilization's sizes, as many civilizations as Civ2 has room for, and Civ2's Earth,
+    //  which stays on its own grid.
+    {
+      const grid = element.querySelector(
+        'select[name=topologyId]'
+      ) as HTMLSelectElement;
+
+      grid.value = 'square';
+      grid.dispatchEvent(new Event('change'));
+      await settle();
+
+      expect(
+        `${name}: on the square grid, Civilization's sizes and Civ2's Earth`,
+        Array.from(
+          element.querySelectorAll('select[name=map] option'),
+          (option) => option.getAttribute('value')
+        ),
+        [
+          'size:tiny',
+          'size:small',
+          'size:normal',
+          'size:large',
+          'size:huge',
+          'earth:small',
+          'earth:normal',
+          'earth:large',
+        ]
+      );
+
+      const map = element.querySelector(
+        'select[name=map]'
+      ) as HTMLSelectElement;
+
+      map.value = 'size:huge';
+      map.dispatchEvent(new Event('change'));
+      await settle();
+
+      expect(
+        `${name}: a huge square world for Civ2 is Civilization's, 128 by 80 squares`,
+        [
+          (element.querySelector('input[name=width]') as HTMLInputElement)
+            .value,
+          (element.querySelector('input[name=height]') as HTMLInputElement)
+            .value,
+        ],
+        ['128', '80']
+      );
+
+      grid.value = 'staggered-iso';
+      grid.dispatchEvent(new Event('change'));
+      map.value = 'size:normal';
+      map.dispatchEvent(new Event('change'));
+      await settle();
+    }
 
     // What each level means, in the modern form: the toughest is the last the rules send, whatever it's called.
     if (name === 'modern') {
@@ -1870,6 +1977,57 @@ const civ2Metadata: PackMetadata = {
         ],
       ]
     );
+
+    // Civ2 with its art on each grid (#1249): on its own grid at first, and on the square grid with Civilization's
+    //  sizes, as many civilizations as Civ2 has room for, Civ2's Earth on its own grid, and sizes typed in held only to
+    //  the page's own bounds.
+    {
+      const anyGrid = new GameSetup({
+        aiClients: ['SimpleAIClient'],
+        civilizations,
+        difficulties: [],
+        existing: {},
+        worldSizes: civ2WorldSizes,
+        game: {
+          id: 'civ2-enhanced',
+          games: ['civ1-enhanced', 'civ2-enhanced'],
+          originals: { 'civ2-enhanced': 'civ2' },
+          grid: 'staggered-iso',
+          grids: ['staggered-iso', 'square', 'hex-odd-r'],
+        },
+      } as any);
+
+      const onIso = [anyGrid.fixedGrid(), anyGrid.topologyId, anyGrid.map()];
+
+      anyGrid.chooseGrid('square');
+      anyGrid.chooseMap('size:huge');
+
+      expect(
+        "Civ2 on any grid its art is for: its own first, then Civilization's huge square world with room for Civ2's 7",
+        [
+          onIso,
+          [anyGrid.topologyId, anyGrid.width, anyGrid.height],
+          anyGrid.maxSeats(),
+          anyGrid.minSeats(),
+          anyGrid.problem('30', '30'),
+        ],
+        [
+          [null, 'staggered-iso', 'size:normal'],
+          ['square', 128, 80],
+          7,
+          3,
+          null,
+        ]
+      );
+
+      anyGrid.chooseMap('earth:normal');
+
+      expect(
+        "and its Earth is Civ2's, on Civ2's own grid",
+        [anyGrid.topologyId, anyGrid.width, anyGrid.height],
+        ['staggered-iso', 50, 80]
+      );
+    }
 
     expect(
       "a size typed in is held to the rules' bounds: 20 to 250 each way, 1,000 to 10,000 squares, an even height",

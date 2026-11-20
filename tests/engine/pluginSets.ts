@@ -1192,7 +1192,7 @@ if (scenario !== null) {
     ]
   );
   expect(
-    'they are drawn with Civ2’s art, or else the isometric pixel art, so a page with either is offered both Civ2 sets too',
+    'they are drawn with Civ2’s art, or else the isometric pixel art, then the square and hex pixel art for those grids (#1249), so a page with either is offered both Civ2 sets too',
     [
       pluginSets.sets.map(({ id, tilesets }) => [id, tilesets]),
       [
@@ -1210,8 +1210,11 @@ if (scenario !== null) {
       [
         ['civ1', []],
         ['civ1-enhanced', []],
-        ['civ2', ['civ2', 'iso-pixelart']],
-        ['civ2-enhanced', ['civ2', 'iso-pixelart']],
+        ['civ2', ['civ2', 'iso-pixelart', 'civ1-pixelart', 'hex-pixelart']],
+        [
+          'civ2-enhanced',
+          ['civ2', 'iso-pixelart', 'civ1-pixelart', 'hex-pixelart'],
+        ],
       ],
       [
         ['civ2', 'civ2'],

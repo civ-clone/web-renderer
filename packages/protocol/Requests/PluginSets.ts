@@ -10,6 +10,12 @@ export type PluginSetOption = {
    */
   tileset: string | null;
   /**
+   * Every art pack of its own the page has, in the order it prefers them (#1249): the first of them on a grid is the
+   *  one its games on that grid are drawn with, and it is played only on grids one of them is for. Empty for a set
+   *  drawn with whatever the player picks; left out by an older worker, which has `tileset` alone.
+   */
+  tilesets?: string[];
+  /**
    * The set offered beside it that plays the same game as the original plays it, when this one is that game with its
    *  fixes (#1248): the setup offers the two as one game, with Original and Enhanced rules. Null, or left out by an
    *  older worker, for a set that is a game of its own.

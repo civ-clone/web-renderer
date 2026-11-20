@@ -286,32 +286,43 @@ export const setSheetFailed = (id: string, reason: string | null): void => {
 export const sheetFailure = (id: string): string | null =>
   unloadedSheets.get(id) ?? null;
 
-// The art the game's rule set names (`civ-clone.sets.<id>.tileset`, Civ2's), when the page knows it: see
+// The art the game's rule set names (`civ-clone.sets.<id>.tileset`, Civ2's), when the page knows it, first first: see
 //  `setRuleSetTileset`.
-let ruleSetTileset: string | null = null;
+let ruleSetTilesets: string[] = [];
 
 /**
- * Has the map drawn with `id`, the art the rule set of the game about to be played names (Civ2's `civ2`), on its grid,
- *  over the player's choice for that grid (decision 2 of docs/asset-library.md); or, given null, for a rule set that
- *  names none, with the player's choice again.
+ * Has the map drawn with the art the rule set of the game about to be played names (Civ2's: `civ2`, then civ.one's
+ *  pixel art for each grid, #1249), the first of it there is on the map's grid, over the player's choice for that grid
+ *  (decision 2 of docs/asset-library.md); or, given null, for a rule set that names none, with the player's choice
+ *  again. A grid the rule set names no art for is drawn as the player chose.
  */
-export const setRuleSetTileset = (id: string | null): void => {
-  ruleSetTileset = id;
+export const setRuleSetTileset = (ids: string | string[] | null): void => {
+  ruleSetTilesets =
+    ids === null ? [] : typeof ids === 'string' ? [ids] : [...ids];
   settledMaps.clear();
 };
 
+// The rule set's art on `grid` that is installed, and, unless `failed`, whose sheet hasn't failed to load, first first.
+const ruleSetTilesetsOn = (
+  grid: TopologyId | string,
+  failed: boolean = true
+): TilesetDescriptor[] =>
+  ruleSetTilesets.flatMap((id) =>
+    installedTilesets().filter(
+      (tileset) =>
+        tileset.id === id &&
+        tileset.grid === grid &&
+        (failed || !unloadedSheets.has(id))
+    )
+  );
+
 /**
- * The installed set the rule set of the game being played names for the `grid` grid's maps (`setRuleSetTileset`), which
- *  outranks the player's choice there, or null when it names none for that grid.
+ * The installed set the rule set of the game being played names for the `grid` grid's maps (`setRuleSetTileset`), the
+ *  first of them there is, which outranks the player's choice there, or null when it names none for that grid.
  */
 export const ruleSetMapTileset = (
   grid: TopologyId | string
-): TilesetDescriptor | null =>
-  ruleSetTileset === null
-    ? null
-    : installedTilesets().find(
-        (tileset) => tileset.grid === grid && tileset.id === ruleSetTileset
-      ) ?? null;
+): TilesetDescriptor | null => ruleSetTilesetsOn(grid)[0] ?? null;
 
 /** The installed set the player chose for the `grid` grid's maps (`mapTilesetOption`), or null without one. */
 export const chosenMapTileset = (
@@ -337,7 +348,7 @@ const settleMapTileset = (
     chosen = chosenMapTileset(topologyId);
 
   return (
-    installed.find(({ id }) => id === ruleSetTileset) ??
+    ruleSetTilesetsOn(topologyId, false)[0] ??
     (chosen === null || unloadedSheets.has(chosen.id) ? null : chosen) ??
     installed.find((tileset) => !isHosted(tileset)) ??
     installed[0] ??

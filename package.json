@@ -353,7 +353,7 @@
       "civ2": {
         "rules": "@civ-clone/ui-rules-civ2",
         "hidden": true,
-        "tileset": ["civ2", "iso-pixelart"],
+        "tileset": ["civ2", "iso-pixelart", "civ1-pixelart", "hex-pixelart"],
         "plugins": [
           "@civ-clone/base-civilization-barbarian",
           "@civ-clone/base-strategy-victory",
@@ -393,7 +393,7 @@
         "extends": "civ2",
         "original": "civ2",
         "hidden": true,
-        "tileset": ["civ2", "iso-pixelart"],
+        "tileset": ["civ2", "iso-pixelart", "civ1-pixelart", "hex-pixelart"],
         "plugins": [
           "@civ-clone/civ2-enhanced"
         ]
