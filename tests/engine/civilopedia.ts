@@ -402,8 +402,29 @@ const check = async (): Promise<void> => {
       join(process.cwd(), 'packages/reports/translations/en.ts'),
       'utf8'
     ),
-    types = Array.from(
-      new Set(entries.flatMap((item) => item.effects.map(({ type }) => type)))
+    // Each effect's wording, as the page looks it up (`lib/effects`): its type and string fields, bar `scope`, and
+    //  `_negative` below 0. A plural or a `_zero` the page adds itself.
+    keys = Array.from(
+      new Set(
+        entries.flatMap((item) =>
+          item.effects.map((effect) =>
+            [
+              `Civilopedia.effect.${effect.type}`,
+              ...Object.entries(effect)
+                .filter(
+                  ([field, value]) =>
+                    field !== 'type' &&
+                    field !== 'scope' &&
+                    typeof value === 'string'
+                )
+                .map(([, value]) => value),
+              ...(typeof effect.value === 'number' && effect.value < 0
+                ? ['negative']
+                : []),
+            ].join('_')
+          )
+        )
+      )
     );
 
   expect(
@@ -415,9 +436,19 @@ const check = async (): Promise<void> => {
     []
   );
   expect(
-    'every type of effect sent has wording in en',
-    types.filter(
-      (type) => !translations.includes(`'Civilopedia.effect.${type}`)
+    'every Wonder says something it does, bar those whose requirements say it',
+    entries
+      .filter((item) => item.kind === 'wonder')
+      .filter((item) => item.effects.length === 0)
+      .map((item) => item.key),
+    ['ApolloProgram', 'ManhattanProject']
+  );
+  expect(
+    'every effect sent has wording in en',
+    keys.filter(
+      (key) =>
+        !translations.includes(`'${key}'`) &&
+        !translations.includes(`'${key}_one'`)
     ),
     []
   );

@@ -51,6 +51,8 @@ i18next.addResources('en', 'default', {
   'Civilopedia.effect.upkeep_zero': 'No upkeep',
   'Civilopedia.effect.capital':
     'Your cities’ {{yield}} grows with their distance from it',
+  'Civilopedia.effect.clause.per': 'for each {{targets}}',
+  'Civilopedia.effect.clause.inCitiesWith': 'in cities with a {{targets}}',
   'Civilopedia.effect.clause.needs': 'with {{targets}}',
   'Civilopedia.effect.clause.with': 'with {{targets}}',
   'Civilopedia.effect.clause.replaces': 'in place of {{targets}}',
@@ -58,6 +60,35 @@ i18next.addResources('en', 'default', {
   'Civilopedia.effect.clause.except': 'except against {{targets}}',
   'Civilopedia.effect.clause.from': 'from {{targets}}',
   'Civilopedia.effect.clause.until': 'until {{targets}}',
+  'Civilopedia.effect.scope.player': 'in all your cities',
+  'Civilopedia.effect.scope.continent': 'in your cities on the same continent',
+  // The Wonders' effects (#1196).
+  'Civilopedia.effect.content_all': 'Makes every unhappy citizen content',
+  'Civilopedia.effect.tile_yield_producing':
+    '+{{value}} {{yield}} on each worked square that already has {{yield}}',
+  'Civilopedia.effect.happy_one': 'Makes {{count}} content citizen happy',
+  'Civilopedia.effect.happy_other': 'Makes {{count}} content citizens happy',
+  'Civilopedia.effect.military_unhappiness_one':
+    'Each unit that causes unhappiness makes {{count}} fewer citizen unhappy',
+  'Civilopedia.effect.military_unhappiness_other':
+    'Each unit that causes unhappiness makes {{count}} fewer citizens unhappy',
+  'Civilopedia.effect.unit_movement_one': '+{{count}} move for your {{unit}}',
+  'Civilopedia.effect.unit_movement_other':
+    '+{{count}} moves for your {{unit}}',
+  // A unit's effect is already all of its owner's units.
+  'Civilopedia.effect.scope.player_unit_movement': '',
+  'Civilopedia.effect.any_government':
+    'You can choose any government, without its advance',
+  'Civilopedia.effect.no_anarchy':
+    'Changing government needs no period of Anarchy',
+  'Civilopedia.effect.pacifies':
+    'Every other leader offers you peace when you meet',
+  'Civilopedia.effect.shared_advances_one':
+    'Gives you any advance that {{count}} other civilization knows',
+  'Civilopedia.effect.shared_advances_other':
+    'Gives you any advance that {{count}} other civilizations know',
+  'Civilopedia.effect.free_advances_one': 'Gives you {{count}} free advance',
+  'Civilopedia.effect.free_advances_other': 'Gives you {{count}} free advances',
   'Civilopedia.loading': 'Loading…',
   'Civilopedia.nothing-known': 'Nothing more is known about this yet.',
   'Civilopedia.stats':

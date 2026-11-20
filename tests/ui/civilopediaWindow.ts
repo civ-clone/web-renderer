@@ -561,6 +561,53 @@ const run = async (): Promise<void> => {
       'No upkeep'
   );
 
+  // A Wonder's effects say where they act (#1196): in all its owner's cities, on its continent, or (with no scope) its
+  //  own city.
+  const research = { class: 'Research', name: 'Research' },
+    wonder = entry('IsaacNewtonsCollege', 'wonder', {
+      effects: [
+        {
+          type: 'yield_percent',
+          yield: research,
+          value: 1 / 3,
+          of: 'base',
+          per: [
+            { class: 'Library', name: 'Library' },
+            { class: 'University', name: 'University' },
+          ],
+          scope: 'player',
+        },
+        { type: 'content', value: 2, scope: 'continent' },
+        { type: 'content', amount: 'all' },
+        {
+          type: 'unit_movement',
+          unit: { class: 'Naval', name: 'Naval' },
+          value: 1,
+          scope: 'player',
+        },
+        {
+          type: 'content',
+          value: 2,
+          step: 'more',
+          inCitiesWith: [{ class: 'Temple', name: 'Temple' }],
+          with: [{ class: 'Mysticism', name: 'Mysticism' }],
+          scope: 'player',
+        },
+      ],
+    });
+
+  expect(
+    'a Wonder says where its effects act',
+    text(entryHtml(wonder, data))
+      .split('What it does')[1]
+      ?.split('Requirements')[0],
+    '+33% of the city’s base Science, for each Library and University, in all your cities' +
+      'Makes 2 unhappy citizens content, in your cities on the same continent' +
+      'Makes every unhappy citizen content' +
+      '+1 move for your ships' +
+      'Makes 2 more unhappy citizens content, in cities with a Temple, with Mysticism, in all your cities'
+  );
+
   finished = true;
 
   if (failures.length > 0) {
