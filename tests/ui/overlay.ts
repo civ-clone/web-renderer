@@ -4,8 +4,9 @@
 //  - what a square shows: roads and railroads joined to their neighbours as the 2D map joins them, fields, mines,
 //    fortresses, airbases, pollution, specials (not rivers) and huts, or nothing;
 //  - its shapes: triangles with a normal and a colour at every point, relative to their chunk's corner; strips draped
-//    over the land; a road reaching halfway to the neighbour it joins, at the copy the place says; specials at sea on
-//    the water; what stands on a square standing clear of the unit's stand at its middle; the same every time;
+//    over the land; a road reaching halfway to the neighbour it joins, at the copy the place says, bending on its own
+//    square and meeting its neighbour's half there going the same way; specials at sea on the water; what stands on a
+//    square standing clear of the unit's stand at its middle; the same every time;
 //  - on the land: a chunk's overlay is its squares', roads at the world's edges and poles joined across them at the
 //    nearest copy, on every grid; a road built remakes its chunk's overlay, and its neighbours', and builds no land;
 //  - what grows: on each terrain the table says, not on a city's lot nor cleared ground, clear of the unit's stand and
@@ -26,7 +27,9 @@ import overlayFor, {
 import overlayMesh, {
   OverlayMesh,
   OverlayPlace,
+  ROAD_BOW,
   layOverlay,
+  roadHalf,
   soup,
 } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
 import { Stage, overlayCopies, polesAt } from '@civ-clone/ui-map-3d/stage';
@@ -845,6 +848,183 @@ const landOf = (
   );
 }
 
+// A road's drawn along its bend: every point of a road east from 16 squares in a row within half its width of its
+//  half (`roadHalf`), and on some of them, bowing furthest, well off the straight line.
+{
+  const offBend: string[] = [];
+  let offStraight = 0;
+
+  for (let x = 16; x < 32; x++) {
+    const here = place(x, 3),
+      half = roadHalf(here, [1, 0]).points,
+      [cu, cv] = here.centre,
+      mesh = overlayMesh(16, 0, [{ overlay: roadEast, place: here }]),
+      // How far a point is from the half's bend, and from the straight line along `v`.
+      fromBend = (u: number, v: number): number =>
+        Math.min(
+          ...half.slice(1).map((b, index) => {
+            const a = half[index]!,
+              du = b[0] - a[0],
+              dv = b[1] - a[1],
+              t = Math.max(
+                0,
+                Math.min(
+                  1,
+                  ((u - a[0]) * du + (v - a[1]) * dv) / (du * du + dv * dv)
+                )
+              );
+
+            return Math.hypot(u - a[0] - du * t, v - a[1] - dv * t);
+          })
+        );
+
+    if (!facesUp(mesh)) {
+      offBend.push(`${x}: faces down`);
+    }
+
+    pointsOf(mesh).forEach(([u, , v]) => {
+      // The disc at the middle aside.
+      if (Math.hypot(u - cu, v - cv) <= 0.036) {
+        return;
+      }
+
+      if (fromBend(u, v) > 0.036) {
+        offBend.push(`${x}: ${u.toFixed(3)},${v.toFixed(3)}`);
+      }
+
+      offStraight = Math.max(offStraight, Math.abs(v - cv) - 0.035);
+    });
+  }
+
+  expect(
+    'a road’s drawn along its bend, within half its width of it, facing up, and some of them well off the straight line',
+    [offBend.slice(0, 5), offStraight > 0.02],
+    [[], true]
+  );
+}
+
+// A road's halves, on every grid, every way out of every square: each bends on its own square, short of the edge, and
+//  meets its neighbour's half at the same point there, going the same way, so the road runs on smoothly. Each bows
+//  no further from the straight line than `ROAD_BOW` of its length, and some bow a good part of that.
+(['square', 'staggered-iso', 'hex-odd-r'] as TopologyId[]).forEach(
+  (topologyId) => {
+    const width = 16,
+      height = 12,
+      world = new World({
+        _: 'World',
+        __: ['World', 'DataObject'],
+        id: 'world',
+        width,
+        height,
+        topologyId,
+        tiles: Array.from({ length: width * height }, (_, index) => ({
+          x: index % width,
+          y: Math.floor(index / width),
+          terrain: { _: 'Grassland', __: ['Grassland'], features: [] },
+          improvements: [],
+          units: [],
+          city: null,
+        })) as never,
+      }),
+      { layout } = new Land(world),
+      topology = world.topology(),
+      placeOf = (x: number, y: number) => ({
+        centre: layout.centre(x, y),
+        toward: ([dx, dy]: readonly [number, number]) =>
+          layout.centre(x + dx, y + dy),
+        seed: Math.imul(x, 73856093) ^ Math.imul(y, 19349663),
+      }),
+      strays: string[] = [],
+      unmet: string[] = [],
+      bows: number[] = [],
+      // Squares whose every way out bows the same.
+      alike: string[] = [];
+
+    for (let y = 2; y < height - 2; y++) {
+      for (let x = 2; x < width - 2; x++) {
+        const before = bows.length;
+
+        topology.directions().forEach((direction) => {
+          const offset = topology.offset(direction, x, y),
+            [nx, ny] = [x + offset[0], y + offset[1]],
+            here = roadHalf(placeOf(x, y), offset),
+            [cu, cv] = layout.centre(x, y),
+            end = here.points.at(-1)!,
+            length = Math.hypot(end[0] - cu, end[1] - cv);
+
+          here.points.slice(0, -1).forEach(([u, v]) => {
+            const [tx, ty] = layout.tileAt(u, v);
+
+            if (tx !== x || ty !== y) {
+              strays.push(`${x},${y} ${offset}`);
+            }
+          });
+
+          // How far it bows from the straight line, as a share of its length.
+          bows.push(
+            Math.max(
+              ...here.points.map(
+                ([u, v]) =>
+                  Math.abs(
+                    (u - cu) * (end[1] - cv) - (v - cv) * (end[0] - cu)
+                  ) /
+                  length /
+                  length
+              )
+            )
+          );
+
+          // The neighbour's half back.
+          const back = topology
+            .directions()
+            .map((other) => topology.offset(other, nx, ny))
+            .find(([dx, dy]) => {
+              const [bu, bv] = layout.centre(nx + dx, ny + dy);
+
+              return Math.hypot(bu - cu, bv - cv) < 1e-9;
+            });
+
+          if (back === undefined) {
+            unmet.push(`${x},${y} ${offset}: no way back`);
+
+            return;
+          }
+
+          const there = roadHalf(placeOf(nx, ny), back),
+            theirEnd = there.points.at(-1)!,
+            [wu, wv] = here.ways.at(-1)!,
+            [tu, tv] = there.ways.at(-1)!;
+
+          if (
+            Math.hypot(theirEnd[0] - end[0], theirEnd[1] - end[1]) > 1e-9 ||
+            Math.abs(wu * tu + wv * tv + 1) > 1e-9
+          ) {
+            unmet.push(`${x},${y} ${offset}`);
+          }
+        });
+
+        const own = bows.slice(before);
+
+        if (own.every((bow) => Math.abs(bow - own[0]!) < 1e-9)) {
+          alike.push(`${x},${y}`);
+        }
+      }
+    }
+
+    expect(
+      `${topologyId}: a road's halves bend on their own squares, short of the edge, meet their neighbours' there going the same way, and bow no further than they may, some a good part of it, each way out of a square its own`,
+      [
+        strays.slice(0, 5),
+        unmet.slice(0, 5),
+        alike.slice(0, 5),
+        Math.max(...bows) <= ROAD_BOW + 1e-9,
+        Math.max(...bows) > ROAD_BOW * 0.6,
+      ],
+      [[], [], [], true, true]
+    );
+  }
+);
+
 // Across the world's east-west seam on the square grid: a road at the last square joins the first at its copy east of
 //  it, halfway there, not back across the world.
 {
@@ -1220,19 +1400,39 @@ expect(
 );
 
 // On 60 squares, as where trees stand is seeded from the square: the road's lines run from the middle halfway east,
-//  and halfway south.
+//  and halfway south, each bending its own way (`roadHalf`).
 const onRoad = Array.from({ length: 60 }, (_, at) => {
   const x = at % 20,
     y = Math.floor(at / 20),
     [cu, cv] = [x + 0.5, y + 0.5],
+    halves = [
+      roadHalf(place(x, y), [1, 0]).points,
+      roadHalf(place(x, y), [0, 1]).points,
+    ],
+    // How far a point is from the nearer road, along its bend.
+    fromRoad = (u: number, v: number): number =>
+      Math.min(
+        ...halves.flatMap((half) =>
+          half.slice(1).map((b, index) => {
+            const a = half[index]!,
+              du = b[0] - a[0],
+              dv = b[1] - a[1],
+              t = Math.max(
+                0,
+                Math.min(
+                  1,
+                  ((u - a[0]) * du + (v - a[1]) * dv) / (du * du + dv * dv)
+                )
+              );
+
+            return Math.hypot(u - a[0] - du * t, v - a[1] - dv * t);
+          })
+        )
+      ),
     offRoad = ([u, , v]: [number, number, number]): boolean =>
-      // Points of the road itself lie on it: only what stands higher is a plant.
-      (u >= cu - 0.036 && u <= cu + 0.5 && Math.abs(v - cv) <= 0.036) ||
-      (v >= cv - 0.036 && v <= cv + 0.5 && Math.abs(u - cu) <= 0.036)
-        ? true
-        : Math.hypot(u - cu, v - cv) > 0.22 &&
-          !(u > cu && Math.abs(v - cv) < 0.05) &&
-          !(v > cv && Math.abs(u - cu) < 0.05);
+      // Points of the road itself lie on it: only what stands further off it is a plant.
+      fromRoad(u, v) <= 0.036 ||
+      (Math.hypot(u - cu, v - cv) > 0.22 && fromRoad(u, v) >= 0.05);
 
   return laidAt(forest(['Road'])!, 0.5, x, y).filter((point) => !offRoad(point))
     .length;

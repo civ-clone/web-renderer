@@ -277,6 +277,76 @@ class Layer {
     }
   }
 
+  /**
+   * A ribbon `width` wide draped over the land along `points`, `lift` over it: across it at each point square to the
+   *  way it goes there (`ways`, or from the point before to the one after), so it bends with no notch on the outside of
+   *  a bend, as strips end to end would leave.
+   */
+  ribbon(
+    points: readonly (readonly [number, number])[],
+    width: number,
+    css: string,
+    lift: number,
+    ways?: readonly (readonly [number, number])[]
+  ): void {
+    const colour = colourOf(css),
+      // Across it at each point, from its right edge to its left, square to the way it goes there.
+      sides = points.map((point, index) => {
+        const before = points[index - 1] ?? point,
+          after = points[index + 1] ?? point,
+          [du, dv] = ways?.[index] ?? [
+            after[0] - before[0],
+            after[1] - before[1],
+          ],
+          length = Math.hypot(du, dv);
+
+        return length === 0
+          ? ([0, 0] as const)
+          : ([(-dv / length) * width, (du / length) * width] as const);
+      });
+
+    for (let index = 0; index + 1 < points.length; index++) {
+      const from = points[index]!,
+        to = points[index + 1]!,
+        fromSide = sides[index]!,
+        toSide = sides[index + 1]!,
+        length = Math.hypot(to[0] - from[0], to[1] - from[1]);
+
+      if (length === 0) {
+        continue;
+      }
+
+      // Cut along it and across it finer than the land's points are apart, so it follows the land between them too.
+      const steps = Math.max(1, Math.ceil(length / STEP)),
+        strands = Math.max(1, Math.ceil(width / STEP)),
+        at = (t: number, w: number): [number, number] => [
+          from[0] +
+            (to[0] - from[0]) * t +
+            (fromSide[0] + (toSide[0] - fromSide[0]) * t) * (w - 0.5),
+          from[1] +
+            (to[1] - from[1]) * t +
+            (fromSide[1] + (toSide[1] - fromSide[1]) * t) * (w - 0.5),
+        ];
+
+      for (let step = 0; step < steps; step++) {
+        for (let strand = 0; strand < strands; strand++) {
+          const [u0, v0] = at(step / steps, (strand + 1) / strands),
+            [u1, v1] = at((step + 1) / steps, (strand + 1) / strands),
+            [u2, v2] = at(step / steps, strand / strands),
+            [u3, v3] = at((step + 1) / steps, strand / strands);
+
+          // Wound as a strip's are, facing up.
+          this.#point(u0, v0, lift, colour);
+          this.#point(u1, v1, lift, colour);
+          this.#point(u2, v2, lift, colour);
+          this.#point(u1, v1, lift, colour);
+          this.#point(u3, v3, lift, colour);
+          this.#point(u2, v2, lift, colour);
+        }
+      }
+    }
+  }
+
   /** A disc `radius` across draped over the land round `centre`, `lift` over it. */
   disc(
     centre: readonly [number, number],
@@ -444,7 +514,7 @@ class Layer {
 
 // Halfway to a neighbour: the neighbour lays the other half.
 const halfway = (
-  place: OverlayPlace,
+  place: Pick<OverlayPlace, 'centre' | 'toward'>,
   offset: readonly [number, number]
 ): [number, number] => {
   const [u, v] = place.centre,
@@ -457,6 +527,82 @@ const halfway = (
 //  2D map.
 const drawn = (route: Route): boolean => route.alone || route.joins.length > 0;
 
+/** How far a road's half bows from the straight line at most, as a share of its length. */
+export const ROAD_BOW = 0.09;
+
+// How many pieces a road's half is drawn in, along its bend, at the fewest: more where it's long, so each is shorter
+//  than a draped strip's step, and the ribbon needn't cut them again.
+const ROAD_PIECES = 8;
+
+// A number of the square's own for each way out of it.
+const wayIndex = ([du, dv]: readonly [number, number]): number =>
+  300 + (du + 3) * 7 + (dv + 3);
+
+/**
+ * The half of a road from a square's middle towards its neighbour `offset` away (`halfway` there, which the neighbour
+ *  lays the other half from), as points along it, from the middle: a lane rather than a ruler's line, bowing a seeded
+ *  way and as far as `ROAD_BOW` from the straight line, each way out of each square its own, as the pixel art's roads
+ *  bend. It leaves the middle bowed and comes to the edge along the straight line, so it meets the neighbour's half,
+ *  which does the same, smoothly, at the same point, and it stays on its own square.
+ */
+export const roadHalf = (
+  place: Pick<OverlayPlace, 'centre' | 'toward' | 'seed'>,
+  offset: readonly [number, number]
+): { points: [number, number][]; ways: [number, number][] } => {
+  const [u, v] = place.centre,
+    [mu, mv] = halfway(place, offset),
+    du = mu - u,
+    dv = mv - v,
+    length = Math.hypot(du, dv);
+
+  if (length === 0) {
+    return { points: [[u, v]], ways: [[0, 0]] };
+  }
+
+  // A cubic: its first handle a third of the way along, out to the side (a cubic's bow there is 4/9 of its handle's
+  //  reach); its second two thirds along, on the line, so it ends along it.
+  const reach =
+      ((fraction(place.seed, wayIndex(offset)) * 2 - 1) * ROAD_BOW * length) /
+      (4 / 9),
+    side = [-dv / length, du / length],
+    handle = [u + du / 3 + side[0]! * reach, v + dv / 3 + side[1]! * reach],
+    later = [u + (du * 2) / 3, v + (dv * 2) / 3];
+
+  const pieces = Math.max(ROAD_PIECES, Math.ceil((length * 1.02) / STEP)),
+    ts = Array.from({ length: pieces + 1 }, (_, index) => index / pieces);
+
+  return {
+    points: ts.map((t) => {
+      const a = (1 - t) ** 3,
+        b = 3 * (1 - t) ** 2 * t,
+        c = 3 * (1 - t) * t ** 2,
+        d = t ** 3;
+
+      return [
+        a * u + b * handle[0]! + c * later[0]! + d * mu,
+        a * v + b * handle[1]! + c * later[1]! + d * mv,
+      ];
+    }),
+    // The way it goes at each point, the curve's own, so its last is along the straight line exactly.
+    ways: ts.map((t) => {
+      const a = 3 * (1 - t) ** 2,
+        b = 6 * (1 - t) * t,
+        c = 3 * t ** 2,
+        wu =
+          a * (handle[0]! - u) +
+          b * (later[0]! - handle[0]!) +
+          c * (mu - later[0]!),
+        wv =
+          a * (handle[1]! - v) +
+          b * (later[1]! - handle[1]!) +
+          c * (mv - later[1]!),
+        size = Math.hypot(wu, wv);
+
+      return size === 0 ? [du / length, dv / length] : [wu / size, wv / size];
+    }),
+  };
+};
+
 const road = (layer: Layer, route: Route): void => {
   const { place } = layer;
 
@@ -464,9 +610,11 @@ const road = (layer: Layer, route: Route): void => {
     return;
   }
 
-  route.joins.forEach((offset) =>
-    layer.strip(place.centre, halfway(place, offset), 0.07, ROAD, LIFT.road)
-  );
+  route.joins.forEach((offset) => {
+    const { points, ways } = roadHalf(place, offset);
+
+    layer.ribbon(points, 0.07, ROAD, LIFT.road, ways);
+  });
   layer.disc(place.centre, route.alone ? 0.09 : 0.035, ROAD, LIFT.road);
 };
 
@@ -1278,12 +1426,22 @@ export const layOverlay = (
   const layer = new Layer(soup, place),
     { centre, radius } = place;
 
-  // The lines across it, which what stands on it keeps clear of.
+  // The lines across it, which what stands on it keeps clear of: a road's along its bend, a railroad's straight.
   [overlay.road, overlay.railroad].forEach((route) => {
     if (route !== null && drawn(route)) {
-      route.joins.forEach((offset) =>
-        layer.lines.push([centre, halfway(place, offset)])
-      );
+      route.joins.forEach((offset) => {
+        if (route === overlay.road) {
+          const half = roadHalf(place, offset).points;
+
+          half
+            .slice(1)
+            .forEach((point, index) => layer.lines.push([half[index]!, point]));
+
+          return;
+        }
+
+        layer.lines.push([centre, halfway(place, offset)]);
+      });
 
       if (route.alone) {
         layer.lines.push([centre, centre]);

@@ -626,8 +626,13 @@ How plants are placed:
 Each is looked up by its type name in the model set.
 
 - **Road:** a strip laid on the land, from the square's middle toward each neighbour that has a road. Only the
-  connected directions are drawn, as the 2D map does.
-- **Railroad:** the same, with sleepers and rails. Where a square has both, the railroad replaces the road.
+  connected directions are drawn, as the 2D map does. As built (`roadHalf` in `overlayMesh.ts`), each half, from the
+  middle to the edge it shares with the neighbour, is a lane, not a ruler's line: it bows a seeded way, each way out of
+  each square its own, as far as 9% of its length from the straight line, and comes to the edge along that line, so it
+  meets the neighbour's half, which does the same, at the same point going the same way. It stays on its own square,
+  and what stands there keeps clear of it along its bend.
+- **Railroad:** the same, with sleepers and rails, but straight, as railways are laid. Where a square has both, the
+  railroad replaces the road.
 - **Irrigation and Farmland:** fields laid over the square, with ditches running from water. Farmland is denser.
 - **Mine:** a shaft head and spoil heaps on hills; a cut on mountains.
 - **Fortress and Airbase:** a model on the square.
@@ -875,9 +880,9 @@ mapEvent:
   units alone, over the land at its feet, the short way round the world. Its figures face the way from one square's
   middle to the next, as a unit standing faces the way it last went, turning as it passes a square's middle, and from
   the way it faced when a step's joined. Its flag, ring and pointer go with it.
-- **Along roads:** a road's drawn straight from a square's middle towards each neighbour's with one (`overlayMesh.ts`),
-  so a walk between two squares with a road is on it. That holds while roads are straight: roads that wind would need
-  walks to follow the same curve.
+- **Along roads:** a walk goes straight between squares' middles, through the point on their shared edge where a road's
+  two halves meet, so it's on the road at the middles and the edge. Roads bow between (§5.4), so a walk following them
+  is still to come.
 - **Aircraft fly an arc** (aircraft, helicopters and missiles, as the built-in set draws them: `airborne`):
   - A walk whose units all fly climbs as it sets off, over a step's way, to 0.3 over where they'd stand (`CRUISE`,
     about an aircraft's own height), and comes down over its last step's way to land at its end. A hop of one square
@@ -1037,7 +1042,7 @@ mapEvent:
   - A stack killed in a battle whose patch was held past the blow fades as the patch comes, the rest of it gone then.
   - Two other players' battle with their moves not shown is shown at once, but its loser fades out: a fade isn't a move.
 - **Still to come:**
-  - roads that wind, as the pixel art's do, with walks following them;
+  - walks following roads as they bend (§5.4);
   - battles' rest (2.4): a ranged unit firing, ships and aircraft as they fight, Civ2's rounds once they're sent (§8.1),
     a flash under reduced motion, a unit gone with its battle won (a missile) fading rather than going at the end, and
     another player's unit walking onto the square it emptied rather than being put there (#1255);
