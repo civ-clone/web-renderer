@@ -1051,6 +1051,79 @@ const landOf = (
   );
 }
 
+// A road built to a city: the houses that stay keep their roofs as they're drawn, whatever lots the street clears
+//  before them.
+{
+  const cityOn = (ways: [number, number][]) =>
+      overlayFor(
+        {
+          ...square(['Road']),
+          city: { id: 'City-Roofs', name: 'Roofs', growth: { size: 8 } },
+        } as unknown as Parameters<typeof overlayFor>[0],
+        ways.map((offset) => neighbour(offset, ['Road']))
+      )!,
+    at = place(17, 3),
+    roofs = ROOFS.map((css) => new Color(css)),
+    // Each house's roof as it's drawn, by where it stands: the colour at its peak.
+    drawn = (overlay: SquareOverlay) => {
+      const laid = overlayMesh(16, 0, [{ overlay, place: at }]),
+        found = new Map<string, number>();
+
+      sprawl(at, overlay.city!, [
+        at.centre[0],
+        at.centre[1] + IN_FRONT_OF_CITY,
+      ]).lots.forEach(({ at: [lu, lv], width }) => {
+        let peak = -Infinity,
+          colour = -1;
+
+        for (let point = 0; point < laid.colours.length; point += 3) {
+          const which = roofs.findIndex(
+            ({ r, g, b }) =>
+              Math.abs(laid.colours[point]! - r) < 1e-4 &&
+              Math.abs(laid.colours[point + 1]! - g) < 1e-4 &&
+              Math.abs(laid.colours[point + 2]! - b) < 1e-4
+          );
+
+          if (
+            which !== -1 &&
+            Math.hypot(
+              laid.positions[point]! + 16 - lu,
+              laid.positions[point + 2]! - lv
+            ) <
+              width / 4 &&
+            laid.positions[point + 1]! > peak
+          ) {
+            peak = laid.positions[point + 1]!;
+            colour = which;
+          }
+        }
+
+        found.set(`${lu},${lv}`, colour);
+      });
+
+      return found;
+    },
+    before = drawn(cityOn([[1, 0]])),
+    after = drawn(
+      cityOn([
+        [1, 0],
+        [0, -1],
+      ])
+    ),
+    kept = [...before.keys()].filter((key) => after.has(key));
+
+  expect(
+    'a road built to a city: the houses that stay keep their roofs as drawn',
+    [
+      kept.length > 5,
+      kept.length < before.size,
+      new Set(before.values()).size > 1,
+      kept.filter((key) => before.get(key) !== after.get(key)),
+    ],
+    [true, true, true, []]
+  );
+}
+
 // A city's houses on a slope: each stands on the land at every corner, its walls down to the ground under the lowest,
 //  with no gap under any.
 {

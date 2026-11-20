@@ -23,13 +23,15 @@ export type SprawlPlace = {
 
 /**
  * A lot: where its building stands, how wide its footprint is (a square, out to its roof's eaves), which way its front
- *  faces (as `atan2` of the way, `u` then `v`), and how many storeys it has.
+ *  faces (as `atan2` of the way, `u` then `v`), how many storeys it has, and which of a city's roofs it has, as a share
+ *  from 0 to 1, its own however many lots a street clears before it.
  */
 export type Lot = {
   at: [number, number];
   width: number;
   facing: number;
   storeys: number;
+  roof: number;
 };
 
 /** A city laid out: its plaza, its streets (each from the plaza's edge to the edge of the square), and its lots. */
@@ -78,6 +80,9 @@ const SPACING = 0.08,
 // How wide a building's footprint is at the narrowest, and how much wider some are.
 const NARROWEST = 0.045,
   WIDER = 0.02;
+
+// Mixed into the city's seed for its roofs, so they're seeded apart from where its lots stand.
+const ROOFED = 0x2545f491;
 
 // How far out from the middle buildings stand taller as the city grows.
 const MIDDLE = 0.18;
@@ -275,6 +280,7 @@ export const sprawl = (
         at,
         width,
         facing: facingAt(at, width),
+        roof: share(seed ^ ROOFED, n),
         // Taller near the middle as the city grows, and some a storey taller anyway.
         storeys:
           1 +
@@ -292,7 +298,7 @@ export const sprawl = (
   const lots: Lot[] = [],
     footprints: Point[][] = [];
 
-  candidates.forEach(({ at, width, facing, storeys }) => {
+  candidates.forEach(({ at, width, facing, storeys, roof }) => {
     const footprint = footprintOf({ at, width, facing });
 
     if (
@@ -304,7 +310,7 @@ export const sprawl = (
       strips.every((strip) => apart(footprint, strip, GAP)) &&
       footprints.every((other) => apart(footprint, other, GAP))
     ) {
-      lots.push({ at, width, facing, storeys });
+      lots.push({ at, width, facing, storeys, roof });
       footprints.push(footprint);
     }
   });

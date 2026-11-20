@@ -730,7 +730,7 @@ const city = (layer: Layer, plan: CityPlan): void => {
   streets.forEach(([from, to]) =>
     layer.strip(from, to, STREET, PAVING, LIFT.road)
   );
-  lots.forEach((lot, index) => {
+  lots.forEach((lot) => {
     const {
         at: [bu, bv],
         width,
@@ -758,7 +758,7 @@ const city = (layer: Layer, plan: CityPlan): void => {
       pyramid,
       [bu, top + width * 0.2, bv],
       [width * Math.SQRT2, width * 0.4, width * Math.SQRT2],
-      ROOFS[(plan.seed + index) % ROOFS.length]!,
+      ROOFS[Math.floor(lot.roof * ROOFS.length)]!,
       [0, facing + Math.PI / 4, 0]
     );
   });

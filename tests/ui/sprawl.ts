@@ -525,7 +525,7 @@ expect(
 }
 
 // The same city, the same every time; another, another. A road built to it runs a street through the lots in its way,
-//  and the rest stay where they were, near enough all of them.
+//  and the rest stay where they were, near enough all of them, with the roofs they had.
 {
   const place = squareAt(5, 5),
     spot = inFrontOf(place.centre),
@@ -535,18 +535,25 @@ expect(
     roaded = sprawl(place, planFor(citySeed('Roma'), 5, [east, north]), spot),
     before = positions(once.lots),
     after = positions(roaded.lots),
-    kept = before.filter((at) => after.includes(at)).length;
+    kept = before.filter((at) => after.includes(at)).length,
+    // The lots kept, each with its roof the same.
+    reroofed = once.lots.filter(({ at, roof }) =>
+      roaded.lots.some(
+        (lot) => lot.at.join(',') === at.join(',') && lot.roof !== roof
+      )
+    ).length;
 
   expect(
-    'the same city the same every time, another another; a road built runs a street in, the rest of the city staying',
+    'the same city the same every time, another another; a road built runs a street in, the rest of the city staying, roofs and all',
     [
       JSON.stringify(once) === JSON.stringify(again),
       JSON.stringify(once.lots) === JSON.stringify(other.lots),
       roaded.streets.length,
       kept >= before.length * 0.6,
       after.length,
+      reroofed,
     ],
-    [true, false, 2, true, before.length]
+    [true, false, 2, true, before.length, 0]
   );
 }
 
