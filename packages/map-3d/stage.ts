@@ -17,6 +17,7 @@ import {
   Fog,
   Group,
   HemisphereLight,
+  IcosahedronGeometry,
   Mesh,
   MeshStandardMaterial,
   Object3D,
@@ -28,6 +29,7 @@ import {
   WebGLRenderer,
 } from 'three';
 import { ChunkMesh } from './terrain/chunks';
+import { puffAt } from './markers/puff';
 import landMaterial from './landMaterial';
 import {
   ALOFT_PART,
@@ -100,6 +102,15 @@ export interface Stage {
    *  (`fades.ts`): its city stays solid, and no other marker fades with it. Marked again (`setMarker`), it's solid.
    */
   fadeMarker(key: string, opacity: number): void;
+  /**
+   * A puff of smoke (`id`, `markers/puff.ts`) where a unit fell in battle, bursting from `at` (`u`, height, `v`, on the
+   *  world's own copy), `through` its time from 0 to 1, drawn at every copy of the world in sight; `null` takes it away.
+   */
+  puff(
+    id: string,
+    at: readonly [number, number, number] | null,
+    through?: number
+  ): void;
   /** What each square yields (`y`), drawn at every copy of the world in sight: what was drawn before is replaced. */
   setYields(mesh: YieldMesh | null): void;
   /**
@@ -266,6 +277,18 @@ export const createStage: StageFactory = (
     // The units walking, by their walk's id (`walks.ts`), and fighting, by their battle's (`battles.ts`), each drawn as
     //  its own marker, with no city; the way each faces, how solid it's drawn, and its own materials, once faded.
     walkers = new Map<string, Walking>(),
+    // The puffs of smoke where units fell, by their battle's id: how far through each is, and its seed.
+    puffs = new Map<string, Placed & { through: number; seed: number }>(),
+    // What every puff's blobs are made of: one shape, and two greys.
+    puffShape = new IcosahedronGeometry(1, 1),
+    puffGrey = (colour: string): MeshStandardMaterial =>
+      new MeshStandardMaterial({
+        color: new Color(colour),
+        roughness: 1,
+        metalness: 0,
+        flatShading: true,
+      }),
+    puffGreys = [puffGrey('#d8d5cf'), puffGrey('#a9a59d')] as const,
     markersGroup = new Group(),
     kit = new MarkerKit(),
     // What each square yields, over the land at every copy of the world, when they're shown.
@@ -366,6 +389,32 @@ export const createStage: StageFactory = (
         aloft.position.y = walker.aloft;
       }
     });
+
+  // A puff's copies, each blob where it is and as big as it is `through` the puff; one that's shrunk to nothing not
+  //  drawn.
+  const shapePuff = (puff: {
+    drawn: Object3D[];
+    through: number;
+    seed: number;
+  }): void => {
+    const blobs = puffAt(puff.through, puff.seed);
+
+    puff.drawn.forEach((copy) =>
+      copy.children.forEach((part, index) => {
+        const blob = blobs[index];
+
+        if (blob === undefined) {
+          part.visible = false;
+
+          return;
+        }
+
+        part.position.set(...blob.at);
+        part.scale.setScalar(Math.max(blob.size, 1e-4));
+        part.visible = blob.size > 0;
+      })
+    );
+  };
 
   // A marker's original, made from what it marks: casting shadows on the land, as the models will. A walker's drawn to
   //  fly (`flying`).
@@ -476,11 +525,14 @@ export const createStage: StageFactory = (
     if (markersKey !== markerCopiesKey) {
       markerCopies = markersInSight;
       markerCopiesKey = markersKey;
-      [...markers.values(), ...walkers.values()].forEach((marker) => {
-        marker.drawn.forEach((drawn) => markersGroup.remove(drawn));
-        marker.drawn = copiesOf(marker, markersGroup, markerCopies);
-      });
+      [...markers.values(), ...walkers.values(), ...puffs.values()].forEach(
+        (marker) => {
+          marker.drawn.forEach((drawn) => markersGroup.remove(drawn));
+          marker.drawn = copiesOf(marker, markersGroup, markerCopies);
+        }
+      );
       walkers.forEach(pose);
+      puffs.forEach(shapePuff);
       // Copies made afresh, from the kit's materials: those faded, faded again.
       walkers.forEach((walker) => {
         if (walker.opacity < 1) {
@@ -694,6 +746,48 @@ export const createStage: StageFactory = (
 
       fade(unitParts(marker.drawn), solid, marker.faded);
     },
+    puff: (id, at, through = 0): void => {
+      const old = puffs.get(id);
+
+      if (at === null) {
+        old?.drawn.forEach((drawn) => markersGroup.remove(drawn));
+        puffs.delete(id);
+
+        return;
+      }
+
+      const seed = Number(id.replace(/\D/g, '')) || 0,
+        puff = old ?? {
+          at,
+          through,
+          seed,
+          // Its blobs, sharing the one shape and the two greys: nothing of its own to let go of.
+          make: (): Object3D => {
+            const group = new Group();
+
+            puffAt(0, seed).forEach(({ shade }) =>
+              group.add(new Mesh(puffShape, puffGreys[shade]))
+            );
+
+            return group;
+          },
+          drawn: [],
+        };
+
+      if (old === undefined) {
+        puff.drawn = copiesOf(puff, markersGroup, markerCopies);
+        puffs.set(id, puff);
+      }
+
+      puff.at = at;
+      puff.through = through;
+      puff.drawn.forEach((drawn, copy) => {
+        const [offsetU, offsetV] = markerCopies[copy] ?? [0, 0];
+
+        drawn.position.set(at[0] + offsetU, at[1], at[2] + offsetV);
+      });
+      shapePuff(puff);
+    },
     fadeWalker: (id, opacity): void => {
       const walker = walkers.get(id),
         solid = Math.min(1, Math.max(0, opacity));
@@ -733,6 +827,9 @@ export const createStage: StageFactory = (
       markers.clear();
       walkers.forEach(({ faded }) => unfade(faded));
       walkers.clear();
+      puffs.clear();
+      puffShape.dispose();
+      puffGreys.forEach((grey) => grey.dispose());
       kit.dispose();
       yields.dispose();
       water.dispose();

@@ -8,7 +8,9 @@
 //    with the stack's size, its letter and a veteran's star, a bar for its hit points when hurt, and a ring and a
 //    pointer when it awaits orders;
 //  - an aircraft drawn to fly, as a walker is: its figures and all over them a part of their own, off its stand and
-//    ring.
+//    ring;
+//  - fading, its figures, stand and ring dithered, and its flag and labels see-through;
+//  - a puff of smoke where a unit falls: grey blobs bursting out, rising and spreading, swelling and shrinking away.
 
 import * as Civ1Units from '@civ-clone/civ1-unit/Units';
 import * as Civ2Units from '@civ-clone/civ2-unit/Units';
@@ -41,6 +43,7 @@ import {
   unfade,
   unfaded,
 } from '@civ-clone/ui-map-3d/markers/drawMarker';
+import { PUFF_BLOBS, puffAt } from '@civ-clone/ui-map-3d/markers/puff';
 import Water, { Clouds } from '@civ-clone/ui-map-3d/water';
 import {
   Part,
@@ -894,9 +897,26 @@ sea.dispose();
   const ownMaterials = materialsOf(copies[0]!),
     atThreeQuarters = [
       ownMaterials.every((material) => !kits.has(material)),
-      ownMaterials.every(
-        (material) => material.transparent && material.opacity <= 0.75
-      ),
+      ownMaterials.every((material) => material.opacity <= 0.75),
+      // Its figures, stand and ring dithered, drawn with the land and units, so a ship's hull cuts no hole in the sea
+      //  drawn after them; its flag and label see-through, drawn after the sea.
+      (() => {
+        const kinds: string[] = [];
+
+        copies[0]!.traverse((part) => {
+          if (part instanceof Mesh || part instanceof Sprite) {
+            const { alphaHash, transparent } = part.material as Material;
+
+            kinds.push(
+              `${part instanceof Sprite ? 'sprite' : 'mesh'} ${
+                alphaHash ? 'hashed' : transparent ? 'see-through' : 'solid'
+              }`
+            );
+          }
+        });
+
+        return [...new Set(kinds)].sort();
+      })(),
       materialsOf(beside).every((material) => material.opacity === 1),
       [...kits].every((material) => material.opacity === 1),
       shadowsOf(copies[0]!).every(Boolean),
@@ -927,14 +947,22 @@ sea.dispose();
   unfade(faded);
 
   expect(
-    'a unit fading has materials of its own, the kit’s and another unit’s solid; under half solid, no shadow; copies made afresh fade with the same; let go of, its own go and the kit’s stay',
+    'a unit fading has materials of its own, the kit’s and another unit’s solid; its figures, stand and ring dithered, its flag and label see-through; under half solid, no shadow; copies made afresh fade with the same; let go of, its own go and the kit’s stay',
     [
       atThreeQuarters,
       atAQuarter,
       [disposedOwn.length === own.length, faded.size],
     ],
     [
-      [true, true, true, true, true, true],
+      [
+        true,
+        true,
+        ['mesh hashed', 'sprite see-through'],
+        true,
+        true,
+        true,
+        true,
+      ],
       [true, false, true, true, true],
       [true, 0],
     ]
@@ -1076,6 +1104,36 @@ expect(
   disposed.length,
   6
 );
+
+// A puff of smoke where a unit falls (`markers/puff.ts`): nothing at the blow and nothing at its end; between, every
+//  blob over the ground, at their biggest a quarter of the way through; rising and spreading as it goes; turned round by
+//  its seed, the same each time for the same seed.
+{
+  const sizes = (through: number) =>
+      puffAt(through).reduce((sum, { size }) => sum + size, 0),
+    mean = (through: number, of: (at: number[]) => number) =>
+      puffAt(through).reduce((sum, { at }) => sum + of(at), 0) / PUFF_BLOBS,
+    high = (at: number[]) => at[1]!,
+    out = (at: number[]) => Math.hypot(at[0]!, at[2]!);
+
+  expect(
+    'a puff: nothing at the blow or its end; between, every blob over the ground, biggest a quarter through; rising and spreading; turned by its seed, the same each time',
+    [
+      puffAt(0).length,
+      sizes(0),
+      sizes(1),
+      puffAt(0.25).every(({ size, at }) => size > 0 && at[1] > 0),
+      sizes(0.25) > sizes(0.1) && sizes(0.25) > sizes(0.6),
+      mean(0.75, high) > mean(0.25, high),
+      puffAt(0.75).every(({ at }, index) => at[1] > puffAt(0.25)[index]!.at[1]),
+      mean(0.75, out) > mean(0.25, out),
+      new Set(puffAt(0.5).map(({ shade }) => shade)).size,
+      JSON.stringify(puffAt(0.5, 3)) === JSON.stringify(puffAt(0.5, 3)),
+      JSON.stringify(puffAt(0.5, 3)) === JSON.stringify(puffAt(0.5, 4)),
+    ],
+    [PUFF_BLOBS, 0, 0, true, true, true, true, true, 2, true, false]
+  );
+}
 
 if (failures.length > 0) {
   process.stderr.write(

@@ -203,6 +203,10 @@ const staged: string[] = [],
   walkersPlaced = new Map<string, number[][]>(),
   // How high each walker was flown off its stand each frame it was put, by its id: an aircraft's.
   walkersAloft = new Map<string, number[]>(),
+  // The puffs of smoke drawn now, by id, where each bursts from and how far through it is; and every puff drawn since
+  //  last cleared, by id, how far through it was each time.
+  puffs = new Map<string, { at: readonly number[]; through: number }>(),
+  puffsPlaced = new Map<string, number[]>(),
   // How solid each walker was last drawn, by its id, from 1 down to 0, once it's been faded.
   walkersFaded = new Map<string, number>(),
   // How solid each square's unit was last drawn, by the square, once it's been faded: marked again, it's solid.
@@ -257,6 +261,16 @@ const staged: string[] = [],
       if (opacity < 1 || markersFaded.has(key)) {
         markersFaded.set(key, opacity);
       }
+    },
+    puff: (id, at, through = 0) => {
+      if (at === null) {
+        puffs.delete(id);
+
+        return;
+      }
+
+      puffs.set(id, { at, through });
+      puffsPlaced.set(id, [...(puffsPlaced.get(id) ?? []), through]);
     },
     fadeWalker: (id, opacity) => {
       if (opacity < 1 || walkersFaded.has(id)) {
@@ -3312,7 +3326,19 @@ expect(
 
   runFrames(10);
 
-  const fading = [unitOn(2, 1), fighters()];
+  const fading = [unitOn(2, 1), fighters()],
+    // The puff where the stack fell: where it stood, as far through as it's faded.
+    fallenAt = [...walkersPlaced.entries()]
+      .find(([id]) => kind(id) === 'battle-fallen')?.[1]
+      .at(-1),
+    wonPuff = [...puffs.entries()].map(([id, { at, through }]) => [
+      kind(id),
+      Math.round(through * 10) / 10,
+      at.every((n, i) => Math.abs(n - groundAt(2, 1)[i]!) < 0.05),
+      // Just where what fell is drawn, on the land there.
+      at.every((n, i) => Math.abs(n - fallenAt![i]!) < 1e-9),
+    ]),
+    wonPuffs = [...puffsPlaced.values()];
 
   runFrames();
 
@@ -3329,7 +3355,7 @@ expect(
       ) / 100;
 
   expect(
-    'won: the attacker’s off its square at once, lunging to the edge and back, facing the square attacked; that square shows its stack till the blow, the patch notwithstanding; then what fell fades where it stood, the stack’s size with it',
+    'won: the attacker’s off its square at once, lunging to the edge and back, facing the square attacked; that square shows its stack till the blow, the patch notwithstanding; then what fell fades where it stood, the stack’s size with it, in a puff of smoke there, through as it fades, gone with the battle',
     [
       wonAtOnce,
       beforeBlow,
@@ -3342,6 +3368,12 @@ expect(
         along(lunge!.at(-1)!),
       ],
       lunge!.every((point) => point[3] === 1.57),
+      wonPuff,
+      wonPuffs.length === 1 &&
+        wonPuffs[0]!.every(
+          (through, at, all) => at === 0 || through >= all[at - 1]!
+        ),
+      puffs.size,
     ],
     [
       [null, ['Unit-R', 2]],
@@ -3363,6 +3395,9 @@ expect(
       [['Unit-A', 1], null, 0],
       [0, 0.45, 0],
       true,
+      [['battle-puff', 0.3, true, true]],
+      true,
+      0,
     ]
   );
 
@@ -3378,17 +3413,31 @@ expect(
 
   runFrames(18);
 
-  const lostFading = fighters();
+  const lostFading = fighters(),
+    lostAt = [...walkersPlaced.values()][0]?.at(-1),
+    lostPuff = [...puffs.entries()].map(([id, { at, through }]) => [
+      kind(id),
+      Math.round(through * 10) / 10,
+      along(at as number[]),
+      // Just where the attacker's drawn fading, on the land there.
+      at.every((n, i) => Math.abs(n - lostAt![i]!) < 1e-9),
+    ]);
 
   runFrames();
 
   expect(
-    'lost: the attacker fades away at the edge and isn’t back; the defender stands where it was',
-    [lostAtBlow, lostFading, [unitOn(1, 1), unitOn(2, 1), walkers.size]],
+    'lost: the attacker fades away at the edge, in a puff of smoke there, and isn’t back; the defender stands where it was',
+    [
+      lostAtBlow,
+      lostFading,
+      lostPuff,
+      [unitOn(1, 1), unitOn(2, 1), walkers.size, puffs.size],
+    ],
     [
       [null, ['Unit-R', 1], [['battle', 'Unit-A', 1, 1]]],
       [['battle', 'Unit-A', 1, 0.5]],
-      [null, ['Unit-R', 1], 0],
+      [['battle-puff', 0.5, 0.45, true]],
+      [null, ['Unit-R', 1], 0, 0],
     ]
   );
 
@@ -3402,6 +3451,7 @@ expect(
   ) => {
     repatched([...from, [walker]], [...to, [rival]]);
     walkersSet.length = 0;
+    puffsPlaced.clear();
 
     const undo = setUp();
 
@@ -3413,7 +3463,7 @@ expect(
     patch([...from, [walker]], [...to, []]);
     runFrames(1);
 
-    const shown = [
+    const shown: unknown[] = [
       standing,
       drawnWalkers().ids.map(kind),
       unitOn(...from),
@@ -3423,6 +3473,8 @@ expect(
     undo();
     runFrames();
     repatched([...from, []]);
+    // Puffs drawn: none, unless it was fought.
+    shown.push(puffsPlaced.size);
 
     return shown;
   };
@@ -3469,27 +3521,64 @@ expect(
     'moving at once, less motion, two other players’ battle with their moves not shown, or one off the screen: how it went at once; others’ shown, it’s fought',
     [offAtOnce, lessMotionBattle, othersHidden, othersShown, offTheScreen],
     [
-      [['Unit-A', 1], [], ['Unit-A', 1], null],
-      [['Unit-A', 1], [], ['Unit-A', 1], null],
+      [['Unit-A', 1], [], ['Unit-A', 1], null, 0],
+      [['Unit-A', 1], [], ['Unit-A', 1], null, 0],
       // Not fought, but the loser, gone with no move, fades out where it stood.
-      [['Unit-A', 1], ['fade'], ['Unit-A', 1], null],
-      [null, ['battle'], null, ['Unit-R', 1]],
-      [['Unit-A', 1], [], ['Unit-A', 1], null],
+      [['Unit-A', 1], ['fade'], ['Unit-A', 1], null, 0],
+      [null, ['battle'], null, ['Unit-R', 1], 1],
+      [['Unit-A', 1], [], ['Unit-A', 1], null, 0],
     ]
   );
 
-  // Chosen mid-battle, moving at once ends it on the next frame, what fell gone with it.
+  // Chosen mid-battle, moving at once ends it on the next frame, what fell gone with it, and its puff of smoke.
   repatched([1, 1, [walker]], [2, 1, [rival]]);
   fought(walker, [1, 1], rival, [2, 1], 'attacker');
   patch([1, 1, [walker]], [2, 1, []]);
   runFrames(14);
+
+  const puffedMidBattle = puffs.size;
+
   optionsRegistry.set(MAP3D_WALKS_OPTION, 'off');
   runFrames(1);
 
-  const offMidBattle = [walkers.size, unitOn(1, 1), unitOn(2, 1)];
+  const offMidBattle = [
+    walkers.size,
+    unitOn(1, 1),
+    unitOn(2, 1),
+    puffedMidBattle,
+    puffs.size,
+  ];
 
   optionsRegistry.set(MAP3D_WALKS_OPTION, 'normal');
   runFrames();
+  repatched([1, 1, []]);
+
+  // A step after the blow ends the battle at once: its puff of smoke goes with it.
+  repatched([1, 1, [walker]], [2, 1, [rival]]);
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  patch([1, 1, [walker]], [2, 1, []]);
+  runFrames(14);
+  offMidBattle.push(puffs.size);
+  stepped(walker, [1, 1], [1, 2]);
+  patch([1, 1, []], [1, 2, [walker]]);
+  runFrames(1);
+  offMidBattle.push(puffs.size);
+  runFrames();
+  repatched([1, 2, []]);
+
+  // With units hidden (`t`), nothing's drawn falling, and no puff of smoke either, won or lost.
+  glider.toggleUnits();
+  repatched([1, 1, [walker]], [2, 1, [rival]]);
+  puffsPlaced.clear();
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  patch([1, 1, [walker]], [2, 1, []]);
+  runFrames();
+  repatched([1, 1, [walker]], [2, 1, [rival]]);
+  fought(walker, [1, 1], rival, [2, 1], 'defender');
+  patch([1, 1, []], [2, 1, [rival]]);
+  runFrames();
+  offMidBattle.push(puffsPlaced.size);
+  glider.toggleUnits();
   repatched([1, 1, []]);
 
   // The attacker walking as it attacks, as a step and an attack come together: it walks there, and then lunges from its
@@ -3548,10 +3637,10 @@ expect(
   walkersPlaced.clear();
 
   expect(
-    'moving at once chosen mid-battle ends it on the next frame; walking as it attacks, it walks there, then lunges from its square, the square attacked as it was; a step mid-battle ends the battle, and it walks from its square',
+    'moving at once chosen mid-battle ends it on the next frame, its puff with it; with units hidden, no puff, won or lost; a step after the blow takes its puff with it; walking as it attacks, it walks there, then lunges from its square, the square attacked as it was; a step mid-battle ends the battle, and it walks from its square',
     [offMidBattle, walkedThenFought, steppedMidBattle],
     [
-      [0, ['Unit-A', 1], null],
+      [0, ['Unit-A', 1], null, 1, 0, 1, 0, 0],
       [
         ['walk'],
         null,
@@ -3606,6 +3695,15 @@ expect(
   runFrames();
   keyedBattle.push(focusOn(3, 3));
 
+  // A key after the blow: the battle's over at once, and its puff of smoke goes with it.
+  attackedLast();
+  runFrames(12);
+  keyedBattle.push(puffs.size);
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'w' }));
+  runFrames(1);
+  keyedBattle.push(puffs.size);
+  runFrames();
+
   // Lost with its last move: the ring and the camera wait till it's faded away, then go to the next.
   repatched([1, 1, [walker]], [2, 1, [rival]], [3, 3, [nextUnit]]);
   glider.setActiveUnit(placed(walker, 1, 1));
@@ -3625,12 +3723,12 @@ expect(
   repatched([1, 1, []], [2, 1, []], [3, 3, []]);
 
   expect(
-    'the active unit attacking with its last move holds the ring and the camera till the battle’s over, then they go to the next; a key meanwhile ends it at once; lost, they wait till it’s gone',
+    'the active unit attacking with its last move holds the ring and the camera till the battle’s over, then they go to the next; a key meanwhile ends it at once, after the blow its puff with it; lost, they wait till it’s gone',
     [heldForBattle, afterBattle, keyedBattle, diedRinged],
     [
       [true, false, true, ['Unit-T', 1], true, false, true],
       [['Unit-A', 1], false, true, true],
-      [['Unit-A', 1], null, 0, true, true],
+      [['Unit-A', 1], null, 0, true, true, 1, 0],
       [true, false, true, null, true, true],
     ]
   );
