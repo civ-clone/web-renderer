@@ -376,6 +376,13 @@ aircraft's arcs).
 
 ### 2.4 Battles
 
+**First part, the fight: done** (spec §8.2, "As built"). The attacker lunges to the edge of the square it attacks
+and goes back, or fades away there if it lost; the loser fades away where it stood, its stack with it. Till the blow,
+the square attacked shows what was on it. Battles at one square are fought together; a unit attacking again, or
+attacked as it lunges, waits for its last. Rivals' battles that come together in a burst are each shown. The ring and
+the camera wait for a battle the active unit fought with its last move. Still to do: ranged units firing, ships and
+aircraft as they fight, Civ2's rounds, a flash under reduced motion, and fading in and out with no move.
+
 - **What:**
   - melee, ranged, naval and air;
   - rounds under Civ2;

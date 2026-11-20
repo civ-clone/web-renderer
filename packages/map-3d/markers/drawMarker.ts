@@ -17,6 +17,7 @@ import {
   CanvasTexture,
   Color,
   Group,
+  Material,
   Mesh,
   MeshStandardMaterial,
   Object3D,
@@ -574,6 +575,66 @@ export const drawMarker = (kit: MarkerKit, marker: TileMarker): Group => {
   }
 
   return group;
+};
+
+/**
+ * A marker's own materials, made from the kit's as it's faded (`fade`), each kit's material to its own: the kit's are
+ *  shared by every marker, so fading one of those would fade every unit in its colours.
+ */
+export type Faded = Map<Material, Material>;
+
+// What each part faded was drawn with, the kit's, and whether it cast a shadow, by part: not in `userData`, which a
+//  clone copies as JSON.
+const kitMaterials = new WeakMap<Object3D, Material>(),
+  castShadows = new WeakMap<Object3D, boolean>();
+
+/** How solid a faded marker drawn less than half solid is for its shadow: it casts none. */
+export const SHADOW_GONE = 0.5;
+
+/**
+ * Draws `drawn` (a marker's copies) `opacity` solid, from 1 down to 0, with materials of its own made from the kit's,
+ *  kept in `faded` to be let go of with `unfade`: other markers drawn with the kit's stay as they are, and the kit's
+ *  sweep still sees the marker's original use the kit's labels. Under half solid, it casts no shadow.
+ */
+export const fade = (
+  drawn: readonly Object3D[],
+  opacity: number,
+  faded: Faded
+): void => {
+  drawn.forEach((copy) =>
+    copy.traverse((part) => {
+      if (!(part instanceof Mesh || part instanceof Sprite)) {
+        return;
+      }
+
+      const kits = kitMaterials.get(part) ?? (part.material as Material);
+      let own = faded.get(kits);
+
+      if (own === undefined) {
+        own = kits.clone();
+        own.transparent = true;
+        faded.set(kits, own);
+      }
+
+      if (!kitMaterials.has(part)) {
+        kitMaterials.set(part, kits);
+        castShadows.set(part, part.castShadow);
+      }
+
+      part.material = own;
+      part.castShadow =
+        (castShadows.get(part) ?? false) && opacity >= SHADOW_GONE;
+    })
+  );
+  faded.forEach((own, kits) => {
+    own.opacity = kits.opacity * opacity;
+  });
+};
+
+/** Lets go of a faded marker's own materials (`fade`): the kit's textures they share stay the kit's. */
+export const unfade = (faded: Faded): void => {
+  faded.forEach((own) => own.dispose());
+  faded.clear();
 };
 
 export default drawMarker;
