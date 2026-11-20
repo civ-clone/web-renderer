@@ -440,8 +440,8 @@ expect(
   );
 }
 
-// A unit's body is made for each pair of colours, its stand in the second; a city's for each owner, its roofs in their
-//  first colour, and for each number of buildings, not each size.
+// A unit's body is made for each pair of colours, its stand in the second. A city's walls are one, for every city: its
+//  buildings are laid with the land, roofed in no owner's colours (`overlay/sprawl.ts`).
 const pointsColoured = (geometry: BufferGeometry, css: string): number => {
     const attribute = geometry.getAttribute('color'),
       colour = new Color();
@@ -460,32 +460,19 @@ const pointsColoured = (geometry: BufferGeometry, css: string): number => {
   },
   spearLook = look('Spearman'),
   ourBody = kit.body(spearLook, colours, false),
-  theirBody = kit.body(spearLook, others, false),
-  cityIn = (pair: typeof colours | typeof others, size = 7) =>
-    kit.city({
-      name: 'Roma',
-      size,
-      colours: pair,
-      walled: false,
-      disorder: false,
-    });
+  theirBody = kit.body(spearLook, others, false);
 
 expect(
-  'a unit’s body is made for each pair of colours, its stand in the second; a city’s for each owner, roofed in their first colour, and for each number of buildings',
+  'a unit’s body is made for each pair of colours, its stand in the second; a city’s walls are one, for every city',
   [
     ourBody !== theirBody,
     pointsColoured(ourBody, colours[1]) >
       pointsColoured(kit.figure(spearLook, colours), colours[1]),
     pointsColoured(theirBody, others[1]) >
       pointsColoured(kit.figure(spearLook, others), others[1]),
-    cityIn(colours) !== cityIn(others),
-    pointsColoured(cityIn(colours), colours[0]) > 0,
-    pointsColoured(cityIn(others), others[0]) > 0 &&
-      pointsColoured(cityIn(others), colours[0]) === 0,
-    cityIn(colours, 25) === cityIn(colours, 30),
-    cityIn(colours, 3) !== cityIn(colours, 7),
+    kit.walls() === kit.walls(),
   ],
-  [true, true, true, true, true, true, true, true]
+  [true, true, true, true]
 );
 
 const fighter = drawn(unit('Fighter')),
@@ -613,17 +600,17 @@ const cityParts = (walled: boolean): Object3D[] => {
 };
 
 expect(
-  'a city is one mesh of its buildings, walls and all, and its name',
+  'a city’s marker is its walls, if it has them, one mesh, and its name: its buildings are laid with the land',
   [
     cityParts(false).map((object) => object.type),
-    pointsIn((cityParts(true)[0] as Mesh).geometry) >
-      pointsIn((cityParts(false)[0] as Mesh).geometry),
+    cityParts(true).map((object) => object.type),
+    (cityParts(true)[0] as Mesh).geometry === kit.walls(),
   ],
-  [['Mesh', 'Sprite'], true]
+  [['Sprite'], ['Mesh', 'Sprite'], true]
 );
 
-// A city's label and buildings are made for each size it reaches, so the kit lets go of those no marker uses, once it
-//  holds enough of them.
+// A city's label is made for each size it reaches, so the kit lets go of those no marker uses, once it holds enough of
+//  them.
 const sweeping = new MarkerKit(),
   romeAt = (size: number): Group =>
     drawMarker(sweeping, {
@@ -670,7 +657,7 @@ const dueLater = sweeping.sweepDue;
 sweeping.sweep([stillDrawn]);
 
 expect(
-  'a city’s outgrown labels and buildings are let go once there are enough of them, not those still drawn, and made again if they’re wanted',
+  'a city’s outgrown labels are let go once there are enough of them, not those still drawn, and made again if they’re wanted',
   [
     dueEarly,
     dueLater,

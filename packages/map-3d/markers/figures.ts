@@ -1229,47 +1229,17 @@ export const unitBodyGeometry = (
   return mergeParts(parts);
 };
 
-// A city's buildings: a block, and its roof; and its walls.
-const roofShape = new ConeGeometry(0.75, 0.5, 4),
-  wallShape = new TorusGeometry(0.36, 0.025, 6, 24);
+// A city's walls.
+const wallShape = new TorusGeometry(0.36, 0.025, 6, 24);
 
-/** A city's buildings, each its height and width, at its place round the city's middle, from the middle out. */
-export type Building = { x: number; z: number; width: number; height: number };
-
-/**
- * A city as one geometry: its `buildings` in stone with roofs in its owner's colour, and walls round them if it's
- *  `walled`. One draw call.
- */
-export const cityGeometry = (
-  buildings: readonly Building[],
-  roof: string,
-  walled: boolean
-): BufferGeometry =>
+/** A city's walls, a ring round its buildings, as one geometry. */
+export const wallsGeometry = (): BufferGeometry =>
   mergeParts([
-    ...buildings.flatMap(({ x, z, width, height }): Part[] => [
-      {
-        shape: box,
-        colour: '#b5ab98',
-        at: [x, height / 2, z],
-        size: [width, height, width],
-      },
-      {
-        shape: roofShape,
-        colour: roof,
-        at: [x, height + width * 0.2, z],
-        size: [width, width * 0.8, width],
-        turn: [0, Math.PI / 4, 0],
-      },
-    ]),
-    ...(walled
-      ? [
-          {
-            shape: wallShape,
-            colour: '#8d8577',
-            at: [0, 0.02, 0],
-            size: [1, 1, 2.5],
-            turn: [Math.PI / 2, 0, 0],
-          } as Part,
-        ]
-      : []),
+    {
+      shape: wallShape,
+      colour: '#8d8577',
+      at: [0, 0.02, 0],
+      size: [1, 1, 2.5],
+      turn: [Math.PI / 2, 0, 0],
+    },
   ]);

@@ -751,6 +751,20 @@ All of these are driven by map events (§8):
   - A city that shrinks loses the outermost.
   - A new era rebuilds lots a few at a time, each on a seeded turn, so a city modernises gradually rather than all at
     once.
+- **As built (4.1, first part: the city's own square;** `overlay/sprawl.ts`, laid with the land by `overlayMesh.ts`):
+  - A city's lot is laid with the land, as its overlay (`overlayFor`'s `city`): it follows the land and casts shadows,
+    and nothing else is laid there. Its marker keeps its walls, a ring, and its name and size.
+  - A paved plaza at its middle, and streets from it to the edge it shares with each neighbour whose road or railroad
+    comes in (where the neighbour's half arrives) and each neighbour of sea.
+  - Lots: one sequence seeded from the city's id, from a jostled grid over the square, nearest the middle first, each
+    clear of the streets, the plaza, the spot in front where a unit stands and the lots before it, inside the walls'
+    ring. A city of a size has that many from the front, 5 at size 1 and 2 more each size, up to as many as fit (about
+    15 to 20 on one square), so one that grows keeps its buildings and adds the next out, and one that shrinks loses
+    the outermost. A road built clears a street through the lots in its way rather than laying the city out afresh.
+  - Each lot a house, its front to the plaza, a storey or two, taller near the middle as the city grows, roofed in a
+    seeded colour, none the owner's: a city taken looks the same till its battle's blow, as its marker does.
+  - Still to come: neighbouring squares (about size 4 on), side streets following the land, eras' buildings,
+    landmarks and the palace, docks.
 
 ### 7.3 Buildings
 

@@ -1,16 +1,16 @@
 // The 3D map's markers (docs/3d-renderer-plan.md 1.3, 2.1), in three.js:
-//  - a city as a cluster of low buildings with its owner's colour on their roofs, a wall round it if it's walled, and
-//    its name and size over it, until the model sets draw cities (M4);
+//  - a city as a wall round it if it's walled, and its name and size over it: its buildings are laid with the land, as
+//    its sprawl (`overlay/sprawl.ts`, plan 4.1);
 //  - a unit as its type looks in the built-in set (`figures.ts`, spec §6): soldiers in their era's kit, riders, ships,
 //    aircraft, on a stand in its owner's second colour (ships ride the water without one), behind a low wall when
 //    fortified, with its owner's flag over it (spec §6.3): the stack's size, the letter for what it's busy with, a
 //    veteran's star, and its hit points when hurt; a ring under the active one and a pointer over it.
 //
 // Every marker shares its geometries and its materials. A unit's figures, stand and wall are one geometry for each look
-//  in each pair of colours, and a city's buildings and walls one for each name, number of buildings, owner and walls:
-//  a mesh each, so a draw call each at every copy of the world near enough to show (#1204; M6 instances them). Names
-//  and flags' labels are sprites drawn on a canvas, the same size on the screen however far away. Labels and cities no
-//  marker shows any more are let go once enough have been made (`sweep`), as cities grow and change hands.
+//  in each pair of colours, and every city's walls one: a mesh each, so a draw call each at every copy of the world
+//  near enough to show (#1204; M6 instances them). Names and flags' labels are sprites drawn on a canvas, the same size
+//  on the screen however far away. Labels no marker shows any more are let go once enough have been made (`sweep`), as
+//  cities grow and change hands.
 
 import {
   BufferGeometry,
@@ -29,9 +29,8 @@ import {
 import { CityMarker, TileMarker, UnitMarker } from './markerFor';
 import {
   BodyPart,
-  Building,
   FigureColours,
-  cityGeometry,
+  wallsGeometry,
   figureGeometry,
   unitBodyGeometry,
 } from './figures';
@@ -71,7 +70,7 @@ export class MarkerKit {
   #labels = new Map<string, SpriteMaterial>();
   #figures = new Map<string, BufferGeometry>();
   #bodies = new Map<string, BufferGeometry>();
-  #cities = new Map<string, BufferGeometry>();
+  #walls: BufferGeometry | null = null;
   #flats = new Map<string, SpriteMaterial>();
   #pointer: SpriteMaterial | null = null;
   // Labels and cities are made for each name and size, so over a game they'd grow without end: how many were kept at
@@ -140,23 +139,14 @@ export class MarkerKit {
     return geometry;
   }
 
-  /** A city's buildings and walls, one geometry, made once for each name, number of buildings, colour and walls. */
-  city(city: CityMarker): BufferGeometry {
-    const buildings = buildingsOf(city),
-      key = JSON.stringify([
-        city.name,
-        buildings.length,
-        city.colours[0],
-        city.walled,
-      ]);
-    let geometry = this.#cities.get(key);
+  /**
+   * A city's walls: one geometry for every walled city, made once. Its buildings are laid with the land
+   *  (`overlay/sprawl.ts`).
+   */
+  walls(): BufferGeometry {
+    this.#walls ??= wallsGeometry();
 
-    if (geometry === undefined) {
-      geometry = cityGeometry(buildings, city.colours[0], city.walled);
-      this.#cities.set(key, geometry);
-    }
-
-    return geometry;
+    return this.#walls;
   }
 
   /** A unit's figures as `look` says, in `colours`, made once for each. */
@@ -270,10 +260,7 @@ export class MarkerKit {
    *  there are twice as many as were kept, so a sweep's cost is spread over what's made between them.
    */
   get sweepDue(): boolean {
-    return (
-      this.#labels.size + this.#cities.size >
-      Math.max(SWEEP_FROM, this.#kept * 2)
-    );
+    return this.#labels.size > Math.max(SWEEP_FROM, this.#kept * 2);
   }
 
   /** Lets go of the labels and cities that none of `markers` uses: the markers drawn, and to be drawn. */
@@ -299,22 +286,16 @@ export class MarkerKit {
         this.#labels.delete(key);
       }
     });
-    this.#cities.forEach((geometry, key) => {
-      if (!used.has(geometry)) {
-        geometry.dispose();
-        this.#cities.delete(key);
-      }
-    });
-    this.#kept = this.#labels.size + this.#cities.size;
+    this.#kept = this.#labels.size;
   }
 
   dispose(): void {
     Object.values(this.geometries).forEach((geometry) => geometry.dispose());
     this.#figures.forEach((geometry) => geometry.dispose());
     this.#bodies.forEach((geometry) => geometry.dispose());
-    this.#cities.forEach((geometry) => geometry.dispose());
+    this.#walls?.dispose();
+    this.#walls = null;
     this.#bodies.clear();
-    this.#cities.clear();
     this.figureMaterial.dispose();
     this.#flats.forEach((material) => material.dispose());
     this.#pointer?.map?.dispose();
@@ -344,17 +325,6 @@ const place = (object: Object3D, x: number, y: number, z: number): Object3D => {
   object.position.set(x, y, z);
 
   return object;
-};
-
-// A seeded fraction from a city's name, so its buildings lie the same way every time it's drawn.
-const fractionOf = (text: string, salt: number): number => {
-  let hash = salt * 2654435761;
-
-  for (let index = 0; index < text.length; index++) {
-    hash = Math.imul(hash ^ text.charCodeAt(index), 2246822519);
-  }
-
-  return ((hash >>> 0) % 10000) / 10000;
 };
 
 // What a unit's flag says in words: the stack's size, what it's busy with, and a veteran's star.
@@ -410,31 +380,13 @@ const label = (
 // Where a city's name stands, over its middle.
 const CITY_NAME_AT: [number, number, number] = [0, 0.36, 0];
 
-/** A city's buildings: more as it grows, up to a dozen, laid the same way every time from its name. */
-export const buildingsOf = (
-  city: Pick<CityMarker, 'name' | 'size'>
-): Building[] => {
-  const count = Math.min(12, 2 + Math.ceil(city.size / 2));
-
-  return Array.from({ length: count }, (_, index) => {
-    const angle = (index / count) * Math.PI * 2 + fractionOf(city.name, 1) * 6,
-      reach = index === 0 ? 0 : 0.12 + fractionOf(city.name, index + 2) * 0.18;
-
-    return {
-      x: Math.cos(angle) * reach,
-      z: Math.sin(angle) * reach,
-      width: 0.07 + fractionOf(city.name, index + 20) * 0.05,
-      height:
-        (index === 0 ? 0.13 : 0.05) + fractionOf(city.name, index + 40) * 0.05,
-    };
-  });
-};
-
 const drawCity = (kit: MarkerKit, city: CityMarker): Group => {
   const group = new Group();
 
-  // Its buildings and walls, one mesh.
-  group.add(new Mesh(kit.city(city), kit.figureMaterial));
+  // Its walls, if it has them; its buildings are laid with the land, as its sprawl (`overlay/sprawl.ts`).
+  if (city.walled) {
+    group.add(new Mesh(kit.walls(), kit.figureMaterial));
+  }
 
   // About as tall on the screen as the 2D map's city names, whatever the distance.
   group.add(

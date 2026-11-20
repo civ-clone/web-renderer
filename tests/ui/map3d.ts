@@ -1305,15 +1305,16 @@ expect(
   };
 
   expect(
-    'a road built: what’s laid on its chunk made again, with the road, and no land built; none on a city’s lot',
+    'a road built: what’s laid on its chunk made again, with the road, and no land built; on a city’s lot, its sprawl, not the road',
     [
       overlaysSet.has(view.land().overlayKeyOf(beside.x, beside.y)),
       laidNear(beside, 0.3).coloured('#8c7a58'),
       view.land().overlaysPending(),
       chunkBuilds.length === landBuilt,
-      laidNear(town, 0.3).points,
+      laidNear(town, 0.3).points > 0,
+      laidNear(town, 0.3).coloured('#8c7a58'),
     ],
-    [true, true, 0, true, 0]
+    [true, true, 0, true, true, false]
   );
 
   staged.splice(0);

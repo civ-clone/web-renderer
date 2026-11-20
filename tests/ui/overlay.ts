@@ -903,6 +903,66 @@ const landOf = (
   );
 }
 
+// A city's lot: its sprawl (`sprawl.ts`), seeded from the city, as big as it is, its streets out to each neighbour
+//  whose road or railroad comes in (a road where the city's square has one too, or a railroad, which joins a city) and
+//  to the sea, and not to a neighbour with nothing, nor a road that doesn't join it. Laid as paving and houses, not a
+//  road.
+{
+  const cityOn = (improvements: string[]) =>
+      ({
+        ...square(improvements),
+        city: { id: 'City-Lanes', name: 'Lanes', growth: { size: 6 } },
+      } as unknown as Parameters<typeof overlayFor>[0]),
+    sea = (offset: [number, number]): OverlayNeighbour => ({
+      offset,
+      tile: {
+        improvements: [],
+        city: null,
+        terrain: { _: 'Ocean' },
+      } as unknown as OverlayNeighbour['tile'],
+    }),
+    ringed = [
+      neighbour([0, -1], ['Road']),
+      neighbour([1, 0], ['Road', 'Railroad']),
+      sea([0, 1]),
+      neighbour([-1, 0]),
+    ],
+    roaded = overlayFor(cityOn(['Road']), ringed)!,
+    unroaded = overlayFor(cityOn([]), ringed)!,
+    laid = overlayMesh(16, 0, [{ overlay: roaded, place: place(17, 3) }]);
+
+  expect(
+    'a city’s lot: seeded from the city, as big as it is, streets out to roads that join it and the sea; laid as paving and houses, not a road',
+    [
+      roaded.city?.seed === unroaded.city?.seed,
+      roaded.city?.size,
+      roaded.city?.ways,
+      unroaded.city?.ways,
+      [roaded.road, roaded.vegetation, roaded.specials.length],
+      hasColour(laid, '#a39a88'),
+      hasColour(laid, '#c4b8a2'),
+      hasColour(laid, '#8c7a58'),
+    ],
+    [
+      true,
+      6,
+      [
+        [0, -1],
+        [1, 0],
+        [0, 1],
+      ],
+      [
+        [1, 0],
+        [0, 1],
+      ],
+      [null, false, 0],
+      true,
+      true,
+      false,
+    ]
+  );
+}
+
 // The way a unit walks along a road between two squares (`Land#roadPath`), relative to the middle of the one it's
 //  going to: from the other's middle along the half it draws to the edge they share, and on along this one's half to
 //  its middle; on a city's side, straight to or from the edge; nothing with no road between them, nor between squares
@@ -1568,9 +1628,15 @@ const forest = (more: string[] = [], city = false) =>
     );
 
 expect(
-  'a forest grows trees, but not on a city’s lot',
-  [forest()?.vegetation, laidAt(forest()!).length > 0, forest([], true)],
-  [true, true, null]
+  'a forest grows trees, but not on a city’s lot, which is the city’s sprawl alone',
+  [
+    forest()?.vegetation,
+    laidAt(forest()!).length > 0,
+    forest([], true)?.vegetation,
+    forest([], true)?.woods,
+    forest([], true)?.city !== null,
+  ],
+  [true, true, false, [], true]
 );
 
 // On 60 squares, as where trees stand is seeded from the square: the road's lines run from the middle halfway east,

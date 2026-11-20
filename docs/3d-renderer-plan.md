@@ -460,6 +460,11 @@ Still to do in 3.4: improvements as models from a hosted set, and Fortress and A
 - **What:** the area, streets, lots, growth and modernising, as pure functions with tests (spec §7.2), drawn as plain
   blocks first.
 
+**First part, the city's own square: done** (spec §7.2, "As built"). A city is laid with the land round a paved plaza,
+with streets out to the roads that come in and the sea, and houses on lots that fill in as it grows, seeded from the
+city, so it keeps its buildings as it grows. Its marker keeps its walls and name. Still to do: neighbouring squares,
+side streets, eras and modernising.
+
 ### 4.2 The building kit
 
 - **What:**
