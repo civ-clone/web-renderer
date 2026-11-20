@@ -2661,6 +2661,281 @@ expect(
   [true, false, false]
 );
 
+// A terrain's other pictures (`families.terrain.variants`, `flavour`): where it is fully joined, a square may be drawn
+//  with a variant of its sprite, and a flavour picture over it, picked by a stable hash of its position. A set that
+//  declares neither, as Civ1's and Civ2's art don't, is drawn exactly as before.
+{
+  const varied: TilesetDescriptor = {
+      ...stub,
+      families: {
+        ...stub.families,
+        terrain: {
+          ...stub.families.terrain,
+          variants: {
+            sprite: 'land/{terrain}/v{variant}',
+            counts: { Grassland: 2 },
+          },
+          flavour: {
+            sprite: 'land/{terrain}/flavour-{variant}',
+            counts: { Grassland: 3 },
+            chance: 0.3,
+          },
+        },
+      },
+    },
+    world = makeWorld(12, 12, { '5,5': { terrain: 'Hills' } }),
+    terrainOf = (tileset: TilesetDescriptor, x: number, y: number) =>
+      drawn(Landscape, tileset, world, x, y)
+        .filter((sprite) => /^land\//.test(sprite))
+        .map((sprite) => sprite.replace(/@.*$/, '')),
+    joinedToHills = ['5,4', '4,5', '6,5', '5,6'],
+    squares: [number, number][] = [];
+
+  for (let y = 0; y < 12; y++) {
+    for (let x = 0; x < 12; x++) {
+      if (`${x},${y}` !== '5,5') {
+        squares.push([x, y]);
+      }
+    }
+  }
+
+  // The variants' sprites are loaded, as a set's sheet has them; the flavour's needn't be, to be asked for.
+  const word = terrainOf(stub, 0, 0)[0]!.split('/')[1];
+
+  setSprites(
+    new Map(
+      [1, 2].map((n) => [
+        `./assets/land/${word}/v${n}.png`,
+        new FakeImage(
+          `land/${word}/v${n}`,
+          1,
+          1
+        ) as unknown as CanvasImageSource,
+      ])
+    )
+  );
+
+  const usual = squares.map(([x, y]) => terrainOf(stub, x, y)),
+    picked = squares.map(([x, y]) => terrainOf(varied, x, y)),
+    full = squares
+      .map(([x, y], index) => ({ at: `${x},${y}`, sprites: picked[index]! }))
+      .filter(({ at }) => !joinedToHills.includes(at)),
+    names = new Set(full.map(({ sprites }) => sprites[0])),
+    flavoured = full.filter(({ sprites }) => sprites.length > 1);
+
+  expect(
+    'a set with variants and flavour is one the renderer reads, and one whose variants name no {variant} is refused',
+    [
+      (() => {
+        try {
+          validateDescriptor(varied);
+
+          return null;
+        } catch (error) {
+          return (error as Error).message;
+        }
+      })(),
+      (() => {
+        try {
+          validateDescriptor({
+            ...varied,
+            families: {
+              ...varied.families,
+              terrain: {
+                ...varied.families.terrain,
+                variants: {
+                  sprite: 'land/{terrain}/v',
+                  counts: { Grassland: 2 },
+                },
+              },
+            },
+          });
+
+          return null;
+        } catch (error) {
+          return /families\.terrain\.variants\.sprite must have \{variant\}/.test(
+            (error as Error).message
+          );
+        }
+      })(),
+    ],
+    [null, true]
+  );
+  expect(
+    'without variants or flavour, every square of a stretch is drawn with the usual sprite alone',
+    usual.every(
+      (sprites) => sprites.length === 1 && !/\/(v\d|flavour-)/.test(sprites[0]!)
+    ),
+    true
+  );
+  expect(
+    'a square not joined on every edge is drawn as without them',
+    joinedToHills.map((at) => {
+      const index = squares.findIndex(([x, y]) => `${x},${y}` === at);
+
+      return JSON.stringify(picked[index]) === JSON.stringify(usual[index]);
+    }),
+    [true, true, true, true]
+  );
+  expect(
+    'fully joined, a square is drawn with the usual sprite or one of its variants, every one turning up across a stretch',
+    [...names].sort(),
+    [usual[0]![0], 'land/gr/v1', 'land/gr/v2']
+      .map((name) =>
+        name!.replace(/^land\/[^/]+/, `land/${usual[0]![0]!.split('/')[1]}`)
+      )
+      .sort()
+  );
+  expect(
+    'and some of them, roughly the chance, have one flavour picture over them, of those the terrain has',
+    [
+      flavoured.length > full.length * 0.15 &&
+        flavoured.length < full.length * 0.45,
+      flavoured.every(
+        ({ sprites }) =>
+          sprites.length === 2 &&
+          /^land\/[^/]+\/flavour-[123]$/.test(sprites[1]!)
+      ),
+      new Set(flavoured.map(({ sprites }) => sprites[1])).size,
+    ],
+    [true, true, 3]
+  );
+  // On a city's map a square is a copy at the small map's coordinates, carrying where it is in the world.
+  const copyOf = (x: number, y: number): string[] => {
+    const tile = world.get(x, y),
+      copy = { ...tile, x: 1, y: 1, worldPosition: { x, y } } as Tile,
+      copies = makeWorld(3, 3, {}),
+      sprites: string[] = [];
+
+    class Copy extends (Landscape as any) {
+      tileset(): TilesetDescriptor {
+        return varied;
+      }
+
+      protected drawImage(path: string): void {
+        sprites.push(path);
+      }
+
+      protected filterNeighbours(): string[] {
+        return ['n', 'e', 's', 'w'];
+      }
+    }
+
+    new (Copy as any)(
+      copies,
+      2,
+      { width: 16, height: 16 },
+      recordingCanvas(50, 50).canvas
+    ).drawTile(copy, 0, 0);
+
+    return sprites.filter((sprite) => /^land\//.test(sprite));
+  };
+
+  expect(
+    "a city map's copy of a square, at the small map's coordinates, is drawn as the square is on the world's map",
+    squares
+      .map(([x, y], index) => ({ x, y, index }))
+      .filter(({ x, y }) => !joinedToHills.includes(`${x},${y}`))
+      .every(
+        ({ x, y, index }) =>
+          JSON.stringify(copyOf(x, y)) === JSON.stringify(picked[index])
+      ),
+    true
+  );
+  {
+    const [{ at }] = flavoured,
+      [fx, fy] = at.split(',').map(Number) as [number, number],
+      sprites = (changes: TileChanges) =>
+        drawn(
+          Landscape,
+          varied,
+          makeWorld(12, 12, { '5,5': { terrain: 'Hills' }, [at]: changes }),
+          fx,
+          fy
+        ).filter((sprite) => /flavour-/.test(sprite));
+
+    expect(
+      'but a square with a special or a hut has no flavour, as those are what a player looks for there',
+      [
+        sprites({}).length,
+        sprites({ features: ['Shield'] }),
+        sprites({ goodyHut: true }),
+      ],
+      [1, [], []]
+    );
+
+    // A feature the terrain family draws as terrain of its own (Civ2's River) isn't a special: the flavour stays.
+    const withRiver: TilesetDescriptor = {
+      ...varied,
+      families: {
+        ...varied.families,
+        terrain: { ...varied.families.terrain, features: ['River'] },
+      },
+    };
+
+    expect(
+      "a feature the terrain family draws as terrain (Civ2's River) keeps the square's flavour",
+      drawn(
+        Landscape,
+        withRiver,
+        makeWorld(12, 12, {
+          '5,5': { terrain: 'Hills' },
+          [at]: { features: ['River'] },
+        }),
+        fx,
+        fy
+      ).filter((sprite) => /flavour-/.test(sprite)).length,
+      1
+    );
+  }
+  {
+    const missing: TilesetDescriptor = {
+      ...varied,
+      families: {
+        ...varied.families,
+        terrain: {
+          ...varied.families.terrain,
+          variants: {
+            sprite: 'land/{terrain}/missing{variant}',
+            counts: { Grassland: 2 },
+          },
+        },
+      },
+    };
+
+    expect(
+      "a variant the art hasn't got is drawn as the usual sprite, rather than leaving the square bare",
+      squares.every(
+        ([x, y], index) => terrainOf(missing, x, y)[0] === usual[index]![0]
+      ),
+      true
+    );
+  }
+  expect(
+    'and the same square is drawn the same way every time',
+    squares.every(
+      ([x, y], index) =>
+        JSON.stringify(terrainOf(varied, x, y)) ===
+        JSON.stringify(picked[index])
+    ),
+    true
+  );
+
+  const civ2 = validateDescriptor(civ2Json as unknown);
+
+  expect(
+    "Civ1's and Civ2's art declare neither, so their maps are drawn as before",
+    [civ1, civ2].map(({ families: { terrain } }) => [
+      terrain.variants,
+      terrain.flavour,
+    ]),
+    [
+      [undefined, undefined],
+      [undefined, undefined],
+    ]
+  );
+}
+
 finished = true;
 
 if (failures.length > 0) {

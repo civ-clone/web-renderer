@@ -93,6 +93,7 @@ export const cityMapLayout = (city: City): CityMapLayout => {
         yields: squareYields(tile, city) as Yield[],
         // Already the city's, at coordinates that aren't the world's: not to be looked up again by them.
         squareYieldsApplied: true,
+        worldPosition: { x: tile.x, y: tile.y },
         x: center.x + x,
         y: center.y + y,
       };

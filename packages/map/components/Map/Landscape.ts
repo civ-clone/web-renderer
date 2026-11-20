@@ -6,12 +6,17 @@ import {
 import {
   CoastCorner,
   CoastStrip,
+  TerrainPictures,
   TilesetDescriptor,
   expandName,
 } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import TerrainAbstract from './TerrainAbstract';
+import squareHash from '../../lib/squareHash';
 import { isDrawable } from '@civ-clone/ui-assets/lib/imageSize';
-import { onPreloadedImagesChanged } from '@civ-clone/ui-assets/lib/getPreloadedImage';
+import {
+  hasPreloadedImage,
+  onPreloadedImagesChanged,
+} from '@civ-clone/ui-assets/lib/getPreloadedImage';
 import { s } from '@dom111/element';
 
 type Improvement = 'Mine' | 'Pollution' | 'Railroad' | 'Road';
@@ -375,11 +380,9 @@ export class Landscape extends TerrainAbstract {
     } = this.tileset();
 
     // What joins up with this terrain: the same terrain, unless the tileset says otherwise (`@water` is any water).
-    const matches = terrain.matches?.[name] ?? [name];
-
-    this.drawFamily(
-      terrain,
-      this.filterNeighbours(
+    const matches = terrain.matches?.[name] ?? [name],
+      directions = this.familyDirections(terrain),
+      matched = this.filterNeighbours(
         tile,
         (adjoiningTile: Tile): boolean =>
           matches.some((match) =>
@@ -387,12 +390,86 @@ export class Landscape extends TerrainAbstract {
               ? adjoiningTile.isWater
               : this.isTerrain(adjoiningTile, match, terrain.features)
           ),
-        this.familyDirections(terrain)
+        directions
       ),
-      { terrain: names.terrain[name] ?? name.toLowerCase() },
-      offsetX,
-      offsetY
+      values = { terrain: names.terrain[name] ?? name.toLowerCase() },
+      // Fully joined, a terrain may have other pictures (a set's `variants` and `flavour`), picked by the square's
+      //  position, so a stretch of it isn't one tile over and over.
+      joined = matched.length === directions.length,
+      variant = joined ? this.pictureOf(tile, name, terrain.variants, 1) : 0;
+
+    // A variant the art hasn't got (a sheet without it, or a count too high) leaves the usual sprite in its place.
+    const variantSprite =
+      variant > 0
+        ? expandName(terrain.variants!.sprite, {
+            ...values,
+            variant: String(variant),
+          })
+        : null;
+
+    if (
+      variantSprite !== null &&
+      hasPreloadedImage(variantSprite, this.tileset())
+    ) {
+      this.drawImage(variantSprite, offsetX, offsetY);
+    } else {
+      this.drawFamily(terrain, matched, values, offsetX, offsetY);
+    }
+
+    // Flavour is left off a square with a special or a hut, which are what a player looks for there.
+    const flavour =
+      joined &&
+      terrain.flavour !== undefined &&
+      tile.goodyHut === null &&
+      (tile.terrain.features ?? []).every(({ _ }) =>
+        terrain.features?.includes(_)
+      ) &&
+      squareHash(...this.positionOf(tile), 3) < terrain.flavour.chance
+        ? this.pictureOf(tile, name, terrain.flavour, 4, false)
+        : 0;
+
+    if (flavour > 0) {
+      this.drawImage(
+        expandName(terrain.flavour!.sprite, {
+          ...values,
+          variant: String(flavour),
+        }),
+        offsetX,
+        offsetY
+      );
+    }
+  }
+
+  /** Where `tile` is in the world, for picking its pictures: the world's position of a city map's copy of it. */
+  protected positionOf(tile: Tile): [number, number] {
+    const { x, y } = tile.worldPosition ?? tile;
+
+    return [x, y];
+  }
+
+  /**
+   * Which of `pictures` a fully joined square of the terrain `name` is drawn with, by a stable hash of its position
+   *  (`seed` apart for each kind): 1 to their count, or 0 for none, as when the set has none for it. With `usual`, the
+   *  family's own sprite is one of the choices (0), as for `variants`; without, one of them is always picked.
+   */
+  protected pictureOf(
+    tile: Tile,
+    name: string,
+    pictures: TerrainPictures | undefined,
+    seed: number,
+    usual: boolean = true
+  ): number {
+    const count = pictures?.counts[name] ?? 0;
+
+    if (count < 1) {
+      return 0;
+    }
+
+    const pick = Math.floor(
+      squareHash(...this.positionOf(tile), seed) * (usual ? count + 1 : count)
     );
+
+    return usual ? pick : pick + 1;
   }
 
   /** Whether `tile` has the terrain feature `name`. */

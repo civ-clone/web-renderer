@@ -346,6 +346,9 @@ export interface Tile extends EntityInstance, Coordinate {
   // Only on the city map's copies of a city's squares (M2c): their `yields` are already the city's figures, and their x
   //  and y are the small map's, not the world's.
   squareYieldsApplied?: boolean;
+  // Only on the city map's copies too: where the square is in the world, for what picks a picture by it (a terrain's
+  //  variants and flavour), so the square looks the same there as on the world's map.
+  worldPosition?: Coordinate;
   city: City | null;
   goodyHut: EntityInstance | null;
   improvements: EntityInstance[];

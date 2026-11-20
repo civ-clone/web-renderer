@@ -427,7 +427,7 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
     );
   }
 
-  // The hexagonal pixel art as it is built (slice 4 of docs/asset-library.md): all 902 of its sprites, as its PNGs
+  // The hexagonal pixel art as it is built (slice 4 of docs/asset-library.md): all 941 of its sprites, as its PNGs
   //  have them.
   {
     const { sheet, index } = sheets['hex-pixelart']!,
@@ -460,7 +460,7 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
         ),
         listed.length,
       ],
-      [[...listed].sort(), [], 902]
+      [[...listed].sort(), [], 941]
     );
     expect(
       'and each is in the sheet as its own PNG has it, a hex tile 32 × 36',
