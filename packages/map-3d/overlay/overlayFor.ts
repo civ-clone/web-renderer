@@ -9,6 +9,7 @@
 
 import { Tile } from '@civ-clone/ui-protocol/types';
 import { growthOf } from '@civ-clone/ui-models-builtin/vegetation';
+import { CityPlan, citySeed, planFor } from './sprawl';
 
 /** A neighbour of a square: how far off it is, in squares, before the world wraps, and what's on it. */
 export type OverlayNeighbour = {
@@ -33,7 +34,7 @@ export type SquareOverlay = {
   // Its features drawn as specials, as `[terrain, feature]`: not those drawn some other way (rivers).
   specials: (readonly [string, string])[];
   hut: boolean;
-  // Its terrain, and whether anything grows on it (`growthOf`): on a city's lot, nothing's laid at all.
+  // Its terrain, and whether anything grows on it (`growthOf`): on a city's lot, nothing grows, as its sprawl's laid.
   terrain: string;
   vegetation: boolean;
   // For woods, its neighbours of the same woods that grow them (`Growth#canopy`), by offset: the canopy runs across
@@ -42,7 +43,14 @@ export type SquareOverlay = {
   // For woods, its neighbours with a road or a city, by offset: a road between two of them that crosses this square's
   //  corner, a diagonal road beside it, is one its trees keep clear of too.
   paths: (readonly [number, number])[];
+  // A city's lot, laid out as its sprawl (`sprawl.ts`): its seed, how many lots it's built and how tall, the ways its
+  //  streets go out, by its neighbours' offsets (a road coming in), and its neighbours of sea, the way its quay's to
+  //  be. Nothing else is laid on a city's lot.
+  city: CityPlan | null;
 };
+
+// Terrain a city's quay runs down to.
+const SEA = ['Ocean'];
 
 // Features drawn otherwise than as a special: Civ2's rivers, which are drawn as rivers (§5.3).
 const NOT_SPECIALS = ['River'];
@@ -62,8 +70,8 @@ export const woodsOf = (
     : growthOf(tile.terrain?._ ?? 'Unknown')?.canopy ?? null;
 
 /**
- * What's laid on `tile`'s land, its `neighbours` all round it: nothing, for a square with none of it, or a city's lot,
- *  which its buildings and the unit in front of them take, as the 2D map's city covers its square's road and fields.
+ * What's laid on `tile`'s land, its `neighbours` all round it: nothing, for a square with none of it; or a city's lot,
+ *  its sprawl, which takes the square, as the 2D map's city covers its square's road and fields.
  */
 export const overlayFor = (
   tile: Pick<Tile, 'improvements' | 'terrain' | 'goodyHut'> &
@@ -71,7 +79,42 @@ export const overlayFor = (
   neighbours: readonly OverlayNeighbour[]
 ): SquareOverlay | null => {
   if (tile.city) {
-    return null;
+    const city = tile.city;
+
+    return {
+      road: null,
+      railroad: null,
+      irrigation: null,
+      mine: false,
+      fortress: false,
+      airbase: false,
+      pollution: false,
+      specials: [],
+      hut: false,
+      terrain: tile.terrain?._ ?? 'Unknown',
+      vegetation: false,
+      woods: [],
+      paths: [],
+      // From its id, as the engine has it: the same city whoever holds it. Out to each neighbour whose road or railroad
+      //  comes in, as it lays its half (a road where the city's square has one too, or a railroad, which joins a city),
+      //  and towards the sea.
+      city: planFor(
+        citySeed(String(city.id ?? city.name ?? '')),
+        city.growth?.size ?? 1,
+        neighbours
+          .filter(
+            ({ tile: neighbour }) =>
+              has(neighbour, 'Road') &&
+              (has(tile, 'Road') || has(neighbour, 'Railroad'))
+          )
+          .map(({ offset }) => offset),
+        neighbours
+          .filter(({ tile: neighbour }) =>
+            SEA.includes(neighbour.terrain?._ ?? '')
+          )
+          .map(({ offset }) => offset)
+      ),
+    };
   }
 
   const road = has(tile, 'Road'),
@@ -127,6 +170,7 @@ export const overlayFor = (
       vegetation: growthOf(tile.terrain?._ ?? 'Unknown') !== null,
       woods: [],
       paths: [],
+      city: null,
     },
     own = woodsOf(tile);
 

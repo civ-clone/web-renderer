@@ -32,6 +32,8 @@ import {
   growthOf,
 } from '@civ-clone/ui-models-builtin/vegetation';
 import { Route, SquareOverlay } from './overlayFor';
+import { CityPlan, STREET, footprintOf, sprawl } from './sprawl';
+import { IN_FRONT_OF_CITY } from '../markers/drawMarker';
 
 /** Where a square is, and what it needs to know of the land round it, to lay its overlay. */
 export type OverlayPlace = {
@@ -702,6 +704,65 @@ const fields = (layer: Layer, kind: 'irrigation' | 'farmland'): void => {
       );
     }
   }
+};
+
+/** The colours a city's roofs come in, each building's seeded. */
+export const ROOFS = ['#9c5a3c', '#7d4a36', '#6f6a64', '#8b6b4a'] as const;
+
+// A city's paving, its buildings' walls, and their roofs, each building's seeded: none in its owner's colours, which its
+//  name carries, so a city taken looks the same, as its marker does, till its battle's blow, as it's laid till then
+//  (`Land#keepCities`).
+const PAVING = '#a39a88',
+  HOUSE = '#c4b8a2',
+  // How tall a building's storey is, and how wide its walls are, under the eaves of a roof its lot's width.
+  STOREY = 0.045,
+  WALLED = 0.86;
+
+/**
+ * A city's sprawl on its lot (`sprawl.ts`): its plaza paved, its streets out to the roads and its quay, and a building
+ *  on each lot built, facing its way, its roof's eaves out to the lot's edges, standing on the land where it is.
+ */
+const city = (layer: Layer, plan: CityPlan): void => {
+  const { place } = layer,
+    [u, v] = place.centre,
+    { plaza, streets, lots } = sprawl(place, plan, [u, v + IN_FRONT_OF_CITY]);
+
+  layer.disc(plaza.at, plaza.radius, PAVING, LIFT.road, 16);
+  streets.forEach(([from, to]) =>
+    layer.strip(from, to, STREET, PAVING, LIFT.road)
+  );
+  lots.forEach((lot) => {
+    const {
+        at: [bu, bv],
+        width,
+        facing,
+        storeys,
+      } = lot,
+      // From the lowest of the ground under it, so it stands on a slope with no gap under any corner, to its storeys
+      //  over the highest.
+      grounds = [[bu, bv] as const, ...footprintOf(lot)].map(([gu, gv]) =>
+        layer.ground(gu, gv)
+      ),
+      low = Math.min(...grounds) - 0.005,
+      top = Math.max(...grounds) + STOREY * storeys;
+
+    layer.solid(
+      box,
+      [bu, (low + top) / 2, bv],
+      [width * WALLED, top - low, width * WALLED],
+      HOUSE,
+      [0, facing, 0]
+    );
+    // A four-sided cone, turned an eighth to square with the walls: its base's corners at half its size, so a base
+    //  `width` across, out to the lot's edges.
+    layer.solid(
+      pyramid,
+      [bu, top + width * 0.2, bv],
+      [width * Math.SQRT2, width * 0.4, width * Math.SQRT2],
+      ROOFS[Math.floor(lot.roof * ROOFS.length)]!,
+      [0, facing + Math.PI / 4, 0]
+    );
+  });
 };
 
 const mine = (layer: Layer, [u, v]: readonly [number, number]): void => {
@@ -1425,6 +1486,13 @@ export const layOverlay = (
 } => {
   const layer = new Layer(soup, place),
     { centre, radius } = place;
+
+  // A city's lot: its sprawl, and nothing else.
+  if (overlay.city !== null) {
+    city(layer, overlay.city);
+
+    return { taken: layer.taken, lines: layer.lines, grown: layer.grown };
+  }
 
   // The lines across it, which what stands on it keeps clear of: a road's along its bend, a railroad's straight.
   [overlay.road, overlay.railroad].forEach((route) => {

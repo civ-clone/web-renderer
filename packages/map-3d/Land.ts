@@ -18,6 +18,7 @@ import { ChunkGrid, buildChunk, chunkGrid, chunksNear } from './terrain/chunks';
 import { Stage } from './stage';
 import { Ground } from './water';
 import World from '@civ-clone/ui-map/components/World';
+import { Tile } from '@civ-clone/ui-protocol/types';
 import { seaFloor } from '@civ-clone/ui-models-builtin/terrain';
 import overlayFor, {
   OverlayNeighbour,
@@ -63,6 +64,9 @@ export class Land {
   #squaresByChunk: Map<string, [number, number][]> | null = null;
   // What was last laid on each square, by `x,y`, as `overlayFor` said: a chunk's made again only when one changes.
   #laid = new Map<string, string>();
+  // The city shown on a square, where it's shown otherwise than the world has it (`keepCities`).
+  #keptCity: (x: number, y: number) => Tile['city'] | undefined = () =>
+    undefined;
   // Where the map was last centred, for what's laid to be made nearest it first.
   #focus: [number, number] = [0, 0];
   // How far a square reaches from its middle every way, its outline's nearest edge; and half the biggest square, with
@@ -400,12 +404,29 @@ export class Land {
     }
   }
 
+  /**
+   * Lays on each square the city `keptAt` says, where it says one (or `null`, none), rather than the world's: a city as
+   *  it was before a battle there whose blow hasn't fallen, as its marker shows it. A square it no longer says one for
+   *  is to be told `changed`, to be laid as the world has it.
+   */
+  keepCities(keptAt: (x: number, y: number) => Tile['city'] | undefined): void {
+    this.#keptCity = keptAt;
+  }
+
+  // The tile at (`x`, `y`) as it's shown: its city kept as it was (`keepCities`), if one is.
+  #shownAt(x: number, y: number): Tile {
+    const tile = this.#world.get(x, y),
+      city = this.#keptCity(x, y);
+
+    return city === undefined ? tile : { ...tile, city };
+  }
+
   // What's laid on the square at (`x`, `y`), as its tile and its neighbours' say.
   #overlayAt(x: number, y: number): SquareOverlay | null {
     const topology = this.#world.topology();
 
     return overlayFor(
-      this.#world.get(x, y),
+      this.#shownAt(x, y),
       topology.directions().flatMap((direction) => {
         const at = topology.neighbour(x, y, direction);
 
@@ -414,7 +435,7 @@ export class Land {
           : [
               {
                 offset: topology.offset(direction, x, y),
-                tile: this.#world.get(at[0], at[1]),
+                tile: this.#shownAt(at[0], at[1]),
               } as OverlayNeighbour,
             ];
       })

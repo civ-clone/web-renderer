@@ -363,6 +363,18 @@ export class MapView3D implements MapRenderer {
     this.#artId = deps.art.id();
     this.world = deps.world;
     this.#land = new Land(deps.world);
+    // A city attacked is laid as it was till the blow, as its marker shows it (`#before`): the first battle there's.
+    this.#land.keepCities((x, y) => {
+      const square = `${x},${y}`;
+
+      for (const before of this.#before.values()) {
+        if (before.square === square) {
+          return before.city;
+        }
+      }
+
+      return undefined;
+    });
     this.#walks = new Walks(this.#land.layout.period());
     this.#walkOptions = deps.walks;
     this.#inner = innerOf(this.#land.layout, deps.world.topology());
@@ -862,11 +874,12 @@ export class MapView3D implements MapRenderer {
   }
 
   // Where a unit stands on the square (`x`, `y`) as it's marked, on the land as it's drawn: at its middle, or in front
-  //  of its city's buildings, where cities are shown. As a point to walk from or to, with how far above the land there
-  //  that is, and the square's middle, which it faces between, as a unit standing does.
+  //  of its city's buildings, whose marker's shown or hidden (`t`): they're laid with the land either way. As a point
+  //  to walk from or to, with how far above the land there that is, and the square's middle, which it faces between,
+  //  as a unit standing does.
   #standing(
     { x, y }: Coordinate,
-    inCity: boolean = this.#unitsShown && Boolean(this.world.get(x, y).city)
+    inCity: boolean = Boolean(this.world.get(x, y).city)
   ): WalkPoint {
     const [u, v] = this.#land.layout.centre(x, y),
       stands = Math.max(0, this.#land.surfaceAt(u, v)),
@@ -1254,6 +1267,8 @@ export class MapView3D implements MapRenderer {
       );
 
     this.#before.delete(battle.id);
+    // Its city laid as it is now, or as the next battle there kept it.
+    this.#land.changed([[x, y]], ...this.#focus());
 
     if (this.#awaiting.has(loser)) {
       this.#gone.add(loser);
@@ -1506,7 +1521,13 @@ export class MapView3D implements MapRenderer {
 
       this.#takeAway(`${id}-fallen`);
       this.#fallen.delete(id);
-      this.#before.delete(id);
+
+      if (this.#before.delete(id)) {
+        this.#land.changed(
+          [[battle.defenderSquare.x, battle.defenderSquare.y]],
+          ...this.#focus()
+        );
+      }
 
       if (this.#awaiting.has(attacker) && !this.#leftOff(attacker)) {
         if (!won) {
@@ -1869,7 +1890,10 @@ export class MapView3D implements MapRenderer {
     return this.#tilesToDraw.size;
   }
 
-  /** Hides the units, cities and their names, but the unit awaiting orders, or shows them again (`t`). */
+  /**
+   * Hides the units, and cities' walls and names, but the unit awaiting orders, or shows them again (`t`). A city's
+   *  buildings are laid with the land, so they stay.
+   */
   toggleUnits(): void {
     this.#unitsShown = !this.#unitsShown;
     this.#markAll();
@@ -2430,7 +2454,7 @@ export class MapView3D implements MapRenderer {
     this.#drawnOn(key, drawn, {
       shown: marker?.unit?.id ?? null,
       ringed: marker?.unit?.active === true,
-      inCity: (marker?.unit ?? null) !== null && marker?.city !== null,
+      inCity: (marker?.unit ?? null) !== null && marker?.inCity === true,
     });
 
     // On the land as it's drawn, as what's laid on it is, so a unit's stand stands over that.

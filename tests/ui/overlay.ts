@@ -28,11 +28,14 @@ import overlayMesh, {
   OverlayMesh,
   OverlayPlace,
   ROAD_BOW,
+  ROOFS,
   layOverlay,
   roadHalf,
   soup,
 } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
 import { Stage, overlayCopies, polesAt } from '@civ-clone/ui-map-3d/stage';
+import sprawl, { Lot } from '@civ-clone/ui-map-3d/overlay/sprawl';
+import { IN_FRONT_OF_CITY } from '@civ-clone/ui-map-3d/markers/drawMarker';
 import { TopologyId } from '@civ-clone/ui-protocol/topology';
 import Land from '@civ-clone/ui-map-3d/Land';
 import { ChunkMesh } from '@civ-clone/ui-map-3d/terrain/chunks';
@@ -903,6 +906,282 @@ const landOf = (
   );
 }
 
+// A city's lot: its sprawl (`sprawl.ts`), seeded from the city, as many lots as its size has built and as tall, its
+//  streets out to each neighbour whose road or railroad comes in (a road where the city's square has one too, or a
+//  railroad, which joins a city), and the sea beside it, for its quay, and not to a neighbour with nothing, nor a road
+//  that doesn't join it. Laid as paving and houses, not a road.
+{
+  const cityOn = (improvements: string[], size = 6) =>
+      ({
+        ...square(improvements),
+        city: { id: 'City-Lanes', name: 'Lanes', growth: { size } },
+      } as unknown as Parameters<typeof overlayFor>[0]),
+    sea = (offset: [number, number]): OverlayNeighbour => ({
+      offset,
+      tile: {
+        improvements: [],
+        city: null,
+        terrain: { _: 'Ocean' },
+      } as unknown as OverlayNeighbour['tile'],
+    }),
+    ringed = [
+      neighbour([0, -1], ['Road']),
+      neighbour([1, 0], ['Road', 'Railroad']),
+      sea([0, 1]),
+      neighbour([-1, 0]),
+    ],
+    roaded = overlayFor(cityOn(['Road']), ringed)!,
+    unroaded = overlayFor(cityOn([]), ringed)!,
+    laid = overlayMesh(16, 0, [{ overlay: roaded, place: place(17, 3) }]);
+
+  expect(
+    'a city’s lot: seeded from the city, as many lots as its size has built and as tall, streets out to roads that join it, and the sea beside it, for its quay; laid as paving and houses, not a road',
+    [
+      roaded.city?.seed === unroaded.city?.seed,
+      [roaded.city?.lots, roaded.city?.tier],
+      [
+        overlayFor(cityOn(['Road'], 14), ringed)!.city?.lots,
+        overlayFor(cityOn(['Road'], 14), ringed)!.city?.tier,
+      ],
+      // Grown with no more lots or storeys, nothing changes.
+      JSON.stringify(overlayFor(cityOn(['Road'], 15), ringed)) ===
+        JSON.stringify(overlayFor(cityOn(['Road'], 16), ringed)),
+      roaded.city?.ways,
+      unroaded.city?.ways,
+      roaded.city?.sea,
+      overlayFor(cityOn([]), [sea([1, 0]), sea([1, 1]), sea([0, 1])])!.city
+        ?.sea,
+      [roaded.road, roaded.vegetation, roaded.specials.length],
+      hasColour(laid, '#a39a88'),
+      hasColour(laid, '#c4b8a2'),
+      hasColour(laid, '#8c7a58'),
+    ],
+    [
+      true,
+      [15, 0],
+      [30, 2],
+      true,
+      [
+        [0, -1],
+        [1, 0],
+      ],
+      [[1, 0]],
+      [[0, 1]],
+      [
+        [1, 0],
+        [1, 1],
+        [0, 1],
+      ],
+      [null, false, 0],
+      true,
+      true,
+      false,
+    ]
+  );
+}
+
+// A city's houses as they're laid on flat land: each roof out to its lot's footprint and no further, its corners at
+//  the footprint's, and its walls inside them, under the eaves.
+{
+  const city = overlayFor(
+      {
+        ...square(['Road']),
+        city: { id: 'City-Eaves', name: 'Eaves', growth: { size: 4 } },
+      } as unknown as Parameters<typeof overlayFor>[0],
+      []
+    )!,
+    at = place(17, 3),
+    laid = overlayMesh(16, 0, [{ overlay: city, place: at }]),
+    { lots } = sprawl(at, city.city!, [
+      at.centre[0],
+      at.centre[1] + IN_FRONT_OF_CITY,
+    ]),
+    roofs = ROOFS.map((css) => new Color(css)),
+    walls = new Color('#c4b8a2'),
+    // Each point of a colour, relative to the chunk's corner, back on the ground.
+    pointsOf = (colours: Color[]) => {
+      const found: [number, number][] = [];
+
+      for (let at = 0; at < laid.colours.length; at += 3) {
+        if (
+          colours.some(
+            ({ r, g, b }) =>
+              Math.abs(laid.colours[at]! - r) < 1e-4 &&
+              Math.abs(laid.colours[at + 1]! - g) < 1e-4 &&
+              Math.abs(laid.colours[at + 2]! - b) < 1e-4
+          )
+        ) {
+          found.push([laid.positions[at]! + 16, laid.positions[at + 2]! + 0]);
+        }
+      }
+
+      return found;
+    },
+    // How far out a point is from a lot's middle, along its own sides: half its width at its edges.
+    outOf = ([u, v]: [number, number], { at: [lu, lv], facing }: Lot) => {
+      const du = u - lu,
+        dv = v - lv;
+
+      return Math.max(
+        Math.abs(du * Math.cos(facing) - dv * Math.sin(facing)),
+        Math.abs(du * Math.sin(facing) + dv * Math.cos(facing))
+      );
+    },
+    // Each point as a share of the half-width out of the lot it's most within.
+    reach = (points: [number, number][]) =>
+      points.map((point) =>
+        Math.min(...lots.map((lot) => outOf(point, lot) / (lot.width / 2)))
+      ),
+    roofReach = reach(pointsOf(roofs)),
+    wallReach = reach(pointsOf([walls]));
+
+  expect(
+    'each roof out to its lot’s edges and no further, its walls under the eaves',
+    [
+      lots.length,
+      roofReach.every((share) => share <= 1 + 1e-4),
+      roofReach.some((share) => share > 1 - 1e-4),
+      wallReach.every((share) => share < 0.9),
+    ],
+    [11, true, true, true]
+  );
+}
+
+// A road built to a city: the houses that stay keep their roofs as they're drawn, whatever lots the street clears
+//  before them.
+{
+  const cityOn = (ways: [number, number][]) =>
+      overlayFor(
+        {
+          ...square(['Road']),
+          city: { id: 'City-Roofs', name: 'Roofs', growth: { size: 8 } },
+        } as unknown as Parameters<typeof overlayFor>[0],
+        ways.map((offset) => neighbour(offset, ['Road']))
+      )!,
+    at = place(17, 3),
+    roofs = ROOFS.map((css) => new Color(css)),
+    // Each house's roof as it's drawn, by where it stands: the colour at its peak.
+    drawn = (overlay: SquareOverlay) => {
+      const laid = overlayMesh(16, 0, [{ overlay, place: at }]),
+        found = new Map<string, number>();
+
+      sprawl(at, overlay.city!, [
+        at.centre[0],
+        at.centre[1] + IN_FRONT_OF_CITY,
+      ]).lots.forEach(({ at: [lu, lv], width }) => {
+        let peak = -Infinity,
+          colour = -1;
+
+        for (let point = 0; point < laid.colours.length; point += 3) {
+          const which = roofs.findIndex(
+            ({ r, g, b }) =>
+              Math.abs(laid.colours[point]! - r) < 1e-4 &&
+              Math.abs(laid.colours[point + 1]! - g) < 1e-4 &&
+              Math.abs(laid.colours[point + 2]! - b) < 1e-4
+          );
+
+          if (
+            which !== -1 &&
+            Math.hypot(
+              laid.positions[point]! + 16 - lu,
+              laid.positions[point + 2]! - lv
+            ) <
+              width / 4 &&
+            laid.positions[point + 1]! > peak
+          ) {
+            peak = laid.positions[point + 1]!;
+            colour = which;
+          }
+        }
+
+        found.set(`${lu},${lv}`, colour);
+      });
+
+      return found;
+    },
+    before = drawn(cityOn([[1, 0]])),
+    after = drawn(
+      cityOn([
+        [1, 0],
+        [0, -1],
+      ])
+    ),
+    kept = [...before.keys()].filter((key) => after.has(key));
+
+  expect(
+    'a road built to a city: the houses that stay keep their roofs as drawn',
+    [
+      kept.length > 5,
+      kept.length < before.size,
+      new Set(before.values()).size > 1,
+      kept.filter((key) => before.get(key) !== after.get(key)),
+    ],
+    [true, true, true, []]
+  );
+}
+
+// A city's houses on a slope: each stands on the land at every corner, its walls down to the ground under the lowest,
+//  with no gap under any.
+{
+  const slope = (u: number, v: number) => 0.5 * (u + v),
+    city = overlayFor(
+      {
+        ...square(['Road']),
+        city: { id: 'City-Slope', name: 'Slope', growth: { size: 6 } },
+      } as unknown as Parameters<typeof overlayFor>[0],
+      []
+    )!,
+    at = place(17, 3, { height: slope }),
+    laid = overlayMesh(16, 0, [{ overlay: city, place: at }]),
+    { lots } = sprawl(at, city.city!, [
+      at.centre[0],
+      at.centre[1] + IN_FRONT_OF_CITY,
+    ]),
+    { r, g, b } = new Color('#c4b8a2'),
+    walls: [number, number, number][] = [];
+
+  for (let point = 0; point < laid.colours.length; point += 3) {
+    if (
+      Math.abs(laid.colours[point]! - r) < 1e-4 &&
+      Math.abs(laid.colours[point + 1]! - g) < 1e-4 &&
+      Math.abs(laid.colours[point + 2]! - b) < 1e-4
+    ) {
+      walls.push([
+        laid.positions[point]! + 16,
+        laid.positions[point + 1]!,
+        laid.positions[point + 2]!,
+      ]);
+    }
+  }
+
+  const floating = lots.filter(({ at: [lu, lv], width, facing }) => {
+    // Its own walls: within its footprint along its own sides, not a neighbour's.
+    const own = walls.filter(([u, , v]) => {
+        const du = u - lu,
+          dv = v - lv;
+
+        return (
+          Math.max(
+            Math.abs(du * Math.cos(facing) - dv * Math.sin(facing)),
+            Math.abs(du * Math.sin(facing) + dv * Math.cos(facing))
+          ) <
+          width / 2
+        );
+      }),
+      bottom = Math.min(...own.map(([, y]) => y));
+
+    return own
+      .filter(([, y]) => y < bottom + 1e-6)
+      .some(([u, y, v]) => y > slope(u, v));
+  });
+
+  expect(
+    'on a slope, every house’s walls reach down to the ground at every corner',
+    [lots.length, floating.length],
+    [15, 0]
+  );
+}
+
 // The way a unit walks along a road between two squares (`Land#roadPath`), relative to the middle of the one it's
 //  going to: from the other's middle along the half it draws to the edge they share, and on along this one's half to
 //  its middle; on a city's side, straight to or from the edge; nothing with no road between them, nor between squares
@@ -1568,9 +1847,15 @@ const forest = (more: string[] = [], city = false) =>
     );
 
 expect(
-  'a forest grows trees, but not on a city’s lot',
-  [forest()?.vegetation, laidAt(forest()!).length > 0, forest([], true)],
-  [true, true, null]
+  'a forest grows trees, but not on a city’s lot, which is the city’s sprawl alone',
+  [
+    forest()?.vegetation,
+    laidAt(forest()!).length > 0,
+    forest([], true)?.vegetation,
+    forest([], true)?.woods,
+    forest([], true)?.city !== null,
+  ],
+  [true, true, false, [], true]
 );
 
 // On 60 squares, as where trees stand is seeded from the square: the road's lines run from the middle halfway east,

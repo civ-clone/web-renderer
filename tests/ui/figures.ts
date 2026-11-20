@@ -440,8 +440,8 @@ expect(
   );
 }
 
-// A unit's body is made for each pair of colours, its stand in the second; a city's for each owner, its roofs in their
-//  first colour, and for each number of buildings, not each size.
+// A unit's body is made for each pair of colours, its stand in the second. A city's walls are one, for every city: its
+//  buildings are laid with the land, roofed in no owner's colours (`overlay/sprawl.ts`).
 const pointsColoured = (geometry: BufferGeometry, css: string): number => {
     const attribute = geometry.getAttribute('color'),
       colour = new Color();
@@ -460,32 +460,19 @@ const pointsColoured = (geometry: BufferGeometry, css: string): number => {
   },
   spearLook = look('Spearman'),
   ourBody = kit.body(spearLook, colours, false),
-  theirBody = kit.body(spearLook, others, false),
-  cityIn = (pair: typeof colours | typeof others, size = 7) =>
-    kit.city({
-      name: 'Roma',
-      size,
-      colours: pair,
-      walled: false,
-      disorder: false,
-    });
+  theirBody = kit.body(spearLook, others, false);
 
 expect(
-  'a unit’s body is made for each pair of colours, its stand in the second; a city’s for each owner, roofed in their first colour, and for each number of buildings',
+  'a unit’s body is made for each pair of colours, its stand in the second; a city’s walls are one, for every city',
   [
     ourBody !== theirBody,
     pointsColoured(ourBody, colours[1]) >
       pointsColoured(kit.figure(spearLook, colours), colours[1]),
     pointsColoured(theirBody, others[1]) >
       pointsColoured(kit.figure(spearLook, others), others[1]),
-    cityIn(colours) !== cityIn(others),
-    pointsColoured(cityIn(colours), colours[0]) > 0,
-    pointsColoured(cityIn(others), others[0]) > 0 &&
-      pointsColoured(cityIn(others), colours[0]) === 0,
-    cityIn(colours, 25) === cityIn(colours, 30),
-    cityIn(colours, 3) !== cityIn(colours, 7),
+    kit.walls() === kit.walls(),
   ],
-  [true, true, true, true, true, true, true, true]
+  [true, true, true, true]
 );
 
 const fighter = drawn(unit('Fighter')),
@@ -613,17 +600,17 @@ const cityParts = (walled: boolean): Object3D[] => {
 };
 
 expect(
-  'a city is one mesh of its buildings, walls and all, and its name',
+  'a city’s marker is its walls, if it has them, one mesh, and its name: its buildings are laid with the land',
   [
     cityParts(false).map((object) => object.type),
-    pointsIn((cityParts(true)[0] as Mesh).geometry) >
-      pointsIn((cityParts(false)[0] as Mesh).geometry),
+    cityParts(true).map((object) => object.type),
+    (cityParts(true)[0] as Mesh).geometry === kit.walls(),
   ],
-  [['Mesh', 'Sprite'], true]
+  [['Sprite'], ['Mesh', 'Sprite'], true]
 );
 
-// A city's label and buildings are made for each size it reaches, so the kit lets go of those no marker uses, once it
-//  holds enough of them.
+// A city's label is made for each size it reaches, so the kit lets go of those no marker uses, once it holds enough of
+//  them.
 const sweeping = new MarkerKit(),
   romeAt = (size: number): Group =>
     drawMarker(sweeping, {
@@ -670,7 +657,7 @@ const dueLater = sweeping.sweepDue;
 sweeping.sweep([stillDrawn]);
 
 expect(
-  'a city’s outgrown labels and buildings are let go once there are enough of them, not those still drawn, and made again if they’re wanted',
+  'a city’s outgrown labels are let go once there are enough of them, not those still drawn, and made again if they’re wanted',
   [
     dueEarly,
     dueLater,
@@ -697,8 +684,9 @@ const garrisoned = drawMarker(kit, {
   }),
   inCity: Object3D[] = [];
 
-// Its unit's part: named, in front of the city, where a unit walking there arrives (`IN_FRONT_OF_CITY`); and its
-//  figures, a part of their own, turned the way it faces, which a walker turns as it goes.
+// Its unit's part: named, in front of the city, where a unit walking there arrives (`IN_FRONT_OF_CITY`), the city's
+//  marker shown or hidden; and its figures, a part of their own, turned the way it faces, which a walker turns as it
+//  goes.
 const facingEast = drawMarker(kit, {
   city: null,
   unit: unit('Spearman', { facing: Math.PI / 2 }),
@@ -725,8 +713,21 @@ expect(
 
       return turned;
     })(),
+    // Its city's walls and name hidden (`t`), still in front of the buildings, which stay, with nothing of the city.
+    (() => {
+      const hidden = drawMarker(kit, {
+        city: null,
+        unit: unit('Spearman'),
+        inCity: true,
+      });
+
+      return [
+        hidden.getObjectByName(UNIT_PART)?.position.z,
+        hidden.children.length,
+      ];
+    })(),
   ],
-  [0.26, 0.26, 1, 0, Math.PI / 2, [FIGURES_PART]]
+  [0.26, 0.26, 1, 0, Math.PI / 2, [FIGURES_PART], [0.26, 1]]
 );
 
 // Drawn to fly, as a walker is: an aircraft's figures, its hit points' bar, flag and label, and the pointer over it,
@@ -1114,8 +1115,8 @@ expect(
 );
 
 // A ship out at sea sits in rings of ripples (`RIPPLES`): ovals of foam round its hull, wider and longer than it, just
-//  over the water, in its own mesh, turning with it. In front of a city's buildings, in port, none; nor round a unit on
-//  land.
+//  over the water, in its own mesh, turning with it. In front of a city's buildings, in port, none, its marker shown or
+//  hidden; nor round a unit on land.
 {
   const look = unitLook('Trireme'),
     plain = kit.body(look, colours, false, 1),
@@ -1129,10 +1130,16 @@ expect(
       city: { name: 'Ostia', size: 2, colours, walled: false, disorder: false },
       unit: unit('Trireme'),
     }),
+    // In port with cities hidden (`t`): still in front of the buildings.
+    inHiddenPort = drawMarker(kit, {
+      city: null,
+      unit: unit('Trireme'),
+      inCity: true,
+    }),
     spearman = unitLook('Spearman');
 
   expect(
-    'a ship out at sea in rings of ripples, wider and longer than its hull, just over the water, turning with it; in port, none; none round a unit on land',
+    'a ship out at sea in rings of ripples, wider and longer than its hull, just over the water, turning with it; in port, none, its city shown or hidden; none round a unit on land',
     [
       points(rippled) > points(plain),
       rippled.boundingBox!.max.x > plain.boundingBox!.max.x,
@@ -1141,10 +1148,11 @@ expect(
         rippled.boundingBox!.min.y < plain.boundingBox!.min.y,
       figuresOf(atSea) === rippled,
       figuresOf(inPort) === plain,
+      figuresOf(inHiddenPort) === plain,
       kit.body(spearman, colours, false, 1, 'whole', true) ===
         kit.body(spearman, colours, false, 1),
     ],
-    [true, true, true, true, true, true, true]
+    [true, true, true, true, true, true, true, true]
   );
 }
 

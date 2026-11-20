@@ -47,6 +47,9 @@ export type UnitMarker = {
 export type TileMarker = {
   city: CityMarker | null;
   unit: UnitMarker | null;
+  // Whether its square has a city, shown or hidden (`t`): a unit stands in front of the city's buildings, which are
+  //  laid with the land, either way. Where it's not said, where the city's marked.
+  inCity?: boolean;
 };
 
 // Grey, for a player whose civilization doesn't say its colours.
@@ -140,7 +143,9 @@ export const markerFor = (
           }
         : null;
 
-  return city === null && unit === null ? null : { city, unit };
+  return city === null && unit === null
+    ? null
+    : { city, unit, inCity: Boolean(tile.city) };
 };
 
 export default markerFor;
