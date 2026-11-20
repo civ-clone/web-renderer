@@ -422,14 +422,21 @@ const run = async (): Promise<void> => {
 
   sent.length = 0;
 
-  // New Game's questions: over everything else, Cancel backing out, and the last one starts the game.
-  askNewGame(transport, () => {});
+  // New Game (#1247): over everything else, Cancel backing out, the game chosen asking only the difficulty, which starts
+  //  it.
+  let customised = 0;
+
+  askNewGame(
+    transport,
+    () => {},
+    () => customised++
+  );
   await settle();
 
-  const sizes = top();
+  const games = top();
 
   (
-    Array.from(sizes.querySelectorAll('.ui-window-footer button')).find(
+    Array.from(games.querySelectorAll('.ui-window-footer button')).find(
       (button) => button.textContent === 'Cancel'
     ) as HTMLButtonElement
   ).click();
@@ -437,22 +444,38 @@ const run = async (): Promise<void> => {
 
   expect(
     'new game: Cancel backs out, asking nothing more',
-    [sizes.hasAttribute('open'), options.length, sent],
-    [false, 0, []]
+    [games.hasAttribute('open'), options.length, sent, customised],
+    [false, 0, [], 0]
   );
 
-  askNewGame(transport, () => {});
+  askNewGame(
+    transport,
+    () => {},
+    () => customised++
+  );
   await settle();
 
   expect(
-    'new game: the world sizes, Normal chosen, over everything, and Cancel backs out',
+    'new game: the game, then Customize…, the game chosen and saying what it starts with, over everything',
     [
       top().querySelector('header h3, .ui-window-title')?.textContent,
+      Array.from(top().querySelectorAll('.ui-choice-name')).map(
+        (row) => row.textContent
+      ),
       chosen(),
+      top().querySelector('[aria-selected="true"] .ui-choice-meta')
+        ?.textContent,
       top().classList.contains('modal'),
       footer(),
     ],
-    ['How big a world?', 'Normal (80 × 50)', true, ['Cancel', 'Choose']]
+    [
+      'Which game?',
+      ['Civilization', 'Customize…'],
+      'Civilization',
+      'A normal world on the square grid, 7 civilizations',
+      true,
+      ['Cancel', 'Play Civilization'],
+    ]
   );
 
   key('Enter');
@@ -460,28 +483,29 @@ const run = async (): Promise<void> => {
   await settle();
 
   expect(
-    'new game: then the difficulty, Prince chosen, saying so',
+    'new game: then only the difficulty, Prince chosen, saying so',
     [chosen(), primary().textContent],
     ['Prince', 'Play at Prince level']
   );
 
   key('Enter');
   await settle();
-
-  expect(
-    'new game: then the players, the primary starting the game',
-    primary().textContent,
-    `Start with ${chosen()}`
-  );
-
-  key('Enter');
-  await settle();
   await settle();
 
   expect(
-    'new game: the answers sent, then the game started',
-    [options.length, (options[0] as any)?.difficulty, sent],
-    [1, 'Prince', [['start', null]]]
+    'new game: the game started on a normal square world with 7 civilizations, at Prince',
+    [
+      options.length,
+      (({ topologyId, width, height, players, difficulty }: any) => [
+        topologyId,
+        width,
+        height,
+        players,
+        difficulty,
+      ])(options[0] ?? {}),
+      sent,
+    ],
+    [1, ['square', 80, 50, 7, 'Prince'], [['start', null]]]
   );
 
   sent.length = 0;

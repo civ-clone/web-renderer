@@ -230,9 +230,25 @@ i18next.addResources('en', 'default', {
   'NewGameWindow.map-grid': 'Which map grid?',
   // New Game's first question once there is more than one game to play (#668).
   'NewGameWindow.game': 'Which game?',
+  // New Game's game when there's only the one (#1247), before the worker has been asked which it is.
+  'NewGameWindow.default-game': 'Civilization',
+  // Under each game in New Game (#1247): what it will start with, as last time or the defaults.
+  'NewGameWindow.game-meta':
+    'A {{- size}} world on the {{- grid}} grid, {{- civilizations}}',
+  // A game and what it starts with, on one line, in a list with no room for more.
+  'NewGameWindow.game-line': '{{- game}}: {{- summary}}',
+  'NewGameWindow.grid-name.hex-odd-r': 'hex',
+  'NewGameWindow.grid-name.square': 'square',
+  'NewGameWindow.grid-name.staggered-iso': 'isometric',
+  'NewGameWindow.play': 'Play {{- game}}',
+  'NewGameWindow.size-name.huge': 'huge',
+  'NewGameWindow.size-name.large': 'large',
+  'NewGameWindow.size-name.normal': 'normal',
+  'NewGameWindow.size-name.small': 'small',
+  'NewGameWindow.size-name.tiny': 'tiny',
   'NewGameWindow.no-earth': 'it has no Earth map.',
   'NewGameWindow.world-size': 'How big a world?',
-  // New Game's first row under the new interface (#749): the game setup, for everything the questions don't ask.
+  // New Game's last row (#749, #1247): the game setup, for everything else.
   'NewGameWindow.customize': 'Customize…',
   'NewGameWindow.customize-meta':
     'Choose the civilizations, seats, rules and the exact world',

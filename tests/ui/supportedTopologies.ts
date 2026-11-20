@@ -468,31 +468,14 @@ const text = (element: Element | null): string =>
 
   closeAll();
 
-  // New Game: no grid question, the sizes as always, and the grid sent.
+  // New Game (#1247): with one game, no setup and rules with no levels there's nothing to ask, and it starts on the
+  //  square grid at the Normal size, with its 7 civilizations.
   askNewGame(transport, () => {});
 
   await settle();
-
-  expect('New Game opens on the world sizes', shown(), {
-    title: 'How big a world?',
-    options: [
-      'Tiny (40 × 25)',
-      'Small (64 × 40)',
-      'Normal (80 × 50)',
-      'Large (104 × 65)',
-      'Huge (128 × 80)',
-    ],
-  });
-  expect('and nothing else', openDialogs().length, 1);
-
-  choose('large');
-
   await settle();
 
-  choose('9');
-
-  await settle();
-
+  expect('New Game asks nothing', openDialogs().length, 0);
   expect(
     'New Game sends the square grid with the size and players',
     requests.find(([channel]) => channel === 'setOptions'),
@@ -500,10 +483,10 @@ const text = (element: Element | null): string =>
       'setOptions',
       {
         topologyId: 'square',
-        width: 104,
-        height: 65,
+        width: 80,
+        height: 50,
         difficulty: '',
-        players: 9,
+        players: 7,
         // Every rule set as it starts (#158).
         ruleSets: [],
       },

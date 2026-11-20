@@ -200,7 +200,7 @@ const save = (
       ['civ.one v…', 'Release notes']
     );
 
-    // New Game: Customise… first, then the sizes.
+    // New Game (#1247): each game, saying what it starts with, then Customise….
     key('n');
     await settle();
 
@@ -208,30 +208,34 @@ const save = (
       document.querySelectorAll('dialog[open] .ui-choice-name')
     ).map((row) => row.textContent);
 
-    expect('New game offers Customize… first', rows[0], 'Customize…');
-    expect('then the sizes', rows.length > 1, true);
+    expect('New Game offers the game, then Customize…', rows.slice(-1), [
+      'Customize…',
+    ]);
     expect(
-      'with the usual size chosen, not Customize…',
-      Array.from(
-        document.querySelectorAll(
-          'dialog[open] [aria-selected="true"] .ui-choice-name'
-        )
-      ).map((row) => row.textContent),
-      ['Normal (80 × 50)']
+      'with the first game chosen, saying what it starts with',
+      [
+        Array.from(
+          document.querySelectorAll(
+            'dialog[open] [aria-selected="true"] .ui-choice-name'
+          )
+        ).map((row) => row.textContent),
+        rows.length > 1,
+      ],
+      [['Civilization'], true]
     );
 
     closeWindows();
 
-    // The classic menu's New Game, which has its own Customize… button, asks only the sizes.
+    // The classic menu's New Game without its setup: only the games.
     askNewGame(transport);
     await settle();
 
     expect(
-      'without Customise, only the sizes',
-      document
-        .querySelector('dialog[open] .ui-choice-name')
-        ?.textContent?.startsWith('Tiny'),
-      true
+      'without Customise, only the games',
+      Array.from(document.querySelectorAll('dialog[open] .ui-choice-name'))
+        .map((row) => row.textContent)
+        .includes('Customize…'),
+      false
     );
 
     closeWindows();

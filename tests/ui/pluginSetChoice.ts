@@ -17,6 +17,16 @@ import {
   TransportReceiveHandler,
 } from '@civ-clone/core-data-client/Transport';
 import { askEarth, askNewGame } from '@civ-clone/ui-menus/components/newGame';
+
+// What each game was last started with (#1247), kept as a browser keeps it.
+const stored = new Map<string, string>();
+
+(globalThis as any).localStorage = {
+  getItem: (key: string) => stored.get(key) ?? null,
+  setItem: (key: string, value: string) => void stored.set(key, value),
+};
+
+const noSetup = (): void => {};
 import GameSetup from '@civ-clone/ui-client/lib/gameSetup';
 import GameSetupForm from '@civ-clone/ui-interface-modern/components/GameSetupForm';
 import GameSetupWindow from '@civ-clone/ui-interface-classic/components/GameSetupWindow';
@@ -554,7 +564,7 @@ const civ2Metadata: PackMetadata = {
     );
   }
 
-  // Without Civ2's art: nothing new is asked, and New Game opens on the world sizes as it always has.
+  // Without Civ2's art: nothing new is asked of the worker, and New Game offers the one game (#1247).
   {
     const { log, transport } = fakeWorkers();
 
@@ -564,13 +574,22 @@ const civ2Metadata: PackMetadata = {
       false
     );
 
-    askNewGame(transport);
+    askNewGame(transport, undefined, noSetup);
     await settle();
 
     expect(
-      'New Game asks nothing first, and opens on the sizes',
-      [channels(log), shown().title],
-      [[], 'How big a world?']
+      'New Game asks the worker nothing, and offers Civilization and Customize…',
+      [channels(log), shown()],
+      [
+        [],
+        {
+          title: 'Which game?',
+          options: [
+            'Civilization: A normal world on the square grid, 7 civilizations',
+            'Customize…',
+          ],
+        },
+      ]
     );
 
     closeAll();
@@ -627,7 +646,7 @@ const civ2Metadata: PackMetadata = {
       true
     );
 
-    askNewGame(transport);
+    askNewGame(transport, undefined, noSetup);
     await settle();
 
     expect(
@@ -642,7 +661,11 @@ const civ2Metadata: PackMetadata = {
         ],
         {
           title: 'Which game?',
-          options: ['Civilization', 'Civilization II (preview)'],
+          options: [
+            'Civilization: A normal world on the square grid, 7 civilizations',
+            'Civilization II (preview): A normal world on the isometric grid, 7 civilizations',
+            'Customize…',
+          ],
         },
       ]
     );
@@ -651,7 +674,7 @@ const civ2Metadata: PackMetadata = {
     await settle();
 
     expect(
-      "Civ2 is loaded and played on the isometric grid, drawn with the isometric pixel art: no grid question, Civ2's own sizes",
+      'Civ2 is loaded and played on the isometric grid, drawn with the isometric pixel art: no grid or size asked, only the difficulty',
       [
         log.slice(1),
         worker.chosen,
@@ -662,10 +685,11 @@ const civ2Metadata: PackMetadata = {
         [
           ['choosePluginSet', 'civ2-enhanced'],
           ['worldSizes', null],
+          ['difficulties', null],
         ],
         'civ2-enhanced',
         'iso-pixelart',
-        'How big a world?',
+        'Difficulty level',
       ]
     );
 
@@ -680,11 +704,12 @@ const civ2Metadata: PackMetadata = {
 
     expect("with Civ2's art imported there may be", mayOfferOtherGames(), true);
 
-    askNewGame(transport);
+    stored.clear();
+    askNewGame(transport, undefined, noSetup);
     await settle();
 
     expect(
-      'New Game asks which game first, Civilization or Civilization II, a preview, after asking with the art imported',
+      'New Game offers each game, saying what it starts with, then Customize…, after asking with the art imported',
       [log, shown()],
       [
         [
@@ -695,7 +720,11 @@ const civ2Metadata: PackMetadata = {
         ],
         {
           title: 'Which game?',
-          options: ['Civilization', 'Civilization II (preview)'],
+          options: [
+            'Civilization: A normal world on the square grid, 7 civilizations',
+            'Civilization II (preview): A normal world on the isometric grid, 7 civilizations',
+            'Customize…',
+          ],
         },
       ]
     );
@@ -704,112 +733,122 @@ const civ2Metadata: PackMetadata = {
     await settle();
 
     expect(
-      "Civ2 is loaded in the worker, and played on the isometric grid: no grid question, and Civ2's own sizes, from its rules, with Normal selected",
+      'Civ2 is loaded in the worker, and asks only the difficulty, its six levels, with Prince selected',
       [
         log.slice(1),
         worker.chosen,
         shown().title,
-        shown().options,
+        shown().options.length,
         latest().querySelector('option[selected]')?.getAttribute('value'),
       ],
       [
         [
           ['choosePluginSet', 'civ2-enhanced'],
           ['worldSizes', null],
+          ['difficulties', null],
         ],
         'civ2-enhanced',
-        'How big a world?',
-        ['Small (40 × 50)', 'Normal (50 × 80)', 'Large (75 × 120)'],
-        'normal',
+        'Difficulty level',
+        6,
+        'Prince',
       ]
     );
-
-    choose('large');
-    await settle();
-
-    expect('and the levels it offers are its six', shown().options.length, 6);
 
     choose('Prince');
     await settle();
-
-    expect(
-      'and from 3 to 7 civilizations, 7 selected',
-      [
-        shown().options,
-        latest().querySelector('option[selected]')?.getAttribute('value'),
-      ],
-      [
-        [
-          '7 civilizations',
-          '6 civilizations',
-          '5 civilizations',
-          '4 civilizations',
-          '3 civilizations',
-        ],
-        '7',
-      ]
-    );
-
-    choose('3');
     await settle();
 
-    expect(
-      'and the world goes to the engine on the isometric grid, at the size chosen',
-      (({ topologyId, width, height, players }) => [
+    const started = () =>
+      (({ topologyId, width, height, players, difficulty }) => [
         topologyId,
         width,
         height,
         players,
+        difficulty,
       ])(
         log.find(([channel]) => channel === 'setOptions')?.[1] as {
-          topologyId: string;
-          width: number;
-          height: number;
-          players: number;
+          [key: string]: unknown;
         }
-      ),
-      ['staggered-iso', 75, 120, 3]
+      );
+
+    expect(
+      "and the game starts on Civ2's own grid at its Normal size, with its 7 civilizations",
+      started(),
+      ['staggered-iso', 50, 80, 7, 'Prince']
+    );
+    expect(
+      'and is kept for next time',
+      JSON.parse(stored.get('civ.newGame') ?? '{}'),
+      {
+        'civ2-enhanced': {
+          topologyId: 'staggered-iso',
+          size: 'normal',
+          players: 7,
+        },
+      }
     );
 
     closeAll();
     log.length = 0;
 
+    // Civilization last started on a large hex world with 12 civilizations, more than a large world has room for.
+    stored.set(
+      'civ.newGame',
+      JSON.stringify({
+        ...JSON.parse(stored.get('civ.newGame')!),
+        'civ1-enhanced': {
+          topologyId: 'hex-odd-r',
+          size: 'large',
+          players: 12,
+        },
+      })
+    );
+
     // Civilization now: the worker has Civ2's plugins, so it is replaced, and the new one loads the default as always.
-    askNewGame(transport);
+    askNewGame(transport, undefined, noSetup);
     await settle();
 
     expect(
-      'asked again, New Game starts on the game chosen last',
-      latest().querySelector('option[selected]')?.getAttribute('value'),
-      'civ2-enhanced'
+      'asked again, New Game starts on the game chosen last, each saying what it starts with as last time',
+      [
+        latest().querySelector('option[selected]')?.getAttribute('value'),
+        shown().options.slice(0, 2),
+      ],
+      [
+        'civ2-enhanced',
+        [
+          'Civilization: A large world on the hex grid, 10 civilizations',
+          'Civilization II (preview): A normal world on the isometric grid, 7 civilizations',
+        ],
+      ]
     );
 
     choose('civ1-enhanced');
     await settle();
 
     expect(
-      "choosing Civilization after Civ2 replaces the worker, asks the new one for its sizes, of which Civ1's rules have none, and asks for the grid as before",
+      "choosing Civilization after Civ2 replaces the worker, asks the new one for its sizes, of which Civ1's rules have none, and then the difficulty",
       [log.slice(1), worker.chosen, shown().title],
       [
         [
           ['replace', 'civ2-enhanced'],
           ['worldSizes', null],
+          ['difficulties', null],
         ],
         'civ1-enhanced',
-        'Which map grid?',
+        'Difficulty level',
       ]
     );
 
-    choose('square');
+    choose('Prince');
+    await settle();
     await settle();
 
-    expect("and the sizes are Civ1's own, as always", shown().options, [
-      'Tiny (40 × 25)',
-      'Small (64 × 40)',
-      'Normal (80 × 50)',
-      'Large (104 × 65)',
-      'Huge (128 × 80)',
-    ]);
+    expect(
+      'and it starts on the grid and size it had last, with as many civilizations as that size has room for',
+      started(),
+      ['hex-odd-r', 97, 70, 10, 'Prince']
+    );
 
     closeAll();
 
