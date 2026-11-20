@@ -791,11 +791,16 @@ const civ2Metadata: PackMetadata = {
     closeAll();
     log.length = 0;
 
-    // Civilization last started on a large hex world with 12 civilizations, more than a large world has room for.
+    // Civilization last started on a large hex world with 12 civilizations, more than a large world has room for, and
+    //  Civilization II on a small world with 7, which its own small world has room for, if the page's doesn't.
     stored.set(
       'civ.newGame',
       JSON.stringify({
-        ...JSON.parse(stored.get('civ.newGame')!),
+        'civ2-enhanced': {
+          topologyId: 'staggered-iso',
+          size: 'small',
+          players: 7,
+        },
         'civ1-enhanced': {
           topologyId: 'hex-odd-r',
           size: 'large',
@@ -818,7 +823,7 @@ const civ2Metadata: PackMetadata = {
         'civ2-enhanced',
         [
           'Civilization: A large world on the hex grid, 10 civilizations',
-          'Civilization II (preview): A normal world on the isometric grid, 7 civilizations',
+          'Civilization II (preview): A small world on the isometric grid, 7 civilizations',
         ],
       ]
     );

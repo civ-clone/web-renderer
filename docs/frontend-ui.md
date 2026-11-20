@@ -195,13 +195,17 @@ isometric stand-in, `tests/ui/lib/staggered.ts`, and with `--iso` on the real `I
   key (C, N, E, L, H, O, A). Continue loads the newest save in the browser,
   named from the `details` a save has kept since (`SaveDetails`: civilization,
   turn, year), or its name for an older one. New Game passes `askNewGame` a
-  `customise` callback, which puts Customize… (the game setup) first among the
-  sizes; Options opens with no portal and shows the Assets row; Art and sound
+  `customise` callback, which puts Customise… (the game setup) after the games; Options opens with no portal and shows the Assets row; Art and sound
   (the library, #1063) is always listed, as the classic menu lists it.
-- `newGame.ts`: New Game's questions, each through `openChoice`: the map grid
-  (`askMapGrid`), world size (`askWorldSize`), difficulty (`askDifficulty`),
-  then the number of civilizations (`askPlayerCount`). `askEarth` asks the same
-  of the sizes there is an Earth map for, and never the grid.
+- `newGame.ts`: New Game (#1247), through `openChoice`: one window with each
+  game, saying what it starts with, and Customise…. A game chosen asks only the
+  difficulty (`askDifficulty`), then starts on its own grid or the one it last
+  had, at the size and with as many civilizations as last time
+  (`lastNewGame.ts`, kept per game in `localStorage`), or Normal and its
+  civilizations. `askEarth` asks the game, world size (`askWorldSize`),
+  difficulty, then the number of civilizations (`askPlayerCount`), offering the
+  sizes there is an Earth map for. `askMapGrid` is the grid question, which New
+  Game no longer asks.
 - `GameSetupWindow`: the game setup, opened by Customise world. It asks for the
   map, the difficulty, the Advanced world options (exact size and land) and the
   seat table.

@@ -3,7 +3,7 @@
 //  items for a game whenever there's art to draw it with, civ.one's own without an import (#1063), and why not when
 //  there's none; Art and sound always; each item's key, but not
 //  while a window is open or with a modifier, and none once the menu has gone; the version and release notes under
-//  them. New Game offers Customise… first, and Options opens with no game, with the Assets row.
+//  them. New Game offers each game, then Customise… (#1247), and Options opens with no game, with the Assets row.
 //
 // Run over the fake store (`tools/saved-game.js`), for the saves Continue reads.
 
@@ -28,7 +28,6 @@ import {
 import Transport from '@civ-clone/ui-client/Transport';
 import addFormatters from '@civ-clone/ui-game/app/i18nFormatters';
 import { applyInterface } from '@civ-clone/ui-platform/lib/interfaceMode';
-import { askNewGame } from '@civ-clone/ui-menus/components/newGame';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
@@ -222,20 +221,6 @@ const save = (
         rows.length > 1,
       ],
       [['Civilization'], true]
-    );
-
-    closeWindows();
-
-    // The classic menu's New Game without its setup: only the games.
-    askNewGame(transport);
-    await settle();
-
-    expect(
-      'without Customise, only the games',
-      Array.from(document.querySelectorAll('dialog[open] .ui-choice-name'))
-        .map((row) => row.textContent)
-        .includes('Customize…'),
-      false
     );
 
     closeWindows();

@@ -46,8 +46,8 @@ import {
 
 export type FinishedHandler = () => void;
 
-/** The game setup, for a game (`pluginSet`, a set's id), or the one chosen last, or the default, as Customize… opens it. */
-export type CustomiseHandler = (pluginSet?: string) => void;
+/** The game setup, for the game chosen last, or the default, as Customise… opens it (#1247). */
+export type CustomiseHandler = () => void;
 
 /**
  * Which game (#668): civ.one's own, or another game's rules (Civ2's), drawn with that game's art where the player has
@@ -330,8 +330,10 @@ export const newGamePlayers = (size: WorldSize, last: LastNewGame): number =>
 
 /**
  * What a game will start with, said under it in New Game (#1247): "A normal world on the square grid, 7 civilizations".
- *  Before its rules are loaded its sizes aren't known, so the size is said by the page's own of that name, whose
- *  civilizations a game last started at that size has kept.
+ *  Before its rules are loaded its sizes aren't known, so the size is said by the page's own of that name. A game played
+ *  on those sizes (one with no grid of its own, Civ1's) has its civilizations held to their range, as it will start; a
+ *  game with sizes of its own (Civ2's) has them as it last started, which its own sizes had room for, or the page's
+ *  size's own.
  */
 export const newGameSummary = (
   own: TopologyId | null,
@@ -343,7 +345,10 @@ export const newGameSummary = (
     size: t(`NewGameWindow.size-name.${size.key}`, { defaultValue: size.key }),
     grid: t(`NewGameWindow.grid-name.${newGameGrid(own, last)}`),
     civilizations: t('NewGameWindow.civilizations', {
-      count: newGamePlayers(size, last),
+      count:
+        own === null
+          ? newGamePlayers(size, last)
+          : last.players ?? size.players,
     }),
     interpolation: { escapeValue: false },
   });
@@ -379,11 +384,14 @@ const startChosenGame = (
           players,
         },
         onFinished
-      ).then((started) => {
-        if (started) {
-          rememberNewGame(game, { topologyId, size: size.key, players });
-        }
-      })
+      )
+        .then((started) => {
+          if (started) {
+            rememberNewGame(game, { topologyId, size: size.key, players });
+          }
+        })
+        // The art fetched or the game's own start failing: said, rather than left unhandled.
+        .catch(gameFailed)
     );
   };
 
