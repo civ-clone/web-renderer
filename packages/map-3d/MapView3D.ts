@@ -837,12 +837,18 @@ export class MapView3D implements MapRenderer {
     });
     this.#stepsOn(unit.id);
 
+    // Along the road between them, as it bends, where one's drawn.
+    const via = this.#land.roadPath(from.x, from.y, to.x, to.y)?.slice(1, -1);
+
     this.#walks.step(
       unit.id,
       from,
       to,
       this.#standing(from),
-      this.#standing(to),
+      {
+        ...this.#standing(to),
+        ...(via === undefined ? {} : { via }),
+      },
       performance.now(),
       speed === 'fast' ? quicker(pace) : pace,
       // Drawn in the air, it flies an arc.

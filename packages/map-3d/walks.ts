@@ -36,6 +36,10 @@ export type WalkPoint = {
   at: readonly [number, number];
   lift: number;
   middle?: readonly [number, number];
+  // The way there from the point before, where it isn't straight, as a road bends (`Land#roadPath`): the points it
+  //  passes between them, each from this point's middle (or the point itself, without one), so they go where it goes
+  //  when it's taken a copy of the world round.
+  via?: readonly (readonly [number, number])[];
 };
 
 /** How fast a walk goes. */
@@ -549,7 +553,13 @@ export class Walks {
         Math.hypot(last.middle[0] - last.at[0], last.middle[1] - last.at[1]) <
         0.01
     ) {
-      walk.points[end] = { at: last.middle, lift: 0, middle: last.middle };
+      walk.points[end] = {
+        at: last.middle,
+        lift: 0,
+        middle: last.middle,
+        // Still along the road there, as it bends.
+        ...(last.via === undefined ? {} : { via: last.via }),
+      };
     }
 
     walk.points.splice(0, passed);
@@ -569,6 +579,7 @@ export class Walks {
               nearest(arrive.middle[1], lastMiddle[1], v),
             ] as [number, number],
           }),
+      ...(arrive.via === undefined ? {} : { via: arrive.via }),
     });
     walk.squares.push(to);
     walk.stepped = now;
@@ -644,6 +655,82 @@ export class Walks {
     );
   }
 
+  // Where the step from `walk`'s point `i` to the next is `t` of the way along it, and the way it's going there: straight,
+  //  facing from one square's middle to the next, or along the way it passes (`via`), by how far along it, facing the
+  //  way it goes there.
+  #stepAt(
+    walk: Walk,
+    i: number,
+    t: number
+  ): { at: [number, number]; way: number | null } {
+    const a = walk.points[i]!,
+      b = walk.points[i + 1] ?? a,
+      middle = (point: WalkPoint): readonly [number, number] =>
+        point.middle ?? point.at;
+
+    if (b.via === undefined || b.via.length === 0) {
+      return {
+        at: [
+          a.at[0] + (b.at[0] - a.at[0]) * t,
+          a.at[1] + (b.at[1] - a.at[1]) * t,
+        ],
+        way: b === a ? null : wayOf(middle(a), middle(b)),
+      };
+    }
+
+    const [mu, mv] = middle(b),
+      way: (readonly [number, number])[] = [
+        a.at,
+        ...b.via.map(([du, dv]) => [mu + du, mv + dv] as const),
+        b.at,
+      ],
+      lengths = way
+        .slice(1)
+        .map((to, index) =>
+          Math.hypot(to[0] - way[index]![0], to[1] - way[index]![1])
+        ),
+      total = lengths.reduce((sum, length) => sum + length, 0),
+      straight = wayOf(middle(a), middle(b)),
+      // The way it goes at each point it passes: halfway between the pieces either side, so it turns as it goes along
+      //  one, not all at once at its end.
+      pieces = way
+        .slice(1)
+        .map((to, index) => wayOf(way[index]!, to) ?? straight ?? 0),
+      turns = way.map((_, index) => {
+        const before = pieces[index - 1],
+          after = pieces[index];
+
+        return before === undefined
+          ? after!
+          : after === undefined
+          ? before
+          : turnTowards(before, after, 0.5);
+      });
+    let left = Math.min(1, Math.max(0, t)) * total;
+
+    for (let piece = 0; piece < lengths.length; piece++) {
+      const length = lengths[piece]!,
+        from = way[piece]!,
+        to = way[piece + 1]!;
+
+      if (left <= length || piece === lengths.length - 1) {
+        const share = length === 0 ? 0 : Math.min(1, left / length);
+
+        return {
+          at: [
+            from[0] + (to[0] - from[0]) * share,
+            from[1] + (to[1] - from[1]) * share,
+          ],
+          way: turnTowards(turns[piece]!, turns[piece + 1]!, share),
+        };
+      }
+
+      left -= length;
+    }
+
+    return { at: [b.at[0], b.at[1]], way: wayOf(middle(a), middle(b)) };
+  }
+
   #walker(walk: Walk, now: number): Walker {
     const { points, squares, turned } = walk,
       last = points.length - 1,
@@ -652,21 +739,18 @@ export class Walks {
       t = along - index,
       a = points[index]!,
       b = points[index + 1] ?? a,
-      at: [number, number] = [
-        a.at[0] + (b.at[0] - a.at[0]) * t,
-        a.at[1] + (b.at[1] - a.at[1]) * t,
-      ],
-      middle = (i: number): readonly [number, number] =>
-        points[i]!.middle ?? points[i]!.at,
-      way = (i: number): number | null =>
-        i < 0 || i >= last ? null : wayOf(middle(i), middle(i + 1)),
-      here = way(index) ?? 0,
+      { at, way: going } = this.#stepAt(walk, index, t),
+      // The way step `i` goes as it leaves a square's middle (0), and as it comes to the next (1): turning from one to
+      //  the other, the way it's going now, so it turns with no jolt, however its steps bend.
+      way = (i: number, end: 0 | 1): number | null =>
+        i < 0 || i >= last ? null : this.#stepAt(walk, i, end).way,
+      here = going ?? 0,
       // Turning at each square's middle: a quarter of a step either side, from the way it came to the way it goes.
       pathFacing =
-        t > 0.75 && way(index + 1) !== null
-          ? turnTowards(here, way(index + 1)!, (t - 0.75) * 2)
-          : t < 0.25 && way(index - 1) !== null
-          ? turnTowards(way(index - 1)!, here, (t + 0.25) * 2)
+        t > 0.75 && way(index + 1, 0) !== null
+          ? turnTowards(here, way(index + 1, 0)!, (t - 0.75) * 2)
+          : t < 0.25 && way(index - 1, 1) !== null
+          ? turnTowards(way(index - 1, 1)!, here, (t + 0.25) * 2)
           : here,
       // Just after a step's joined, from the way it faced then.
       facing =

@@ -1324,6 +1324,196 @@ const flown = (
   );
 }
 
+// Along a road as it bends (`via`): through each point it passes, with no jump or jolt in where it is or which way it
+//  faces; joined on mid-bend, on along it; over the world's seam, a copy round with it; ended at once, where it's bound.
+{
+  // Points between (1, 1) and (2, 1), from (2, 1): a lane bowing south and back.
+  const via = [
+      [-0.8, 0.06],
+      [-0.6, 0.1],
+      [-0.5, 0],
+      [-0.4, -0.08],
+      [-0.2, -0.05],
+    ] as const,
+    bent = (u: number) => ({
+      at: [u, 1] as const,
+      lift: 0,
+      middle: [u, 1] as const,
+    }),
+    walks = new Walks({ u: 10, v: null });
+
+  walks.step(
+    'lane',
+    { x: 1, y: 1 },
+    { x: 2, y: 1 },
+    bent(1),
+    { ...bent(2), via },
+    0,
+    pace
+  );
+
+  const seen: Walker[] = [];
+
+  for (let now = 0; now <= 1000; now++) {
+    const [walker] = walks.at(now).going;
+
+    if (walker !== undefined) {
+      seen.push(walker);
+    }
+  }
+
+  const passes = via.map(([du, dv]) =>
+      seen.some(
+        ({ at }) => Math.hypot(at[0] - (2 + du), at[1] - (1 + dv)) < 0.01
+      )
+    ),
+    jump = Math.max(
+      ...seen
+        .slice(1)
+        .map(({ at }, index) =>
+          Math.hypot(at[0] - seen[index]!.at[0], at[1] - seen[index]!.at[1])
+        )
+    ),
+    turn = Math.max(
+      ...seen.slice(1).map(({ facing }, index) => {
+        const delta = facing - seen[index]!.facing;
+
+        return Math.abs(
+          delta - Math.PI * 2 * Math.round(delta / (Math.PI * 2))
+        );
+      })
+    ),
+    // Turned from due east towards the south (`facing` 0), as it bows south.
+    south = seen.some(({ facing }) => facing < Math.PI / 2 - 0.2);
+
+  // Joined mid-bend: a step on east, as a GoTo's next.
+  const joining = new Walks({ u: 10, v: null });
+
+  joining.step(
+    'lane',
+    { x: 1, y: 1 },
+    { x: 2, y: 1 },
+    bent(1),
+    { ...bent(2), via },
+    0,
+    pace
+  );
+
+  const before: Walker[] = [];
+
+  for (let now = 0; now <= 150; now++) {
+    before.push(joining.at(now).going[0]!);
+  }
+
+  joining.step(
+    'lane',
+    { x: 2, y: 1 },
+    { x: 3, y: 1 },
+    bent(9),
+    { ...bent(3), via },
+    150,
+    pace
+  );
+
+  const after = joining.at(150).going[0]!,
+    joinedOn = [
+      Math.hypot(
+        after.at[0] - before.at(-1)!.at[0],
+        after.at[1] - before.at(-1)!.at[1]
+      ) < 0.01,
+      Math.abs(after.facing - before.at(-1)!.facing) < 0.1,
+    ];
+
+  // Over the seam: from the last column to the first, a world 10 across, its points a copy round with it.
+  const seam = new Walks({ u: 10, v: null });
+
+  seam.step(
+    'lane',
+    { x: 9, y: 1 },
+    { x: 0, y: 1 },
+    bent(9.5),
+    { ...bent(0.5), via },
+    0,
+    pace
+  );
+
+  const overSeam: Walker[] = [];
+
+  for (let now = 0; now <= 1000; now++) {
+    const [walker] = seam.at(now).going;
+
+    if (walker !== undefined) {
+      overSeam.push(walker);
+    }
+  }
+
+  const seamPasses = via.every(([du, dv]) =>
+    overSeam.some(
+      ({ at }) => Math.hypot(at[0] - (10.5 + du), at[1] - (1 + dv)) < 0.01
+    )
+  );
+
+  // Bound for a city, standing in front of its buildings: the points it passes are from the square's middle, not from
+  //  where it stands.
+  const toCity = new Walks({ u: 10, v: null });
+
+  toCity.step(
+    'lane',
+    { x: 1, y: 1 },
+    { x: 2, y: 1 },
+    bent(1),
+    { at: [2, 1.26], lift: 0, middle: [2, 1], via },
+    0,
+    pace
+  );
+
+  const intoCity: Walker[] = [];
+
+  for (let now = 0; now <= 1000; now++) {
+    const [walker] = toCity.at(now).going;
+
+    if (walker !== undefined) {
+      intoCity.push(walker);
+    }
+  }
+
+  const cityPasses = via.every(([du, dv]) =>
+    intoCity.some(
+      ({ at }) => Math.hypot(at[0] - (2 + du), at[1] - (1 + dv)) < 0.01
+    )
+  );
+
+  // Ended at once mid-bend: where it's bound.
+  const cut = new Walks({ u: 10, v: null });
+
+  cut.step(
+    'lane',
+    { x: 1, y: 1 },
+    { x: 2, y: 1 },
+    bent(1),
+    { ...bent(2), via },
+    0,
+    pace
+  );
+
+  const [ended] = cut.endAll(100);
+
+  expect(
+    'along a road as it bends: through each point it passes, no jump or jolt, facing the way it goes, south as it bows; joined mid-bend, on along it; over the seam, a copy round; into a city, from its middle, not where it stands; ended at once, where it’s bound',
+    [
+      passes,
+      jump < 0.02,
+      turn < 0.2,
+      south,
+      joinedOn,
+      seamPasses,
+      cityPasses,
+      ended?.at.map((n) => round(n, 6)),
+    ],
+    [via.map(() => true), true, true, true, [true, true], true, true, [2, 1]]
+  );
+}
+
 if (failures.length > 0) {
   process.stderr.write(
     `FAIL walks: ${

@@ -903,6 +903,83 @@ const landOf = (
   );
 }
 
+// The way a unit walks along a road between two squares (`Land#roadPath`), relative to the middle of the one it's
+//  going to: from the other's middle along the half it draws to the edge they share, and on along this one's half to
+//  its middle; on a city's side, straight to or from the edge; nothing with no road between them, nor between squares
+//  that aren't neighbours; over the world's seam, from the copy beside it.
+{
+  const width = 16,
+    height = 12,
+    roads = new Set(['4,5', '5,5', '6,5', '15,5', '0,5', '4,7']),
+    world = new World({
+      _: 'World',
+      __: ['World', 'DataObject'],
+      id: 'world',
+      width,
+      height,
+      topologyId: 'square',
+      tiles: Array.from({ length: width * height }, (_, index) => {
+        const x = index % width,
+          y = Math.floor(index / width);
+
+        return {
+          x,
+          y,
+          terrain: { _: 'Grassland', __: ['Grassland'], features: [] },
+          improvements: roads.has(`${x},${y}`) ? [{ _: 'Road' }] : [],
+          units: [],
+          city: x === 6 && y === 5 ? { name: 'Lanes' } : null,
+        };
+      }) as never,
+    }),
+    land = new Land(world),
+    { layout } = land,
+    halfOf = (x: number, y: number, offset: readonly [number, number]) =>
+      roadHalf(
+        {
+          centre: layout.centre(x, y),
+          toward: ([dx, dy]) => layout.centre(x + dx, y + dy),
+          seed: Math.imul(x, 73856093) ^ Math.imul(y, 19349663),
+        },
+        offset
+      ).points,
+    near = (a: readonly number[], b: readonly number[]) =>
+      Math.hypot(a[0]! - b[0]!, a[1]! - b[1]!) < 1e-9,
+    both = land.roadPath(4, 5, 5, 5)!,
+    leaving = halfOf(4, 5, [1, 0]),
+    coming = halfOf(5, 5, [-1, 0]),
+    [tu, tv] = layout.centre(5, 5),
+    // Into the city: its square draws no half.
+    intoCity = land.roadPath(5, 5, 6, 5)!,
+    overSeam = land.roadPath(15, 5, 0, 5)!;
+
+  expect(
+    'a walk along a road: from one middle along its half to the edge, and on along the other’s to its middle; to a city, straight from the edge; none with no road, nor between squares not beside each other; over the seam, from the copy beside it',
+    [
+      near(both[0]!, [-1, 0]),
+      near(both.at(-1)!, [0, 0]),
+      both.some((point) => near(point, [-0.5, 0])),
+      leaving.every((point, index) =>
+        near(both[index]!, [point[0] - tu, point[1] - tv])
+      ),
+      [...coming]
+        .reverse()
+        .every((point, index) =>
+          near(both[leaving.length - 1 + index]!, [
+            point[0] - tu,
+            point[1] - tv,
+          ])
+        ),
+      intoCity.length === halfOf(5, 5, [1, 0]).length + 1,
+      near(intoCity.at(-2)!, [-0.5, 0]),
+      land.roadPath(4, 5, 4, 6),
+      land.roadPath(4, 5, 4, 7),
+      near(overSeam[0]!, [-1, 0]) && near(overSeam.at(-1)!, [0, 0]),
+    ],
+    [true, true, true, true, true, true, true, null, null, true]
+  );
+}
+
 // A road's halves, on every grid, every way out of every square: each bends on its own square, short of the edge, and
 //  meets its neighbour's half at the same point there, going the same way, so the road runs on smoothly. Each bows
 //  no further from the straight line than `ROAD_BOW` of its length, and some bow a good part of that.

@@ -2254,6 +2254,52 @@ expect(
     ]
   );
 
+  // Along a road, between two squares with one: the unit walks along it as it bends (`Land#roadPath`), not straight
+  //  across, from one middle to the other.
+  (tiles[3 * 4 + 0] as Tile).improvements = [{ _: 'Road' }] as never;
+  (tiles[3 * 4 + 1] as Tile).improvements = [{ _: 'Road' }] as never;
+  repatched([0, 3, [walker]], [1, 3, []]);
+  walkersPlaced.clear();
+  stepped(walker, [0, 3], [1, 3]);
+  repatched([0, 3, []], [1, 3, [walker]]);
+
+  const [roadWay] = [...walkersPlaced.values()],
+    lane = glider.land().roadPath(0, 3, 1, 3)!,
+    [laneU, , laneV] = groundAt(1, 3),
+    // How far a point on the ground is from the road's way.
+    fromLane = (u: number, v: number): number =>
+      Math.min(
+        ...lane.slice(1).map((b, index) => {
+          const a = lane[index]!,
+            au = a[0] + laneU!,
+            av = a[1] + laneV!,
+            du = b[0] - a[0],
+            dv = b[1] - a[1],
+            t = Math.max(
+              0,
+              Math.min(1, ((u - au) * du + (v - av) * dv) / (du * du + dv * dv))
+            );
+
+          return Math.hypot(u - au - du * t, v - av - dv * t);
+        })
+      ),
+    // How far the road bows from the straight way, at most.
+    bows = Math.max(...lane.map(([, dv]) => Math.abs(dv)));
+
+  (tiles[3 * 4 + 0] as Tile).improvements = [];
+  (tiles[3 * 4 + 1] as Tile).improvements = [];
+  repatched([0, 3, []], [1, 3, []]);
+
+  expect(
+    'between two squares with a road, a unit walks along it as it bends, not straight across',
+    [
+      roadWay!.length > 5,
+      roadWay!.every(([u, , v]) => fromLane(u!, v!) < 0.02),
+      bows > 0.02,
+    ],
+    [true, true, true]
+  );
+
   // An aircraft flying two squares, as a GoTo's steps come: it climbs off its stand and comes down to land on the
   //  square it's bound for; the units walking so far, on foot, flew none of the way.
   const onFoot = [...walkersAloft.values()].flat(),

@@ -880,9 +880,14 @@ mapEvent:
   units alone, over the land at its feet, the short way round the world. Its figures face the way from one square's
   middle to the next, as a unit standing faces the way it last went, turning as it passes a square's middle, and from
   the way it faced when a step's joined. Its flag, ring and pointer go with it.
-- **Along roads:** a walk goes straight between squares' middles, through the point on their shared edge where a road's
-  two halves meet, so it's on the road at the middles and the edge. Roads bow between (§5.4), so a walk following them
-  is still to come.
+- **Along roads:** between two squares with a road drawn between them, a step follows it as it bends (§5.4,
+  `Land#roadPath`): along the half the square it leaves draws, from its middle to the edge they share, and on along the
+  half the square it comes to draws, to its middle. Where only one draws a half (the other a city, or the way a
+  railroad goes), it goes straight to or from the edge on the other's side; with neither, straight, as before.
+  - The points it passes are kept from the middle of the square it's going to (`via`), so they go a copy of the world
+    round with it, and a step joined mid-bend keeps them.
+  - It goes along them by distance, and faces the way it goes, turning from each piece's way to the next's as it goes
+    along one, so it turns with no jolt, as at a square's middle.
 - **Aircraft fly an arc** (aircraft, helicopters and missiles, as the built-in set draws them: `airborne`):
   - A walk whose units all fly climbs as it sets off, over a step's way, to 0.3 over where they'd stand (`CRUISE`,
     about an aircraft's own height), and comes down over its last step's way to land at its end. A hop of one square
@@ -1042,7 +1047,6 @@ mapEvent:
   - A stack killed in a battle whose patch was held past the blow fades as the patch comes, the rest of it gone then.
   - Two other players' battle with their moves not shown is shown at once, but its loser fades out: a fade isn't a move.
 - **Still to come:**
-  - walks following roads as they bend (§5.4);
   - battles' rest (2.4): a ranged unit firing, ships and aircraft as they fight, Civ2's rounds once they're sent (§8.1),
     a flash under reduced motion, a unit gone with its battle won (a missile) fading rather than going at the end, and
     another player's unit walking onto the square it emptied rather than being put there (#1255);
