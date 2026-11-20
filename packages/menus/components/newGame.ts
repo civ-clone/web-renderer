@@ -585,7 +585,7 @@ export const askEarth = (
     return;
   }
 
-  askGame(transport, (pluginSet, grid) =>
+  askGame(transport, () =>
     transport
       .request(new WorldSizes())
       .then((answer) => {

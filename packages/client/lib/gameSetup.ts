@@ -55,8 +55,13 @@ export type GameSetupPreset = {
    */
   seats?: (Pick<SeatState, 'kind' | 'name'> &
     Partial<Pick<SeatState, 'civilization' | 'leader' | 'ai'>>)[];
-  /** The grid it was on (#1248), kept where this game has no grid of its own. */
+  /**
+   * The grid the player chose (#1248), kept where this game can be on it: by a game with no grid of its own, or by one
+   *  with a grid of its own (Civ2's, #1249) only from a setup for the same game (`game`), its other rules.
+   */
   topologyId?: TopologyId;
+  /** The game the grid was chosen for (#1249), by its set's game (`gameOf`). */
+  game?: string;
   /** The map it had (`map()`), kept where this game offers it, and a custom size's width and height. */
   map?: string;
   width?: number;
@@ -204,6 +209,8 @@ export class GameSetup {
    *  changed, as the worker it would reach is on its way to another game.
    */
   switching: boolean = false;
+  // The grid is the player's choice (#1249): picked here, or carried from a setup where it was, and so carried on.
+  #gridChosen: boolean = false;
   /** The setup's window has closed (#1248): a switch on its way opens nothing. */
   closed: boolean = false;
   // From Start until the game goes ahead, or doesn't (#954): Start is held meanwhile.
@@ -290,8 +297,10 @@ export class GameSetup {
       preset.topologyId !== undefined &&
       fixedGrid === null &&
       this.allowsGrid(preset.topologyId) &&
+      (this.defaultGrid() === null || preset.game === this.gameKey()) &&
       !this.earth
     ) {
+      this.#gridChosen = true;
       this.topologyId = preset.topologyId;
       this.size =
         this.sizesOn(this.topologyId).find(
@@ -305,7 +314,11 @@ export class GameSetup {
     //  Customize World's is; a size, or Earth's, by name. An Earth size this game hasn't is the size of its own Earth
     //  nearest it in area (above), or a map of the sizes it has when it has no Earth.
     if (preset.map === 'custom') {
-      if (fixedGrid === null && preset.width && preset.height) {
+      if (
+        !this.hasRuleSizesOn(this.topologyId) &&
+        preset.width &&
+        preset.height
+      ) {
         this.size = null;
         this.earth = false;
         this.width = preset.width;
@@ -393,6 +406,7 @@ export class GameSetup {
     | 'earth'
     | 'seats'
     | 'topologyId'
+    | 'game'
     | 'map'
     | 'width'
     | 'height'
@@ -416,10 +430,14 @@ export class GameSetup {
         leader,
         ai,
       })),
-      // Only a grid the player chose: one of the game's own (Civ2's) isn't the player's to carry to another game.
-      ...(this.fixedGrid() === null ? { topologyId: this.topologyId } : {}),
-      // Nor a size typed in on a grid of the game's own: its shape is that grid's (#1248).
-      ...(this.fixedGrid() !== null && this.size === null
+      // Only a grid the player chose: one of the game's own (Civ2's) isn't the player's to carry to another game, nor is
+      //  the one it starts on, unless the player picked it (#1249).
+      ...(this.fixedGrid() === null &&
+      (this.defaultGrid() === null || this.#gridChosen)
+        ? { topologyId: this.topologyId, game: this.gameKey() }
+        : {}),
+      // Nor a size typed in on the rules' own grid: its shape is that grid's (#1248).
+      ...(this.hasRuleSizesOn(this.topologyId) && this.size === null
         ? {}
         : { map: this.map(), width: this.width, height: this.height }),
       ruleSetChoices: [
@@ -459,6 +477,13 @@ export class GameSetup {
         this.data.civilizations.length,
       this.data.civilizations.length
     );
+  }
+
+  /** The game the setup is for, by its set's game (`gameOf`): its enhanced rules' set, or `''` for the only one. */
+  gameKey(): string {
+    const game = this.data.game;
+
+    return game === undefined ? '' : gameOf(game, game.id);
   }
 
   /** The grid the rules' own sizes are on (#1175, Civ2's isometric grid), or null for rules with none (Civ1's). */
@@ -634,6 +659,8 @@ export class GameSetup {
 
   /** The same size on the new grid has its own width and height. */
   chooseGrid(topologyId: TopologyId): void {
+    this.#gridChosen = true;
+
     this.topologyId =
       this.fixedGrid() ??
       (this.allowsGrid(topologyId) ? topologyId : this.topologyId);

@@ -39,6 +39,7 @@ import {
   mapTileset,
   mapTilesetOption,
   registerTileset,
+  ruleSetMapTileset,
   setRuleSetTileset,
   sheetFailure,
 } from '@civ-clone/ui-assets/lib/tilesets';
@@ -1820,6 +1821,38 @@ const ids = (tilesets: TilesetDescriptor[]): string[] =>
       mapTileset('staggered-iso').id,
       'hosted-iso'
     );
+
+    // Civ2's art on each grid (#1249): the first of the rule set's own on a grid, over an imported set the player chose
+    //  there, so Civ2 on the square grid is drawn with civ.one's square pixel art, never Civ1's art; a grid it names no
+    //  art for is the player's.
+    installTilesets({
+      ...civ2Installed,
+      'imported-square': { complete: true, metadata: null },
+    });
+    chooseMapTileset('square', 'imported-square');
+    setRuleSetTileset(['civ2', 'hosted-iso', 'civ1-pixelart']);
+
+    expect(
+      "a rule set naming art for several grids has each drawn with the first of its own there, over the player's imported choice",
+      [
+        mapTileset('staggered-iso').id,
+        mapTileset('square').id,
+        ruleSetMapTileset('square')?.id,
+      ],
+      ['civ2', 'civ1-pixelart', 'civ1-pixelart']
+    );
+
+    setRuleSetTileset(['civ2', 'hosted-iso']);
+
+    expect(
+      'and a grid it names none for is drawn as the player chose',
+      [mapTileset('square').id, ruleSetMapTileset('square')],
+      ['imported-square', null]
+    );
+
+    setRuleSetTileset(null);
+    chooseMapTileset('square', 'civ1-pixelart');
+    installTilesets(civ2Installed);
 
     // A save is drawn with the art its rule set names too (#1114), as the worker says which that is: the first of the
     //  set's own art it is asked with. Asked with the sets here first; when none of the set's art is here, again with

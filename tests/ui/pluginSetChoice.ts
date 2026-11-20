@@ -1928,6 +1928,100 @@ const civ2Metadata: PackMetadata = {
     );
   }
 
+  // What a switch carries with each game's setup data as the page sends it (#1249): Civ2 can be played on any grid its
+  //  art is for, but opens on its own unless the player picked another for it.
+  {
+    const originals = { 'civ1-enhanced': 'civ1', 'civ2-enhanced': 'civ2' },
+      games = ['civ1-enhanced', 'civ2-enhanced'],
+      data = (id: string) =>
+        ({
+          aiClients: ['SimpleAIClient'],
+          civilizations: [{ name: 'Roman', leaders: ['JuliusCaesar'] }],
+          difficulties: [],
+          existing: {},
+          ...(id.startsWith('civ2') ? { worldSizes: civ2WorldSizes } : {}),
+          game: {
+            id,
+            games,
+            originals,
+            grid: id.startsWith('civ2') ? 'staggered-iso' : null,
+            grids: id.startsWith('civ2')
+              ? ['staggered-iso', 'square', 'hex-odd-r']
+              : null,
+          },
+        } as any),
+      open = (id: string, preset: any = {}) => new GameSetup(data(id), preset),
+      // The next setup opened with what the one before carried, as the forms open them.
+      next = (from: GameSetup, id: string, preset: any = {}) => {
+        const carried = { ...preset, ...from.carried(preset) };
+
+        return { setup: open(id, carried), preset: carried };
+      };
+
+    const civ1 = open('civ1-enhanced'),
+      toCiv2 = next(civ1, 'civ2-enhanced'),
+      civ2 = open('civ2-enhanced'),
+      fromCiv2 = next(civ2, 'civ1-enhanced');
+
+    expect(
+      "Civilization's square grid, never picked, isn't carried to Civ2, which opens on its own; nor is Civ2's own carried to Civilization",
+      [
+        [toCiv2.setup.topologyId, toCiv2.setup.map()],
+        [fromCiv2.setup.topologyId, fromCiv2.setup.map()],
+      ],
+      [
+        ['staggered-iso', 'size:normal'],
+        ['square', 'size:normal'],
+      ]
+    );
+
+    const civ2Square = open('civ2-enhanced');
+
+    civ2Square.chooseGrid('square');
+    civ2Square.chooseMap('size:large');
+
+    const squareToCiv1 = next(civ2Square, 'civ1-enhanced'),
+      squareToOriginal = next(civ2Square, 'civ2');
+
+    expect(
+      "Civ2 put on the square grid carries it to Civilization, and to Civ2's own original rules, the size by name with it",
+      [
+        [squareToCiv1.setup.topologyId, squareToCiv1.setup.map()],
+        [squareToOriginal.setup.topologyId, squareToOriginal.setup.map()],
+      ],
+      [
+        ['square', 'size:large'],
+        ['square', 'size:large'],
+      ]
+    );
+
+    const civ1Hex = open('civ1-enhanced');
+
+    civ1Hex.chooseGrid('hex-odd-r');
+
+    const there = next(civ1Hex, 'civ2-enhanced'),
+      back = next(there.setup, 'civ1-enhanced', there.preset);
+
+    expect(
+      "Civilization on hex to Civ2 and back: Civ2 opens on its own grid, and Civilization is on the player's hex grid again",
+      [there.setup.topologyId, back.setup.topologyId],
+      ['staggered-iso', 'hex-odd-r']
+    );
+
+    const civ2Custom = open('civ2-enhanced');
+
+    civ2Custom.setCustomSize(40, 100);
+
+    expect(
+      "a size typed in on Civ2's own grid isn't carried, and Civilization opens on its own default map",
+      [
+        'map' in civ2Custom.carried(),
+        next(civ2Custom, 'civ1-enhanced').setup.map(),
+      ],
+      [false, 'size:normal']
+    );
+  }
+
   // Civ2's rules' own sizes in the setup (#1175): what a size typed in may be, and how many civilizations it has room for.
   {
     const civilizations = [
