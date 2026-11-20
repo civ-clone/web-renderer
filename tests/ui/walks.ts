@@ -992,7 +992,7 @@ const flown = (
     )
   );
 
-  // Two and a half squares along: past two it's let go of.
+  // Two and a half squares along: past the square it set off from, which it's let go of.
   let joinAt = 0;
 
   for (let now = 0; joinAt === 0 && now < 5000; now++) {
@@ -1016,17 +1016,52 @@ const flown = (
     true
   );
 
-  const after = flown(walks, joinAt, 5000).get('long')!;
+  // Coming down again, most of the way to its new end: joined again, once it's let go of a square.
+  let againAt = 0;
+  const after = flown(walks, joinAt, joinAt).get('long')!;
+
+  for (let now = joinAt + 1; againAt === 0 && now < 9000; now++) {
+    const [walker] = walks.at(now).going;
+
+    if (walker === undefined) {
+      break;
+    }
+
+    after.jump = Math.max(after.jump, Math.abs(walker.aloft - after.last));
+    after.last = walker.aloft;
+
+    if (walker.at[0] >= 4.85) {
+      againAt = now;
+    }
+  }
+
+  const descending = after.last;
+
+  walks.step(
+    'long',
+    { x: 5, y: 1 },
+    { x: 6, y: 1 },
+    point(9, 9),
+    point(6, 1),
+    againAt,
+    slow,
+    true
+  );
+
+  const rest = flown(walks, againAt, 9000).get('long')!;
 
   expect(
-    'a long flight joined coming down, past squares it’s let go of: on from the height it’s flown, with no jump, landing at the end',
+    'a long flight joined coming down, past squares it’s let go of, and again: on from the height it’s flown each time, with no jump, landing at the end',
     [
       round(before.last, 2),
       round(after.first - before.last, 6),
       after.jump < CRUISE / 50,
-      after.last,
+      againAt > 0 && descending < CRUISE / 2,
+      round(rest.first - descending, 6),
+      rest.jump < CRUISE / 50,
+      rest.last,
     ],
-    [round(CRUISE / 2, 2), 0, true, 0]
+    [round(CRUISE / 2, 2), 0, true, true, 0, true, 0]
   );
 }
 
@@ -1050,7 +1085,7 @@ const flown = (
 
   const joinAt = 330,
     before = flown(walks, 0, joinAt).get('late')!,
-    // Coming down, a fifth of a step from landing: less than half a share of its climb.
+    // Coming down, about a tenth of a step from landing: less than half a share of its climb.
     landing = before.last;
 
   walks.step(
@@ -1167,7 +1202,9 @@ const flown = (
       pace
     ),
     riding = flown(walks, RIDE / 2, 200),
-    shipAt = walks.at(200).going.find(({ units }) => units.includes('ship'));
+    { going: atTwoHundred } = walks.at(200),
+    shipAt = atTwoHundred.find(({ units }) => units.includes('ship')),
+    flierAt = atTwoHundred.find(({ units }) => units.includes('flier'));
 
   walks.step(
     'plane',
@@ -1188,8 +1225,7 @@ const flown = (
       shipAt?.units,
       carried === shipAt?.id,
       riding.get('ship+plane')?.highest,
-      footId ===
-        walks.at(200).going.find(({ units }) => units.includes('flier'))?.id,
+      flierAt !== undefined && footId === flierAt.id,
       riding.get('foot')?.highest,
       (riding.get('flier')?.highest ?? 0) > 0,
       offTheShip.get('plane')?.first,
@@ -1199,6 +1235,92 @@ const flown = (
       offTheShip.get('ship')?.highest,
     ],
     [['ship', 'plane'], true, 0, false, 0, true, 0, true, true, 0, 0]
+  );
+}
+
+// Two aircraft flying as one; the first goes on as they come down to land, climbing again, and the second makes the
+//  same step a moment later, the first already higher: it flies on with a walk of its own rather than riding along
+//  with the first, so it never jumps to the first's height.
+{
+  const walks = new Walks({ u: 10, v: null }),
+    heights: number[] = [],
+    heightOf = (now: number) => {
+      const { going, ended } = walks.at(now),
+        walker = [...going, ...ended].find(({ units }) =>
+          units.includes('second')
+        );
+
+      if (walker !== undefined) {
+        heights.push(walker.aloft);
+      }
+    };
+
+  ['first', 'second'].forEach((unit, index) =>
+    walks.step(
+      unit,
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+      point(1, 1),
+      point(2, 1),
+      index * 10,
+      pace,
+      true
+    )
+  );
+
+  const together = walks.size();
+  let goesOn = 0;
+
+  for (let now = 10; goesOn === 0 && now < 2000; now++) {
+    heightOf(now);
+
+    const [walker] = walks.at(now).going;
+
+    if (walker !== undefined && walker.at[0] >= 1.8) {
+      goesOn = now;
+    }
+  }
+
+  const firstGoesOn = walks.step(
+    'first',
+    { x: 2, y: 1 },
+    { x: 3, y: 1 },
+    point(9, 9),
+    point(3, 1),
+    goesOn,
+    pace,
+    true
+  );
+
+  for (let now = goesOn; now < goesOn + 40; now++) {
+    heightOf(now);
+  }
+
+  const second = walks.step(
+    'second',
+    { x: 2, y: 1 },
+    { x: 3, y: 1 },
+    point(9, 9),
+    point(3, 1),
+    goesOn + 40,
+    pace,
+    true
+  );
+
+  for (let now = goesOn + 40; now < 3000; now++) {
+    heightOf(now);
+  }
+
+  const jump = heights.reduce(
+    (most, height, at) =>
+      at === 0 ? most : Math.max(most, Math.abs(height - heights[at - 1]!)),
+    0
+  );
+
+  expect(
+    'an aircraft making a step just after another, at a different height, flies on with its own walk, with no jump',
+    [together, jump < CRUISE / 50, second !== firstGoesOn, heights.at(-1)],
+    [1, true, true, 0]
   );
 }
 

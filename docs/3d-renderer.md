@@ -876,19 +876,21 @@ mapEvent:
   middle to the next, as a unit standing faces the way it last went, turning as it passes a square's middle, and from
   the way it faced when a step's joined. Its flag, ring and pointer go with it.
 - **Along roads:** a road's drawn straight from a square's middle towards each neighbour's with one (`overlayMesh.ts`),
-  so a walk between two squares with a road is on it.
+  so a walk between two squares with a road is on it. That holds while roads are straight: roads that wind would need
+  walks to follow the same curve.
 - **Aircraft fly an arc** (aircraft, helicopters and missiles, as the built-in set draws them: `airborne`):
   - A walk whose units all fly climbs as it sets off, over a step's way, to 0.3 over where they'd stand (`CRUISE`,
     about an aircraft's own height), and comes down over its last step's way to land at its end. A hop of one square
     goes half as high.
   - A step joined as it comes down climbs on from where it is. One setting off again from elsewhere mid-air sets off as
     high as it is.
-  - Its figures, flag, label and pointer climb (`ALOFT_PART`); its stand and the ring at its feet stay on the ground,
-    so whose it is, and that it's active, show where it is. Its shadow falls on the land below.
+  - Its figures, hit points' bar, flag, label and pointer climb (`ALOFT_PART`); its stand and the ring at its feet stay
+    on the ground, so whose it is, and that it's active, show where it is. Its shadow falls on the land below.
   - It flies over the land at its feet, as a unit walking does, so over hills and mountains it rises and falls with
     them.
   - Nothing on the ground rides along with a walk that flies: it walks on its own beneath. An aircraft a ship carries
-    rides with the ship, on the water, and flying on alone from where the ship's bound, takes off.
+    rides with the ship, on the water, and flying on alone from where the ship's bound, takes off. An aircraft rides
+    along with another flying only at the same height; otherwise it flies on with a walk of its own.
 - **Left off, not held:** rather than holding patches, a unit walking is left off every square it's on until its walk's
   over, when those squares are marked again. Whatever else a patch changes (a city captured, the land) shows at once. A
   unit that joins a stack under a stronger one walks there and disappears into it.

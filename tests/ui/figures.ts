@@ -718,11 +718,17 @@ expect(
   [0.26, 0.26, 1, 0, Math.PI / 2, [FIGURES_PART]]
 );
 
-// Drawn to fly, as a walker is: an aircraft's figures, its flag and label, and the pointer over it, are a part of their
-//  own, to climb off its stand and the ring at its feet, which stay on the ground; its figures as high on their own as
-//  on the stand, and the two together all of it. On its square, or a unit on foot drawn to fly, one part as ever.
+// Drawn to fly, as a walker is: an aircraft's figures, its hit points' bar, flag and label, and the pointer over it,
+//  are a part of their own, to climb off its stand and the ring at its feet, which stay on the ground; its figures as
+//  high on their own as on the stand, and the two together all of it. On its square, or a unit on foot drawn to fly,
+//  one part as ever.
 {
-  const flier = unit('Fighter', { kinds: ['Air'], count: 2, active: true }),
+  const flier = unit('Fighter', {
+      kinds: ['Air'],
+      count: 2,
+      active: true,
+      health: 0.5,
+    }),
     flying = drawMarker(kit, { city: null, unit: flier }, true),
     part = flying.getObjectByName(UNIT_PART)!,
     aloft = flying.getObjectByName(ALOFT_PART),
@@ -775,7 +781,8 @@ expect(
     ],
     [
       ['aloft', 'mesh', 'mesh'],
-      ['figures', 'sprite', 'sprite', 'sprite'],
+      // Its hit points' bar, back and front, its flag, label and pointer.
+      ['figures', 'sprite', 'sprite', 'sprite', 'sprite', 'sprite'],
       true,
       true,
       true,

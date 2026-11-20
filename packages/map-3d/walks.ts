@@ -88,8 +88,10 @@ export const CRUISE = 0.3;
 /** How far a walk that flies goes as it climbs to `CRUISE`, and as it comes down from it, in steps. */
 export const CLIMB = 1;
 
-// How near, on the ground, a unit walking must be drawn to another walk to ride along with it.
-const BESIDE = 0.05;
+// How near, on the ground, a unit walking must be drawn to another walk to ride along with it; and how near its height,
+//  flying.
+const BESIDE = 0.05,
+  ALOFT_BESIDE = 0.02;
 
 // How it moves: from `from` steps along its path at `started`, going `speed` steps a ms, up to `pace` at `rise` steps a
 //  ms², then on at `top`, then stopping at `fall`, to `to`.
@@ -311,8 +313,11 @@ export class Walks {
     const ownId = this.#walkOf.get(unit),
       own = ownId === undefined ? undefined : this.#walks.get(ownId),
       drawn = own === undefined ? setOff : this.#drawn(own, now),
-      // Another walk that's just made this step, drawn where this unit was as it made it: it rides along with it, as
-      //  what a ship carries does, stepping after the ship. Not into the air, though.
+      // As high as it's flown, as a share of its climb.
+      climbed =
+        own === undefined ? 0 : this.#climbed(own, this.#along(own, now)),
+      // Another walk that's just made this step, drawn where this unit was as it made it, and as high: it rides along
+      //  with it, as what a ship carries does, stepping after the ship. Not into the air, though.
       riding = [...this.#walks.values()].find(
         (walk) =>
           walk !== own &&
@@ -321,7 +326,13 @@ export class Walks {
           this.#beside(
             this.#drawn(walk, walk.stepped),
             own === undefined ? setOff : this.#drawn(own, walk.stepped)
-          )
+          ) &&
+          CRUISE *
+            Math.abs(
+              eased(this.#climbed(walk, this.#along(walk, now))) -
+                eased(climbed)
+            ) <
+            ALOFT_BESIDE
       );
 
     if (riding !== undefined) {
@@ -361,9 +372,6 @@ export class Walks {
     }
 
     // Elsewhere, or not walking: it sets off from where it's drawn, as high as it's flown there.
-    const climbed =
-      own === undefined ? 0 : this.#climbed(own, this.#along(own, now));
-
     if (own !== undefined) {
       this.#leave(own, unit);
     }
