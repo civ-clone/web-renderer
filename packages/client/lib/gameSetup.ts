@@ -29,6 +29,7 @@ import Request from '@civ-clone/core-data-client/Request';
 import { WorldSizesAnswer } from '@civ-clone/ui-protocol/Requests/WorldSizes';
 import { TopologyId } from './topologyFor';
 import Transport from '../Transport';
+import { rememberNewGame } from './lastNewGame';
 import { rememberDifficulty } from './difficulty';
 import { t } from 'i18next';
 import { unlessRequestFailed } from './unlessRequestFailed';
@@ -832,6 +833,20 @@ export class GameSetup {
       unlessRequestFailed(error);
 
       return true;
+    }
+
+    // What New Game starts this game with next time (#1247): a size it offers, on its grid, not Earth or a size typed.
+    if (!this.earth && this.size !== null) {
+      rememberNewGame(
+        this.data.game === undefined
+          ? ''
+          : gameOf(this.data.game, this.data.game.id),
+        {
+          topologyId: this.topologyId,
+          size: this.size.key,
+          players: this.seats.length,
+        }
+      );
     }
 
     if (onFinished) {

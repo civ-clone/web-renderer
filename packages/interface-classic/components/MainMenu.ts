@@ -55,8 +55,17 @@ export class MainMenu extends Element {
                 }>${t('MainMenu.new-game')}</button>`
               ),
               {
+                // Each game, or Customise… for the game setup (#1247).
                 click: () => {
-                  askNewGame(this.#transport, () => this.remove());
+                  askNewGame(
+                    this.#transport,
+                    () => this.remove(),
+                    () =>
+                      // Not answered: the player has been told, and the menu is still here (#580).
+                      GameSetupWindow.ask(this.#transport, () =>
+                        this.remove()
+                      ).catch(unlessRequestFailed)
+                  );
                 },
               }
             ),

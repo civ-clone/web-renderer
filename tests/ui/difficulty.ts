@@ -1,5 +1,6 @@
 // The difficulty levels New Game offers (#173): labelled easiest to toughest, starting on the level the player chose
-// last in this browser, or Prince, and falling back to Prince when storage can't be used.
+// last in this browser, or Prince, and falling back to Prince when storage can't be used. Beside it, what each game was
+// last started with (#1247), kept the same way.
 
 import {
   DifficultyStorage,
@@ -7,6 +8,10 @@ import {
   preselectedDifficulty,
   rememberDifficulty,
 } from '@civ-clone/ui-client/lib/difficulty';
+import {
+  lastNewGame,
+  rememberNewGame,
+} from '@civ-clone/ui-client/lib/lastNewGame';
 import i18next from 'i18next';
 
 const failures: string[] = [];
@@ -120,6 +125,73 @@ const levels = [
   }
 
   expect('remembering into blocked storage does not throw', threw, false);
+
+  // What each game was last started with (#1247).
+  {
+    const { items, storage } = memoryStorage();
+
+    expect(
+      'a game never started has nothing kept',
+      lastNewGame('civ1-enhanced', () => storage),
+      {}
+    );
+
+    rememberNewGame(
+      'civ1-enhanced',
+      { topologyId: 'hex-odd-r', size: 'large', players: 9 },
+      () => storage
+    );
+    rememberNewGame(
+      'civ2-enhanced',
+      { topologyId: 'staggered-iso', size: 'normal', players: 7 },
+      () => storage
+    );
+
+    expect(
+      'each game keeps its own',
+      [
+        lastNewGame('civ1-enhanced', () => storage),
+        lastNewGame('civ2-enhanced', () => storage),
+      ],
+      [
+        { topologyId: 'hex-odd-r', size: 'large', players: 9 },
+        { topologyId: 'staggered-iso', size: 'normal', players: 7 },
+      ]
+    );
+
+    items['civ.newGame'] = JSON.stringify({
+      'civ1-enhanced': { topologyId: 7, size: 'large', players: 'many' },
+    });
+
+    expect(
+      'only the parts that are what they should be are kept',
+      lastNewGame('civ1-enhanced', () => storage),
+      { size: 'large' }
+    );
+
+    items['civ.newGame'] = 'not JSON';
+
+    expect(
+      'unreadable storage keeps nothing',
+      lastNewGame('civ1-enhanced', () => storage),
+      {}
+    );
+
+    let threw = false;
+
+    try {
+      rememberNewGame(
+        'civ1-enhanced',
+        { topologyId: 'square', size: 'normal', players: 7 },
+        () => blocked
+      );
+      lastNewGame('civ1-enhanced', () => blocked);
+    } catch {
+      threw = true;
+    }
+
+    expect('blocked storage neither throws nor keeps anything', threw, false);
+  }
 
   if (failures.length > 0) {
     process.stderr.write(

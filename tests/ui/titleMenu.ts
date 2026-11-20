@@ -3,7 +3,7 @@
 //  items for a game whenever there's art to draw it with, civ.one's own without an import (#1063), and why not when
 //  there's none; Art and sound always; each item's key, but not
 //  while a window is open or with a modifier, and none once the menu has gone; the version and release notes under
-//  them. New Game offers Customise… first, and Options opens with no game, with the Assets row.
+//  them. New Game offers each game, then Customise… (#1247), and Options opens with no game, with the Assets row.
 //
 // Run over the fake store (`tools/saved-game.js`), for the saves Continue reads.
 
@@ -28,7 +28,6 @@ import {
 import Transport from '@civ-clone/ui-client/Transport';
 import addFormatters from '@civ-clone/ui-game/app/i18nFormatters';
 import { applyInterface } from '@civ-clone/ui-platform/lib/interfaceMode';
-import { askNewGame } from '@civ-clone/ui-menus/components/newGame';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
@@ -200,7 +199,7 @@ const save = (
       ['civ.one v…', 'Release notes']
     );
 
-    // New Game: Customise… first, then the sizes.
+    // New Game (#1247): each game, saying what it starts with, then Customise….
     key('n');
     await settle();
 
@@ -208,30 +207,20 @@ const save = (
       document.querySelectorAll('dialog[open] .ui-choice-name')
     ).map((row) => row.textContent);
 
-    expect('New game offers Customize… first', rows[0], 'Customize…');
-    expect('then the sizes', rows.length > 1, true);
+    expect('New Game offers the game, then Customize…', rows.slice(-1), [
+      'Customize…',
+    ]);
     expect(
-      'with the usual size chosen, not Customize…',
-      Array.from(
-        document.querySelectorAll(
-          'dialog[open] [aria-selected="true"] .ui-choice-name'
-        )
-      ).map((row) => row.textContent),
-      ['Normal (80 × 50)']
-    );
-
-    closeWindows();
-
-    // The classic menu's New Game, which has its own Customize… button, asks only the sizes.
-    askNewGame(transport);
-    await settle();
-
-    expect(
-      'without Customise, only the sizes',
-      document
-        .querySelector('dialog[open] .ui-choice-name')
-        ?.textContent?.startsWith('Tiny'),
-      true
+      'with the first game chosen, saying what it starts with',
+      [
+        Array.from(
+          document.querySelectorAll(
+            'dialog[open] [aria-selected="true"] .ui-choice-name'
+          )
+        ).map((row) => row.textContent),
+        rows.length > 1,
+      ],
+      [['Civilization'], true]
     );
 
     closeWindows();

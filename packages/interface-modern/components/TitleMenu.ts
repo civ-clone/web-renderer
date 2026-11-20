@@ -146,12 +146,12 @@ export class TitleMenu extends Element {
               name: 'new-game',
               label: t('TitleMenu.new-game'),
               hotkey: t('TitleMenu.key.new-game'),
-              // The sizes, or Customise… for the game setup (#605), whose Advanced section has the rest.
+              // Each game, or Customise… for the game setup (#605, #1247), whose Advanced section has the rest.
               action: (): void =>
-                askNewGame(this.#transport, finished, (pluginSet) =>
-                  GameSetupForm.ask(this.#transport, finished, {
-                    pluginSet,
-                  }).catch(unlessRequestFailed)
+                askNewGame(this.#transport, finished, () =>
+                  GameSetupForm.ask(this.#transport, finished).catch(
+                    unlessRequestFailed
+                  )
                 ),
             },
             {
