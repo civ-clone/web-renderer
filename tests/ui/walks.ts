@@ -1383,8 +1383,8 @@ const flown = (
         );
       })
     ),
-    // Turned from due east towards the south (`facing` 0), as it bows south.
-    south = seen.some(({ facing }) => facing < Math.PI / 2 - 0.2);
+    // Turned off due east as it bows, towards the south and the north.
+    south = seen.some(({ facing }) => Math.abs(facing - Math.PI / 2) > 0.2);
 
   // Joined mid-bend: a step on east, as a GoTo's next.
   const joining = new Walks({ u: 10, v: null });
@@ -1499,7 +1499,7 @@ const flown = (
   const [ended] = cut.endAll(100);
 
   expect(
-    'along a road as it bends: through each point it passes, no jump or jolt, facing the way it goes, south as it bows; joined mid-bend, on along it; over the seam, a copy round; into a city, from its middle, not where it stands; ended at once, where it’s bound',
+    'along a road as it bends: through each point it passes, no jump or jolt, facing the way it goes, turning with it as it bows; joined mid-bend, on along it; over the seam, a copy round; into a city, from its middle, not where it stands; ended at once, where it’s bound',
     [
       passes,
       jump < 0.02,
@@ -1525,8 +1525,8 @@ const flown = (
       [-0.4, -0.08],
       [-0.2, -0.05],
     ] as const,
-    // The same lane back west, from (1, 1): bowing the other way as it's walked the other way.
-    bowBack = bowSouth.map(([du, dv]) => [-1 - du, dv] as const).reverse(),
+    // The same lane back west, its points from (1, 1), the square it's going back to, in the order it passes them.
+    bowBack = bowSouth.map(([du, dv]) => [1 + du, dv] as const).reverse(),
     // A sharp corner: on north-west from (2, 1), bowing a little.
     corner = [
       [0.8, 0.85],
@@ -1648,6 +1648,68 @@ const flown = (
       afterJoin < 0.2,
     ],
     [true, true, true]
+  );
+}
+
+// Along a bending road, a single step: it sets off facing straight for the square it's going to, as it stood, having
+//  turned to face it, and stops facing so, as it'll stand, turning to and from the road's way as it goes.
+{
+  const walks = new Walks({ u: 10, v: null }),
+    lane = [
+      [-0.8, 0.06],
+      [-0.6, 0.1],
+      [-0.5, 0],
+      [-0.4, -0.08],
+      [-0.2, -0.05],
+    ] as const,
+    square = (u: number) => ({
+      at: [u, 1] as const,
+      lift: 0,
+      middle: [u, 1] as const,
+    });
+
+  walks.step(
+    'lane',
+    { x: 1, y: 1 },
+    { x: 2, y: 1 },
+    square(1),
+    { ...square(2), via: lane },
+    0,
+    pace
+  );
+
+  const facings: number[] = [];
+  let ended: Walker | undefined;
+
+  for (let now = 0; now <= 1000 && ended === undefined; now++) {
+    const { going, ended: over } = walks.at(now);
+
+    going.forEach(({ facing }) => facings.push(facing));
+    [ended] = over;
+  }
+
+  const jump = Math.max(
+    ...facings
+      .slice(1)
+      .map((facing, index) => Math.abs(facing - facings[index]!))
+  );
+
+  expect(
+    'along a bending road, it sets off and stops facing straight for the square it’s going to, as it stands, with no snap',
+    [
+      round(facings[0]!, 6),
+      round(facings.at(-1)!, 2),
+      round(ended?.facing ?? 0, 6),
+      jump < 0.2,
+      facings.some((facing) => Math.abs(facing - Math.PI / 2) > 0.2),
+    ],
+    [
+      round(Math.PI / 2, 6),
+      round(Math.PI / 2, 2),
+      round(Math.PI / 2, 6),
+      true,
+      true,
+    ]
   );
 }
 

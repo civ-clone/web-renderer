@@ -760,11 +760,18 @@ export class Walks {
       //  on from the way it's going now, so it turns with no jolt, however its steps bend.
       coming = turnAt(index),
       leaving = turnAt(index - 1),
+      // The way straight from this step's square's middle to the next's: how a unit standing faces, having come so, and
+      //  so how it faces as it sets off and as it stops, where the step bends between, as along a road.
+      straight = wayOf(a.middle ?? a.at, b.middle ?? b.at),
       pathFacing =
         t > 0.75 && coming !== null
           ? here + coming * (t - 0.75) * 2
           : t < 0.25 && leaving !== null
           ? here - leaving * (0.5 - t * 2)
+          : t > 0.75 && index === last - 1 && straight !== null
+          ? turnTowards(here, straight, (t - 0.75) * 4)
+          : t < 0.25 && index === 0 && straight !== null
+          ? turnTowards(straight, here, t * 4)
           : here,
       // Just after a step's joined, from the way it faced then.
       facing =
