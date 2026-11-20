@@ -523,7 +523,8 @@ const run = async (): Promise<void> => {
     'civ3-unit:somewhere'
   );
 
-  // What an entry does (#1196), said by each effect's type, a plugin's unknown type left out.
+  // What an entry does (#1196), said by each effect's type, a plugin's unknown type, and a context with no wording, left
+  //  out.
   const gold = { class: 'CityImprovementMaintenanceGold', name: 'Gold' },
     effects = entry('Temple', 'improvement', {
       effects: [
@@ -536,6 +537,8 @@ const run = async (): Promise<void> => {
           step: 'more',
         },
         { type: 'plugin_unknown', value: 3 },
+        // No wording for a negative "more", so it's left out, never said as a positive one.
+        { type: 'content', value: -1, step: 'more' },
         { type: 'upkeep', yield: gold, value: 0 },
         {
           type: 'yield_percent',

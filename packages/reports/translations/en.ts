@@ -19,8 +19,8 @@ i18next.addResources('en', 'default', {
   'Civilopedia.list': '{{items}} and {{last}}',
   'Civilopedia.list_or': '{{items}} or {{last}}',
   // What an entry does (#1196), one wording per effect type a rule describes, with its context from the effect's
-  //  words (`of`, `source`…), `_negative` for a value below 0 and `_zero` for 0. `value` and `count` are the size of the number,
-  //  `percent` that as a percentage.
+  //  words (`of`, `source`…), `_negative` for a value below 0 and `_zero` for 0 (which alone falls back to the wording
+  //  without it). `value` and `count` are the size of the number, `percent` that as a percentage.
   'Civilopedia.effect.yield_percent_base':
     '+{{percent}}% of the city’s base {{yield}}',
   'Civilopedia.effect.yield_percent_total': '+{{percent}}% {{yield}}',
@@ -40,7 +40,7 @@ i18next.addResources('en', 'default', {
   'Civilopedia.effect.growth_store':
     'Keeps {{percent}}% of the food when the city grows',
   'Civilopedia.effect.pollution_divisor':
-    'Pollution from shields ÷{{value}}, where it’s the best the city has',
+    'Pollution from shields ÷{{value}} (only the city’s best divisor counts)',
   'Civilopedia.effect.pollution_source_removed_population':
     'The city’s people no longer cause pollution',
   'Civilopedia.effect.protects_from_nuclear_attack_units':
@@ -54,7 +54,7 @@ i18next.addResources('en', 'default', {
   'Civilopedia.effect.clause.needs': 'with {{targets}}',
   'Civilopedia.effect.clause.with': 'with {{targets}}',
   'Civilopedia.effect.clause.replaces': 'in place of {{targets}}',
-  'Civilopedia.effect.clause.notWith': 'doesn’t add to {{targets}}',
+  'Civilopedia.effect.clause.notWith': 'doesn’t stack with {{targets}}',
   'Civilopedia.effect.clause.except': 'except against {{targets}}',
   'Civilopedia.effect.clause.from': 'from {{targets}}',
   'Civilopedia.effect.clause.until': 'until {{targets}}',

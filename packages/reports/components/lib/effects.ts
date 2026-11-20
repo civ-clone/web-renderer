@@ -1,8 +1,10 @@
 // What an entry does (#1196), in words: each effect the rules describe is said by its `type`, from the translation
 //  `Civilopedia.effect.<type>`, so a plugin's effect needs only its wording, and the page knows no rules. The string
 //  fields pick the wording's context (`yield_percent` with `of: 'base'` is `Civilopedia.effect.yield_percent_base`),
-//  a negative `value` adds `_negative` and a `value` of 0 `_zero` (each falling back to the wording without it), and
-//  the fields that qualify an effect (`needs`, `replaces`, `from`…) each add a clause of their own. An effect with no wording is left out, and logged once.
+//  and a negative `value` adds `_negative`, a `value` of 0 `_zero`. Only `_zero` falls back to the wording without
+//  it ("Upkeep: 0 gold a turn"): a missing context is never read as another, so a negative value is never said as
+//  a positive one, and an effect with no wording for its context is left out, and logged once. The fields that
+//  qualify an effect (`needs`, `replaces`, `from`…) each add a clause of their own.
 import {
   CivilopediaEffect,
   CivilopediaEffectValue,
@@ -76,7 +78,7 @@ const said = (
     return items.length === 0 ? null : list(items, listKey);
   }
 
-  return typeof value === 'object' ? null : String(value);
+  return typeof value === 'object' ? null : escape(String(value));
 };
 
 const warned = new Set<string>();
@@ -86,46 +88,49 @@ export const effectLine = (
   effect: CivilopediaEffect,
   entries: EntriesByKey
 ): string | null => {
-  const key = `Civilopedia.effect.${effect.type}`,
-    value = typeof effect.value === 'number' ? effect.value : null,
-    context = [
-      ...Object.entries(effect)
-        .filter(
-          ([field, fieldValue]) =>
-            field !== 'type' && typeof fieldValue === 'string'
-        )
-        .map(([, fieldValue]) => fieldValue as string),
-      ...(value !== null && value < 0 ? ['negative'] : []),
-      ...(value === 0 ? ['zero'] : []),
-    ].join('_'),
+  const value = typeof effect.value === 'number' ? effect.value : null,
+    words = Object.entries(effect)
+      .filter(
+        ([field, fieldValue]) =>
+          field !== 'type' && typeof fieldValue === 'string'
+      )
+      .map(([, fieldValue]) => fieldValue as string),
+    sign = value !== null && value < 0 ? ['negative'] : [],
+    base = `Civilopedia.effect.${[effect.type, ...words].join('_')}`,
+    // The wording with its whole context first; without `_zero` only if there's none for 0.
+    whole = [base, ...sign, ...(value === 0 ? ['zero'] : [])].join('_'),
+    keys = value === 0 ? [whole, base] : [whole],
     count = value === null ? undefined : Math.abs(value);
 
-  // A wording may exist only with its context or plural (`content_one`), so it's looked for as it would be said.
-  if (!i18next.exists(key, { context, count })) {
-    if (!warned.has(effect.type)) {
-      warned.add(effect.type);
+  // A wording may exist only with its plural (`content_one`), so it's looked for as it would be said.
+  if (!keys.some((key) => i18next.exists(key, { count }))) {
+    if (!warned.has(whole)) {
+      warned.add(whole);
 
-      console.warn(`Civilopedia: no wording for the effect '${effect.type}'.`);
+      console.warn(`Civilopedia: no wording for the effect '${whole}'.`);
     }
 
     return null;
   }
 
-  const fields = Object.fromEntries(
+  // The fields as interpolation values only, so none can be read as one of `t`'s own options (`ns`, `count`…).
+  const replace = Object.fromEntries(
       Object.entries(effect)
         .filter(([field]) => field !== 'type' && !clauses.includes(field))
         .map(([field, fieldValue]) => [field, said(fieldValue, entries) ?? ''])
     ),
-    main = t(key, {
-      ...fields,
-      ...(value === null
-        ? {}
-        : {
-            value: Math.abs(value),
-            count,
-            percent: Math.round(Math.abs(value) * 100),
-          }),
-      context,
+    main = t(keys, {
+      replace: {
+        ...replace,
+        ...(value === null
+          ? {}
+          : {
+              value: Math.abs(value),
+              count,
+              percent: Math.round(Math.abs(value) * 100),
+            }),
+      },
+      count,
       interpolation: { escapeValue: false },
     }),
     qualified = clauses
@@ -156,7 +161,10 @@ const last: string[] = ['upkeep'];
 const rank = ({ type }: CivilopediaEffect): number =>
   last.includes(type) ? 1 : 0;
 
-/** An entry's effects, as lines of HTML, each said once, its upkeep last. */
+/**
+ * An entry's effects, as lines of HTML, its upkeep last. The same line from two rules (a rule set that describes what
+ *  it takes the place of, alongside the rule it replaces) is said once.
+ */
 export const effectLines = (
   effects: CivilopediaEffect[],
   entries: EntriesByKey
