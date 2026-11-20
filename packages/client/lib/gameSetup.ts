@@ -588,7 +588,10 @@ export class GameSetup {
     const sizes = ruleWorldSizes(this.data.worldSizes);
 
     if (sizes !== null) {
-      return sizes.filter(({ earth }) => earth);
+      // None where its Earth's grid has no art here (#1249): Civ2's isometric Earth without isometric art.
+      return this.allowsGrid(this.earthGrid())
+        ? sizes.filter(({ earth }) => earth)
+        : [];
     }
 
     return this.defaultGrid() === null ? earthWorldSizes : [];
@@ -666,10 +669,19 @@ export class GameSetup {
       (this.allowsGrid(topologyId) ? topologyId : this.topologyId);
 
     if (this.size) {
+      const sizes = this.sizesOn(this.topologyId),
+        area = this.size.width * this.size.height;
+
+      // The same size by name, or, where the new grid hasn't it (Civ2's own have no Tiny or Huge, #1249), its size
+      //  nearest in area, rather than a world the player never typed.
       this.size =
-        this.sizesOn(this.topologyId).find(
-          (size) => size.key === this.size!.key
-        ) ?? null;
+        sizes.find((size) => size.key === this.size!.key) ??
+        [...sizes].sort(
+          (a, b) =>
+            Math.abs(a.width * a.height - area) -
+            Math.abs(b.width * b.height - area)
+        )[0] ??
+        null;
       this.width = this.size?.width ?? this.width;
       this.height = this.size?.height ?? this.height;
     }

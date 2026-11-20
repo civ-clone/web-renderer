@@ -585,7 +585,7 @@ export const askEarth = (
     return;
   }
 
-  askGame(transport, () =>
+  askGame(transport, (pluginSet, grid) =>
     transport
       .request(new WorldSizes())
       .then((answer) => {
@@ -598,9 +598,12 @@ export const askEarth = (
           return;
         }
 
-        const sizes = offered.filter(({ earth }) => earth);
+        const sizes = offered.filter(({ earth }) => earth),
+          earthGrid = answer.sizes[0]!.topologyId as TopologyId;
 
-        if (sizes.length === 0) {
+        // None, too, where its Earth's grid has no art here (#1249): Civ2's isometric Earth without isometric art, when
+        //  it starts on another grid.
+        if (sizes.length === 0 || (grid !== null && grid !== earthGrid)) {
           gameFailed(new Error(t('NewGameWindow.no-earth')));
 
           return;
@@ -609,7 +612,7 @@ export const askEarth = (
         // On the grid its rules' Earth is on (Civ2's isometric), whichever grids the game can be played on (#1249).
         askWorldSize(transport, onFinished, sizes, {
           earth: true,
-          topologyId: answer.sizes[0]!.topologyId as TopologyId,
+          topologyId: earthGrid,
         });
       })
       // Not answered: the player has been told, and the main menu is still there (#580).

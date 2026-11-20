@@ -2114,6 +2114,39 @@ const civ2Metadata: PackMetadata = {
         ]
       );
 
+      anyGrid.chooseGrid('staggered-iso');
+
+      expect(
+        "back on Civ2's own grid from Huge, which it hasn't, the nearest of its own in area, not a world never typed",
+        [anyGrid.map(), anyGrid.width, anyGrid.height],
+        ['size:large', 75, 120]
+      );
+
+      const noIsometric = new GameSetup({
+        aiClients: ['SimpleAIClient'],
+        civilizations,
+        difficulties: [],
+        existing: {},
+        worldSizes: civ2WorldSizes,
+        game: {
+          id: 'civ2-enhanced',
+          games: ['civ1-enhanced', 'civ2-enhanced'],
+          originals: { 'civ2-enhanced': 'civ2' },
+          grid: 'square',
+          grids: ['square', 'hex-odd-r'],
+        },
+      } as any);
+
+      expect(
+        "with no isometric art, Civ2 starts on square, at Civilization's Normal, and offers no Earth, whose grid is isometric",
+        [
+          noIsometric.topologyId,
+          noIsometric.map(),
+          noIsometric.earthSizes().length,
+        ],
+        ['square', 'size:normal', 0]
+      );
+
       anyGrid.chooseMap('earth:normal');
 
       expect(
