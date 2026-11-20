@@ -760,9 +760,9 @@ All of these are driven by map events (§8):
     they all lie on the ground.
   - Lots: one sequence seeded from the city's id, from a jostled grid over the square, nearest the middle first. A city
     of a size has that many from the front, 5 at size 1 and 2 more each size, up to 30 or as many as fit, so one that
-    grows keeps its buildings and adds the next out, and one that shrinks loses the outermost. Thirty fit with few
-    streets, and 14 or more with a street out every way. A road built clears a street through the lots in its way,
-    rather than laying the city out afresh.
+    grows keeps its buildings and adds the next out, and one that shrinks loses the outermost. About 25 or more fit
+    with no streets, 20 or more with one or two, and 13 or more with a street out every way. A road built clears a
+    street through the lots in its way, rather than laying the city out afresh.
   - Each building's footprint, out to its roof's eaves, is inside the walls and clear of the streets, the plaza, the
     lots before it, and the stand of a unit in front of the buildings, with the ring at its feet or its bank. So the
     buildings stand round the plaza and behind the unit, which stands in the open.

@@ -346,7 +346,8 @@ expect(
   [5, true, true, true, [0, 0, 1, 1, 2]]
 );
 
-// Taller as it grows: each six sizes, the buildings near the middle a storey taller, and those well out the same.
+// Taller as it grows: each six sizes, the buildings near the middle a storey taller, and those well out the same. Sizes
+//  12 and 13 have the same first lots, and only how tall they stand between them differs.
 {
   const place = squareAt(5, 5),
     [u, v] = place.centre,
@@ -359,20 +360,23 @@ expect(
         out: Math.hypot(at[0] - u, at[1] - v),
         storeys,
       })),
-    small = storeys(1),
-    big = storeys(13);
+    before = storeys(12),
+    after = storeys(13).slice(0, before.length),
+    near = before.filter(({ out }) => out < 0.15),
+    out = before.filter(({ out }) => out > 0.2);
 
   expect(
-    'taller as it grows: near the middle two storeys taller at size 13, well out the same',
+    'taller as it grows: near the middle a storey taller at size 13 than 12, well out the same',
     [
-      small.every(
+      before.every(
         ({ out, storeys }, index) =>
-          (out > 0.15 || big[index]!.storeys === storeys + 2) &&
-          (out < 0.2 || big[index]!.storeys === storeys)
+          (out > 0.15 || after[index]!.storeys === storeys + 1) &&
+          (out < 0.2 || after[index]!.storeys === storeys)
       ),
-      small.some(({ out }) => out < 0.15),
+      near.length > 0,
+      out.length > 5,
     ],
-    [true, true]
+    [true, true, true]
   );
 }
 
