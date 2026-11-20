@@ -29,7 +29,16 @@ import {
 } from 'three';
 import { ChunkMesh } from './terrain/chunks';
 import landMaterial from './landMaterial';
-import { FIGURES_PART, MarkerKit, drawMarker } from './markers/drawMarker';
+import {
+  FIGURES_PART,
+  Faded,
+  MarkerKit,
+  UNIT_PART,
+  drawMarker,
+  fade,
+  unfade,
+  unfaded,
+} from './markers/drawMarker';
 import { TileMarker } from './markers/markerFor';
 import { OverlayMesh } from './overlay/overlayMesh';
 import { FIELD_OF_VIEW, Orbit, eye, sightFor } from './camera/orbit';
@@ -79,6 +88,16 @@ export interface Stage {
     at: readonly [number, number, number],
     facing: number
   ): void;
+  /**
+   * How solid the walker `id` is drawn, from 1 down to gone at 0, as a unit falling in battle fades (`battles.ts`): with
+   *  materials of its own, so no other marker fades with it. Drawn again for it (`setWalker`), it's solid.
+   */
+  fadeWalker(id: string, opacity: number): void;
+  /**
+   * How solid the unit marked on the square `key` is drawn, from 0 to 1, as a unit arriving with no move fades in
+   *  (`fades.ts`): its city stays solid, and no other marker fades with it. Marked again (`setMarker`), it's solid.
+   */
+  fadeMarker(key: string, opacity: number): void;
   /** What each square yields (`y`), drawn at every copy of the world in sight: what was drawn before is replaced. */
   setYields(mesh: YieldMesh | null): void;
   /**
@@ -231,10 +250,14 @@ export const createStage: StageFactory = (
     //  drawn a period round too, where the land is theirs: `overlayCopies`).
     extent = ground.rows * ground.spacingV,
     poles = polesAt(extent),
-    markers = new Map<string, Placed>(),
-    // The units walking, by their walk's id (`walks.ts`), each drawn as its own marker, with no city; and the way each
-    //  faces.
-    walkers = new Map<string, Placed & { facing: number }>(),
+    // What's marked on each square, and, once its unit's faded, how solid and with what materials of its own.
+    markers = new Map<string, Placed & { opacity?: number; faded?: Faded }>(),
+    // The units walking, by their walk's id (`walks.ts`), and fighting, by their battle's (`battles.ts`), each drawn as
+    //  its own marker, with no city; the way each faces, how solid it's drawn, and its own materials, once faded.
+    walkers = new Map<
+      string,
+      Placed & { facing: number; opacity: number; faded: Faded }
+    >(),
     markersGroup = new Group(),
     kit = new MarkerKit(),
     // What each square yields, over the land at every copy of the world, when they're shown.
@@ -311,6 +334,14 @@ export const createStage: StageFactory = (
       land,
       overlayCopies(copies, overlay.span, extent, period.v, stopped)
     );
+
+  // The unit's part of each of a marker's copies, its city apart.
+  const unitParts = (drawn: readonly Object3D[]): Object3D[] =>
+    drawn.flatMap((copy) => {
+      const part = copy.getObjectByName(UNIT_PART);
+
+      return part === undefined ? [] : [part];
+    });
 
   // A walker's copies turned the way it faces: only its figures turn, its flag over them as ever.
   const face = (walker: Placed & { facing: number }): void =>
@@ -435,6 +466,17 @@ export const createStage: StageFactory = (
         marker.drawn = copiesOf(marker, markersGroup, markerCopies);
       });
       walkers.forEach(face);
+      // Copies made afresh, from the kit's materials: those faded, faded again.
+      walkers.forEach((walker) => {
+        if (walker.opacity < 1) {
+          fade(walker.drawn, walker.opacity, walker.faded);
+        }
+      });
+      markers.forEach((marker) => {
+        if (marker.faded !== undefined && (marker.opacity ?? 1) < 1) {
+          fade(unitParts(marker.drawn), marker.opacity ?? 1, marker.faded);
+        }
+      });
     }
   };
 
@@ -540,8 +582,16 @@ export const createStage: StageFactory = (
       overlays.set(key, overlay);
     },
     setMarker: (key, at, marker): void => {
-      // Its geometries and materials are the kit's, shared by every marker, and let go by the kit's sweep.
-      markers.get(key)?.drawn.forEach((drawn) => markersGroup.remove(drawn));
+      // Its geometries and materials are the kit's, shared by every marker, and let go by the kit's sweep: those it
+      //  faded with are its own.
+      const old = markers.get(key);
+
+      old?.drawn.forEach((drawn) => markersGroup.remove(drawn));
+
+      if (old?.faded !== undefined) {
+        unfade(old.faded);
+      }
+
       markers.delete(key);
 
       if (marker === null) {
@@ -564,6 +614,11 @@ export const createStage: StageFactory = (
       const old = walkers.get(id);
 
       old?.drawn.forEach((drawn) => markersGroup.remove(drawn));
+
+      if (old !== undefined) {
+        unfade(old.faded);
+      }
+
       walkers.delete(id);
 
       if (marker === null) {
@@ -571,9 +626,11 @@ export const createStage: StageFactory = (
       }
 
       const original = markerOf(marker),
-        walker: Placed & { facing: number } = {
+        walker: Placed & { facing: number; opacity: number; faded: Faded } = {
           at: old?.at ?? [0, 0, 0],
           facing: old?.facing ?? marker.unit?.facing ?? 0,
+          opacity: 1,
+          faded: new Map(),
           make: () => original.clone(),
           drawn: [],
           original,
@@ -600,6 +657,37 @@ export const createStage: StageFactory = (
       });
       face(walker);
     },
+    fadeMarker: (key, opacity): void => {
+      const marker = markers.get(key),
+        solid = Math.min(1, Math.max(0, opacity));
+
+      if (marker === undefined || solid === (marker.opacity ?? 1)) {
+        return;
+      }
+
+      marker.opacity = solid;
+      marker.faded ??= new Map();
+
+      // Solid again: drawn with the kit's materials, as every other marker is, its own let go of.
+      if (solid === 1) {
+        unfaded(unitParts(marker.drawn), marker.faded);
+
+        return;
+      }
+
+      fade(unitParts(marker.drawn), solid, marker.faded);
+    },
+    fadeWalker: (id, opacity): void => {
+      const walker = walkers.get(id),
+        solid = Math.min(1, Math.max(0, opacity));
+
+      if (walker === undefined || solid === walker.opacity) {
+        return;
+      }
+
+      walker.opacity = solid;
+      fade(walker.drawn, solid, walker.faded);
+    },
     setYields: (mesh): void => {
       yieldsPlaced?.drawn.forEach((drawn) => yieldsGroup.remove(drawn));
       yieldsPlaced = null;
@@ -624,7 +712,9 @@ export const createStage: StageFactory = (
       overlays.forEach(({ geometry }) => geometry.dispose());
       overlays.clear();
       overlayMaterial.dispose();
+      markers.forEach(({ faded }) => faded !== undefined && unfade(faded));
       markers.clear();
+      walkers.forEach(({ faded }) => unfade(faded));
       walkers.clear();
       kit.dispose();
       yields.dispose();
