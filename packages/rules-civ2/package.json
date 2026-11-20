@@ -65,7 +65,7 @@
     "@civ-clone/core-pending-effect": "^0.1.2",
     "@civ-clone/core-player": "^0.1.10",
     "@civ-clone/core-player-world": "^0.1.14",
-    "@civ-clone/core-rule": "^0.1.9",
+    "@civ-clone/core-rule": "^0.1.10",
     "@civ-clone/core-science": "^0.1.9",
     "@civ-clone/core-spaceship": "^0.1.11",
     "@civ-clone/core-terrain": "^0.1.4",

@@ -69,6 +69,7 @@ const entry = (
     leadsTo: [],
     cost: null,
     stats: null,
+    effects: [],
     ...values,
   }),
   requirement = (
@@ -520,6 +521,41 @@ const run = async (): Promise<void> => {
     'and an unknown one is its id',
     conditionText('civ3-unit:somewhere'),
     'civ3-unit:somewhere'
+  );
+
+  // What an entry does (#1196), said by each effect's type, a plugin's unknown type left out.
+  const gold = { class: 'CityImprovementMaintenanceGold', name: 'Gold' },
+    effects = entry('Temple', 'improvement', {
+      effects: [
+        { type: 'upkeep', yield: gold, value: 1 },
+        { type: 'content', value: 1 },
+        {
+          type: 'content',
+          value: 1,
+          with: [{ class: 'Mysticism', name: 'Mysticism' }],
+          step: 'more',
+        },
+        { type: 'plugin_unknown', value: 3 },
+        { type: 'upkeep', yield: gold, value: 0 },
+        {
+          type: 'yield_percent',
+          yield: { class: 'Corruption', name: 'Corruption' },
+          value: -0.5,
+          of: 'total',
+        },
+      ],
+    });
+
+  expect(
+    'an entry says what it does, its upkeep last',
+    text(entryHtml(effects, data))
+      .split('What it does')[1]
+      ?.split('Requirements')[0],
+    'Makes 1 unhappy citizen content' +
+      'Makes 1 more unhappy citizen content, with Mysticism' +
+      '−50% Corruption' +
+      'Upkeep: 1 gold a turn' +
+      'No upkeep'
   );
 
   finished = true;

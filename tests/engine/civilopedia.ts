@@ -28,6 +28,8 @@ import {
 } from '@civ-clone/ui-worker-client/Client/requests';
 import { inBuildListOrder } from '@civ-clone/ui-worker-client/lib/buildList';
 import Player from '@civ-clone/core-player/Player';
+import { join } from 'path';
+import { readFileSync } from 'fs';
 import setUpCity from '@civ-clone/civ1-city/tests/lib/setUpCity';
 
 const failures: string[] = [];
@@ -124,6 +126,7 @@ const check = async (): Promise<void> => {
     ],
     cost: 30,
     stats: { attack: 2, defence: 3, movement: 1, visibility: 1 },
+    effects: [],
   });
   expect(
     'a Trireme needs a coastal city, through Naval',
@@ -392,6 +395,61 @@ const check = async (): Promise<void> => {
       advanceEntries.find((item) => item.key === 'Alphabet')?.age,
     ],
     ['Medieval', 'Ancient']
+  );
+
+  // What the rules say each improvement does (#1196), from the rules in force.
+  const translations = readFileSync(
+      join(process.cwd(), 'packages/reports/translations/en.ts'),
+      'utf8'
+    ),
+    types = Array.from(
+      new Set(entries.flatMap((item) => item.effects.map(({ type }) => type)))
+    );
+
+  expect(
+    'every city improvement says something it does',
+    entries
+      .filter((item) => item.kind === 'improvement')
+      .filter((item) => item.effects.length === 0)
+      .map((item) => item.key),
+    []
+  );
+  expect(
+    'every type of effect sent has wording in en',
+    types.filter(
+      (type) => !translations.includes(`'Civilopedia.effect.${type}`)
+    ),
+    []
+  );
+  expect(
+    'a Library costs 1 gold a turn and adds half the base science',
+    entry('Library')?.effects,
+    [
+      {
+        type: 'upkeep',
+        yield: {
+          class: 'CityImprovementMaintenanceGold',
+          name: 'CityImprovementMaintenanceGold',
+        },
+        value: 1,
+      },
+      {
+        type: 'yield_percent',
+        yield: { class: 'Research', name: 'Research' },
+        value: 0.5,
+        of: 'base',
+      },
+    ]
+  );
+  expect(
+    'a Temple makes one more content with Mysticism',
+    entry('Temple')
+      ?.effects.filter(({ type }) => type === 'content')
+      .map(({ value, with: advances }) => [value, advances ?? null]),
+    [
+      [1, null],
+      [1, [{ class: 'Mysticism', name: 'Mysticism' }]],
+    ]
   );
 
   finished = true;

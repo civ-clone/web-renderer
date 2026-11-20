@@ -12,10 +12,52 @@ i18next.addResources('en', 'default', {
   'Civilopedia.failed': 'The Civilopedia couldn’t be loaded.',
   'Civilopedia.heading.advances': 'Advances of this age',
   'Civilopedia.heading.age': 'Age',
+  'Civilopedia.heading.effects': 'What it does',
   'Civilopedia.heading.goes-here': 'Can be built here',
   'Civilopedia.heading.subject': 'Requirements',
   'Civilopedia.heading.target': 'Leads to',
   'Civilopedia.list': '{{items}} and {{last}}',
+  'Civilopedia.list_or': '{{items}} or {{last}}',
+  // What an entry does (#1196), one wording per effect type a rule describes, with its context from the effect's
+  //  words (`of`, `source`…), `_negative` for a value below 0 and `_zero` for 0. `value` and `count` are the size of the number,
+  //  `percent` that as a percentage.
+  'Civilopedia.effect.yield_percent_base':
+    '+{{percent}}% of the city’s base {{yield}}',
+  'Civilopedia.effect.yield_percent_total': '+{{percent}}% {{yield}}',
+  'Civilopedia.effect.yield_percent_total_negative': '−{{percent}}% {{yield}}',
+  'Civilopedia.effect.content_one': 'Makes {{count}} unhappy citizen content',
+  'Civilopedia.effect.content_other':
+    'Makes {{count}} unhappy citizens content',
+  'Civilopedia.effect.content_more_one':
+    'Makes {{count}} more unhappy citizen content',
+  'Civilopedia.effect.content_more_other':
+    'Makes {{count}} more unhappy citizens content',
+  'Civilopedia.effect.defence_multiplier':
+    'Defense of the units in the city ×{{value}}',
+  'Civilopedia.effect.unit_improvement': 'Units built here are {{improvement}}',
+  'Civilopedia.effect.size_limit':
+    'The city can grow past size {{value, number}}',
+  'Civilopedia.effect.growth_store':
+    'Keeps {{percent}}% of the food when the city grows',
+  'Civilopedia.effect.pollution_divisor':
+    'Pollution from shields ÷{{value}}, where it’s the best the city has',
+  'Civilopedia.effect.pollution_source_removed_population':
+    'The city’s people no longer cause pollution',
+  'Civilopedia.effect.protects_from_nuclear_attack_units':
+    'Units in the city survive a nuclear attack',
+  'Civilopedia.effect.protects_from_nuclear_attack_size':
+    'The city loses no people to a nuclear attack',
+  'Civilopedia.effect.upkeep': 'Upkeep: {{value, number}} {{yield}} a turn',
+  'Civilopedia.effect.upkeep_zero': 'No upkeep',
+  'Civilopedia.effect.capital':
+    'Your cities’ {{yield}} grows with their distance from it',
+  'Civilopedia.effect.clause.needs': 'with {{targets}}',
+  'Civilopedia.effect.clause.with': 'with {{targets}}',
+  'Civilopedia.effect.clause.replaces': 'in place of {{targets}}',
+  'Civilopedia.effect.clause.notWith': 'doesn’t add to {{targets}}',
+  'Civilopedia.effect.clause.except': 'except against {{targets}}',
+  'Civilopedia.effect.clause.from': 'from {{targets}}',
+  'Civilopedia.effect.clause.until': 'until {{targets}}',
   'Civilopedia.loading': 'Loading…',
   'Civilopedia.nothing-known': 'Nothing more is known about this yet.',
   'Civilopedia.stats':
@@ -59,6 +101,15 @@ i18next.addResources('en', 'default', {
   'Civilopedia.world.obsoletedBy': '{{line}}, once any civilization has it',
   'Civilopedia.world.other': '{{line}}, for any civilization',
   'Civilopedia.class.CityImprovement': 'city improvements',
+  // The yields and traits effects name (#1196).
+  'Civilopedia.class.CityImprovementMaintenanceGold': 'gold',
+  'Civilopedia.class.Corruption': 'Corruption',
+  'Civilopedia.class.Gold': 'Gold',
+  'Civilopedia.class.Luxuries': 'Luxuries',
+  'Civilopedia.class.Production': 'Production',
+  'Civilopedia.class.Research': 'Science',
+  'Civilopedia.class.Veteran': 'Veterans',
+  'Civilopedia.class.IgnoresFortifications': 'units that ignore City Walls',
   'Civilopedia.class.Naval': 'ships',
   'Civilopedia.class.Part': 'spaceship parts',
   // A condition a rule decides, by its name without the rule set's prefix, so every rule set that has one shares its

@@ -31,6 +31,35 @@ export interface CivilopediaEntry {
   advances?: string[];
   /** An age's place among the ages, from 0 (#1076). */
   order?: number;
+  /**
+   * What it does, as the rules in force describe it (#1196): each effect whose `subject` is this or one of its base
+   *  classes, in the rules' order. The page says each in words by its `type`.
+   */
+  effects: CivilopediaEffect[];
+}
+
+/**
+ * A class an effect names (a yield, an advance, a unit improvement), by its save key, as `requires` names classes, and
+ *  its class name, which the translations use.
+ */
+export interface CivilopediaClass {
+  class: string;
+  name: string;
+}
+
+export type CivilopediaEffectValue =
+  | string
+  | number
+  | boolean
+  | null
+  | CivilopediaClass
+  | CivilopediaEffectValue[]
+  | { [field: string]: CivilopediaEffectValue };
+
+/** One effect, as a rule describes it (`@civ-clone/core-rule/Description`): its `type` says what its fields mean. */
+export interface CivilopediaEffect {
+  type: string;
+  [field: string]: CivilopediaEffectValue;
 }
 
 export interface UnitStats {
