@@ -14,6 +14,7 @@ import Window from '@civ-clone/ui-component-window/Window';
 import cannotHover from '@civ-clone/ui-widgets/lib/cannotHover';
 import { hasFeature } from '@civ-clone/ui-platform/lib/interfaceMode';
 import { mapMenus } from './mapMenus';
+import { markHowToPlaySeen } from '../lib/howToPlaySeen';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
@@ -323,6 +324,12 @@ export class HowToPlay extends Window {
 
   /** Opens How to play, or brings the one open to the front. */
   static open(): HowToPlay {
+    // Opened by any way, the title screen's first-visit line has been answered.
+    markHowToPlaySeen();
+    document
+      .querySelectorAll('.how-to-play-prompt')
+      .forEach((prompt) => prompt.remove());
+
     if (open !== null && open.element().isConnected) {
       open.element().focus();
 

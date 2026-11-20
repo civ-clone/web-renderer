@@ -242,7 +242,9 @@ const run = async (): Promise<void> => {
     []
   );
 
-  // The first-visit line.
+  // The first-visit line, in a browser that hasn't seen the help (opening it above answered it).
+  stored.clear();
+
   let prompt = howToPlayPrompt();
 
   expect('a newcomer is offered How to play', prompt !== null, true);
@@ -273,6 +275,18 @@ const run = async (): Promise<void> => {
   );
 
   HowToPlay.open().close();
+
+  // Opened from a menu, the line is answered too, and goes from the screen.
+  stored.clear();
+  prompt = howToPlayPrompt();
+  document.body.append(prompt!);
+  HowToPlay.open().close();
+
+  expect(
+    'opened from a menu, the line is answered, and goes',
+    [howToPlaySeen(), prompt!.isConnected],
+    [true, false]
+  );
 
   blocked = true;
   prompt = howToPlayPrompt();

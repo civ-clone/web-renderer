@@ -173,6 +173,7 @@ const save = (
       'earth',
       'load-game',
       'hall-of-fame',
+      'how-to-play',
       'options',
       'library',
     ]);
@@ -181,7 +182,7 @@ const save = (
       Array.from(element.querySelectorAll('.ui-title-menu-item .key')).map(
         (key) => key.textContent
       ),
-      ['N', 'E', 'L', 'H', 'O', 'A']
+      ['N', 'E', 'L', 'H', 'P', 'O', 'A']
     );
     expect(
       'and has it as its shortcut',
@@ -342,6 +343,7 @@ const save = (
           'earth',
           'load-game',
           'hall-of-fame',
+          'how-to-play',
           'options',
           'library',
         ],
@@ -384,7 +386,7 @@ const save = (
     expect(
       'with no art at all, no game items, Continue included',
       items(element),
-      ['hall-of-fame', 'options', 'library']
+      ['hall-of-fame', 'how-to-play', 'options', 'library']
     );
     expect(
       'and the menu says why',
@@ -424,7 +426,18 @@ const save = (
           .querySelector('.no-art')
           ?.textContent?.startsWith('There’s no art to draw the game with'),
       ],
-      [['Hall of Fame', 'Art and sound'], false, true]
+      [
+        [
+          'Hall of Fame',
+          'Art and sound',
+          'How to play',
+          // The first-visit line's (#1270): How to play, and dismiss it.
+          'How to play',
+          '',
+        ],
+        false,
+        true,
+      ]
     );
 
     // Civilization II's art alone: a map, but no interface art, which it has none of.
@@ -472,6 +485,7 @@ const save = (
             'earth',
             'load-game',
             'hall-of-fame',
+            'how-to-play',
             'options',
             'library',
           ],
@@ -541,6 +555,7 @@ const save = (
           'earth',
           'load-game',
           'hall-of-fame',
+          'how-to-play',
           'options',
           'library',
         ],

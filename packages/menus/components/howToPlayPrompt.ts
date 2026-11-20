@@ -2,30 +2,12 @@
 //  then not again, as this browser remembers. Where the browser keeps nothing (a private window, storage blocked), it's
 //  offered each visit, and dismissed for that one.
 
+import { howToPlaySeen, markHowToPlaySeen } from '../lib/howToPlaySeen';
 import HowToPlay from './HowToPlay';
+import { glyph } from '@civ-clone/ui-platform/lib/glyphs';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-
-const storageKey = 'civ.howToPlay.seen';
-
-/** Whether the prompt has been answered in this browser. */
-export const howToPlaySeen = (): boolean => {
-  try {
-    return window.localStorage.getItem(storageKey) !== null;
-  } catch {
-    return false;
-  }
-};
-
-/** Remembers the prompt answered, where the browser lets it. */
-export const markHowToPlaySeen = (): void => {
-  try {
-    window.localStorage.setItem(storageKey, '1');
-  } catch {
-    // Not kept: offered again next visit.
-  }
-};
 
 /** The prompt, or `null` once it's been answered. */
 export const howToPlayPrompt = (): HTMLElement | null => {
@@ -63,7 +45,9 @@ export const howToPlayPrompt = (): HTMLElement | null => {
     ),
     dismissButton = h(
       s<HTMLButtonElement>(
-        '<button type="button" class="btn-bare how-to-play-prompt-dismiss">×</button>'
+        `<button type="button" class="btn-bare how-to-play-prompt-dismiss">${glyph(
+          'close'
+        )}</button>`
       ),
       { click: answered }
     );
@@ -78,3 +62,5 @@ export const howToPlayPrompt = (): HTMLElement | null => {
 };
 
 export default howToPlayPrompt;
+
+export { howToPlaySeen, markHowToPlaySeen };
