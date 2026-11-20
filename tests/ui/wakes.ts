@@ -1,5 +1,6 @@
 // The wakes ships leave on the 3D map (docs/3d-renderer.md §6.4, §8.2, `wakes.ts`), by the clock:
-//  - a ship sailing lays a point each time it's gone a little way, and the newest follows it, so the wake reaches it;
+//  - a ship sailing lays a point every little way along its way, however few the frames, and the newest follows it,
+//    so the wake reaches it;
 //  - a ship stopped, or no longer drawn sailing, isn't followed, and its wake thins away, told gone once, with its
 //    last point;
 //  - its foam is two lines, one each side of its path, spreading out in a V behind it and thinning to nothing, lying
@@ -70,6 +71,33 @@ const round = (value: number, places = 3): number =>
   );
 }
 
+// Told where the ship is every 10 ms, or every 100 ms, as when frames are few: the same points laid, every
+//  `WAKE_EVERY` along its way, each as old as when the ship passed it.
+{
+  const laid = (every: number) => {
+    const wakes = new Wakes();
+
+    for (let now = 0; now <= 400; now += every) {
+      wakes.trail('ship', [1 + now / 1000, 2], now);
+    }
+
+    return (wakes.at(400).going[0]?.points ?? []).map(({ at, age }) => [
+      round(at[0], 6),
+      round(at[1], 6),
+      round(age, 3),
+    ]);
+  };
+
+  const fine = laid(10),
+    coarse = laid(100);
+
+  expect(
+    'told every 10 ms or every 100 ms, the same points laid, each as old as when the ship passed it',
+    [coarse.length, JSON.stringify(coarse) === JSON.stringify(fine)],
+    [fine.length, true]
+  );
+}
+
 // Stopped, no longer followed: it thins away, the oldest first; told gone once, with its last point, and nothing left.
 //  One still sailing, its newest point always new, stays. All of them gone at once, as with less motion asked for.
 {
@@ -106,9 +134,16 @@ const round = (value: number, places = 3): number =>
         (count, index) => index === 0 || count <= heldOn[index - 1]!
       ),
       heldOn.at(-1),
-      oldestAt.every(
-        (at, index) => index === 0 || at >= oldestAt[index - 1]!
-      ) && oldestAt[0]! < oldestAt.at(-2)!,
+      // Where the oldest point left is, while any is: further on each time one's gone.
+      (() => {
+        const finite = oldestAt.filter(Number.isFinite);
+
+        return (
+          finite.every(
+            (at, index) => index === 0 || at >= finite[index - 1]!
+          ) && finite[0]! < finite.at(-1)!
+        );
+      })(),
       told.flat(),
       sailing,
       ended,

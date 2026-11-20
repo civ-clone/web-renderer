@@ -3,8 +3,8 @@
 //  the clock, as walks are (`walks.ts`): the view says where each ship walking is as it draws, and asks for the wakes
 //  as they are then.
 //
-// - A point's laid each time the ship's gone `WAKE_EVERY` from the last, so a wake's as fine as the ship's path, however
-//   many frames there are; and the newest follows the ship, so the wake reaches it.
+// - A point's laid every `WAKE_EVERY` along the ship's way, so a wake's as fine however many frames there are, few or
+//   many; and the newest follows the ship, so the wake reaches it.
 // - A ship that's stopped, its walk over or no longer drawn, isn't followed any more: its wake goes on thinning, and is
 //   gone with its last point.
 // - The ground's where the walk has it: past the world's seam, a copy round, as walks go. A wake's points are as near
@@ -33,8 +33,9 @@ export class Wakes {
   }
 
   /**
-   * The ship walking as `id` is at `at` at `now`. The newest point follows the ship, so the wake reaches it; once it's
-   *  gone `WAKE_EVERY` from the point laid before it, another's laid there, and it goes on following.
+   * The ship walking as `id` is at `at` at `now`. The newest point follows the ship, so the wake reaches it; behind it,
+   *  a point's laid every `WAKE_EVERY` along the way it's come since the last laid, however far it's gone since it was
+   *  last told, as when frames are few: each where and when the ship passed it, as the straight way between has it.
    */
   trail(id: string, at: readonly [number, number], now: number): void {
     const wake = this.#wakes.get(id),
@@ -55,9 +56,26 @@ export class Wakes {
     head.at = at;
     head.time = now;
 
-    if (Math.hypot(at[0] - laid.at[0], at[1] - laid.at[1]) >= WAKE_EVERY) {
-      wake.points.splice(1, 0, { at, time: now });
-    }
+    const du = at[0] - laid.at[0],
+      dv = at[1] - laid.at[1],
+      since = Math.hypot(du, dv),
+      count = Math.floor(since / WAKE_EVERY),
+      [lu, lv] = laid.at,
+      then = laid.time;
+
+    // Newest first, as they're kept.
+    wake.points.splice(
+      1,
+      0,
+      ...Array.from({ length: count }, (_, index) => {
+        const share = ((count - index) * WAKE_EVERY) / since;
+
+        return {
+          at: [lu + du * share, lv + dv * share] as const,
+          time: then + (now - then) * share,
+        };
+      })
+    );
   }
 
   /**

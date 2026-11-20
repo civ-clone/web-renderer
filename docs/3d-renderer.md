@@ -896,11 +896,11 @@ mapEvent:
     its hull just over the water, part of its own mesh, so they cost nothing and turn with it. A ship walking into port
     or out of it carries them over the shore till it's there.
   - Sailing, a stack with a ship in it, shown on top or carrying the one that is, leaves a wake: a point laid behind it
-    each time it's gone 0.04 of a square, the newest following it, drawn as two lines of foam, one each side of its
-    path, spreading out in a V, wide open half a square behind it however fast it goes, and thinning away over 1.2 s.
-    A ship that's stopped, its walk over or no longer drawn (units hidden), lays no more, and its wake thins away, the
-    frames going on till it's gone. Each wake's foam is made again every frame, and costs a draw call at every copy of
-    the world in sight.
+    every 0.04 of a square along its way, however few the frames, the newest following it, drawn as two lines of foam,
+    one each side of its path, spreading out in a V, wide open half a square behind it however fast it goes, and
+    thinning away over 1.2 s. A ship that's stopped, its walk over or no longer drawn (units hidden), lays no more, and
+    its wake thins away, the frames going on till it's gone. Each wake's foam is made again every frame, and costs a
+    draw call at every copy of the world in sight.
   - The foam's solid, just over the sea, so it's drawn with the land and the units, and the sea needs drawing in no
     other order round it. It lies at sea level wherever the ship is, so one coming into port doesn't lift its wake off
     the water behind it, and the land hides what lies over it. It's unlit, so where a line folds over itself on the

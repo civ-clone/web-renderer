@@ -983,7 +983,7 @@ export class MapView3D implements MapRenderer {
 
       // On the sea, wherever the ship is: one coming into port doesn't lift its wake off the water behind it, and the
       //  land hides what lies over it.
-      const [u, , v] = this.#onLand(newest.at, 0);
+      const [u, v] = this.#wrapped(newest.at);
 
       this.#stage.wake(id, [u, 0, v], wakeShape(points));
     });
@@ -1032,17 +1032,22 @@ export class MapView3D implements MapRenderer {
     this.#stage.fadeWalker(id, opacity);
   }
 
+  // Where the point `at` on the ground is on the world's own copy.
+  #wrapped(at: readonly [number, number]): [number, number] {
+    const { u: periodU, v: periodV } = this.#land.layout.period(),
+      within = (value: number, period: number | null): number =>
+        period === null ? value : ((value % period) + period) % period;
+
+    return [within(at[0], periodU), within(at[1], periodV)];
+  }
+
   // Where the point `at` on the ground is, `lift` over the land there (the sea, where it's under the sea), on the world's
-  //  own copy: as the stage places what walks, fights, puffs and sails.
+  //  own copy: as the stage places what walks, fights and puffs.
   #onLand(
     at: readonly [number, number],
     lift: number
   ): [number, number, number] {
-    const { u: periodU, v: periodV } = this.#land.layout.period(),
-      within = (value: number, period: number | null): number =>
-        period === null ? value : ((value % period) + period) % period,
-      u = within(at[0], periodU),
-      v = within(at[1], periodV);
+    const [u, v] = this.#wrapped(at);
 
     return [u, Math.max(0, this.#land.surfaceAt(u, v)) + lift, v];
   }
