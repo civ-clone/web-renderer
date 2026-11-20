@@ -1386,6 +1386,54 @@ expect(
     [true, 0]
   );
 
+  // `t`: the towns hidden with the units, so the land shows as it is. What's laid on a city's square and round it is
+  //  made again without its buildings or the houses round it, and with them when they're shown again, by `t` or for a
+  //  unit to give orders to.
+  {
+    // The square south of the town: open grassland.
+    const below = tiles[town.x + width] as Tile,
+      roofed = (tile: Tile, reach: number): boolean =>
+        ROOFS.some((colour) => laidNear(tile, reach).coloured(colour)),
+      seen = () => [roofed(town, 0.45), roofed(below, 0.5)];
+
+    grownTo(8);
+
+    const shown = seen();
+
+    overlaysSet.clear();
+    view.toggleUnits();
+    view.flush();
+
+    const hidden = [seen(), overlaysSet.size > 0, view.shown().units];
+
+    // Back for a unit to give orders to, as `t` brings them back.
+    view.showActiveUnit([]);
+    view.flush();
+
+    const forOrders = seen();
+
+    view.toggleUnits();
+    view.flush();
+    view.toggleUnits();
+    view.flush();
+
+    const back = seen();
+
+    grownTo(3);
+    staged.splice(0);
+
+    expect(
+      't hides the towns with the units: what’s laid on a city’s square and round it made again without its buildings or the houses round it, and with them shown again, by t or for orders',
+      [shown, hidden, forOrders, back],
+      [
+        [true, true],
+        [[false, false], true, false],
+        [true, true],
+        [true, true],
+      ]
+    );
+  }
+
   // What the game asks of it, kept until it's shown (slices 1.2 and 1.3).
   const unit = { id: 'Unit-1' } as unknown as Unit;
 
@@ -2942,7 +2990,7 @@ expect(
   walkersSet.length = 0;
 
   // With units hidden, and cities' walls and names (`t`), the active unit in a city stands in front of its buildings,
-  //  which are laid with the land and stay, as it's drawn there, and sets off from there.
+  //  or where they'd stand with the towns hidden, as it's drawn there, and sets off from there.
   const hiddenTown = tiles[1 * 4 + 1] as Tile,
     [hiddenU, hiddenV] = middleOf(hiddenTown);
 

@@ -9,7 +9,8 @@
 //
 // What's laid on the land (`overlay/`: roads, fields, mines, specials, huts) is a mesh for each chunk of the squares
 //  whose middles are in it. It's made again when its chunk's land is, or when a square in it or beside it is released,
-//  as roads join their neighbours: far cheaper than the land, so a road built rebuilds no land.
+//  as roads join their neighbours: far cheaper than the land, so a road built rebuilds no land. And when the towns are
+//  hidden or shown (`t`, `showTowns`): those with a city on or beside them.
 
 import groundLayoutFor, { GroundLayout } from './layouts';
 import { REACH } from './terrain/kernel';
@@ -67,6 +68,8 @@ export class Land {
   // The city shown on a square, where it's shown otherwise than the world has it (`keepCities`).
   #keptCity: (x: number, y: number) => Tile['city'] | undefined = () =>
     undefined;
+  // Whether the towns are laid: hidden (`t`), every square's laid as though no city stood on it.
+  #townsShown = true;
   // Where the map was last centred, for what's laid to be made nearest it first.
   #focus: [number, number] = [0, 0];
   // How far a square reaches from its middle every way, its outline's nearest edge; and half the biggest square, with
@@ -260,27 +263,11 @@ export class Land {
 
     // What's laid on them and beside them, as roads join their neighbours, where it's changed: every square's, for a
     //  world replaced with none released.
-    (squares.length === 0
-      ? [...this.#chunksOfSquares().values()].flat()
-      : this.#besides(squares)
-    ).forEach(([x, y]) => {
-      const chunk = this.#chunkOf(x, y);
-
-      // Its chunk's to be made again anyway, or it's being made and hasn't reached this square, which it'll read as it
-      //  is now: no need to look.
-      if (
-        this.#overlaysDue.has(chunk) ||
-        (this.#making?.key === chunk && !this.#reached(this.#making, x, y))
-      ) {
-        return;
-      }
-
-      const signature = JSON.stringify(this.#overlayAt(x, y));
-
-      if (signature !== (this.#laid.get(`${x},${y}`) ?? 'null')) {
-        this.#overlaysDue.add(chunk);
-      }
-    });
+    this.#layAgain(
+      squares.length === 0
+        ? [...this.#chunksOfSquares().values()].flat()
+        : this.#besides(squares)
+    );
 
     // The squares released alone, unless the world itself may have been replaced.
     const terrain = this.#relief.refresh(always ? undefined : squares);
@@ -300,6 +287,52 @@ export class Land {
     );
 
     return terrain;
+  }
+
+  /**
+   * Shows the towns, or hides them (`t`): hidden, every square's laid as though no city stood on it, so the land shows as
+   *  it is, without a city's buildings or the houses round it, and with the woods and fields they took whole again.
+   *  The squares cities stand on, and those beside them, are laid again, the nearest to (`u`, `v`) first.
+   */
+  showTowns(shown: boolean, u: number, v: number): void {
+    if (shown === this.#townsShown) {
+      return;
+    }
+
+    // Where a city stands, as the world has it or as one's kept from before a battle.
+    const towns = [...this.#chunksOfSquares().values()]
+      .flat()
+      .filter(
+        ([x, y]) =>
+          Boolean(this.#world.get(x, y).city) || Boolean(this.#keptCity(x, y))
+      );
+
+    this.#townsShown = shown;
+    this.#focus = [u, v];
+    this.#layAgain(this.#besides(towns));
+  }
+
+  // The chunks with any of `squares` on them whose overlays are to be made again: those where what's laid on one has
+  //  changed.
+  #layAgain(squares: [number, number][]): void {
+    squares.forEach(([x, y]) => {
+      const chunk = this.#chunkOf(x, y);
+
+      // Its chunk's to be made again anyway, or it's being made and hasn't reached this square, which it'll read as it
+      //  is now: no need to look.
+      if (
+        this.#overlaysDue.has(chunk) ||
+        (this.#making?.key === chunk && !this.#reached(this.#making, x, y))
+      ) {
+        return;
+      }
+
+      const signature = JSON.stringify(this.#overlayAt(x, y));
+
+      if (signature !== (this.#laid.get(`${x},${y}`) ?? 'null')) {
+        this.#overlaysDue.add(chunk);
+      }
+    });
   }
 
   /** The chunks waiting, put in order again, the nearest to (`u`, `v`) first: the map has been centred elsewhere. */
@@ -413,10 +446,10 @@ export class Land {
     this.#keptCity = keptAt;
   }
 
-  // The tile at (`x`, `y`) as it's shown: its city kept as it was (`keepCities`), if one is.
+  // The tile at (`x`, `y`) as it's shown: its city kept as it was (`keepCities`), if one is; none, the towns hidden.
   #shownAt(x: number, y: number): Tile {
     const tile = this.#world.get(x, y),
-      city = this.#keptCity(x, y);
+      city = this.#townsShown ? this.#keptCity(x, y) : null;
 
     return city === undefined ? tile : { ...tile, city };
   }

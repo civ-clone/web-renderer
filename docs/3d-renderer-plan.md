@@ -236,7 +236,7 @@ Building another world from the form starts it in the middle again.
   - `isVisible` with covered rectangles;
   - `MapPortal`'s `openCity`, `setCenter` and `render`, and the city screen's sizes from the 2D art;
   - hiding units and cities (`t`), and waiting for the next turn (`setWaiting`), as on the 2D map: a city's buildings,
-    laid with the land, stay.
+    laid with the land, stayed at first. Since 4.1, `t` lays the land again without the towns, to show the terrain.
 - **Tests:** picking at every yaw and pitch over a known height function, the sea at 0 and a lake at its own height,
   including a square under water at a low pitch.
 - **Done when:** a whole turn can be played by mouse and keyboard, with units and cities drawn as plain markers.

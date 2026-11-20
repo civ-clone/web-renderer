@@ -47,8 +47,8 @@ export type UnitMarker = {
 export type TileMarker = {
   city: CityMarker | null;
   unit: UnitMarker | null;
-  // Whether its square has a city, shown or hidden (`t`): a unit stands in front of the city's buildings, which are
-  //  laid with the land, either way. Where it's not said, where the city's marked.
+  // Whether its square has a city, shown or hidden (`t`): a unit stands in front of the city's buildings, or where
+  //  they'd stand with the towns hidden, either way. Where it's not said, where the city's marked.
   inCity?: boolean;
 };
 
