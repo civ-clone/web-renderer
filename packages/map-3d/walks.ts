@@ -14,8 +14,9 @@
 //   way at once. One stepping on from where its walk's bound goes on along it, the others staying bound there unless
 //   they step along too; one stepping from elsewhere sets off from where it's drawn, and a walk it leaves empty is
 //   given up (`dropped`).
-// - It faces the way from one square's middle to the next (each point's `middle`), turning as it passes one, and,
-//   when a step's joined, from the way it faced then.
+// - It faces the way from one square's middle to the next (each point's `middle`), or along the way it passes where a
+//   step bends (`via`, as along a road), turning as it passes a square's middle, and, when a step's joined, from the
+//   way it faced then.
 // - Aircraft fly an arc: a walk whose units all fly climbs as it sets off and comes down to land at its end, a step's
 //   way each, so a hop of one square goes half as high as a longer flight. A step joined as it comes down climbs again
 //   from where it is. One that doesn't fly rides along with a walk only if that walk doesn't fly either: what a ship
@@ -36,6 +37,10 @@ export type WalkPoint = {
   at: readonly [number, number];
   lift: number;
   middle?: readonly [number, number];
+  // The way there from the point before, where it isn't straight, as a road bends (`Land#roadPath`): the points it
+  //  passes between them, each from this point's middle (or the point itself, without one), so they go where it goes
+  //  when it's taken a copy of the world round.
+  via?: readonly (readonly [number, number])[];
 };
 
 /** How fast a walk goes. */
@@ -119,9 +124,10 @@ type Walk = {
   // When its last step was taken: a unit making the same step this soon after rides along.
   stepped: number;
   motion: Motion;
-  // The way it faced as its last step was joined, when, and how long it takes to turn from it to the way its path
-  //  goes, so it turns rather than snapping round.
-  turned: { facing: number; at: number; over: number } | null;
+  // How far it was turned from the way its path goes as its last step was joined, the short way round, when, and how
+  //  long it takes to turn that away, so it turns rather than snapping round: worked out once, so it turns one way
+  //  however its path turns meanwhile.
+  turned: { offset: number; at: number; over: number } | null;
   // Whether its units fly; how many steps of its path have been let go as passed; and how high it was, as a share of
   //  the climb (0 to 1), how far along its whole path, when it set off or its last step was joined: it climbs on from
   //  there.
@@ -549,7 +555,13 @@ export class Walks {
         Math.hypot(last.middle[0] - last.at[0], last.middle[1] - last.at[1]) <
         0.01
     ) {
-      walk.points[end] = { at: last.middle, lift: 0, middle: last.middle };
+      walk.points[end] = {
+        at: last.middle,
+        lift: 0,
+        middle: last.middle,
+        // Still along the road there, as it bends.
+        ...(last.via === undefined ? {} : { via: last.via }),
+      };
     }
 
     walk.points.splice(0, passed);
@@ -569,11 +581,10 @@ export class Walks {
               nearest(arrive.middle[1], lastMiddle[1], v),
             ] as [number, number],
           }),
+      ...(arrive.via === undefined ? {} : { via: arrive.via }),
     });
     walk.squares.push(to);
     walk.stepped = now;
-    walk.turned =
-      facing === null ? null : { facing, at: now, over: pace.step / 2 };
     walk.motion = plan(
       now,
       along - passed,
@@ -581,6 +592,15 @@ export class Walks {
       walk.points.length - 1,
       pace
     );
+    walk.turned = null;
+
+    if (facing !== null) {
+      walk.turned = {
+        offset: turnTowards(0, facing - this.#walker(walk, now).facing, 1),
+        at: now,
+        over: pace.step / 2,
+      };
+    }
   }
 
   // `unit` leaves `walk`: one walking alone ends it there.
@@ -644,6 +664,82 @@ export class Walks {
     );
   }
 
+  // Where the step from `walk`'s point `i` to the next is `t` of the way along it, and the way it's going there: straight,
+  //  facing from one square's middle to the next, or along the way it passes (`via`), by how far along it, facing the
+  //  way it goes there.
+  #stepAt(
+    walk: Walk,
+    i: number,
+    t: number
+  ): { at: [number, number]; way: number | null } {
+    const a = walk.points[i]!,
+      b = walk.points[i + 1] ?? a,
+      middle = (point: WalkPoint): readonly [number, number] =>
+        point.middle ?? point.at;
+
+    if (b.via === undefined || b.via.length === 0) {
+      return {
+        at: [
+          a.at[0] + (b.at[0] - a.at[0]) * t,
+          a.at[1] + (b.at[1] - a.at[1]) * t,
+        ],
+        way: b === a ? null : wayOf(middle(a), middle(b)),
+      };
+    }
+
+    const [mu, mv] = middle(b),
+      way: (readonly [number, number])[] = [
+        a.at,
+        ...b.via.map(([du, dv]) => [mu + du, mv + dv] as const),
+        b.at,
+      ],
+      lengths = way
+        .slice(1)
+        .map((to, index) =>
+          Math.hypot(to[0] - way[index]![0], to[1] - way[index]![1])
+        ),
+      total = lengths.reduce((sum, length) => sum + length, 0),
+      straight = wayOf(middle(a), middle(b)),
+      // The way it goes at each point it passes: halfway between the pieces either side, so it turns as it goes along
+      //  one, not all at once at its end.
+      pieces = way
+        .slice(1)
+        .map((to, index) => wayOf(way[index]!, to) ?? straight ?? 0),
+      turns = way.map((_, index) => {
+        const before = pieces[index - 1],
+          after = pieces[index];
+
+        return before === undefined
+          ? after!
+          : after === undefined
+          ? before
+          : turnTowards(before, after, 0.5);
+      });
+    let left = Math.min(1, Math.max(0, t)) * total;
+
+    for (let piece = 0; piece < lengths.length; piece++) {
+      const length = lengths[piece]!,
+        from = way[piece]!,
+        to = way[piece + 1]!;
+
+      if (left <= length || piece === lengths.length - 1) {
+        const share = length === 0 ? 0 : Math.min(1, left / length);
+
+        return {
+          at: [
+            from[0] + (to[0] - from[0]) * share,
+            from[1] + (to[1] - from[1]) * share,
+          ],
+          way: turnTowards(turns[piece]!, turns[piece + 1]!, share),
+        };
+      }
+
+      left -= length;
+    }
+
+    return { at: [b.at[0], b.at[1]], way: wayOf(middle(a), middle(b)) };
+  }
+
   #walker(walk: Walk, now: number): Walker {
     const { points, squares, turned } = walk,
       last = points.length - 1,
@@ -652,30 +748,57 @@ export class Walks {
       t = along - index,
       a = points[index]!,
       b = points[index + 1] ?? a,
-      at: [number, number] = [
-        a.at[0] + (b.at[0] - a.at[0]) * t,
-        a.at[1] + (b.at[1] - a.at[1]) * t,
-      ],
-      middle = (i: number): readonly [number, number] =>
-        points[i]!.middle ?? points[i]!.at,
-      way = (i: number): number | null =>
-        i < 0 || i >= last ? null : wayOf(middle(i), middle(i + 1)),
-      here = way(index) ?? 0,
-      // Turning at each square's middle: a quarter of a step either side, from the way it came to the way it goes.
-      pathFacing =
-        t > 0.75 && way(index + 1) !== null
-          ? turnTowards(here, way(index + 1)!, (t - 0.75) * 2)
-          : t < 0.25 && way(index - 1) !== null
-          ? turnTowards(way(index - 1)!, here, (t + 0.25) * 2)
-          : here,
-      // Just after a step's joined, from the way it faced then.
+      { at, way: going } = this.#stepAt(walk, index, t),
+      // The way step `i` goes as it leaves a square's middle (0), and as it comes to the next (1).
+      way = (i: number, end: 0 | 1): number | null =>
+        i < 0 || i >= last ? null : this.#stepAt(walk, i, end).way,
+      // How far it turns at the middle between step `i` and the next, the short way round, from the way it comes in to
+      //  the way it goes out: one turn for both sides of the middle, so they can't turn opposite ways round, as they
+      //  could when it doubles back.
+      turnAt = (i: number): number | null => {
+        const into = way(i, 1),
+          out = way(i + 1, 0);
+
+        return into === null || out === null
+          ? null
+          : turnTowards(0, out - into, 1);
+      },
+      here = going ?? 0,
+      // The way straight from this step's square's middle to the next's: how a unit standing faces, having come so, and
+      //  so how it faces as it sets off and as it stops, where the step bends between, as along a road.
+      straight = wayOf(a.middle ?? a.at, b.middle ?? b.at),
+      // Turning at each square's middle: a quarter of a step either side, half of it before the middle and half after,
+      //  on from the way it's going now, so it turns with no jolt, however its steps bend. Worked out only there.
+      pathFacing = ((): number => {
+        if (t > 0.75) {
+          const coming = turnAt(index);
+
+          if (coming !== null) {
+            return here + coming * (t - 0.75) * 2;
+          }
+
+          if (index === last - 1 && straight !== null) {
+            return turnTowards(here, straight, (t - 0.75) * 4);
+          }
+        } else if (t < 0.25) {
+          const leaving = turnAt(index - 1);
+
+          if (leaving !== null) {
+            return here - leaving * (0.5 - t * 2);
+          }
+
+          if (index === 0 && straight !== null) {
+            return turnTowards(straight, here, t * 4);
+          }
+        }
+
+        return here;
+      })(),
+      // Just after a step's joined, from the way it faced then, the turn it was from its path then easing away.
       facing =
         turned !== null && now - turned.at < turned.over
-          ? turnTowards(
-              turned.facing,
-              pathFacing,
-              Math.max(0, now - turned.at) / turned.over
-            )
+          ? pathFacing +
+            turned.offset * (1 - Math.max(0, now - turned.at) / turned.over)
           : pathFacing;
 
     return {

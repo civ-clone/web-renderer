@@ -30,6 +30,7 @@ import overlayMesh, {
   layOverlay,
   meshOf,
   soup,
+  roadHalf,
 } from './overlay/overlayMesh';
 
 // A chunk's overlay being made a square at a time: which chunk, its squares, how many are made, what's laid so far,
@@ -41,6 +42,10 @@ type Making = {
   laid: Soup;
   heights: Map<string, number>;
 };
+
+// A number of the square at (`x`, `y`)'s own, for where things stand on it and which way its roads bend.
+const squareSeed = (x: number, y: number): number =>
+  Math.imul(x, 73856093) ^ Math.imul(y, 19349663);
 
 export class Land {
   readonly layout: GroundLayout;
@@ -416,6 +421,97 @@ export class Land {
     );
   }
 
+  /**
+   * The way a unit walks from the square at (`x`, `y`) to its neighbour at (`nx`, `ny`) along the road between them, as
+   *  it's drawn: the half each draws (`roadHalf`), from the middle of one to the edge they share and on to the middle of
+   *  the other, as points relative to the middle of the square it's going to. Where only one draws a half (the other a
+   *  city, say, or a railroad's way), straight from or to the edge on the other's side. Nothing where neither does, or
+   *  they aren't neighbours.
+   */
+  roadPath(
+    x: number,
+    y: number,
+    nx: number,
+    ny: number
+  ): [number, number][] | null {
+    const topology = this.#world.topology(),
+      offsetTo = (
+        fromX: number,
+        fromY: number,
+        toX: number,
+        toY: number
+      ): readonly [number, number] | null => {
+        const direction = topology.directions().find((way) => {
+          const at = topology.neighbour(fromX, fromY, way);
+
+          return at !== null && at[0] === toX && at[1] === toY;
+        });
+
+        return direction === undefined
+          ? null
+          : topology.offset(direction, fromX, fromY);
+      },
+      out = offsetTo(x, y, nx, ny),
+      back = offsetTo(nx, ny, x, y);
+
+    if (out === null || back === null) {
+      return null;
+    }
+
+    // The half the square at (`ax`, `ay`) draws `offset` away, from its middle to the edge, in its own frame; or
+    //  nothing, where it draws none that way.
+    const half = (
+        ax: number,
+        ay: number,
+        offset: readonly [number, number]
+      ): [number, number][] | null => {
+        const road = this.#overlayAt(ax, ay)?.road ?? null;
+
+        return road !== null &&
+          road.joins.some(([du, dv]) => du === offset[0] && dv === offset[1])
+          ? roadHalf(
+              {
+                centre: this.layout.centre(ax, ay),
+                toward: ([du, dv]) => this.layout.centre(ax + du, ay + dv),
+                seed: squareSeed(ax, ay),
+              },
+              offset
+            ).points
+          : null;
+      },
+      leaving = half(x, y, out),
+      coming = half(nx, ny, back);
+
+    if (leaving === null && coming === null) {
+      return null;
+    }
+
+    // The edge they share, in each one's frame: the copies the two halves are drawn at.
+    const here = this.layout.centre(x, y),
+      there = this.layout.centre(nx, ny),
+      edgeHere = this.layout.centre(x + out[0], y + out[1]),
+      edgeThere = this.layout.centre(nx + back[0], ny + back[1]),
+      fromEdge: [number, number] = [
+        (here[0] + edgeHere[0]) / 2,
+        (here[1] + edgeHere[1]) / 2,
+      ],
+      toEdge: [number, number] = [
+        (there[0] + edgeThere[0]) / 2,
+        (there[1] + edgeThere[1]) / 2,
+      ],
+      // From the leaving square's frame to the arriving one's.
+      shift = [toEdge[0] - fromEdge[0], toEdge[1] - fromEdge[1]],
+      path = [
+        ...(leaving ?? [here, fromEdge]).map(([u, v]): [number, number] => [
+          u + shift[0]!,
+          v + shift[1]!,
+        ]),
+        ...(coming ?? [there, toEdge]).slice(0, -1).reverse(),
+      ];
+
+    return path.map(([u, v]) => [u - there[0], v - there[1]]);
+  }
+
   /** What's laid on the land of chunk `i` across and `j` down: its squares' roads, fields and the rest, or nothing. */
   overlayOf(i: number, j: number): OverlayMesh | null {
     const { stepsU, stepsV, spacingU, spacingV } = this.#grid,
@@ -458,7 +554,7 @@ export class Land {
         radius: this.#radius,
         inner: this.#inner,
         heightAt: (pu, pv) => this.surfaceAt(pu, pv, heights),
-        seed: Math.imul(x, 73856093) ^ Math.imul(y, 19349663),
+        seed: squareSeed(x, y),
         latitude: Math.min(1, Math.abs((2 * v) / this.extentV() - 1)),
         outline: this.layout.outline(x, y),
         owns: (pu, pv) => {

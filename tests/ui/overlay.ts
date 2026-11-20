@@ -903,6 +903,180 @@ const landOf = (
   );
 }
 
+// The way a unit walks along a road between two squares (`Land#roadPath`), relative to the middle of the one it's
+//  going to: from the other's middle along the half it draws to the edge they share, and on along this one's half to
+//  its middle; on a city's side, straight to or from the edge; nothing with no road between them, nor between squares
+//  that aren't neighbours; over the world's seam, from the copy beside it.
+{
+  const width = 16,
+    height = 12,
+    roads = new Set(['4,5', '5,5', '6,5', '15,5', '0,5', '4,7']),
+    world = new World({
+      _: 'World',
+      __: ['World', 'DataObject'],
+      id: 'world',
+      width,
+      height,
+      topologyId: 'square',
+      tiles: Array.from({ length: width * height }, (_, index) => {
+        const x = index % width,
+          y = Math.floor(index / width);
+
+        return {
+          x,
+          y,
+          terrain: { _: 'Grassland', __: ['Grassland'], features: [] },
+          improvements: roads.has(`${x},${y}`) ? [{ _: 'Road' }] : [],
+          units: [],
+          city: x === 6 && y === 5 ? { name: 'Lanes' } : null,
+        };
+      }) as never,
+    }),
+    land = new Land(world),
+    { layout } = land,
+    halfOf = (x: number, y: number, offset: readonly [number, number]) =>
+      roadHalf(
+        {
+          centre: layout.centre(x, y),
+          toward: ([dx, dy]) => layout.centre(x + dx, y + dy),
+          seed: Math.imul(x, 73856093) ^ Math.imul(y, 19349663),
+        },
+        offset
+      ).points,
+    near = (a: readonly number[], b: readonly number[]) =>
+      Math.hypot(a[0]! - b[0]!, a[1]! - b[1]!) < 1e-9,
+    both = land.roadPath(4, 5, 5, 5)!,
+    leaving = halfOf(4, 5, [1, 0]),
+    coming = halfOf(5, 5, [-1, 0]),
+    [tu, tv] = layout.centre(5, 5),
+    // Into the city: its square draws no half.
+    intoCity = land.roadPath(5, 5, 6, 5)!,
+    overSeam = land.roadPath(15, 5, 0, 5)!;
+
+  expect(
+    'a walk along a road: from one middle along its half to the edge, and on along the other’s to its middle; to a city, straight from the edge; none with no road, nor between squares not beside each other; over the seam, from the copy beside it',
+    [
+      near(both[0]!, [-1, 0]),
+      near(both.at(-1)!, [0, 0]),
+      both.some((point) => near(point, [-0.5, 0])),
+      leaving.every((point, index) =>
+        near(both[index]!, [point[0] - tu, point[1] - tv])
+      ),
+      [...coming]
+        .reverse()
+        .every((point, index) =>
+          near(both[leaving.length - 1 + index]!, [
+            point[0] - tu,
+            point[1] - tv,
+          ])
+        ),
+      intoCity.length === halfOf(5, 5, [1, 0]).length + 1,
+      near(intoCity.at(-2)!, [-0.5, 0]),
+      land.roadPath(4, 5, 4, 6),
+      land.roadPath(4, 5, 4, 7),
+      near(overSeam[0]!, [-1, 0]) && near(overSeam.at(-1)!, [0, 0]),
+    ],
+    [true, true, true, true, true, true, true, null, null, true]
+  );
+}
+
+// On every grid, with roads on every square of a world 8 by 8 that wraps over its poles: the way along the road from
+//  every square to every neighbour, over the world's seam and its poles too, starts at the middle it leaves, as the
+//  arriving square sees it, ends at the middle it comes to, and runs on with no gap.
+(['square', 'staggered-iso', 'hex-odd-r'] as TopologyId[]).forEach(
+  (topologyId) => {
+    const size = 8,
+      world = new World({
+        _: 'World',
+        __: ['World', 'DataObject'],
+        id: 'world',
+        width: size,
+        height: size,
+        topologyId,
+        tiles: Array.from({ length: size * size }, (_, index) => ({
+          x: index % size,
+          y: Math.floor(index / size),
+          terrain: { _: 'Grassland', __: ['Grassland'], features: [] },
+          improvements: [{ _: 'Road' }],
+          units: [],
+          city: null,
+        })) as never,
+      }),
+      land = new Land(world),
+      { layout } = land,
+      topology = world.topology(),
+      wrong: string[] = [];
+
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        topology.directions().forEach((direction) => {
+          const at = topology.neighbour(x, y, direction);
+
+          if (at === null) {
+            return;
+          }
+
+          const [nx, ny] = at,
+            path = land.roadPath(x, y, nx, ny),
+            there = layout.centre(nx, ny),
+            // The way back, and the middle it leaves as the arriving square sees it.
+            back = topology
+              .directions()
+              .map((other) => topology.offset(other, nx, ny))
+              .find(([dx, dy]) => {
+                const to = topology.neighbour(
+                  nx,
+                  ny,
+                  topology.directions().find((way) => {
+                    const offset = topology.offset(way, nx, ny);
+
+                    return offset[0] === dx && offset[1] === dy;
+                  })!
+                );
+
+                return to !== null && to[0] === x && to[1] === y;
+              }),
+            leaves =
+              back === undefined
+                ? null
+                : layout.centre(nx + back[0], ny + back[1]);
+
+          if (path === null || leaves === null) {
+            wrong.push(`${x},${y} → ${nx},${ny}: none`);
+
+            return;
+          }
+
+          const gap = Math.max(
+            ...path
+              .slice(1)
+              .map(([u, v], index) =>
+                Math.hypot(u - path[index]![0], v - path[index]![1])
+              )
+          );
+
+          if (
+            Math.hypot(
+              path[0]![0] - (leaves[0] - there[0]),
+              path[0]![1] - (leaves[1] - there[1])
+            ) > 1e-9 ||
+            Math.hypot(path.at(-1)![0], path.at(-1)![1]) > 1e-9 ||
+            gap > 0.07
+          ) {
+            wrong.push(`${x},${y} → ${nx},${ny}`);
+          }
+        });
+      }
+    }
+
+    expect(
+      `${topologyId}: the way along a road from every square to every neighbour, over the seam and poles, starts at the middle it leaves, ends at the one it comes to, with no gap`,
+      wrong.slice(0, 5),
+      []
+    );
+  }
+);
+
 // A road's halves, on every grid, every way out of every square: each bends on its own square, short of the edge, and
 //  meets its neighbour's half at the same point there, going the same way, so the road runs on smoothly. Each bows
 //  no further from the straight line than `ROAD_BOW` of its length, and some bow a good part of that.
