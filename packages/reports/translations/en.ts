@@ -53,6 +53,8 @@ i18next.addResources('en', 'default', {
     'Your cities’ {{yield}} grows with their distance from it',
   'Civilopedia.effect.clause.per': 'for each {{targets}}',
   'Civilopedia.effect.clause.inCitiesWith': 'in cities with a {{targets}}',
+  'Civilopedia.effect.clause.inCitiesWith_player':
+    'in all your cities with a {{targets}}',
   'Civilopedia.effect.clause.needs': 'with {{targets}}',
   'Civilopedia.effect.clause.with': 'with {{targets}}',
   'Civilopedia.effect.clause.replaces': 'in place of {{targets}}',

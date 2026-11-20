@@ -141,6 +141,17 @@ export const effectLine = (
       count,
       interpolation: { escapeValue: false },
     }),
+    // A clause may say the scope with it ("in all your cities with a Temple", `clause.inCitiesWith_player`), and
+    //  then the scope isn't said again.
+    scoped = (field: string): string | undefined =>
+      typeof effect.scope === 'string'
+        ? [`Civilopedia.effect.clause.${field}_${effect.scope}`].find((key) =>
+            i18next.exists(key)
+          )
+        : undefined,
+    scopeSaid = clauses.some(
+      (field) => effect[field] !== undefined && scoped(field) !== undefined
+    ),
     qualified = clauses
       .map((field) => {
         const targets = said(
@@ -153,7 +164,7 @@ export const effectLine = (
 
         return targets === null
           ? null
-          : t(`Civilopedia.effect.clause.${field}`, {
+          : t(scoped(field) ?? `Civilopedia.effect.clause.${field}`, {
               targets,
               interpolation: { escapeValue: false },
             });
@@ -166,8 +177,23 @@ export const effectLine = (
             `Civilopedia.effect.scope.${effect.scope}_${effect.type}`,
             `Civilopedia.effect.scope.${effect.scope}`,
           ].find((key) => i18next.exists(key))
-        : undefined,
-    scope = scopeKey === undefined || t(scopeKey) === '' ? [] : [t(scopeKey)];
+        : undefined;
+
+  // A scope with no wording would read as the effect's own city, so it's said to be missing.
+  if (typeof effect.scope === 'string' && scopeKey === undefined) {
+    const missing = `Civilopedia.effect.scope.${effect.scope}`;
+
+    if (!warned.has(missing)) {
+      warned.add(missing);
+
+      console.warn(`Civilopedia: no wording for the scope '${missing}'.`);
+    }
+  }
+
+  const scope =
+    scopeSaid || scopeKey === undefined || t(scopeKey) === ''
+      ? []
+      : [t(scopeKey)];
 
   return [main, ...qualified, ...scope].join(', ');
 };

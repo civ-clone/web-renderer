@@ -448,7 +448,25 @@ const check = async (): Promise<void> => {
     keys.filter(
       (key) =>
         !translations.includes(`'${key}'`) &&
-        !translations.includes(`'${key}_one'`)
+        !(
+          translations.includes(`'${key}_one'`) &&
+          translations.includes(`'${key}_other'`)
+        )
+    ),
+    []
+  );
+  expect(
+    'every scope sent has wording in en',
+    Array.from(
+      new Set(
+        entries.flatMap((item) =>
+          item.effects.flatMap(({ scope }) =>
+            typeof scope === 'string' ? [scope] : []
+          )
+        )
+      )
+    ).filter(
+      (scope) => !translations.includes(`'Civilopedia.effect.scope.${scope}'`)
     ),
     []
   );

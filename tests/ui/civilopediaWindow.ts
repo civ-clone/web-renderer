@@ -605,7 +605,7 @@ const run = async (): Promise<void> => {
       'Makes 2 unhappy citizens content, in your cities on the same continent' +
       'Makes every unhappy citizen content' +
       '+1 move for your ships' +
-      'Makes 2 more unhappy citizens content, in cities with a Temple, with Mysticism, in all your cities'
+      'Makes 2 more unhappy citizens content, in all your cities with a Temple, with Mysticism'
   );
 
   finished = true;
