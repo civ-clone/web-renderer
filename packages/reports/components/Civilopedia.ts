@@ -11,6 +11,7 @@ import {
   whereHtml,
 } from './lib/requirements';
 import CivilopediaRequest from '@civ-clone/ui-protocol/Requests/Civilopedia';
+import { effectLines } from './lib/effects';
 import { RequirementData } from '@civ-clone/ui-protocol/requirements';
 import Requirements from '@civ-clone/ui-protocol/Requests/Requirements';
 import Transport from '@civ-clone/ui-client/Transport';
@@ -155,6 +156,11 @@ export const entryHtml = (
         .filter((advance): advance is CivilopediaEntry => !!advance)
         .sort(byName)
         .map((advance) => classLink(advance.key, entries))
+    ),
+    // What it does, as the rules describe it (#1196).
+    section(
+      t('Civilopedia.heading.effects'),
+      effectLines(entry.effects ?? [], entries)
     ),
     section(
       t('Civilopedia.heading.subject'),

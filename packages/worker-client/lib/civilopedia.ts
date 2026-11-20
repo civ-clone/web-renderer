@@ -32,6 +32,9 @@ import { ageOf } from '@civ-clone/base-science-age/lib/ageOf';
 import { entriesInForce } from './requirements';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 import {
+  CivilopediaClass,
+  CivilopediaEffect,
+  CivilopediaEffectValue,
   CivilopediaKind,
   CivilopediaEntry,
   UnitStats,
@@ -129,6 +132,60 @@ export const advanceAges = (
   return { ages, ageOf: of };
 };
 
+// A described value as the page is sent it: a class by its key and name, lists and records the same all the way down.
+const effectValue = (value: unknown): CivilopediaEffectValue => {
+  if (typeof value === 'function') {
+    return {
+      class: typeNameOf(value as Class),
+      name: (value as Class).name,
+    } as CivilopediaClass;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(effectValue);
+  }
+
+  if (value !== null && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([field, item]) => [field, effectValue(item)])
+    );
+  }
+
+  return value as CivilopediaEffectValue;
+};
+
+type Described = { type: string; subject?: unknown; [field: string]: unknown };
+
+/**
+ * What the rules in force say they do (#1196), by what each effect is about (its `subject`): a rule switched off, by a
+ *  rule set or one that supersedes it, says nothing. A rule from a copy of `core-rule` without descriptions has none.
+ */
+export const describedEffects = (rules: RuleRegistry): Described[] =>
+  rules
+    .entries()
+    .filter((rule) => rule.enabled())
+    .flatMap(
+      (rule) =>
+        ((rule as { descriptions?: () => Described[] }).descriptions?.() ??
+          []) as Described[]
+    );
+
+/** `Item`'s effects among `described`: those about it, or about one of its base classes. */
+export const effectsOf = (
+  Item: Class,
+  described: Described[]
+): CivilopediaEffect[] =>
+  described
+    .filter(
+      ({ subject }) =>
+        typeof subject === 'function' &&
+        (subject === Item || Item.prototype instanceof subject)
+    )
+    .map(
+      ({ subject, ...fields }) =>
+        effectValue(fields) as unknown as CivilopediaEffect
+    );
+
 export const civilopediaData = (
   game: Game = defaultGame
 ): CivilopediaEntry[] => {
@@ -137,6 +194,7 @@ export const civilopediaData = (
       (Item) => Item.prototype instanceof Advance
     ) as (typeof Advance)[],
     { ages, ageOf: agesOf } = advanceAges(advances, game.rules),
+    described = describedEffects(game.rules),
     entry = (
       Item: Class,
       kind: CivilopediaKind,
@@ -149,6 +207,7 @@ export const civilopediaData = (
       leadsTo: ids(game.requirements.leadsTo(Item as any), kept),
       cost: buildable ? costOf(Item, game) : null,
       stats: kind === 'unit' ? unitStats(Item, game.rules) : null,
+      effects: effectsOf(Item, described),
     });
 
   return [

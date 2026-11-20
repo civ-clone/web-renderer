@@ -3,6 +3,8 @@ import i18next from 'i18next';
 
 i18next.addResources('en-GB', 'default', {
   'Civilopedia.section.advance': 'Civilisation Advances',
+  'Civilopedia.effect.defence_multiplier':
+    'Defence of the units in the city ×{{value}}',
   'Civilopedia.kind.advance': 'Civilisation Advance',
   'Civilopedia.stats':
     'Attack: {{attack, number}} · Defence: {{defense, number}} · Moves: {{movement, number}}',
