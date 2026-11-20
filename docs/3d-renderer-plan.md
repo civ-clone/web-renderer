@@ -464,7 +464,14 @@ Still to do in 3.4: improvements as models from a hosted set, and Fortress and A
 **First part, the city's own square: done** (spec §7.2, "As built"). A city is laid with the land round a paved plaza,
 with streets out to the roads that come in and to its quay, and houses lining them on lots that fill in as it grows,
 seeded from the city, so it keeps its buildings as it grows. They stand inside its walls, clear of a unit in front.
-Its marker keeps its walls and name. Still to do: neighbouring squares, side streets, eras and modernising.
+Its marker keeps its walls and name.
+
+**Second part, neighbouring squares: done** (spec §7.2, "As built"). From size 4, a city's houses spill onto the squares
+round it, further each size up to 15, lining the roads into town and thinning outward. Each square lays them itself,
+from the city beside it, on land that isn't the sea, mountains, a mine, a fortress or an airbase. Fields give way to
+them, and trees keep clear.
+
+Still to do: worked squares further out, side streets, eras and modernising.
 
 ### 4.2 The building kit
 

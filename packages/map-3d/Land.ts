@@ -445,9 +445,9 @@ export class Land {
   /**
    * The way a unit walks from the square at (`x`, `y`) to its neighbour at (`nx`, `ny`) along the road between them, as
    *  it's drawn: the half each draws (`roadHalf`), from the middle of one to the edge they share and on to the middle of
-   *  the other, as points relative to the middle of the square it's going to. Where only one draws a half (the other a
-   *  city, say, or a railroad's way), straight from or to the edge on the other's side. Nothing where neither does, or
-   *  they aren't neighbours.
+   *  the other, as points relative to the middle of the square it's going to. Where a railroad takes the way, its half,
+   *  straight to the edge. Where only one draws a half (the other a city, say), straight from or to the edge on the
+   *  other's side. Nothing where neither does, or they aren't neighbours.
    */
   roadPath(
     x: number,
@@ -479,26 +479,43 @@ export class Land {
       return null;
     }
 
-    // The half the square at (`ax`, `ay`) draws `offset` away, from its middle to the edge, in its own frame; or
-    //  nothing, where it draws none that way.
+    // The half the square at (`ax`, `ay`) draws `offset` away, from its middle to the edge, in its own frame: its road's,
+    //  as it bends, or where a railroad takes that way instead, the railroad's, straight; or nothing, where it draws
+    //  none that way.
     const half = (
         ax: number,
         ay: number,
         offset: readonly [number, number]
       ): [number, number][] | null => {
-        const road = this.#overlayAt(ax, ay)?.road ?? null;
+        const overlay = this.#overlayAt(ax, ay),
+          joins = (route: { joins: (readonly [number, number])[] } | null) =>
+            route !== null &&
+            route.joins.some(
+              ([du, dv]) => du === offset[0] && dv === offset[1]
+            ),
+          centre = this.layout.centre(ax, ay);
 
-        return road !== null &&
-          road.joins.some(([du, dv]) => du === offset[0] && dv === offset[1])
-          ? roadHalf(
-              {
-                centre: this.layout.centre(ax, ay),
-                toward: ([du, dv]) => this.layout.centre(ax + du, ay + dv),
-                seed: squareSeed(ax, ay),
-              },
-              offset
-            ).points
-          : null;
+        if (joins(overlay?.road ?? null)) {
+          return roadHalf(
+            {
+              centre,
+              toward: ([du, dv]) => this.layout.centre(ax + du, ay + dv),
+              seed: squareSeed(ax, ay),
+            },
+            offset
+          ).points;
+        }
+
+        if (joins(overlay?.railroad ?? null)) {
+          const [tu, tv] = this.layout.centre(ax + offset[0], ay + offset[1]);
+
+          return [
+            [centre[0], centre[1]],
+            [(centre[0] + tu) / 2, (centre[1] + tv) / 2],
+          ];
+        }
+
+        return null;
       },
       leaving = half(x, y, out),
       coming = half(nx, ny, back);

@@ -2,6 +2,7 @@
 //  by code for the built-in set:
 //  - roads, railroads, fields and pollution are draped over the land, sampled along it, a little above it;
 //  - mines, fortresses, airbases, specials and huts are small solids standing on it, specials at sea on the water;
+//  - a city's lot is its sprawl, and a city's houses spill onto its neighbours' squares as it grows;
 //  - what stands on a square stands away from its middle, where a unit stands, each at a place of its own seeded from
 //    the square, so they don't line up from square to square.
 //
@@ -32,7 +33,16 @@ import {
   growthOf,
 } from '@civ-clone/ui-models-builtin/vegetation';
 import { Route, SquareOverlay } from './overlayFor';
-import { CityPlan, STREET, footprintOf, sprawl } from './sprawl';
+import {
+  CityPlan,
+  GAP,
+  Lot,
+  Run,
+  STREET,
+  footprintOf,
+  sprawl,
+  suburb,
+} from './sprawl';
 import { IN_FRONT_OF_CITY } from '../markers/drawMarker';
 
 /** Where a square is, and what it needs to know of the land round it, to lay its overlay. */
@@ -448,6 +458,10 @@ class Layer {
   // The lines across the square that what stands on it keeps clear of: its roads and railroads, a fortress's walls,
   //  an airbase's runway. And what stands there already: where, and how much room it takes.
   readonly lines: [readonly [number, number], readonly [number, number]][] = [];
+  // Its roads and railroads among them, each from its middle out one way, keyed by that way: the houses of a city beside
+  //  it line them. And the roads past its corners, which they keep clear of too.
+  readonly runs: Run[] = [];
+  readonly past: [readonly [number, number], readonly [number, number]][] = [];
   readonly taken: [number, number, number][] = [];
   // Where each plant grown stands, and what it is.
   readonly grown: [number, number, PlantKind][] = [];
@@ -672,36 +686,76 @@ const railroad = (layer: Layer, route: Route): void => {
   layer.disc(place.centre, 0.05, BALLAST, LIFT.ballast);
 };
 
-// Rows of crops across the square, with ditches between them: more rows, and yellower, for farmland.
-const fields = (layer: Layer, kind: 'irrigation' | 'farmland'): void => {
+// The shortest piece of a row of crops left between houses, or at its end: shorter, it's left out.
+const SHORTEST_ROW = 0.04;
+
+/**
+ * What's left of the run from `from` to `to`, along a row across the square at `v`, `width` across, clear of the
+ *  `houses` (footprints) by `GAP`: the pieces between them, each at least `SHORTEST_ROW` long.
+ */
+export const rowAround = (
+  from: number,
+  to: number,
+  v: number,
+  width: number,
+  houses: readonly (readonly (readonly [number, number])[])[]
+): [number, number][] => {
+  const blocked = houses
+      .filter(
+        (corners) =>
+          Math.min(...corners.map(([, cv]) => cv)) - GAP < v + width / 2 &&
+          Math.max(...corners.map(([, cv]) => cv)) + GAP > v - width / 2
+      )
+      .map((corners): [number, number] => [
+        Math.min(...corners.map(([cu]) => cu)) - GAP,
+        Math.max(...corners.map(([cu]) => cu)) + GAP,
+      ])
+      .sort((a, b) => a[0] - b[0]),
+    pieces: [number, number][] = [];
+  let start = from;
+
+  blocked.forEach(([a, b]) => {
+    if (a - start >= SHORTEST_ROW) {
+      pieces.push([start, Math.min(a, to)]);
+    }
+
+    start = Math.max(start, b);
+  });
+
+  if (to - start >= SHORTEST_ROW) {
+    pieces.push([start, to]);
+  }
+
+  return pieces.filter(([a, b]) => b - a >= SHORTEST_ROW);
+};
+
+// Rows of crops across the square, with ditches between them: more rows, and yellower, for farmland. They give way to a
+//  city's houses on the square, stopping short of them.
+const fields = (
+  layer: Layer,
+  kind: 'irrigation' | 'farmland',
+  houses: readonly (readonly (readonly [number, number])[])[]
+): void => {
   const { centre, inner } = layer.place,
     rows = kind === 'farmland' ? 6 : 4,
     // Inside the square's outline, a diamond or a hex as much as a square, so fields don't run into their neighbours'.
     reach = inner * 0.9,
-    width = (reach * 2) / rows;
+    width = (reach * 2) / rows,
+    across = (v: number, wide: number, colour: string, lift: number): void =>
+      rowAround(centre[0] - reach, centre[0] + reach, v, wide, houses).forEach(
+        ([a, b]) => layer.strip([a, v], [b, v], wide, colour, lift)
+      );
 
   for (let row = 0; row < rows; row++) {
-    const v = centre[1] - reach + width * (row + 0.5),
-      colour = kind === 'farmland' ? FARMLAND[row % 2]! : FIELD;
-
-    layer.strip(
-      [centre[0] - reach, v],
-      [centre[0] + reach, v],
+    across(
+      centre[1] - reach + width * (row + 0.5),
       width * 0.8,
-      colour,
+      kind === 'farmland' ? FARMLAND[row % 2]! : FIELD,
       LIFT.field
     );
 
     if (row > 0) {
-      const ditch = centre[1] - reach + width * row;
-
-      layer.strip(
-        [centre[0] - reach, ditch],
-        [centre[0] + reach, ditch],
-        0.016,
-        DITCH,
-        LIFT.field + 0.001
-      );
+      across(centre[1] - reach + width * row, 0.016, DITCH, LIFT.field + 0.001);
     }
   }
 };
@@ -731,37 +785,103 @@ const city = (layer: Layer, plan: CityPlan): void => {
   streets.forEach(([from, to]) =>
     layer.strip(from, to, STREET, PAVING, LIFT.road)
   );
-  lots.forEach((lot) => {
-    const {
-        at: [bu, bv],
-        width,
-        facing,
-        storeys,
-      } = lot,
-      // From the lowest of the ground under it, so it stands on a slope with no gap under any corner, to its storeys
-      //  over the highest.
-      grounds = [[bu, bv] as const, ...footprintOf(lot)].map(([gu, gv]) =>
-        layer.ground(gu, gv)
-      ),
-      low = Math.min(...grounds) - 0.005,
-      top = Math.max(...grounds) + STOREY * storeys;
+  lots.forEach((lot) => house(layer, lot));
+};
 
-    layer.solid(
-      box,
-      [bu, (low + top) / 2, bv],
-      [width * WALLED, top - low, width * WALLED],
-      HOUSE,
-      [0, facing, 0]
+// A house on its lot, facing its way, its roof's eaves out to the lot's edges, standing on the land where it is.
+const house = (layer: Layer, lot: Lot): void => {
+  const {
+      at: [bu, bv],
+      width,
+      facing,
+      storeys,
+    } = lot,
+    // From the lowest of the ground under it, so it stands on a slope with no gap under any corner, to its storeys over
+    //  the highest.
+    grounds = [[bu, bv] as const, ...footprintOf(lot)].map(([gu, gv]) =>
+      layer.ground(gu, gv)
+    ),
+    low = Math.min(...grounds) - 0.005,
+    top = Math.max(...grounds) + STOREY * storeys;
+
+  layer.solid(
+    box,
+    [bu, (low + top) / 2, bv],
+    [width * WALLED, top - low, width * WALLED],
+    HOUSE,
+    [0, facing, 0]
+  );
+  // A four-sided cone, turned an eighth to square with the walls: its base's corners at half its size, so a base
+  //  `width` across, out to the lot's edges.
+  layer.solid(
+    pyramid,
+    [bu, top + width * 0.2, bv],
+    [width * Math.SQRT2, width * 0.4, width * Math.SQRT2],
+    ROOFS[Math.floor(lot.roof * ROOFS.length)]!,
+    [0, facing + Math.PI / 4, 0]
+  );
+};
+
+/**
+ * The houses of the cities beside the square that have spread onto it (`suburb`), each on its own side of it, clear of
+ *  what's on it, its roads and railroads and those past its corners, and the ways units walk from it into each city
+ *  beside it, where no road takes them; each taken once laid, so what grows there keeps clear of it. Their footprints.
+ */
+const suburbs = (
+  layer: Layer,
+  overlay: SquareOverlay
+): (readonly (readonly [number, number])[])[] => {
+  if (overlay.suburbs.length === 0) {
+    return [];
+  }
+
+  const { place } = layer,
+    same = (a: readonly [number, number], b: readonly [number, number]) =>
+      a[0] === b[0] && a[1] === b[1],
+    standOf = (offset: readonly [number, number]): [number, number] => {
+      const [cu, cv] = place.toward(offset);
+
+      return [cu, cv + IN_FRONT_OF_CITY];
+    },
+    clear = {
+      runs: [...layer.runs],
+      lines: [...layer.past],
+      // Straight from its middle to where units stand in each city, but where its road or railroad goes that way, which
+      //  they walk (`Land#roadPath`).
+      lanes: overlay.beside
+        .filter(
+          (offset) =>
+            ![
+              ...(overlay.road?.joins ?? []),
+              ...(overlay.railroad?.joins ?? []),
+            ].some((join) => same(join, offset))
+        )
+        .map((offset): [[number, number], [number, number]] => [
+          [place.centre[0], place.centre[1]],
+          standOf(offset),
+        ]),
+      stands: overlay.beside.map(standOf),
+      // What's claimed its place there first: each city's lots are all laid out before any is taken, so none hangs on
+      //  another city's houses, only on the city and the square.
+      taken: layer.taken,
+      // Out of the sea, where the land dips below it at the shore.
+      ground: (u: number, v: number) => place.heightAt(u, v),
+    },
+    lots = overlay.suburbs.flatMap((plan) =>
+      suburb(place, plan, {
+        ...clear,
+        others: overlay.beside
+          .filter((offset) => !same(offset, plan.city))
+          .map((offset) => place.toward(offset)),
+      })
     );
-    // A four-sided cone, turned an eighth to square with the walls: its base's corners at half its size, so a base
-    //  `width` across, out to the lot's edges.
-    layer.solid(
-      pyramid,
-      [bu, top + width * 0.2, bv],
-      [width * Math.SQRT2, width * 0.4, width * Math.SQRT2],
-      ROOFS[Math.floor(lot.roof * ROOFS.length)]!,
-      [0, facing + Math.PI / 4, 0]
-    );
+
+  return lots.map((lot) => {
+    house(layer, lot);
+    // Round its corners, so what's round it keeps clear of every one.
+    layer.taken.push([lot.at[0], lot.at[1], (lot.width / 2) * Math.SQRT2]);
+
+    return footprintOf(lot);
   });
 };
 
@@ -1430,10 +1550,9 @@ export const woodsPlants = (
   return found;
 };
 
-// Woods' trees, each where it has room clear of the unit's stand, the square's lines and what stands on it: not of
-//  each other, as the lattice keeps them apart, and a tree can't see its neighbour's square.
-const woods = (layer: Layer, overlay: SquareOverlay, growth: Growth): void => {
-  const { centre, around, toward, heightAt } = layer.place,
+// The roads between the square's neighbours that cross its corners (a diagonal road beside it), as its own lines.
+const pathsPast = (layer: Layer, overlay: SquareOverlay): void => {
+  const { centre, around, toward } = layer.place,
     // How far its furthest neighbour's middle is: two of its neighbours that far apart or nearer are neighbours.
     furthest = Math.max(
       ...around.map((offset) => {
@@ -1444,14 +1563,20 @@ const woods = (layer: Layer, overlay: SquareOverlay, growth: Growth): void => {
     ),
     paths = overlay.paths.map((offset) => toward(offset));
 
-  // The roads between its neighbours that cross its corners (a diagonal road beside it), as its own lines.
   paths.forEach((a, index) =>
     paths.slice(index + 1).forEach((b) => {
       if (Math.hypot(b[0] - a[0], b[1] - a[1]) <= furthest + 1e-6) {
         layer.lines.push([a, b]);
+        layer.past.push([a, b]);
       }
     })
   );
+};
+
+// Woods' trees, each where it has room clear of the unit's stand, the square's lines and what stands on it: not of
+//  each other, as the lattice keeps them apart, and a tree can't see its neighbour's square.
+const woods = (layer: Layer, overlay: SquareOverlay, growth: Growth): void => {
+  const { heightAt } = layer.place;
 
   woodsPlants(overlay, layer.place, growth).forEach(
     ({ u, v, kind, plant, size, room, facing }) => {
@@ -1504,11 +1629,17 @@ export const layOverlay = (
           half
             .slice(1)
             .forEach((point, index) => layer.lines.push([half[index]!, point]));
+          layer.runs.push({ key: wayIndex(offset), points: half });
 
           return;
         }
 
         layer.lines.push([centre, halfway(place, offset)]);
+        // Keyed apart from the roads' ways.
+        layer.runs.push({
+          key: wayIndex(offset) + 100,
+          points: [centre, halfway(place, offset)],
+        });
       });
 
       if (route.alone) {
@@ -1538,10 +1669,6 @@ export const layOverlay = (
       [centre[0] - reach, centre[1] + 0.12],
       [centre[0] + reach, centre[1] + 0.12],
     ]);
-  }
-
-  if (overlay.irrigation !== null) {
-    fields(layer, overlay.irrigation);
   }
 
   if (overlay.road !== null) {
@@ -1579,6 +1706,16 @@ export const layOverlay = (
 
   if (overlay.hut) {
     hut(layer, layer.claim(...SPOTS.hut, 0.13));
+  }
+
+  // The roads past its corners, then the houses of the cities beside it clear of them and of what's claimed its place,
+  //  so a city reaching it moves nothing that was there; then fields round the houses, and plants clear of them.
+  pathsPast(layer, overlay);
+
+  const houses = suburbs(layer, overlay);
+
+  if (overlay.irrigation !== null) {
+    fields(layer, overlay.irrigation, houses);
   }
 
   // What grows there, but not on cleared ground: fields, a fortress, an airbase. Woods as one canopy across their

@@ -10,7 +10,9 @@
 // - Each building's footprint, out to its eaves, is clear of the streets, the plaza, the stand of a unit in front of
 //   the buildings and the ring at its feet, and every lot before it, and inside the walls' ring. So a road built to the
 //   city runs a street in through the lots in its way, rather than laying the city out afresh.
-// - All on the city's own square; neighbouring squares are for a later slice.
+// - From size 4, its houses spill onto its neighbours' squares (`suburb`): each neighbour lays them on its own ground,
+//   as each square lays its own half of a road, by how far out the city has spread, so it needs to know only its
+//   neighbours.
 
 /** A square a city stands on, as the overlay knows it (`OverlayPlace`). */
 export type SprawlPlace = {
@@ -359,6 +361,347 @@ export const sprawl = (
     streets,
     lots: lots.slice(0, built),
   };
+};
+
+/** From what size a city's houses spill onto its neighbours' squares. */
+export const SUBURBS_FROM = 4;
+
+// How far from a city's middle its houses reach on its neighbours' squares at `SUBURBS_FROM`, how much further each size
+//  after, and how many sizes they go on spreading.
+const SUBURB_FIRST = 0.62,
+  SUBURB_STEP = 0.05,
+  SUBURB_STEPS = 12;
+
+// How far apart a neighbour's lots are laid, before they're jostled: a little further than in the city.
+const SUBURB_SPACING = 0.085;
+
+/**
+ * How far a house on a neighbour's square keeps from the middle of its roads and railroads, and of those past its
+ *  corners: a ballast's half-width. So its houses line them closely, and a unit walking along one passes through them
+ *  (#1282).
+ */
+export const ROADSIDE = 0.055;
+
+/**
+ * How far a house on a neighbour's square keeps from the middle of a way in, where units walk with no road to show it:
+ *  as far as a unit's figures reach across its way, so they walk between the houses, not through them. Its stand and
+ *  ring, wider and low, still reach into the walls of the nearest (#1282).
+ */
+export const WALKWAY = 0.13;
+
+// How many lots there are along one road or railroad on a neighbour's square at the most, each side: more than fit along
+//  its half, from the square's middle to its edge.
+const ALONG_MOST = 32;
+
+// Mixed into the city's seed for its lots on a neighbour's square, so each neighbour's are its own.
+const SUBURBED = 0x6c8e9cf5;
+
+/** How many steps out onto its neighbours' squares a city of `size` has spread: none below `SUBURBS_FROM`. */
+export const suburbStepsFor = (size: number): number =>
+  size < SUBURBS_FROM ? 0 : Math.min(SUBURB_STEPS, size - SUBURBS_FROM + 1);
+
+/** How far from its middle a city `steps` out (`suburbStepsFor`) reaches on its neighbours' squares: none at none. */
+export const suburbReach = (steps: number): number =>
+  steps <= 0
+    ? 0
+    : SUBURB_FIRST + (Math.min(steps, SUBURB_STEPS) - 1) * SUBURB_STEP;
+
+/**
+ * A city's houses on a neighbour's square: its seed, how many steps out it's spread (`suburbStepsFor`), and the
+ *  offset from that square to the city's.
+ */
+export type SuburbPlan = {
+  seed: number;
+  steps: number;
+  city: readonly [number, number];
+};
+
+/** A road or railroad on a square, from its middle out one way, along its bend: `key` is the way it goes, its own. */
+export type Run = { key: number; points: readonly Point[] };
+
+/**
+ * What's on a square beside a city that its houses keep clear of, line or stand on their own side of: the same for every
+ *  city beside it, so each city's houses there hang on nothing else's.
+ */
+export type SuburbClear = {
+  // Its roads and railroads (`ROADSIDE` either side of their middles), which its houses line.
+  runs: readonly Run[];
+  // Other lines across it, kept clear (`ROADSIDE` either side) but not lined: the roads past its corners.
+  lines: readonly (readonly [Point, Point])[];
+  // The way a unit walks from its middle into each city beside it, where no road takes it: to the spot where units stand
+  //  in front of the city's buildings. Kept clear (`WALKWAY` either side), and lined.
+  lanes: readonly (readonly [Point, Point])[];
+  // Those spots, in front of each city beside it.
+  stands: readonly Point[];
+  // The middles of the other cities beside it, whatever their size: each city builds on its own side of the square,
+  //  nearer its own middle than theirs.
+  others: readonly Point[];
+  // What's claimed its place there first (its specials and hut): where, and how far round it.
+  taken: readonly (readonly [number, number, number])[];
+  // How high the ground is at a point, below 0 under the water: no house stands with any of it in the sea. Dry
+  //  everywhere without it.
+  ground?: (u: number, v: number) => number;
+};
+
+// How much of the lots a city has room for on a neighbour's square are built, from all of them at its edge to fewer
+//  further out: the town thins as it goes.
+const builtShare = (out: number): number =>
+  1 - 0.55 * Math.min(1, Math.max(0, (out - 0.5) / 0.7));
+
+// A strip `wide` either side of the segment `a`–`b`.
+const strip = ([a, b]: readonly [Point, Point], wide: number): Point[] => {
+  const length = Math.hypot(b[0] - a[0], b[1] - a[1]),
+    nu = (-(b[1] - a[1]) / length) * wide,
+    nv = ((b[0] - a[0]) / length) * wide;
+
+  return [
+    [a[0] + nu, a[1] + nv],
+    [b[0] + nu, b[1] + nv],
+    [b[0] - nu, b[1] - nv],
+    [a[0] - nu, a[1] - nv],
+  ];
+};
+
+// The pieces of a run, from point to point, but those of no length.
+const piecesOf = (points: readonly Point[]): [Point, Point][] =>
+  points
+    .slice(1)
+    .map((to, index): [Point, Point] => [points[index]!, to])
+    .filter(([a, b]) => Math.hypot(b[0] - a[0], b[1] - a[1]) > 0);
+
+// Whether the boxes round two shapes are at least `gap` apart: a quick look before `apart`.
+const boxesApart = (p: Point[], q: Point[], gap: number): boolean =>
+  Math.min(...q.map(([u]) => u)) - Math.max(...p.map(([u]) => u)) >= gap ||
+  Math.min(...p.map(([u]) => u)) - Math.max(...q.map(([u]) => u)) >= gap ||
+  Math.min(...q.map(([, v]) => v)) - Math.max(...p.map(([, v]) => v)) >= gap ||
+  Math.min(...p.map(([, v]) => v)) - Math.max(...q.map(([, v]) => v)) >= gap;
+
+/**
+ * The houses a city planned as `plan` has on its neighbour's square at `place`: lots from a jostled grid over the
+ *  square, and along each of its roads and railroads, either side, seeded from the city, the way to it and each road's
+ *  way, nearest the city first, thinning outward, as far out as its steps reach. Each building's footprint, out to its
+ *  eaves:
+ *  - is on the square, with room to its edge;
+ *  - is on the city's own side of it, nearer its middle than any other city's beside it;
+ *  - is outside the city's walls, and clear of a unit in front of each city's buildings and of one standing on the
+ *    square, at its middle;
+ *  - is clear of the square's roads, railroads and the ways units walk from it into the cities beside it, of what's
+ *    claimed its place there first, and of the lots before it.
+ *
+ * A lot beside a road, railroad or way in faces it, square to it; any other faces the city. What it builds hangs on
+ *  the city and the square alone, not another city's houses, so it keeps them as it grows whatever the others do.
+ */
+export const suburb = (
+  place: SprawlPlace,
+  { seed: citySeed, steps, city }: SuburbPlan,
+  clear: SuburbClear
+): Lot[] => {
+  const reach = suburbReach(steps);
+
+  if (reach === 0) {
+    return [];
+  }
+
+  const [u, v] = place.centre,
+    middle = place.toward(city),
+    seed = citySeed ^ Math.imul(SUBURBED, (city[0] + 7) * 31 + (city[1] + 7)),
+    runPieces = clear.runs.flatMap(({ points }) => piecesOf(points)),
+    // The streets its houses line, and how far they keep from each one's middle: its roads and railroads, at the
+    //  roadside, and the ways in, a unit's width either side, where nothing else shows the way it walks.
+    streets = [
+      ...runPieces.map((line) => ({ line, wide: ROADSIDE })),
+      ...clear.lanes
+        .filter(([a, b]) => Math.hypot(b[0] - a[0], b[1] - a[1]) > 0)
+        .map((line) => ({ line, wide: WALKWAY })),
+    ],
+    // Those, and a road's width either side of those past its corners.
+    strips = [
+      ...streets.map(({ line, wide }) => strip(line, wide)),
+      ...clear.lines
+        .filter(([a, b]) => Math.hypot(b[0] - a[0], b[1] - a[1]) > 0)
+        .map((line) => strip(line, ROADSIDE)),
+    ],
+    // Which way a lot at `at` faces: square to the street it's beside, towards it, or else to the city.
+    facingAt = (at: Point, width: number): number => {
+      const beside = streets
+        .map(({ line: [a, b], wide }) => {
+          const t = along(at, a, b),
+            near: Point = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+
+          return {
+            t,
+            near,
+            off: Math.hypot(near[0] - at[0], near[1] - at[1]),
+            wide,
+          };
+        })
+        .filter(
+          ({ t, off, wide }) =>
+            t >= 0 && t <= 1 && off <= wide + width + GAP && off > 0
+        )
+        .sort((a, b) => a.off - b.off)[0];
+
+      return beside === undefined
+        ? Math.atan2(middle[0] - at[0], middle[1] - at[1])
+        : Math.atan2(beside.near[0] - at[0], beside.near[1] - at[1]);
+    },
+    // Far enough each way to cover a square on any grid: a diamond's corners are 0.71 out, a hex's 0.58.
+    cells = Math.ceil(0.75 / SUBURB_SPACING),
+    candidates: (Lot & { order: number })[] = [],
+    // How wide the `n`th lot is.
+    widthOf = (n: number): number => NARROWEST + share(seed, n * 5 + 2) * WIDER,
+    // How far `at` is from the nearest of the square's roads and railroads.
+    fromRuns = (at: Point): number =>
+      Math.min(
+        Infinity,
+        ...runPieces.map(([a, b]) => {
+          const t = Math.max(0, Math.min(1, along(at, a, b)));
+
+          return Math.hypot(
+            a[0] + (b[0] - a[0]) * t - at[0],
+            a[1] + (b[1] - a[1]) * t - at[1]
+          );
+        })
+      ),
+    // The `n`th lot, at `at`, if it's in reach, on the square and among those built as the town thins, and, from the
+    //  grid, `off` the roadside, which is left for the lots along the roads.
+    consider = (n: number, at: [number, number], grid: boolean): void => {
+      const out = Math.hypot(at[0] - middle[0], at[1] - middle[1]),
+        order = out + share(seed, n * 5 + 3) * 0.03,
+        width = widthOf(n);
+
+      if (
+        order <= reach &&
+        share(seed, n * 5 + 4) < builtShare(out) &&
+        place.owns(at[0], at[1]) &&
+        (!grid || fromRuns(at) >= ROADSIDE + GAP * 2 + NARROWEST + WIDER)
+      ) {
+        candidates.push({
+          at,
+          width,
+          facing: facingAt(at, width),
+          roof: share(seed ^ ROOFED, n),
+          // A storey, and some two.
+          storeys: 1 + (share(seed, n * 5 + 3) < 0.15 ? 1 : 0),
+          order,
+        });
+      }
+    };
+
+  // A jostled grid over the square.
+  for (let j = -cells; j <= cells; j++) {
+    for (let i = -cells; i <= cells; i++) {
+      const n = (j + cells) * (cells * 2 + 1) + (i + cells);
+
+      consider(
+        n,
+        [
+          u + i * SUBURB_SPACING + (share(seed, n * 5) - 0.5) * 2 * JOSTLE,
+          v + j * SUBURB_SPACING + (share(seed, n * 5 + 1) - 0.5) * 2 * JOSTLE,
+        ],
+        true
+      );
+    }
+  }
+
+  // And along each road and railroad, either side of it, its front at the roadside, so the houses line them as a town's
+  //  do along the roads out of it: along its bend, its lots as far apart as the widest, each seeded from the way it goes,
+  //  so a road built another way leaves them be.
+  clear.runs.forEach(({ key, points }) => {
+    const pieces = piecesOf(points).map(([from, to]) => ({
+        from,
+        to,
+        length: Math.hypot(to[0] - from[0], to[1] - from[1]),
+      })),
+      length = pieces.reduce((sum, piece) => sum + piece.length, 0),
+      count = Math.min(
+        ALONG_MOST,
+        Math.floor(length / (NARROWEST + WIDER + GAP * 2))
+      );
+
+    for (let k = 0; k < count; k++) {
+      [1, -1].forEach((side, sideIndex) => {
+        const n = (cells * 2 + 1) ** 2 + (key * ALONG_MOST + k) * 2 + sideIndex,
+          off = ROADSIDE + widthOf(n) / 2 + GAP * 2;
+        // How far along it, and so along which piece of it.
+        let t =
+          ((k + 0.5) / count) * length + (share(seed, n * 5) - 0.5) * JOSTLE;
+
+        for (const [index, { from, to, length: piece }] of pieces.entries()) {
+          if (t <= piece || index === pieces.length - 1) {
+            const du = (to[0] - from[0]) / piece,
+              dv = (to[1] - from[1]) / piece;
+
+            consider(
+              n,
+              [
+                from[0] + du * t - dv * off * side,
+                from[1] + dv * t + du * off * side,
+              ],
+              false
+            );
+            break;
+          }
+
+          t -= piece;
+        }
+      });
+    }
+  });
+
+  candidates.sort((a, b) => a.order - b.order);
+
+  // How much nearer the city's middle than `other`'s a point is, as far as it is from the line halfway between them.
+  const nearer = ([pu, pv]: Point, other: Point): number =>
+    (Math.hypot(pu - other[0], pv - other[1]) ** 2 -
+      Math.hypot(pu - middle[0], pv - middle[1]) ** 2) /
+    (2 * Math.hypot(other[0] - middle[0], other[1] - middle[1]));
+
+  // Each in turn, where it's clear: a lot's taken or not whatever the city's size, so as it spreads it keeps those it
+  //  has and adds the next out.
+  const lots: Lot[] = [],
+    footprints: Point[][] = [];
+
+  candidates.forEach(({ at, width, facing, storeys, roof }) => {
+    const footprint = footprintOf({ at, width, facing });
+
+    if (
+      // On the square, with room to its edge.
+      footprintOf({ at, width: width + GAP * 2, facing }).every(([cu, cv]) =>
+        place.owns(cu, cv)
+      ) &&
+      // On the city's own side, with room to the line halfway to each other.
+      clear.others.every((other) =>
+        footprint.every((corner) => nearer(corner, other) >= GAP / 2)
+      ) &&
+      fromFootprint(middle, footprint) >=
+        WALLS.radius + WALLS.thickness + GAP &&
+      clear.stands.every(
+        (stand) => fromFootprint(stand, footprint) >= UNIT_ROOM + GAP
+      ) &&
+      fromFootprint(place.centre, footprint) >= UNIT_ROOM + GAP &&
+      // Out of the water, at its middle and every corner.
+      [at, ...footprint].every(
+        ([gu, gv]) => (clear.ground?.(gu, gv) ?? 0) >= 0
+      ) &&
+      clear.taken.every(
+        ([tu, tv, room]) => fromFootprint([tu, tv], footprint) >= room + GAP
+      ) &&
+      strips.every(
+        (strip) =>
+          boxesApart(footprint, strip, GAP) || apart(footprint, strip, GAP)
+      ) &&
+      footprints.every(
+        (other) =>
+          boxesApart(footprint, other, GAP) || apart(footprint, other, GAP)
+      )
+    ) {
+      lots.push({ at, width, facing, storeys, roof });
+      footprints.push(footprint);
+    }
+  });
+
+  return lots;
 };
 
 export default sprawl;

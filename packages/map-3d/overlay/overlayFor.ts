@@ -9,7 +9,13 @@
 
 import { Tile } from '@civ-clone/ui-protocol/types';
 import { growthOf } from '@civ-clone/ui-models-builtin/vegetation';
-import { CityPlan, citySeed, planFor } from './sprawl';
+import {
+  CityPlan,
+  SuburbPlan,
+  citySeed,
+  planFor,
+  suburbStepsFor,
+} from './sprawl';
 
 /** A neighbour of a square: how far off it is, in squares, before the world wraps, and what's on it. */
 export type OverlayNeighbour = {
@@ -40,17 +46,30 @@ export type SquareOverlay = {
   // For woods, its neighbours of the same woods that grow them (`Growth#canopy`), by offset: the canopy runs across
   //  to them. Not one on a city's lot, or cleared (fields, a fortress, an airbase), or never seen.
   woods: (readonly [number, number])[];
-  // For woods, its neighbours with a road or a city, by offset: a road between two of them that crosses this square's
-  //  corner, a diagonal road beside it, is one its trees keep clear of too.
+  // For woods, or a square with a city's houses on it, its neighbours with a road or a city, by offset: a road between
+  //  two of them that crosses this square's corner, a diagonal road beside it, is one its trees and houses keep clear of
+  //  too.
   paths: (readonly [number, number])[];
   // A city's lot, laid out as its sprawl (`sprawl.ts`): its seed, how many lots it's built and how tall, the ways its
   //  streets go out, by its neighbours' offsets (a road coming in), and its neighbours of sea, the way its quay's to
   //  be. Nothing else is laid on a city's lot.
   city: CityPlan | null;
+  // The houses of each city beside it that has spread onto it (`suburb`), by its seed, how far out it's spread, and the
+  //  offset to it: on land that isn't steep or taken by a mine, a fortress or an airbase. Fields give way to them.
+  suburbs: SuburbPlan[];
+  // Where it has them, every city beside it, whatever its size, by offset: each builds on its own side, and the ways in
+  //  to each are kept clear.
+  beside: (readonly [number, number])[];
 };
 
 // Terrain a city's quay runs down to.
 const SEA = ['Ocean'];
+
+// Terrain too steep to build on.
+const STEEP = ['Mountains'];
+
+// Improvements that take the ground, so a city's houses don't spill onto it.
+const UNBUILT = ['Mine', 'Fortress', 'Airbase'];
 
 // Features drawn otherwise than as a special: Civ2's rivers, which are drawn as rivers (§5.3).
 const NOT_SPECIALS = ['River'];
@@ -71,11 +90,12 @@ export const woodsOf = (
 
 /**
  * What's laid on `tile`'s land, its `neighbours` all round it: nothing, for a square with none of it; or a city's lot,
- *  its sprawl, which takes the square, as the 2D map's city covers its square's road and fields.
+ *  its sprawl, which takes the square, as the 2D map's city covers its square's road and fields; and beside a city
+ *  that's grown, its houses.
  */
 export const overlayFor = (
   tile: Pick<Tile, 'improvements' | 'terrain' | 'goodyHut'> &
-    Partial<Pick<Tile, 'city'>>,
+    Partial<Pick<Tile, 'city' | 'isWater'>>,
   neighbours: readonly OverlayNeighbour[]
 ): SquareOverlay | null => {
   if (tile.city) {
@@ -114,6 +134,8 @@ export const overlayFor = (
           )
           .map(({ offset }) => offset)
       ),
+      suburbs: [],
+      beside: [],
     };
   }
 
@@ -171,13 +193,54 @@ export const overlayFor = (
       woods: [],
       paths: [],
       city: null,
+      suburbs: [],
+      beside: [],
     },
-    own = woodsOf(tile);
+    own = woodsOf(tile),
+    terrain = tile.terrain?._ ?? 'Unknown';
+
+  // Each city beside it that's spread this far, on land a city builds on, in an order of their own, whichever way
+  //  round they are.
+  if (
+    tile.isWater !== true &&
+    !SEA.includes(terrain) &&
+    terrain !== 'Unknown' &&
+    !STEEP.includes(terrain) &&
+    !UNBUILT.some((name) => has(tile, name))
+  ) {
+    overlay.suburbs = neighbours
+      .flatMap(({ offset, tile: { city } }): SuburbPlan[] => {
+        const steps = city ? suburbStepsFor(city.growth?.size ?? 1) : 0;
+
+        return city && steps > 0
+          ? [
+              {
+                seed: citySeed(String(city.id ?? city.name ?? '')),
+                steps,
+                city: offset,
+              },
+            ]
+          : [];
+      })
+      .sort(
+        (a, b) =>
+          a.seed - b.seed || a.city[0] - b.city[0] || a.city[1] - b.city[1]
+      );
+  }
+
+  if (overlay.suburbs.length > 0) {
+    overlay.beside = neighbours
+      .filter(({ tile: { city } }) => Boolean(city))
+      .map(({ offset }) => offset);
+  }
 
   if (own !== null) {
     overlay.woods = neighbours
       .filter((neighbour) => woodsOf(neighbour.tile) === own)
       .map(({ offset }) => offset);
+  }
+
+  if (own !== null || overlay.suburbs.length > 0) {
     overlay.paths = neighbours
       .filter(
         (neighbour) =>
@@ -195,7 +258,8 @@ export const overlayFor = (
     !overlay.pollution &&
     overlay.specials.length === 0 &&
     !overlay.hut &&
-    !overlay.vegetation;
+    !overlay.vegetation &&
+    overlay.suburbs.length === 0;
 
   return empty ? null : overlay;
 };
