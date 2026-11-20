@@ -6,9 +6,13 @@
 //    they're drawn, on every grid;
 //  - the houses beside a street facing it, square to it, lining it;
 //  - streets out to exactly the ways it's given, from the plaza to the edge, where a road's half comes in;
-//  - the same every time for the same city, and a road built clearing a street rather than laying it out afresh.
+//  - the same every time for the same city, and a road built clearing a street rather than laying it out afresh;
+//  - from size 4, its houses on its neighbours' squares, more as it grows, kept as it grows; each, as it's drawn, on its
+//    own square, outside the walls, clear of a unit's feet in front of the city and on that square, of the roads,
+//    railroads and fields drawn there and of every other house, the cities beside it included, on every grid; none on
+//    the sea, mountains or a mine; and those beside a road lining it.
 
-import { Euler, Mesh, Vector3 } from 'three';
+import { Color, Euler, Mesh, Vector3 } from 'three';
 import { TopologyId } from '@civ-clone/ui-protocol/topology';
 import Land from '@civ-clone/ui-map-3d/Land';
 import World from '@civ-clone/ui-map/components/World';
@@ -17,14 +21,21 @@ import sprawl, {
   GAP,
   Lot,
   PLAZA,
+  ROADSIDE,
   SprawlPlace,
   STREET,
   UNIT_ROOM,
+  WALKWAY,
   citySeed,
   lotsFor,
   planFor,
+  suburb,
+  suburbReach,
+  suburbStepsFor,
   tierFor,
 } from '@civ-clone/ui-map-3d/overlay/sprawl';
+import { ROOFS, roadHalf } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
+import { OverlayMesh } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
 import {
   IN_FRONT_OF_CITY,
   MarkerKit,
@@ -73,6 +84,21 @@ const squareAt = (x: number, y: number): SprawlPlace => ({
   west = [-1, 0] as const,
   south = [0, 1] as const,
   inFrontOf = ([u, v]: Point): Point => [u, v + IN_FRONT_OF_CITY],
+  // What a square beside a city at `cityAt` has on it, for its houses: a road `run` or none, and the way in from its
+  //  middle to where units stand in the city where no road takes them.
+  besideCity = (
+    place: SprawlPlace,
+    cityAt: Point,
+    runs: { key: number; points: readonly Point[] }[] = [],
+    lane = true
+  ) => ({
+    runs,
+    lines: [],
+    lanes: lane ? [[place.centre, inFrontOf(cityAt)] as [Point, Point]] : [],
+    stands: [inFrontOf(cityAt)],
+    others: [],
+    taken: [],
+  }),
   positions = (lots: Lot[]) => lots.map(({ at }) => at.join(',')),
   // How far out the inside of the walls is, as they're drawn: the nearest any of their faces comes to the middle, across
   //  the ground.
@@ -157,6 +183,64 @@ const squareAt = (x: number, y: number): SprawlPlace => ({
 
     return furthest;
   })(),
+  // How far a walking unit's figures, above its stand, reach across the way it faces, as they're drawn, for every kind
+  //  of unit on foot, horse or wheels: what passes either side of the line it walks.
+  unitsAcross = Math.max(
+    ...[
+      'Warrior',
+      'Spearman',
+      'Settlers',
+      'Horseman',
+      'Chariot',
+      'Catapult',
+      'Caravan',
+      'Musketman',
+      'Rifleman',
+      'Cannon',
+      'Tank',
+      'Engineer',
+    ].map((type) => {
+      const group = drawMarker(new MarkerKit(), {
+        city: null,
+        unit: {
+          id: `Unit-${type}`,
+          type,
+          kinds: [],
+          colours: ['#aa0000', '#ffffff'],
+          count: 1,
+          active: false,
+          busy: false,
+          fortified: false,
+          veteran: false,
+          health: null,
+          status: null,
+          facing: 0,
+          size: 1,
+        },
+      });
+      let widest = 0;
+
+      group.updateMatrixWorld(true);
+      group.traverse((part) => {
+        if (!(part instanceof Mesh)) {
+          return;
+        }
+
+        const at = part.geometry.getAttribute('position'),
+          point = new Vector3();
+
+        for (let index = 0; index < at.count; index++) {
+          point.fromBufferAttribute(at, index).applyMatrix4(part.matrixWorld);
+
+          if (point.y > 0.031 && point.y < 0.3) {
+            widest = Math.max(widest, Math.abs(point.x));
+          }
+        }
+      });
+
+      return widest;
+    })
+  ),
   // A building's footprint as it's drawn: a square its width across, turned to face its way, as the overlay turns it.
   footprint = ({ at: [u, v], width, facing }: Lot): Point[] =>
     [
@@ -266,11 +350,18 @@ const squareAt = (x: number, y: number): SprawlPlace => ({
   };
 
 // What's drawn round a city that its lots keep clear of: a unit's feet reach no further than the room kept, and the
-//  walls stand out beyond where the lots reach.
+//  walls stand out beyond where the lots reach. A walking unit's figures reach no further across its way than the room
+//  kept either side of a way in with no road.
 expect(
-  'a unit’s stand, ring and bank are within the room kept for them, and the walls stand well out from the middle',
-  [unitsFeet > 0.2, unitsFeet <= UNIT_ROOM, wallsInside > 0.3],
-  [true, true, true]
+  'a unit’s stand, ring and bank are within the room kept for them, and the walls stand well out from the middle; a walking unit’s figures within the room kept beside a way in',
+  [
+    unitsFeet > 0.2,
+    unitsFeet <= UNIT_ROOM,
+    wallsInside > 0.3,
+    unitsAcross > 0.1,
+    unitsAcross <= WALKWAY,
+  ],
+  [true, true, true, true, true]
 );
 
 // From the front: size by size, each one's lots are the next's first, for many cities and ways out.
@@ -688,6 +779,769 @@ expect(
       reroofed,
     ],
     [true, false, 2, true, before.length, 0]
+  );
+}
+
+// Onto its neighbours' squares: none below size 4, then further out each size, up to a point.
+expect(
+  'a city spills onto its neighbours’ squares from size 4, a step further each size, up to a point',
+  [
+    [1, 3, 4, 5, 15, 16, 40].map(suburbStepsFor),
+    suburbReach(0),
+    suburbReach(1) > 0.5,
+    suburbReach(2) > suburbReach(1),
+    suburbReach(12) === suburbReach(40),
+  ],
+  [[0, 0, 1, 2, 12, 12, 12], 0, true, true, true]
+);
+
+// From the front on its neighbours' squares too: size by size, each one's houses there are the next's first, with a road
+//  across the square or none; none at size 3.
+{
+  const notPrefix: string[] = [],
+    around = [
+      east,
+      north,
+      west,
+      south,
+      [1, 1],
+      [-1, 1],
+      [1, -1],
+      [-1, -1],
+    ] as const;
+  let atThree = 0,
+    most = 0;
+
+  for (let city = 0; city < 20; city++) {
+    around.forEach((way, index) => {
+      // The square beside the city, `way` from it: the city's `-way` from there.
+      const place = squareAt(10 + way[0], 10 + way[1]),
+        toCity = [-way[0], -way[1]] as const,
+        cityAt = place.toward(toCity),
+        withRoad = (city + index) % 2 === 0,
+        runs = withRoad
+          ? [
+              {
+                key: 7,
+                points: roadHalf({ ...place, seed: city * 31 + index }, [
+                  way[1],
+                  -way[0],
+                ]).points,
+              },
+            ]
+          : [];
+      let before: string[] = [];
+
+      for (let size = 3; size <= 20; size++) {
+        const lots = positions(
+          suburb(
+            place,
+            {
+              seed: citySeed(`City-${city}`),
+              steps: suburbStepsFor(size),
+              city: toCity,
+            },
+            besideCity(place, cityAt, runs)
+          )
+        );
+
+        if (size === 3) {
+          atThree += lots.length;
+        }
+
+        if (before.some((at, at2) => lots[at2] !== at)) {
+          notPrefix.push(`City-${city} ${way} size ${size}`);
+        }
+
+        most = Math.max(most, lots.length);
+        before = lots;
+      }
+    });
+  }
+
+  expect(
+    'a city’s houses on its neighbours’ squares from the front: grown, it keeps them; shrunk, it loses the outermost; none at size 3',
+    [notPrefix.slice(0, 5), atThree, most > 10],
+    [[], 0, true]
+  );
+}
+
+// As drawn, on every grid: a city of each size beside squares of every kind (a road, a railroad, fields, open ground,
+//  woods, mountains, the sea, a mine; on hex, with six neighbours, twice, the kinds turned two places round the second
+//  time), and another city two squares off sharing some of them. Each house's eaves, read from its roof as it's drawn:
+//  - on its own square, a city's or a neighbour of one, and not the mountains, the sea or the mine;
+//  - outside the walls as they're drawn, but on the city's own square;
+//  - clear of a unit's feet in front of each city, and at the middle of each square a neighbour's;
+//  - clear of every road, railroad and field drawn, of every other house, and of the way a unit walks from its square
+//    into a city: along the road, or where there's none, as wide as its figures;
+//  and more of them on the neighbours as the city grows, plenty in the end, beginning at size 4, on every kind of square
+//  they're built on, fields and woods included.
+{
+  const builtOn = new Set<string>();
+
+  const wallsOutside = (() => {
+      const at = wallsGeometry().getAttribute('position');
+      let furthest = 0;
+
+      for (let index = 0; index < at.count; index++) {
+        furthest = Math.max(
+          furthest,
+          Math.hypot(at.getX(index), at.getZ(index))
+        );
+      }
+
+      return furthest;
+    })(),
+    colours = (css: readonly string[]) => css.map((one) => new Color(one)),
+    roofColours = colours(ROOFS),
+    // A road, a railroad's ballast and rails and sleepers, and fields' crops and ditches, as they're drawn.
+    groundColours = colours([
+      '#8c7a58',
+      '#5f5953',
+      '#a9abae',
+      '#5e432b',
+      '#7da33f',
+      '#c2b448',
+      '#8fae3e',
+      '#4f87b0',
+    ]),
+    isOf = (mesh: OverlayMesh, at: number, among: Color[]): boolean =>
+      among.some(
+        ({ r, g, b }) =>
+          Math.abs(mesh.colours[at]! - r) < 1e-4 &&
+          Math.abs(mesh.colours[at + 1]! - g) < 1e-4 &&
+          Math.abs(mesh.colours[at + 2]! - b) < 1e-4
+      ),
+    // The smallest convex shape round `points`, its corners in order.
+    hull = (points: Point[]): Point[] => {
+      const sorted = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]),
+        cross = (o: Point, a: Point, b: Point) =>
+          (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]),
+        half = (from: Point[]) =>
+          from.reduce<Point[]>((kept, point) => {
+            while (
+              kept.length >= 2 &&
+              cross(kept[kept.length - 2]!, kept[kept.length - 1]!, point) <=
+                1e-12
+            ) {
+              kept.pop();
+            }
+
+            kept.push(point);
+
+            return kept;
+          }, []),
+        lower = half(sorted),
+        upper = half([...sorted].reverse());
+
+      return [...lower.slice(0, -1), ...upper.slice(0, -1)];
+    },
+    // Each house's eaves, as drawn: the base of each roof, a run of triangles in a roof's colour. And the triangles of
+    //  the roads, railroads and fields drawn.
+    drawnIn = (mesh: OverlayMesh) => {
+      const eaves: Point[][] = [],
+        ground: Point[][] = [];
+      let roof: number[] = [];
+      const done = () => {
+        if (roof.length > 0) {
+          const low = Math.min(...roof.map((at) => mesh.positions[at + 1]!));
+
+          eaves.push(
+            hull(
+              roof
+                .filter((at) => mesh.positions[at + 1]! < low + 1e-6)
+                .map(
+                  (at) =>
+                    [
+                      mesh.positions[at]! + mesh.u,
+                      mesh.positions[at + 2]! + mesh.v,
+                    ] as const
+                )
+            )
+          );
+          roof = [];
+        }
+      };
+
+      for (let at = 0; at < mesh.positions.length; at += 9) {
+        if (isOf(mesh, at, roofColours)) {
+          roof.push(at, at + 3, at + 6);
+
+          continue;
+        }
+
+        done();
+
+        if (isOf(mesh, at, groundColours)) {
+          ground.push(
+            [at, at + 3, at + 6].map(
+              (point) =>
+                [
+                  mesh.positions[point]! + mesh.u,
+                  mesh.positions[point + 2]! + mesh.v,
+                ] as const
+            )
+          );
+        }
+      }
+
+      done();
+
+      return { eaves, ground };
+    };
+
+  (
+    [
+      ['square', 0],
+      ['staggered-iso', 0],
+      ['hex-odd-r', 0],
+      ['hex-odd-r', 2],
+    ] as [TopologyId, number][]
+  ).forEach(([topologyId, turn]) => {
+    const size = 14,
+      tiles = Array.from({ length: size * size }, (_, index) => ({
+        x: index % size,
+        y: Math.floor(index / size),
+        terrain: { _: 'Grassland', __: ['Grassland'], features: [] },
+        improvements: [] as { _: string }[],
+        units: [],
+        city: null as unknown,
+        isWater: false,
+      })),
+      at = (x: number, y: number) => tiles[y * size + x]!,
+      world = new World({
+        _: 'World',
+        __: ['World', 'DataObject'],
+        id: 'world',
+        width: size,
+        height: size,
+        topologyId,
+        tiles: tiles as never,
+      }),
+      topology = world.topology(),
+      home = [5, 6] as const,
+      other = [7, 6] as const,
+      cityOf = (name: string, size: number) => ({
+        id: name,
+        name,
+        growth: { size },
+      }),
+      // The kind of each of the first city's neighbours, by its place round it, turned `turn` places.
+      kinds = [
+        'road',
+        'fields',
+        'open',
+        'railroad',
+        'woods',
+        'mountains',
+        'sea',
+        'mine',
+      ],
+      neighbours = topology
+        .directions()
+        .map((direction) => topology.neighbour(...home, direction)!),
+      kindAt = new Map(
+        neighbours.map(([x, y], index) => [
+          `${x},${y}`,
+          kinds[(index + turn) % kinds.length]!,
+        ])
+      ),
+      // The squares beside the second city, which has spread onto some of the first's.
+      besideOther = new Set(
+        topology
+          .directions()
+          .map((direction) =>
+            topology.neighbour(...other, direction)!.join(',')
+          )
+      ),
+      faults: string[] = [],
+      // How many houses each size has on the first city's neighbours that aren't the second's too, and how much of the
+      //  roads, railroads and fields drawn there are.
+      beside: number[] = [];
+    let groundDrawn = 0;
+
+    at(...home).improvements = [{ _: 'Road' }];
+    neighbours.forEach(([x, y], index) => {
+      const tile = at(x, y);
+
+      (
+        ({
+          road: () => (tile.improvements = [{ _: 'Road' }]),
+          fields: () => (tile.improvements = [{ _: 'Irrigation' }]),
+          open: () => undefined,
+          railroad: () =>
+            (tile.improvements = [{ _: 'Road' }, { _: 'Railroad' }]),
+          woods: () =>
+            (tile.terrain = { _: 'Forest', __: ['Forest'], features: [] }),
+          mountains: () =>
+            (tile.terrain = {
+              _: 'Mountains',
+              __: ['Mountains'],
+              features: [],
+            }),
+          sea: () => {
+            tile.terrain = { _: 'Ocean', __: ['Ocean'], features: [] };
+            tile.isWater = true;
+          },
+          mine: () => (tile.improvements = [{ _: 'Mine' }]),
+        }) as { [kind: string]: () => unknown }
+      )[kindAt.get(`${x},${y}`)!]!();
+    });
+
+    // The other city two squares off, then beside the first, where the mountains were.
+    (
+      [
+        other,
+        neighbours.find(([x, y]) => kindAt.get(`${x},${y}`) === 'mountains')!,
+      ] as (readonly [number, number])[]
+    ).forEach((otherAt, arrangement) => {
+      // What each square beside the first city is, but the second city's own.
+      const kindsNow = new Map(kindAt);
+
+      kindsNow.delete(otherAt.join(','));
+
+      [3, 4, 8, 20].forEach((citySize) => {
+        at(...home).city = cityOf('Home', citySize);
+        at(...otherAt).city = cityOf('Other', 20);
+
+        const land = new Land(world),
+          { layout } = land,
+          squareOf = ([u, v]: Point) => layout.tileAt(u, v).join(','),
+          besideOtherNow = new Set(
+            topology
+              .directions()
+              .map((direction) =>
+                topology.neighbour(...otherAt, direction)!.join(',')
+              )
+          ),
+          chunks = new Set(
+            [home, otherAt, ...neighbours, ...besideOtherNow].map((at) => {
+              const [x, y] =
+                typeof at === 'string'
+                  ? (at.split(',').map(Number) as [number, number])
+                  : at;
+
+              return land.overlayKeyOf(x, y);
+            })
+          ),
+          drawn = [...chunks].map((key) =>
+            drawnIn(
+              land.overlayOf(
+                ...(key.split(',').map(Number) as [number, number])
+              )!
+            )
+          ),
+          eaves = drawn.flatMap(({ eaves }) => eaves),
+          ground = drawn.flatMap(({ ground }) => ground),
+          cities = [home, otherAt].map(([x, y]) => layout.centre(x, y)),
+          // `wide` either side of the segment `a`–`b`.
+          thin = ([a, b]: [Point, Point], wide: number): Point[] => {
+            const length = Math.hypot(b[0] - a[0], b[1] - a[1]),
+              across: Point = [
+                (-(b[1] - a[1]) / length) * wide,
+                ((b[0] - a[0]) / length) * wide,
+              ];
+
+            return [
+              [a[0] + across[0], a[1] + across[1]],
+              [b[0] + across[0], b[1] + across[1]],
+              [b[0] - across[0], b[1] - across[1]],
+              [a[0] - across[0], a[1] - across[1]],
+            ];
+          },
+          // The way a unit walks from each square beside a city into it, as the view walks it: along the road
+          //  between them as it's drawn (`roadPath`), or straight, from the square's middle to where units stand in
+          //  front of the city's buildings.
+          walks = [home, otherAt].flatMap(([cx, cy]) =>
+            topology.directions().flatMap((direction) => {
+              const [x, y] = topology.neighbour(cx, cy, direction)!;
+
+              if (at(x, y).city) {
+                return [];
+              }
+
+              const [cu, cv] = layout.centre(cx, cy),
+                road = land.roadPath(x, y, cx, cy),
+                points: Point[] = [
+                  layout.centre(x, y),
+                  ...(road ?? [])
+                    .slice(1, -1)
+                    .map(([pu, pv]): Point => [pu + cu, pv + cv]),
+                  inFrontOf([cu, cv]),
+                ],
+                // Along a road, its houses line it at the roadside, and a unit walking it passes through them
+                //  (#1282): a hair's breadth either side. Where there's none to show the way, as wide as a walking
+                //  unit's figures.
+                wide = road === null ? unitsAcross : 0.001;
+
+              return [
+                {
+                  from: `${x},${y}`,
+                  strips: points
+                    .slice(1)
+                    .map((to, index): [Point, Point] => [points[index]!, to])
+                    .filter(
+                      ([a, b]) => Math.hypot(b[0] - a[0], b[1] - a[1]) > 0
+                    )
+                    .map((line) => thin(line, wide)),
+                },
+              ];
+            })
+          ),
+          middles = [
+            ...neighbours,
+            ...topology
+              .directions()
+              .map((direction) => topology.neighbour(...otherAt, direction)!),
+          ].map(([x, y]) => layout.centre(x, y));
+
+        eaves.forEach((corners, index) => {
+          const middle: Point = [
+              corners.reduce((sum, [u]) => sum + u, 0) / corners.length,
+              corners.reduce((sum, [, v]) => sum + v, 0) / corners.length,
+            ],
+            square = squareOf(middle),
+            onCity = cities.some((city) => squareOf(city) === square),
+            fault = [
+              corners.some((corner) => squareOf(corner) !== square) &&
+                'off its square',
+              ['mountains', 'sea', 'mine'].includes(
+                kindsNow.get(square) ?? ''
+              ) && `on the ${kindsNow.get(square)}`,
+              !onCity &&
+                cities.some(
+                  (city) => fromShape(city, corners) < wallsOutside
+                ) &&
+                'inside the walls',
+              cities.some(
+                (city) => fromShape(inFrontOf(city), corners) < unitsFeet
+              ) && 'at the feet of the unit in front of a city',
+              !onCity &&
+                middles.some((at) => fromShape(at, corners) < unitsFeet) &&
+                'at the feet of the unit on its square',
+              ground.some((triangle) => overlap(corners, triangle)) &&
+                'on a road, railroad or field',
+              eaves
+                .slice(0, index)
+                .some((others) => overlap(corners, others)) && 'on another',
+              walks.some(
+                ({ from, strips }) =>
+                  from === square &&
+                  strips.some((strip) => overlap(corners, strip))
+              ) && 'in the way of a unit walking from its square into a city',
+            ].filter(Boolean);
+
+          if (fault.length > 0) {
+            faults.push(
+              `${
+                arrangement === 0 ? 'apart' : 'beside'
+              }, size ${citySize}, house at ${middle.map((n) =>
+                n.toFixed(2)
+              )}: ${fault.join(', ')}`
+            );
+          }
+        });
+
+        if (arrangement === 0) {
+          beside.push(
+            eaves.filter((corners) => {
+              const square = squareOf(corners[0]!);
+
+              return kindAt.has(square) && !besideOther.has(square);
+            }).length
+          );
+          groundDrawn = ground.length;
+
+          if (citySize === 20) {
+            eaves.forEach((corners) =>
+              builtOn.add(kindAt.get(squareOf(corners[0]!)) ?? 'city')
+            );
+          }
+        }
+      });
+
+      at(...otherAt).city = null;
+    });
+
+    expect(
+      `${topologyId}${
+        turn === 0 ? '' : `, turned ${turn}`
+      }: a city’s houses on its neighbours’ squares, as drawn, on their own squares and not the mountains, the sea or a mine, outside the walls, clear of units’ feet, the roads, railroads and fields and each other; more as it grows, from size 4`,
+      [
+        faults.slice(0, 5),
+        beside[0],
+        beside[1]! > 0,
+        beside[2]! > beside[1]!,
+        beside[3]! > beside[2]!,
+        beside[3]! >= 40,
+        groundDrawn > 100,
+      ],
+      [[], 0, true, true, true, true, true]
+    );
+  });
+
+  expect(
+    'a city’s houses on every kind of square it builds on, fields and woods included',
+    [...builtOn].sort(),
+    ['city', 'fields', 'open', 'railroad', 'road', 'woods']
+  );
+}
+
+// Nearest the city first, thinning outward: on a square beside it, for many cities, the first of its houses there are
+//  nearer the city than the last, and further out there are fewer for the room there is.
+{
+  const place = squareAt(11, 10),
+    cityAt = place.toward(west),
+    reach = suburbReach(suburbStepsFor(20)),
+    // How much of the square, sampled finely, is `from` to `to` from the city's middle, clear of the unit at the square's
+    //  middle and the way in.
+    roomIn = (from: number, to: number): number => {
+      let room = 0;
+
+      for (let i = 0; i < 100; i++) {
+        for (let j = 0; j < 100; j++) {
+          const point: Point = [11 + (i + 0.5) / 100, 10 + (j + 0.5) / 100],
+            out = Math.hypot(point[0] - cityAt[0], point[1] - cityAt[1]);
+
+          if (
+            out >= from &&
+            out < to &&
+            Math.hypot(
+              point[0] - place.centre[0],
+              point[1] - place.centre[1]
+            ) >= UNIT_ROOM &&
+            // Not on the way in, kept clear for a unit walking it.
+            fromSegment(point, place.centre, inFrontOf(cityAt)) >= WALKWAY
+          ) {
+            room++;
+          }
+        }
+      }
+
+      return room;
+    };
+  let outward = 0,
+    laid = 0,
+    near = 0,
+    far = 0;
+
+  for (let city = 0; city < 40; city++) {
+    const outs = suburb(
+        place,
+        {
+          seed: citySeed(`Thin-${city}`),
+          steps: suburbStepsFor(20),
+          city: west,
+        },
+        besideCity(place, cityAt)
+      ).map(({ at }) => Math.hypot(at[0] - cityAt[0], at[1] - cityAt[1])),
+      third = Math.floor(outs.length / 3),
+      mean = (some: number[]) =>
+        some.reduce((sum, out) => sum + out, 0) / some.length;
+
+    if (third > 0) {
+      laid++;
+      outward += mean(outs.slice(0, third)) < mean(outs.slice(-third)) ? 1 : 0;
+    }
+
+    near += outs.filter((out) => out < 0.8).length;
+    far += outs.filter((out) => out >= 0.9).length;
+  }
+
+  expect(
+    'on a square beside a city, its houses nearest the city first, and fewer for the room further out',
+    [laid, outward, near / roomIn(0.5, 0.8) > (far / roomIn(0.9, reach)) * 1.3],
+    [40, 40, true]
+  );
+}
+
+// Each square round a city its own: for many cities, no house on the square east of it stands where one on the square
+//  north of it does, against each one's middle, as they would if each square's lots were the same jostled grid.
+{
+  let alike = 0,
+    laid = 0;
+
+  for (let city = 0; city < 20; city++) {
+    const relative = (way: readonly [number, number]) => {
+        const place = squareAt(10 + way[0], 10 + way[1]),
+          cityAt = place.toward([-way[0], -way[1]]);
+
+        return suburb(
+          place,
+          {
+            seed: citySeed(`Own-${city}`),
+            steps: suburbStepsFor(15),
+            city: [-way[0], -way[1]],
+          },
+          besideCity(place, cityAt)
+        ).map(({ at }) =>
+          [at[0] - place.centre[0], at[1] - place.centre[1]]
+            .map((n) => n.toFixed(6))
+            .join(',')
+        );
+      },
+      east = relative([1, 0]),
+      north = relative([0, -1]);
+
+    laid += east.length + north.length;
+    alike += east.filter((at) => north.includes(at)).length;
+  }
+
+  expect(
+    'each square round a city its own: no house on one stands where one on another does, against its middle',
+    [laid > 200, alike],
+    [true, 0]
+  );
+}
+
+// On a neighbour's square, houses line its road in to the city, in a row along it: each beside it faces it, square to
+//  it, its front as far from it as the others', and the rest face the city. The same city's the same every time there, and another another.
+{
+  const place = { ...squareAt(11, 10), seed: 77 },
+    toCity = west,
+    cityAt = place.toward(toCity),
+    // Its road in to the city.
+    road = roadHalf(place, toCity).points,
+    lines = road.slice(1).map((point, at) => [road[at]!, point] as const),
+    // Its road takes a unit in, so there's no way in apart from it.
+    laid = (seed: string) =>
+      suburb(
+        place,
+        { seed: citySeed(seed), steps: suburbStepsFor(20), city: toCity },
+        besideCity(place, cityAt, [{ key: 7, points: road }], false)
+      ),
+    lots = laid('Lined'),
+    streets = lines,
+    facingOf = ({ facing }: Lot) => [Math.sin(facing), Math.cos(facing)],
+    beside = lots.filter((lot) =>
+      streets.some(([a, b]) => {
+        const du = b[0] - a[0],
+          dv = b[1] - a[1],
+          t =
+            ((lot.at[0] - a[0]) * du + (lot.at[1] - a[1]) * dv) /
+            (du * du + dv * dv);
+
+        return (
+          t >= 0 &&
+          t <= 1 &&
+          fromSegment(lot.at, a, b) <= ROADSIDE + lot.width + GAP
+        );
+      })
+    ),
+    square = beside.filter((lot) => {
+      const [fu, fv] = facingOf(lot);
+
+      return streets.some(([a, b]) => {
+        const length = Math.hypot(b[0] - a[0], b[1] - a[1]),
+          along = Math.abs((fu * (b[0] - a[0]) + fv * (b[1] - a[1])) / length),
+          off = fromSegment(lot.at, a, b),
+          ahead = fromSegment(
+            [lot.at[0] + fu * off, lot.at[1] + fv * off],
+            a,
+            b
+          );
+
+        return along < 1e-9 && ahead < off;
+      });
+    }),
+    others = lots.filter((lot) => !beside.includes(lot)),
+    toCityFacing = others.filter((lot) => {
+      const [fu, fv] = facingOf(lot),
+        out = Math.hypot(cityAt[0] - lot.at[0], cityAt[1] - lot.at[1]);
+
+      return (
+        Math.abs(fu - (cityAt[0] - lot.at[0]) / out) < 1e-9 &&
+        Math.abs(fv - (cityAt[1] - lot.at[1]) / out) < 1e-9
+      );
+    });
+
+  expect(
+    'on a neighbour’s square, houses line its road in, in a row along it: each beside one faces it, square to it, the rest the city; the same city the same every time, another another',
+    [
+      beside.length >= 4,
+      // For many cities, those beside the road stand in a row along it, each its front as far from it as the others'.
+      (() => {
+        const setbacks: number[] = [];
+
+        for (let city = 0; city < 30; city++) {
+          laid(`Row-${city}`).forEach((lot) => {
+            const off = Math.min(
+              ...lines.map(([a, b]) => fromSegment(lot.at, a, b))
+            );
+
+            if (off <= ROADSIDE + lot.width + GAP) {
+              setbacks.push(off - lot.width / 2);
+            }
+          });
+        }
+
+        return [
+          setbacks.length > 60,
+          Math.max(...setbacks) - Math.min(...setbacks) < 0.003,
+        ];
+      })(),
+      others.length > 0,
+      square.length === beside.length,
+      toCityFacing.length === others.length,
+      JSON.stringify(laid('Lined')) === JSON.stringify(lots),
+      JSON.stringify(positions(laid('Other'))) ===
+        JSON.stringify(positions(lots)),
+    ],
+    [true, [true, true], true, true, true, true, false]
+  );
+}
+
+// On a neighbour's square with no road in, the houses beside the way a unit walks in face it, square to it, as they do
+//  a road, for many cities.
+{
+  const place = { ...squareAt(11, 10), seed: 77 },
+    toCity = west,
+    cityAt = place.toward(toCity),
+    [a, b]: [Point, Point] = [place.centre, inFrontOf(cityAt)],
+    du = b[0] - a[0],
+    dv = b[1] - a[1],
+    length = Math.hypot(du, dv),
+    beside: Lot[] = [];
+
+  for (let city = 0; city < 30; city++) {
+    suburb(
+      place,
+      {
+        seed: citySeed(`Lane-${city}`),
+        steps: suburbStepsFor(20),
+        city: toCity,
+      },
+      besideCity(place, cityAt)
+    ).forEach((lot) => {
+      const t =
+        ((lot.at[0] - a[0]) * du + (lot.at[1] - a[1]) * dv) /
+        (du * du + dv * dv);
+
+      if (
+        t >= 0 &&
+        t <= 1 &&
+        fromSegment(lot.at, a, b) <= WALKWAY + lot.width + GAP
+      ) {
+        beside.push(lot);
+      }
+    });
+  }
+
+  const facingIt = beside.filter(({ at, facing }) => {
+    const fu = Math.sin(facing),
+      fv = Math.cos(facing),
+      off = fromSegment(at, a, b);
+
+    return (
+      Math.abs((fu * du + fv * dv) / length) < 1e-9 &&
+      fromSegment([at[0] + fu * off, at[1] + fv * off], a, b) < off
+    );
+  });
+
+  expect(
+    'on a neighbour’s square with no road in, the houses beside the way in face it, square to it',
+    [beside.length >= 20, facingIt.length === beside.length],
+    [true, true]
   );
 }
 

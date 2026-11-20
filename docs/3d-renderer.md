@@ -690,8 +690,9 @@ Each is looked up by its type name in the model set.
 - **Working (Settlers):** the `work` clip.
 - **The active unit:** a ring laid on the land under it. It follows the unit marker option (ring, blink or both) and the
   theme's colours [verified: `UnitMarker` and the `--ui-unit-ring` tokens, `packages/game/MapView2D.ts`].
-- **Hidden units:** `t` hides units and cities, as it does on the 2D map. A city's buildings are laid with the land
-  (§7.2), so they stay, and only its walls and name go; a unit in a city still stands in front of them.
+- **Hidden units:** `t` hides units and cities, as it does on the 2D map. A city's buildings, on its square and round
+  it, are laid with the land (§7.2), so they stay, and only its walls and name go; a unit in a city still stands in
+  front of them.
 
 ### 6.4 Animation
 
@@ -733,9 +734,13 @@ All of these are driven by map events (§8):
   - under rules with territory, its own squares.
 - **Never built on:**
   - water, except a Harbour's docks;
-  - steep slopes;
+  - steep slopes: mountains;
   - Wonder sites;
-  - squares where an improvement's fields or mine take the ground.
+  - squares where a mine, a fortress or an airbase takes the ground.
+- **Fields give way:** a square of fields is built on where the town reaches it, its rows of crops stopping short of the
+  houses. So a city ringed by fields, as most grown ones are, still spreads. (Chosen on 2026-11-20: in one of my saves,
+  most neighbours of grown cities were irrigated, so built only on open land, most cities would have spread onto one or
+  two squares, or none.)
 - **Streets:**
   - the city's square holds a square or plaza;
   - main streets run from it toward each neighbouring square with a road, and toward the sea;
@@ -771,8 +776,41 @@ All of these are driven by map events (§8):
     colour of its own lot's, none the owner's.
   - A city attacked is laid as it was till the battle's blow, as its marker shows it: one that shrinks loses its outer
     houses then, and one destroyed its whole town.
-  - Still to come: neighbouring squares (about size 4 on), side streets following the land, eras' buildings,
-    landmarks and the palace, docks.
+  - Still to come: side streets following the land, worked squares further out, eras' buildings, landmarks and the
+    palace, docks.
+- **As built (4.1, second part: neighbouring squares;** `suburb` in `overlay/sprawl.ts`, laid by `overlayMesh.ts`):
+  - From size 4, a city's houses spill onto the squares round it. Each square lays them on its own ground, as each lays
+    its own half of a road, from the city beside it (`overlayFor`'s `suburbs`: its seed, how far it's spread, and the
+    way to it), so it needs to know only its neighbours, and is laid again when they change.
+  - How far they reach from the city's middle grows a step each size, from 0.62 at size 4 to 1.17 at 15, then stops.
+    A city that grows keeps its houses and adds the next out, as on its own square: the lots are one seeded sequence
+    on each square, nearest the city first, and a size takes those within its reach.
+  - Fewer are built further out: all those with room at the city's edge, about half at its furthest.
+  - Lots come from a jostled grid over the square, and along each road and railroad on it, either side, facing it, so
+    the houses line the roads into town. The grid's lots keep off the roadside, which is left for those. Each road's
+    lots are seeded from the way it goes, so a road built another way leaves them be, but for any in its way.
+  - On land a city builds on, which isn't the sea, mountains, a mine, a fortress or an airbase, or never seen, and out
+    of the water where the land dips under it at the shore. Fields give way: their rows stop short of each house. The
+    trees and other plants on a house's square keep clear of it (a neighbouring wood's trees, at the edge, can crowd
+    it), and what was on the square first (its specials and hut) stays where it was.
+  - Each house's footprint, out to its eaves, is on its own square, with room to its edge, so no two squares' houses
+    meet; outside the city's walls; clear of the unit in front of each city's buildings and of one standing on the
+    square, at its middle; clear of the square's roads and railroads, the roads past its corners, what's claimed its
+    place there first, and every house before it.
+  - The ways in are kept clear: from the square's middle to where units stand in front of each city beside it, as a unit
+    walks it, where no road or railroad takes it (`Land#roadPath`); where one does, it's kept clear. A way in with
+    neither is kept clear a unit's width either side, as far as its figures reach across its way (0.13), so a unit's
+    figures walk between the houses, though its stand and ring, wider and low, still reach into the walls of the
+    nearest. Roads and railroads are kept clear only to the roadside (0.055), so the houses line them closely, and a
+    unit walking along one passes through those beside it, its figures through their eaves and its stand through their
+    walls (#1282). (Chosen on 2026-11-20: a unit's width along the roads too cost a quarter of the houses round cities,
+    and most of those lining the roads into town.) A unit walking into a city from another square can still cross a
+    corner of this one, and one walking between two squares round a city, not into it, through their houses (#1282).
+  - A house beside a road, railroad or way in faces it, square to it; any other faces the city. A storey, and some two.
+  - Between two cities, or more, each builds on its own side of a square, nearer its own middle than the other's,
+    whatever size the other is. So a city's houses there hang on that city and the square alone: it keeps them as it
+    grows, whatever the others do.
+  - A city attacked keeps its houses round it till the battle's blow, as it keeps its town.
 
 ### 7.3 Buildings
 
@@ -904,9 +942,9 @@ mapEvent:
   the way it faced when a step's joined. Its flag, ring and pointer go with it.
 - **Along roads:** between two squares with a road drawn between them, a step follows it as it bends (§5.4,
   `Land#roadPath`): along the half the square it leaves draws, from its middle to the edge they share, and on along the
-  half the square it comes to draws, to its middle. Where only one draws a half (the other a city, or the way a
-  railroad goes), it goes straight to or from the edge on the other's side; with neither, straight, as before. Aircraft
-  fly straight over roads.
+  half the square it comes to draws, to its middle. Where a railroad takes the way instead of the road, it follows the
+  railroad's half, straight to the edge. Where only one draws a half (the other a city, say), it goes straight to or
+  from the edge on the other's side; with neither, straight, as before. Aircraft fly straight over roads.
   - The points it passes are kept from the middle of the square it's going to (`via`), so they go a copy of the world
     round with it, and a step joined mid-bend keeps them.
   - It goes along them by distance, and faces the way it goes, turning from each piece's way to the next's as it goes

@@ -1360,6 +1360,32 @@ expect(
     [0, ['render']]
   );
 
+  // A city grown: what's laid round it is made again as its houses spread further onto the squares round it, and only
+  //  then. At sizes 14 and 15 it builds the same on its own square, but its houses reach further round it; at 15 and
+  //  16, the same everywhere.
+  const grownTo = (size: number): number => {
+    roma.growth.size = size;
+    overlaysSet.clear();
+    view.queueTile(town);
+    view.releaseTiles();
+    view.flush();
+
+    return overlaysSet.size;
+  };
+
+  grownTo(14);
+
+  const spread = [grownTo(15) > 0, grownTo(16)];
+
+  grownTo(3);
+  staged.splice(0);
+
+  expect(
+    'a city grown: what’s laid round it made again as its houses spread further, and not when they don’t',
+    spread,
+    [true, 0]
+  );
+
   // What the game asks of it, kept until it's shown (slices 1.2 and 1.3).
   const unit = { id: 'Unit-1' } as unknown as Unit;
 
@@ -4381,9 +4407,82 @@ expect(
 
   const hamletAfter = [markers.get('2,1')?.city ?? null, roofsOn()];
 
+  // A city of 4 its defender's beaten in, shrinking to 3: its houses on the squares round it (not another city's own)
+  //  laid till the blow, as its marker and town are, then gone.
+  const roofsBeside = (): number => {
+      const land = glider.land(),
+        roofs = ROOFS.map((css) => new Color(css)),
+        keys = new Set<string>();
+      let found = 0;
+
+      for (let y = 0; y <= 2; y++) {
+        for (let x = 1; x <= 3; x++) {
+          keys.add(land.overlayKeyOf(x, y));
+        }
+      }
+
+      keys.forEach((key) => {
+        const mesh = overlaysSet.get(key);
+
+        for (let at = 0; mesh && at < mesh.positions.length; at += 3) {
+          const [tx, ty] = land.layout.tileAt(
+            mesh.positions[at]! + mesh.u,
+            mesh.positions[at + 2]! + mesh.v
+          );
+
+          if (
+            Math.abs(tx - 2) <= 1 &&
+            Math.abs(ty - 1) <= 1 &&
+            !(tx === 2 && ty === 1) &&
+            // Not another city's own town.
+            !square(tx, ty).city &&
+            roofs.some(
+              ({ r, g, b }) =>
+                Math.abs(mesh.colours[at]! - r) < 1e-4 &&
+                Math.abs(mesh.colours[at + 1]! - g) < 1e-4 &&
+                Math.abs(mesh.colours[at + 2]! - b) < 1e-4
+            )
+          ) {
+            found++;
+          }
+        }
+      });
+
+      return found;
+    },
+    outskirts = {
+      ...battleton,
+      id: 'City-O',
+      name: 'Outskirts',
+      growth: { size: 4 },
+    };
+
+  square(2, 1).city = outskirts as unknown as Tile['city'];
+  repatched([1, 1, [walker]], [2, 1, [rival]]);
+  walkersSet.length = 0;
+
+  const besideBefore = roofsBeside();
+
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  outskirts.growth.size = 3;
+  patch([1, 1, [walker]], [2, 1, []]);
+  runFrames(1);
+
+  const besideTillTheBlow = roofsBeside();
+
+  runFrames();
+
+  const besideAfter = roofsBeside();
+
   optionsRegistry.set(MAP3D_WALKS_OPTION, 'normal');
   square(2, 1).city = null;
   repatched([1, 1, []], [2, 1, []]);
+
+  expect(
+    'a city of 4 shrinking to 3 in a battle: its houses round it laid till the blow, then gone',
+    [besideBefore > 0, besideTillTheBlow === besideBefore, besideAfter],
+    [true, true, 0]
+  );
 
   expect(
     'walking quickly, the blow falls in half the time; the square attacked shows its city as it was till the blow, its town too, then as it is; a city taken and gone, its town till the blow',
