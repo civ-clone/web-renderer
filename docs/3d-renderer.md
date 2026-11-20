@@ -970,12 +970,36 @@ mapEvent:
     where it fought. How it went is shown at once.
   - **Fading:** a marker fading has materials of its own, made from the kit's, so no other unit in its colours fades
     with it; under half solid, it casts no shadow.
+- **Arriving or leaving with no move** (2.4, second part: `packages/map-3d/fades.ts`, `MapView3D`), by the clock:
+  - **Which:** as tiles are taken, told against each square as it was marked when its tiles were released (its units as
+    they were drawn, the one shown on top, and whether it stood in front of a city), and every unit marked anywhere or
+    drawn walking or fighting then, as the game marks the active unit's square again before the frame takes them.
+    - The unit shown on a released square that isn't drawn anywhere now (marked on another square, walking, fighting,
+      or waiting for its patch, as a battle's loser does) has left with no move, as one disbanded, lost, or gone out of
+      sight. One beneath it going goes unseen, as it was.
+    - On a square that showed no unit, the unit on top now, if it wasn't marked anywhere, has arrived, as one built, or
+      come into sight. One shown over another, a stronger one built where one stands, is there at once.
+    - What each square's marked with is what's drawn there, as it was before a battle's blow too; squares marked other
+      than as tiles are taken (a battle's blow, a walk's end, `t`) don't count, so a battle's loser, a walker arriving
+      and a unit hidden don't fade.
+  - **How:** one that's left fades out where it stood, drawn as it was shown, ringed if it was, the units gone with it
+    its stack, over half a second; marked again within it, come back from the fog say, its fade out's over, and it's
+    there at once, as it was being drawn; units hidden (`t`) within it, it's over too. One that's
+    arrived fades in where it's marked, its unit alone, the city there solid (`Stage#fadeMarker`, the kit's materials
+    back once it's solid), and isn't left off its square: another on top there, or it walking away, ends its fade.
+    Walking quickly halves it.
+  - **Not:** till the view's drawn once; off the screen; with less motion asked for or units to move at once, which also
+    end fades under way; with units hidden, any but the active unit, the only one shown; more than eight in one batch
+    anywhere, as a turn handed over or a stretch of the map coming into sight sends, which come and go at once; or a
+    world replaced with most of it released at once, as an observer's change of view sends it.
+  - A stack killed in a battle whose patch was held past the blow fades as the patch comes, the rest of it gone then.
+  - Two other players' battle with their moves not shown is shown at once, but its loser fades out: a fade isn't a move.
 - **Still to come:**
   - §6.4's paths: along roads, ships' wakes and aircraft's arcs (a walk goes straight between squares' middles now);
   - battles' rest (2.4): a ranged unit firing, ships and aircraft as they fight, Civ2's rounds once they're sent (§8.1),
-    a flash under reduced motion, a unit gone with its battle won (a missile) fading rather than going at the end,
-    another player's unit walking onto the square it emptied rather than being put there, and units arriving or leaving
-    with no move fading in and out (which also fades the rest of a stack killed whose patch is held past the blow).
+    a flash under reduced motion, a unit gone with its battle won (a missile) fading rather than going at the end, and
+    another player's unit walking onto the square it emptied rather than being put there (#1255);
+  - units that go while drawn elsewhere, walking or fighting, out of sight say, fade with neither (#1255).
 
 ---
 

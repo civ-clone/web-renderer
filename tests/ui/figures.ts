@@ -36,6 +36,7 @@ import {
   drawMarker,
   fade,
   unfade,
+  unfaded,
 } from '@civ-clone/ui-map-3d/markers/drawMarker';
 import Water, { Clouds } from '@civ-clone/ui-map-3d/water';
 import {
@@ -857,6 +858,134 @@ sea.dispose();
       [true, false, true, true, true],
       [true, 0],
     ]
+  );
+}
+
+// A unit arriving on a city's square fades in as the stage fades a marker: its unit's part alone, so the city stays
+//  solid, with materials of its own.
+{
+  const square = drawMarker(kit, {
+      city: {
+        name: 'Roma',
+        size: 3,
+        colours,
+        walled: false,
+        disorder: false,
+      },
+      unit: unit('Spearman'),
+    }),
+    unitPart = square.getObjectByName(UNIT_PART)!,
+    shadowsBefore: boolean[] = [],
+    opacities = (object: Object3D) => {
+      const found: number[] = [];
+
+      object.traverse((part) => {
+        if (part instanceof Mesh || part instanceof Sprite) {
+          found.push((part.material as Material).opacity);
+        }
+      });
+
+      return found;
+    },
+    faded: Faded = new Map();
+
+  unitPart.traverse((part) => {
+    if (part instanceof Mesh) {
+      shadowsBefore.push(part.castShadow);
+    }
+  });
+  const cityKits = square.children
+    .filter((child) => child !== unitPart)
+    .flatMap((child) => {
+      const found: Material[] = [];
+
+      child.traverse((part) => {
+        if (part instanceof Mesh || part instanceof Sprite) {
+          found.push(part.material as Material);
+        }
+      });
+
+      return found;
+    });
+
+  fade([unitPart], 0.25, faded);
+
+  const city = square.children.filter((child) => child !== unitPart);
+
+  const kitsBefore = (() => {
+    const found: Material[] = [];
+
+    drawMarker(kit, { city: null, unit: unit('Spearman') }).traverse((part) => {
+      if (part instanceof Mesh || part instanceof Sprite) {
+        found.push(part.material as Material);
+      }
+    });
+
+    return found;
+  })();
+
+  expect(
+    'a square’s unit faded alone: its city stays solid, with the kit’s materials',
+    [
+      opacities(unitPart).every((opacity) => opacity <= 0.25),
+      city.every((part) => opacities(part).every((opacity) => opacity === 1)),
+      city.length > 0,
+      (() => {
+        const now: Material[] = [];
+
+        city.forEach((child) =>
+          child.traverse((part) => {
+            if (part instanceof Mesh || part instanceof Sprite) {
+              now.push(part.material as Material);
+            }
+          })
+        );
+
+        return (
+          now.length === cityKits.length &&
+          now.every((material, at) => material === cityKits[at])
+        );
+      })(),
+    ],
+    [true, true, true, true]
+  );
+
+  // Solid again: the kit's own materials back, its shadows as they were, and its own let go of.
+  const own = [...faded.values()],
+    disposedOwn: Material[] = [];
+
+  own.forEach((material) =>
+    material.addEventListener('dispose', () => void disposedOwn.push(material))
+  );
+  unitPart.traverse((part) => {
+    if (part instanceof Mesh) {
+      part.castShadow = false;
+    }
+  });
+  unfaded([unitPart], faded);
+
+  const restored: Material[] = [],
+    shadows: boolean[] = [];
+
+  unitPart.traverse((part) => {
+    if (part instanceof Mesh || part instanceof Sprite) {
+      restored.push(part.material as Material);
+    }
+
+    if (part instanceof Mesh) {
+      shadows.push(part.castShadow);
+    }
+  });
+
+  expect(
+    'solid again, a faded unit has the kit’s materials back, its shadows as they were, and its own let go of',
+    [
+      restored.every((material) => kitsBefore.includes(material)),
+      disposedOwn.length === own.length && own.length > 0,
+      faded.size,
+      shadows.every((shadow, at) => shadow === shadowsBefore[at]),
+    ],
+    [true, true, 0, true]
   );
 }
 
