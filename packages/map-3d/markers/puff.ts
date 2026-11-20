@@ -1,7 +1,7 @@
-// A puff of smoke where a unit falls in battle on the 3D map (docs/3d-renderer.md §6.4, plan 2.4): a handful of grey
-//  blobs bursting from where it fell, spreading and rising, swelling at once and then shrinking away to nothing as the
-//  loser fades. Solid shapes, made by code as the figures are, rather than see-through smoke: drawn with the land and
-//  the units, so neither the sea nor the cloud needs drawing in another order round it.
+// A puff of smoke where a unit falls in battle on the 3D map (docs/3d-renderer.md §6.4, §8.2, plan 2.4): a handful of
+//  grey blobs bursting from where it fell, spreading and rising, swelling at once and then shrinking away to nothing as
+//  the loser fades. Solid shapes, made by code as the figures are, rather than see-through smoke: drawn with the land
+//  and the units, so neither the sea nor the cloud needs drawing in another order round it.
 
 /** One of a puff's blobs: where it is, from the point it bursts from (`x` east, `y` up, `z` south), and how big. */
 export type PuffBlob = {

@@ -3695,6 +3695,15 @@ expect(
   runFrames();
   keyedBattle.push(focusOn(3, 3));
 
+  // A key after the blow: the battle's over at once, and its puff of smoke goes with it.
+  attackedLast();
+  runFrames(12);
+  keyedBattle.push(puffs.size);
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'w' }));
+  runFrames(1);
+  keyedBattle.push(puffs.size);
+  runFrames();
+
   // Lost with its last move: the ring and the camera wait till it's faded away, then go to the next.
   repatched([1, 1, [walker]], [2, 1, [rival]], [3, 3, [nextUnit]]);
   glider.setActiveUnit(placed(walker, 1, 1));
@@ -3714,12 +3723,12 @@ expect(
   repatched([1, 1, []], [2, 1, []], [3, 3, []]);
 
   expect(
-    'the active unit attacking with its last move holds the ring and the camera till the battle’s over, then they go to the next; a key meanwhile ends it at once; lost, they wait till it’s gone',
+    'the active unit attacking with its last move holds the ring and the camera till the battle’s over, then they go to the next; a key meanwhile ends it at once, after the blow its puff with it; lost, they wait till it’s gone',
     [heldForBattle, afterBattle, keyedBattle, diedRinged],
     [
       [true, false, true, ['Unit-T', 1], true, false, true],
       [['Unit-A', 1], false, true, true],
-      [['Unit-A', 1], null, 0, true, true],
+      [['Unit-A', 1], null, 0, true, true, 1, 0],
       [true, false, true, null, true, true],
     ]
   );
