@@ -14,11 +14,13 @@ import {
   BufferGeometry,
   Color,
   DirectionalLight,
+  DoubleSide,
   Fog,
   Group,
   HemisphereLight,
   IcosahedronGeometry,
   Mesh,
+  MeshBasicMaterial,
   MeshStandardMaterial,
   Object3D,
   PerspectiveCamera,
@@ -110,6 +112,16 @@ export interface Stage {
     id: string,
     at: readonly [number, number, number] | null,
     through?: number
+  ): void;
+  /**
+   * A ship's wake (`id`, `wakes.ts`): the foam `shape` says (`wakeShape`), from `at` (`u`, height, `v`, on the world's
+   *  own copy), drawn at every copy of the world in sight; what was drawn before for it is replaced, and `null` takes it
+   *  away.
+   */
+  wake(
+    id: string,
+    at: readonly [number, number, number] | null,
+    shape?: readonly number[]
   ): void;
   /** What each square yields (`y`), drawn at every copy of the world in sight: what was drawn before is replaced. */
   setYields(mesh: YieldMesh | null): void;
@@ -289,6 +301,14 @@ export const createStage: StageFactory = (
         flatShading: true,
       }),
     puffGreys = [puffGrey('#d8d5cf'), puffGrey('#a9a59d')] as const,
+    // The wakes ships leave, by their walk's id, each its foam's own shape; and the foam they're drawn in, solid, so
+    //  it's drawn with the land and the units, over the sea, as the ripples round a ship are. Unlit, so where a line
+    //  folds over itself, round a turn, it's the same white either way up.
+    wakes = new Map<string, Placed & { shape: BufferGeometry }>(),
+    foam = new MeshBasicMaterial({
+      color: new Color('#dfe8e8'),
+      side: DoubleSide,
+    }),
     markersGroup = new Group(),
     kit = new MarkerKit(),
     // What each square yields, over the land at every copy of the world, when they're shown.
@@ -525,12 +545,15 @@ export const createStage: StageFactory = (
     if (markersKey !== markerCopiesKey) {
       markerCopies = markersInSight;
       markerCopiesKey = markersKey;
-      [...markers.values(), ...walkers.values(), ...puffs.values()].forEach(
-        (marker) => {
-          marker.drawn.forEach((drawn) => markersGroup.remove(drawn));
-          marker.drawn = copiesOf(marker, markersGroup, markerCopies);
-        }
-      );
+      [
+        ...markers.values(),
+        ...walkers.values(),
+        ...puffs.values(),
+        ...wakes.values(),
+      ].forEach((marker) => {
+        marker.drawn.forEach((drawn) => markersGroup.remove(drawn));
+        marker.drawn = copiesOf(marker, markersGroup, markerCopies);
+      });
       walkers.forEach(pose);
       puffs.forEach(shapePuff);
       // Copies made afresh, from the kit's materials: those faded, faded again.
@@ -746,6 +769,49 @@ export const createStage: StageFactory = (
 
       fade(unitParts(marker.drawn), solid, marker.faded);
     },
+    wake: (id, at, shape = []): void => {
+      const old = wakes.get(id);
+
+      if (at === null) {
+        old?.drawn.forEach((drawn) => markersGroup.remove(drawn));
+        old?.shape.dispose();
+        wakes.delete(id);
+
+        return;
+      }
+
+      const made = new BufferGeometry();
+
+      made.setAttribute(
+        'position',
+        new BufferAttribute(Float32Array.from(shape), 3)
+      );
+
+      const wake = old ?? {
+        at,
+        shape: made,
+        make: (): Object3D => new Mesh(wake.shape, foam),
+        drawn: [],
+      };
+
+      if (old === undefined) {
+        wake.drawn = copiesOf(wake, markersGroup, markerCopies);
+        wakes.set(id, wake);
+      } else {
+        old.shape.dispose();
+        old.shape = made;
+        old.drawn.forEach((drawn) => {
+          (drawn as Mesh).geometry = made;
+        });
+      }
+
+      wake.at = at;
+      wake.drawn.forEach((drawn, copy) => {
+        const [offsetU, offsetV] = markerCopies[copy] ?? [0, 0];
+
+        drawn.position.set(at[0] + offsetU, at[1], at[2] + offsetV);
+      });
+    },
     puff: (id, at, through = 0): void => {
       const old = puffs.get(id);
 
@@ -828,6 +894,9 @@ export const createStage: StageFactory = (
       walkers.forEach(({ faded }) => unfade(faded));
       walkers.clear();
       puffs.clear();
+      wakes.forEach(({ shape }) => shape.dispose());
+      wakes.clear();
+      foam.dispose();
       puffShape.dispose();
       puffGreys.forEach((grey) => grey.dispose());
       kit.dispose();

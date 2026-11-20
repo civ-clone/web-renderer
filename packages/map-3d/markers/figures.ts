@@ -1129,7 +1129,16 @@ export const figureGeometry = (
 
 // A unit's stand, and a fortified unit's low wall round it.
 const standShape = new CylinderGeometry(0.19, 0.2, 1, 28),
-  bankShape = new TorusGeometry(0.22, 0.014, 4, 32);
+  bankShape = new TorusGeometry(0.22, 0.014, 4, 32),
+  // A ring of ripples round a ship, in foam, stretched to an oval.
+  rippleShape = new TorusGeometry(1, 0.03, 3, 40),
+  FOAM = '#dfe9ea';
+
+/** The ovals of ripples round a ship afloat, each across its beam and along its length, as a share of its size. */
+export const RIPPLES: readonly (readonly [number, number])[] = [
+  [0.11, 0.2],
+  [0.16, 0.27],
+];
 
 /**
  * Which of a unit's body a geometry is: all of it, or its figures alone or its stand and wall alone, so an aircraft
@@ -1141,7 +1150,8 @@ export type BodyPart = 'whole' | 'figures' | 'base';
  * All that's drawn of a unit on the land, as one geometry: its figures as `look` says, `scale` times their size, on a
  *  stand `stand` thick in its owner's second colour (a ship rides the water without one), behind a low wall when
  *  `fortified`. One draw call. Or, as `part` says, its figures alone, standing as high as on the stand, or its stand
- *  and wall alone.
+ *  and wall alone. A ship out at sea (`ripples`) sits in rings of ripples, ovals of foam round its hull just over the
+ *  water, which turn with it.
  */
 export const unitBodyGeometry = (
   look: UnitLook,
@@ -1151,7 +1161,14 @@ export const unitBodyGeometry = (
     scale,
     stand,
     part = 'whole',
-  }: { fortified: boolean; scale: number; stand: number; part?: BodyPart }
+    ripples = false,
+  }: {
+    fortified: boolean;
+    scale: number;
+    stand: number;
+    part?: BodyPart;
+    ripples?: boolean;
+  }
 ): BufferGeometry => {
   const afloat = look.shape === 'ship',
     lift = afloat ? 0 : stand,
@@ -1183,6 +1200,20 @@ export const unitBodyGeometry = (
       at: [0, stand / 2, 0],
       size: [1, stand, 1],
     });
+  }
+
+  if (afloat && ripples && part === 'whole') {
+    const size = (look.large ? 1.25 : 1) * scale;
+
+    RIPPLES.forEach(([across, along]) =>
+      parts.push({
+        shape: rippleShape,
+        colour: FOAM,
+        at: [0, 0.006, 0],
+        size: [across * size, along * size, 0.15],
+        turn: [Math.PI / 2, 0, 0],
+      })
+    );
   }
 
   if (fortified) {

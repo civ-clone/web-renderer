@@ -111,16 +111,19 @@ export class MarkerKit {
   /**
    * All that's drawn of a unit on the land, as `look` says, in `colours`, fortified or not, its figures `size` times
    *  life size: its figures, stand and wall, one geometry, made once for each. Or, as `part` says, its figures alone
-   *  or its stand and wall alone.
+   *  or its stand and wall alone. A ship out at sea, with its ripples (`ripples`).
    */
   body(
     look: UnitLook,
     colours: FigureColours,
     fortified: boolean,
     size: number = 1,
-    part: BodyPart = 'whole'
+    part: BodyPart = 'whole',
+    ripples = false
   ): BufferGeometry {
-    const key = JSON.stringify([look, colours, fortified, size, part]);
+    // Only a ship's whole body has ripples round it: any other's the same with or without.
+    const rippled = ripples && look.shape === 'ship' && part === 'whole',
+      key = JSON.stringify([look, colours, fortified, size, part, rippled]);
     let geometry = this.#bodies.get(key);
 
     if (geometry === undefined) {
@@ -129,6 +132,7 @@ export class MarkerKit {
         scale: size,
         stand: STAND_HEIGHT,
         part,
+        ripples: rippled,
       });
       this.#bodies.set(key, geometry);
     }
@@ -472,7 +476,9 @@ const drawUnit = (
       unit.colours,
       unit.fortified,
       unit.size,
-      apart ? 'figures' : 'whole'
+      apart ? 'figures' : 'whole',
+      // Out at sea, not in front of a city's buildings: in rings of ripples.
+      badges === null
     ),
     aloft = apart ? new Group() : group,
     top = body.boundingBox?.max.y ?? 0.3,
