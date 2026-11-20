@@ -1527,12 +1527,12 @@ const flown = (
     ] as const,
     // The same lane back west, its points from (1, 1), the square it's going back to, in the order it passes them.
     bowBack = bowSouth.map(([du, dv]) => [1 + du, dv] as const).reverse(),
-    // A sharp corner: on north-west from (2, 1), bowing a little.
+    // A sharp corner: on south-west from (2, 1) to (1, 2), bowing a little, its points from (1, 2).
     corner = [
-      [0.8, 0.85],
-      [0.6, 0.62],
-      [0.4, 0.38],
-      [0.2, 0.18],
+      [0.8, -0.85],
+      [0.6, -0.62],
+      [0.4, -0.38],
+      [0.2, -0.18],
     ] as const,
     square = (u: number, v: number) => ({
       at: [u, v] as const,
@@ -1591,57 +1591,59 @@ const flown = (
       return most;
     };
 
-  // Joined mid-bend, then on: the turn from one ms to the next for 200 ms after.
-  const joining = new Walks({ u: 10, v: null });
+  // Joined at any time along the first step, as a step back west comes late: the turn from one ms to the next for
+  //  300 ms after, the most of any join.
+  let afterJoin = 0;
 
-  joining.step(
-    'lane',
-    { x: 1, y: 1 },
-    { x: 2, y: 1 },
-    square(1, 1),
-    { ...square(2, 1), via: bowSouth },
-    0,
-    pace
-  );
+  for (let joinAt = 10; joinAt <= 420; joinAt += 10) {
+    const joining = new Walks({ u: 10, v: null });
 
-  for (let now = 0; now <= 150; now++) {
-    joining.at(now);
-  }
+    joining.step(
+      'lane',
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+      square(1, 1),
+      { ...square(2, 1), via: bowSouth },
+      0,
+      pace
+    );
 
-  joining.step(
-    'lane',
-    { x: 2, y: 1 },
-    { x: 1, y: 1 },
-    square(9, 9),
-    { ...square(1, 1), via: bowBack },
-    150,
-    pace
-  );
+    let was: number | null = null;
 
-  let afterJoin = 0,
-    was: number | null = null;
+    for (let now = 0; now <= joinAt + 300; now++) {
+      if (now === joinAt) {
+        joining.step(
+          'lane',
+          { x: 2, y: 1 },
+          { x: 1, y: 1 },
+          square(9, 9),
+          { ...square(1, 1), via: bowBack },
+          joinAt,
+          pace
+        );
+      }
 
-  for (let now = 150; now <= 350; now++) {
-    const [walker] = joining.at(now).going;
+      const [walker] = joining.at(now).going;
 
-    if (walker === undefined) {
-      break;
+      if (walker === undefined) {
+        break;
+      }
+
+      if (was !== null) {
+        const delta = walker.facing - was;
+
+        afterJoin = Math.max(
+          afterJoin,
+          Math.abs(delta - Math.PI * 2 * Math.round(delta / (Math.PI * 2)))
+        );
+      }
+
+      was = walker.facing;
     }
-
-    if (was !== null) {
-      const delta = walker.facing - was;
-
-      afterJoin = Math.max(
-        afterJoin,
-        Math.abs(delta - Math.PI * 2 * Math.round(delta / (Math.PI * 2)))
-      );
-    }
-
-    was = walker.facing;
   }
 
   expect(
-    'doubling back along a bending road, or round a sharp corner, it turns at the middle with no snap; joined mid-bend, it turns on smoothly',
+    'doubling back along a bending road, or round a sharp corner, it turns at the middle with no snap; joined at any time along the step, it turns on smoothly',
     [
       turning({ to: { x: 1, y: 1 }, at: [1, 1], via: bowBack }) < 0.2,
       turning({ to: { x: 1, y: 2 }, at: [1, 2], via: corner }) < 0.2,

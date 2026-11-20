@@ -124,9 +124,10 @@ type Walk = {
   // When its last step was taken: a unit making the same step this soon after rides along.
   stepped: number;
   motion: Motion;
-  // The way it faced as its last step was joined, when, and how long it takes to turn from it to the way its path
-  //  goes, so it turns rather than snapping round.
-  turned: { facing: number; at: number; over: number } | null;
+  // How far it was turned from the way its path goes as its last step was joined, the short way round, when, and how
+  //  long it takes to turn that away, so it turns rather than snapping round: worked out once, so it turns one way
+  //  however its path turns meanwhile.
+  turned: { offset: number; at: number; over: number } | null;
   // Whether its units fly; how many steps of its path have been let go as passed; and how high it was, as a share of
   //  the climb (0 to 1), how far along its whole path, when it set off or its last step was joined: it climbs on from
   //  there.
@@ -584,8 +585,6 @@ export class Walks {
     });
     walk.squares.push(to);
     walk.stepped = now;
-    walk.turned =
-      facing === null ? null : { facing, at: now, over: pace.step / 2 };
     walk.motion = plan(
       now,
       along - passed,
@@ -593,6 +592,15 @@ export class Walks {
       walk.points.length - 1,
       pace
     );
+    walk.turned = null;
+
+    if (facing !== null) {
+      walk.turned = {
+        offset: turnTowards(0, facing - this.#walker(walk, now).facing, 1),
+        at: now,
+        over: pace.step / 2,
+      };
+    }
   }
 
   // `unit` leaves `walk`: one walking alone ends it there.
@@ -756,31 +764,41 @@ export class Walks {
           : turnTowards(0, out - into, 1);
       },
       here = going ?? 0,
-      // Turning at each square's middle: a quarter of a step either side, half of it before the middle and half after,
-      //  on from the way it's going now, so it turns with no jolt, however its steps bend.
-      coming = turnAt(index),
-      leaving = turnAt(index - 1),
       // The way straight from this step's square's middle to the next's: how a unit standing faces, having come so, and
       //  so how it faces as it sets off and as it stops, where the step bends between, as along a road.
       straight = wayOf(a.middle ?? a.at, b.middle ?? b.at),
-      pathFacing =
-        t > 0.75 && coming !== null
-          ? here + coming * (t - 0.75) * 2
-          : t < 0.25 && leaving !== null
-          ? here - leaving * (0.5 - t * 2)
-          : t > 0.75 && index === last - 1 && straight !== null
-          ? turnTowards(here, straight, (t - 0.75) * 4)
-          : t < 0.25 && index === 0 && straight !== null
-          ? turnTowards(straight, here, t * 4)
-          : here,
-      // Just after a step's joined, from the way it faced then.
+      // Turning at each square's middle: a quarter of a step either side, half of it before the middle and half after,
+      //  on from the way it's going now, so it turns with no jolt, however its steps bend. Worked out only there.
+      pathFacing = ((): number => {
+        if (t > 0.75) {
+          const coming = turnAt(index);
+
+          if (coming !== null) {
+            return here + coming * (t - 0.75) * 2;
+          }
+
+          if (index === last - 1 && straight !== null) {
+            return turnTowards(here, straight, (t - 0.75) * 4);
+          }
+        } else if (t < 0.25) {
+          const leaving = turnAt(index - 1);
+
+          if (leaving !== null) {
+            return here - leaving * (0.5 - t * 2);
+          }
+
+          if (index === 0 && straight !== null) {
+            return turnTowards(straight, here, t * 4);
+          }
+        }
+
+        return here;
+      })(),
+      // Just after a step's joined, from the way it faced then, the turn it was from its path then easing away.
       facing =
         turned !== null && now - turned.at < turned.over
-          ? turnTowards(
-              turned.facing,
-              pathFacing,
-              Math.max(0, now - turned.at) / turned.over
-            )
+          ? pathFacing +
+            turned.offset * (1 - Math.max(0, now - turned.at) / turned.over)
           : pathFacing;
 
     return {
