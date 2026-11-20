@@ -132,6 +132,28 @@ export const ruleWorldSizes = (
         })
       );
 
+/**
+ * `sizes`, each offering only as many civilizations as from `minPlayers` to `maxPlayers` (#1249): the page's own sizes
+ *  for rules with a range of their own (Civ2's 3 to 7), where its sizes aren't on the grid. A size whose range is
+ *  wholly outside is held to the nearest end.
+ */
+export const withinPlayers = (
+  sizes: WorldSize[],
+  minPlayers: number,
+  maxPlayers: number
+): WorldSize[] =>
+  sizes.map((size) => {
+    const min = Math.min(Math.max(size.minPlayers, minPlayers), maxPlayers),
+      max = Math.max(Math.min(size.maxPlayers, maxPlayers), min);
+
+    return {
+      ...size,
+      minPlayers: min,
+      maxPlayers: max,
+      players: Math.min(max, Math.max(min, size.players)),
+    };
+  });
+
 /** A problem with a size typed in: the field to fix, and the message to show there, with what it needs to say. */
 export type CustomSizeProblem = {
   field: 'height' | 'width';

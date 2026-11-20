@@ -236,9 +236,9 @@ export class GameSetupForm extends Window {
 
     const setup = this.#setup,
       data = setup.data,
-      // A game with a grid of its own (Civ2's) is on that one.
-      fixedGrid = setup.fixedGrid(),
-      grids = fixedGrid === null ? supportedTopologies() : [fixedGrid],
+      // The grids a map can be drawn on that the game can be played on (#1249): Civ2's on those its art is for.
+      gridChoices = setup.gridChoices(supportedTopologies()),
+      grids = gridChoices.length === 0 ? [setup.topologyId] : gridChoices,
       advanced = s<HTMLDetailsElement>(
         `<details class="ui-game-setup-advanced"${
           preset.advanced ? ' open' : ''

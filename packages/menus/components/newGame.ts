@@ -6,6 +6,7 @@ import {
   playerCounts,
   ruleWorldSizes,
   worldSizes,
+  withinPlayers,
   worldSizesFor,
 } from '@civ-clone/ui-client/lib/worldSizes';
 import {
@@ -28,6 +29,7 @@ import {
   askGameChoices,
   gameFailed,
   gameGrid,
+  gameGrids,
   mayOfferOtherGames,
   playGame,
   preselectedGame,
@@ -301,18 +303,55 @@ export const askWorldSize = (
 const customiseValue = '#customise';
 
 /**
- * The grid a new game is on: the game's own (Civ2's), or else the one it was last started on, where that can be drawn,
- *  or else the first that can be: square, whose art ships with civ.one.
+ * The grid a new game is on: the one it was last started on, where it can still be played and drawn, or else the game's
+ *  own (Civ2's), or else the first that can be: square, whose art ships with civ.one. `grids` are those it can be on.
  */
 export const newGameGrid = (
   own: TopologyId | null,
   last: LastNewGame,
   grids: TopologyId[] = supportedTopologies()
 ): TopologyId =>
-  own ??
-  (last.topologyId !== undefined && grids.includes(last.topologyId)
+  last.topologyId !== undefined && grids.includes(last.topologyId)
     ? last.topologyId
-    : grids[0] ?? 'square');
+    : own !== null && (grids.length === 0 || grids.includes(own))
+    ? own
+    : grids[0] ?? own ?? 'square';
+
+/** Of the grids a map can be drawn on, those a game with `game` can be played on (#1249): Civ2's, those its art is for. */
+const playableGrids = (game: Parameters<typeof gameGrids>[0]): TopologyId[] => {
+  const drawable = supportedTopologies(),
+    grids = gameGrids(game);
+
+  return grids === null
+    ? drawable
+    : grids.filter((grid) => drawable.includes(grid));
+};
+
+/**
+ * The sizes a new game on `topologyId` is offered, from the rules' answer: their own, on their own grid (Civ2's
+ *  isometric); on any other, Civilization's for that grid (#1249), with as many civilizations as the rules have room
+ *  for; and Civilization's for rules with none (Civ1's).
+ */
+export const sizesForGrid = (
+  topologyId: TopologyId,
+  answer: Parameters<typeof ruleWorldSizes>[0]
+): WorldSize[] => {
+  const rules = ruleWorldSizes(answer);
+
+  if (rules === null) {
+    return worldSizesFor(topologyId);
+  }
+
+  if (answer!.sizes[0]!.topologyId === topologyId) {
+    return rules;
+  }
+
+  return withinPlayers(
+    worldSizesFor(topologyId),
+    Math.min(...rules.map(({ minPlayers }) => minPlayers)),
+    Math.max(...rules.map(({ maxPlayers }) => maxPlayers))
+  );
+};
 
 /** The size a new game is: the one it was last started at, where it's still offered, or Normal, or the first there is. */
 export const newGameSize = (sizes: WorldSize[], last: LastNewGame): WorldSize =>
@@ -331,22 +370,24 @@ export const newGamePlayers = (size: WorldSize, last: LastNewGame): number =>
 /**
  * What a game will start with, said under it in New Game (#1247): "A normal world on the square grid, 7 civilizations".
  *  Before its rules are loaded its sizes aren't known, so the size is said by the page's own of that name. A game played
- *  on those sizes (one with no grid of its own, Civ1's) has its civilizations held to their range, as it will start; a
- *  game with sizes of its own (Civ2's) has them as it last started, which its own sizes had room for, or the page's
- *  size's own.
+ *  on those sizes (Civ1's, or Civ2's off its own grid, #1249) has its civilizations held to their range, as it will
+ *  start; a game on its own sizes (Civ2's isometric) has them as it last started, which its own sizes had room for, or
+ *  the page's size's own.
  */
 export const newGameSummary = (
   own: TopologyId | null,
-  last: LastNewGame
+  last: LastNewGame,
+  grids: TopologyId[] = supportedTopologies()
 ): string => {
-  const size = newGameSize(worldSizes, last);
+  const size = newGameSize(worldSizes, last),
+    grid = newGameGrid(own, last, grids);
 
   return t('NewGameWindow.game-meta', {
     size: t(`NewGameWindow.size-name.${size.key}`, { defaultValue: size.key }),
-    grid: t(`NewGameWindow.grid-name.${newGameGrid(own, last)}`),
+    grid: t(`NewGameWindow.grid-name.${grid}`),
     civilizations: t('NewGameWindow.civilizations', {
       count:
-        own === null
+        own === null || grid !== own
           ? newGamePlayers(size, last)
           : last.players ?? size.players,
     }),
@@ -364,6 +405,7 @@ const startChosenGame = (
   transport: Transport,
   game: string,
   own: TopologyId | null,
+  grids: TopologyId[],
   rulesKnown: boolean,
   onFinished?: FinishedHandler
 ): void => {
@@ -395,33 +437,20 @@ const startChosenGame = (
     );
   };
 
-  const onGrid = (): void => {
-    const topologyId = newGameGrid(own, last);
-
-    start(topologyId, worldSizesFor(topologyId));
-  };
+  const topologyId = newGameGrid(own, last, grids);
 
   // The only game there is asks nothing more of the worker than it always has.
   if (!rulesKnown) {
-    onGrid();
+    start(topologyId, worldSizesFor(topologyId));
 
     return;
   }
 
-  // The game's own sizes (#1175), on their own grid: Civ2's. Rules that offer none (Civ1's) leave the page's own.
+  // The game's own sizes (#1175) on their own grid (Civ2's), or Civilization's on another (#1249) and for rules that
+  //  offer none (Civ1's).
   transport
     .request(new WorldSizes())
-    .then((answer) => {
-      const offered = ruleWorldSizes(answer);
-
-      if (offered === null) {
-        onGrid();
-
-        return;
-      }
-
-      start(own ?? (answer.sizes[0]!.topologyId as TopologyId), offered);
-    })
+    .then((answer) => start(topologyId, sizesForGrid(topologyId, answer)))
     // Not answered: the player has been told (#580), and nothing more is asked.
     .catch(unlessRequestFailed);
 };
@@ -438,21 +467,21 @@ export const askNewGame = (
   customise: CustomiseHandler | null = null
 ): void => {
   const open = (
-    games: { id: string; own: TopologyId | null }[],
+    games: { id: string; own: TopologyId | null; grids: TopologyId[] }[],
     chosen: string | null,
     onGame: (id: string) => void
   ): void =>
     ask(
       t('NewGameWindow.game'),
       [
-        ...games.map(({ id, own }) => {
+        ...games.map(({ id, own, grids }) => {
           const label =
             id === '' ? t('NewGameWindow.default-game') : gameTitle(id);
 
           return {
             label,
             value: id,
-            meta: newGameSummary(own, lastNewGame(id)),
+            meta: newGameSummary(own, lastNewGame(id), grids),
             primary: t('NewGameWindow.play', {
               game: label,
               interpolation: { escapeValue: false },
@@ -493,8 +522,15 @@ export const askNewGame = (
 
   // Without art for another game there's none to offer, and nothing to ask the worker: the default it is.
   if (!mayOfferOtherGames()) {
-    open([{ id: '', own: null }], '', () =>
-      startChosenGame(transport, '', null, false, onFinished)
+    open([{ id: '', own: null, grids: supportedTopologies() }], '', () =>
+      startChosenGame(
+        transport,
+        '',
+        null,
+        supportedTopologies(),
+        false,
+        onFinished
+      )
     );
 
     return;
@@ -506,6 +542,7 @@ export const askNewGame = (
         choices.games.map(({ id }) => ({
           id,
           own: gameGrid(choices.games.find((game) => game.id === id)),
+          grids: playableGrids(choices.games.find((game) => game.id === id)),
         })),
         preselectedGame(choices),
         (id) =>
@@ -515,6 +552,7 @@ export const askNewGame = (
                 transport,
                 id,
                 gameGrid(choices.games.find((game) => game.id === id)),
+                playableGrids(choices.games.find((game) => game.id === id)),
                 true,
                 onFinished
               )
@@ -560,17 +598,21 @@ export const askEarth = (
           return;
         }
 
-        const sizes = offered.filter(({ earth }) => earth);
+        const sizes = offered.filter(({ earth }) => earth),
+          earthGrid = answer.sizes[0]!.topologyId as TopologyId;
 
-        if (sizes.length === 0) {
+        // None, too, where its Earth's grid has no art here (#1249): Civ2's isometric Earth without isometric art, when
+        //  it starts on another grid.
+        if (sizes.length === 0 || (grid !== null && grid !== earthGrid)) {
           gameFailed(new Error(t('NewGameWindow.no-earth')));
 
           return;
         }
 
+        // On the grid its rules' Earth is on (Civ2's isometric), whichever grids the game can be played on (#1249).
         askWorldSize(transport, onFinished, sizes, {
           earth: true,
-          topologyId: grid ?? (answer.sizes[0]!.topologyId as TopologyId),
+          topologyId: earthGrid,
         });
       })
       // Not answered: the player has been told, and the main menu is still there (#580).

@@ -9,6 +9,7 @@ import {
   defaultWorldSize,
   earthWorldSizes,
   ruleWorldSizes,
+  withinPlayers,
   worldSizesFor,
 } from './worldSizes';
 import AIClients from '@civ-clone/ui-protocol/Requests/AIClients';
@@ -26,7 +27,10 @@ import RuleSets, {
   RuleSetsAnswer,
 } from '@civ-clone/ui-protocol/Requests/RuleSets';
 import Request from '@civ-clone/core-data-client/Request';
-import { WorldSizesAnswer } from '@civ-clone/ui-protocol/Requests/WorldSizes';
+import {
+  CustomWorldSizeOption,
+  WorldSizesAnswer,
+} from '@civ-clone/ui-protocol/Requests/WorldSizes';
 import { TopologyId } from './topologyFor';
 import Transport from '../Transport';
 import { rememberNewGame } from './lastNewGame';
@@ -51,8 +55,13 @@ export type GameSetupPreset = {
    */
   seats?: (Pick<SeatState, 'kind' | 'name'> &
     Partial<Pick<SeatState, 'civilization' | 'leader' | 'ai'>>)[];
-  /** The grid it was on (#1248), kept where this game has no grid of its own. */
+  /**
+   * The grid the player chose (#1248), kept where this game can be on it: by a game with no grid of its own, or by one
+   *  with a grid of its own (Civ2's, #1249) only from a setup for the same game (`game`), its other rules.
+   */
   topologyId?: TopologyId;
+  /** The game the grid was chosen for (#1249), by its set's game (`gameOf`). */
+  game?: string;
   /** The map it had (`map()`), kept where this game offers it, and a custom size's width and height. */
   map?: string;
   width?: number;
@@ -80,8 +89,13 @@ export type GameChoice = {
   games: string[];
   /** The original rules of each game in `games` that has them, by the game's set: Civ1's `civ1` for `civ1-enhanced`. */
   originals: { [set: string]: string };
-  /** The only grid its games are played on, drawn with its own art (Civ2's), or null for any. */
+  /** The grid its games start on, its own art's (Civ2's), or null for any. */
   grid: TopologyId | null;
+  /**
+   * The grids its games can be played on, those its art is for (#1249), its own first, or null for any. Left out, the
+   *  game is played only on `grid`.
+   */
+  grids?: TopologyId[] | null;
 };
 
 /** The game the set `id` is played as (#1248): itself, or the game whose original rules it is. */
@@ -195,6 +209,8 @@ export class GameSetup {
    *  changed, as the worker it would reach is on its way to another game.
    */
   switching: boolean = false;
+  // The grid is the player's choice (#1249): picked here, or carried from a setup where it was, and so carried on.
+  #gridChosen: boolean = false;
   /** The setup's window has closed (#1248): a switch on its way opens nothing. */
   closed: boolean = false;
   // From Start until the game goes ahead, or doesn't (#954): Start is held meanwhile.
@@ -209,17 +225,21 @@ export class GameSetup {
     this.ruleSetChoices = data.ruleSets?.choices ?? [];
     this.ruleSetProblems = data.ruleSets?.problems ?? [];
 
-    // A game with a grid of its own (Civ2's) is on it, with that grid's size of the same name, or the rules' own size
-    //  of that name (#1175), and on Earth only when its rules have an Earth of their own (#1176): the page's Earth
-    //  maps are square.
-    const fixedGrid = this.fixedGrid();
+    // A game with a grid of its own (Civ2's) starts on it, with that grid's size of the same name, or the rules' own
+    //  size of that name (#1175), and on Earth only when its rules have an Earth of their own (#1176): the page's Earth
+    //  maps are square. It may be played on the other grids its art is for (#1249).
+    const fixedGrid = this.fixedGrid(),
+      startGrid = this.defaultGrid();
 
-    if (fixedGrid !== null) {
-      const sizes = this.sizesOn(fixedGrid),
+    if (startGrid !== null) {
+      const sizes = this.sizesOn(startGrid),
         size =
-          sizes.find(({ key }) => key === this.size?.key) ?? sizes[0] ?? null;
+          sizes.find(({ key }) => key === this.size?.key) ??
+          sizes.find(({ key }) => key === defaultWorldSize.key) ??
+          sizes[0] ??
+          null;
 
-      this.topologyId = fixedGrid;
+      this.topologyId = startGrid;
       this.size = size;
       this.width = size?.width ?? this.width;
       this.height = size?.height ?? this.height;
@@ -247,7 +267,7 @@ export class GameSetup {
         null;
       this.width = this.size?.width ?? this.width;
       this.height = this.size?.height ?? this.height;
-      this.topologyId = fixedGrid ?? 'square';
+      this.topologyId = this.earthGrid();
     }
 
     // Customize World opens on the world last set: one of the sizes, or a custom one. On a grid of the game's own, only
@@ -263,7 +283,7 @@ export class GameSetup {
       preset.advanced &&
       width > 0 &&
       height > 0 &&
-      (fixedGrid === null || existingSize !== null)
+      (!this.hasRuleSizesOn(this.topologyId) || existingSize !== null)
     ) {
       this.size = existingSize;
       this.width = width;
@@ -273,7 +293,14 @@ export class GameSetup {
     // A setup for another game, or the same game's other rules (#1248), keeps the grid the player chose (none is
     //  carried from a game with a grid of its own), unless this game has a grid of its own or is on Earth, whose grid
     //  is Earth's; the same size by name on it.
-    if (preset.topologyId !== undefined && fixedGrid === null && !this.earth) {
+    if (
+      preset.topologyId !== undefined &&
+      fixedGrid === null &&
+      this.allowsGrid(preset.topologyId) &&
+      (this.defaultGrid() === null || preset.game === this.gameKey()) &&
+      !this.earth
+    ) {
+      this.#gridChosen = true;
       this.topologyId = preset.topologyId;
       this.size =
         this.sizesOn(this.topologyId).find(
@@ -287,7 +314,11 @@ export class GameSetup {
     //  Customize World's is; a size, or Earth's, by name. An Earth size this game hasn't is the size of its own Earth
     //  nearest it in area (above), or a map of the sizes it has when it has no Earth.
     if (preset.map === 'custom') {
-      if (fixedGrid === null && preset.width && preset.height) {
+      if (
+        !this.hasRuleSizesOn(this.topologyId) &&
+        preset.width &&
+        preset.height
+      ) {
         this.size = null;
         this.earth = false;
         this.width = preset.width;
@@ -305,7 +336,7 @@ export class GameSetup {
       this.height = this.size?.height ?? this.height;
 
       if (this.earth) {
-        this.topologyId = fixedGrid ?? 'square';
+        this.topologyId = this.earthGrid();
       }
     }
 
@@ -375,6 +406,7 @@ export class GameSetup {
     | 'earth'
     | 'seats'
     | 'topologyId'
+    | 'game'
     | 'map'
     | 'width'
     | 'height'
@@ -398,10 +430,14 @@ export class GameSetup {
         leader,
         ai,
       })),
-      // Only a grid the player chose: one of the game's own (Civ2's) isn't the player's to carry to another game.
-      ...(this.fixedGrid() === null ? { topologyId: this.topologyId } : {}),
-      // Nor a size typed in on a grid of the game's own: its shape is that grid's (#1248).
-      ...(this.fixedGrid() !== null && this.size === null
+      // Only a grid the player chose: one of the game's own (Civ2's) isn't the player's to carry to another game, nor is
+      //  the one it starts on, unless the player picked it (#1249).
+      ...(this.fixedGrid() === null &&
+      (this.defaultGrid() === null || this.#gridChosen)
+        ? { topologyId: this.topologyId, game: this.gameKey() }
+        : {}),
+      // Nor a size typed in on the rules' own grid: its shape is that grid's (#1248).
+      ...(this.hasRuleSizesOn(this.topologyId) && this.size === null
         ? {}
         : { map: this.map(), width: this.width, height: this.height }),
       ruleSetChoices: [
@@ -443,24 +479,105 @@ export class GameSetup {
     );
   }
 
-  /**
-   * The only grid the game can be on, when it has one of its own (#668), or its rules' sizes are on one (#1175), or
-   *  null when the player picks it.
-   */
-  fixedGrid(): TopologyId | null {
-    const [first] = ruleWorldSizes(this.data.worldSizes) ?? [];
+  /** The game the setup is for, by its set's game (`gameOf`): its enhanced rules' set, or `''` for the only one. */
+  gameKey(): string {
+    const game = this.data.game;
 
-    return (
-      this.data.game?.grid ??
-      (first === undefined
-        ? null
-        : (this.data.worldSizes!.sizes[0]!.topologyId as TopologyId))
+    return game === undefined ? '' : gameOf(game, game.id);
+  }
+
+  /** The grid the rules' own sizes are on (#1175, Civ2's isometric grid), or null for rules with none (Civ1's). */
+  rulesGrid(): TopologyId | null {
+    return ruleWorldSizes(this.data.worldSizes) === null
+      ? null
+      : (this.data.worldSizes!.sizes[0]!.topologyId as TopologyId);
+  }
+
+  /** Whether `topologyId` is the grid the rules' own sizes are on, which a world on it is one of. */
+  hasRuleSizesOn(topologyId: TopologyId): boolean {
+    return this.rulesGrid() === topologyId;
+  }
+
+  /**
+   * The grids the game can be played on (#1249): those its art is for (Civ2's: its own isometric, then the pixel art's
+   *  square and hex), or, for a game drawn with whatever the player picks, null for any. An older answer, with only the
+   *  grid it starts on, is played there alone.
+   */
+  grids(): TopologyId[] | null {
+    const game = this.data.game;
+
+    if (game === undefined) {
+      return null;
+    }
+
+    return game.grids !== undefined
+      ? game.grids
+      : game.grid === null
+      ? null
+      : [game.grid];
+  }
+
+  /** Whether the game can be played on `topologyId`'s grid. */
+  allowsGrid(topologyId: TopologyId): boolean {
+    const grids = this.grids();
+
+    return grids === null || grids.includes(topologyId);
+  }
+
+  /** Of `drawable` (the grids a map can be drawn on), those the game can be played on. */
+  gridChoices(drawable: TopologyId[]): TopologyId[] {
+    return drawable.filter((grid) => this.allowsGrid(grid));
+  }
+
+  /** The grid the game starts on: its art's own (Civ2's), or its rules' sizes' (#1175), or null for the player's pick. */
+  defaultGrid(): TopologyId | null {
+    return this.data.game?.grid ?? this.rulesGrid();
+  }
+
+  /** The only grid the game can be on, when its art is for one alone, or null when the player picks among them. */
+  fixedGrid(): TopologyId | null {
+    const grids = this.grids();
+
+    if (grids !== null) {
+      return grids.length === 1 ? grids[0]! : null;
+    }
+
+    // Rules with sizes of their own, and no art of their own to say which grids: on their sizes' grid.
+    return this.data.game === undefined ? this.rulesGrid() : null;
+  }
+
+  /** The grid Earth is on: the rules' own Earth's (Civ2's), or the page's square Earth. */
+  earthGrid(): TopologyId {
+    return this.rulesGrid() ?? 'square';
+  }
+
+  /**
+   * The sizes on `topologyId`'s grid: the rules' own (#1175), on their own grid; on any other, the setup's own for that
+   *  grid (Civilization's, #1249), with as many civilizations as the rules have room for, where they say.
+   */
+  sizesOn(topologyId: TopologyId): WorldSize[] {
+    const rules = ruleWorldSizes(this.data.worldSizes);
+
+    if (rules === null) {
+      return worldSizesFor(topologyId);
+    }
+
+    if (this.hasRuleSizesOn(topologyId)) {
+      return rules;
+    }
+
+    return withinPlayers(
+      worldSizesFor(topologyId),
+      Math.min(...rules.map(({ minPlayers }) => minPlayers)),
+      Math.max(...rules.map(({ maxPlayers }) => maxPlayers))
     );
   }
 
-  /** The sizes on `topologyId`'s grid: the rules' own (#1175), or the setup's own for that grid. */
-  sizesOn(topologyId: TopologyId): WorldSize[] {
-    return ruleWorldSizes(this.data.worldSizes) ?? worldSizesFor(topologyId);
+  /** What a size typed in may be on the grid chosen: the rules' own limits on their own grid, or none to say. */
+  customLimits(): CustomWorldSizeOption | null {
+    return this.hasRuleSizesOn(this.topologyId) || this.rulesGrid() === null
+      ? this.data.worldSizes?.custom ?? null
+      : null;
   }
 
   /**
@@ -471,10 +588,13 @@ export class GameSetup {
     const sizes = ruleWorldSizes(this.data.worldSizes);
 
     if (sizes !== null) {
-      return sizes.filter(({ earth }) => earth);
+      // None where its Earth's grid has no art here (#1249): Civ2's isometric Earth without isometric art.
+      return this.allowsGrid(this.earthGrid())
+        ? sizes.filter(({ earth }) => earth)
+        : [];
     }
 
-    return this.fixedGrid() === null ? earthWorldSizes : [];
+    return this.defaultGrid() === null ? earthWorldSizes : [];
   }
 
   sizes(): WorldSize[] {
@@ -542,13 +662,26 @@ export class GameSetup {
 
   /** The same size on the new grid has its own width and height. */
   chooseGrid(topologyId: TopologyId): void {
-    this.topologyId = this.fixedGrid() ?? topologyId;
+    this.#gridChosen = true;
+
+    this.topologyId =
+      this.fixedGrid() ??
+      (this.allowsGrid(topologyId) ? topologyId : this.topologyId);
 
     if (this.size) {
+      const sizes = this.sizesOn(this.topologyId),
+        area = this.size.width * this.size.height;
+
+      // The same size by name, or, where the new grid hasn't it (Civ2's own have no Tiny or Huge, #1249), its size
+      //  nearest in area, rather than a world the player never typed.
       this.size =
-        this.sizesOn(this.topologyId).find(
-          (size) => size.key === this.size!.key
-        ) ?? null;
+        sizes.find((size) => size.key === this.size!.key) ??
+        [...sizes].sort(
+          (a, b) =>
+            Math.abs(a.width * a.height - area) -
+            Math.abs(b.width * b.height - area)
+        )[0] ??
+        null;
       this.width = this.size?.width ?? this.width;
       this.height = this.size?.height ?? this.height;
     }
@@ -570,7 +703,7 @@ export class GameSetup {
   //  from the end, so the human's stays.
   #settle(): void {
     if (this.earth) {
-      this.topologyId = this.fixedGrid() ?? 'square';
+      this.topologyId = this.earthGrid();
     }
 
     while (this.seats.length > this.maxSeats()) {
@@ -683,12 +816,7 @@ export class GameSetup {
   problem(width: string, height: string): ReturnType<typeof customSizeProblem> {
     return this.earth
       ? null
-      : customSizeProblem(
-          this.topologyId,
-          width,
-          height,
-          this.data.worldSizes?.custom ?? null
-        );
+      : customSizeProblem(this.topologyId, width, height, this.customLimits());
   }
 
   /** A chosen leader is sent, but not a civilization's lone one, which the worker would choose anyway. */

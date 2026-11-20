@@ -136,7 +136,7 @@ export const isOffered = (
 
 /**
  * The sets the page may offer for a new game, in their order: with no art packs named, every one that isn't hidden and
- *  needs no art of its own. Civ2's is offered to a page that has Civ2's art or civ.one's isometric pixel art.
+ *  needs no art of its own. Civ2's is offered to a page that has Civ2's art or any of civ.one's pixel art (#1249).
  */
 export const offeredSets = (
   plugins: Plugins,

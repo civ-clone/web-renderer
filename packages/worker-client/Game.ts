@@ -352,6 +352,7 @@ export class Game implements IGame {
         sets: offeredSets(this.#plugins, have).map((set) => ({
           id: set.id,
           tileset: drawnWith(set, have),
+          tilesets: set.tilesets.filter((id) => have.includes(id)),
           // Offered only beside it: a set whose original isn't offered is a game of its own.
           original: offeredSets(this.#plugins, have).some(
             ({ id }) => id === set.original
