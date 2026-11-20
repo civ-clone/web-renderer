@@ -837,8 +837,12 @@ export class MapView3D implements MapRenderer {
     });
     this.#stepsOn(unit.id);
 
-    // Along the road between them, as it bends, where one's drawn.
-    const via = this.#land.roadPath(from.x, from.y, to.x, to.y)?.slice(1, -1);
+    // Drawn in the air, it flies an arc, straight; on the ground, along the road between them, as it bends, where one's
+    //  drawn.
+    const flies = airborne(unitLook(seen._, seen.__ ?? [])),
+      via = flies
+        ? undefined
+        : this.#land.roadPath(from.x, from.y, to.x, to.y)?.slice(1, -1);
 
     this.#walks.step(
       unit.id,
@@ -851,8 +855,7 @@ export class MapView3D implements MapRenderer {
       },
       performance.now(),
       speed === 'fast' ? quicker(pace) : pace,
-      // Drawn in the air, it flies an arc.
-      airborne(unitLook(seen._, seen.__ ?? []))
+      flies
     );
     // Off the square it set off from, now: `#face` marks it again.
     this.#draw();

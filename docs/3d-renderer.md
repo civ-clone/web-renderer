@@ -883,11 +883,13 @@ mapEvent:
 - **Along roads:** between two squares with a road drawn between them, a step follows it as it bends (§5.4,
   `Land#roadPath`): along the half the square it leaves draws, from its middle to the edge they share, and on along the
   half the square it comes to draws, to its middle. Where only one draws a half (the other a city, or the way a
-  railroad goes), it goes straight to or from the edge on the other's side; with neither, straight, as before.
+  railroad goes), it goes straight to or from the edge on the other's side; with neither, straight, as before. Aircraft
+  fly straight over roads.
   - The points it passes are kept from the middle of the square it's going to (`via`), so they go a copy of the world
     round with it, and a step joined mid-bend keeps them.
   - It goes along them by distance, and faces the way it goes, turning from each piece's way to the next's as it goes
-    along one, so it turns with no jolt, as at a square's middle.
+    along one, so it turns with no jolt. At a square's middle it turns from the way it comes in to the way it goes out,
+    the short way round, one turn shared by both sides of the middle, so doubling back it never snaps half way round.
 - **Aircraft fly an arc** (aircraft, helicopters and missiles, as the built-in set draws them: `airborne`):
   - A walk whose units all fly climbs as it sets off, over a step's way, to 0.3 over where they'd stand (`CRUISE`,
     about an aircraft's own height), and comes down over its last step's way to land at its end. A hop of one square

@@ -14,8 +14,9 @@
 //   way at once. One stepping on from where its walk's bound goes on along it, the others staying bound there unless
 //   they step along too; one stepping from elsewhere sets off from where it's drawn, and a walk it leaves empty is
 //   given up (`dropped`).
-// - It faces the way from one square's middle to the next (each point's `middle`), turning as it passes one, and,
-//   when a step's joined, from the way it faced then.
+// - It faces the way from one square's middle to the next (each point's `middle`), or along the way it passes where a
+//   step bends (`via`, as along a road), turning as it passes a square's middle, and, when a step's joined, from the
+//   way it faced then.
 // - Aircraft fly an arc: a walk whose units all fly climbs as it sets off and comes down to land at its end, a step's
 //   way each, so a hop of one square goes half as high as a longer flight. A step joined as it comes down climbs again
 //   from where it is. One that doesn't fly rides along with a walk only if that walk doesn't fly either: what a ship
@@ -740,17 +741,30 @@ export class Walks {
       a = points[index]!,
       b = points[index + 1] ?? a,
       { at, way: going } = this.#stepAt(walk, index, t),
-      // The way step `i` goes as it leaves a square's middle (0), and as it comes to the next (1): turning from one to
-      //  the other, the way it's going now, so it turns with no jolt, however its steps bend.
+      // The way step `i` goes as it leaves a square's middle (0), and as it comes to the next (1).
       way = (i: number, end: 0 | 1): number | null =>
         i < 0 || i >= last ? null : this.#stepAt(walk, i, end).way,
+      // How far it turns at the middle between step `i` and the next, the short way round, from the way it comes in to
+      //  the way it goes out: one turn for both sides of the middle, so they can't turn opposite ways round, as they
+      //  could when it doubles back.
+      turnAt = (i: number): number | null => {
+        const into = way(i, 1),
+          out = way(i + 1, 0);
+
+        return into === null || out === null
+          ? null
+          : turnTowards(0, out - into, 1);
+      },
       here = going ?? 0,
-      // Turning at each square's middle: a quarter of a step either side, from the way it came to the way it goes.
+      // Turning at each square's middle: a quarter of a step either side, half of it before the middle and half after,
+      //  on from the way it's going now, so it turns with no jolt, however its steps bend.
+      coming = turnAt(index),
+      leaving = turnAt(index - 1),
       pathFacing =
-        t > 0.75 && way(index + 1, 0) !== null
-          ? turnTowards(here, way(index + 1, 0)!, (t - 0.75) * 2)
-          : t < 0.25 && way(index - 1, 1) !== null
-          ? turnTowards(way(index - 1, 1)!, here, (t + 0.25) * 2)
+        t > 0.75 && coming !== null
+          ? here + coming * (t - 0.75) * 2
+          : t < 0.25 && leaving !== null
+          ? here - leaving * (0.5 - t * 2)
           : here,
       // Just after a step's joined, from the way it faced then.
       facing =

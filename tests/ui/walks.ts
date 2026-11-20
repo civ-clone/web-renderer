@@ -1514,6 +1514,143 @@ const flown = (
   );
 }
 
+// Doubling back along a bending road, its two steps at once, as a GoTo's come, or a unit stepping straight back: it
+//  turns round at the square's middle one way, with no snap half way round; and the same round a sharp corner. Joined
+//  mid-bend, it turns on smoothly after.
+{
+  const bowSouth = [
+      [-0.8, 0.06],
+      [-0.6, 0.1],
+      [-0.5, 0],
+      [-0.4, -0.08],
+      [-0.2, -0.05],
+    ] as const,
+    // The same lane back west, from (1, 1): bowing the other way as it's walked the other way.
+    bowBack = bowSouth.map(([du, dv]) => [-1 - du, dv] as const).reverse(),
+    // A sharp corner: on north-west from (2, 1), bowing a little.
+    corner = [
+      [0.8, 0.85],
+      [0.6, 0.62],
+      [0.4, 0.38],
+      [0.2, 0.18],
+    ] as const,
+    square = (u: number, v: number) => ({
+      at: [u, v] as const,
+      lift: 0,
+      middle: [u, v] as const,
+    }),
+    // The biggest turn from one ms to the next, the short way round, across two steps given at once.
+    turning = (second: {
+      to: { x: number; y: number };
+      at: [number, number];
+      via: readonly (readonly [number, number])[];
+    }) => {
+      const walks = new Walks({ u: 10, v: null });
+
+      walks.step(
+        'lane',
+        { x: 1, y: 1 },
+        { x: 2, y: 1 },
+        square(1, 1),
+        { ...square(2, 1), via: bowSouth },
+        0,
+        pace
+      );
+      walks.step(
+        'lane',
+        { x: 2, y: 1 },
+        second.to,
+        square(9, 9),
+        { ...square(...second.at), via: second.via },
+        0,
+        pace
+      );
+
+      let most = 0,
+        was: number | null = null;
+
+      for (let now = 0; now <= 2000; now++) {
+        const [walker] = walks.at(now).going;
+
+        if (walker === undefined) {
+          break;
+        }
+
+        if (was !== null) {
+          const delta = walker.facing - was;
+
+          most = Math.max(
+            most,
+            Math.abs(delta - Math.PI * 2 * Math.round(delta / (Math.PI * 2)))
+          );
+        }
+
+        was = walker.facing;
+      }
+
+      return most;
+    };
+
+  // Joined mid-bend, then on: the turn from one ms to the next for 200 ms after.
+  const joining = new Walks({ u: 10, v: null });
+
+  joining.step(
+    'lane',
+    { x: 1, y: 1 },
+    { x: 2, y: 1 },
+    square(1, 1),
+    { ...square(2, 1), via: bowSouth },
+    0,
+    pace
+  );
+
+  for (let now = 0; now <= 150; now++) {
+    joining.at(now);
+  }
+
+  joining.step(
+    'lane',
+    { x: 2, y: 1 },
+    { x: 1, y: 1 },
+    square(9, 9),
+    { ...square(1, 1), via: bowBack },
+    150,
+    pace
+  );
+
+  let afterJoin = 0,
+    was: number | null = null;
+
+  for (let now = 150; now <= 350; now++) {
+    const [walker] = joining.at(now).going;
+
+    if (walker === undefined) {
+      break;
+    }
+
+    if (was !== null) {
+      const delta = walker.facing - was;
+
+      afterJoin = Math.max(
+        afterJoin,
+        Math.abs(delta - Math.PI * 2 * Math.round(delta / (Math.PI * 2)))
+      );
+    }
+
+    was = walker.facing;
+  }
+
+  expect(
+    'doubling back along a bending road, or round a sharp corner, it turns at the middle with no snap; joined mid-bend, it turns on smoothly',
+    [
+      turning({ to: { x: 1, y: 1 }, at: [1, 1], via: bowBack }) < 0.2,
+      turning({ to: { x: 1, y: 2 }, at: [1, 2], via: corner }) < 0.2,
+      afterJoin < 0.2,
+    ],
+    [true, true, true]
+  );
+}
+
 if (failures.length > 0) {
   process.stderr.write(
     `FAIL walks: ${

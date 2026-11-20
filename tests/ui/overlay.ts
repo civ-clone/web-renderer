@@ -980,6 +980,103 @@ const landOf = (
   );
 }
 
+// On every grid, with roads on every square of a world 8 by 8 that wraps over its poles: the way along the road from
+//  every square to every neighbour, over the world's seam and its poles too, starts at the middle it leaves, as the
+//  arriving square sees it, ends at the middle it comes to, and runs on with no gap.
+(['square', 'staggered-iso', 'hex-odd-r'] as TopologyId[]).forEach(
+  (topologyId) => {
+    const size = 8,
+      world = new World({
+        _: 'World',
+        __: ['World', 'DataObject'],
+        id: 'world',
+        width: size,
+        height: size,
+        topologyId,
+        tiles: Array.from({ length: size * size }, (_, index) => ({
+          x: index % size,
+          y: Math.floor(index / size),
+          terrain: { _: 'Grassland', __: ['Grassland'], features: [] },
+          improvements: [{ _: 'Road' }],
+          units: [],
+          city: null,
+        })) as never,
+      }),
+      land = new Land(world),
+      { layout } = land,
+      topology = world.topology(),
+      wrong: string[] = [];
+
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        topology.directions().forEach((direction) => {
+          const at = topology.neighbour(x, y, direction);
+
+          if (at === null) {
+            return;
+          }
+
+          const [nx, ny] = at,
+            path = land.roadPath(x, y, nx, ny),
+            there = layout.centre(nx, ny),
+            // The way back, and the middle it leaves as the arriving square sees it.
+            back = topology
+              .directions()
+              .map((other) => topology.offset(other, nx, ny))
+              .find(([dx, dy]) => {
+                const to = topology.neighbour(
+                  nx,
+                  ny,
+                  topology.directions().find((way) => {
+                    const offset = topology.offset(way, nx, ny);
+
+                    return offset[0] === dx && offset[1] === dy;
+                  })!
+                );
+
+                return to !== null && to[0] === x && to[1] === y;
+              }),
+            leaves =
+              back === undefined
+                ? null
+                : layout.centre(nx + back[0], ny + back[1]);
+
+          if (path === null || leaves === null) {
+            wrong.push(`${x},${y} → ${nx},${ny}: none`);
+
+            return;
+          }
+
+          const gap = Math.max(
+            ...path
+              .slice(1)
+              .map(([u, v], index) =>
+                Math.hypot(u - path[index]![0], v - path[index]![1])
+              )
+          );
+
+          if (
+            Math.hypot(
+              path[0]![0] - (leaves[0] - there[0]),
+              path[0]![1] - (leaves[1] - there[1])
+            ) > 1e-9 ||
+            Math.hypot(path.at(-1)![0], path.at(-1)![1]) > 1e-9 ||
+            gap > 0.07
+          ) {
+            wrong.push(`${x},${y} → ${nx},${ny}`);
+          }
+        });
+      }
+    }
+
+    expect(
+      `${topologyId}: the way along a road from every square to every neighbour, over the seam and poles, starts at the middle it leaves, ends at the one it comes to, with no gap`,
+      wrong.slice(0, 5),
+      []
+    );
+  }
+);
+
 // A road's halves, on every grid, every way out of every square: each bends on its own square, short of the edge, and
 //  meets its neighbour's half at the same point there, going the same way, so the road runs on smoothly. Each bows
 //  no further from the straight line than `ROAD_BOW` of its length, and some bow a good part of that.
