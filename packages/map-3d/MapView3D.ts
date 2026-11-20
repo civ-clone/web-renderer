@@ -874,9 +874,9 @@ export class MapView3D implements MapRenderer {
   }
 
   // Where a unit stands on the square (`x`, `y`) as it's marked, on the land as it's drawn: at its middle, or in front
-  //  of its city's buildings, whose marker's shown or hidden (`t`): they're laid with the land either way. As a point
-  //  to walk from or to, with how far above the land there that is, and the square's middle, which it faces between,
-  //  as a unit standing does.
+  //  of its city's buildings, whose marker's shown or hidden (`t`): where they stand, with the towns hidden too. As a
+  //  point to walk from or to, with how far above the land there that is, and the square's middle, which it faces
+  //  between, as a unit standing does.
   #standing(
     { x, y }: Coordinate,
     inCity: boolean = Boolean(this.world.get(x, y).city)
@@ -1864,14 +1864,15 @@ export class MapView3D implements MapRenderer {
   }
 
   /**
-   * Brings the units back if they were hidden (`t`), as the 2D map does for a unit to give orders to. The squares it
-   *  changed are drawn with the units (slice 2.1).
+   * Brings the units and towns back if they were hidden (`t`), as the 2D map does for a unit to give orders to. The
+   *  squares it changed are drawn with the units (slice 2.1).
    */
   showActiveUnit(changed: Tile[]): void {
     void changed;
 
     if (!this.#unitsShown) {
       this.#unitsShown = true;
+      this.#land.showTowns(true, ...this.#focus());
       this.#markAll();
       this.#draw();
     }
@@ -1891,11 +1892,12 @@ export class MapView3D implements MapRenderer {
   }
 
   /**
-   * Hides the units, and cities' walls and names, but the unit awaiting orders, or shows them again (`t`). A city's
-   *  buildings are laid with the land, so they stay.
+   * Hides the units, but the unit awaiting orders, and the cities, their walls, names and towns, or shows them again
+   *  (`t`), so the land shows as it is. The towns are laid with the land, so it's laid again without them, or with them.
    */
   toggleUnits(): void {
     this.#unitsShown = !this.#unitsShown;
+    this.#land.showTowns(this.#unitsShown, ...this.#focus());
     this.#markAll();
     this.#draw();
   }

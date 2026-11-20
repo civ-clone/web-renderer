@@ -2686,6 +2686,210 @@ expect(
   );
 }
 
+// The towns hidden (`t`, `Land#showTowns`): every chunk is laid as in the same world with no city in it, and shown
+//  again, as a land laid afresh lays it. For a city of 12 on a chunk's edge, whose houses reach the next chunk; for a
+//  city kept for a battle whose world's city is gone; and with `t` pressed while the city's chunk is half made, past
+//  its square or short of it. On every grid.
+{
+  const width = 24,
+    height = 8,
+    faults: string[] = [],
+    // A mesh as it's laid, to compare: nothing and an empty mesh alike.
+    keyOf = (mesh: OverlayMesh | null | undefined): string =>
+      mesh === undefined
+        ? 'unset'
+        : mesh === null || mesh.positions.length === 0
+        ? 'none'
+        : [mesh.u, mesh.v, mesh.positions, mesh.colours]
+            .map((part) =>
+              typeof part === 'number'
+                ? String(part)
+                : Buffer.from(
+                    part.buffer,
+                    part.byteOffset,
+                    part.byteLength
+                  ).toString('base64')
+            )
+            .join(' '),
+    // The chunks where `laid` isn't as `expected` has them.
+    differing = (
+      laid: Map<string, OverlayMesh | null>,
+      expected: Map<string, OverlayMesh | null>
+    ): string[] =>
+      [...expected.keys()].filter(
+        (key) => keyOf(laid.get(key)) !== keyOf(expected.get(key))
+      );
+
+  (['square', 'staggered-iso', 'hex-odd-r'] as TopologyId[]).forEach(
+    (topologyId) => {
+      (['edge', 'kept', 'past', 'short'] as const).forEach((scenario) => {
+        const { tiles, land, laid, stage } = landOf(
+            topologyId,
+            width,
+            height,
+            (x, y) => ({
+              terrain: (x * 7 + y * 3) % 9 === 0 ? 'Forest' : 'Grassland',
+              improvements:
+                (x + 2 * y) % 3 === 0
+                  ? ['Road']
+                  : (x * y) % 4 === 1
+                  ? ['Irrigation']
+                  : [],
+            })
+          ),
+          world = new World({
+            _: 'World',
+            __: ['World', 'DataObject'],
+            id: 'world',
+            width,
+            height,
+            topologyId,
+            tiles: tiles as never,
+          }),
+          topology = world.topology(),
+          kept = new Map<string, Tile['city']>(),
+          keep = (x: number, y: number): Tile['city'] | undefined =>
+            kept.get(`${x},${y}`),
+          // Laid afresh, over the same tiles, the towns `shown` or not; or, with `bare`, in the same world with no city
+          //  in it.
+          fresh = (shown: boolean, bare = false) => {
+            const other = new Land(
+                new World({
+                  _: 'World',
+                  __: ['World', 'DataObject'],
+                  id: 'world',
+                  width,
+                  height,
+                  topologyId,
+                  tiles: (bare
+                    ? tiles.map((tile) => ({ ...tile, city: null }))
+                    : tiles) as never,
+                })
+              ),
+              laidAfresh = new Map<string, OverlayMesh | null>();
+
+            if (!bare) {
+              other.keepCities(keep);
+            }
+
+            other.showTowns(shown, 0, 0);
+            other.queueAll(0, 0);
+            other.build(
+              {
+                setChunk: () => undefined,
+                setOverlay: (i: number, j: number, mesh: OverlayMesh | null) =>
+                  void laidAfresh.set(`${i},${j}`, mesh),
+              } as unknown as Stage,
+              null
+            );
+
+            return laidAfresh;
+          },
+          check = (
+            label: string,
+            expected: Map<string, OverlayMesh | null>
+          ) => {
+            land.build(stage, null);
+
+            const wrong = differing(laid, expected);
+
+            if (wrong.length > 0) {
+              faults.push(
+                `${topologyId} ${scenario}: ${label}: chunks ${wrong.join(' ')}`
+              );
+            }
+          },
+          // A square with a neighbour in another chunk, away from the world's edges, a few squares into its chunk's.
+          at = tiles.find(({ x, y }) => {
+            const key = land.overlayKeyOf(x, y),
+              inChunk = tiles.filter(
+                (tile) => land.overlayKeyOf(tile.x, tile.y) === key
+              ),
+              index = inChunk.findIndex((tile) => tile.x === x && tile.y === y);
+
+            return (
+              y > 2 &&
+              y < height - 3 &&
+              x > 2 &&
+              x < width - 3 &&
+              index >= 4 &&
+              index < inChunk.length - 4 &&
+              topology.directions().some((direction) => {
+                const next = topology.neighbour(x, y, direction);
+
+                return next !== null && land.overlayKeyOf(...next) !== key;
+              })
+            );
+          })!,
+          city = { id: 'City-Edge', name: 'Edge', growth: { size: 12 } };
+
+        land.keepCities(keep);
+        land.queueAll(0, 0);
+        land.build(stage, null);
+
+        Object.assign(at, {
+          city,
+          terrain: { _: 'Grassland', __: ['Grassland'], features: [] },
+          improvements: [{ _: 'Road' }],
+        });
+        land.changed([[at.x, at.y]], 0, 0);
+
+        if (scenario === 'kept') {
+          // Kept as it was before a battle, the world's city gone.
+          kept.set(`${at.x},${at.y}`, city as unknown as Tile['city']);
+          at.city = null;
+          land.changed([[at.x, at.y]], 0, 0);
+        }
+
+        const shown = fresh(true);
+
+        check('shown', shown);
+
+        if (scenario === 'past' || scenario === 'short') {
+          // Its chunk made again, and `t` pressed when it's made past the city's square, or short of it.
+          const key = land.overlayKeyOf(at.x, at.y),
+            inChunk = tiles.filter(
+              (tile) => land.overlayKeyOf(tile.x, tile.y) === key
+            ),
+            index = inChunk.indexOf(at),
+            far = scenario === 'past' ? inChunk.at(-1)! : inChunk[0]!;
+
+          far.improvements = far.improvements.length > 0 ? [] : [{ _: 'Road' }];
+          land.changed([[far.x, far.y]], 0, 0);
+
+          for (
+            let step = 0;
+            step < (scenario === 'past' ? index + 2 : 1);
+            step++
+          ) {
+            land.build(stage, 0);
+          }
+
+          if (land.overlaysPending() === 0) {
+            faults.push(`${topologyId} ${scenario}: not half made`);
+          }
+        }
+
+        land.showTowns(false, 0, 0);
+        check('hidden', fresh(false));
+        check('hidden, as with no city', fresh(false, true));
+
+        land.showTowns(true, 0, 0);
+        check(
+          'shown again',
+          scenario === 'past' || scenario === 'short' ? fresh(true) : shown
+        );
+      });
+    }
+  );
+
+  expect(
+    'the towns hidden: every chunk as in the same world with no city, and shown again as laid afresh, for a city on a chunk’s edge, one kept for a battle, and `t` pressed half way through its chunk, on every grid',
+    faults.slice(0, 5),
+    []
+  );
+}
+
 if (failures.length > 0) {
   process.stderr.write(
     `FAIL overlay: ${
