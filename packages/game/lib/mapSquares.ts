@@ -94,7 +94,7 @@ export const pickPrompt = (
 
 /** What a square does on the 3D map, as on the 2D map: the page's, handed to the 3D map's script. */
 export const mapSquares: MapSquares = {
-  click: (portal, tile) => clickSquare(portal, tile),
+  click: (portal, tile, bannerCity) => clickSquare(portal, tile, bannerCity),
   prompt: pickPrompt,
   // The interface's menu for the active unit over a press held, or a right-click where the interface opens it (#808).
   menu: (launcher, x, y, unit, tile, transport, pressed) =>

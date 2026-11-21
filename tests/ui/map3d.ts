@@ -36,6 +36,8 @@ import {
 import {
   DISTANCE_MAX,
   DISTANCE_MIN,
+  PITCH_MAX,
+  PITCH_MIN,
   ZOOM_STEP,
 } from '@civ-clone/ui-map-3d/camera/orbit';
 import { instance as optionsRegistry } from '@civ-clone/ui-platform/GameOptionsRegistry';
@@ -6328,6 +6330,444 @@ expect(
       [overlay.isConnected, restyles.size],
       [false, 0]
     );
+  }
+
+  // Clicks and the mouse resting on a city's banner (docs/3d-renderer.md §7.5), as on the 2D map: a click on one is for
+  //  its city as well as the square under it, and its tooltip opens over the banner, about its city's square; of
+  //  banners that overlap, the one drawn on top takes them. None for a banner more than half faded into the haze, which
+  //  lets them through to the land as faded as it is, nor with the units hidden, nor once its city has gone; and a
+  //  square being chosen takes the click as ever. On a canvas of its own, away from the page's corner.
+  {
+    const corner = { left: 30, top: 40 },
+      holder = document.createElement('div'),
+      own = document.createElement('canvas'),
+      // Each click, as the page was told it: the square under it, and the city whose banner it was on.
+      clicks: [string | null, string | null][] = [],
+      // Each tooltip opened, about which square and over where on the page, and closed.
+      tips: string[] = [],
+      // Each image drawn on the banners' canvas, where, and how solid.
+      drawn: [unknown, number, number, number][] = [],
+      // How tall each city's banner is, in the 2D map's px, as painted: Ur's reaches down over the banner below it.
+      tall = new Map<string, number>([['Ur', 600]]),
+      images = new Map<string, CanvasImageSource>(),
+      // How big each city's banner was last painted, in the canvas's px.
+      sizes = new Map<unknown, { width: number; height: number }>(),
+      imageOf = (name: string): CanvasImageSource => {
+        const image =
+          images.get(name) ??
+          ({ banner: name } as unknown as CanvasImageSource);
+
+        images.set(name, image);
+
+        return image;
+      },
+      context2d = {
+        globalAlpha: 1,
+        clearRect: () => void (drawn.length = 0),
+        drawImage: (what: unknown, x: number, y: number) =>
+          void drawn.push([what, x, y, context2d.globalAlpha]),
+      };
+
+    holder.append(own);
+    document.body.append(holder);
+    Object.defineProperties(holder, {
+      offsetWidth: { get: () => box.width },
+      offsetHeight: { get: () => box.height },
+    });
+    Object.defineProperties(own, {
+      setPointerCapture: { value: () => {}, configurable: true },
+      clientWidth: { get: () => box.width, configurable: true },
+      clientHeight: { get: () => box.height, configurable: true },
+      getBoundingClientRect: {
+        value: () => ({
+          ...corner,
+          right: corner.left + box.width,
+          bottom: corner.top + box.height,
+        }),
+        configurable: true,
+      },
+    });
+
+    const view = new MapView3D(
+        {
+          ...given!,
+          // So a banner can hang past the pole the camera stops at.
+          lockVerticalEdges: true,
+          mapCanvas: own,
+          cityBanners: {
+            paint: (tile: Tile, density: number) => {
+              const name = tile.city!.name,
+                image = imageOf(name),
+                size = {
+                  width: Math.ceil(60 * density),
+                  height: Math.ceil((tall.get(name) ?? 12) * density),
+                };
+
+              sizes.set(image, size);
+
+              return { image, ...size, centre: 30 * density };
+            },
+            key: (tile: Tile) =>
+              `${tile.city?.name} ${tall.get(tile.city?.name ?? '') ?? 12}`,
+            giveWayToYields: true,
+            restyled: () => () => {},
+          },
+          squares: {
+            ...given!.squares,
+            click: (_portal, tile, bannerCity) =>
+              void clicks.push([
+                tile && `${tile.x},${tile.y}`,
+                bannerCity?.name ?? null,
+              ]),
+            prompt: () => ({ close: () => {} }),
+            menuOpen: () => false,
+            tooltip: (_over, tile, _playerId, { left, top, bottom }) => {
+              tips.push(`open ${tile.x},${tile.y} ${left} ${top} ${bottom}`);
+
+              return true;
+            },
+            endTooltip: () => void tips.push('closed'),
+          },
+        },
+        fakeStage
+      ),
+      overlay = own.nextElementSibling as HTMLCanvasElement,
+      ur = tiles[1 * width + 1] as Tile,
+      kish = tiles[2 * width + 1] as Tile,
+      city = (name: string) => ({
+        name,
+        growth: { size: 2 },
+        player: owner,
+        originalPlayer: { civilization: { _: 'Sumerians' } },
+        walled: false,
+        civilDisorderDeclared: false,
+      }),
+      patch = (...squares: [Tile, string | null][]): void => {
+        squares.forEach(([tile, name]) =>
+          Object.assign(tile, { city: name && city(name), units: [] })
+        );
+        squares.forEach(([tile]) => view.queueTile(tile));
+        view.releaseTiles();
+        view.flush();
+      },
+      // Where each of `name`'s banners was drawn the last frame, on the page, and how solid.
+      boxesOf = (name: string) => {
+        const ratio = overlay.width / box.width,
+          image = imageOf(name),
+          size = sizes.get(image)!;
+
+        return drawn
+          .filter(([what]) => what === image)
+          .map(([, x, y, alpha]) => ({
+            left: corner.left + x / ratio,
+            top: corner.top + y / ratio,
+            right: corner.left + (x + size.width) / ratio,
+            bottom: corner.top + (y + size.height) / ratio,
+            alpha,
+          }));
+      },
+      // The one of `name`'s banners nearest the middle of the screen across.
+      nearest = (name: string) =>
+        boxesOf(name).sort(
+          (a, b) =>
+            Math.abs((a.left + a.right) / 2 - corner.left - box.width / 2) -
+            Math.abs((b.left + b.right) / 2 - corner.left - box.width / 2)
+        )[0]!,
+      pointer = (type: string, clientX: number, clientY: number): void =>
+        void own.dispatchEvent(
+          Object.assign(new Event(type), {
+            clientX,
+            clientY,
+            button: 0,
+            buttons: 0,
+            pointerId: 1,
+            isPrimary: true,
+            pointerType: 'mouse',
+            timeStamp: 0,
+          })
+        ),
+      clickAt = (clientX: number, clientY: number): void =>
+        ['pointerdown', 'pointerup'].forEach((type) =>
+          pointer(type, clientX, clientY)
+        ),
+      // A click, and what the page was told of it.
+      clicked = (clientX: number, clientY: number) => {
+        clicks.length = 0;
+        clickAt(clientX, clientY);
+
+        return clicks.splice(0);
+      },
+      pause = (ms: number): Promise<void> =>
+        new Promise((resolve) => setTimeout(resolve, ms));
+
+    Object.assign(overlay, { getContext: () => context2d });
+    view.setOrbit({
+      ...view.orbit(),
+      focus: view.land().layout.centre(ur.x, ur.y),
+      distance: DISTANCE_MIN,
+    });
+    patch([ur, 'Ur'], [kish, 'Kish']);
+
+    const urs = nearest('Ur'),
+      kishes = nearest('Kish'),
+      // On Ur's banner above where Kish's hangs, on Kish's (over Ur's too), and beside both.
+      onUr = [(urs.left + urs.right) / 2, (urs.top + kishes.top) / 2] as const,
+      onKish = [
+        (kishes.left + kishes.right) / 2,
+        (kishes.top + kishes.bottom) / 2,
+      ] as const,
+      beside = [urs.left - 5, onKish[1]] as const,
+      onEach = [clicked(...onUr), clicked(...onKish), clicked(...beside)];
+
+    expect(
+      'a click on a city’s banner is for its city and the square under it, which isn’t the city’s own; of two that overlap, the one drawn over the other’s; beside them, for the square alone',
+      [
+        urs.top < kishes.top && urs.bottom > kishes.bottom,
+        onEach.map((each) => each.map(([, name]) => name)),
+        onEach.every((each) => each[0]?.[0] !== null),
+        onEach[0]![0]![0] === `${ur.x},${ur.y}`,
+      ],
+      [true, [['Ur'], ['Kish'], [null]], true, false]
+    );
+
+    // Resting on Ur's banner: its tooltip, about Ur's square, over the banner on the page. Moved off it onto the land
+    //  beside: that closes, and the square's opens over the mouse.
+    pointer('pointermove', ...onUr);
+    await pause(450);
+
+    const overBanner = tips.splice(0);
+
+    pointer('pointermove', ...beside);
+    await pause(450);
+
+    const offBanner = tips.splice(0),
+      // Above the banner, on Ur's own square.
+      onSquare = [onUr[0], urs.top - 15] as const;
+
+    pointer('pointermove', ...onUr);
+    await pause(450);
+    tips.length = 0;
+    pointer('pointermove', ...onSquare);
+    await pause(450);
+
+    const ontoSquare = tips.splice(0);
+
+    // Ur gone from the world, though no frame's drawn since: resting on its banner is resting on the land under it.
+    Object.assign(ur, { city: null });
+    pointer('pointermove', ...onUr);
+    await pause(450);
+
+    const overGone = tips.splice(0);
+
+    Object.assign(ur, { city: city('Ur') });
+
+    expect(
+      'resting on a city’s banner opens its city’s tooltip over the banner; moving off it onto the land, or onto its city’s own square, the square’s over the mouse; its city gone, the land’s under it',
+      [
+        overBanner,
+        offBanner.length,
+        offBanner[0],
+        offBanner[1]?.endsWith(
+          ` ${beside[0] - 10} ${beside[1] - 10} ${beside[1] + 10}`
+        ),
+        offBanner[1]?.startsWith(`open ${ur.x},${ur.y} `),
+        ontoSquare,
+        overGone.length,
+        overGone
+          .at(-1)
+          ?.endsWith(` ${onUr[0] - 10} ${onUr[1] - 10} ${onUr[1] + 10}`),
+        overGone.at(-1)?.startsWith(`open ${ur.x},${ur.y} `),
+      ],
+      [
+        [`open ${ur.x},${ur.y} ${urs.left} ${urs.top} ${urs.bottom}`],
+        2,
+        'closed',
+        true,
+        false,
+        [
+          'closed',
+          `open ${ur.x},${ur.y} ${onSquare[0] - 10} ${onSquare[1] - 10} ${
+            onSquare[1] + 10
+          }`,
+        ],
+        2,
+        true,
+        false,
+      ]
+    );
+
+    document.dispatchEvent(new Event('keydown'));
+    tips.length = 0;
+
+    // On a screen with twice the pixels: the banners where they were on the page, taking clicks there.
+    (window as unknown as { devicePixelRatio: number }).devicePixelRatio = 2;
+    window.dispatchEvent(new Event('resize'));
+    view.flush();
+
+    const doubled = [
+      overlay.width,
+      nearest('Kish'),
+      clicked(...onKish),
+      // Just past Kish's banner's right, and just under it, on Ur's.
+      clicked(kishes.right + 1, onKish[1]),
+      clicked(onKish[0], kishes.bottom + 1),
+    ];
+
+    delete (window as unknown as { devicePixelRatio?: number })
+      .devicePixelRatio;
+    window.dispatchEvent(new Event('resize'));
+    view.flush();
+
+    expect(
+      'on a screen with twice the pixels, a banner is where it was on the page, as big, and a click there is for its city',
+      [
+        doubled[0],
+        // As high up, as far across and as big, but for where its corner and its size round to on each canvas: within
+        //  a pixel.
+        (['left', 'top', 'right', 'bottom'] as const).every(
+          (edge) =>
+            Math.abs((doubled[1] as typeof kishes)[edge] - kishes[edge]) <= 1
+        ),
+        ...doubled
+          .slice(2)
+          .map((each) => (each as typeof clicks).map(([, name]) => name)),
+      ],
+      [box.width * 2, true, ['Kish'], [null], ['Ur']]
+    );
+
+    // With the units hidden (`t`), no banners: a click where one was is for the square alone. Ur gone from the world,
+    //  though no frame's drawn since: a click on its banner is for the square alone.
+    view.toggleUnits();
+    view.flush();
+
+    const hidden = clicked(...onKish);
+
+    view.toggleUnits();
+    view.flush();
+    Object.assign(ur, { city: null });
+
+    const gone = clicked(...onUr);
+
+    patch([ur, 'Ur']);
+
+    // A square being chosen for a long-range order: a click on a banner picks the square under it, as on the 2D map.
+    const picked: string[] = [];
+
+    view.pickTile(
+      () => true,
+      (tile) => void picked.push(`${tile.x},${tile.y}`),
+      'Where?'
+    );
+
+    const whilePicking = clicked(...onKish);
+
+    expect(
+      'none with the units hidden, nor once its city has gone; and while a square’s being chosen, a click on a banner picks the square under it',
+      [
+        hidden.map(([, name]) => name),
+        gone.map(([, name]) => name),
+        whilePicking,
+        picked.length,
+        picked[0] === `${kish.x},${kish.y}`,
+      ],
+      [[null], [null], [], 1, false]
+    );
+
+    // Looking low across the world as it repeats: Ur's banners, faded the further into the haze. One faded more than
+    //  half lets a click through to the land; one less faded takes it.
+    tall.delete('Ur');
+    patch([kish, null], [ur, 'Ur']);
+
+    const faded = [0, 1, 2, 3]
+      .map((quarter) => {
+        view.setOrbit({
+          ...view.orbit(),
+          focus: view.land().layout.centre(ur.x, ur.y),
+          distance: DISTANCE_MIN,
+          pitch: PITCH_MIN,
+          yaw: (quarter * Math.PI) / 2,
+        });
+        view.flush();
+
+        const all = boxesOf('Ur'),
+          alone = all.filter(
+            (one) =>
+              !all.some(
+                (other) =>
+                  other !== one &&
+                  other.left < one.right &&
+                  other.right > one.left &&
+                  other.top < one.bottom &&
+                  other.bottom > one.top
+              ) &&
+              one.left >= corner.left &&
+              one.right <= corner.left + box.width &&
+              one.top >= corner.top &&
+              one.bottom <= corner.top + box.height
+          );
+
+        return {
+          quarter,
+          faint: alone.find(({ alpha }) => alpha > 0 && alpha < 0.45),
+          clear: alone.find(({ alpha }) => alpha > 0.55 && alpha < 1),
+        };
+      })
+      .find(({ faint, clear }) => faint && clear);
+
+    if (faded !== undefined) {
+      view.setOrbit({
+        ...view.orbit(),
+        pitch: PITCH_MIN,
+        yaw: (faded.quarter * Math.PI) / 2,
+      });
+      view.flush();
+    }
+
+    const middle = (of?: {
+      left: number;
+      top: number;
+      right: number;
+      bottom: number;
+    }) =>
+      [
+        ((of?.left ?? 0) + (of?.right ?? 0)) / 2,
+        ((of?.top ?? 0) + (of?.bottom ?? 0)) / 2,
+      ] as const;
+
+    expect(
+      'a banner faded more than half into the haze lets a click through to the land; one less faded takes it',
+      faded === undefined
+        ? 'none found'
+        : [
+            clicked(...middle(faded.faint)).map(([, name]) => name),
+            clicked(...middle(faded.clear)).map(([, name]) => name),
+          ],
+      [[null], ['Ur']]
+    );
+
+    // A city on the last row before the pole the camera stops at: its banner hangs past it, where there's no square,
+    //  and a click on it is for its city alone.
+    const lagash = tiles[(height - 1) * width + 1] as Tile;
+
+    patch([ur, null], [lagash, 'Lagash']);
+    view.setOrbit({
+      ...view.orbit(),
+      focus: view.land().layout.centre(lagash.x, lagash.y),
+      distance: DISTANCE_MIN,
+      pitch: PITCH_MAX,
+      yaw: 0,
+    });
+    view.flush();
+
+    expect(
+      'a click on a banner hanging past the pole the camera stops at is for its city, with no square under it',
+      clicked(...middle(nearest('Lagash'))),
+      [[null, 'Lagash']]
+    );
+
+    patch([lagash, null]);
+    view.dispose();
+    holder.remove();
   }
 
   // A city kept as it was before a battle, as its banner and marker show it: the page fills its objects in place as

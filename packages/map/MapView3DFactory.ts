@@ -21,8 +21,9 @@ export const MAP3D_GLOBAL = 'civMap3D';
  *  (`@civ-clone/ui-game/lib/mapSquares`), so both maps open the same cities, units and menus.
  */
 export type MapSquares = {
-  // A click on `tile`, held by `portal`.
-  click(portal: MapPortal, tile: Tile): void;
+  // A click on `tile` (nothing, past a pole the camera stops at), held by `portal`, or on `bannerCity`'s banner, which
+  //  hangs past its square over the land below it.
+  click(portal: MapPortal, tile: Tile | null, bannerCity: City | null): void;
   // The window saying what a square is being chosen for: `closed` is told when it closes, however it does.
   prompt(prompt: string, closed: () => void): { close(): void };
   // The active unit's menu at (`x`, `y`) on the page, for `tile`: `pressed` for a press held, rather than a right-click.
@@ -38,7 +39,8 @@ export type MapSquares = {
   // Whether a right-click opens the unit's menu, and whether a menu is open over the map.
   menuOnRightClick(): boolean;
   menuOpen(): boolean;
-  // The tooltip for `tile`, or its city, over `box` on the page, where the interface shows one: whether it opened.
+  // The tooltip for `tile`, or its city, over `box` on the page (the mouse's, or its city's banner's), where the
+  //  interface shows one: whether it opened.
   tooltip(
     over: HTMLElement,
     tile: Tile,
