@@ -12,6 +12,7 @@ import {
   mkdtempSync,
   readFileSync,
   readdirSync,
+  symlinkSync,
   writeFileSync,
 } from 'fs';
 import { tmpdir } from 'os';
@@ -20,8 +21,9 @@ import { readModelManifest } from '@civ-clone/ui-map-3d/models/modelSet';
 import { selfContained } from '@civ-clone/ui-map-3d/models/loadModels';
 import ancientUnits from '@civ-clone/ui-models-0ad';
 
-const { buildModelSet, declaredModelSets } =
+const { buildHostedModels, buildModelSet, declaredModelSets } =
   require('../../tools/lib/hostedSets') as {
+    buildHostedModels: (root: string) => object;
     buildModelSet: (
       manifest: string,
       output: string
@@ -181,15 +183,23 @@ expect(
   mkdirSync(join(set, 'models'));
   writeFileSync(join(set, 'models', 'soldier.glb'), model);
   writeFileSync(join(set, 'elsewhere.glb'), model);
+  // A link beside the manifest to a file outside the set.
+  const outside = mkdtempSync(join(tmpdir(), 'hosted-models-outside-'));
+
+  writeFileSync(join(outside, 'soldier.glb'), model);
+  symlinkSync(join(outside, 'soldier.glb'), join(set, 'models', 'linked.glb'));
 
   expect(
-    'a model missing, not beside its manifest, or not the file it says, or a set with no id to name its files by, fails the build, saying why',
+    'a model missing, not beside its manifest (a link to elsewhere among them), not the file it says, or without a SHA-256 to say so, or a set with no id to name its files by, fails the build, saying why',
     [
       failure(() => undefined),
       failure((json) => (json.models.soldier.file = 'models/missing.glb')),
       failure((json) => (json.models.soldier.file = '../elsewhere.glb')),
       failure((json) => (json.models.soldier.file = '/etc/hosts')),
       failure((json) => (json.models.soldier.sha256 = sha256('other'))),
+      failure((json) => delete json.models.soldier.sha256),
+      failure((json) => (json.models.soldier.file = 'models')),
+      failure((json) => (json.models.soldier.file = 'models/linked.glb')),
       failure((json) => (json.models['Soldier!'] = json.models.soldier)),
       failure((json) => (json.id = '../test')),
       failure((json) => delete json.id),
@@ -200,9 +210,50 @@ expect(
       "test-set: model soldier isn't beside its manifest",
       "test-set: model soldier isn't beside its manifest",
       "test-set: models/soldier.glb isn't the file its manifest says",
+      'test-set: model soldier has no SHA-256',
+      'test-set: model soldier has no models',
+      "test-set: model soldier isn't beside its manifest",
       "test-set: model Soldier! isn't beside its manifest",
       `${join(set, 'manifest.json')}: no id to name its files by`,
       `${join(set, 'manifest.json')}: no id to name its files by`,
+    ]
+  );
+}
+
+// Two packages declaring sets under one id, which would remove each other's files, or one declaring a set that isn't
+//  installed: the build fails, saying why.
+{
+  const root = mkdtempSync(join(tmpdir(), 'hosted-models-root-')),
+    declare = (name: string, manifest: string): void => {
+      mkdirSync(join(root, 'packages', name), { recursive: true });
+      writeFileSync(
+        join(root, 'packages', name, 'package.json'),
+        JSON.stringify({ 'civ-clone': { hostedModels: [{ manifest }] } })
+      );
+    },
+    built = (): string => {
+      try {
+        buildHostedModels(root);
+
+        return 'built';
+      } catch (error) {
+        return (error as Error).message;
+      }
+    };
+
+  declare('first', shipped);
+  declare('second', shipped);
+
+  const twice = built();
+
+  declare('second', '@civ-clone/not-installed/manifest.json');
+
+  expect(
+    'two sets under one id, or one that isn’t installed, fail the build, saying why',
+    [twice, built()],
+    [
+      `two hosted sets of models are ${source.id}`,
+      "second declares @civ-clone/not-installed/manifest.json, which isn't installed: run pnpm install",
     ]
   );
 }

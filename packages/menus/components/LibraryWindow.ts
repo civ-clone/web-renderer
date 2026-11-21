@@ -37,7 +37,10 @@ import i18next, { t } from 'i18next';
 // Civilization's music, a set of its own: registered wherever the library can open.
 import '../lib/civ1Sound';
 import ancientUnits from '@civ-clone/ui-models-0ad';
-import { map3dAsked } from '@civ-clone/ui-client/lib/map3dOptions';
+import {
+  map3dAsked,
+  map3dModelsAsked,
+} from '@civ-clone/ui-client/lib/map3dOptions';
 
 // The library of art and sound (#1063): every set the game can draw or play with, by what it is for (the map's art by
 //  grid, the interface's themes, the sound), saying where each comes from, whether it's ready, and opening its import.
@@ -200,7 +203,8 @@ const soundLibrarySets = (): LibrarySet[] =>
 const modelLibrarySets = (
   search: string = typeof location === 'undefined' ? '' : location.search
 ): LibrarySet[] =>
-  map3dAsked(search)
+  // Not where it asked for another set to try, which the map draws with instead.
+  map3dAsked(search) && map3dModelsAsked(search) === undefined
     ? [
         {
           id: '0ad-ancient',
@@ -211,6 +215,26 @@ const modelLibrarySets = (
         },
       ]
     : [];
+
+/**
+ * `text` as text, its https: addresses links to them, as a credit's addresses (CC BY-SA asks for links): set as text and
+ *  as an attribute, so a manifest's words aren't markup.
+ */
+const withLinks = (text: string): (string | HTMLAnchorElement)[] =>
+  text.split(/(https:\/\/[^\s()]*[^\s().,:;])/).map((part, index) => {
+    if (index % 2 === 0 || !isHttps(part)) {
+      return part;
+    }
+
+    const link = s<HTMLAnchorElement>(
+      '<a target="_blank" rel="noopener noreferrer"></a>'
+    );
+
+    link.href = part;
+    link.textContent = part;
+
+    return link;
+  });
 
 /** Whether `url` is an https: address. */
 const isHttps = (url: string): boolean => {
@@ -259,7 +283,9 @@ const sourceOf = ({ source, licence, pack }: LibrarySet): HTMLElement => {
       t('LibraryWindow.licence'),
       ' ',
       link,
-      ...(licence.attribution === undefined ? [] : [' · ', licence.attribution])
+      ...(licence.attribution === undefined
+        ? []
+        : [' · ', ...withLinks(licence.attribution)])
     );
   }
 

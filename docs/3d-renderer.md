@@ -1330,8 +1330,9 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
 
 - **0 A.D.'s ancient units** ([civ-clone/models-0ad](https://github.com/civ-clone/models-0ad), CC BY-SA 3.0, adapted
   from Wildfire Games' art):
-  - 15 models, 12 of them drawing a unit type (Warrior, Spearman, Archer, Swordman, Pikeman, Settlers, Horseman,
-    Chariot, Elephant, Catapult, Caravan, Trireme);
+  - 15 models, each drawing a unit type: Warrior, Spearman, Archer, Swordman, Pikeman, Settlers, Horseman, Chariot,
+    Elephant, Catapult, Caravan and Trireme. Three stand in where 0 A.D. has nothing quite like Civilization's: Roman
+    heavy cavalry for Knight, a mounted scout for Explorer, and a Norse knarr for Sail;
   - 3.8 MB in all, each a unit posed as it stands still, from one atlas (and a second for what's see-through).
 
   It's a dependency of the renderer, pinned by its commit in the lockfile, and its package here

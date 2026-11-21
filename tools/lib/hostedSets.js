@@ -264,10 +264,20 @@ const declaredModelSets = (root = webRenderer) => {
       );
 
       return ((declared['civ-clone'] ?? {}).hostedModels ?? []).map(
-        ({ manifest }) => ({
-          directory,
-          manifest: require.resolve(manifest, { paths: [directory] }),
-        })
+        ({ manifest }) => {
+          try {
+            return {
+              directory,
+              manifest: require.resolve(manifest, { paths: [directory] }),
+            };
+          } catch {
+            throw new Error(
+              `${path.basename(
+                directory
+              )} declares ${manifest}, which isn't installed: run pnpm install`
+            );
+          }
+        }
       );
     });
 };
@@ -286,7 +296,8 @@ const NAME = /^[a-z0-9][a-z0-9-]*$/;
 const buildModelSet = (manifestPath, output) => {
   const text = fs.readFileSync(manifestPath),
     manifest = JSON.parse(text),
-    directory = path.dirname(manifestPath),
+    // Where the set is, as it is on disk: a model's file must be in it, however it's reached.
+    directory = fs.realpathSync(path.dirname(manifestPath)),
     hash = crypto.createHash('sha256').update(text).digest('hex').slice(0, 12),
     base = `${manifest.id}.${hash}`,
     models = {};
@@ -296,22 +307,36 @@ const buildModelSet = (manifestPath, output) => {
   }
 
   Object.entries(manifest.models ?? {}).forEach(([name, model]) => {
-    const source = path.resolve(directory, String(model.file));
+    const named = path.resolve(directory, String(model.file));
 
-    if (!NAME.test(name) || !source.startsWith(directory + path.sep)) {
+    if (!NAME.test(name) || !named.startsWith(directory + path.sep)) {
       throw new Error(
         `${manifest.id}: model ${name} isn't beside its manifest`
       );
     }
 
-    if (!fs.existsSync(source)) {
+    if (!fs.existsSync(named) || !fs.statSync(named).isFile()) {
       throw new Error(`${manifest.id}: model ${name} has no ${model.file}`);
+    }
+
+    // As it is on disk, a link followed: still beside its manifest.
+    const source = fs.realpathSync(named);
+
+    if (!source.startsWith(directory + path.sep)) {
+      throw new Error(
+        `${manifest.id}: model ${name} isn't beside its manifest`
+      );
+    }
+
+    // Each model as its manifest says it is: its name beside the page changes only as the manifest does, so a file the
+    //  manifest doesn't pin could change under a name the browser keeps.
+    if (typeof model.sha256 !== 'string') {
+      throw new Error(`${manifest.id}: model ${name} has no SHA-256`);
     }
 
     const bytes = fs.readFileSync(source);
 
     if (
-      typeof model.sha256 === 'string' &&
       crypto.createHash('sha256').update(bytes).digest('hex') !== model.sha256
     ) {
       throw new Error(
@@ -358,9 +383,19 @@ const buildHostedModels = (root = webRenderer) => {
 
   fs.mkdirSync(output, { recursive: true });
 
+  const ids = new Set();
+
   declaredModelSets(root).forEach(({ directory, manifest }) => {
-    const built = buildModelSet(manifest, output),
-      { id } = JSON.parse(fs.readFileSync(manifest, 'utf8'));
+    const { id } = JSON.parse(fs.readFileSync(manifest, 'utf8'));
+
+    // Two sets under one id would remove each other's files.
+    if (ids.has(id)) {
+      throw new Error(`two hosted sets of models are ${id}`);
+    }
+
+    ids.add(id);
+
+    const built = buildModelSet(manifest, output);
 
     byPackage.set(directory, {
       ...(byPackage.get(directory) ?? {}),

@@ -355,9 +355,10 @@ Epic's UE4 skeleton or only match its bone names.
 model's parts in their owner's colour, the squad merged in each, on the built-in set's stand. The rest are the built-in
 set's figures. Posed as they stand still: no clips yet.
 
-**Second part, the first set: done.** 0 A.D.'s ancient units ship with civ.one: under `?3d=1` the map draws the 12 unit
-types they have models for with them, and the library lists them with their licence and credit. Still to do:
-- **More sets:** the eras 0 A.D. doesn't reach, and stand-ins for Knight, Explorer and Sail;
+**Second part, the first set: done.** 0 A.D.'s ancient units ship with civ.one: under `?3d=1` the map draws the 15 unit
+types they have models for with them (Knight, Explorer and Sail by stand-ins), and the library lists them with their
+licence and credit. Still to do:
+- **More sets:** the eras 0 A.D. doesn't reach;
 - **Clips:** idle, walk, attack, death;
 - **Squads:** instancing them;
 - **Textures:** KTX2.
