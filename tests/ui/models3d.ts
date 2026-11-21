@@ -6,8 +6,10 @@
 //  - a unit's marker says the model it's drawn with, where the map has one loaded for its type;
 //  - the marker kit draws a unit with a model added: a mesh for each of its parts, as many figures as stand for one
 //    unit merged in each, at the set's size times the player's, on the built-in set's stand (a ship on the water, in
-//    its ripples at sea); in its owner's colour where its parts say, cut out where they're see-through, a material
-//    made once for each; and the built-in set's figures till the model's added;
+//    its ripples at sea); in its owner's colour where its parts say (a very dark one lightened, so the model's shading
+//    shows), cut out where they're see-through, from both sides where its file says, a material made once for each;
+//    and the built-in set's figures till the model's added;
+//  - out of a city, an aircraft rests in the air over its stand, as high as it flies;
 //  - faded, a part keeps its owner's colour;
 //  - the kit lets go of its models when taken down.
 
@@ -16,6 +18,7 @@ import {
   BufferGeometry,
   Color,
   DoubleSide,
+  FrontSide,
   Group,
   Material,
   Mesh,
@@ -25,6 +28,7 @@ import {
   Texture,
 } from 'three';
 import {
+  ALOFT_PART,
   FIGURES_PART,
   Faded,
   MarkerKit,
@@ -42,9 +46,14 @@ import {
   LoadedModel,
   modelManager,
   onSite,
+  partsOf,
   selfContained,
 } from '@civ-clone/ui-map-3d/models/loadModels';
-import TintedMaterial from '@civ-clone/ui-map-3d/markers/tinted';
+import TintedMaterial, {
+  TINT_FLOOR,
+  ownerTint,
+} from '@civ-clone/ui-map-3d/markers/tinted';
+import { CRUISE } from '@civ-clone/ui-map-3d/walks';
 import markerFor, { UnitMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
 import { formation } from '@civ-clone/ui-map-3d/markers/figures';
 import { map3dModelsAsked } from '@civ-clone/ui-client/lib/map3dOptions';
@@ -503,12 +512,14 @@ const colours = ['#aa0000', '#ffffff'] as const,
         map: watched('solid map', new Texture()),
         tinted: true,
         cutout: false,
+        doubleSided: true,
       },
       {
         geometry: watched('see-through geometry', box(0.5)),
         map: watched('see-through map', new Texture()),
         tinted: false,
         cutout: true,
+        doubleSided: true,
       },
     ],
     scale: 0.1,
@@ -520,6 +531,7 @@ const colours = ['#aa0000', '#ffffff'] as const,
         map: new Texture(),
         tinted: false,
         cutout: false,
+        doubleSided: false,
       },
     ],
     scale: 0.2,
@@ -650,17 +662,27 @@ kit.addModel('statue', plain);
   ) as [TintedMaterial, MeshStandardMaterial];
 
   expect(
-    'in its owner’s colour where its part says, and cut out, both sides drawn, where it’s see-through, each with its texture',
+    'in its owner’s colour where its part says, from both sides as its file says, and cut out, both sides drawn, where it’s see-through, each with its texture',
     [
       solidMaterial instanceof TintedMaterial,
       solidMaterial.tint.getHexString(),
+      solidMaterial.side === DoubleSide,
       solidMaterial.map === model.parts[0]!.map,
       seeThroughMaterial instanceof TintedMaterial,
       seeThroughMaterial.alphaTest,
       seeThroughMaterial.side === DoubleSide,
       seeThroughMaterial.map === model.parts[1]!.map,
     ],
-    [true, new Color(colours[0]).getHexString(), true, false, 0.5, true, true]
+    [
+      true,
+      new Color(colours[0]).getHexString(),
+      true,
+      true,
+      false,
+      0.5,
+      true,
+      true,
+    ]
   );
 
   const again = kit.modelFigures('hoplite', look, colours)!,
@@ -688,7 +710,8 @@ kit.addModel('statue', plain);
       true,
       true,
       true,
-      new Color(others[0]).getHexString(),
+      // Too dark to show its shading as it is: lightened.
+      ownerTint(others[0]).getHexString(),
       true,
       round(0.03 + 0.15),
       1,
@@ -700,12 +723,70 @@ kit.addModel('statue', plain);
     statueOthers = kit.modelFigures('statue', unitTable['Settlers']!, others)!;
 
   expect(
-    'a part with no owner’s colour is as its texture is, in one material for every owner',
+    'a part with no owner’s colour is as its texture is, in one material for every owner; one whose file doesn’t say it’s drawn from both sides is drawn from its front',
     [
       (statue.meshes[0]![1] as TintedMaterial).tint.getHexString(),
       statue.meshes[0]![1] === statueOthers.meshes[0]![1],
+      statue.meshes[0]![1].side === FrontSide,
     ],
-    ['ffffff', true]
+    ['ffffff', true, true]
+  );
+}
+
+// An owner's colour painted on a model: as it is, unless it's too dark to show the model's shading, when it's mixed
+//  with white just enough, its hue kept.
+{
+  const luminance = (colour: Color): number =>
+      0.2126 * colour.r + 0.7152 * colour.g + 0.0722 * colour.b,
+    black = ownerTint('#000000'),
+    blue = ownerTint('#0000aa'),
+    darkRed = ownerTint('#aa0000');
+
+  expect(
+    'a very dark owner’s colour is lightened on a model, just enough, its hue kept; one light enough is as it is',
+    [
+      round(luminance(black)),
+      black.r === black.g && black.g === black.b,
+      round(luminance(blue)),
+      blue.b > blue.r && blue.r === blue.g,
+      darkRed.getHexString(),
+      ownerTint('#ffcc00').getHexString(),
+    ],
+    [round(TINT_FLOOR), true, round(TINT_FLOOR), true, 'aa0000', 'ffcc00']
+  );
+}
+
+// What's read of a model's file: each mesh's part, drawn from both sides where its material says so.
+{
+  const scene = new Group(),
+    material = (side: typeof DoubleSide | typeof FrontSide) =>
+      new MeshStandardMaterial({ side, map: new Texture() });
+
+  scene.add(new Mesh(box(1), material(DoubleSide)));
+  scene.add(new Mesh(box(1), material(FrontSide)));
+
+  expect(
+    'a model’s part is drawn from both sides where its file’s material says so, and from its front otherwise',
+    partsOf(scene).map((part) => part.doubleSided),
+    [true, false]
+  );
+}
+
+// An aircraft standing still: in the air over its stand out of a city, as high as it flies; on its stand in a city; and
+//  a walker's at the height its walk says, which the stage sets.
+{
+  const fighter = unit('Fighter', { kinds: ['Air', 'Unit'] }),
+    aloftOf = (group: Group): number | null =>
+      group.getObjectByName(ALOFT_PART)?.position.y ?? null,
+    outOfCity = drawMarker(kit, { city: null, unit: fighter }),
+    inCity = drawMarker(kit, { city: null, unit: fighter, inCity: true }),
+    walking = drawMarker(kit, { city: null, unit: fighter }, true),
+    onFoot = drawMarker(kit, { city: null, unit: unit('Spearman') });
+
+  expect(
+    'out of a city, an aircraft rests in the air over its stand, as high as it flies; in a city, on its stand; walking, as its walk says; a unit on foot, on its stand',
+    [aloftOf(outOfCity), aloftOf(inCity), aloftOf(walking), aloftOf(onFoot)],
+    [CRUISE, null, 0, null]
   );
 }
 
@@ -803,7 +884,13 @@ kit.addModel('statue', plain);
     gone: string[] = [],
     replacement: LoadedModel = {
       parts: [
-        { geometry: box(2), map: new Texture(), tinted: false, cutout: false },
+        {
+          geometry: box(2),
+          map: new Texture(),
+          tinted: false,
+          cutout: false,
+          doubleSided: false,
+        },
       ],
       scale: 0.2,
     };

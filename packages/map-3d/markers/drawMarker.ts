@@ -17,6 +17,7 @@ import {
   CanvasTexture,
   Color,
   DoubleSide,
+  FrontSide,
   Group,
   Material,
   Matrix4,
@@ -38,17 +39,24 @@ import {
   unitBodyGeometry,
 } from './figures';
 import { LoadedModel } from '../models/loadModels';
-import TintedMaterial from './tinted';
+import TintedMaterial, { ownerTint } from './tinted';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {
   UnitLook,
   airborne,
   unitLook,
 } from '@civ-clone/ui-models-builtin/units';
+import { CRUISE } from '../walks';
 
-// The size of a square is about 1 (spec §3): a city fills half its square, and a soldier stands a fifth of a square,
-//  drawn as big as the player chooses (`UnitMarker.size`), life size unless they choose otherwise. A unit's stand is
-//  thick enough to stand over everything laid on the land, roads and smears and all.
+/**
+ * How many times life size units are drawn, before the size the player chooses: twice, as a tabletop game's figures
+ *  are, so they read at a glance beside the cities and land, which are drawn life size. Their stands stay as they are.
+ */
+export const UNIT_SCALE = 2;
+
+// The size of a square is about 1 (spec §3): a city fills half its square, and a soldier stands a fifth of a square
+//  life size, drawn `UNIT_SCALE` times that, times the size the player chooses (`UnitMarker.size` is both). A unit's
+//  stand is thick enough to stand over everything laid on the land, roads and smears and all.
 const STAND_HEIGHT = 0.03,
   ACTIVE = '#fff4b0',
   // How far over a unit its flag flies, on the land.
@@ -237,8 +245,9 @@ export class MarkerKit {
     return figures;
   }
 
-  // A model's part's material: in its owner's colour where its texture says, or cut out by its alpha, made once for
-  //  each. A cut-out part isn't in its owner's colour, as its alpha's what's cut out, not a mask.
+  // A model's part's material: in its owner's colour where its texture says (lightened if it's very dark), or cut out
+  //  by its alpha, made once for each; from both sides where its file says. A cut-out part isn't in its owner's colour,
+  //  as its alpha's what's cut out, not a mask, and is always drawn from both sides.
   #modelMaterial(
     id: string,
     index: number,
@@ -259,7 +268,8 @@ export class MarkerKit {
           })
         : new TintedMaterial({
             ...shared,
-            tint: part.tinted ? new Color(colours[0]) : new Color(1, 1, 1),
+            tint: part.tinted ? ownerTint(colours[0]) : new Color(1, 1, 1),
+            side: part.doubleSided ? DoubleSide : FrontSide,
           });
       this.#modelMaterials.set(key, material);
     }
@@ -729,7 +739,8 @@ export const IN_FRONT_OF_CITY = 0.26;
 /**
  * A square's markers, standing on the ground at its middle: its city, and the unit on top of its stack in front of its
  *  buildings, its flag over the city's name, from the same point, so the two never cross however the camera's turned.
- *  A walker's, `flying`, an aircraft can climb off its stand (`ALOFT_PART`).
+ *  A walker's, `flying`, an aircraft can climb off its stand (`ALOFT_PART`); out of a city, an aircraft standing still
+ *  rests in the air, `CRUISE` over its stand, as high as a flight that ends there stays.
  */
 export const drawMarker = (
   kit: MarkerKit,
@@ -745,6 +756,11 @@ export const drawMarker = (
   if (marker.unit !== null) {
     const inFront =
         marker.inCity ?? marker.city !== null ? IN_FRONT_OF_CITY : 0,
+      // An aircraft out of a city rests in the air, as high as it flies, its stand under it.
+      aloft =
+        !flying &&
+        inFront === 0 &&
+        airborne(unitLook(marker.unit.type, marker.unit.kinds)),
       pawn = drawUnit(
         kit,
         marker.unit,
@@ -754,13 +770,18 @@ export const drawMarker = (
               at: [CITY_NAME_AT[0], CITY_NAME_AT[1], CITY_NAME_AT[2] - inFront],
               over: CITY_LABEL + SPACE,
             },
-        flying,
+        flying || aloft,
         // In front of a city's buildings, or where they stand with the towns hidden: in port, not out at sea.
         inFront === 0
       );
 
     pawn.name = UNIT_PART;
     pawn.position.z = inFront;
+
+    if (aloft) {
+      pawn.getObjectByName(ALOFT_PART)!.position.y = CRUISE;
+    }
+
     group.add(pawn);
   }
 

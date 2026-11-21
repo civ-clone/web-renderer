@@ -42,7 +42,7 @@ export type UnitMarker = {
   // Which way it faces on the ground, turned from south (`+v`) towards east (`+u`), in radians: the way it last moved,
   //  or last attacked, as the page saw it. South when it hasn't been seen to.
   facing: number;
-  // How big its figures are drawn, as the player chose: 1 is life size.
+  // How many times life size its figures are drawn: `UNIT_SCALE` times the size the player chose.
   size: number;
   // The model a set of models draws it with (`MapView3DDeps['models']`), once it's loaded: the built-in set's figures
   //  where there's none.

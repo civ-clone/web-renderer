@@ -111,8 +111,8 @@ export type MapView3DDeps = {
   // What a square does when clicked, held or right-clicked.
   squares: MapSquares;
   transport: Transport;
-  // How big units are drawn, as the player chose it (1 is life size), and what tells of a change, returning what stops
-  //  it. Life size where there's none.
+  // How big units are drawn, as the player chose it (1 is as the map draws them, twice life size), and what tells of a
+  //  change, returning what stops it. 1 where there's none.
   unitSize?: {
     get(): number;
     onChange(changed: () => void): () => void;

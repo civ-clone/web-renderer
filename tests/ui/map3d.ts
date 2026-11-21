@@ -80,8 +80,12 @@ import {
   spriteKey,
 } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import markerFor, { TileMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
+import { CRUISE } from '@civ-clone/ui-map-3d/walks';
 import { OverlayMesh, ROOFS } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
-import { IN_FRONT_OF_CITY } from '@civ-clone/ui-map-3d/markers/drawMarker';
+import {
+  IN_FRONT_OF_CITY,
+  UNIT_SCALE,
+} from '@civ-clone/ui-map-3d/markers/drawMarker';
 import { Color } from 'three';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { unitStatus } from '@civ-clone/ui-assets/lib/renderUnit';
@@ -981,8 +985,8 @@ expect(
         status: 'Fd',
         // Not seen to move yet: facing south.
         facing: 0,
-        // Life size, as no other size is chosen.
-        size: 1,
+        // Twice life size, as the map draws units, as no other size is chosen.
+        size: UNIT_SCALE,
       },
     ]
   );
@@ -1013,7 +1017,8 @@ expect(
   );
 
   // How big units are drawn, changed in Options as the game goes on: every square's unit drawn again at once, at the
-  //  nearest size a player could choose, and life size again after.
+  //  nearest size a player could choose, and as the map draws them again after; all `UNIT_SCALE` times life size, as
+  //  units are drawn twice life size.
   // Each change drawn at once, with no other reason for a frame: the map's idle.
   staged.splice(0);
 
@@ -1033,15 +1038,18 @@ expect(
   sizesDrawn.push(sizeDrawn());
 
   expect(
-    'units are drawn at the size chosen in Options as soon as it changes, and the map drawn, the nearest size a player could choose, or life size',
-    sizesDrawn,
+    'units are drawn at the size chosen in Options as soon as it changes, and the map drawn, the nearest size a player could choose, or as the map draws them; all twice life size',
+    [UNIT_SCALE, sizesDrawn],
     [
-      [1, false],
-      [1.5, true],
-      // As it was: nothing drawn.
-      [1.5, false],
-      [0.5, true],
-      [1, true],
+      2,
+      [
+        [UNIT_SCALE, false],
+        [1.5 * UNIT_SCALE, true],
+        // As it was: nothing drawn.
+        [1.5 * UNIT_SCALE, false],
+        [0.5 * UNIT_SCALE, true],
+        [UNIT_SCALE, true],
+      ],
     ]
   );
 
@@ -1066,7 +1074,7 @@ expect(
   expect(
     'a size chosen before the game is the one its units are drawn at from the start',
     sizeAtStart,
-    1.25
+    1.25 * UNIT_SCALE
   );
 
   // A city and its units on a mountain, and a mountain made beside it, with only that square released: the land under
@@ -2445,8 +2453,8 @@ expect(
     [true, true, true, true]
   );
 
-  // An aircraft flying two squares, as a GoTo's steps come: it climbs off its stand and comes down to land on the
-  //  square it's bound for; the units walking so far, on foot, flew none of the way.
+  // An aircraft flying two squares, as a GoTo's steps come, from open land into a city: it sets off as high as it rests
+  //  in the air there and comes down to land in the city; the units walking so far, on foot, flew none of the way.
   const onFoot = [...walkersAloft.values()].flat(),
     fighter = {
       ...unitOf('Unit-F', 1),
@@ -2465,17 +2473,31 @@ expect(
   const [flight] = [...walkersAloft.values()],
     [flightWay] = placedSince();
 
+  // Flown on out of the city, to open land: it climbs off its stand, and stays up, as high as it rests in the air there.
+  walkersAloft.clear();
+  walkersPlaced.clear();
+  stepped(fighter, [2, 0], [1, 0]);
+  repatched([2, 0, []], [1, 0, [fighter]]);
+
+  const [outOfCity] = [...walkersAloft.values()];
+
+  repatched([1, 0, []]);
+
   expect(
-    'an aircraft flies off its stand and lands on the square it’s bound for; units on foot fly none of the way',
+    'an aircraft out of a city sets off from the air, where it rests, and comes down to land in a city it’s bound for; flown on out of the city, it climbs off its stand and stays up; units on foot fly none of the way',
     [
       onFoot.length > 0 && onFoot.every((aloft) => aloft === 0),
       flight!.length > 5,
-      flight![0]! < 0.05,
-      Math.max(...flight!) > 0.25,
+      Math.abs(flight![0]! - CRUISE) < 0.005,
+      // Over the open land on its way: in the air, as high as it rests there.
+      Math.min(...flight!.slice(0, flight!.length / 2)) > CRUISE - 0.005,
       flight!.at(-1)! < 0.005,
       flightWay!.at(-1)![0],
+      outOfCity!.length > 5,
+      outOfCity![0]! < 0.05,
+      Math.abs(outOfCity!.at(-1)! - CRUISE) < 0.005,
     ],
-    [true, true, true, true, true, groundAt(2, 0)[0]]
+    [true, true, true, true, true, groundAt(2, 0)[0], true, true, true]
   );
 
   // A ship sailing two squares leaves a wake: foam behind it as it goes, on the sea, though the land under it's higher,
@@ -3127,7 +3149,7 @@ expect(
     'a unit walking is drawn as it is standing, the active one ringed, at the size chosen; a rival’s stepping out of the dark, or off the screen, is on its square at once, not walking',
     [asDrawn, outOfTheDark, offScreen],
     [
-      [1, true, 1.5],
+      [1, true, 1.5 * UNIT_SCALE],
       [['Unit-R', 1], { ids: [], units: [] }],
       [['Unit-R', 1], { ids: [], units: [] }],
     ]

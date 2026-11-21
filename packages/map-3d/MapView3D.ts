@@ -39,7 +39,7 @@ import {
 import prefersReducedMotion from '@civ-clone/ui-map/lib/reducedMotion';
 import CameraInput from './camera/CameraInput';
 import markerFor, { MarkerWords, TileMarker } from './markers/markerFor';
-import { IN_FRONT_OF_CITY } from './markers/drawMarker';
+import { IN_FRONT_OF_CITY, UNIT_SCALE } from './markers/drawMarker';
 import { airborne, unitLook } from '@civ-clone/ui-models-builtin/units';
 import Walks, {
   OWN_PACE,
@@ -389,7 +389,8 @@ export class MapView3D implements MapRenderer {
   #activeUnit: Unit | null = null;
   #pendingTile: Coordinate | null = null;
   #unitsShown = true;
-  // How big units are drawn, as the player chose (1 is life size), and what stops a change to it being told.
+  // How big units are drawn: `UNIT_SCALE` times life size, times the size the player chose; and what stops a change to
+  //  it being told.
   #unitSize: number;
   // The model each unit type is drawn with, by its type, from the set of models (`MapView3DDeps['models']`), as each
   //  model's loaded: the built-in set's figures for the rest.
@@ -429,7 +430,7 @@ export class MapView3D implements MapRenderer {
     this.#art = deps.art;
     this.#cityBanners = deps.cityBanners ?? null;
     this.#words = { cityName: deps.cityName, unitStatus: deps.unitStatus };
-    this.#unitSize = deps.unitSize?.get() ?? 1;
+    this.#unitSize = UNIT_SCALE * (deps.unitSize?.get() ?? 1);
     this.#artId = deps.art.id();
     this.world = deps.world;
     this.#land = new Land(deps.world);
@@ -561,7 +562,7 @@ export class MapView3D implements MapRenderer {
     //  size chosen, as Options changes it.
     this.#stopUnitSize =
       deps.unitSize?.onChange((): void => {
-        const size = deps.unitSize?.get() ?? 1;
+        const size = UNIT_SCALE * (deps.unitSize?.get() ?? 1);
 
         if (size !== this.#unitSize && !this.#disposed) {
           this.#unitSize = size;
@@ -1012,6 +1013,8 @@ export class MapView3D implements MapRenderer {
       at,
       lift: stands - Math.max(0, this.#land.surfaceAt(...at)),
       middle: [u, v],
+      // Out of a city, an aircraft rests in the air.
+      ...(inCity ? {} : { aloft: true }),
     };
   }
 

@@ -19,8 +19,9 @@
 //   way it faced then.
 // - Aircraft fly an arc: a walk whose units all fly climbs as it sets off and comes down to land at its end, a step's
 //   way each, so a hop of one square goes half as high as a longer flight. A step joined as it comes down climbs again
-//   from where it is. One that doesn't fly rides along with a walk only if that walk doesn't fly either: what a ship
-//   carries rides with it, but nothing on the ground is carried into the air.
+//   from where it is. Out of a city an aircraft rests in the air (a point's `aloft`): a flight from there sets off at
+//   its height, and one ending there stays up. One that doesn't fly rides along with a walk only if that walk doesn't
+//   fly either: what a ship carries rides with it, but nothing on the ground is carried into the air.
 //
 // Where it walks is on the ground (`u`, `v`), each point with a `lift`: how far above the land there the unit stands,
 //  which the view sets, so a walk starts and ends where the unit's drawn standing.
@@ -41,6 +42,9 @@ export type WalkPoint = {
   //  passes between them, each from this point's middle (or the point itself, without one), so they go where it goes
   //  when it's taken a copy of the world round.
   via?: readonly (readonly [number, number])[];
+  // Out of a city, where an aircraft rests in the air, `CRUISE` up: a flight sets off from there at that height, and
+  //  doesn't come down to end there.
+  aloft?: boolean;
 };
 
 /** How fast a walk goes. */
@@ -319,9 +323,13 @@ export class Walks {
     const ownId = this.#walkOf.get(unit),
       own = ownId === undefined ? undefined : this.#walks.get(ownId),
       drawn = own === undefined ? setOff : this.#drawn(own, now),
-      // As high as it's flown, as a share of its climb.
+      // As high as it's flown, as a share of its climb: an aircraft resting in the air is as high as it goes.
       climbed =
-        own === undefined ? 0 : this.#climbed(own, this.#along(own, now)),
+        own === undefined
+          ? flies && setOff.aloft === true
+            ? 1
+            : 0
+          : this.#climbed(own, this.#along(own, now)),
       // Another walk that's just made this step, drawn where this unit was as it made it, and as high: it rides along
       //  with it, as what a ship carries does, stepping after the ship. Not into the air, though.
       riding = [...this.#walks.values()].find(
@@ -582,6 +590,7 @@ export class Walks {
             ] as [number, number],
           }),
       ...(arrive.via === undefined ? {} : { via: arrive.via }),
+      ...(arrive.aloft === true ? { aloft: true } : {}),
     });
     walk.squares.push(to);
     walk.stepped = now;
@@ -647,8 +656,8 @@ export class Walks {
   }
 
   // How high `walk` is at `along`, as a share of its climb, 0 to 1: climbing from as high as it was when it set off or a
-  //  step was last joined, and coming down over its last `CLIMB` of a step, landing at its end. Nothing if it doesn't
-  //  fly.
+  //  step was last joined, and coming down over its last `CLIMB` of a step, landing at its end, unless it ends out of a
+  //  city, where it stays up. Nothing if it doesn't fly.
   #climbed(walk: Walk, along: number): number {
     if (!walk.flies) {
       return 0;
@@ -659,7 +668,9 @@ export class Walks {
       Math.min(
         1,
         walk.climb.from + (walk.flown + along - walk.climb.at) / CLIMB,
-        (walk.points.length - 1 - along) / CLIMB
+        walk.points[walk.points.length - 1]!.aloft === true
+          ? 1
+          : (walk.points.length - 1 - along) / CLIMB
       )
     );
   }
