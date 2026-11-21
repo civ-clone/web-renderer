@@ -8,7 +8,8 @@ import './lib/seed';
 import '@civ-clone/ui-worker-client/Game';
 import civilopediaData from '@civ-clone/ui-worker-client/lib/civilopedia';
 import { defaultGame } from '@civ-clone/core-game/defaultGame';
-import missingWording from './lib/effectWording';
+import missingWording, { missingConditions } from './lib/effectWording';
+import requirementsData from '@civ-clone/ui-worker-client/lib/requirements';
 import pluginSets from '../../src/js/pluginSets';
 import { pluginsFrom } from '@civ-clone/ui-worker-client/Plugins';
 
@@ -66,6 +67,12 @@ const check = (): void => {
     'every effect, scope and class without an entry sent has wording in en',
     missingWording(entries),
     { effects: [], scopes: [], classes: [] }
+  );
+
+  expect(
+    'every condition a requirement names has wording in en (#1317)',
+    missingConditions(requirementsData()),
+    []
   );
 
   // What #1196 left out (#1291): the effects each says, by type.

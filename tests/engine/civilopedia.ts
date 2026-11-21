@@ -28,7 +28,7 @@ import {
 } from '@civ-clone/ui-worker-client/Client/requests';
 import { inBuildListOrder } from '@civ-clone/ui-worker-client/lib/buildList';
 import Player from '@civ-clone/core-player/Player';
-import missingWording from './lib/effectWording';
+import missingWording, { missingConditions } from './lib/effectWording';
 import setUpCity from '@civ-clone/civ1-city/tests/lib/setUpCity';
 
 const failures: string[] = [];
@@ -418,6 +418,11 @@ const check = async (): Promise<void> => {
     'every effect, scope and class without an entry sent has wording in en',
     missingWording(entries),
     { effects: [], scopes: [], classes: [] }
+  );
+  expect(
+    'every condition a requirement names has wording in en (#1317)',
+    missingConditions(requirements),
+    []
   );
   expect(
     'a Library costs 1 gold a turn and adds half the base science',

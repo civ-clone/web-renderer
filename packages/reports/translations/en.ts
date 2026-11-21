@@ -72,6 +72,13 @@ i18next.addResources('en', 'default', {
   'Civilopedia.effect.scope.player': 'in all your cities',
   'Civilopedia.effect.scope.continent': 'in your cities on the same continent',
   'Civilopedia.effect.scope.world': 'for every civilization',
+  // A Wonder's effect with no scope acts in its own city (#1318), said for the types that act on a city; the rest act
+  //  for its owner, which their wording says.
+  'Civilopedia.effect.scope.city': '',
+  'Civilopedia.effect.scope.city_content': 'in its city',
+  'Civilopedia.effect.scope.city_happy': 'in its city',
+  'Civilopedia.effect.scope.city_tile_yield': 'in its city',
+  'Civilopedia.effect.scope.city_yield_percent': 'in its city',
   // Civilization II's (#1196).
   'Civilopedia.effect.content_fewer_one':
     'Makes {{count}} fewer unhappy citizen content',
@@ -330,6 +337,9 @@ i18next.addResources('en', 'default', {
   // The Hydro Plant's site with the enhanced rule on (#954), which counts the city's own square.
   'Civilopedia.condition.mountains-or-river-on-or-nearby':
     'Mountains or a River on or next to the city',
+  // Civilization II's: parts are built only for a ship that hasn't launched, and only in the years AD (#1317).
+  'Civilopedia.condition.civ2-spaceship.city/build/not-launched/condition':
+    'a spaceship that hasn’t been launched, in the years AD',
   'Civilopedia.condition.unlaunched-spaceship':
     'a spaceship that hasn’t been launched',
   // Where Civilization II's tile improvements can go.

@@ -162,7 +162,7 @@ export const entryHtml = (
     // What it does, as the rules describe it (#1196).
     section(
       t('Civilopedia.heading.effects'),
-      effectLines(entry.effects ?? [], entries)
+      effectLines(entry.effects ?? [], entries, entry.kind)
     ),
     section(
       t('Civilopedia.heading.subject'),
