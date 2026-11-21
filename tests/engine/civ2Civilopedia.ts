@@ -7,6 +7,7 @@ import './lib/seed';
 // The worker client a civ2 game runs in, as `civ2Isolation` loads it.
 import '@civ-clone/ui-worker-client/Game';
 import civilopediaData from '@civ-clone/ui-worker-client/lib/civilopedia';
+import { defaultGame } from '@civ-clone/core-game/defaultGame';
 import missingWording from './lib/effectWording';
 import pluginSets from '../../src/js/pluginSets';
 import { pluginsFrom } from '@civ-clone/ui-worker-client/Plugins';
@@ -141,6 +142,61 @@ const check = (): void => {
       has('MarcoPolosEmbassy', ['shared_maps', 'tribute_demand']),
     ],
     [[], [], [], [], [], [], [], [], []]
+  );
+
+  // In a game, an entry says what applies to the player now (#1310): Barracks' upkeep and sales, at a level below
+  //  Prince and at Prince, before Gunpowder, with it, and with Mobile Warfare too.
+  const advance = (name: string) =>
+      (defaultGame.advances.entries() as Function[]).find(
+        (AdvanceType) => AdvanceType.name === name
+      )!,
+    levels = defaultGame.availableDifficulties.sorted(),
+    Prince = levels.find((Level) => Level.name === 'Prince')!,
+    Warlord = levels.find((Level) => Level.name === 'Warlord')!,
+    barracks = (known: string[], level: Function) => {
+      const knows = new Set(known.map(advance));
+
+      return civilopediaData(defaultGame, {
+        knows: (AdvanceType) => knows.has(AdvanceType),
+        difficulty: level as never,
+      })
+        .find((entry) => entry.key === 'Barracks')
+        ?.effects.filter(({ type }) => ['upkeep', 'sold_on'].includes(type))
+        .map(({ type, value, from, until, below, atLeast, with: needs }) => [
+          type,
+          value ?? null,
+          (from as { class?: string } | undefined)?.class ?? null,
+          (until as { class?: string } | undefined)?.class ?? null,
+          below === undefined && atLeast === undefined,
+          ((needs as { class: string }[] | undefined) ?? []).map(
+            ({ class: name }) => name
+          ),
+        ]);
+    };
+
+  expect(
+    'Barracks before Gunpowder, below Prince: free until Gunpowder, then 1 gold, and both sales',
+    barracks([], Warlord),
+    [
+      ['upkeep', 0, null, 'Gunpowder', true, []],
+      ['upkeep', 1, 'Gunpowder', null, true, []],
+      ['sold_on', null, null, null, true, ['Gunpowder']],
+      ['sold_on', null, null, null, true, ['MobileWarfare']],
+    ]
+  );
+  expect(
+    'with Gunpowder, at Prince: 2 gold until Mobile Warfare, then 3, and one sale left',
+    barracks(['Gunpowder'], Prince),
+    [
+      ['upkeep', 2, null, 'MobileWarfare', true, []],
+      ['upkeep', 3, 'MobileWarfare', null, true, []],
+      ['sold_on', null, null, null, true, ['MobileWarfare']],
+    ]
+  );
+  expect(
+    'and with Mobile Warfare too, just its upkeep',
+    barracks(['Gunpowder', 'MobileWarfare'], Prince),
+    [['upkeep', 3, null, null, true, []]]
   );
 
   finished = true;

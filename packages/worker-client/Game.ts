@@ -38,7 +38,10 @@ import {
   checkSavedRuleSets,
   ruleSetsData,
 } from './lib/ruleSets';
-import civilopediaData from './lib/civilopedia';
+import civilopediaData, {
+  entryEffectsInForce,
+  situationOf,
+} from './lib/civilopedia';
 import worldSizesData from './lib/worldSizes';
 import { instance as aiClientRegistryInstance } from '@civ-clone/core-ai-client/AIClientRegistry';
 import { Seat, seatsFromOptions } from '@civ-clone/ui-protocol/lib/seats';
@@ -470,6 +473,15 @@ export class Game implements IGame {
 
     // Every entry the civilopedia shows, with the requirement entries about it and a unit's numbers (#183).
     answer(this.#transport, 'getCivilopedia', () => civilopediaData());
+
+    // An entry's effects as they stand for the player at the keyboard (#1310): none for an observer or before a game.
+    answer(this.#transport, 'getCivilopediaInForce', (key: string) => {
+      const player = this.#localPlayerClient?.player() ?? null;
+
+      return player === null
+        ? null
+        : entryEffectsInForce(key, situationOf(player));
+    });
   }
 
   // The engine's options, read and set by the page.

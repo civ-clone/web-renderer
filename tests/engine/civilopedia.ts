@@ -494,6 +494,26 @@ const check = async (): Promise<void> => {
     ]
   );
 
+  // In a game, Barracks say what applies now (#1310): with Gunpowder, 1 gold until Combustion, then 2.
+  expect(
+    'with Gunpowder, Barracks cost 1 gold until Combustion, then 2',
+    civilopediaData(defaultGame, {
+      knows: (AdvanceType) => AdvanceType === Gunpowder,
+      difficulty: null,
+    })
+      .find(({ key }) => key === 'Barracks')
+      ?.effects.filter(({ type }) => type === 'upkeep')
+      .map(({ value, from, until }) => [
+        value,
+        (from as { class?: string } | null | undefined)?.class ?? null,
+        (until as { class?: string } | null | undefined)?.class ?? null,
+      ]),
+    [
+      [1, null, 'Combustion'],
+      [2, 'Combustion', null],
+    ]
+  );
+
   finished = true;
 
   if (failures.length > 0) {

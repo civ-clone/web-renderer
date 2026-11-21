@@ -16,7 +16,11 @@ import {
   WondersRow,
 } from './reports';
 import { RequirementData } from './requirements';
-import { CivilopediaEntry, UnavailableBuildItem } from './civilopedia';
+import {
+  CivilopediaEffect,
+  CivilopediaEntry,
+  UnavailableBuildItem,
+} from './civilopedia';
 import type { BattleSound } from './battles';
 import type { MapEvent } from './mapEvents';
 import type { QueueEdit } from './cityBuild';
@@ -160,6 +164,8 @@ declare global {
     getRequirements: TransportData<RequirementData[], null>;
     // Every entry the civilopedia shows (#183).
     getCivilopedia: TransportData<CivilopediaEntry[], null>;
+    // An entry's effects as they stand for the local player, by its save key, or `null` with no player to ask about (#1310).
+    getCivilopediaInForce: TransportData<CivilopediaEffect[] | null, string>;
     getOptions: TransportData<
       {
         [key: string]: any;
