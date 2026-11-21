@@ -80,7 +80,6 @@ import {
   spriteKey,
 } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import markerFor, { TileMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
-import { CRUISE } from '@civ-clone/ui-map-3d/walks';
 import { OverlayMesh, ROOFS } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
 import {
   IN_FRONT_OF_CITY,
@@ -238,8 +237,11 @@ const staged: string[] = [],
   markedAt = new Map<string, readonly [number, number, number]>(),
   // What each square yields, each time the stage was given it.
   yieldsSet: (YieldMesh | null)[] = [],
+  // The square whose unit's drawn under the pointer, as the stage would say, if any.
+  unitUnderPointer: { key: string | null } = { key: null },
   fakeStage = (): Stage => ({
     render: () => void staged.push('render'),
+    unitAt: () => unitUnderPointer.key,
     resize: (stageWidth, stageHeight, ratio) =>
       void staged.push(`resize ${stageWidth}×${stageHeight}@${ratio}`),
     setChunk: (i, j) => {
@@ -1882,6 +1884,22 @@ expect(
     [[true, true, 1], ['1,1'], false, false]
   );
 
+  // A unit's figures under the pointer, standing over the ground of another square: the click picks the unit's square.
+  chooser.pickTile(
+    () => true,
+    (tile) => void picked.push(`${tile.x},${tile.y}`),
+    'Where?'
+  );
+  unitUnderPointer.key = '2,0';
+  clickAt(box.width / 2, box.height / 2);
+  unitUnderPointer.key = null;
+
+  expect(
+    'a click on a unit’s figures picks its square, not the ground behind them',
+    picked,
+    ['1,1', '2,0']
+  );
+
   chooser.dispose();
 
   // The mouse resting on a square: its tooltip opens after a moment, through the page's own; a key closes it, and while
@@ -2453,8 +2471,8 @@ expect(
     [true, true, true, true]
   );
 
-  // An aircraft flying two squares, as a GoTo's steps come, from open land into a city: it sets off as high as it rests
-  //  in the air there and comes down to land in the city; the units walking so far, on foot, flew none of the way.
+  // An aircraft flying two squares, as a GoTo's steps come: it climbs off its stand and comes down to land on the
+  //  square it's bound for; the units walking so far, on foot, flew none of the way.
   const onFoot = [...walkersAloft.values()].flat(),
     fighter = {
       ...unitOf('Unit-F', 1),
@@ -2473,31 +2491,17 @@ expect(
   const [flight] = [...walkersAloft.values()],
     [flightWay] = placedSince();
 
-  // Flown on out of the city, to open land: it climbs off its stand, and stays up, as high as it rests in the air there.
-  walkersAloft.clear();
-  walkersPlaced.clear();
-  stepped(fighter, [2, 0], [1, 0]);
-  repatched([2, 0, []], [1, 0, [fighter]]);
-
-  const [outOfCity] = [...walkersAloft.values()];
-
-  repatched([1, 0, []]);
-
   expect(
-    'an aircraft out of a city sets off from the air, where it rests, and comes down to land in a city it’s bound for; flown on out of the city, it climbs off its stand and stays up; units on foot fly none of the way',
+    'an aircraft flies off its stand and lands on the square it’s bound for; units on foot fly none of the way',
     [
       onFoot.length > 0 && onFoot.every((aloft) => aloft === 0),
       flight!.length > 5,
-      Math.abs(flight![0]! - CRUISE) < 0.005,
-      // Over the open land on its way: in the air, as high as it rests there.
-      Math.min(...flight!.slice(0, flight!.length / 2)) > CRUISE - 0.005,
+      flight![0]! < 0.05,
+      Math.max(...flight!) > 0.25,
       flight!.at(-1)! < 0.005,
       flightWay!.at(-1)![0],
-      outOfCity!.length > 5,
-      outOfCity![0]! < 0.05,
-      Math.abs(outOfCity!.at(-1)! - CRUISE) < 0.005,
     ],
-    [true, true, true, true, true, groundAt(2, 0)[0], true, true, true]
+    [true, true, true, true, true, groundAt(2, 0)[0]]
   );
 
   // A ship sailing two squares leaves a wake: foam behind it as it goes, on the sea, though the land under it's higher,

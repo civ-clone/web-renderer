@@ -9,7 +9,7 @@
 //    its ripples at sea); in its owner's colour where its parts say (a very dark one lightened, so the model's shading
 //    shows), cut out where they're see-through, from both sides where its file says, a material made once for each;
 //    and the built-in set's figures till the model's added;
-//  - out of a city, an aircraft rests in the air over its stand, as high as it flies;
+//  - an aircraft drawn with a model flies over its stand, as high as the built-in set's do;
 //  - faded, a part keeps its owner's colour;
 //  - the kit lets go of its models when taken down.
 
@@ -28,7 +28,7 @@ import {
   Texture,
 } from 'three';
 import {
-  ALOFT_PART,
+  AIRBORNE_LIFT,
   FIGURES_PART,
   Faded,
   MarkerKit,
@@ -53,7 +53,6 @@ import TintedMaterial, {
   TINT_FLOOR,
   ownerTint,
 } from '@civ-clone/ui-map-3d/markers/tinted';
-import { CRUISE } from '@civ-clone/ui-map-3d/walks';
 import markerFor, { UnitMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
 import { formation } from '@civ-clone/ui-map-3d/markers/figures';
 import { map3dModelsAsked } from '@civ-clone/ui-client/lib/map3dOptions';
@@ -772,21 +771,32 @@ kit.addModel('statue', plain);
   );
 }
 
-// An aircraft standing still: in the air over its stand out of a city, as high as it flies; on its stand in a city; and
-//  a walker's at the height its walk says, which the stage sets.
+// An aircraft drawn with a model: flying over its stand, its underside as high as the built-in set's aircraft's, at any
+//  size; a vehicle drawn with the same model, on its stand.
 {
-  const fighter = unit('Fighter', { kinds: ['Air', 'Unit'] }),
-    aloftOf = (group: Group): number | null =>
-      group.getObjectByName(ALOFT_PART)?.position.y ?? null,
-    outOfCity = drawMarker(kit, { city: null, unit: fighter }),
-    inCity = drawMarker(kit, { city: null, unit: fighter, inCity: true }),
-    walking = drawMarker(kit, { city: null, unit: fighter }, true),
-    onFoot = drawMarker(kit, { city: null, unit: unit('Spearman') });
+  const lowest = (figures: ReturnType<MarkerKit['modelFigures']>): number => {
+      const geometry = figures!.meshes[0]![0];
+
+      geometry.computeBoundingBox();
+
+      return round(geometry.boundingBox!.min.y);
+    },
+    builtIn = kit.body(unitTable['Fighter']!, colours, false, 2, 'figures');
+
+  builtIn.computeBoundingBox();
 
   expect(
-    'out of a city, an aircraft rests in the air over its stand, as high as it flies; in a city, on its stand; walking, as its walk says; a unit on foot, on its stand',
-    [aloftOf(outOfCity), aloftOf(inCity), aloftOf(walking), aloftOf(onFoot)],
-    [CRUISE, null, 0, null]
+    'an aircraft drawn with a model flies over its stand, as high as the built-in set’s, at any size; a vehicle drawn with it stands on its stand',
+    [
+      lowest(kit.modelFigures('statue', unitTable['Fighter']!, colours)),
+      lowest(kit.modelFigures('statue', unitTable['Fighter']!, colours, 2)),
+      Math.abs(
+        lowest(kit.modelFigures('statue', unitTable['Fighter']!, colours, 2)) -
+          builtIn.boundingBox!.min.y
+      ) < 0.001,
+      lowest(kit.modelFigures('statue', unitTable['Tank']!, colours, 2)),
+    ],
+    [round(0.03 + AIRBORNE_LIFT), round(0.03 + 2 * AIRBORNE_LIFT), true, 0.03]
   );
 }
 

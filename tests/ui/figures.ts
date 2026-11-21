@@ -11,21 +11,26 @@
 //    ring;
 //  - fading, its figures, stand and ring dithered, and its flag and labels see-through;
 //  - a puff of smoke where a unit falls: grey blobs bursting out, rising and spreading, swelling and shrinking away;
-//  - a ship out at sea in rings of ripples, and not in front of a city's buildings.
+//  - a ship out at sea in rings of ripples, and not in front of a city's buildings;
+//  - picked by what's drawn of it: a unit's figures standing over the ground of the square behind are its square's.
 
 import * as Civ1Units from '@civ-clone/civ1-unit/Units';
 import * as Civ2Units from '@civ-clone/civ2-unit/Units';
 import {
+  Box3,
   BufferGeometry,
   Color,
   Group,
   Material,
   Mesh,
   Object3D,
+  PerspectiveCamera,
   Sprite,
   SpriteMaterial,
   Vector3,
 } from 'three';
+import unitUnder from '@civ-clone/ui-map-3d/markers/pickUnit';
+import { UNIT_SCALE } from '@civ-clone/ui-map-3d/markers/drawMarker';
 import {
   UnitLook,
   unitLook,
@@ -53,7 +58,6 @@ import {
   partMatrix,
 } from '@civ-clone/ui-map-3d/markers/figures';
 import { UnitMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
-import { CRUISE } from '@civ-clone/ui-map-3d/walks';
 import { UNIT_SIZES } from '@civ-clone/ui-client/lib/map3dOptions';
 import { landTypes, seaTypes } from '@civ-clone/ui-map-3d/debug/populate';
 
@@ -741,8 +745,8 @@ expect(
 
 // Drawn to fly, as a walker is: an aircraft's figures, its hit points' bar, flag and label, and the pointer over it,
 //  are a part of their own, to climb off its stand and the ring at its feet, which stay on the ground; its figures as
-//  high on their own as on the stand, and the two together all of it. Standing on its square out of a city, the same
-//  part, resting in the air as high as it flies; in a city, or a unit on foot drawn to fly, one part as ever.
+//  high on their own as on the stand, and the two together all of it. On its square, or a unit on foot drawn to fly,
+//  one part as ever.
 {
   const flier = unit('Fighter', {
       kinds: ['Air'],
@@ -775,7 +779,7 @@ expect(
       Math.round((n ?? NaN) * 1000) / 1000;
 
   expect(
-    'drawn to fly, an aircraft’s figures, flag, label and pointer climb as a part of their own, off its stand and ring; its figures as high as on the stand, and with it all of it; standing out of a city, resting in the air; in a city, or on foot, one part; helicopters and missiles fly too, not ships',
+    'drawn to fly, an aircraft’s figures, flag, label and pointer climb as a part of their own, off its stand and ring; its figures as high as on the stand, and with it all of it; on its square, or on foot, one part; helicopters and missiles fly too, not ships',
     [
       kinds(part.children).sort(),
       aloft === undefined ? null : kinds(aloft.children).sort(),
@@ -785,13 +789,7 @@ expect(
       rounded(figures.boundingBox?.min.y) > 0.02,
       rounded(base.boundingBox?.max.y) < 0.05,
       count(figures) + count(base) === count(whole),
-      drawMarker(kit, { city: null, unit: flier }).getObjectByName(ALOFT_PART)
-        ?.position.y,
-      drawMarker(kit, {
-        city: null,
-        unit: flier,
-        inCity: true,
-      }).getObjectByName(ALOFT_PART),
+      drawMarker(kit, { city: null, unit: flier }).getObjectByName(ALOFT_PART),
       drawMarker(
         kit,
         { city: null, unit: unit('Spearman') },
@@ -815,7 +813,6 @@ expect(
       true,
       true,
       true,
-      CRUISE,
       undefined,
       undefined,
       [true, true, true, true, false],
@@ -1199,6 +1196,83 @@ expect(
       JSON.stringify(puffAt(0.5, 3)) === JSON.stringify(puffAt(0.5, 4)),
     ],
     [PUFF_BLOBS, 0, 0, true, true, true, true, true, 2, true, false]
+  );
+}
+
+// Picked by what's drawn of it: a squad twice life size, seen from above at a slant, its figures over the ground of the
+//  square behind it, where another squad stands. The point on the screen over its figures is its square, though the
+//  ground there is the square behind's; the point over the other's figures is theirs; one over neither is nothing.
+{
+  const camera = new PerspectiveCamera(30, 16 / 9, 0.1, 50),
+    squad = (z: number): Group => {
+      const drawn = drawMarker(kit, {
+        city: null,
+        unit: unit('Musketman', { size: UNIT_SCALE }),
+      });
+
+      drawn.position.set(0, 0, z);
+      drawn.updateMatrixWorld(true);
+
+      return drawn;
+    },
+    front = squad(0),
+    behind = squad(-1.2),
+    marked = [
+      ['3,4', [front]],
+      ['3,3', [behind]],
+    ] as const,
+    on = (x: number, y: number, z: number): [number, number] => {
+      const point = new Vector3(x, y, z).project(camera);
+
+      return [point.x, point.y];
+    },
+    top = new Box3().setFromObject(front.getObjectByName(FIGURES_PART)!).max.y,
+    // Two-thirds up the front squad's middle figure, and where the ray through it comes down to the ground: past the
+    //  edge of its square, half a square in front of it.
+    through = top * 0.66,
+    ground = 2 - (2 + 0.04) / (1 - through);
+
+  camera.position.set(0, 1, 2);
+  camera.lookAt(0, 0, -0.5);
+  camera.updateMatrixWorld();
+
+  expect(
+    'a unit’s figures standing over the ground of the square behind are its square’s; another’s figures there are theirs; nothing is nothing',
+    [
+      ground < -0.5,
+      unitUnder(marked, camera, on(0, through, -0.04)),
+      unitUnder(marked, camera, on(0, top * 0.8, -1.24)),
+      unitUnder(marked, camera, on(2, 0, 0)),
+      unitUnder([], camera, on(0, through, -0.04)),
+    ],
+    [true, '3,4', '3,3', null, null]
+  );
+
+  // A squad close behind, where the same ray meets its figures too: the nearer's square, whichever's listed first.
+  const close = squad(-0.75),
+    inLine = (first: 'front' | 'close') =>
+      unitUnder(
+        first === 'front'
+          ? [
+              ['3,4', [front]],
+              ['9,9', [close]],
+            ]
+          : [
+              ['9,9', [close]],
+              ['3,4', [front]],
+            ],
+        camera,
+        on(0, through, -0.04)
+      );
+
+  expect(
+    'where a ray meets two units’ figures, the nearer’s square is picked',
+    [
+      unitUnder([['9,9', [close]]], camera, on(0, through, -0.04)),
+      inLine('front'),
+      inLine('close'),
+    ],
+    ['9,9', '3,4', '3,4']
   );
 }
 

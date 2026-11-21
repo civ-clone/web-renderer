@@ -1013,8 +1013,6 @@ export class MapView3D implements MapRenderer {
       at,
       lift: stands - Math.max(0, this.#land.surfaceAt(...at)),
       middle: [u, v],
-      // Out of a city, an aircraft rests in the air.
-      ...(inCity ? {} : { aloft: true }),
     };
   }
 
@@ -2122,7 +2120,8 @@ export class MapView3D implements MapRenderer {
     );
   }
 
-  // The square under (`x`, `y`) in the canvas's px: what's shown there, the land or the water over it, on the world.
+  // The square under (`x`, `y`) in the canvas's px: what's shown there, on the world. A unit's figures first, as they
+  //  stand over the ground of the square behind, twice life size, or flying; then the land or the water over it.
   //  Nothing above the horizon, or past a pole the world doesn't wrap over.
   #tileAt(x: number, y: number): Tile | null {
     const width = this.#canvas.clientWidth,
@@ -2132,10 +2131,19 @@ export class MapView3D implements MapRenderer {
       return null;
     }
 
+    const ndc: [number, number] = [(x / width) * 2 - 1, 1 - (y / height) * 2],
+      unit = this.#stage.unitAt?.(ndc) ?? null;
+
+    if (unit !== null) {
+      const [unitX, unitY] = unit.split(',').map(Number) as [number, number];
+
+      return this.world.get(unitX, unitY);
+    }
+
     const ground = pickGround(
       this.#orbit,
       this.#lookHeight ?? 0,
-      [(x / width) * 2 - 1, 1 - (y / height) * 2],
+      ndc,
       width / height,
       (u, v) => this.#land.heightAt(u, v)
     );

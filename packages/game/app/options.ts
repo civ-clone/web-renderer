@@ -60,7 +60,8 @@ export const setOptionDefaults = (): void => {
     // The 3D map's camera's distance, as the player last chose it, or 0 for the camera's own (docs/3d-renderer.md §11).
     //  See `MAP3D_DISTANCE_OPTION`.
     map3dDistance: 0,
-    // How big the 3D map draws its units: life size, unless the player chose otherwise. See `MAP3D_UNIT_SIZE_OPTION`.
+    // How big the 3D map draws its units: as it draws them (twice life size), unless the player chose otherwise. See
+    //  `MAP3D_UNIT_SIZE_OPTION`.
     map3dUnitSize: 1,
     // How the 3D map's units move, and whether other players' are shown moving. See `MAP3D_WALKS_OPTION`.
     map3dWalks: 'normal',

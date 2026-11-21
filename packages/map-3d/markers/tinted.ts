@@ -2,7 +2,7 @@
 //  models paints the parts a player's colour shows on, the colour's mixed in, `rgb × mix(tint, white, alpha)`, and the
 //  alpha's left out of how solid it is. A class of its own, so a marker faded (`fade`), which draws with a clone of
 //  the kit's material, is tinted as the kit's is. A colour too dark to show the model's shading under it is lightened
-//  (`ownerTint`).
+//  (`ownerTint`): black, and the darker navies, purples, browns, greens and reds, and saturated blues.
 
 import {
   Color,

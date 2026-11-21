@@ -367,9 +367,9 @@ licence and credit. Still to do:
 - **Textures:** KTX2.
 
 **Third part, drawing them: done.** Units are drawn twice life size, as a tabletop game's figures are, with 0 A.D.'s
-riders and chariot at three-quarters of its scale. Out of a city, aircraft rest in the air over their stands. A very
-dark owner's colour is lightened on a model so its shading shows, and a model's parts are drawn from both sides where
-its file says.
+riders and chariot at three-quarters of its scale, and a click on a unit's figures picks its square, not the ground
+behind them. An aircraft drawn with a model flies over its stand, as the built-in set's do. A dark owner's colour is
+lightened on a model so its shading shows, and a model's parts are drawn from both sides where its file says.
 
 - **What:**
   - loading `.glb` with KTX2 textures;

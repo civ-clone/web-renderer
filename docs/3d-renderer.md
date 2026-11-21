@@ -684,13 +684,13 @@ Each is looked up by its type name in the model set.
 - **Facing:** a unit faces the way it last moved.
 - **Height:** it stands on the land's height at its feet.
 - **Size:** twice life size (`UNIT_SCALE`), as a tabletop game's figures are, so units read at a glance beside the
-  cities and land, which are drawn life size. Their stands stay as they are, so a vehicle may reach past its stand,
-  as a counter on a table does. A set says its models' sizes against each other: 0 A.D.'s riders and chariot are drawn
-  at three-quarters of its scale, so a horse doesn't tower over a tank. Options has the size of the 3D map's units,
-  from half to half as big again, for a player who'd rather have them read from further away. (Life size until
-  2026-11-21, when I tried twice life size in a game and kept it.)
-- **Aircraft at rest:** out of a city, an aircraft rests in the air over its stand, as high as it flies (`CRUISE`). In
-  a city, it stands on its stand.
+  cities and land, which are drawn life size. Their stands, and a fortified unit's wall, stay as they are, so a squad
+  or a vehicle may reach past its stand, as a counter on a table does. A set says its models' sizes against each
+  other: 0 A.D.'s riders and chariot are drawn at three-quarters of its scale, so a horse doesn't tower over a tank.
+  Options has the size of the 3D map's units, from half to half as big again, for a player who'd rather have them read
+  from further away. (Life size until 2026-11-21, when I tried twice life size in a game and kept it.)
+- **Aircraft:** an aircraft flies over its stand, wherever it is: the built-in set's are drawn so, and one drawn with
+  a model flies as high, its underside `AIRBORNE_LIFT` times its size over the stand (`MarkerKit.modelFigures`).
 - **Squads:** a squad's figures spread around its position, each with a small fixed offset, so they don't line up like
   a parade.
 
@@ -1014,9 +1014,8 @@ mapEvent:
     the short way round, one turn shared by both sides of the middle, so doubling back it never snaps half way round.
 - **Aircraft fly an arc** (aircraft, helicopters and missiles, as the built-in set draws them: `airborne`):
   - A walk whose units all fly climbs as it sets off, over a step's way, to 0.3 over where they'd stand (`CRUISE`,
-    about an aircraft's own height), and comes down over its last step's way to land at its end, in a city. Out of a
-    city, where an aircraft rests in the air (§6.2), a flight sets off at `CRUISE` and stays up at its end (the
-    point's `aloft`). A hop of one square between cities goes half as high.
+    about an aircraft's own height), and comes down over its last step's way to land at its end. A hop of one square
+    goes half as high.
   - A step joined as it comes down climbs on from where it is. One setting off again from elsewhere mid-air sets off as
     high as it is.
   - Its figures, hit points' bar, flag, label and pointer climb (`ALOFT_PART`); its stand and the ring at its feet stay
@@ -1223,6 +1222,11 @@ mapEvent:
   below it (the sea at height 0, a lake or swamp pool at its own). It's stepped against the height function, taken as
   no lower than the water, and refined. The point where it lands goes through `layout.tileAt`, then wraps.
 - **A unit:** a ray that passes through a unit's bounding sphere picks the unit before the square.
+  - As built (`markers/pickUnit.ts`, `Stage.unitAt`): the ray meets what's drawn of each square's unit (its figures,
+    stand and ring, at every copy of the world drawn), and the nearest it meets picks that unit's square, before the
+    ground. Units are drawn twice life size, and aircraft fly over their stands, so their figures stand over the ground
+    of the square behind: a click, a GoTo's square or a tooltip there goes to the square whose unit it's on, as it's
+    seen. A unit walking or fighting isn't picked.
 - **A city:** a banner, or a city's lots, picks the city.
 - **Uses:** clicks, long presses, hover tooltips and target picking (Paradrop, Airlift) all go through these, with the
   tooltip content the 2D map gives [verified: `HoverSubject` in `GamePortal.ts`].
@@ -1315,8 +1319,10 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
   A model's parts are its meshes, each a geometry and a texture:
   - in its owner's colour where its material says (`extras.playerColour`), its texture's alpha the mask, as `rgb ×
     mix(owner, white, alpha)`. An owner's colour darker than `TINT_FLOOR` (a luminance of 0.08, in linear light) is
-    mixed with white just enough to reach it (`ownerTint`), so black doesn't leave the model a flat silhouette. The
-    unit's flag keeps the colour as it is;
+    mixed with white just enough to reach it (`ownerTint`), so black doesn't leave the model a flat silhouette. That
+    lightens dark colours, not black alone: of the civilizations' own colours, the Zulus' near-black, the Americans'
+    navy, the Carthaginians' and Romans' purples, the Malians' brown, the Celts' green and the Russians' dark red, and
+    any saturated blue. The unit's flag keeps the colour as it is;
   - or cut out where its alpha is under a half (`alphaMode` `MASK`), both sides drawn;
   - from both sides where its material says (glTF's `doubleSided`), as a model made in Blender, which draws both, may
     need: a coat's single sheet, seen from inside.

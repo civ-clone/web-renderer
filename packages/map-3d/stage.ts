@@ -45,6 +45,7 @@ import {
   unfaded,
 } from './markers/drawMarker';
 import { TileMarker } from './markers/markerFor';
+import unitUnder from './markers/pickUnit';
 import { OverlayMesh } from './overlay/overlayMesh';
 import { FIELD_OF_VIEW, Orbit, eye, sightFor } from './camera/orbit';
 import Water, { Clouds, Ground } from './water';
@@ -80,6 +81,12 @@ export interface Stage {
     at: readonly [number, number, number],
     marker: TileMarker | null
   ): void;
+  /**
+   * The square (`x,y`) whose unit's drawn under the point `ndc` on the screen (from -1 to 1 across, and up), as the
+   *  camera last drew it, the nearest to it where several are; or nothing (`markers/pickUnit.ts`). A stage that can't
+   *  say leaves the view to pick the ground.
+   */
+  unitAt?(ndc: readonly [number, number]): string | null;
   /**
    * A walk under way (`id`, `walks.ts`), drawn as `marker`, its units alone with no city: one drawn before for it is
    *  replaced, and `null` takes it away.
@@ -686,6 +693,16 @@ export const createStage: StageFactory = (
 
       overlay.drawn = overlayCopiesOf(overlay);
       overlays.set(key, overlay);
+    },
+    unitAt: (ndc): string | null => {
+      markersGroup.updateMatrixWorld();
+      camera.updateMatrixWorld();
+
+      return unitUnder(
+        [...markers].map(([key, { drawn }]) => [key, drawn] as const),
+        camera,
+        ndc
+      );
     },
     setMarker: (key, at, marker): void => {
       // Its geometries and materials are the kit's, shared by every marker, and let go by the kit's sweep: those it

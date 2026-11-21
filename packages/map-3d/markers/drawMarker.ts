@@ -46,13 +46,19 @@ import {
   airborne,
   unitLook,
 } from '@civ-clone/ui-models-builtin/units';
-import { CRUISE } from '../walks';
 
 /**
  * How many times life size units are drawn, before the size the player chooses: twice, as a tabletop game's figures
  *  are, so they read at a glance beside the cities and land, which are drawn life size. Their stands stay as they are.
  */
 export const UNIT_SCALE = 2;
+
+/**
+ * How high over its stand an aircraft drawn with a model flies, times its size: as high as the built-in set's aircraft
+ *  fly (`markers/figures.ts`), the model's underside where theirs is, their bodies' 0.3 less their half-thickness. So a
+ *  model doesn't sit on its stand as a vehicle does, and a flight climbs from there, as theirs does.
+ */
+export const AIRBORNE_LIFT = 0.285;
 
 // The size of a square is about 1 (spec §3): a city fills half its square, and a soldier stands a fifth of a square
 //  life size, drawn `UNIT_SCALE` times that, times the size the player chooses (`UnitMarker.size` is both). A unit's
@@ -178,7 +184,8 @@ export class MarkerKit {
 
   /**
    * A unit's figures drawn with the model `id`, if it's been added: as many as stand for one unit of its look (D6),
-   *  `size` times as big as the set draws them, standing as high as on a stand (a ship on the water), in `colours`.
+   *  `size` times as big as the set draws them, standing as high as on a stand (a ship on the water, an aircraft flying
+   *  `AIRBORNE_LIFT` over it), in `colours`.
    *  One mesh for each of the model's parts, the figures merged in each, made once for each; and how high they reach.
    */
   modelFigures(
@@ -194,15 +201,16 @@ export class MarkerKit {
     }
 
     const afloat = look.shape === 'ship',
+      flies = airborne(look),
       squad = look.shape === 'foot' ? look.squad : 1,
-      shape = JSON.stringify([id, squad, size, afloat]),
-      key = JSON.stringify([id, squad, size, afloat, colours[0]]);
+      shape = JSON.stringify([id, squad, size, afloat, flies]),
+      key = JSON.stringify([id, squad, size, afloat, flies, colours[0]]);
     let merged = this.#modelGeometries.get(shape),
       figures = this.#modelFigures.get(key);
 
     if (merged === undefined) {
       const scale = model.scale * size,
-        lift = afloat ? 0 : STAND_HEIGHT,
+        lift = afloat ? 0 : STAND_HEIGHT + (flies ? AIRBORNE_LIFT * size : 0),
         placed = formation(squad).map(([x, z]) =>
           new Matrix4()
             .makeTranslation(x * size, lift, z * size)
@@ -245,7 +253,7 @@ export class MarkerKit {
     return figures;
   }
 
-  // A model's part's material: in its owner's colour where its texture says (lightened if it's very dark), or cut out
+  // A model's part's material: in its owner's colour where its texture says (lightened if it's dark), or cut out
   //  by its alpha, made once for each; from both sides where its file says. A cut-out part isn't in its owner's colour,
   //  as its alpha's what's cut out, not a mask, and is always drawn from both sides.
   #modelMaterial(
@@ -739,8 +747,7 @@ export const IN_FRONT_OF_CITY = 0.26;
 /**
  * A square's markers, standing on the ground at its middle: its city, and the unit on top of its stack in front of its
  *  buildings, its flag over the city's name, from the same point, so the two never cross however the camera's turned.
- *  A walker's, `flying`, an aircraft can climb off its stand (`ALOFT_PART`); out of a city, an aircraft standing still
- *  rests in the air, `CRUISE` over its stand, as high as a flight that ends there stays.
+ *  A walker's, `flying`, an aircraft can climb off its stand (`ALOFT_PART`).
  */
 export const drawMarker = (
   kit: MarkerKit,
@@ -756,11 +763,6 @@ export const drawMarker = (
   if (marker.unit !== null) {
     const inFront =
         marker.inCity ?? marker.city !== null ? IN_FRONT_OF_CITY : 0,
-      // An aircraft out of a city rests in the air, as high as it flies, its stand under it.
-      aloft =
-        !flying &&
-        inFront === 0 &&
-        airborne(unitLook(marker.unit.type, marker.unit.kinds)),
       pawn = drawUnit(
         kit,
         marker.unit,
@@ -770,18 +772,13 @@ export const drawMarker = (
               at: [CITY_NAME_AT[0], CITY_NAME_AT[1], CITY_NAME_AT[2] - inFront],
               over: CITY_LABEL + SPACE,
             },
-        flying || aloft,
+        flying,
         // In front of a city's buildings, or where they stand with the towns hidden: in port, not out at sea.
         inFront === 0
       );
 
     pawn.name = UNIT_PART;
     pawn.position.z = inFront;
-
-    if (aloft) {
-      pawn.getObjectByName(ALOFT_PART)!.position.y = CRUISE;
-    }
-
     group.add(pawn);
   }
 
