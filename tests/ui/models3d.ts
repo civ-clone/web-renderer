@@ -289,6 +289,39 @@ expect(
       new Uint8Array(data, 20).set(text);
 
       return data;
+    },
+    // A glTF binary of a harmless JSON chunk and then one reading from elsewhere, which three.js reads last.
+    twoJson = (): ArrayBuffer => {
+      const first = new TextEncoder().encode(
+          JSON.stringify({ buffers: [{ byteLength: 4 }] }).padEnd(32, ' ')
+        ),
+        second = new TextEncoder().encode(
+          JSON.stringify({
+            buffers: [{ byteLength: 4, uri: 'https://example.com/x.bin' }],
+          }).padEnd(64, ' ')
+        ),
+        data = new ArrayBuffer(12 + 8 + first.length + 8 + second.length),
+        view = new DataView(data);
+
+      view.setUint32(0, 0x46546c67, true);
+      view.setUint32(4, 2, true);
+      view.setUint32(8, data.byteLength, true);
+      view.setUint32(12, first.length, true);
+      view.setUint32(16, 0x4e4f534a, true);
+      new Uint8Array(data, 20).set(first);
+      view.setUint32(20 + first.length, second.length, true);
+      view.setUint32(24 + first.length, 0x4e4f534a, true);
+      new Uint8Array(data, 28 + first.length).set(second);
+
+      return data;
+    },
+    // One that says it's longer than it is.
+    longer = (): ArrayBuffer => {
+      const data = binary({ buffers: [{ byteLength: 4 }] });
+
+      new DataView(data).setUint32(8, data.byteLength + 8, true);
+
+      return data;
     };
 
   expect(
@@ -360,25 +393,16 @@ expect(
         })
       ),
       selfContained(binary([])),
+      // A second JSON chunk, which three.js would read instead; more than it says it is; and less.
+      selfContained(twoJson()),
+      selfContained(longer()),
+      selfContained(binary({ buffers: [{ byteLength: 4 }] }).slice(0, 24)),
     ],
-    [
-      true,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-    ]
+    [true, ...Array(14).fill(false)]
   );
 
   // Whatever a model's file says, what it's loaded with fetches nothing but what's in the file itself.
-  const manager = modelManager(),
+  const manager = modelManager('https://site.test'),
     resolved = (url: string): string => {
       try {
         return manager.resolveURL(url);
@@ -392,6 +416,7 @@ expect(
     [
       resolved('blob:https://site.test/1234'),
       resolved('data:image/png;base64,AAAA'),
+      resolved('blob:https://example.com/1234'),
       resolved('https://example.com/x.bin'),
       resolved('/sets/0ad/x.bin'),
       resolved('x.bin'),
@@ -400,6 +425,7 @@ expect(
     [
       'blob:https://site.test/1234',
       'data:image/png;base64,AAAA',
+      'refused',
       'refused',
       'refused',
       'refused',

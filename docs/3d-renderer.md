@@ -1289,10 +1289,12 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
   binaries read with three.js's `GLTFLoader`. Only from this site:
   - each address is checked before it's fetched (`onSite`), a redirect is refused, and each model must be beside the
     manifest;
-  - a model must be whole in itself (`selfContained`: no `uri` anywhere in it, its buffers and images as lists, and no
-    extensions), and it's parsed from its bytes;
-  - what it's loaded with refuses any address but what's in the file itself (`modelManager`: `blob:` and `data:`), so
-    nothing else is fetched for it, whatever it says.
+  - a model must be whole in itself (`selfContained`: its chunks read as three.js reads them, one JSON chunk and a
+    binary one, as long as it says; no `uri` anywhere in it, its buffers and images as lists, and no extensions), and
+    it's parsed from its bytes;
+  - what it's loaded with refuses any address but what's in the file itself (`modelManager`: this site's `blob:`
+    addresses and `data:` ones), so nothing else is fetched for it, whatever it says. Nothing's sent with what's
+    fetched (no cookies).
 
   A model's parts are its meshes, each a geometry and a texture:
   - in its owner's colour where its material says (`extras.playerColour`), its texture's alpha the mask, as `rgb ×

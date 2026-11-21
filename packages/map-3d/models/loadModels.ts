@@ -85,13 +85,37 @@ export const selfContained = (data: ArrayBuffer): boolean => {
   const view = new DataView(data),
     length = view.getUint32(12, true);
 
-  // `glTF`, version 2, and a JSON chunk first, as a glTF binary is.
+  // `glTF`, version 2, as long as it says, and a JSON chunk first, as a glTF binary is.
   if (
     view.getUint32(0, true) !== 0x46546c67 ||
     view.getUint32(4, true) !== 2 ||
+    view.getUint32(8, true) !== data.byteLength ||
     view.getUint32(16, true) !== 0x4e4f534a ||
     20 + length > data.byteLength
   ) {
+    return false;
+  }
+
+  // Its chunks, read as three.js reads them, to its end: that JSON chunk and at most a binary one after it, ending at
+  //  its end, so the JSON looked at here is the one it's loaded with.
+  const kinds: number[] = [];
+
+  for (let at = 12; at < data.byteLength; ) {
+    if (at + 8 > data.byteLength) {
+      return false;
+    }
+
+    const size = view.getUint32(at, true);
+
+    kinds.push(view.getUint32(at + 4, true));
+    at += 8 + size;
+
+    if (at > data.byteLength) {
+      return false;
+    }
+  }
+
+  if (kinds.length > 2 || (kinds.length === 2 && kinds[1] !== 0x004e4942)) {
     return false;
   }
 
@@ -126,14 +150,15 @@ export const selfContained = (data: ArrayBuffer): boolean => {
 };
 
 /**
- * What a model's loaded with: anything it would fetch but what's in the file itself (a `blob:` or `data:` address, as
- *  three.js reads its images from), it's refused, whatever the file said.
+ * What a model's loaded with: anything it would fetch but what's in the file itself (a `blob:` address of this site's,
+ *  `here`, or a `data:` one, as three.js reads its images from), it's refused, whatever the file said.
  */
-export const modelManager = (): LoadingManager => {
-  const manager = new LoadingManager();
+export const modelManager = (here: string): LoadingManager => {
+  const manager = new LoadingManager(),
+    own = `blob:${here}/`;
 
   manager.setURLModifier((url: string): string => {
-    if (!/^(?:blob|data):/i.test(url)) {
+    if (!url.startsWith(own) && !/^data:/i.test(url)) {
       throw new Error(`${url}: a model reads nothing from elsewhere`);
     }
 
@@ -173,7 +198,7 @@ export const loadModels = async (
   }
 
   // Nor sent on to another by the site.
-  const response = await fetch(at, { redirect: 'error' });
+  const response = await fetch(at, { redirect: 'error', credentials: 'omit' });
 
   if (!response.ok) {
     throw new Error(`${url}: ${response.status}`);
@@ -185,7 +210,7 @@ export const loadModels = async (
     throw new Error(`${url}: ${manifest}`);
   }
 
-  const loader = new GLTFLoader(modelManager()),
+  const loader = new GLTFLoader(modelManager(location.origin)),
     types = unitTypesOf(manifest),
     // Where the manifest is: each model's beside it.
     beside = new URL('.', at).href;
@@ -201,7 +226,10 @@ export const loadModels = async (
           );
         }
 
-        const got = await fetch(file, { redirect: 'error' });
+        const got = await fetch(file, {
+          redirect: 'error',
+          credentials: 'omit',
+        });
 
         if (!got.ok) {
           throw new Error(`${file}: ${got.status}`);
