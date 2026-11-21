@@ -14,6 +14,7 @@ import {
   MAP3D_UNIT_SIZE_OPTION,
   MAP3D_WALKS_OPTION,
   map3dAsked,
+  map3dModelsAsked,
   unitSizeFor,
   walkSpeedFor,
 } from '@civ-clone/ui-client/lib/map3dOptions';
@@ -146,11 +147,12 @@ export type PrepareMap3DOptions = {
 };
 
 // The 3D map's factory, once its script has loaded; the script being fetched; whether the player has been told why the
-//  map is 2D, and how.
+//  map is 2D, and how; and the set of models the page asked to try out, if it did.
 let factory: CreateMapView3D | null = null,
   loading: Promise<CreateMapView3D> | null = null,
   told = false,
-  say: (text: string) => void = sayMap3DFellBack;
+  say: (text: string) => void = sayMap3DFellBack,
+  modelsAsked: { url: string } | undefined;
 
 const tell = (text: string): void => {
   if (!told) {
@@ -173,6 +175,8 @@ export const prepareMap3D = async ({
   if (factory !== null || !map3dAsked(search)) {
     return;
   }
+
+  modelsAsked = map3dModelsAsked(search);
 
   say = sayWith;
 
@@ -199,6 +203,7 @@ export const forgetMap3D = (): void => {
   loading = null;
   told = false;
   say = sayMap3DFellBack;
+  modelsAsked = undefined;
 };
 
 /**
@@ -361,6 +366,8 @@ export const makeMapView = (
       lockVerticalEdges: deps.options.get('lockVerticalEdges', false),
       mapCanvas: deps.mapPortal,
       minimapCanvas: deps.minimapCanvas,
+      // A set of models to try out, where the page asked for one.
+      models: modelsAsked,
       playerId: deps.playerId,
       squares: mapSquares,
       transport: deps.transport,

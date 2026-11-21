@@ -7,6 +7,20 @@ import parseBooleanParam from './parseBooleanParam';
 export const map3dAsked = (search: string): boolean =>
   parseBooleanParam(new URLSearchParams(search).get('3d'), false);
 
+/**
+ * The set of models the page asked the 3D map to draw units with (`?models=`, its manifest's path on this site, to try
+ *  one out), or none. Only a path on this site: a link can't have the map fetch another site's.
+ */
+export const map3dModelsAsked = (
+  search: string
+): { url: string } | undefined => {
+  const url = new URLSearchParams(search).get('models');
+
+  return url !== null && /^\/(?![/\\])/.test(url) && !url.includes('\\')
+    ? { url }
+    : undefined;
+};
+
 /** The option the size of the 3D map's units is kept in: 1 is life size, as cities are drawn. */
 export const MAP3D_UNIT_SIZE_OPTION = 'map3dUnitSize';
 

@@ -50,6 +50,7 @@ import { FIELD_OF_VIEW, Orbit, eye, sightFor } from './camera/orbit';
 import Water, { Clouds, Ground } from './water';
 import YieldIcons from './yieldIcons';
 import { YieldMesh } from './yields';
+import { loadModels } from './models/loadModels';
 
 /** What the stage has drawn, for the debug overlay. */
 export type StageStats = {
@@ -135,6 +136,15 @@ export interface Stage {
     period?: { u: number; v: number | null }
   ): void;
   stats(): StageStats;
+  /**
+   * Loads the set of models whose manifest is at `url` (`models/loadModels.ts`), to draw units with: `loaded` is told
+   *  of each model as it's ready, with the unit types it draws. Resolves once all have been tried, or rejects saying
+   *  why there's none. A stage that draws no models has none.
+   */
+  loadModels?(
+    url: string,
+    loaded: (id: string, types: readonly string[]) => void
+  ): Promise<void>;
   dispose(): void;
 }
 
@@ -335,6 +345,9 @@ export const createStage: StageFactory = (
     stopped = false,
     // The yields drawn now, at every copy of the world in sight, or none.
     yieldsPlaced: Placed | null = null;
+
+  // Taken down: models loaded after are let go of.
+  let disposed = false;
 
   renderer.outputColorSpace = SRGBColorSpace;
   // For what's laid on the land, to stop at a pole the view's stopped at.
@@ -881,12 +894,33 @@ export const createStage: StageFactory = (
       yieldsPlaced.drawn = copiesOf(yieldsPlaced, yieldsGroup);
     },
     view,
+    loadModels: async (url, loaded): Promise<void> => {
+      await loadModels(
+        url,
+        (id, model, types) => {
+          // Taken down meanwhile: let go of it.
+          if (disposed) {
+            model.parts.forEach(({ geometry, map }) => {
+              geometry.dispose();
+              map?.dispose();
+            });
+
+            return;
+          }
+
+          kit.addModel(id, model);
+          loaded(id, types);
+        },
+        (id, error) => console.warn(`The 3D map's model ${id}:`, error)
+      );
+    },
     stats: (): StageStats => ({
       drawCalls: renderer.info.render.calls,
       triangles: renderer.info.render.triangles,
       geometries: renderer.info.memory.geometries,
     }),
     dispose: (): void => {
+      disposed = true;
       chunks.forEach(({ geometry }) => geometry.dispose());
       chunks.clear();
       overlays.forEach(({ geometry }) => geometry.dispose());

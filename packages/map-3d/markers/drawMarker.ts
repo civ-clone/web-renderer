@@ -16,8 +16,10 @@ import {
   BufferGeometry,
   CanvasTexture,
   Color,
+  DoubleSide,
   Group,
   Material,
+  Matrix4,
   Mesh,
   MeshStandardMaterial,
   Object3D,
@@ -30,10 +32,14 @@ import { CityMarker, TileMarker, UnitMarker } from './markerFor';
 import {
   BodyPart,
   FigureColours,
+  formation,
   wallsGeometry,
   figureGeometry,
   unitBodyGeometry,
 } from './figures';
+import { LoadedModel } from '../models/loadModels';
+import TintedMaterial from './tinted';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {
   UnitLook,
   airborne,
@@ -64,12 +70,22 @@ const STAND_HEIGHT = 0.03,
   // How many labels the kit holds before it first lets go of those no longer drawn.
   SWEEP_FROM = 256;
 
+/** A unit's figures drawn with a set's model: a mesh for each of its parts, and how high they reach. */
+export type ModelFigures = {
+  meshes: [BufferGeometry, Material][];
+  top: number;
+};
+
 /** What markers are drawn with, shared by all of them, and let go together. */
 export class MarkerKit {
   #materials = new Map<string, MeshStandardMaterial>();
   #labels = new Map<string, SpriteMaterial>();
   #figures = new Map<string, BufferGeometry>();
   #bodies = new Map<string, BufferGeometry>();
+  // A set's models (`addModel`), by their ids; and what's drawn of each, as `modelFigures` makes it.
+  #models = new Map<string, LoadedModel>();
+  #modelFigures = new Map<string, ModelFigures>();
+  #modelMaterials = new Map<string, Material>();
   #walls: BufferGeometry | null = null;
   #flats = new Map<string, SpriteMaterial>();
   #pointer: SpriteMaterial | null = null;
@@ -107,10 +123,103 @@ export class MarkerKit {
     return material;
   }
 
+  /** A set's model `id` (`loadModels.ts`), to draw the unit types it draws (`UnitMarker.model`). */
+  addModel(id: string, model: LoadedModel): void {
+    this.#models.set(id, model);
+  }
+
+  /**
+   * A unit's figures drawn with the model `id`, if it's been added: as many as stand for one unit of its look (D6),
+   *  `size` times as big as the set draws them, standing as high as on a stand (a ship on the water), in `colours`.
+   *  One mesh for each of the model's parts, the figures merged in each, made once for each; and how high they reach.
+   */
+  modelFigures(
+    id: string,
+    look: UnitLook,
+    colours: FigureColours,
+    size: number = 1
+  ): ModelFigures | null {
+    const model = this.#models.get(id);
+
+    if (model === undefined) {
+      return null;
+    }
+
+    const afloat = look.shape === 'ship',
+      squad = look.shape === 'foot' ? look.squad : 1,
+      key = JSON.stringify([id, squad, colours[0], size, afloat]);
+    let figures = this.#modelFigures.get(key);
+
+    if (figures === undefined) {
+      const scale = model.scale * size,
+        lift = afloat ? 0 : STAND_HEIGHT,
+        placed = formation(squad).map(([x, z]) =>
+          new Matrix4()
+            .makeTranslation(x * size, lift, z * size)
+            .multiply(new Matrix4().makeScale(scale, scale, scale))
+        );
+      let top = lift;
+
+      const meshes = model.parts.map(
+        (part, index): [BufferGeometry, Material] => {
+          const copies = placed.map((matrix) =>
+              part.geometry.clone().applyMatrix4(matrix)
+            ),
+            geometry =
+              (copies.length === 1
+                ? copies[0]!.clone()
+                : mergeGeometries(copies)) ?? new BufferGeometry();
+
+          copies.forEach((copy) => copy.dispose());
+          geometry.computeBoundingBox();
+          geometry.computeBoundingSphere();
+          top = Math.max(top, geometry.boundingBox?.max.y ?? lift);
+
+          return [geometry, this.#modelMaterial(id, index, part, colours)];
+        }
+      );
+
+      figures = { meshes, top };
+      this.#modelFigures.set(key, figures);
+    }
+
+    return figures;
+  }
+
+  // A model's part's material: in its owner's colour where its texture says, or cut out by its alpha, made once for
+  //  each.
+  #modelMaterial(
+    id: string,
+    index: number,
+    part: LoadedModel['parts'][number],
+    colours: FigureColours
+  ): Material {
+    const key = JSON.stringify([id, index, part.tinted ? colours[0] : null]);
+    let material = this.#modelMaterials.get(key);
+
+    if (material === undefined) {
+      const shared = { map: part.map, roughness: 0.85, metalness: 0 };
+
+      material = part.cutout
+        ? new MeshStandardMaterial({
+            ...shared,
+            alphaTest: 0.5,
+            side: DoubleSide,
+          })
+        : new TintedMaterial({
+            ...shared,
+            tint: part.tinted ? new Color(colours[0]) : new Color(1, 1, 1),
+          });
+      this.#modelMaterials.set(key, material);
+    }
+
+    return material;
+  }
+
   /**
    * All that's drawn of a unit on the land, as `look` says, in `colours`, fortified or not, its figures `size` times
    *  life size: its figures, stand and wall, one geometry, made once for each. Or, as `part` says, its figures alone
-   *  or its stand and wall alone. A ship out at sea, with its ripples (`ripples`).
+   *  or its stand and wall alone. A ship out at sea, with its ripples (`ripples`), round it or alone.
    */
   body(
     look: UnitLook,
@@ -120,8 +229,8 @@ export class MarkerKit {
     part: BodyPart = 'whole',
     ripples = false
   ): BufferGeometry {
-    // Only a ship's whole body has ripples round it: any other's the same with or without.
-    const rippled = ripples && look.shape === 'ship' && part === 'whole',
+    // Only a ship's whole body or base has ripples round it: any other's the same with or without.
+    const rippled = ripples && look.shape === 'ship' && part !== 'figures',
       key = JSON.stringify([look, colours, fortified, size, part, rippled]);
     let geometry = this.#bodies.get(key);
 
@@ -296,6 +405,19 @@ export class MarkerKit {
     this.#walls?.dispose();
     this.#walls = null;
     this.#bodies.clear();
+    this.#modelFigures.forEach(({ meshes }) =>
+      meshes.forEach(([geometry]) => geometry.dispose())
+    );
+    this.#modelFigures.clear();
+    this.#modelMaterials.forEach((material) => material.dispose());
+    this.#modelMaterials.clear();
+    this.#models.forEach(({ parts }) =>
+      parts.forEach(({ geometry, map }) => {
+        geometry.dispose();
+        map?.dispose();
+      })
+    );
+    this.#models.clear();
     this.figureMaterial.dispose();
     this.#flats.forEach((material) => material.dispose());
     this.#pointer?.map?.dispose();
@@ -427,17 +549,25 @@ const drawUnit = (
     { ring } = kit.geometries,
     look = unitLook(unit.type, unit.kinds),
     apart = flying && airborne(look),
-    body = kit.body(
-      look,
-      unit.colours,
-      unit.fortified,
-      unit.size,
-      apart ? 'figures' : 'whole',
-      // Out at sea, not in front of a city's buildings: in rings of ripples.
-      atSea
-    ),
+    // Drawn with a set's model, once it's been added, rather than the built-in set's figures.
+    modelled =
+      unit.model === undefined
+        ? null
+        : kit.modelFigures(unit.model, look, unit.colours, unit.size),
+    body =
+      modelled === null
+        ? kit.body(
+            look,
+            unit.colours,
+            unit.fortified,
+            unit.size,
+            apart ? 'figures' : 'whole',
+            // Out at sea, not in front of a city's buildings: in rings of ripples.
+            atSea
+          )
+        : null,
     aloft = apart ? new Group() : group,
-    top = body.boundingBox?.max.y ?? 0.3,
+    top = modelled?.top ?? body?.boundingBox?.max.y ?? 0.3,
     at = badges?.at ?? [0, top + FLAG_GAP, 0],
     // From the bottom up, on the screen.
     hurt = unit.health !== null,
@@ -448,21 +578,36 @@ const drawUnit = (
 
   // Its figures on a stand in the owner's second colour, so whose it is shows from afar (a ship rides the water without
   //  one), behind a low wall when fortified: one mesh, facing the way it last went (its figures face south, unturned).
-  const figures = new Mesh(body, kit.figureMaterial);
+  //  A model's figures are a mesh for each of its parts, on the built-in set's stand.
+  const figures =
+    modelled === null ? new Mesh(body!, kit.figureMaterial) : new Group();
 
+  modelled?.meshes.forEach(([geometry, material]) =>
+    figures.add(new Mesh(geometry, material))
+  );
   figures.name = FIGURES_PART;
   figures.rotation.y = unit.facing;
   aloft.add(figures);
 
+  if (apart || modelled !== null) {
+    const base = kit.body(
+      look,
+      unit.colours,
+      unit.fortified,
+      unit.size,
+      'base',
+      atSea
+    );
+
+    // A ship's has nothing to draw, at sea or not, but its ripples.
+    if (base.getAttribute('position') !== undefined) {
+      group.add(new Mesh(base, kit.figureMaterial));
+    }
+  }
+
   if (apart) {
     aloft.name = ALOFT_PART;
-    group.add(
-      new Mesh(
-        kit.body(look, unit.colours, unit.fortified, unit.size, 'base'),
-        kit.figureMaterial
-      ),
-      aloft
-    );
+    group.add(aloft);
   }
 
   // Its hit points, when it has lost some: a bar under its flag, shorter and redder as they go, from its left.

@@ -391,6 +391,10 @@ export class MapView3D implements MapRenderer {
   #unitsShown = true;
   // How big units are drawn, as the player chose (1 is life size), and what stops a change to it being told.
   #unitSize: number;
+  // The model each unit type is drawn with, by its type, from the set of models (`MapView3DDeps['models']`), as each
+  //  model's loaded: the built-in set's figures for the rest.
+  #models = new Map<string, string>();
+  #modelOf = (type: string): string | null => this.#models.get(type) ?? null;
   #stopUnitSize: () => void = (): void => {};
   #yieldsShown = false;
   // Whether the yields drawn are out of date (`#showYields`), and whether any are drawn.
@@ -577,6 +581,28 @@ export class MapView3D implements MapRenderer {
           this.#paintBannersAgain();
         }
       }) ?? ((): void => {});
+
+    if (deps.models !== undefined) {
+      this.#loadModels(deps.models.url);
+    }
+  }
+
+  // The set of models at `url` loaded, each unit type its models draw marked again with its model as each arrives. One
+  //  that can't be had leaves the built-in set's figures, said once.
+  #loadModels(url: string): void {
+    this.#stage
+      .loadModels?.(url, (id, types) => {
+        if (this.#disposed) {
+          return;
+        }
+
+        types.forEach((type) => this.#models.set(type, id));
+        this.#markAll();
+        this.#draw();
+      })
+      .catch((error: unknown) =>
+        console.warn("The 3D map's models couldn't be loaded:", error)
+      );
   }
 
   /** The land, for the `?debug=1` console. */
@@ -1199,7 +1225,8 @@ export class MapView3D implements MapRenderer {
       this.#unitsShown,
       this.#words,
       () => 0,
-      this.#unitSize
+      this.#unitSize,
+      this.#modelOf
     );
   }
 
@@ -2621,7 +2648,8 @@ export class MapView3D implements MapRenderer {
         this.#unitsShown,
         this.#words,
         (unit) => this.#facings.get(unit.id) ?? 0,
-        this.#unitSize
+        this.#unitSize,
+        this.#modelOf
       ),
       // With its banner hung below its square, a city's name isn't over it too.
       marker =

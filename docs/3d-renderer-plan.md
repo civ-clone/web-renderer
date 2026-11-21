@@ -350,6 +350,15 @@ Epic's UE4 skeleton or only match its bone names.
 
 ### 2.2 glTF and skeletal animation
 
+**First part, static models: done** (spec §10, "As built"). A set of models, its manifest's path on the site given as
+`?models=`, is loaded as the game starts. Each unit type it has a model for is drawn with it once it arrives: the
+model's parts in their owner's colour, the squad merged in each, on the built-in set's stand. The rest are the built-in
+set's figures. Posed as they stand still: no clips yet. Still to do:
+- **Shipping the first set,** 0 A.D.'s ancient units, with its credits;
+- **Clips:** idle, walk, attack, death;
+- **Squads:** instancing them;
+- **Textures:** KTX2.
+
 - **What:**
   - loading `.glb` with KTX2 textures;
   - `AnimationMixer` clips and the fallbacks;

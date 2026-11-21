@@ -370,7 +370,7 @@ const person = (
 };
 
 // Where the figures of a squad of `count` stand, round the square's middle.
-const formation = (count: number): [number, number][] =>
+export const formation = (count: number): [number, number][] =>
   count <= 1
     ? [[0, 0]]
     : count === 2
@@ -1110,7 +1110,10 @@ export const mergeParts = (parts: readonly Part[]): BufferGeometry => {
     return piece;
   });
 
-  const geometry = mergeGeometries(pieces) ?? new BufferGeometry();
+  // Nothing to merge (a ship's base, with no stand): an empty geometry.
+  const geometry =
+    (pieces.length === 0 ? null : mergeGeometries(pieces)) ??
+    new BufferGeometry();
 
   pieces.forEach((piece) => piece.dispose());
   geometry.computeBoundingBox();
@@ -1203,7 +1206,7 @@ export const unitBodyGeometry = (
     });
   }
 
-  if (afloat && ripples && part === 'whole') {
+  if (afloat && ripples) {
     const size = (look.large ? 1.25 : 1) * scale;
 
     RIPPLES.forEach(([across, along]) =>

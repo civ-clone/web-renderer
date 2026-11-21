@@ -44,6 +44,9 @@ export type UnitMarker = {
   facing: number;
   // How big its figures are drawn, as the player chose: 1 is life size.
   size: number;
+  // The model a set of models draws it with (`MapView3DDeps['models']`), once it's loaded: the built-in set's figures
+  //  where there's none.
+  model?: string;
 };
 
 export type TileMarker = {
@@ -101,7 +104,8 @@ const healthOf = (unit: Unit): number | null => {
 
 /**
  * What to mark on `tile`, with the unit `activeUnitId` active, and the units and cities `shown` or hidden (`t`):
- *  nothing, for a square with neither. Its words are the page's, where it gives them.
+ *  nothing, for a square with neither. Its words are the page's, where it gives them; and its unit's drawn with the
+ *  model `modelOf` says for its type, where it says one.
  */
 export const markerFor = (
   tile: Pick<Tile, 'city' | 'units'>,
@@ -109,11 +113,13 @@ export const markerFor = (
   shown: boolean,
   words: MarkerWords = {},
   facingOf: (unit: Unit) => number = () => 0,
-  unitSize: number = 1
+  unitSize: number = 1,
+  modelOf: (type: string) => string | null = () => null
 ): TileMarker | null => {
   const units = tile.units ?? [],
     top = unitOnTop(units, activeUnitId),
     active = top !== null && top.id === activeUnitId,
+    model = top === null ? null : modelOf(top._),
     city: CityMarker | null =
       shown && tile.city
         ? {
@@ -142,6 +148,7 @@ export const markerFor = (
             status: (top.busy ? words.unitStatus?.(top) : null) || null,
             facing: facingOf(top),
             size: unitSize,
+            ...(model === null ? {} : { model }),
           }
         : null;
 
