@@ -10,7 +10,10 @@
 // What's laid on the land (`overlay/`: roads, fields, mines, specials, huts) is a mesh for each chunk of the squares
 //  whose middles are in it. It's made again when its chunk's land is, or when a square in it or beside it is released,
 //  as roads join their neighbours: far cheaper than the land, so a road built rebuilds no land. And when the towns are
-//  hidden or shown (`t`, `showTowns`): those with a city on or beside them.
+//  hidden or shown (`t`, `showTowns`): those with a city on or beside them. Each chunk's mesh is kept, one with the
+//  towns shown and one with them hidden (one for both, where no town is on or beside its squares), and taken again
+//  while its squares would be laid as they were, so pressing `t` again only swaps them; until the land changes near
+//  enough to it to move the heights it's laid on.
 
 import groundLayoutFor, { GroundLayout } from './layouts';
 import { REACH } from './terrain/kernel';
@@ -26,6 +29,7 @@ import overlayFor, {
   SquareOverlay,
 } from './overlay/overlayFor';
 import overlayMesh, {
+  NORMAL_STEP,
   OverlayMesh,
   OverlayPlace,
   Soup,
@@ -36,13 +40,22 @@ import overlayMesh, {
 } from './overlay/overlayMesh';
 
 // A chunk's overlay being made a square at a time: which chunk, its squares, how many are made, what's laid so far,
-//  and the land's heights read for it.
+//  what was laid on each square made (as `overlayFor` said), the land's heights read for it, and whether it's to be
+//  kept once it's made: not if the land's changed since it was begun.
 type Making = {
   key: string;
   squares: [number, number][];
   done: number;
   laid: Soup;
+  signatures: string[];
   heights: Map<string, number>;
+  keep: boolean;
+};
+
+// A chunk's overlay as it was made: what was laid on each of its squares, in turn, and its mesh, or nothing.
+type Made = {
+  signatures: string[];
+  mesh: OverlayMesh | null;
 };
 
 // A number of the square at (`x`, `y`)'s own, for where things stand on it and which way its roads bend.
@@ -57,6 +70,10 @@ export class Land {
   #queue: string[] = [];
   // How far a change to a square reaches, in world units.
   #reach: number;
+  // How far past its chunk what's laid on a chunk reads the land's heights: its squares' outlines reach a corner past
+  //  their middles, a point's normal reads the land either side of it, and a point's height is read from the land's
+  //  points round it.
+  #overhang: number;
   #world: World;
   // The chunks whose overlays are to be made again, and which squares' middles each has, worked out once.
   #overlaysDue = new Set<string>();
@@ -65,6 +82,9 @@ export class Land {
   #squaresByChunk: Map<string, [number, number][]> | null = null;
   // What was last laid on each square, by `x,y`, as `overlayFor` said: a chunk's made again only when one changes.
   #laid = new Map<string, string>();
+  // Each chunk's overlay as it was last made, by `i,j`, with the towns shown and with them hidden: taken again rather
+  //  than made again while its squares would be laid as they were then. Let go when the land it's laid on may move.
+  #made = new Map<string, { shown?: Made; hidden?: Made }>();
   // The city shown on a square, where it's shown otherwise than the world has it (`keepCities`).
   #keptCity: (x: number, y: number) => Tile['city'] | undefined = () =>
     undefined;
@@ -138,6 +158,9 @@ export class Land {
         (seaFloor.reach - 1) * step,
         step / 2 + WANDER * Math.SQRT2 + BEND
       );
+
+    this.#overhang =
+      corner + NORMAL_STEP + Math.max(this.#grid.spacingU, this.#grid.spacingV);
 
     // Each edge of a square's outline: how far it is from the middle, and which way it faces.
     const outline = this.layout.outline(0, 0),
@@ -242,6 +265,7 @@ export class Land {
     this.#queue = this.#nearestFirst(all, u, v);
     this.#focus = [u, v];
     all.forEach((key) => this.#overlaysDue.add(key));
+    this.#landChanged();
   }
 
   /**
@@ -281,6 +305,16 @@ export class Land {
       ([i, j]) => `${i},${j}`
     );
 
+    // What's laid on those, and on any whose squares reach into the land they're on.
+    this.#landChanged(
+      chunksNear(
+        this.#grid,
+        this.layout,
+        terrain,
+        this.#reach + this.#overhang
+      ).map(([i, j]) => `${i},${j}`)
+    );
+
     this.#queue = this.#nearestFirst(
       [...new Set([...this.#queue, ...near])],
       u,
@@ -301,13 +335,9 @@ export class Land {
       return;
     }
 
-    // Where a city stands, as the world has it or as one's kept from before a battle.
     const towns = [...this.#chunksOfSquares().values()]
       .flat()
-      .filter(
-        ([x, y]) =>
-          Boolean(this.#world.get(x, y).city) || Boolean(this.#keptCity(x, y))
-      );
+      .filter(([x, y]) => this.#townAt(x, y));
 
     this.#townsShown = shown;
     this.#focus = [u, v];
@@ -335,6 +365,31 @@ export class Land {
         this.#overlaysDue.add(chunk);
       }
     });
+  }
+
+  // Whether a city stands on the square at (`x`, `y`), as the world has it or as one's kept from before a battle.
+  #townAt(x: number, y: number): boolean {
+    return Boolean(this.#world.get(x, y).city) || Boolean(this.#keptCity(x, y));
+  }
+
+  // The land's changed under the chunks `near` (every one, if none's given), or under what's laid on them: what's laid
+  //  on them, as it was made, is let go, as it read the land's heights, and so is the chunk being made among them, once
+  //  it's made.
+  #landChanged(near?: string[]): void {
+    const changed = near === undefined ? null : new Set(near);
+
+    if (changed === null) {
+      this.#made.clear();
+    } else {
+      changed.forEach((key) => this.#made.delete(key));
+    }
+
+    if (
+      this.#making !== null &&
+      (changed === null || changed.has(this.#making.key))
+    ) {
+      this.#making.keep = false;
+    }
   }
 
   /** The chunks waiting, put in order again, the nearest to (`u`, `v`) first: the map has been centred elsewhere. */
@@ -386,24 +441,49 @@ export class Land {
 
     // What's laid on the chunks, the nearest first, a square at a time, so a busy chunk is made over a few frames
     //  rather than holding one up. One that's changed again while it's being made is begun again.
+    // Whether a chunk's been handed to the stage this frame: past the budget, no other's begun.
+    let handed = false;
+
     while (this.#overlaysDue.size > 0 || this.#making !== null) {
       if (this.#making !== null && this.#overlaysDue.has(this.#making.key)) {
         this.#making = null;
       }
 
       if (this.#making === null) {
+        if (handed && spent()) {
+          return;
+        }
+
         const key = this.#nearestFirst(
-          [...this.#overlaysDue],
-          ...this.#focus
-        )[0]!;
+            [...this.#overlaysDue],
+            ...this.#focus
+          )[0]!,
+          squares = this.#chunksOfSquares().get(key) ?? [],
+          made = this.#madeAs(key, squares);
 
         this.#overlaysDue.delete(key);
+
+        // As it was made before, as `t` hides the towns and shows them again: taken again, and nothing to make.
+        if (made !== null) {
+          const [i, j] = key.split(',').map(Number) as [number, number];
+
+          squares.forEach(([x, y], index) =>
+            this.#laid.set(`${x},${y}`, made.signatures[index]!)
+          );
+          stage.setOverlay(i, j, made.mesh);
+          handed = true;
+
+          continue;
+        }
+
         this.#making = {
           key,
-          squares: this.#chunksOfSquares().get(key) ?? [],
+          squares,
           done: 0,
           laid: soup(),
+          signatures: [],
           heights: new Map(),
+          keep: true,
         };
       }
 
@@ -414,6 +494,7 @@ export class Land {
         const [x, y] = making.squares[making.done]!,
           square = this.#square(x, y, making.heights);
 
+        making.signatures.push(this.#laid.get(`${x},${y}`)!);
         making.done++;
 
         if (square !== null) {
@@ -426,17 +507,58 @@ export class Land {
       }
 
       const [i, j] = making.key.split(',').map(Number) as [number, number],
-        { stepsU, stepsV, spacingU, spacingV } = this.#grid;
+        { stepsU, stepsV, spacingU, spacingV } = this.#grid,
+        mesh =
+          making.laid.positions.length === 0
+            ? null
+            : meshOf(i * stepsU * spacingU, j * stepsV * spacingV, making.laid);
 
       this.#making = null;
-      stage.setOverlay(
-        i,
-        j,
-        making.laid.positions.length === 0
-          ? null
-          : meshOf(i * stepsU * spacingU, j * stepsV * spacingV, making.laid)
-      );
+
+      // Kept as it's laid with the towns as they are now, for `t` to take again: one with no town on or beside its
+      //  squares is laid the same either way, so it's kept for both, and no other kept for it lingers.
+      if (making.keep) {
+        const made = { signatures: making.signatures, mesh };
+
+        this.#made.set(
+          making.key,
+          this.#besides(making.squares).some(([x, y]) => this.#townAt(x, y))
+            ? {
+                ...this.#made.get(making.key),
+                [this.#townsShown ? 'shown' : 'hidden']: made,
+              }
+            : { shown: made, hidden: made }
+        );
+      }
+
+      stage.setOverlay(i, j, mesh);
+      handed = true;
     }
+  }
+
+  // The chunk `key`'s overlay as it was made before, with the towns shown or hidden, if its `squares` would be laid as
+  //  they were then; or nothing.
+  #madeAs(key: string, squares: [number, number][]): Made | null {
+    const made = this.#made.get(key);
+
+    if (made === undefined) {
+      return null;
+    }
+
+    const signatures = squares.map(([x, y]) =>
+      JSON.stringify(this.#overlayAt(x, y))
+    );
+
+    return (
+      [made.shown, made.hidden].find(
+        (kept): kept is Made =>
+          kept !== undefined &&
+          kept.signatures.length === signatures.length &&
+          kept.signatures.every(
+            (signature, index) => signature === signatures[index]
+          )
+      ) ?? null
+    );
   }
 
   /**

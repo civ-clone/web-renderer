@@ -149,6 +149,8 @@ const fraction = (seed: number, n: number): number => {
   return (h >>> 0) / 4294967296;
 };
 
+/** How far either side of a point the land's height is read for its normal. */
+export const NORMAL_STEP = 0.05;
 // Colours as three.js works in them, each worked out once.
 const colours = new Map<string, [number, number, number]>();
 
@@ -220,7 +222,7 @@ class Layer {
 
   // The land's normal at a point, from its height either side.
   #normal(u: number, v: number): [number, number, number] {
-    const e = 0.05,
+    const e = NORMAL_STEP,
       du =
         (this.place.heightAt(u + e, v) - this.place.heightAt(u - e, v)) /
         (2 * e),
