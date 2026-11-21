@@ -221,3 +221,6 @@ src/js/translations.ts
 # The hosted sets' sheets' names, which `tools/lib/hostedSets.js` writes (#1063).
 packages/*/sheets.js
 packages/*/sheets.js.*.tmp
+# The hosted sets of models' manifests' names, which `tools/lib/hostedSets.js` writes (docs/3d-renderer.md §10).
+packages/*/modelSets.js
+packages/*/modelSets.js.*.tmp

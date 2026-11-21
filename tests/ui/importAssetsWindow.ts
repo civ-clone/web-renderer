@@ -2236,6 +2236,63 @@ const run = async (): Promise<void> => {
       ],
       ['Ready', 'https://example.com/licence', null]
     );
+    // Where the page asked for the 3D map: its units' set, 0 A.D.'s, which ships with civ.one, in a section of its own,
+    //  with its licence linked and the credit it asks for. None where it didn't.
+    {
+      const with3D = new LibraryWindow({}, { search: '?3d=1' }),
+        without = new LibraryWindow({}, { search: '' }),
+        // Asked to try another set, which the map draws with instead.
+        trying = new LibraryWindow(
+          {},
+          { search: '?3d=1&models=/sets/other/manifest.json' }
+        );
+
+      await settle();
+
+      const section = with3D
+          .element()
+          .querySelector('[data-section="models"]') as HTMLElement | null,
+        units = section?.querySelector('[data-set="0ad-ancient"]');
+
+      expect(
+        'asked for the 3D map, the library lists its units’ set, which ships with civ.one, with its licence linked and the credit it asks for, its addresses linked; not otherwise, nor where another set’s asked for',
+        [
+          section?.querySelector('h4')?.textContent,
+          units?.querySelector('.name')?.textContent,
+          Array.from(
+            units?.querySelectorAll('.provides span') ?? [],
+            (span) => span.textContent
+          ),
+          units?.querySelector('.status')?.textContent,
+          (units?.querySelector('.source a') as HTMLAnchorElement | null)?.href,
+          units?.querySelector('.source')?.textContent,
+          without.element().querySelector('[data-section="models"]'),
+          trying.element().querySelector('[data-section="models"]'),
+          Array.from(
+            units?.querySelectorAll('.source a') ?? [],
+            (link) => (link as HTMLAnchorElement).href
+          ),
+        ],
+        [
+          'Units on the 3D map',
+          '0 A.D.: ancient units',
+          ['Units for the 3D map'],
+          'Ready',
+          'https://creativecommons.org/licenses/by-sa/3.0/',
+          'Comes with civ.one · License: CC BY-SA 3.0 · Copyright (C) 2009 Wildfire Games. Adapted from 0 A.D. by Wildfire Games (https://www.wildfiregames.com/), CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0/): posed, put together, converted and atlased by dom111.',
+          null,
+          null,
+          [
+            'https://creativecommons.org/licenses/by-sa/3.0/',
+            'https://www.wildfiregames.com/',
+            'https://creativecommons.org/licenses/by-sa/3.0/',
+          ],
+        ]
+      );
+      with3D.close();
+      without.close();
+      trying.close();
+    }
     expect(
       "a licence that isn't at an https: address is named, not linked",
       [

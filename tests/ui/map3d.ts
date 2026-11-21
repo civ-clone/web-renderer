@@ -86,6 +86,7 @@ import { Color } from 'three';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { unitStatus } from '@civ-clone/ui-assets/lib/renderUnit';
 import { setBuild } from '@civ-clone/ui-client/lib/build';
+import ancientUnits from '@civ-clone/ui-models-0ad';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import { sourcesUnder, specifiersOf } from './lib/imports';
@@ -6863,6 +6864,13 @@ expect(
   //  once, the units left as they are; nothing marked for one arriving after the map's taken down. The stage isn't
   //  asked where the page asks for none.
   {
+    // Asked for no set, the page asks for the one that ships with civ.one: 0 A.D.'s ancient units.
+    expect(
+      'asked for no set, the page draws units with the one that ships with civ.one',
+      given!.models,
+      { url: ancientUnits.manifest }
+    );
+
     const asked: string[] = [],
       warned: unknown[][] = [],
       warn = console.warn;
@@ -6922,7 +6930,7 @@ expect(
 
     const afterDown = modelAt(bow),
       // Where the page asks for no set.
-      none = new MapView3D(given!, withLoading);
+      none = new MapView3D({ ...given!, models: undefined }, withLoading);
 
     none.dispose();
 

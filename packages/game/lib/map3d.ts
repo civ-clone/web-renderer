@@ -9,6 +9,7 @@
 import { t } from 'i18next';
 import NotificationWindow from '@civ-clone/ui-component-window/NotificationWindow';
 import build from '@civ-clone/ui-client/lib/build';
+import ancientUnits from '@civ-clone/ui-models-0ad';
 import {
   MAP3D_RIVALS_WALK_OPTION,
   MAP3D_UNIT_SIZE_OPTION,
@@ -366,8 +367,9 @@ export const makeMapView = (
       lockVerticalEdges: deps.options.get('lockVerticalEdges', false),
       mapCanvas: deps.mapPortal,
       minimapCanvas: deps.minimapCanvas,
-      // A set of models to try out, where the page asked for one.
-      models: modelsAsked,
+      // A set of models to try out, where the page asked for one, or else the one that ships with civ.one: 0 A.D.'s
+      //  ancient units.
+      models: modelsAsked ?? { url: ancientUnits.manifest },
       playerId: deps.playerId,
       squares: mapSquares,
       transport: deps.transport,
