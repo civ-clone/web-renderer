@@ -213,6 +213,13 @@ const manifest = (): Record<string, unknown> => ({
     'data:model/gltf-binary;base64,AAAA',
     'models\\hoplite.glb',
     '',
+    // What a URL reads as other than it says: an escaped dot, a query, a fragment, a tab, a space.
+    '%2e%2e/hoplite.glb',
+    'models/%2e/hoplite.glb',
+    'hoplite.glb?v=1',
+    'hoplite.glb#mesh',
+    'models/\thoplite.glb',
+    'models/ hoplite.glb',
   ];
 
   expect(
@@ -220,7 +227,7 @@ const manifest = (): Record<string, unknown> => ({
     files.map(
       (file) => read((json) => (json.models.hoplite.file = file)) === 'read'
     ),
-    [true, true, false, false, false, false, false, false, false, false, false]
+    [true, true, ...Array(15).fill(false)]
   );
 }
 
@@ -236,8 +243,19 @@ expect(
     map3dModelsAsked('?models=/\\example.com/manifest.json'),
     map3dModelsAsked('?models=https://example.com/manifest.json'),
     map3dModelsAsked('?models=/sets\\..\\manifest.json'),
+    // Read as the browser reads it: a tab, a newline or a return the browser drops from a URL, or a space.
+    map3dModelsAsked('?models=/%09/example.com/manifest.json'),
+    map3dModelsAsked('?models=/%0a/example.com/manifest.json'),
+    map3dModelsAsked('?models=/%0d/example.com/manifest.json'),
+    map3dModelsAsked('?models=/%20/example.com/manifest.json'),
+    // As it reads, its dots taken out.
+    map3dModelsAsked('?models=/sets/x/../0ad/manifest.json'),
   ],
-  [{ url: '/sets/0ad/manifest.json' }, ...Array(7).fill(undefined)]
+  [
+    { url: '/sets/0ad/manifest.json' },
+    ...Array(11).fill(undefined),
+    { url: '/sets/0ad/manifest.json' },
+  ]
 );
 
 // A unit's marker says the model it's drawn with, where the map has one for its type.
@@ -478,9 +496,12 @@ kit.addModel('statue', plain);
   bigger.meshes[0]![0].computeBoundingBox();
 
   expect(
-    'made once for each: the same again; in other colours, its tinted part’s material in theirs, its see-through one the same; bigger as the player chooses; a single figure for one that isn’t a squad',
+    'made once for each: the same again; in other colours, the same figures, its tinted part’s material in theirs, its see-through one the same; bigger as the player chooses; a single figure for one that isn’t a squad',
     [
       again === figures,
+      otherColours.meshes.every(
+        ([geometry], index) => geometry === figures.meshes[index]![0]
+      ),
       otherColours.meshes[0]![1] !== solidMaterial,
       (otherColours.meshes[0]![1] as TintedMaterial).tint.getHexString(),
       otherColours.meshes[1]![1] === seeThroughMaterial,
@@ -488,6 +509,7 @@ kit.addModel('statue', plain);
       count(alone.meshes[0]![0]) / count(model.parts[0]!.geometry),
     ],
     [
+      true,
       true,
       true,
       new Color(others[0]).getHexString(),
@@ -596,6 +618,41 @@ kit.addModel('statue', plain);
       material.clone().tint.getHexString(),
     ],
     [true, true, true, false, false, 'ff0000']
+  );
+}
+
+// A model added again under the same id: the one before let go of, with all that was made from it, and the new one drawn.
+{
+  const before = kit.modelFigures('statue', unitTable['Settlers']!, colours)!,
+    gone: string[] = [],
+    replacement: LoadedModel = {
+      parts: [
+        { geometry: box(2), map: new Texture(), tinted: false, cutout: false },
+      ],
+      scale: 0.2,
+    };
+
+  watched('statue geometry', plain.parts[0]!.geometry);
+  watched('statue made', before.meshes[0]![0]);
+  watched('statue material', before.meshes[0]![1]);
+  disposed.length = 0;
+  kit.addModel('statue', replacement);
+
+  const after = kit.modelFigures('statue', unitTable['Settlers']!, colours)!;
+
+  after.meshes[0]![0].computeBoundingBox();
+  gone.push(...disposed.splice(0));
+
+  expect(
+    'a model added again under its id lets go of the one before and all made from it, and is drawn itself',
+    [
+      ['statue geometry', 'statue made', 'statue material'].every((name) =>
+        gone.includes(name)
+      ),
+      after === before,
+      round(after.meshes[0]![0].boundingBox!.max.y),
+    ],
+    [true, false, round(0.03 + 0.4)]
   );
 }
 

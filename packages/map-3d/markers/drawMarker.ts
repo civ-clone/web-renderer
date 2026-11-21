@@ -82,8 +82,13 @@ export class MarkerKit {
   #labels = new Map<string, SpriteMaterial>();
   #figures = new Map<string, BufferGeometry>();
   #bodies = new Map<string, BufferGeometry>();
-  // A set's models (`addModel`), by their ids; and what's drawn of each, as `modelFigures` makes it.
+  // A set's models (`addModel`), by their ids; and what's drawn of each, as `modelFigures` makes it: its figures merged,
+  //  the same in every owner's colours, and those with their materials in each.
   #models = new Map<string, LoadedModel>();
+  #modelGeometries = new Map<
+    string,
+    { geometries: BufferGeometry[]; top: number }
+  >();
   #modelFigures = new Map<string, ModelFigures>();
   #modelMaterials = new Map<string, Material>();
   #walls: BufferGeometry | null = null;
@@ -123,9 +128,44 @@ export class MarkerKit {
     return material;
   }
 
-  /** A set's model `id` (`loadModels.ts`), to draw the unit types it draws (`UnitMarker.model`). */
+  /**
+   * A set's model `id` (`loadModels.ts`), to draw the unit types it draws (`UnitMarker.model`). One added before under
+   *  `id` is let go of, with all that was made from it.
+   */
   addModel(id: string, model: LoadedModel): void {
+    const before = this.#models.get(id);
+
+    if (before !== undefined && before !== model) {
+      this.#letGoOfModel(id, before);
+    }
+
     this.#models.set(id, model);
+  }
+
+  // Lets go of the model `id`, and of what was made from it.
+  #letGoOfModel(id: string, model: LoadedModel): void {
+    const ours = (key: string): boolean => JSON.parse(key)[0] === id;
+
+    model.parts.forEach(({ geometry, map }) => {
+      geometry.dispose();
+      map?.dispose();
+    });
+    this.#models.delete(id);
+    [...this.#modelGeometries].forEach(([key, { geometries }]) => {
+      if (ours(key)) {
+        geometries.forEach((geometry) => geometry.dispose());
+        this.#modelGeometries.delete(key);
+      }
+    });
+    [...this.#modelFigures.keys()]
+      .filter(ours)
+      .forEach((key) => this.#modelFigures.delete(key));
+    [...this.#modelMaterials].forEach(([key, material]) => {
+      if (ours(key)) {
+        material.dispose();
+        this.#modelMaterials.delete(key);
+      }
+    });
   }
 
   /**
@@ -147,10 +187,12 @@ export class MarkerKit {
 
     const afloat = look.shape === 'ship',
       squad = look.shape === 'foot' ? look.squad : 1,
-      key = JSON.stringify([id, squad, colours[0], size, afloat]);
-    let figures = this.#modelFigures.get(key);
+      shape = JSON.stringify([id, squad, size, afloat]),
+      key = JSON.stringify([id, squad, size, afloat, colours[0]]);
+    let merged = this.#modelGeometries.get(shape),
+      figures = this.#modelFigures.get(key);
 
-    if (figures === undefined) {
+    if (merged === undefined) {
       const scale = model.scale * size,
         lift = afloat ? 0 : STAND_HEIGHT,
         placed = formation(squad).map(([x, z]) =>
@@ -160,26 +202,35 @@ export class MarkerKit {
         );
       let top = lift;
 
-      const meshes = model.parts.map(
-        (part, index): [BufferGeometry, Material] => {
-          const copies = placed.map((matrix) =>
-              part.geometry.clone().applyMatrix4(matrix)
-            ),
-            geometry =
-              (copies.length === 1
-                ? copies[0]!.clone()
-                : mergeGeometries(copies)) ?? new BufferGeometry();
+      const geometries = model.parts.map((part): BufferGeometry => {
+        const copies = placed.map((matrix) =>
+            part.geometry.clone().applyMatrix4(matrix)
+          ),
+          geometry =
+            (copies.length === 1
+              ? copies[0]!.clone()
+              : mergeGeometries(copies)) ?? new BufferGeometry();
 
-          copies.forEach((copy) => copy.dispose());
-          geometry.computeBoundingBox();
-          geometry.computeBoundingSphere();
-          top = Math.max(top, geometry.boundingBox?.max.y ?? lift);
+        copies.forEach((copy) => copy.dispose());
+        geometry.computeBoundingBox();
+        geometry.computeBoundingSphere();
+        top = Math.max(top, geometry.boundingBox?.max.y ?? lift);
 
-          return [geometry, this.#modelMaterial(id, index, part, colours)];
-        }
-      );
+        return geometry;
+      });
 
-      figures = { meshes, top };
+      merged = { geometries, top };
+      this.#modelGeometries.set(shape, merged);
+    }
+
+    if (figures === undefined) {
+      figures = {
+        meshes: merged.geometries.map((geometry, index) => [
+          geometry,
+          this.#modelMaterial(id, index, model.parts[index]!, colours),
+        ]),
+        top: merged.top,
+      };
       this.#modelFigures.set(key, figures);
     }
 
@@ -187,7 +238,7 @@ export class MarkerKit {
   }
 
   // A model's part's material: in its owner's colour where its texture says, or cut out by its alpha, made once for
-  //  each.
+  //  each. A cut-out part isn't in its owner's colour, as its alpha's what's cut out, not a mask.
   #modelMaterial(
     id: string,
     index: number,
@@ -405,19 +456,7 @@ export class MarkerKit {
     this.#walls?.dispose();
     this.#walls = null;
     this.#bodies.clear();
-    this.#modelFigures.forEach(({ meshes }) =>
-      meshes.forEach(([geometry]) => geometry.dispose())
-    );
-    this.#modelFigures.clear();
-    this.#modelMaterials.forEach((material) => material.dispose());
-    this.#modelMaterials.clear();
-    this.#models.forEach(({ parts }) =>
-      parts.forEach(({ geometry, map }) => {
-        geometry.dispose();
-        map?.dispose();
-      })
-    );
-    this.#models.clear();
+    [...this.#models].forEach(([id, model]) => this.#letGoOfModel(id, model));
     this.figureMaterial.dispose();
     this.#flats.forEach((material) => material.dispose());
     this.#pointer?.map?.dispose();

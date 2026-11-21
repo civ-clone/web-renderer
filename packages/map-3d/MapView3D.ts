@@ -395,6 +395,9 @@ export class MapView3D implements MapRenderer {
   //  model's loaded: the built-in set's figures for the rest.
   #models = new Map<string, string>();
   #modelOf = (type: string): string | null => this.#models.get(type) ?? null;
+  // Whether models have arrived since the squares were last marked: they're all marked again at the next frame, once
+  //  however many arrived.
+  #modelsArrived = false;
   #stopUnitSize: () => void = (): void => {};
   #yieldsShown = false;
   // Whether the yields drawn are out of date (`#showYields`), and whether any are drawn.
@@ -597,7 +600,7 @@ export class MapView3D implements MapRenderer {
         }
 
         types.forEach((type) => this.#models.set(type, id));
-        this.#markAll();
+        this.#modelsArrived = true;
         this.#draw();
       })
       .catch((error: unknown) =>
@@ -2988,6 +2991,11 @@ export class MapView3D implements MapRenderer {
     const started = performance.now(),
       moving = this.#moveCamera(started),
       [u, v] = this.#focus();
+
+    if (this.#modelsArrived) {
+      this.#modelsArrived = false;
+      this.#markAll();
+    }
 
     this.#takeTiles();
     this.#placeWalkers(started);

@@ -47,11 +47,12 @@ const isLicence = (value: unknown): value is ModelLicence =>
   isText(value.url) &&
   (value.attribution === undefined || isText(value.attribution));
 
-// A model's file: a path beside the manifest, not reaching out of where the set is, nor to another site.
+// A model's file: a path beside the manifest, not reaching out of where the set is, nor to another site: nothing a URL
+//  reads as other than it says (an escaped dot, a query, a fragment, a space or a control character).
 const isFile = (value: unknown): value is string =>
   isText(value) &&
   !value.startsWith('/') &&
-  !value.includes('\\') &&
+  !/[\\%?#\u0000-\u0020]/.test(value) &&
   !/^[a-z][a-z0-9+.-]*:/i.test(value) &&
   value
     .split('/')

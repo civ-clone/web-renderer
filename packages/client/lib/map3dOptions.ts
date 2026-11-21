@@ -9,15 +9,28 @@ export const map3dAsked = (search: string): boolean =>
 
 /**
  * The set of models the page asked the 3D map to draw units with (`?models=`, its manifest's path on this site, to try
- *  one out), or none. Only a path on this site: a link can't have the map fetch another site's.
+ *  one out), or none. Only a path on this site, read as the browser reads it: a link can't have the map fetch another
+ *  site's, however it spells it.
  */
 export const map3dModelsAsked = (
   search: string
 ): { url: string } | undefined => {
-  const url = new URLSearchParams(search).get('models');
+  const asked = new URLSearchParams(search).get('models'),
+    // Somewhere that isn't anywhere, to read the path against.
+    here = 'https://here.invalid';
 
-  return url !== null && /^\/(?![/\\])/.test(url) && !url.includes('\\')
-    ? { url }
+  if (
+    asked === null ||
+    !asked.startsWith('/') ||
+    /[\u0000-\u0020\\]/.test(asked)
+  ) {
+    return undefined;
+  }
+
+  const url = new URL(asked, here);
+
+  return url.origin === here
+    ? { url: `${url.pathname}${url.search}` }
     : undefined;
 };
 
