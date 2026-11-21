@@ -228,15 +228,25 @@ export const effectLine = (
   return [main, ...qualified, ...scope].join(', ');
 };
 
-// What a city pays for an entry, said after what it does.
-const last: string[] = ['upkeep'];
+// What a square gives, said before what it costs (#620); what a city pays for an entry, said after what it does.
+const first: string[] = [
+    'terrain_yield',
+    'improvement_yield',
+    'improvement_yield_percent',
+  ],
+  last: string[] = ['upkeep'];
 
+// The yields in `first`'s order, the rest in the rules' order between them and the upkeep.
 const rank = ({ type }: CivilopediaEffect): number =>
-  last.includes(type) ? 1 : 0;
+  first.includes(type)
+    ? first.indexOf(type) - first.length
+    : last.includes(type)
+    ? 1
+    : 0;
 
 /**
- * An entry's effects, as lines of HTML, its upkeep last. The same line from two rules (a rule set that describes what
- *  it takes the place of, alongside the rule it replaces) is said once.
+ * An entry's effects, as lines of HTML, a square's yields first and its upkeep last. The same line from two rules (a
+ *  rule set that describes what it takes the place of, alongside the rule it replaces) is said once.
  */
 export const effectLines = (
   effects: CivilopediaEffect[],

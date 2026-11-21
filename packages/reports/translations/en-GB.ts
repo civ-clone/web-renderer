@@ -12,6 +12,8 @@ i18next.addResources('en-GB', 'default', {
     'Gives you any advance that {{count}} other civilisations know',
   'Civilopedia.effect.defence_multiplier':
     'Defence of the units in the city ×{{value}}',
+  'Civilopedia.effect.defence_bonus':
+    'Units defending here: defence ×{{value}}',
   'Civilopedia.effect.lost_on_capture_founder':
     'Lost when the city is captured, unless by the civilisation that founded it',
   'Civilopedia.effect.lost_on_capture_founder_other':

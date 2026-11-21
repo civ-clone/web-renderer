@@ -76,11 +76,11 @@ const check = async (): Promise<void> => {
     ).filter((key) => !byKey.has(key) && !baseClasses.includes(key)),
     []
   );
-  // Bar four that no requirement entry describes yet, which the page says it knows nothing more about: Future
-  //  Technology's need for every other advance is a hand-written rule, Anarchy needs nothing, Pollution isn't built,
-  //  and nothing is built on Ocean.
+  // Bar three that no requirement entry describes yet, which the page says it knows nothing more about: Future
+  //  Technology's need for every other advance is a hand-written rule, Anarchy needs nothing, and Pollution isn't
+  //  built. Ocean says what it gives and costs (#620).
   expect(
-    'and every entry says something: a requirement, something it leads to, numbers, a cost, or tile improvements that go on it',
+    'and every entry says something: a requirement, something it leads to, numbers, a cost, what it does, or tile improvements that go on it',
     entries
       .filter(
         (entry) =>
@@ -88,12 +88,13 @@ const check = async (): Promise<void> => {
           entry.leadsTo.length === 0 &&
           entry.stats === null &&
           entry.cost === null &&
+          entry.effects.length === 0 &&
           !requirements.some((requirement) =>
             requirement.where?.includes(entry.key)
           )
       )
       .map((entry) => entry.key),
-    ['FutureTechnology', 'Anarchy', 'Pollution', 'Ocean']
+    ['FutureTechnology', 'Anarchy', 'Pollution']
   );
   expect(
     'each section has entries',
@@ -463,6 +464,34 @@ const check = async (): Promise<void> => {
       ?.effects.filter(({ type }) => type === 'shared_advances')
       .map(({ value }) => value),
     [2]
+  );
+
+  // A terrain says what it gives and costs, as Civ1 v474.05 has it (#620).
+  const terrain = (key: string) =>
+    entry(key)
+      ?.effects.filter(({ type }) =>
+        ['terrain_yield', 'movement_cost', 'defence_bonus'].includes(type)
+      )
+      .map(({ type, value, yield: yieldType }) => [
+        type,
+        (yieldType as { class?: string } | undefined)?.class ?? null,
+        value,
+      ])
+      // In whichever order the rule sets load: the page puts a square's yields first.
+      .sort((a, b) => String(a).localeCompare(String(b)));
+
+  expect('Grassland gives 2 Food and costs 1 move', terrain('Grassland'), [
+    ['movement_cost', null, 1],
+    ['terrain_yield', 'Food', 2],
+  ]);
+  expect(
+    'Hills give 1 Food, cost 2 moves and double a defender',
+    terrain('Hills'),
+    [
+      ['defence_bonus', null, 2],
+      ['movement_cost', null, 2],
+      ['terrain_yield', 'Food', 1],
+    ]
   );
 
   finished = true;
