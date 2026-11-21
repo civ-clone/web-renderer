@@ -233,6 +233,21 @@ i18next.addResources('en', 'default', {
   'Civilopedia.effect.reputation_recovers':
     'Every civilization’s reputation recovers halfway when it’s built, to {{value}} at worst',
   'Civilopedia.effect.scope.world_reputation_recovers': '',
+  // What a terrain gives and costs (#620).
+  'Civilopedia.effect.terrain_yield': 'Each square gives {{value}} {{yield}}',
+  'Civilopedia.effect.improvement_yield':
+    '+{{value}} {{yield}} with {{improvement}}',
+  'Civilopedia.effect.improvement_yield_negative':
+    '−{{value}} {{yield}} with {{improvement}}',
+  'Civilopedia.effect.improvement_yield_percent':
+    '+{{percent}}% {{yield}} with {{improvement}}, rounded down',
+  'Civilopedia.effect.movement_cost_one': 'Costs {{count}} move to enter',
+  'Civilopedia.effect.movement_cost_other': 'Costs {{count}} moves to enter',
+  'Civilopedia.effect.defence_bonus':
+    'Units defending here: defense ×{{value}}',
+  'Civilopedia.effect.converts_to': '{{improvement}} turns it into {{terrain}}',
+  'Civilopedia.effect.improvement_turns':
+    '{{improvement}} here: {{value}} turns of {{unit}} work',
   'Civilopedia.loading': 'Loading…',
   'Civilopedia.nothing-known': 'Nothing more is known about this yet.',
   'Civilopedia.stats':
@@ -296,6 +311,12 @@ i18next.addResources('en', 'default', {
   'Civilopedia.class.Part': 'spaceship parts',
   // The difficulty a Civilization II rule changes at (#1291).
   'Civilopedia.class.Prince': 'Prince',
+  // A terrain's work that is no tile improvement (#620).
+  'Civilopedia.class.TransformTerrain': 'Transforming the terrain',
+  'Civilopedia.class.ClearForest': 'Clearing the forest',
+  'Civilopedia.class.ClearJungle': 'Clearing the jungle',
+  'Civilopedia.class.ClearSwamp': 'Draining the swamp',
+  'Civilopedia.class.PlantForest': 'Planting a forest',
   // A condition a rule decides, by its name without the rule set's prefix, so every rule set that has one shares its
   //  wording (#1051). One rule set's own wording goes under its full id (`civ1-unit.coastal-city`), which comes first.
   'Civilopedia.condition.coastal-city': 'a coastal city',
