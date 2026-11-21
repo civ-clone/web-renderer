@@ -332,6 +332,8 @@ export class Civilopedia extends FilterableWindow {
     }
 
     this.#entry.dataset.key = key;
+    // Each entry starts at what applies to the player, whichever the last one showed.
+    this.#everyCase = false;
     this.#inForce = null;
     this.#render();
 
@@ -364,7 +366,7 @@ export class Civilopedia extends FilterableWindow {
 
     const all = entry.effects ?? [],
       differs =
-        this.#inForce !== null &&
+        this.#inForce != null &&
         JSON.stringify(this.#inForce) !== JSON.stringify(all),
       effects = differs && !this.#everyCase ? this.#inForce! : all;
 

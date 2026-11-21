@@ -22,10 +22,6 @@ import Game from '@civ-clone/core-game/Game';
 import Government from '@civ-clone/core-government/Government';
 import Part from '@civ-clone/core-spaceship/Part';
 import Player from '@civ-clone/core-player/Player';
-import {
-  PlayerResearchRegistry,
-  instance as playerResearchRegistryInstance,
-} from '@civ-clone/core-science/PlayerResearchRegistry';
 import { RuleRegistry } from '@civ-clone/core-rule/RuleRegistry';
 import { Requirement } from '@civ-clone/core-requirement/Requirement';
 import Terrain from '@civ-clone/core-terrain/Terrain';
@@ -250,16 +246,18 @@ export const effectsInForce = (
   return current
     .filter((effect) => !future.includes(effect) || next.includes(effect))
     .map((effect): Described => {
-      const { from, until, ...rest } = effect;
+      // The next step: when it starts, not when it gives way to the one after. In force: when it ends, not when it
+      //  started. Each field kept in its place, so an unchanged effect is the same as the one sent with every case.
+      const dropped = next.includes(effect)
+        ? 'until'
+        : known(effect.from)
+        ? 'from'
+        : null;
 
-      // The next step: when it starts, not when it gives way to the one after.
-      if (next.includes(effect)) {
-        return { ...rest, from } as Described;
-      }
+      if (dropped !== null) {
+        const { [dropped]: _, ...rest } = effect;
 
-      // In force: when it ends, not when it started.
-      if (known(from)) {
-        return (until === undefined ? rest : { ...rest, until }) as Described;
+        return rest as Described;
       }
 
       return effect;
@@ -386,10 +384,9 @@ export const unavailableBuildItems = (
 /** Where `player` stands in `game` (#1310): the advances it has finished researching, and the game's level. */
 export const situationOf = (
   player: Player,
-  game: Game = defaultGame,
-  playerResearchRegistry: PlayerResearchRegistry = playerResearchRegistryInstance
+  game: Game = defaultGame
 ): Situation => {
-  const research = playerResearchRegistry.getByPlayer(player);
+  const research = game.playerResearch.getByPlayer(player);
 
   return {
     knows: (AdvanceType: Function): boolean =>
