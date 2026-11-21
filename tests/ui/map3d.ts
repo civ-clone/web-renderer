@@ -6599,6 +6599,37 @@ expect(
     document.dispatchEvent(new Event('keydown'));
     tips.length = 0;
 
+    // Resting on Ur's banner, its tooltip open, and Ur's banner painted again taller: its tooltip's shown again over it
+    //  as it's drawn now. Painted again too short to reach the mouse: its tooltip goes.
+    pointer('pointermove', ...onUr);
+    await pause(450);
+    tips.length = 0;
+    tall.set('Ur', 700);
+    patch([ur, 'Ur']);
+
+    const taller = nearest('Ur'),
+      followed = tips.splice(0);
+
+    tall.set('Ur', 12);
+    patch([ur, 'Ur']);
+
+    const shrunk = tips.splice(0);
+
+    tall.set('Ur', 600);
+    patch([ur, 'Ur']);
+    document.dispatchEvent(new Event('keydown'));
+    tips.length = 0;
+
+    expect(
+      'an open tooltip over a banner painted again is shown over it as it’s drawn now, or goes if it no longer reaches the mouse',
+      [taller.bottom > urs.bottom, followed, shrunk],
+      [
+        true,
+        [`open ${ur.x},${ur.y} ${taller.left} ${taller.top} ${taller.bottom}`],
+        ['closed'],
+      ]
+    );
+
     // On a screen with twice the pixels: the banners where they were on the page, taking clicks there.
     (window as unknown as { devicePixelRatio: number }).devicePixelRatio = 2;
     window.dispatchEvent(new Event('resize'));
@@ -6649,6 +6680,12 @@ expect(
     const gone = clicked(...onUr);
 
     patch([ur, 'Ur']);
+    // Kish gone, though no frame's drawn since: a click on its banner is for Ur's, beneath it.
+    Object.assign(kish, { city: null });
+
+    const goneAbove = clicked(...onKish);
+
+    Object.assign(kish, { city: city('Kish') });
 
     // A square being chosen for a long-range order: a click on a banner picks the square under it, as on the 2D map.
     const picked: string[] = [];
@@ -6662,15 +6699,15 @@ expect(
     const whilePicking = clicked(...onKish);
 
     expect(
-      'none with the units hidden, nor once its city has gone; and while a square’s being chosen, a click on a banner picks the square under it',
+      'none with the units hidden, nor once its city has gone, which lets a click through to a banner beneath; and while a square’s being chosen, a click on a banner picks the square under it',
       [
         hidden.map(([, name]) => name),
         gone.map(([, name]) => name),
+        goneAbove.map(([, name]) => name),
         whilePicking,
-        picked.length,
-        picked[0] === `${kish.x},${kish.y}`,
+        picked,
       ],
-      [[null], [null], [], 1, false]
+      [[null], [null], ['Ur'], [], [onEach[1]![0]![0]]]
     );
 
     // Looking low across the world as it repeats: Ur's banners, faded the further into the haze. One faded more than

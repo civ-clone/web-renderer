@@ -320,8 +320,10 @@ export class MapView3D implements MapRenderer {
   };
   #transport: MapView3DDeps['transport'];
   #picking: Picking | null = null;
-  // The square the mouse rests on, waiting to show its tooltip or showing it, and whose tooltips they'd be.
+  // The square the mouse rests on, waiting to show its tooltip or showing it, and whose tooltips they'd be; and whether
+  //  the square an open one is about has changed in the tiles taken this frame.
   #hover: Hover | null = null;
+  #hoverChanged = false;
   #playerId: string;
   #endHover = (): void => {
     const hover = this.#hover;
@@ -2120,7 +2122,8 @@ export class MapView3D implements MapRenderer {
   }
 
   // The city whose banner is under (`x`, `y`) in the canvas's px, as the banners were last drawn, and where its banner
-  //  is: of banners that overlap, the one on top. None where its city has gone since.
+  //  is: of banners that overlap, the one on top. Not one whose city has gone since, which lets it through to any
+  //  beneath.
   #bannerAt(
     x: number,
     y: number
@@ -2132,7 +2135,9 @@ export class MapView3D implements MapRenderer {
         const [tileX, tileY] = key.split(',').map(Number) as [number, number],
           tile = this.world.get(tileX, tileY);
 
-        return tile?.city ? { tile, box: { left, top, bottom } } : null;
+        if (tile?.city) {
+          return { tile, box: { left, top, bottom } };
+        }
       }
     }
 
@@ -2526,7 +2531,8 @@ export class MapView3D implements MapRenderer {
     //  square newly seen says which, as for the yields.
     reshaped.forEach(([x, y]) => this.#bannerSites.delete(`${x},${y}`));
 
-    // The square an open tooltip is about has changed: it says what's there now.
+    // The square an open tooltip is about has changed: it says what's there now, once the banners are drawn as they are
+    //  now, so one over a banner moves with it, or goes if it's no longer under the mouse.
     const hover = this.#hover;
 
     if (
@@ -2534,7 +2540,7 @@ export class MapView3D implements MapRenderer {
       hover.open &&
       squares.some(([x, y]) => x === hover.x && y === hover.y)
     ) {
-      this.#showHover(hover);
+      this.#hoverChanged = true;
     }
 
     if (squares.length > 0 || replaced) {
@@ -2968,6 +2974,15 @@ export class MapView3D implements MapRenderer {
     this.#stage.view(this.#orbit, this.#lookHeight ?? 0, this.#period());
     this.#stage.render();
     this.#drawBanners();
+
+    if (this.#hoverChanged) {
+      this.#hoverChanged = false;
+
+      if (this.#hover?.open) {
+        this.#showHover(this.#hover);
+      }
+    }
+
     this.#showMinimap();
     this.#keepDistance();
     this.#frameTime = performance.now() - started;
