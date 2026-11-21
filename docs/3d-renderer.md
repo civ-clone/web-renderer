@@ -683,8 +683,14 @@ Each is looked up by its type name in the model set.
   buildings.
 - **Facing:** a unit faces the way it last moved.
 - **Height:** it stands on the land's height at its feet.
-- **Size:** life size, as cities are drawn, so a small city doesn't look tiny beside its garrison. Options has the size
-  of the 3D map's units, from half to half as big again, for a player who'd rather have them read from further away.
+- **Size:** twice life size (`UNIT_SCALE`), as a tabletop game's figures are, so units read at a glance beside the
+  cities and land, which are drawn life size. Their stands stay as they are, so a vehicle may reach past its stand,
+  as a counter on a table does. A set says its models' sizes against each other: 0 A.D.'s riders and chariot are drawn
+  at three-quarters of its scale, so a horse doesn't tower over a tank. Options has the size of the 3D map's units,
+  from half to half as big again, for a player who'd rather have them read from further away. (Life size until
+  2026-11-21, when I tried twice life size in a game and kept it.)
+- **Aircraft at rest:** out of a city, an aircraft rests in the air over its stand, as high as it flies (`CRUISE`). In
+  a city, it stands on its stand.
 - **Squads:** a squad's figures spread around its position, each with a small fixed offset, so they don't line up like
   a parade.
 
@@ -1008,8 +1014,9 @@ mapEvent:
     the short way round, one turn shared by both sides of the middle, so doubling back it never snaps half way round.
 - **Aircraft fly an arc** (aircraft, helicopters and missiles, as the built-in set draws them: `airborne`):
   - A walk whose units all fly climbs as it sets off, over a step's way, to 0.3 over where they'd stand (`CRUISE`,
-    about an aircraft's own height), and comes down over its last step's way to land at its end. A hop of one square
-    goes half as high.
+    about an aircraft's own height), and comes down over its last step's way to land at its end, in a city. Out of a
+    city, where an aircraft rests in the air (§6.2), a flight sets off at `CRUISE` and stays up at its end (the
+    point's `aloft`). A hop of one square between cities goes half as high.
   - A step joined as it comes down climbs on from where it is. One setting off again from elsewhere mid-air sets off as
     high as it is.
   - Its figures, hit points' bar, flag, label and pointer climb (`ALOFT_PART`); its stand and the ring at its feet stay
@@ -1307,8 +1314,12 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
 
   A model's parts are its meshes, each a geometry and a texture:
   - in its owner's colour where its material says (`extras.playerColour`), its texture's alpha the mask, as `rgb ×
-    mix(owner, white, alpha)`;
-  - or cut out where its alpha is under a half (`alphaMode` `MASK`), both sides drawn.
+    mix(owner, white, alpha)`. An owner's colour darker than `TINT_FLOOR` (a luminance of 0.08, in linear light) is
+    mixed with white just enough to reach it (`ownerTint`), so black doesn't leave the model a flat silhouette. The
+    unit's flag keeps the colour as it is;
+  - or cut out where its alpha is under a half (`alphaMode` `MASK`), both sides drawn;
+  - from both sides where its material says (glTF's `doubleSided`), as a model made in Blender, which draws both, may
+    need: a coat's single sheet, seen from inside.
 
   As each arrives, every unit of a type it draws is marked again with it (`UnitMarker.model`). Units of other types,
   and all of them till then, are the built-in set's figures. A set that can't be loaded is said once, and each model
@@ -1316,7 +1327,7 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
 - **Drawn** (`MarkerKit.modelFigures`):
   - **Figures:** as many as stand for one unit of the type's look (D6), in its formation, merged in a mesh for each of
     the model's parts. So a unit is a draw call for each part, one or two, besides its stand.
-  - **Size:** the set's size times the player's (§6.2).
+  - **Size:** the set's size, or the model's own, times twice life size and the player's choice (§6.2).
   - **Where:** on the built-in set's stand, and behind its wall when fortified. A ship sits on the water in its
     ripples, with no stand.
   - **Colour:** `TintedMaterial` (`markers/tinted.ts`) mixes the owner's colour in. It's a class of its own, so a

@@ -339,7 +339,8 @@ Epic's UE4 skeleton or only match its bone names.
     it carries, its hull, and how many figures stand for it. A type it doesn't know is drawn by its kind (`Naval`,
     `Air`).
   - `packages/map-3d/markers/figures.ts` makes each look from plain shapes in the owner's colours, merged into one
-    geometry, life size unless the player chooses otherwise in Options (half to half as big again).
+    geometry, life size (twice since 2.2's third part) unless the player chooses otherwise in Options (half to half as
+    big again).
   - A unit stands on a stand in its owner's second colour (a ship rides the water without one), behind a low wall when
     fortified. Its flag flies over it, with the stack's size, the 2D map's letter for what it's busy with, a veteran's
     star, and a bar for its hit points when it's hurt.
@@ -358,10 +359,17 @@ set's figures. Posed as they stand still: no clips yet.
 **Second part, the first set: done.** 0 A.D.'s ancient units ship with civ.one: under `?3d=1` the map draws the 15 unit
 types they have models for with them (Knight, Explorer and Sail by stand-ins), and the library lists them with their
 licence and credit. Still to do:
-- **More sets:** the eras 0 A.D. doesn't reach;
+- **More sets:** the eras 0 A.D. doesn't reach. Cimpletoon's CC0 Freeciv models (OpenGameArt, by yd) were tried in a
+  game for the later units: the Mech. Inf. and Bomber kept, the rest to get their own textures, or realistic
+  replacements;
 - **Clips:** idle, walk, attack, death;
 - **Squads:** instancing them;
 - **Textures:** KTX2.
+
+**Third part, drawing them: done.** Units are drawn twice life size, as a tabletop game's figures are, with 0 A.D.'s
+riders and chariot at three-quarters of its scale. Out of a city, aircraft rest in the air over their stands. A very
+dark owner's colour is lightened on a model so its shading shows, and a model's parts are drawn from both sides where
+its file says.
 
 - **What:**
   - loading `.glb` with KTX2 textures;
