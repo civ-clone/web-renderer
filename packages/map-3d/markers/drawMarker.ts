@@ -17,6 +17,7 @@ import {
   CanvasTexture,
   Color,
   DoubleSide,
+  FrontSide,
   Group,
   Material,
   Matrix4,
@@ -38,7 +39,7 @@ import {
   unitBodyGeometry,
 } from './figures';
 import { LoadedModel } from '../models/loadModels';
-import TintedMaterial from './tinted';
+import TintedMaterial, { ownerTint } from './tinted';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {
   UnitLook,
@@ -46,9 +47,22 @@ import {
   unitLook,
 } from '@civ-clone/ui-models-builtin/units';
 
-// The size of a square is about 1 (spec §3): a city fills half its square, and a soldier stands a fifth of a square,
-//  drawn as big as the player chooses (`UnitMarker.size`), life size unless they choose otherwise. A unit's stand is
-//  thick enough to stand over everything laid on the land, roads and smears and all.
+/**
+ * How many times life size units are drawn, before the size the player chooses: twice, as a tabletop game's figures
+ *  are, so they read at a glance beside the cities and land, which are drawn life size. Their stands stay as they are.
+ */
+export const UNIT_SCALE = 2;
+
+/**
+ * How high over its stand an aircraft drawn with a model flies, times its size: as high as the built-in set's aircraft
+ *  fly (`markers/figures.ts`), the model's underside where theirs is, their bodies' 0.3 less their half-thickness. So a
+ *  model doesn't sit on its stand as a vehicle does, and a flight climbs from there, as theirs does.
+ */
+export const AIRBORNE_LIFT = 0.285;
+
+// The size of a square is about 1 (spec §3): a city fills half its square, and a soldier stands a fifth of a square
+//  life size, drawn `UNIT_SCALE` times that, times the size the player chooses (`UnitMarker.size` is both). A unit's
+//  stand is thick enough to stand over everything laid on the land, roads and smears and all.
 const STAND_HEIGHT = 0.03,
   ACTIVE = '#fff4b0',
   // How far over a unit its flag flies, on the land.
@@ -170,7 +184,8 @@ export class MarkerKit {
 
   /**
    * A unit's figures drawn with the model `id`, if it's been added: as many as stand for one unit of its look (D6),
-   *  `size` times as big as the set draws them, standing as high as on a stand (a ship on the water), in `colours`.
+   *  `size` times as big as the set draws them, standing as high as on a stand (a ship on the water, an aircraft flying
+   *  `AIRBORNE_LIFT` over it), in `colours`.
    *  One mesh for each of the model's parts, the figures merged in each, made once for each; and how high they reach.
    */
   modelFigures(
@@ -186,15 +201,16 @@ export class MarkerKit {
     }
 
     const afloat = look.shape === 'ship',
+      flies = airborne(look),
       squad = look.shape === 'foot' ? look.squad : 1,
-      shape = JSON.stringify([id, squad, size, afloat]),
-      key = JSON.stringify([id, squad, size, afloat, colours[0]]);
+      shape = JSON.stringify([id, squad, size, afloat, flies]),
+      key = JSON.stringify([id, squad, size, afloat, flies, colours[0]]);
     let merged = this.#modelGeometries.get(shape),
       figures = this.#modelFigures.get(key);
 
     if (merged === undefined) {
       const scale = model.scale * size,
-        lift = afloat ? 0 : STAND_HEIGHT,
+        lift = afloat ? 0 : STAND_HEIGHT + (flies ? AIRBORNE_LIFT * size : 0),
         placed = formation(squad).map(([x, z]) =>
           new Matrix4()
             .makeTranslation(x * size, lift, z * size)
@@ -237,8 +253,9 @@ export class MarkerKit {
     return figures;
   }
 
-  // A model's part's material: in its owner's colour where its texture says, or cut out by its alpha, made once for
-  //  each. A cut-out part isn't in its owner's colour, as its alpha's what's cut out, not a mask.
+  // A model's part's material: in its owner's colour where its texture says (lightened if it's dark), or cut out
+  //  by its alpha, made once for each; from both sides where its file says. A cut-out part isn't in its owner's colour,
+  //  as its alpha's what's cut out, not a mask, and is always drawn from both sides.
   #modelMaterial(
     id: string,
     index: number,
@@ -259,7 +276,8 @@ export class MarkerKit {
           })
         : new TintedMaterial({
             ...shared,
-            tint: part.tinted ? new Color(colours[0]) : new Color(1, 1, 1),
+            tint: part.tinted ? ownerTint(colours[0]) : new Color(1, 1, 1),
+            side: part.doubleSided ? DoubleSide : FrontSide,
           });
       this.#modelMaterials.set(key, material);
     }

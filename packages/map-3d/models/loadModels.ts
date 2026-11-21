@@ -5,6 +5,7 @@
 
 import {
   BufferGeometry,
+  DoubleSide,
   Material,
   Mesh,
   MeshStandardMaterial,
@@ -27,6 +28,8 @@ export type ModelPart = {
   tinted: boolean;
   // Cut out where its texture's alpha is under a half, both sides drawn.
   cutout: boolean;
+  // Drawn from both sides, as its file's material says (glTF's `doubleSided`): a coat's single sheet seen from inside.
+  doubleSided: boolean;
 };
 
 /** A model as it's drawn: its parts, in its own units, and the 3D map's squares to each. */
@@ -66,6 +69,7 @@ export const partsOf = (scene: {
         map: standard.map ?? null,
         tinted: standard.userData?.playerColour === true,
         cutout: standard.alphaTest > 0,
+        doubleSided: standard.side === DoubleSide,
       });
     });
   });

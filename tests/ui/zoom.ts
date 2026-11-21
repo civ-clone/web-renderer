@@ -714,8 +714,8 @@ const run = async (): Promise<void> => {
     optionsWindow.close();
   }
 
-  // The size of the 3D map's units: only under `?3d=1`, from half life size to half as big again in quarters, at the
-  //  size kept, saying what it's at; let go, the size is kept, which the 3D map draws its units at.
+  // The size of the 3D map's units: only under `?3d=1`, from half as big as the map draws them to half as big again in
+  //  quarters, at the size kept, saying what it's at; let go, the size is kept, which the 3D map draws its units at.
   {
     const unitSizes = (search: string) =>
         unitSizeRow(search).map(
@@ -739,7 +739,7 @@ const run = async (): Promise<void> => {
     slider!.dispatchEvent(new Event('change'));
 
     expect(
-      "Options has the 3D map's unit size under ?3d=1 only, from half to half as big again in quarters, at life size, kept once it's let go",
+      "Options has the 3D map's unit size under ?3d=1 only, from half to half as big again in quarters, at the map's own size, kept once it's let go",
       [
         unitSizes('').length,
         unitSizes('?3d=0').length,

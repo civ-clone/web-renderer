@@ -683,8 +683,14 @@ Each is looked up by its type name in the model set.
   buildings.
 - **Facing:** a unit faces the way it last moved.
 - **Height:** it stands on the land's height at its feet.
-- **Size:** life size, as cities are drawn, so a small city doesn't look tiny beside its garrison. Options has the size
-  of the 3D map's units, from half to half as big again, for a player who'd rather have them read from further away.
+- **Size:** twice life size (`UNIT_SCALE`), as a tabletop game's figures are, so units read at a glance beside the
+  cities and land, which are drawn life size. Their stands, and a fortified unit's wall, stay as they are, so a squad
+  or a vehicle may reach past its stand, as a counter on a table does. A set says its models' sizes against each
+  other: 0 A.D.'s riders and chariot are drawn at three-quarters of its scale, so a horse doesn't tower over a tank.
+  Options has the size of the 3D map's units, from half to half as big again, for a player who'd rather have them read
+  from further away. (Life size until 2026-11-21, when I tried twice life size in a game and kept it.)
+- **Aircraft:** an aircraft flies over its stand, wherever it is: the built-in set's are drawn so, and one drawn with
+  a model flies as high, its underside `AIRBORNE_LIFT` times its size over the stand (`MarkerKit.modelFigures`).
 - **Squads:** a squad's figures spread around its position, each with a small fixed offset, so they don't line up like
   a parade.
 
@@ -1216,6 +1222,11 @@ mapEvent:
   below it (the sea at height 0, a lake or swamp pool at its own). It's stepped against the height function, taken as
   no lower than the water, and refined. The point where it lands goes through `layout.tileAt`, then wraps.
 - **A unit:** a ray that passes through a unit's bounding sphere picks the unit before the square.
+  - As built (`markers/pickUnit.ts`, `Stage.unitAt`): the ray meets what's drawn of each square's unit (its figures,
+    stand and ring, at every copy of the world drawn), and the nearest it meets picks that unit's square, before the
+    ground. Units are drawn twice life size, and aircraft fly over their stands, so their figures stand over the ground
+    of the square behind: a click, a GoTo's square or a tooltip there goes to the square whose unit it's on, as it's
+    seen. A unit walking or fighting isn't picked.
 - **A city:** a banner, or a city's lots, picks the city.
 - **Uses:** clicks, long presses, hover tooltips and target picking (Paradrop, Airlift) all go through these, with the
   tooltip content the 2D map gives [verified: `HoverSubject` in `GamePortal.ts`].
@@ -1307,8 +1318,14 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
 
   A model's parts are its meshes, each a geometry and a texture:
   - in its owner's colour where its material says (`extras.playerColour`), its texture's alpha the mask, as `rgb ×
-    mix(owner, white, alpha)`;
-  - or cut out where its alpha is under a half (`alphaMode` `MASK`), both sides drawn.
+    mix(owner, white, alpha)`. An owner's colour darker than `TINT_FLOOR` (a luminance of 0.08, in linear light) is
+    mixed with white just enough to reach it (`ownerTint`), so black doesn't leave the model a flat silhouette. That
+    lightens dark colours, not black alone: of the civilizations' own colours, the Zulus' near-black, the Americans'
+    navy, the Carthaginians' and Romans' purples, the Malians' brown, the Celts' green and the Russians' dark red, and
+    any saturated blue. The unit's flag keeps the colour as it is;
+  - or cut out where its alpha is under a half (`alphaMode` `MASK`), both sides drawn;
+  - from both sides where its material says (glTF's `doubleSided`), as a model made in Blender, which draws both, may
+    need: a coat's single sheet, seen from inside.
 
   As each arrives, every unit of a type it draws is marked again with it (`UnitMarker.model`). Units of other types,
   and all of them till then, are the built-in set's figures. A set that can't be loaded is said once, and each model
@@ -1316,7 +1333,7 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
 - **Drawn** (`MarkerKit.modelFigures`):
   - **Figures:** as many as stand for one unit of the type's look (D6), in its formation, merged in a mesh for each of
     the model's parts. So a unit is a draw call for each part, one or two, besides its stand.
-  - **Size:** the set's size times the player's (§6.2).
+  - **Size:** the set's size, or the model's own, times twice life size and the player's choice (§6.2).
   - **Where:** on the built-in set's stand, and behind its wall when fortified. A ship sits on the water in its
     ripples, with no stand.
   - **Colour:** `TintedMaterial` (`markers/tinted.ts`) mixes the owner's colour in. It's a class of its own, so a

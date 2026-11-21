@@ -81,7 +81,10 @@ import {
 } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import markerFor, { TileMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
 import { OverlayMesh, ROOFS } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
-import { IN_FRONT_OF_CITY } from '@civ-clone/ui-map-3d/markers/drawMarker';
+import {
+  IN_FRONT_OF_CITY,
+  UNIT_SCALE,
+} from '@civ-clone/ui-map-3d/markers/drawMarker';
 import { Color } from 'three';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { unitStatus } from '@civ-clone/ui-assets/lib/renderUnit';
@@ -234,8 +237,11 @@ const staged: string[] = [],
   markedAt = new Map<string, readonly [number, number, number]>(),
   // What each square yields, each time the stage was given it.
   yieldsSet: (YieldMesh | null)[] = [],
+  // The square whose unit's drawn under the pointer, as the stage would say, if any.
+  unitUnderPointer: { key: string | null } = { key: null },
   fakeStage = (): Stage => ({
     render: () => void staged.push('render'),
+    unitAt: () => unitUnderPointer.key,
     resize: (stageWidth, stageHeight, ratio) =>
       void staged.push(`resize ${stageWidth}×${stageHeight}@${ratio}`),
     setChunk: (i, j) => {
@@ -981,8 +987,8 @@ expect(
         status: 'Fd',
         // Not seen to move yet: facing south.
         facing: 0,
-        // Life size, as no other size is chosen.
-        size: 1,
+        // Twice life size, as the map draws units, as no other size is chosen.
+        size: UNIT_SCALE,
       },
     ]
   );
@@ -1013,7 +1019,8 @@ expect(
   );
 
   // How big units are drawn, changed in Options as the game goes on: every square's unit drawn again at once, at the
-  //  nearest size a player could choose, and life size again after.
+  //  nearest size a player could choose, and as the map draws them again after; all `UNIT_SCALE` times life size, as
+  //  units are drawn twice life size.
   // Each change drawn at once, with no other reason for a frame: the map's idle.
   staged.splice(0);
 
@@ -1033,15 +1040,18 @@ expect(
   sizesDrawn.push(sizeDrawn());
 
   expect(
-    'units are drawn at the size chosen in Options as soon as it changes, and the map drawn, the nearest size a player could choose, or life size',
-    sizesDrawn,
+    'units are drawn at the size chosen in Options as soon as it changes, and the map drawn, the nearest size a player could choose, or as the map draws them; all twice life size',
+    [UNIT_SCALE, sizesDrawn],
     [
-      [1, false],
-      [1.5, true],
-      // As it was: nothing drawn.
-      [1.5, false],
-      [0.5, true],
-      [1, true],
+      2,
+      [
+        [UNIT_SCALE, false],
+        [1.5 * UNIT_SCALE, true],
+        // As it was: nothing drawn.
+        [1.5 * UNIT_SCALE, false],
+        [0.5 * UNIT_SCALE, true],
+        [UNIT_SCALE, true],
+      ],
     ]
   );
 
@@ -1066,7 +1076,7 @@ expect(
   expect(
     'a size chosen before the game is the one its units are drawn at from the start',
     sizeAtStart,
-    1.25
+    1.25 * UNIT_SCALE
   );
 
   // A city and its units on a mountain, and a mountain made beside it, with only that square released: the land under
@@ -1872,6 +1882,22 @@ expect(
       ownCanvas.classList.contains('picking-tile'),
     ],
     [[true, true, 1], ['1,1'], false, false]
+  );
+
+  // A unit's figures under the pointer, standing over the ground of another square: the click picks the unit's square.
+  chooser.pickTile(
+    () => true,
+    (tile) => void picked.push(`${tile.x},${tile.y}`),
+    'Where?'
+  );
+  unitUnderPointer.key = '2,0';
+  clickAt(box.width / 2, box.height / 2);
+  unitUnderPointer.key = null;
+
+  expect(
+    'a click on a unit’s figures picks its square, not the ground behind them',
+    picked,
+    ['1,1', '2,0']
   );
 
   chooser.dispose();
@@ -3127,7 +3153,7 @@ expect(
     'a unit walking is drawn as it is standing, the active one ringed, at the size chosen; a rival’s stepping out of the dark, or off the screen, is on its square at once, not walking',
     [asDrawn, outOfTheDark, offScreen],
     [
-      [1, true, 1.5],
+      [1, true, 1.5 * UNIT_SCALE],
       [['Unit-R', 1], { ids: [], units: [] }],
       [['Unit-R', 1], { ids: [], units: [] }],
     ]

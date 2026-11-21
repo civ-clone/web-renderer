@@ -39,7 +39,7 @@ import {
 import prefersReducedMotion from '@civ-clone/ui-map/lib/reducedMotion';
 import CameraInput from './camera/CameraInput';
 import markerFor, { MarkerWords, TileMarker } from './markers/markerFor';
-import { IN_FRONT_OF_CITY } from './markers/drawMarker';
+import { IN_FRONT_OF_CITY, UNIT_SCALE } from './markers/drawMarker';
 import { airborne, unitLook } from '@civ-clone/ui-models-builtin/units';
 import Walks, {
   OWN_PACE,
@@ -389,7 +389,8 @@ export class MapView3D implements MapRenderer {
   #activeUnit: Unit | null = null;
   #pendingTile: Coordinate | null = null;
   #unitsShown = true;
-  // How big units are drawn, as the player chose (1 is life size), and what stops a change to it being told.
+  // How big units are drawn: `UNIT_SCALE` times life size, times the size the player chose; and what stops a change to
+  //  it being told.
   #unitSize: number;
   // The model each unit type is drawn with, by its type, from the set of models (`MapView3DDeps['models']`), as each
   //  model's loaded: the built-in set's figures for the rest.
@@ -429,7 +430,7 @@ export class MapView3D implements MapRenderer {
     this.#art = deps.art;
     this.#cityBanners = deps.cityBanners ?? null;
     this.#words = { cityName: deps.cityName, unitStatus: deps.unitStatus };
-    this.#unitSize = deps.unitSize?.get() ?? 1;
+    this.#unitSize = UNIT_SCALE * (deps.unitSize?.get() ?? 1);
     this.#artId = deps.art.id();
     this.world = deps.world;
     this.#land = new Land(deps.world);
@@ -561,7 +562,7 @@ export class MapView3D implements MapRenderer {
     //  size chosen, as Options changes it.
     this.#stopUnitSize =
       deps.unitSize?.onChange((): void => {
-        const size = deps.unitSize?.get() ?? 1;
+        const size = UNIT_SCALE * (deps.unitSize?.get() ?? 1);
 
         if (size !== this.#unitSize && !this.#disposed) {
           this.#unitSize = size;
@@ -2119,7 +2120,8 @@ export class MapView3D implements MapRenderer {
     );
   }
 
-  // The square under (`x`, `y`) in the canvas's px: what's shown there, the land or the water over it, on the world.
+  // The square under (`x`, `y`) in the canvas's px: what's shown there, on the world. A unit's figures first, as they
+  //  stand over the ground of the square behind, twice life size, or flying; then the land or the water over it.
   //  Nothing above the horizon, or past a pole the world doesn't wrap over.
   #tileAt(x: number, y: number): Tile | null {
     const width = this.#canvas.clientWidth,
@@ -2129,10 +2131,19 @@ export class MapView3D implements MapRenderer {
       return null;
     }
 
+    const ndc: [number, number] = [(x / width) * 2 - 1, 1 - (y / height) * 2],
+      unit = this.#stage.unitAt?.(ndc) ?? null;
+
+    if (unit !== null) {
+      const [unitX, unitY] = unit.split(',').map(Number) as [number, number];
+
+      return this.world.get(unitX, unitY);
+    }
+
     const ground = pickGround(
       this.#orbit,
       this.#lookHeight ?? 0,
-      [(x / width) * 2 - 1, 1 - (y / height) * 2],
+      ndc,
       width / height,
       (u, v) => this.#land.heightAt(u, v)
     );
