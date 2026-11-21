@@ -449,6 +449,21 @@ const check = async (): Promise<void> => {
       [1, [{ class: 'Mysticism', name: 'Mysticism', entry: true }]],
     ]
   );
+  // As in Civ1 v474.05 (#1284, #1286).
+  expect(
+    'a Colosseum costs 4 gold a turn',
+    entry('Colosseum')
+      ?.effects.filter(({ type }) => type === 'upkeep')
+      .map(({ value }) => value),
+    [4]
+  );
+  expect(
+    'the Great Library gives an advance two other civilizations know',
+    entry('GreatLibrary')
+      ?.effects.filter(({ type }) => type === 'shared_advances')
+      .map(({ value }) => value),
+    [2]
+  );
 
   finished = true;
 
