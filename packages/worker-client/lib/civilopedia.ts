@@ -13,6 +13,7 @@ import {
 } from '@civ-clone/core-unit/Yields';
 import Advance from '@civ-clone/core-science/Advance';
 import Age from '@civ-clone/base-science-age/Age';
+import Difficulty from '@civ-clone/core-difficulty/Difficulty';
 import { BaseYield } from '@civ-clone/core-unit/Rules/Yield';
 import BuildItem from '@civ-clone/core-city-build/BuildItem';
 import CityBuild from '@civ-clone/core-city-build/CityBuild';
@@ -20,6 +21,11 @@ import CityImprovement from '@civ-clone/core-city-improvement/CityImprovement';
 import Game from '@civ-clone/core-game/Game';
 import Government from '@civ-clone/core-government/Government';
 import Part from '@civ-clone/core-spaceship/Part';
+import Player from '@civ-clone/core-player/Player';
+import {
+  PlayerResearchRegistry,
+  instance as playerResearchRegistryInstance,
+} from '@civ-clone/core-science/PlayerResearchRegistry';
 import { RuleRegistry } from '@civ-clone/core-rule/RuleRegistry';
 import { Requirement } from '@civ-clone/core-requirement/Requirement';
 import Terrain from '@civ-clone/core-terrain/Terrain';
@@ -179,25 +185,111 @@ export const describedEffects = (rules: RuleRegistry): Described[] =>
           []) as Described[]
     );
 
-/** `Item`'s effects among `described`: those about it, or about one of its base classes. */
+/** Where a player stands, for the effects that apply to them (#1310): the advances they know and the game's level. */
+export interface Situation {
+  knows: (AdvanceType: Function) => boolean;
+  difficulty: typeof Difficulty | null;
+}
+
+// Effects that happen when the player discovers one of their `with` advances: done with once it has.
+const onDiscovery: string[] = ['sold_on'];
+
+const classOf = (value: unknown): Function | null =>
+  typeof value === 'function' ? value : null;
+
+/**
+ * `effects` as they stand in `situation` (#1310), in their order:
+ *  - one for another level (`below`, `atLeast`) is left out, and the level dropped from those for this one;
+ *  - one over (`until` an advance the player knows, or `sold_on` an advance it knows) is left out;
+ *  - one in force says no `from` the player already has;
+ *  - one still to come is said only as the next step (its `from` is the `until` of one in force, or of none), without
+ *    its own `until`, which is a step further.
+ */
+export const effectsInForce = (
+  effects: Described[],
+  { knows, difficulty }: Situation
+): Described[] => {
+  const level = difficulty?.level() ?? null,
+    known = (value: unknown): boolean => {
+      const AdvanceType = classOf(value);
+
+      return AdvanceType !== null && knows(AdvanceType);
+    },
+    atLevel =
+      level === null
+        ? effects
+        : effects
+            .filter(
+              ({ below, atLeast }) =>
+                (classOf(below) === null ||
+                  level < (below as typeof Difficulty).level()) &&
+                (classOf(atLeast) === null ||
+                  level >= (atLeast as typeof Difficulty).level())
+            )
+            .map(({ below, atLeast, ...effect }) => effect as Described),
+    current = atLevel
+      .filter(({ until }) => !known(until))
+      .flatMap((effect): Described[] => {
+        if (!onDiscovery.includes(effect.type) || !Array.isArray(effect.with)) {
+          return [effect];
+        }
+
+        const unknown = effect.with.filter(
+          (AdvanceType: unknown) => !known(AdvanceType)
+        );
+
+        return unknown.length === 0 ? [] : [{ ...effect, with: unknown }];
+      }),
+    future = current.filter(
+      ({ from }) => classOf(from) !== null && !known(from)
+    ),
+    // The steps after the next: their `from` is the `until` of a step still to come.
+    later = new Set(future.map(({ until }) => classOf(until))),
+    next = future.filter(({ from }) => !later.has(classOf(from)));
+
+  return current
+    .filter((effect) => !future.includes(effect) || next.includes(effect))
+    .map((effect): Described => {
+      const { from, until, ...rest } = effect;
+
+      // The next step: when it starts, not when it gives way to the one after.
+      if (next.includes(effect)) {
+        return { ...rest, from } as Described;
+      }
+
+      // In force: when it ends, not when it started.
+      if (known(from)) {
+        return (until === undefined ? rest : { ...rest, until }) as Described;
+      }
+
+      return effect;
+    });
+};
+
+/** `Item`'s effects among `described`: those about it, or about one of its base classes, as they stand in `situation`. */
 export const effectsOf = (
   Item: Class,
   described: Described[],
-  entryClasses: Set<Function> = new Set()
-): CivilopediaEffect[] =>
-  described
+  entryClasses: Set<Function> = new Set(),
+  situation: Situation | null = null
+): CivilopediaEffect[] => {
+  const about = described
     .filter(
       ({ subject }) =>
         typeof subject === 'function' &&
         (subject === Item || Item.prototype instanceof subject)
     )
-    .map(
-      ({ subject, ...fields }) =>
-        effectValue(fields, entryClasses) as unknown as CivilopediaEffect
-    );
+    .map(({ subject, ...fields }) => fields as Described);
+
+  return (situation === null ? about : effectsInForce(about, situation)).map(
+    (fields) =>
+      effectValue(fields, entryClasses) as unknown as CivilopediaEffect
+  );
+};
 
 export const civilopediaData = (
-  game: Game = defaultGame
+  game: Game = defaultGame,
+  situation: Situation | null = null
 ): CivilopediaEntry[] => {
   const kept = new Set(entriesInForce(game.requirements, game.rules)),
     advances = (game.advances.entries() as Class[]).filter(
@@ -267,7 +359,12 @@ export const civilopediaData = (
 
   // On the entries as sent, some of which are copies with more fields (an advance's age): by key, which is unique.
   all.forEach((made: CivilopediaEntry): void => {
-    made.effects = effectsOf(itemOf.get(made.key)!, described, entryClasses);
+    made.effects = effectsOf(
+      itemOf.get(made.key)!,
+      described,
+      entryClasses,
+      situation
+    );
   });
 
   return all;
@@ -285,5 +382,29 @@ export const unavailableBuildItems = (
     name: (item as unknown as Class).name,
     refusedBy: refusedBy.filter((id): id is string => id !== null),
   }));
+
+/** Where `player` stands in `game` (#1310): the advances it has finished researching, and the game's level. */
+export const situationOf = (
+  player: Player,
+  game: Game = defaultGame,
+  playerResearchRegistry: PlayerResearchRegistry = playerResearchRegistryInstance
+): Situation => {
+  const research = playerResearchRegistry.getByPlayer(player);
+
+  return {
+    knows: (AdvanceType: Function): boolean =>
+      research.completed(AdvanceType as typeof Advance),
+    difficulty: game.difficulty.get(),
+  };
+};
+
+/** The entry with save key `key`'s effects as they stand in `situation` (#1310), or `null` when there's no such entry. */
+export const entryEffectsInForce = (
+  key: string,
+  situation: Situation,
+  game: Game = defaultGame
+): CivilopediaEffect[] | null =>
+  civilopediaData(game, situation).find((entry) => entry.key === key)
+    ?.effects ?? null;
 
 export default civilopediaData;

@@ -1,4 +1,5 @@
 import {
+  CivilopediaEffect,
   CivilopediaEntry,
   CivilopediaKind,
 } from '@civ-clone/ui-protocol/civilopedia';
@@ -10,6 +11,7 @@ import {
   targetLine,
   whereHtml,
 } from './lib/requirements';
+import CivilopediaInForce from '@civ-clone/ui-protocol/Requests/CivilopediaInForce';
 import CivilopediaRequest from '@civ-clone/ui-protocol/Requests/Civilopedia';
 import { effectLines } from './lib/effects';
 import { RequirementData } from '@civ-clone/ui-protocol/requirements';
@@ -217,6 +219,10 @@ let open: Civilopedia | null = null;
 
 export class Civilopedia extends FilterableWindow {
   #data: CivilopediaData | null = null;
+  // In a game, each entry says only what applies to the player now (#1310), unless they ask to see every case.
+  #everyCase: boolean = false;
+  #inForce: CivilopediaEffect[] | null = null;
+  #transport: Transport;
   #entry: HTMLElement = s('<article class="entry"></article>');
   #pending: string | null = null;
   #history: string[] = [];
@@ -232,6 +238,7 @@ export class Civilopedia extends FilterableWindow {
 
     open = this;
     this.#pending = key;
+    this.#transport = transport;
 
     this.on('close', () => {
       if (open === this) {
@@ -252,7 +259,7 @@ export class Civilopedia extends FilterableWindow {
         h(this.element(), {
           click: (event: Event) => {
             const link = (event.target as HTMLElement).closest?.(
-              'a.civilopedia-link, button.back'
+              'a.civilopedia-link, button.back, button.every-case'
             ) as HTMLElement | null;
 
             if (!link) {
@@ -263,6 +270,13 @@ export class Civilopedia extends FilterableWindow {
 
             if (link.matches('button.back')) {
               this.back();
+
+              return;
+            }
+
+            if (link.matches('button.every-case')) {
+              this.#everyCase = !this.#everyCase;
+              this.#render();
 
               return;
             }
@@ -318,13 +332,53 @@ export class Civilopedia extends FilterableWindow {
     }
 
     this.#entry.dataset.key = key;
-    this.#entry.innerHTML = `<button class="btn-quiet back">${t(
-      'Civilopedia.back'
-    )}</button>${entryHtml(entry, this.#data)}`;
+    this.#inForce = null;
+    this.#render();
 
     // On a narrow screen the entry takes the index's place; Back returns to it.
     this.element().classList.add('showing-entry');
     this.#entry.scrollTop = 0;
+
+    // What applies to the player now (#1310), asked each time as their advances change: every case until it's answered,
+    //  and when there's no one playing (the title screen, an observer) or no answer.
+    this.#transport.request(new CivilopediaInForce(key)).then(
+      (effects: CivilopediaEffect[] | null) => {
+        if (this.#entry.dataset.key === key) {
+          this.#inForce = effects;
+          this.#render();
+        }
+      },
+      () => {}
+    );
+  }
+
+  // The entry shown, with what applies to the player now unless they asked for every case, and the button to switch
+  //  when the two differ.
+  #render(): void {
+    const key = this.#entry.dataset.key,
+      entry = key === undefined ? undefined : this.#data?.entries.get(key);
+
+    if (!entry || !this.#data) {
+      return;
+    }
+
+    const all = entry.effects ?? [],
+      differs =
+        this.#inForce !== null &&
+        JSON.stringify(this.#inForce) !== JSON.stringify(all),
+      effects = differs && !this.#everyCase ? this.#inForce! : all;
+
+    this.#entry.innerHTML = `<button class="btn-quiet back">${t(
+      'Civilopedia.back'
+    )}</button>${entryHtml({ ...entry, effects }, this.#data)}${
+      differs
+        ? `<button class="btn-quiet every-case">${t(
+            this.#everyCase
+              ? 'Civilopedia.what-applies'
+              : 'Civilopedia.every-case'
+          )}</button>`
+        : ''
+    }`;
   }
 
   /** The entry shown before this one, or the index when there is none. */

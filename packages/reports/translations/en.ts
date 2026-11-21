@@ -8,6 +8,9 @@ i18next.addResources('en', 'default', {
   'Civilopedia.title': 'Civilopedia',
   'Civilopedia.back': 'Back',
   'Civilopedia.choose': 'Choose an entry from the list.',
+  // In a game, an entry says what applies to you now; this shows every case, then back again (#1310).
+  'Civilopedia.every-case': 'Show every case',
+  'Civilopedia.what-applies': 'Show what applies to you',
   'Civilopedia.cost': 'Cost: {{cost, number}}',
   'Civilopedia.failed': 'The Civilopedia couldn’t be loaded.',
   'Civilopedia.heading.advances': 'Advances of this age',

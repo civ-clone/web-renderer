@@ -561,6 +561,92 @@ const run = async (): Promise<void> => {
       'No upkeep'
   );
 
+  // In a game, an entry says only what applies to the player now (#1310), asked each time it's shown, with a button for
+  //  every case; with no answer (no one playing, or a transport that doesn't know the request) it says every case.
+  const asked: string[] = [],
+    inForceTransport = {
+      request: async (request: { channel(): string; args(): unknown[] }) => {
+        const channel = request.channel();
+
+        if (channel === 'getCivilopedia') {
+          return [...entries, effects];
+        }
+
+        if (channel === 'getRequirements') {
+          return requirements;
+        }
+
+        if (channel === 'getCivilopediaInForce') {
+          asked.push(request.args()[0] as string);
+
+          return request.args()[0] === 'Temple'
+            ? [{ type: 'upkeep', yield: gold, value: 1 }]
+            : null;
+        }
+
+        throw new Error(`unexpected request ${channel}`);
+      },
+    } as any,
+    said = (shown: Civilopedia): string =>
+      text(
+        shown
+          .element()
+          .querySelector('.entry')!
+          .innerHTML.replace(
+            /<button class="btn-quiet every-case">.*?<\/button>/,
+            ''
+          )
+      )
+        .split('What it does')[1]
+        ?.split('Requirements')[0] ?? '',
+    inGame = new Civilopedia(inForceTransport, 'Temple');
+
+  await wait();
+  await wait();
+
+  expect(
+    'in a game, an entry says what applies now, with a button for every case',
+    [
+      said(inGame),
+      inGame.element().querySelector('.entry button.every-case')?.textContent,
+    ],
+    ['Upkeep: 1 gold a turn', 'Show every case']
+  );
+
+  (
+    inGame.element().querySelector('.entry button.every-case') as HTMLElement
+  ).click();
+
+  expect(
+    'and every case when asked, with a button back',
+    [
+      said(inGame).startsWith('Makes 1 unhappy citizen content'),
+      inGame.element().querySelector('.entry button.every-case')?.textContent,
+    ],
+    [true, 'Show what applies to you']
+  );
+
+  inGame.show('Musketman');
+
+  await wait();
+
+  expect(
+    'an entry with no answer has no button',
+    inGame.element().querySelector('.entry button.every-case'),
+    null
+  );
+
+  inGame.close();
+  new Civilopedia(inForceTransport, 'Temple').close();
+
+  await wait();
+
+  expect('and what applies is asked each time an entry is shown', asked, [
+    'Temple',
+    'Musketman',
+    'Temple',
+  ]);
+
   // A Wonder's effects say where they act (#1196): in all its owner's cities, on its continent, or (with no scope) its
   //  own city.
   const research = { class: 'Research', name: 'Research' },

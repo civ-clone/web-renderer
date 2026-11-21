@@ -17,6 +17,7 @@
     "./Requests/CivilizationScore": "./Requests/CivilizationScore.ts",
     "./Requests/Civilizations": "./Requests/Civilizations.ts",
     "./Requests/Civilopedia": "./Requests/Civilopedia.ts",
+    "./Requests/CivilopediaInForce": "./Requests/CivilopediaInForce.ts",
     "./Requests/Difficulties": "./Requests/Difficulties.ts",
     "./Requests/Intelligence": "./Requests/Intelligence.ts",
     "./Requests/Military": "./Requests/Military.ts",
