@@ -40,6 +40,7 @@ import {
 } from '@civ-clone/ui-map-3d/models/modelSet';
 import {
   LoadedModel,
+  modelManager,
   onSite,
   selfContained,
 } from '@civ-clone/ui-map-3d/models/loadModels';
@@ -326,8 +327,84 @@ expect(
       ),
       selfContained(binary({ buffers: [{ byteLength: 4 }] }, 0x12345678)),
       selfContained(new ArrayBuffer(8)),
+      // Lists as objects keyed by their places, which three.js reads as lists.
+      selfContained(
+        binary({
+          buffers: { 0: { byteLength: 4, uri: 'https://example.com/x.bin' } },
+        })
+      ),
+      selfContained(
+        binary({
+          buffers: [{ byteLength: 4 }],
+          images: { 0: { uri: 'x.png' } },
+        })
+      ),
+      selfContained(binary({ buffers: { 0: { byteLength: 4 } } })),
+      // A `uri` anywhere, and extensions, which may read more.
+      selfContained(
+        binary({
+          buffers: [{ byteLength: 4 }],
+          materials: [{ extras: { uri: 'x.png' } }],
+        })
+      ),
+      selfContained(
+        binary({
+          buffers: [{ byteLength: 4 }],
+          extensionsUsed: ['KHR_texture_basisu'],
+        })
+      ),
+      selfContained(
+        binary({
+          buffers: [{ byteLength: 4 }],
+          extensionsRequired: ['EXT_meshopt_compression'],
+        })
+      ),
+      selfContained(binary([])),
     ],
-    [true, false, false, false, false]
+    [
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+    ]
+  );
+
+  // Whatever a model's file says, what it's loaded with fetches nothing but what's in the file itself.
+  const manager = modelManager(),
+    resolved = (url: string): string => {
+      try {
+        return manager.resolveURL(url);
+      } catch {
+        return 'refused';
+      }
+    };
+
+  expect(
+    'a model’s loaded with nothing but what’s in its file: no other address, on this site or another',
+    [
+      resolved('blob:https://site.test/1234'),
+      resolved('data:image/png;base64,AAAA'),
+      resolved('https://example.com/x.bin'),
+      resolved('/sets/0ad/x.bin'),
+      resolved('x.bin'),
+      resolved(''),
+    ],
+    [
+      'blob:https://site.test/1234',
+      'data:image/png;base64,AAAA',
+      'refused',
+      'refused',
+      'refused',
+      'refused',
+    ]
   );
 }
 

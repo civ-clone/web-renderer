@@ -11,6 +11,7 @@ import {
   Texture,
 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { LoadingManager } from 'three';
 import {
   ModelManifest,
   readModelManifest,
@@ -73,8 +74,8 @@ export const partsOf = (scene: {
 };
 
 /**
- * Whether `data` is a glTF binary whole in itself: its buffer and images in it, none read from elsewhere (a `uri`),
- *  which loading it would fetch.
+ * Whether `data` is a glTF binary whole in itself: nothing in it read from elsewhere (a `uri`, anywhere in it), which
+ *  loading it would fetch; its buffers and images lists, as glTF has them; and needing no extension, which might.
  */
 export const selfContained = (data: ArrayBuffer): boolean => {
   if (data.byteLength < 20) {
@@ -98,16 +99,48 @@ export const selfContained = (data: ArrayBuffer): boolean => {
     const json = JSON.parse(
         new TextDecoder().decode(new Uint8Array(data, 20, length))
       ),
-      external = (list: unknown): boolean =>
-        Array.isArray(list) &&
-        list.some(
-          (each) => typeof each !== 'object' || each === null || 'uri' in each
-        );
+      // Whether there's a `uri` anywhere in `value`.
+      reads = (value: unknown): boolean =>
+        Array.isArray(value)
+          ? value.some(reads)
+          : typeof value === 'object' &&
+            value !== null &&
+            (Object.prototype.hasOwnProperty.call(value, 'uri') ||
+              Object.values(value).some(reads)),
+      listed = (value: unknown): boolean =>
+        value === undefined || Array.isArray(value);
 
-    return !external(json.buffers) && !external(json.images);
+    return (
+      typeof json === 'object' &&
+      json !== null &&
+      !Array.isArray(json) &&
+      listed(json.buffers) &&
+      listed(json.images) &&
+      json.extensionsUsed === undefined &&
+      json.extensionsRequired === undefined &&
+      !reads(json)
+    );
   } catch {
     return false;
   }
+};
+
+/**
+ * What a model's loaded with: anything it would fetch but what's in the file itself (a `blob:` or `data:` address, as
+ *  three.js reads its images from), it's refused, whatever the file said.
+ */
+export const modelManager = (): LoadingManager => {
+  const manager = new LoadingManager();
+
+  manager.setURLModifier((url: string): string => {
+    if (!/^(?:blob|data):/i.test(url)) {
+      throw new Error(`${url}: a model reads nothing from elsewhere`);
+    }
+
+    return url;
+  });
+
+  return manager;
 };
 
 /** `url` read against `here`, if it's on the same site as `here`: or nothing, for another site's. */
@@ -152,16 +185,20 @@ export const loadModels = async (
     throw new Error(`${url}: ${manifest}`);
   }
 
-  const loader = new GLTFLoader(),
-    types = unitTypesOf(manifest);
+  const loader = new GLTFLoader(modelManager()),
+    types = unitTypesOf(manifest),
+    // Where the manifest is: each model's beside it.
+    beside = new URL('.', at).href;
 
   await Promise.all(
     [...types.keys()].map(async (id) => {
       try {
         const file = onSite(manifest.models[id]!.file, at);
 
-        if (file === null) {
-          throw new Error(`${manifest.models[id]!.file}: not on this site`);
+        if (file === null || !file.startsWith(beside)) {
+          throw new Error(
+            `${manifest.models[id]!.file}: not beside the manifest`
+          );
         }
 
         const got = await fetch(file, { redirect: 'error' });
