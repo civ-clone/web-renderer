@@ -6352,6 +6352,8 @@ expect(
       images = new Map<string, CanvasImageSource>(),
       // How big each city's banner was last painted, in the canvas's px.
       sizes = new Map<unknown, { width: number; height: number }>(),
+      // What's told of the theme or the fonts changing.
+      restyles = new Set<() => void>(),
       imageOf = (name: string): CanvasImageSource => {
         const image =
           images.get(name) ??
@@ -6410,7 +6412,11 @@ expect(
             key: (tile: Tile) =>
               `${tile.city?.name} ${tall.get(tile.city?.name ?? '') ?? 12}`,
             giveWayToYields: true,
-            restyled: () => () => {},
+            restyled: (changed: () => void) => {
+              restyles.add(changed);
+
+              return (): void => void restyles.delete(changed);
+            },
           },
           squares: {
             ...given!.squares,
@@ -6615,17 +6621,62 @@ expect(
 
     const shrunk = tips.splice(0);
 
+    // Its tooltip open again, and the banners painted again as the theme changes, with nothing on its square changed:
+    //  shown again over it as it's drawn now. The units hidden (`t`), or the yields shown, by something other than a
+    //  key: it goes.
+    tall.set('Ur', 600);
+    patch([ur, 'Ur']);
+    pointer('pointermove', ...onUr);
+    await pause(450);
+    tips.length = 0;
+    tall.set('Ur', 650);
+    restyles.forEach((changed) => changed());
+    view.flush();
+
+    const restyled = nearest('Ur'),
+      followedRestyle = tips.splice(0);
+
+    view.toggleUnits();
+    view.flush();
+
+    const closedByHiding = tips.splice(0);
+
+    view.toggleUnits();
+    view.flush();
+    pointer('pointermove', ...onUr);
+    await pause(450);
+    tips.length = 0;
+    view.toggleYields();
+    view.flush();
+
+    const closedByYields = tips.splice(0);
+
+    view.toggleYields();
     tall.set('Ur', 600);
     patch([ur, 'Ur']);
     document.dispatchEvent(new Event('keydown'));
     tips.length = 0;
 
     expect(
-      'an open tooltip over a banner painted again is shown over it as it’s drawn now, or goes if it no longer reaches the mouse',
-      [taller.bottom > urs.bottom, followed, shrunk],
+      'an open tooltip over a banner painted again, as its city changes or the theme does, is shown over it as it’s drawn now, or goes if it no longer reaches the mouse; and goes with the banners hidden by the units or the yields',
+      [
+        taller.bottom > urs.bottom,
+        followed,
+        shrunk,
+        restyled.bottom > urs.bottom && restyled.bottom < taller.bottom,
+        followedRestyle,
+        closedByHiding,
+        closedByYields,
+      ],
       [
         true,
         [`open ${ur.x},${ur.y} ${taller.left} ${taller.top} ${taller.bottom}`],
+        ['closed'],
+        true,
+        [
+          `open ${ur.x},${ur.y} ${restyled.left} ${restyled.top} ${restyled.bottom}`,
+        ],
+        ['closed'],
         ['closed'],
       ]
     );

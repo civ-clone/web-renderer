@@ -321,7 +321,8 @@ export class MapView3D implements MapRenderer {
   #transport: MapView3DDeps['transport'];
   #picking: Picking | null = null;
   // The square the mouse rests on, waiting to show its tooltip or showing it, and whose tooltips they'd be; and whether
-  //  the square an open one is about has changed in the tiles taken this frame.
+  //  an open one is to be shown again once the frame's banners are drawn: its square has changed, or the banners have
+  //  been painted again, hidden or shown.
   #hover: Hover | null = null;
   #hoverChanged = false;
   #playerId: string;
@@ -1992,6 +1993,8 @@ export class MapView3D implements MapRenderer {
     this.#unitsShown = !this.#unitsShown;
     this.#land.showTowns(this.#unitsShown, ...this.#focus());
     this.#markAll();
+    // The banners hidden or shown: an open tooltip over one goes, or one over the land may be over one now.
+    this.#hoverChanged = true;
     this.#draw();
   }
 
@@ -1999,6 +2002,8 @@ export class MapView3D implements MapRenderer {
   toggleYields(): void {
     this.#yieldsShown = !this.#yieldsShown;
     this.#yieldsStale = true;
+    // The banners may give way to them, or come back.
+    this.#hoverChanged = true;
     this.#draw();
   }
 
@@ -2741,6 +2746,8 @@ export class MapView3D implements MapRenderer {
     this.#bannersPaintedFor = this.#bannersFor();
     this.#banners.clear();
     this.#markAll();
+    // Painted at another size: an open tooltip over one moves with it.
+    this.#hoverChanged = true;
   }
 
   // The banners over the map, drawn after it each frame: each below its city's square as the camera sees it now, the
