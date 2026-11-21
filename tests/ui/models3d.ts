@@ -38,7 +38,11 @@ import {
   scaleOf,
   unitTypesOf,
 } from '@civ-clone/ui-map-3d/models/modelSet';
-import { LoadedModel } from '@civ-clone/ui-map-3d/models/loadModels';
+import {
+  LoadedModel,
+  onSite,
+  selfContained,
+} from '@civ-clone/ui-map-3d/models/loadModels';
 import TintedMaterial from '@civ-clone/ui-map-3d/markers/tinted';
 import markerFor, { UnitMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
 import { formation } from '@civ-clone/ui-map-3d/markers/figures';
@@ -192,7 +196,7 @@ const manifest = (): Record<string, unknown> => ({
       'no scale',
       'no scale',
       'no models',
-      'model spare: no file beside the manifest, or no scale',
+      'model spare: no glTF binary beside the manifest, or no scale',
       'no unit names',
       'no unit names',
       'unit Archer: drawn by a model the set hasn’t',
@@ -213,6 +217,9 @@ const manifest = (): Record<string, unknown> => ({
     'data:model/gltf-binary;base64,AAAA',
     'models\\hoplite.glb',
     '',
+    // Not a glTF binary, which reads nothing more.
+    'models/hoplite.gltf',
+    'models/hoplite',
     // What a URL reads as other than it says: an escaped dot, a query, a fragment, a tab, a space.
     '%2e%2e/hoplite.glb',
     'models/%2e/hoplite.glb',
@@ -227,7 +234,7 @@ const manifest = (): Record<string, unknown> => ({
     files.map(
       (file) => read((json) => (json.models.hoplite.file = file)) === 'read'
     ),
-    [true, true, ...Array(15).fill(false)]
+    [true, true, ...Array(17).fill(false)]
   );
 }
 
@@ -248,15 +255,81 @@ expect(
     map3dModelsAsked('?models=/%0a/example.com/manifest.json'),
     map3dModelsAsked('?models=/%0d/example.com/manifest.json'),
     map3dModelsAsked('?models=/%20/example.com/manifest.json'),
+    // Its dots taken out, leaving `//`, which the browser reads as another site's.
+    map3dModelsAsked('?models=/.//example.com/manifest.json'),
+    map3dModelsAsked('?models=/a/..//example.com/manifest.json'),
+    map3dModelsAsked('?models=/..//example.com/manifest.json'),
+    map3dModelsAsked('?models=/%2e//example.com/manifest.json'),
+    map3dModelsAsked('?models=/a/%2e%2e//example.com/manifest.json'),
     // As it reads, its dots taken out.
     map3dModelsAsked('?models=/sets/x/../0ad/manifest.json'),
   ],
   [
     { url: '/sets/0ad/manifest.json' },
-    ...Array(11).fill(undefined),
+    ...Array(16).fill(undefined),
     { url: '/sets/0ad/manifest.json' },
   ]
 );
+
+// Whatever asked for it, the loader fetches nothing from another site, and loads only glTF binaries whole in
+//  themselves.
+{
+  const here = 'https://site.test/play/',
+    binary = (json: object, magic = 0x46546c67): ArrayBuffer => {
+      const text = new TextEncoder().encode(JSON.stringify(json)),
+        data = new ArrayBuffer(20 + text.length),
+        view = new DataView(data);
+
+      view.setUint32(0, magic, true);
+      view.setUint32(4, 2, true);
+      view.setUint32(8, data.byteLength, true);
+      view.setUint32(12, text.length, true);
+      view.setUint32(16, 0x4e4f534a, true);
+      new Uint8Array(data, 20).set(text);
+
+      return data;
+    };
+
+  expect(
+    'the loader takes this site’s addresses and no other’s',
+    [
+      onSite('/sets/0ad/manifest.json', here),
+      onSite('models/hoplite.glb', 'https://site.test/sets/0ad/manifest.json'),
+      onSite('//example.com/manifest.json', here),
+      onSite('https://example.com/manifest.json', here),
+      onSite('/.//example.com/manifest.json', here),
+      onSite('http://site.test/sets/manifest.json', here),
+    ],
+    [
+      'https://site.test/sets/0ad/manifest.json',
+      'https://site.test/sets/0ad/models/hoplite.glb',
+      null,
+      null,
+      'https://site.test//example.com/manifest.json',
+      null,
+    ]
+  );
+
+  expect(
+    'and loads a glTF binary only if it’s whole in itself, reading nothing from elsewhere',
+    [
+      selfContained(
+        binary({ buffers: [{ byteLength: 4 }], images: [{ bufferView: 0 }] })
+      ),
+      selfContained(
+        binary({
+          buffers: [{ byteLength: 4, uri: 'https://example.com/x.bin' }],
+        })
+      ),
+      selfContained(
+        binary({ buffers: [{ byteLength: 4 }], images: [{ uri: 'x.png' }] })
+      ),
+      selfContained(binary({ buffers: [{ byteLength: 4 }] }, 0x12345678)),
+      selfContained(new ArrayBuffer(8)),
+    ],
+    [true, false, false, false, false]
+  );
+}
 
 // A unit's marker says the model it's drawn with, where the map has one for its type.
 {

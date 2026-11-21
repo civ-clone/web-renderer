@@ -29,7 +29,8 @@ export const map3dModelsAsked = (
 
   const url = new URL(asked, here);
 
-  return url.origin === here
+  // Its dots taken out, it may start `//`, which the browser reads as another site's.
+  return url.origin === here && !url.pathname.startsWith('//')
     ? { url: `${url.pathname}${url.search}` }
     : undefined;
 };

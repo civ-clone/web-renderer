@@ -73,6 +73,55 @@ export const partsOf = (scene: {
 };
 
 /**
+ * Whether `data` is a glTF binary whole in itself: its buffer and images in it, none read from elsewhere (a `uri`),
+ *  which loading it would fetch.
+ */
+export const selfContained = (data: ArrayBuffer): boolean => {
+  if (data.byteLength < 20) {
+    return false;
+  }
+
+  const view = new DataView(data),
+    length = view.getUint32(12, true);
+
+  // `glTF`, version 2, and a JSON chunk first, as a glTF binary is.
+  if (
+    view.getUint32(0, true) !== 0x46546c67 ||
+    view.getUint32(4, true) !== 2 ||
+    view.getUint32(16, true) !== 0x4e4f534a ||
+    20 + length > data.byteLength
+  ) {
+    return false;
+  }
+
+  try {
+    const json = JSON.parse(
+        new TextDecoder().decode(new Uint8Array(data, 20, length))
+      ),
+      external = (list: unknown): boolean =>
+        Array.isArray(list) &&
+        list.some(
+          (each) => typeof each !== 'object' || each === null || 'uri' in each
+        );
+
+    return !external(json.buffers) && !external(json.images);
+  } catch {
+    return false;
+  }
+};
+
+/** `url` read against `here`, if it's on the same site as `here`: or nothing, for another site's. */
+export const onSite = (url: string, here: string): string | null => {
+  try {
+    const read = new URL(url, here);
+
+    return read.origin === new URL(here).origin ? read.href : null;
+  } catch {
+    return null;
+  }
+};
+
+/**
  * Loads the set whose manifest is at `url`: its manifest, then each model that draws a unit type, each given to
  *  `loaded` as it arrives, with the unit types it draws. Resolves with the manifest once all have been tried, or
  *  rejects saying why there's none (it can't be fetched, or isn't a set of models). A model that can't be had is said
@@ -83,7 +132,15 @@ export const loadModels = async (
   loaded: (id: string, model: LoadedModel, types: readonly string[]) => void,
   failed: (id: string, error: unknown) => void
 ): Promise<ModelManifest> => {
-  const response = await fetch(url);
+  // Only this site's, the manifest and its models: whatever asked for it, nothing's fetched from another.
+  const at = onSite(url, location.href);
+
+  if (at === null) {
+    throw new Error(`${url}: not on this site`);
+  }
+
+  // Nor sent on to another by the site.
+  const response = await fetch(at, { redirect: 'error' });
 
   if (!response.ok) {
     throw new Error(`${url}: ${response.status}`);
@@ -101,11 +158,26 @@ export const loadModels = async (
   await Promise.all(
     [...types.keys()].map(async (id) => {
       try {
-        const file = new URL(
-            manifest.models[id]!.file,
-            new URL(url, location.href)
-          ).href,
-          gltf = await loader.loadAsync(file);
+        const file = onSite(manifest.models[id]!.file, at);
+
+        if (file === null) {
+          throw new Error(`${manifest.models[id]!.file}: not on this site`);
+        }
+
+        const got = await fetch(file, { redirect: 'error' });
+
+        if (!got.ok) {
+          throw new Error(`${file}: ${got.status}`);
+        }
+
+        // A glTF binary, whole in itself: nothing more is fetched for it.
+        const data = await got.arrayBuffer();
+
+        if (!selfContained(data)) {
+          throw new Error(`${file}: not a glTF binary whole in itself`);
+        }
+
+        const gltf = await loader.parseAsync(data, '');
 
         loaded(
           id,

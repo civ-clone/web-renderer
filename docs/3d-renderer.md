@@ -1280,19 +1280,22 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
   - its licence, with the credit it asks for where it asks for one (`licence.attribution`, as a tileset's);
   - its credits, each naming the work, its author, a link and the licence;
   - its scale, the 3D map's squares to each of its models' units, which a model may set for itself;
-  - each model's file, a path beside the manifest (not the site's root, above the set, nor another site);
+  - each model's file, a glTF binary (`.glb`) beside the manifest: not the site's root, above the set, nor another
+    site, nor with anything a URL reads as other than it says (`%`, `?`, `#`, a space or a control character);
   - each unit type it draws, by the engine's name for it, drawn by one of its models.
 
   A manifest that isn't one is refused, saying why, and the map draws the built-in set's figures.
 - **Loading** (`loadModels.ts`): the stage fetches the manifest, then each model that draws a unit type, glTF
-  binaries read with three.js's `GLTFLoader`. A model's parts are its meshes, each a geometry and a texture:
+  binaries read with three.js's `GLTFLoader`. Only from this site: each address is checked before it's fetched
+  (`onSite`), a redirect is refused, and a model must be whole in itself (`selfContained`: no buffer or image read
+  from elsewhere), so nothing else is fetched for it. A model's parts are its meshes, each a geometry and a texture:
   - in its owner's colour where its material says (`extras.playerColour`), its texture's alpha the mask, as `rgb ×
     mix(owner, white, alpha)`;
   - or cut out where its alpha is under a half (`alphaMode` `MASK`), both sides drawn.
 
   As each arrives, every unit of a type it draws is marked again with it (`UnitMarker.model`). Units of other types,
-  and all of them till then, are the built-in set's figures. A set that can't be loaded is said once, and one model
-  that can't be leaves its types as they were.
+  and all of them till then, are the built-in set's figures. A set that can't be loaded is said once, and each model
+  that can't be is said, its types left as they were.
 - **Drawn** (`MarkerKit.modelFigures`):
   - **Figures:** as many as stand for one unit of the type's look (D6), in its formation, merged in a mesh for each of
     the model's parts. So a unit is a draw call for each part, one or two, besides its stand.
@@ -1303,7 +1306,8 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
     unit faded as it arrives or falls keeps its colour.
   - **Flags:** a unit's flag and labels stand over what the model reaches.
 - **Asking for one:** the page draws with a set only where it's asked to, `?models=` with its manifest's path on the
-  site, for trying one out (`map3dModelsAsked`). No set ships with civ.one yet: the first, 0 A.D.'s ancient units
+  site, for trying one out (`map3dModelsAsked`). It's read as the browser reads it, and taken only if it's a path on
+  this site, however it's spelled. No set ships with civ.one yet: the first, 0 A.D.'s ancient units
   (CC BY-SA 3.0, its own repository), comes with the credits list D3 asks for.
 
 ---

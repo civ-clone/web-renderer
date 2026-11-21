@@ -47,10 +47,12 @@ const isLicence = (value: unknown): value is ModelLicence =>
   isText(value.url) &&
   (value.attribution === undefined || isText(value.attribution));
 
-// A model's file: a path beside the manifest, not reaching out of where the set is, nor to another site: nothing a URL
-//  reads as other than it says (an escaped dot, a query, a fragment, a space or a control character).
+// A model's file: a glTF binary (whole in itself, reading no other file) beside the manifest, not reaching out of where
+//  the set is, nor to another site: nothing a URL reads as other than it says (an escaped dot, a query, a fragment, a
+//  space or a control character).
 const isFile = (value: unknown): value is string =>
   isText(value) &&
+  value.endsWith('.glb') &&
   !value.startsWith('/') &&
   !/[\\%?#\u0000-\u0020]/.test(value) &&
   !/^[a-z][a-z0-9+.-]*:/i.test(value) &&
@@ -112,7 +114,7 @@ export const readModelManifest = (json: unknown): ModelManifest | string => {
   );
 
   if (bad !== undefined) {
-    return `model ${bad[0]}: no file beside the manifest, or no scale`;
+    return `model ${bad[0]}: no glTF binary beside the manifest, or no scale`;
   }
 
   const names = json.names;
