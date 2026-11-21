@@ -695,7 +695,8 @@ export const createStage: StageFactory = (
       overlays.set(key, overlay);
     },
     unitAt: (ndc): string | null => {
-      markersGroup.updateMatrixWorld();
+      // As last drawn: drawing brings every marker's matrices up to date, so asking on each move of the pointer costs
+      //  no walk of the whole scene.
       camera.updateMatrixWorld();
 
       return unitUnder(
