@@ -67,6 +67,82 @@ const check = (): void => {
     { effects: [], scopes: [], classes: [] }
   );
 
+  // What #1196 left out (#1291): the effects each says, by type.
+  const types = (key: string): string[] =>
+    [
+      ...new Set(
+        entries
+          .find((entry) => entry.key === key)
+          ?.effects.map(({ type }) => type) ?? []
+      ),
+    ].sort();
+  const has = (key: string, wanted: string[]): string[] =>
+    wanted.filter((type) => !types(key).includes(type));
+
+  expect(
+    'the Palace: barbarians, civil war, its moves and its escape',
+    has('Palace', [
+      'barbarian_attack',
+      'barbarian_defender_rerolls',
+      'civil_war',
+      'free_in_first_city',
+      'lost_on_capture',
+      'palace_escape',
+      'relocates',
+    ]),
+    []
+  );
+  expect(
+    'Barracks: sold on an advance, upkeep by difficulty, healing and repair',
+    [
+      has('Barracks', [
+        'heals_nearby',
+        'lost_on_capture',
+        'repairs_allies',
+        'sold_on',
+        'upkeep',
+      ]),
+      entries
+        .find((entry) => entry.key === 'Barracks')
+        ?.effects.filter(({ type }) => type === 'upkeep')
+        .map(({ below, atLeast }) => (below ? 'below' : atLeast ? 'at' : '')),
+    ],
+    [[], ['below', 'below', 'below', 'at', 'at', 'at']]
+  );
+  expect(
+    'a Marketplace is lost half the time, unless its founder takes it',
+    entries
+      .find((entry) => entry.key === 'Marketplace')
+      ?.effects.filter(({ type }) => type === 'lost_on_capture')
+      .map(({ unless, value }) => [unless, value]),
+    [['founder', 0.5]]
+  );
+  expect(
+    'the rest of #1291, each on its page',
+    [
+      has('Courthouse', ['incite_distance']),
+      has('Lighthouse', ['protects_from']),
+      has('Airport', ['trade_route_link']),
+      has('Superhighways', ['trade_route_link']),
+      has('SolarPlant', ['global_warming', 'pollution_step']),
+      has('GreatWall', [
+        'attack_multiplier',
+        'barbarian_attack',
+        'talks_attitude',
+        'talks_no_tribute',
+        'talks_peace',
+      ]),
+      has('EiffelTower', [
+        'attitude_improved',
+        'reputation_halved',
+        'vendettas_end',
+      ]),
+      has('ManhattanProject', ['reputation_recovers']),
+      has('MarcoPolosEmbassy', ['shared_maps', 'tribute_demand']),
+    ],
+    [[], [], [], [], [], [], [], [], []]
+  );
+
   finished = true;
 
   if (failures.length > 0) {
