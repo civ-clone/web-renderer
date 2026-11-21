@@ -584,11 +584,11 @@ expect(
 );
 
 // A city: its buildings and walls one mesh, its name a label, and walls more of the mesh.
-const cityParts = (walled: boolean): Object3D[] => {
+const cityParts = (walled: boolean, unnamed?: true): Object3D[] => {
   const found: Object3D[] = [];
 
   drawMarker(kit, {
-    city: { name: 'Roma', size: 7, colours, walled, disorder: false },
+    city: { name: 'Roma', size: 7, colours, walled, disorder: false, unnamed },
     unit: null,
   }).traverse((object) => {
     if (!(object instanceof Group)) {
@@ -607,6 +607,14 @@ expect(
     (cityParts(true)[0] as Mesh).geometry === kit.walls(),
   ],
   [['Sprite'], ['Mesh', 'Sprite'], true]
+);
+expect(
+  'with its banner hung below it instead (the 3D map’s, from the page), no name over it',
+  [
+    cityParts(false, true).map((object) => object.type),
+    cityParts(true, true).map((object) => object.type),
+  ],
+  [[], ['Mesh']]
 );
 
 // A city's label is made for each size it reaches, so the kit lets go of those no marker uses, once it holds enough of

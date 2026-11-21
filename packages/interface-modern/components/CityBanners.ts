@@ -80,6 +80,16 @@ type BannerLayout = {
   baseline: number;
 };
 
+// What one city's banner says, which is all it changes with (`#content`), but for the theme, the fonts and the art.
+type BannerContent = {
+  size: string;
+  name: string;
+  production: { text: string; held: boolean } | null;
+  flags: string[];
+  food: { progress: number; cost: number; starving: boolean } | null;
+  colours: string[];
+};
+
 export class CityBanners extends CityNames {
   #cachedStyle: BannerStyle | null = null;
 
@@ -118,6 +128,42 @@ export class CityBanners extends CityNames {
     }
 
     return null;
+  }
+
+  override paintBanner(
+    tile: Tile,
+    density: number = 1
+  ): { width: number; height: number; centre: number } | null {
+    if (!tile.city || !this.#full()) {
+      return null;
+    }
+
+    // Laid out as on its square at the canvas's corner, then drawn moved up and left by as much as that puts it in, as
+    //  many of the canvas's pixels to each of the map's as `density` says: as big as on the map, and as sharp as the
+    //  screen.
+    const { pill, food } = this.#layout(tile, 0, 0),
+      bottom = food ? food.track.y + food.track.height : pill.y + pill.height,
+      canvas = this.canvas(),
+      context = this.context(),
+      { width } = this.projection().footprint();
+
+    canvas.width = Math.ceil(pill.width * density);
+    canvas.height = Math.ceil((bottom - pill.y) * density);
+    context.setTransform(density, 0, 0, density, 0, 0);
+    this.#drawBanner(tile, -pill.x, -pill.y);
+    context.setTransform(1, 0, 0, 1, 0, 0);
+
+    return {
+      width: canvas.width,
+      height: canvas.height,
+      centre: (width * this.tileset().cities.labels.x - pill.x) * density,
+    };
+  }
+
+  override bannerKey(tile: Tile): string | null {
+    return !tile.city || !this.#full()
+      ? null
+      : JSON.stringify(this.#content(tile.city));
   }
 
   protected override drawTile(
@@ -209,8 +255,49 @@ export class CityBanners extends CityNames {
     return Math.ceil(this.context().measureText(text).width);
   }
 
+  // What a city's banner says, before it's laid out: its size, its name, what it's building and in how many turns (a
+  //  dash for nothing, or for never, and the hold glyph for a build a rule holds once paid for, #959, #970, which the
+  //  banner's tooltip words), its flags, how far it is towards its next size and whether it's starving, and its colours.
+  //  Too small for more than the size and the name (#822), only those.
+  #content(city: City): BannerContent {
+    const compact = this.#compact(),
+      building = !compact && city.build ? city.build : null,
+      outlook = building?.building ? buildOutlook(city) : null,
+      turns = outlook?.turns ?? 0,
+      held = outlook?.hold?.now ?? false,
+      perTurn = city.yields ? reduceKnownYield(city.yields, 'Food') : 0,
+      growth = !compact && city.growth.cost ? city.growth : null;
+
+    return {
+      size: localeProvider.number(city.growth.size),
+      name: cityName(city),
+      production:
+        building === null
+          ? null
+          : {
+              text: held ? '' : turns > 0 ? localeProvider.number(turns) : '–',
+              held,
+            },
+      flags: compact
+        ? []
+        : [
+            ...(city.civilDisorderDeclared ? [disorderIconPath] : []),
+            ...(city.celebrateLeader ? [celebratingIconPath] : []),
+          ],
+      food:
+        growth === null || !city.build
+          ? null
+          : {
+              progress: growth.progress.value,
+              cost: growth.cost.value,
+              starving: perTurn < 0,
+            },
+      colours: playerColours(city.player),
+    };
+  }
+
   #layout(tile: Tile, offsetX: number, offsetY: number): BannerLayout {
-    const city = tile.city!,
+    const content = this.#content(tile.city!),
       { width } = this.projection().footprint(),
       { x: labelX } = this.tileset().cities.labels,
       scale = this.scale(),
@@ -218,41 +305,24 @@ export class CityBanners extends CityNames {
       padding = this.#padding(),
       height = this.#pillHeight(),
       top = this.#top(offsetY),
-      size = localeProvider.number(city.growth.size);
+      { size, name } = content;
 
     // Measured in the banner's font, which the label's drawing sets again for itself.
     this.context().save();
     this.context().font = this.#font();
 
     const badgeWidth = Math.max(height, this.#measure(size) + padding * 2),
-      compact = this.#compact(),
-      name = cityName(city),
       nameWidth = this.#measure(name),
-      // What a city seen in full is building, and in how many turns; a dash for nothing, or for never, and the hold
-      //  glyph for a build a rule holds once paid for (#959, #970), which the banner's tooltip words.
-      building = !compact && city.build ? city.build : null,
-      outlook = building?.building ? buildOutlook(city) : null,
-      turns = outlook?.turns ?? 0,
-      held = outlook?.hold?.now ?? false,
-      productionText = held
-        ? ''
-        : turns > 0
-        ? localeProvider.number(turns)
-        : '–',
       iconSize = fontSize,
       productionWidth =
-        building === null
+        content.production === null
           ? 0
           : iconSize +
             scale +
-            (held ? iconSize : this.#measure(productionText)),
-      flagPaths = compact
-        ? []
-        : [
-            ...(city.civilDisorderDeclared ? [disorderIconPath] : []),
-            ...(city.celebrateLeader ? [celebratingIconPath] : []),
-          ],
-      flagWidth = flagPaths.length * (iconSize + scale),
+            (content.production.held
+              ? iconSize
+              : this.#measure(content.production.text)),
+      flagWidth = content.flags.length * (iconSize + scale),
       contentWidth =
         badgeWidth +
         padding +
@@ -273,13 +343,13 @@ export class CityBanners extends CityNames {
     cursor += nameWidth + padding;
 
     const production =
-      building === null
+      content.production === null
         ? null
         : {
             icon: { x: cursor, y: iconTop, width: iconSize, height: iconSize },
-            text: productionText,
+            text: content.production.text,
             x: cursor + iconSize + scale,
-            hold: held
+            hold: content.production.held
               ? {
                   x: cursor + iconSize + scale,
                   y: iconTop,
@@ -291,7 +361,7 @@ export class CityBanners extends CityNames {
 
     cursor += productionWidth > 0 ? productionWidth + padding : 0;
 
-    const flags = flagPaths.map((path, index) => ({
+    const flags = content.flags.map((path, index) => ({
         path,
         rect: {
           x: cursor + index * (iconSize + scale),
@@ -300,8 +370,6 @@ export class CityBanners extends CityNames {
           height: iconSize,
         },
       })),
-      perTurn = city.yields ? reduceKnownYield(city.yields, 'Food') : 0,
-      growth = !compact && city.growth.cost ? city.growth : null,
       foodTrack = {
         x: left,
         y: top + height,
@@ -318,7 +386,7 @@ export class CityBanners extends CityNames {
       production,
       flags,
       food:
-        growth === null || !city.build
+        content.food === null
           ? null
           : {
               track: foodTrack,
@@ -326,18 +394,18 @@ export class CityBanners extends CityNames {
                 ...foodTrack,
                 // Starving, at least a sliver, so an empty store still shows red.
                 width: Math.max(
-                  perTurn < 0 ? this.scale() * 2 : 0,
+                  content.food.starving ? this.scale() * 2 : 0,
                   Math.round(
                     foodTrack.width *
                       Math.min(
                         1,
-                        Math.max(0, growth.progress.value) /
-                          Math.max(1, growth.cost.value)
+                        Math.max(0, content.food.progress) /
+                          Math.max(1, content.food.cost)
                       )
                   )
                 ),
               },
-              starving: perTurn < 0,
+              starving: content.food.starving,
             },
       baseline,
     };

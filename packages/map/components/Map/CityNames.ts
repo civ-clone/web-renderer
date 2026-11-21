@@ -54,6 +54,28 @@ export class CityNames extends Map {
     this.#drawLabel(tile, offsetX, offsetY);
   }
 
+  /**
+   * `tile`'s city's banner on its own, for a map that places it itself (the 3D map, docs/3d-renderer.md §7.5): laid out
+   *  as this layer lays it on the map, and painted on this layer's canvas, sized to it, with `density` of the canvas's
+   *  pixels to each of the map's, its top left at the canvas's. Its size in the canvas's pixels, and how far across it
+   *  the middle of its square is. Nothing, for a layer that draws no banner: the classic label is placed by the 2D
+   *  map's city sprite, which another map doesn't draw.
+   */
+  paintBanner(
+    tile: Tile,
+    density: number = 1
+  ): { width: number; height: number; centre: number } | null {
+    return null;
+  }
+
+  /**
+   * What `tile`'s city's banner says, as `paintBanner` would paint it now, to tell when it's to be painted again: the
+   *  same for the same banner. Nothing, for a layer that draws no banner.
+   */
+  bannerKey(tile: Tile): string | null {
+    return null;
+  }
+
   // A city has something drawn for it, which an update has to clear if the city goes.
   protected markLabelled(tile: Tile): void {
     this.#labelled.add(`${tile.x},${tile.y}`);

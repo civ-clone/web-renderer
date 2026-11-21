@@ -1,6 +1,6 @@
 // The 3D map's markers (docs/3d-renderer-plan.md 1.3, 2.1), in three.js:
-//  - a city as a wall round it if it's walled, and its name and size over it: its buildings are laid with the land, as
-//    its sprawl (`overlay/sprawl.ts`, plan 4.1);
+//  - a city as a wall round it if it's walled, and its name and size over it, unless the interface's banner hangs below
+//    it instead (`banners.ts`): its buildings are laid with the land, as its sprawl (`overlay/sprawl.ts`, plan 4.1);
 //  - a unit as its type looks in the built-in set (`figures.ts`, spec §6): soldiers in their era's kit, riders, ships,
 //    aircraft, on a stand in its owner's second colour (ships ride the water without one), behind a low wall when
 //    fortified, with its owner's flag over it (spec §6.3): the stack's size, the letter for what it's busy with, a
@@ -388,21 +388,23 @@ const drawCity = (kit: MarkerKit, city: CityMarker): Group => {
     group.add(new Mesh(kit.walls(), kit.figureMaterial));
   }
 
-  // About as tall on the screen as the 2D map's city names, whatever the distance.
-  group.add(
-    place(
-      label(
-        kit.label(
-          `${city.name}  ${city.size}${city.disorder ? ' !' : ''}`,
-          city.colours[0],
-          textOn(city.colours[0])
+  // About as tall on the screen as the 2D map's city names, whatever the distance: unless its banner says it instead.
+  if (city.unnamed !== true) {
+    group.add(
+      place(
+        label(
+          kit.label(
+            `${city.name}  ${city.size}${city.disorder ? ' !' : ''}`,
+            city.colours[0],
+            textOn(city.colours[0])
+          ),
+          CITY_LABEL,
+          0
         ),
-        CITY_LABEL,
-        0
-      ),
-      ...CITY_NAME_AT
-    )
-  );
+        ...CITY_NAME_AT
+      )
+    );
+  }
 
   return group;
 };

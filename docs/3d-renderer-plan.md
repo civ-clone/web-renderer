@@ -492,6 +492,12 @@ Still to do: worked squares further out, side streets, eras and modernising.
   - disorder, celebration, captured and destroyed;
   - yields over squares (`y`).
 
+**Banners, first part (drawing): done** (spec §7.5, "As built"). The interface's own banners, as the 2D map draws
+them, painted by the page one city at a time and hung below each city's square on a canvas over the map, the lowest
+on the screen over the rest, at every copy of the world in sight. Hidden with the units and, where they give way to
+them, with the yields. Still to do: clicking and hovering over them, fading those hidden behind the land, and the
+states (disorder, celebration, captured and destroyed) on the map itself.
+
 **Yields (`y`): done.** The 2D map's icons for what each square yields (the map's pack's own, or the interface's) stand
 in the world over each square's middle, as strategy maps show them, rather than on the screen:
 - **Laid out** as the 2D map lays them in its tile (`tileYieldGrid`: two rows, more columns the more there are), in a

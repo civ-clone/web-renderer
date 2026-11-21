@@ -27,7 +27,12 @@ import {
   MapView3DDeps,
 } from '@civ-clone/ui-map/MapView3DFactory';
 import MapView2D from '@civ-clone/ui-game/MapView2D';
-import MapView3D from '@civ-clone/ui-map-3d/MapView3D';
+import MapView3D, { keptCity } from '@civ-clone/ui-map-3d/MapView3D';
+import { bannerPlaces } from '@civ-clone/ui-map-3d/banners';
+import {
+  applyInterface,
+  interfaceMode,
+} from '@civ-clone/ui-platform/lib/interfaceMode';
 import {
   DISTANCE_MAX,
   DISTANCE_MIN,
@@ -49,6 +54,7 @@ import {
 } from '@civ-clone/ui-client/lib/map3dOptions';
 import {
   MAP3D_DISTANCE_OPTION,
+  cityBannersFor,
   forgetMap3D,
   loadMap3DScript,
   makeMapView,
@@ -128,6 +134,10 @@ const context = (): CanvasRenderingContext2D =>
   }) as unknown as CanvasRenderingContext2D;
 
 (globalThis as any).HTMLCanvasElement.prototype.getContext = context;
+
+// The page's styles, which the DOM here doesn't work out: none, so the interface's layer paints no banners for the 3D
+//  map, which then names its cities itself, as before, but where a check gives it a painter of its own.
+(globalThis as any).getComputedStyle ??= () => ({ getPropertyValue: () => '' });
 
 // The 2D map's blink, which nothing here runs.
 Object.assign(window, {
@@ -5877,6 +5887,702 @@ expect(
     inputs.some((path: string) => /three\/build\//.test(path)),
     true
   );
+
+  // The interface's banners (docs/3d-renderer.md §7.5): each city's painted alone by the page as its square's marked,
+  //  laid out at the 2D art's scale, as dense as the 2D map shows it on this screen, and drawn below its square on a
+  //  canvas over the map's, where `banners.ts` places it, with no name over the city then; the name back where the
+  //  page paints none. None with the units hidden (`t`), nor with the yields shown where they give way to them. All
+  //  painted again as the theme or fonts change, other art is chosen, its zoom changes or the screen's pixels do; and
+  //  the canvas, and what tells of those, let go with the map.
+  {
+    const painted: string[] = [],
+      restyles = new Set<() => void>(),
+      // Each image drawn on the banners' canvas, where, and how solid.
+      drawn: [unknown, number, number, number][] = [],
+      // The cities whose banners can't be painted, as on a browser short of what the interface draws with.
+      throwing = new Set<string>(),
+      // Who's told of the page's art changing.
+      artListeners = new Set<() => void>(),
+      // Each city's its own, so Ur's can be told from the other cities' on the world.
+      images = new Map<string, CanvasImageSource>(),
+      imageOf = (name: string): CanvasImageSource => {
+        const image =
+          images.get(name) ??
+          ({ banner: name } as unknown as CanvasImageSource);
+
+        images.set(name, image);
+
+        return image;
+      },
+      // The art, which can change under the map: chosen mid-game, or its zoom changed in Options.
+      art = { id: 'set-1', zoom: given!.art.zoom() };
+    let paints = true;
+
+    const cityBanners = {
+        paint: (tile: Tile, density: number) => {
+          painted.push(
+            `${tile.city?.name} ${tile.city?.growth.size} ×${density}`
+          );
+
+          if (throwing.has(tile.city?.name ?? '')) {
+            throw new Error('roundRect is not a function');
+          }
+
+          return paints
+            ? {
+                image: imageOf(tile.city?.name ?? ''),
+                width: 60,
+                height: 12,
+                centre: 25,
+              }
+            : null;
+        },
+        // What its banner says: here, its name and size, which the checks change.
+        key: (tile: Tile) => `${tile.city?.name} ${tile.city?.growth.size}`,
+        giveWayToYields: true,
+        restyled: (changed: () => void): (() => void) => {
+          restyles.add(changed);
+
+          return (): void => void restyles.delete(changed);
+        },
+      },
+      bannered = new MapView3D(
+        {
+          ...given!,
+          art: {
+            ...given!.art,
+            id: () => art.id,
+            zoom: () => art.zoom,
+            scale: () => Math.ceil(art.zoom),
+          },
+          artChanged: (changed: () => void): (() => void) => {
+            artListeners.add(changed);
+
+            return (): void => void artListeners.delete(changed);
+          },
+          cityBanners,
+        },
+        fakeStage
+      ),
+      overlay = mapCanvas.nextElementSibling as HTMLCanvasElement,
+      site = tiles[1 * width + 1] as Tile,
+      key = `${site.x},${site.y}`,
+      // As many of the screen's pixels to each of the 2D map's as it shows them: drawn at the whole scale at or above
+      //  its zoom, and shown at the zoom.
+      density = (ratio = 1) => (ratio * art.zoom) / Math.ceil(art.zoom),
+      patch = (city: object | null): void => {
+        Object.assign(site, { city, units: [] });
+        bannered.queueTile(site);
+        bannered.releaseTiles();
+        bannered.flush();
+      },
+      ur = (size: number) => ({
+        name: 'Ur',
+        growth: { size },
+        player: owner,
+        originalPlayer: { civilization: { _: 'Sumerians' } },
+        walled: false,
+        civilDisorderDeclared: false,
+      }),
+      // Ur's banner, where it's drawn now.
+      urs = () => drawn.filter(([what]) => what === imageOf('Ur')),
+      // What's drawn after a frame: the canvas cleared, as each frame clears it, and Ur's banner drawn again.
+      shown = () => {
+        bannered.flush();
+
+        return urs().length;
+      },
+      // What was painted for Ur since `from`, once each.
+      paintedFor = (from: number) => [
+        ...new Set(painted.slice(from).filter((what) => what.startsWith('Ur'))),
+      ],
+      // Where Ur's banner should be drawn at each copy, on a canvas with `ratio` of its pixels to each of the page's,
+      //  as `banners.ts` places it for the camera as the stage was last told it, a step down from the square.
+      expectedAt = (ratio: number) => {
+        const [u, v] = bannered.land().layout.centre(site.x, site.y),
+          up = Math.max(0, bannered.land().surfaceAt(u, v)),
+          gap = Math.round(Math.ceil(art.zoom) * density(ratio));
+
+        return bannerPlaces(
+          [
+            {
+              key,
+              centre: [u, up, v],
+              outline: bannered
+                .land()
+                .layout.outline(site.x, site.y)
+                .map(
+                  ([ou, ov]) =>
+                    [
+                      ou,
+                      Math.max(0, bannered.land().surfaceAt(ou, ov)),
+                      ov,
+                    ] as const
+                ),
+            },
+          ],
+          {
+            orbit: bannered.orbit(),
+            look: lookedAt[2]!,
+            width: box.width,
+            height: box.height,
+            period: bannered.land().layout.period(),
+            reach: 60,
+          }
+        ).map(({ x, y, clear }) => [
+          Math.round(x * ratio - 25),
+          Math.round(y * ratio) + gap,
+          clear,
+        ]);
+      },
+      drawnAt = () => urs().map(([, x, y, alpha]) => [x, y, alpha]);
+
+    const context2d = {
+      globalAlpha: 1,
+      // How many times it's been cleared.
+      clears: 0,
+      clearRect: () => {
+        drawn.length = 0;
+        context2d.clears++;
+      },
+      drawImage: (what: unknown, x: number, y: number) =>
+        void drawn.push([what, x, y, context2d.globalAlpha]),
+    };
+
+    Object.assign(overlay, { getContext: () => context2d });
+    bannered.setOrbit({
+      ...bannered.orbit(),
+      focus: bannered.land().layout.centre(site.x, site.y),
+      distance: DISTANCE_MIN,
+    });
+    patch(ur(2));
+
+    expect(
+      'a city’s banner is painted by the page as its square’s marked, as dense as the 2D map shows it, on a canvas after the map’s, with clicks going through',
+      [
+        paintedFor(0),
+        overlay.className,
+        overlay.style.pointerEvents,
+        overlay.previousElementSibling === mapCanvas,
+      ],
+      [[`Ur 2 ×${density()}`], 'map3d-banners', 'none', true]
+    );
+    expect(
+      'and drawn where `banners.ts` places it at each copy in sight, a step down from its square, there being no name over the city',
+      [drawnAt().length > 0, drawnAt(), markers.get(key)?.city?.unnamed],
+      [true, expectedAt(1), true]
+    );
+
+    const before = painted.length;
+
+    patch(ur(3));
+    paints = false;
+    patch(ur(4));
+
+    expect(
+      'painted again as it changes; and where the page paints none, its name is over it again, and nothing’s drawn',
+      [paintedFor(before), markers.get(key)?.city?.unnamed, shown()],
+      [[`Ur 3 ×${density()}`, `Ur 4 ×${density()}`], undefined, 0]
+    );
+
+    // As the theme changes back to one with banners: each painted again.
+    paints = true;
+    restyles.forEach((changed) => changed());
+    bannered.toggleUnits();
+
+    const hidden = shown(),
+      // A frame more with none to draw: the canvas, cleared already, left as it is.
+      clearsBefore = context2d.clears;
+
+    shown();
+
+    const idleClears = context2d.clears - clearsBefore;
+
+    bannered.toggleUnits();
+
+    const back = shown();
+
+    bannered.toggleYields();
+
+    const withYields = shown();
+
+    bannered.toggleYields();
+
+    expect(
+      'none with the units hidden, nor with the yields shown, as they give way to them, the canvas not cleared again with none on it; and back after',
+      [hidden, idleClears, back > 0, withYields, shown() > 0],
+      [0, 0, true, 0, true]
+    );
+
+    const restyledFrom = painted.length;
+
+    restyles.forEach((changed) => changed());
+
+    expect(
+      'painted again as the theme or the fonts loaded change',
+      paintedFor(restyledFrom),
+      [`Ur 4 ×${density()}`]
+    );
+
+    // Other art chosen mid-game, and the zoom changed in Options, though nothing's marked: each paints them all again,
+    //  at the next frame, before they're drawn.
+    const artFrom = painted.length,
+      firstDensity = density();
+
+    art.id = 'set-2';
+    shown();
+
+    const forArt = paintedFor(artFrom),
+      zoomFrom = painted.length;
+
+    art.zoom = 1.5;
+    shown();
+
+    expect(
+      'painted again for other art chosen, and for its zoom changed, as dense as the 2D map shows it at that zoom, and drawn where they hang',
+      [forArt, paintedFor(zoomFrom), drawnAt()],
+      [[`Ur 4 ×${firstDensity}`], [`Ur 4 ×${density()}`], expectedAt(1)]
+    );
+
+    // The land under it raised: drawn where it hangs over the land as it is now. And worked out once: a frame with
+    //  nothing changed doesn't measure the land under it again.
+    Object.assign(site, { terrain: { _: 'Mountains', features: [] } });
+    patch(ur(4));
+
+    const raised = drawnAt(),
+      land = bannered.land(),
+      measure = land.surfaceAt.bind(land);
+    let measured = 0;
+
+    land.surfaceAt = (...args: Parameters<typeof land.surfaceAt>) => {
+      measured++;
+
+      return measure(...args);
+    };
+    shown();
+    delete (land as { surfaceAt?: unknown }).surfaceAt;
+
+    expect(
+      'the land under a city raised, its banner hangs from the land as it is now; and a frame with nothing changed measures the land under none',
+      [raised, measured],
+      [expectedAt(1), 0]
+    );
+
+    // The window moved to a screen with twice the pixels: the canvas as many again, drawn on at once as sizing it
+    //  cleared it, the banners painted again twice as dense, as sharp as the map, and drawn where they were on the
+    //  page. The pixels told of before the canvas is sized for them aren't painted at.
+    const ratioFrom = painted.length;
+
+    (window as unknown as { devicePixelRatio: number }).devicePixelRatio = 2;
+    window.dispatchEvent(new Event('resize'));
+
+    const onResize = drawnAt();
+
+    shown();
+
+    const resized = [paintedFor(ratioFrom), drawnAt()],
+      untoldFrom = painted.length;
+
+    (window as unknown as { devicePixelRatio: number }).devicePixelRatio = 3;
+    shown();
+
+    expect(
+      'on a screen with twice the pixels, the canvas has twice as many and is drawn on as it’s sized, the banners are painted again twice as dense, and drawn at the same places on the page; till it’s sized again, at the same density',
+      [
+        overlay.width,
+        overlay.style.width,
+        onResize,
+        resized,
+        paintedFor(untoldFrom),
+      ],
+      [
+        box.width * 2,
+        `${box.width}px`,
+        expectedAt(2),
+        [[`Ur 4 ×${density(2)}`], expectedAt(2)],
+        [],
+      ]
+    );
+
+    delete (window as unknown as { devicePixelRatio?: number })
+      .devicePixelRatio;
+    window.dispatchEvent(new Event('resize'));
+    shown();
+
+    // Marked again with nothing changed: not painted again.
+    const unchangedFrom = painted.length;
+
+    patch(ur(4));
+
+    const unchanged = paintedFor(unchangedFrom);
+
+    // The land beside it raised: its outline's corners with it.
+    const beside = tiles[1 * width + 2] as Tile;
+
+    Object.assign(beside, { terrain: { _: 'Mountains', features: [] } });
+    bannered.queueTile(beside);
+    bannered.releaseTiles();
+    bannered.flush();
+
+    expect(
+      'marked again with nothing changed, not painted again; the land beside it raised, it hangs from its square as the land is now; faded as far into the haze as it is',
+      [unchanged, drawnAt()],
+      [[], expectedAt(1)]
+    );
+
+    // Where the banners don't give way to the yields, drawn with them.
+    cityBanners.giveWayToYields = false;
+    bannered.toggleYields();
+
+    const besideYields = shown();
+
+    bannered.toggleYields();
+    cityBanners.giveWayToYields = true;
+
+    // The page's art loaded again, and the zoom changed in Options: each painting them again at once.
+    const loadedFrom = painted.length;
+
+    artListeners.forEach((changed) => changed());
+
+    const loaded = paintedFor(loadedFrom),
+      zoomedFrom = painted.length;
+
+    art.zoom = 2;
+    bannered.portal.setZoom();
+
+    expect(
+      'drawn with the yields where they don’t give way to them; painted again as the page’s art is loaded again, and as the zoom’s changed in Options, at once',
+      [besideYields > 0, loaded, paintedFor(zoomedFrom)],
+      [true, [`Ur 4 ×${(1 * 1.5) / 2}`], [`Ur 4 ×${density()}`]]
+    );
+
+    // A banner that can't be painted (a browser short of what the interface draws with): its city named over it, the
+    //  others painted as ever, the squares released with it all marked, and said once.
+    const bad = tiles[2 * width + 2] as Tile,
+      good = tiles[2 * width + 3] as Tile,
+      errors: unknown[] = [],
+      log = console.error;
+
+    console.error = (error: unknown) => void errors.push(error);
+    throwing.add('Bad');
+    Object.assign(bad, { city: { ...ur(2), name: 'Bad' }, units: [] });
+    Object.assign(good, { city: { ...ur(2), name: 'Good' }, units: [] });
+    bannered.queueTile(bad);
+    bannered.queueTile(good);
+
+    let failed = false;
+
+    try {
+      bannered.releaseTiles();
+      bannered.flush();
+      Object.assign(bad, { city: { ...ur(3), name: 'Bad' } });
+      bannered.queueTile(bad);
+      bannered.releaseTiles();
+      bannered.flush();
+      // Marked again, unchanged: not tried again.
+      bannered.queueTile(bad);
+      bannered.releaseTiles();
+      bannered.flush();
+    } catch {
+      failed = true;
+    }
+
+    console.error = log;
+
+    const triedForBad = painted.filter((what) => what.startsWith('Bad'));
+
+    expect(
+      'a banner that can’t be painted leaves its city named, the others painted and marked as ever, and is said once; tried again only as its city changes',
+      [
+        failed,
+        markers.get(`${bad.x},${bad.y}`)?.city?.name,
+        markers.get(`${bad.x},${bad.y}`)?.city?.unnamed,
+        markers.get(`${good.x},${good.y}`)?.city?.unnamed,
+        errors.length,
+        triedForBad,
+      ],
+      [
+        false,
+        'Bad',
+        undefined,
+        true,
+        1,
+        [`Bad 2 ×${density()}`, `Bad 3 ×${density()}`],
+      ]
+    );
+
+    Object.assign(bad, { city: null });
+    Object.assign(good, { city: null });
+    bannered.queueTile(bad);
+    bannered.queueTile(good);
+    bannered.releaseTiles();
+    bannered.flush();
+    patch(null);
+
+    expect('a city gone, its banner goes', shown(), 0);
+
+    bannered.dispose();
+
+    expect(
+      'taken down, the canvas goes, and nothing tells it of the theme',
+      [overlay.isConnected, restyles.size],
+      [false, 0]
+    );
+  }
+
+  // A city kept as it was before a battle, as its banner and marker show it: the page fills its objects in place as
+  //  patches come, so what's shown of it (what it's building and how far, how it grows, what it yields) is copied.
+  {
+    const live = {
+        name: 'Ur',
+        player: owner,
+        growth: { size: 3, progress: { value: 10 }, cost: { value: 40 } },
+        build: {
+          building: { item: { _: 'Warriors' } },
+          progress: { value: 4 },
+          cost: { value: 20 },
+          held: ['a rule'],
+        },
+        yields: [{ _: 'Food', value: 2 }],
+      },
+      kept = keptCity(
+        live as unknown as Tile['city']
+      ) as unknown as typeof live;
+
+    Object.assign(live.growth, { size: 4 });
+    Object.assign(live.growth.progress, { value: 30 });
+    Object.assign(live.build.progress, { value: 12 });
+    live.build.held.push('another');
+    Object.assign(live.yields[0]!, { value: -1 });
+
+    expect(
+      'a city kept before a battle stays as it was, though the page fills its objects in place',
+      [
+        kept.growth.size,
+        kept.growth.progress.value,
+        kept.build.progress.value,
+        kept.build.held,
+        kept.yields[0]!.value,
+        kept.player === owner,
+      ],
+      [3, 10, 4, ['a rule'], 2, true]
+    );
+  }
+
+  // The page's own painter, with the new interface's banners (the theme's form `full`): a city's banner painted by the
+  //  interface's layer, twice as many pixels across and down, and as far across to the square's middle, for twice the
+  //  density; and painted again as the theme changes, till it's told no more.
+  {
+    const was = interfaceMode(),
+      computed = (globalThis as { getComputedStyle?: unknown })
+        .getComputedStyle;
+
+    applyInterface('modern', null);
+    (globalThis as { getComputedStyle?: unknown }).getComputedStyle = () => ({
+      getPropertyValue: (name: string) =>
+        name === '--ui-city-banner' ? 'full' : '',
+    });
+
+    const painter = cityBannersFor(
+        new World(worldData),
+        () => mapTileset(),
+        () => 2
+      )!,
+      tile = {
+        ...(tiles[0] as Tile),
+        city: {
+          name: 'Ur',
+          growth: { size: 3 },
+          player: owner,
+          originalPlayer: { civilization: { _: 'Sumerians' } },
+          civilDisorderDeclared: false,
+        },
+      } as unknown as Tile,
+      once = painter.paint(tile, 1),
+      twice = painter.paint(tile, 2),
+      // What it says: the same again, and not once it's grown.
+      keys = [
+        painter.key(tile),
+        painter.key(tile),
+        painter.key({
+          ...tile,
+          city: { ...tile.city!, growth: { size: 4 } },
+        } as unknown as Tile),
+      ];
+    let told = 0;
+
+    // The browser's light or dark, as the page asks after it, switched (the DOM here has none of its own).
+    const schemes = new Set<() => void>(),
+      matchMedia = (window as { matchMedia?: unknown }).matchMedia;
+
+    (window as { matchMedia?: unknown }).matchMedia = () => ({
+      addEventListener: (_: string, changed: () => void) =>
+        void schemes.add(changed),
+      removeEventListener: (_: string, changed: () => void) =>
+        void schemes.delete(changed),
+    });
+
+    const stop = painter.restyled(() => told++);
+
+    schemes.forEach((changed) => changed());
+    stop();
+    schemes.forEach((changed) => changed());
+    (window as { matchMedia?: unknown }).matchMedia = matchMedia;
+    // Through the view, with the page's own key and painter, on a city shaped as the page has it (an id on every part)
+    //  and filled in place as patches come: painted again as what its banner says changes, and only then.
+    const site = tiles[3 * width + 3] as Tile,
+      painting: string[] = [],
+      real = cityBannersFor(
+        given!.world,
+        () => mapTileset(),
+        () => 2
+      )!,
+      keyed = new MapView3D(
+        {
+          ...given!,
+          cityBanners: {
+            ...real,
+            paint: (shown: Tile, density: number) => {
+              painting.push(String(shown.city?.growth.size));
+
+              return real.paint(shown, density);
+            },
+          },
+        },
+        fakeStage
+      ),
+      production = (value: number) => ({
+        _: 'Production',
+        __: ['Production', 'Yield'],
+        id: `Production-${value}-${painting.length}`,
+        value,
+      }),
+      food = (value: number) => ({
+        _: 'Food',
+        __: ['Food', 'Yield'],
+        id: `Food-${value}-${painting.length}`,
+        value,
+      }),
+      city = {
+        id: 'City-K',
+        name: 'Kish',
+        player: owner,
+        originalPlayer: { id: 'Player-1', civilization: { _: 'Sumerians' } },
+        civilDisorderDeclared: false,
+        celebrateLeader: false,
+        growth: {
+          id: 'CityGrowth-K',
+          size: 3,
+          progress: { id: 'Progress-K', value: 10 },
+          cost: { id: 'Cost-K', value: 40 },
+        },
+        build: {
+          id: 'CityBuild-K',
+          building: { id: 'BuildItem-K', item: { _: 'Warriors' } },
+          progress: { id: 'Progress-B', value: 4 },
+          cost: { id: 'Cost-B', value: 20 },
+        },
+        yields: [production(4), food(2)],
+      },
+      // The square released and drawn, and whether its banner was painted again for it.
+      repainted = (change: () => void) => {
+        const from = painting.length;
+
+        change();
+        keyed.queueTile(site);
+        keyed.releaseTiles();
+        keyed.flush();
+
+        return painting.length > from;
+      };
+
+    Object.assign(site, { city, units: [] });
+
+    const first = repainted(() => undefined),
+      unchanged = repainted(() => undefined),
+      // As the worker sends a build alone: filled in place, the city's square queued for its banner.
+      turns = repainted(() => void (city.build.progress.value = 12)),
+      sameCost = repainted(
+        () => void (city.build.building.item = { _: 'Phalanx' })
+      ),
+      grown = repainted(() => void (city.growth.progress.value = 30)),
+      yieldsAnew = repainted(
+        () => void (city.yields = [production(4), food(2)])
+      ),
+      starving = repainted(
+        () => void (city.yields = [production(4), food(-1)])
+      ),
+      disorder = repainted(() => void (city.civilDisorderDeclared = true));
+
+    keyed.dispose();
+    Object.assign(site, { city: null });
+
+    expect(
+      'through the view, with the page’s own key, a city shaped and filled in place as the page has it: painted again for the turns to finish, its growth, starving and disorder; not for nothing changed, another item at the same cost, or its yields sent anew the same',
+      {
+        first,
+        unchanged,
+        turns,
+        sameCost,
+        grown,
+        yieldsAnew,
+        starving,
+        disorder,
+      },
+      {
+        first: true,
+        unchanged: false,
+        turns: true,
+        sameCost: false,
+        grown: true,
+        yieldsAnew: false,
+        starving: true,
+        disorder: true,
+      }
+    );
+
+    (globalThis as { getComputedStyle?: unknown }).getComputedStyle = computed;
+    applyInterface(was, null);
+
+    expect(
+      'the page paints a city’s banner by the interface’s layer, twice as big for twice the density, says what it says (the same for the same, otherwise not), and paints them again as the theme changes, till it’s told no more',
+      [
+        once !== null && once.width > 0 && once.height > 0,
+        twice?.width === (once?.width ?? 0) * 2,
+        twice?.height === (once?.height ?? 0) * 2,
+        twice?.centre === (once?.centre ?? 0) * 2,
+        keys[0] !== null && keys[0] === keys[1] && keys[1] !== keys[2],
+        told,
+      ],
+      [true, true, true, true, true, 1]
+    );
+  }
+
+  // An interface whose labels paint no banners (the classic one) gives the 3D map none, which names its cities itself;
+  //  the new one does.
+  {
+    const was = interfaceMode(),
+      world = new World(worldData),
+      painters = (['classic', 'modern'] as const).map((mode) => {
+        applyInterface(mode, null);
+
+        return (
+          cityBannersFor(
+            world,
+            () => mapTileset(),
+            () => 2
+          ) !== undefined
+        );
+      });
+
+    applyInterface(was, null);
+
+    expect(
+      'the classic interface gives the 3D map no banners; the new one does',
+      painters,
+      [false, true]
+    );
+  }
 
   // And the page's own bundle can't take three.js in: nothing outside the 3D map's package imports it, or that package.
   const root = process.cwd(),

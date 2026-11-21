@@ -21,7 +21,10 @@ import {
   CreateMapView3D,
   MAP3D_GLOBAL,
   Map3DScript,
+  MapView3DDeps,
 } from '@civ-clone/ui-map/MapView3DFactory';
+import cityLabels from '@civ-clone/ui-map/components/Map/cityLabels';
+import { CityNames } from '@civ-clone/ui-map/components/Map/CityNames';
 import MapRenderer from '@civ-clone/ui-map/MapRenderer';
 import World from '@civ-clone/ui-map/components/World';
 import { scaleOfZoom } from '@civ-clone/ui-map/components/Portal';
@@ -222,6 +225,70 @@ export const yieldIconFrom =
     return hasPreloadedImage(path, art) ? getPreloadedImage(path, art) : null;
   };
 
+/**
+ * Tells `changed` whenever the theme, light or dark, or the fonts loaded change, as the 2D map's banners are drawn again
+ *  then (`MapView2D`), returning what stops it. Nothing where the page has none of these (the tests' DOM).
+ */
+export const onRestyled = (changed: () => void): (() => void) => {
+  const observer =
+      typeof MutationObserver === 'undefined'
+        ? null
+        : new MutationObserver(() => changed()),
+    scheme = window.matchMedia?.('(prefers-color-scheme: dark)') ?? null,
+    fonts = document.fonts ?? null,
+    handler = (): void => changed();
+
+  observer?.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme', 'data-ui-theme'],
+  });
+  // Older Safari's list has only `addListener`: there, they follow the theme only when it's chosen.
+  scheme?.addEventListener?.('change', handler);
+  fonts?.addEventListener?.('loadingdone', handler);
+
+  return (): void => {
+    observer?.disconnect();
+    scheme?.removeEventListener?.('change', handler);
+    fonts?.removeEventListener?.('loadingdone', handler);
+  };
+};
+
+/**
+ * The interface's banners, for the 3D map to hang below its cities (docs/3d-renderer.md §7.5): each city's painted
+ *  alone, on a canvas of its own, by the layer the 2D map draws them with, at the 2D map's scale (`scale`), `density`
+ *  of the canvas's pixels to each of the map's. Nothing where that layer paints none (the classic label), and painted
+ *  again as the theme or the fonts loaded change, where they follow the theme. None at all for an interface whose layer
+ *  paints no banner.
+ */
+export const cityBannersFor = (
+  world: World,
+  tileset: () => TilesetDescriptor,
+  scale: () => number
+): MapView3DDeps['cityBanners'] => {
+  const labels = cityLabels.current();
+
+  if (labels.layer.prototype.paintBanner === CityNames.prototype.paintBanner) {
+    return undefined;
+  }
+
+  // The layer, laid out as the 2D map lays it now, over `canvas`: made afresh each time, so it reads the theme as it is.
+  const layer = (canvas = document.createElement('canvas')) =>
+    new labels.layer(world, scale(), nativeTileSize(tileset()), canvas);
+
+  return {
+    paint: (tile, density) => {
+      const canvas = document.createElement('canvas'),
+        painted = layer(canvas).paintBanner(tile, density);
+
+      return painted === null ? null : { image: canvas, ...painted };
+    },
+    key: (tile) => layer().bannerKey(tile),
+    giveWayToYields: labels.giveWayToYields,
+    restyled: (changed) =>
+      labels.followTheme ? onRestyled(changed) : (): void => {},
+  };
+};
+
 // A canvas that a WebGL context has been taken on can't give a 2D one: one in its place, the same size, for the 2D map.
 const canvasFor2D = (canvas: HTMLCanvasElement): HTMLCanvasElement => {
   if (canvas.getContext('2d') !== null) {
@@ -286,6 +353,7 @@ export const makeMapView = (
         set: (distance: number): void =>
           options.set(MAP3D_DISTANCE_OPTION, distance),
       },
+      cityBanners: cityBannersFor(world, tileset, () => scaleOfZoom(zoom())),
       cityName,
       cityOpener: deps.cityOpener,
       coveredBy: deps.coveredBy ?? [],

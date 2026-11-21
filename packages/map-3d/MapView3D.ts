@@ -13,7 +13,10 @@
 
 import { Coordinate, Tile, Unit } from '@civ-clone/ui-protocol/types';
 import { MapEvent, MapEventUnit } from '@civ-clone/ui-protocol/mapEvents';
-import { MapView3DDeps } from '@civ-clone/ui-map/MapView3DFactory';
+import {
+  CityBannerImage,
+  MapView3DDeps,
+} from '@civ-clone/ui-map/MapView3DFactory';
 import MapPortal3D from './MapPortal3D';
 import MapRenderer from '@civ-clone/ui-map/MapRenderer';
 import type { MapHeading } from '@civ-clone/ui-client/lib/unitActionKeys';
@@ -57,6 +60,7 @@ import Battles, {
 import pickGround from './camera/pick';
 import Minimap3D from './minimap/Minimap3D';
 import { LaidYields, innerOf, laidYields, yieldMesh } from './yields';
+import { BannerSite, bannerPlaces } from './banners';
 import { squareCity, squareYields } from '@civ-clone/ui-client/lib/yieldMap';
 
 // How long, in ms, each frame may go on building the land's chunks while any wait. A chunk is built whole, once a frame
@@ -89,12 +93,33 @@ const keptUnit = (unit: Unit): Unit => ({
   ...(unit.improvements ? { improvements: [...unit.improvements] } : {}),
 });
 
-// A city as it's shown, kept, as `keptUnit` keeps a unit: its size with it.
-const keptCity = (city: Tile['city']): Tile['city'] =>
+// An object the page fills in place as patches come, copied a level down: its own values, and theirs.
+const copied = <T extends object>(object: T): T =>
+  Object.fromEntries(
+    Object.entries(object).map(([name, value]) => [
+      name,
+      Array.isArray(value)
+        ? [...value]
+        : value !== null && typeof value === 'object'
+        ? { ...value }
+        : value,
+    ])
+  ) as T;
+
+/**
+ * A city as it's shown, kept, as `keptUnit` keeps a unit: what its marker and its banner show of it (its size, what it's
+ *  building and how far, how it grows, what it yields), so a patch filling the page's objects in place leaves it as it
+ *  was. Its players, whose objects reach round to the city itself, are shared.
+ */
+export const keptCity = (city: Tile['city']): Tile['city'] =>
   city
     ? {
         ...city,
-        ...(city.growth ? { growth: { ...city.growth } } : {}),
+        ...(city.growth ? { growth: copied(city.growth) } : {}),
+        ...(city.build ? { build: copied(city.build) } : {}),
+        ...(city.yields
+          ? { yields: city.yields.map((each) => ({ ...each })) }
+          : {}),
       }
     : city;
 
@@ -316,6 +341,26 @@ export class MapView3D implements MapRenderer {
   #minimapStale = true;
   // The squares marked now, by `x,y`, each with what it was marked with, so a square marked the same is left alone.
   #marked = new Map<string, string>();
+  // The interface's banners, where it draws them (`MapView3DDeps['cityBanners']`): each city's painted alone, by its
+  //  square, as it was when its square was last marked; the art, its scale and the density they were all last painted
+  //  at; the canvas they're drawn on, over the map's; and what stops the theme or the fonts changing being told of.
+  #cityBanners: NonNullable<MapView3DDeps['cityBanners']> | null;
+  #banners = new Map<
+    string,
+    { signature: string; banner: CityBannerImage | null }
+  >();
+  // Whether any banner was drawn the last frame, so a canvas with none is left as it is; and whether one has failed
+  //  to paint, which is said once.
+  #bannersDrawn = false;
+  #bannerFailed = false;
+  #bannersPaintedFor = '';
+  // Where each city with a banner stands on the land, by its square, worked out once: again only where the land under
+  //  it changes.
+  #bannerSites = new Map<string, BannerSite>();
+  // The banners' canvas's pixels to each of the page's, as it was last sized, or none before it was.
+  #bannerRatio: number | null = null;
+  #bannerCanvas: HTMLCanvasElement | null = null;
+  #stopRestyled: () => void = (): void => {};
   // A frame asked for to draw in, if one is.
   #frame: number | null = null;
   // Keyed by the square, as the 2D map's: a tile waits in `#incomingTiles` until the world has it (`releaseTiles`).
@@ -358,6 +403,7 @@ export class MapView3D implements MapRenderer {
     this.#canvas = deps.mapCanvas;
     this.#coveredBy = deps.coveredBy;
     this.#art = deps.art;
+    this.#cityBanners = deps.cityBanners ?? null;
     this.#words = { cityName: deps.cityName, unitStatus: deps.unitStatus };
     this.#unitSize = deps.unitSize?.get() ?? 1;
     this.#artId = deps.art.id();
@@ -427,6 +473,26 @@ export class MapView3D implements MapRenderer {
       (window as unknown as { civMap3DView?: MapView3D }).civMap3DView = this;
     }
 
+    // Over the map, after its canvas so it's drawn over it, as the stats are; clicks go through it to the map.
+    if (this.#cityBanners !== null && deps.mapCanvas.parentElement) {
+      const banners = document.createElement('canvas');
+
+      banners.className = 'map3d-banners';
+      banners.setAttribute('aria-hidden', 'true');
+      Object.assign(banners.style, {
+        left: '0',
+        pointerEvents: 'none',
+        position: 'absolute',
+        top: '0',
+      });
+      deps.mapCanvas.after(banners);
+      this.#bannerCanvas = banners;
+    } else {
+      // Nowhere to draw them: the cities named over them, as before.
+      this.#cityBanners = null;
+    }
+
+    this.#bannersPaintedFor = this.#bannersFor();
     this.#land.queueAll(...this.#focus());
     this.#markAll();
 
@@ -479,12 +545,19 @@ export class MapView3D implements MapRenderer {
           this.#draw();
         }
       }) ?? ((): void => {});
-    // And the yields' icons drawn again from the page's art when it changes.
+    // And the yields' icons drawn again from the page's art when it changes, and the banners painted again with it.
     this.#stopArtChanged =
       deps.artChanged?.((): void => {
         if (!this.#disposed) {
           this.#yieldsStale = true;
-          this.#draw();
+          this.#paintBannersAgain();
+        }
+      }) ?? ((): void => {});
+    // As they are with the theme, or the fonts loaded, they're painted with.
+    this.#stopRestyled =
+      this.#cityBanners?.restyled((): void => {
+        if (!this.#disposed) {
+          this.#paintBannersAgain();
         }
       }) ?? ((): void => {});
   }
@@ -592,6 +665,10 @@ export class MapView3D implements MapRenderer {
 
     this.#stopUnitSize();
     this.#stopArtChanged();
+    this.#stopRestyled();
+    this.#bannerCanvas?.remove();
+    this.#banners.clear();
+    this.#bannerSites.clear();
     this.#endHover();
     this.#input.dispose();
     this.#minimap?.dispose();
@@ -2364,6 +2441,10 @@ export class MapView3D implements MapRenderer {
     });
     this.#yieldsChanged(squares, reshaped);
 
+    // Where the cities stand, worked out again where the land under them may have changed: a world sent again with a
+    //  square newly seen says which, as for the yields.
+    reshaped.forEach(([x, y]) => this.#bannerSites.delete(`${x},${y}`));
+
     // The square an open tooltip is about has changed: it says what's there now.
     const hover = this.#hover;
 
@@ -2439,19 +2520,27 @@ export class MapView3D implements MapRenderer {
     });
 
     const drawn = units.filter(({ id }) => !this.#leftOff(id)),
-      marker = markerFor(
+      city = shownBefore === undefined ? tile.city : shownBefore.city,
+      marked = markerFor(
         shownBefore === undefined && drawn.length === tile.units.length
           ? tile
-          : {
-              city: shownBefore === undefined ? tile.city : shownBefore.city,
-              units: drawn,
-            },
+          : { city, units: drawn },
         this.#ringed,
         this.#unitsShown,
         this.#words,
         (unit) => this.#facings.get(unit.id) ?? 0,
         this.#unitSize
-      );
+      ),
+      // With its banner hung below its square, a city's name isn't over it too.
+      marker =
+        marked?.city && this.#bannerOf(key, tile, city) !== null
+          ? { ...marked, city: { ...marked.city, unnamed: true as const } }
+          : marked;
+
+    if (!city) {
+      this.#banners.delete(key);
+      this.#bannerSites.delete(key);
+    }
 
     this.#drawnOn(key, drawn, {
       shown: marker?.unit?.id ?? null,
@@ -2474,6 +2563,178 @@ export class MapView3D implements MapRenderer {
       this.#stage.setMarker(key, at, marker);
       this.#remember(key, signature);
     }
+  }
+
+  // The banner for the city on the square `key` as it's shown (`city`, before a battle there, say): painted again only
+  //  if what it says has changed (`key`, the page's), as the density changing paints them all again (`#bannersFor`); or
+  //  nothing, where the interface draws none, or it couldn't be painted (a browser short of what the interface draws
+  //  with), which leaves the city named over it, and is said once.
+  #bannerOf(
+    key: string,
+    tile: Tile,
+    city: Tile['city']
+  ): CityBannerImage | null {
+    if (this.#cityBanners === null || !city) {
+      return null;
+    }
+
+    const density = this.#bannerDensity(),
+      shown = { ...tile, city },
+      kept = this.#banners.get(key);
+    let signature = '!',
+      banner: CityBannerImage | null = null;
+
+    try {
+      signature = String(this.#cityBanners.key(shown));
+
+      if (kept?.signature === signature) {
+        return kept.banner;
+      }
+
+      banner = this.#cityBanners.paint(shown, density);
+    } catch (error) {
+      if (!this.#bannerFailed) {
+        this.#bannerFailed = true;
+        console.error(error);
+      }
+    }
+
+    this.#banners.set(key, { signature, banner });
+
+    return banner;
+  }
+
+  // How many of the screen's pixels the banners have to each of the 2D map's: as big as the 2D map shows them, drawn at
+  //  the whole scale at or above its zoom and shown at the zoom (`Portal#setZoom`), and as sharp as the screen.
+  //  The screen's pixels as the banners' canvas was last sized for them, so the two agree till it's sized again.
+  #bannerDensity(): number {
+    return (
+      (this.#bannerRatio ?? (window.devicePixelRatio || 1)) *
+      (this.#art.zoom() / this.#art.scale())
+    );
+  }
+
+  // Where the city on the square `key` stands on the land as it's drawn: its square's middle and its outline's corners.
+  #bannerSiteOf(key: string): BannerSite {
+    let site = this.#bannerSites.get(key);
+
+    if (site === undefined) {
+      const [x, y] = key.split(',').map(Number) as [number, number],
+        [u, v] = this.#land.layout.centre(x, y),
+        up = (pu: number, pv: number) =>
+          Math.max(0, this.#land.surfaceAt(pu, pv));
+
+      site = {
+        key,
+        centre: [u, up(u, v), v],
+        outline: this.#land.layout
+          .outline(x, y)
+          .map(([ou, ov]) => [ou, up(ou, ov), ov] as const),
+      };
+      this.#bannerSites.set(key, site);
+    }
+
+    return site;
+  }
+
+  // What the banners are painted for: the art, its scale and the density, any of which changing paints them all again.
+  #bannersFor(): string {
+    return `${this.#art.id()} ${this.#art.scale()} ${this.#bannerDensity()}`;
+  }
+
+  // The banners painted again, as the theme, the fonts loaded, the art they're painted with or its size have changed:
+  //  every city's square marked again, which paints them, and its name taken off or put back as one is painted or not.
+  #paintBannersAgain(): void {
+    this.#repaintBanners();
+    this.#draw();
+  }
+
+  // As `#paintBannersAgain`, in a frame being drawn, which draws them next.
+  #repaintBanners(): void {
+    this.#bannersPaintedFor = this.#bannersFor();
+    this.#banners.clear();
+    this.#markAll();
+  }
+
+  // The banners over the map, drawn after it each frame: each below its city's square as the camera sees it now, the
+  //  lower on the screen over the higher. None with the units hidden (`t`), nor where they give way to the yields.
+  #drawBanners(): void {
+    const canvas = this.#bannerCanvas;
+
+    if (canvas === null || this.#cityBanners === null) {
+      return;
+    }
+
+    // Painted for other art, another size of it, or another screen (chosen mid-game, the zoom changed in Options, the
+    //  window moved): all painted again first, whichever were painted since.
+    if (this.#bannersFor() !== this.#bannersPaintedFor) {
+      this.#repaintBanners();
+    }
+
+    const context = canvas.getContext('2d');
+
+    if (context === null) {
+      return;
+    }
+
+    // Cleared of the last frame's, if it drew any.
+    if (this.#bannersDrawn) {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      this.#bannersDrawn = false;
+    }
+
+    if (
+      !this.#unitsShown ||
+      (this.#yieldsShown && this.#cityBanners.giveWayToYields)
+    ) {
+      return;
+    }
+
+    const width = this.#canvas.clientWidth,
+      height = this.#canvas.clientHeight,
+      ratio = canvas.width / Math.max(1, width),
+      sites: BannerSite[] = [];
+
+    if (width <= 0 || height <= 0) {
+      return;
+    }
+
+    let widest = 0;
+
+    this.#banners.forEach(({ banner }, key) => {
+      if (banner === null) {
+        return;
+      }
+
+      widest = Math.max(widest, banner.width / ratio);
+      sites.push(this.#bannerSiteOf(key));
+    });
+
+    // A step down from the square, as on the 2D map.
+    const gap = Math.round(this.#art.scale() * this.#bannerDensity());
+
+    bannerPlaces(sites, {
+      orbit: this.#orbit,
+      look: this.#lookHeight ?? 0,
+      width,
+      height,
+      period: this.#period(),
+      reach: widest,
+    }).forEach(({ key, x, y, clear }) => {
+      const banner = this.#banners.get(key)?.banner;
+
+      if (banner) {
+        // Faded into the haze as the land is.
+        context.globalAlpha = clear;
+        context.drawImage(
+          banner.image,
+          Math.round(x * ratio - banner.centre),
+          Math.round(y * ratio) + gap
+        );
+        this.#bannersDrawn = true;
+      }
+    });
+    context.globalAlpha = 1;
   }
 
   // Squares that changed (`squares`), their yields laid out again; and those whose land may stand higher or lower
@@ -2574,9 +2835,9 @@ export class MapView3D implements MapRenderer {
     }
   }
 
-  // Every square the world has, and every one marked before.
+  // Every square the world has, and every one marked before or with a banner.
   #markAll(): void {
-    const squares = new Set(this.#marked.keys());
+    const squares = new Set([...this.#marked.keys(), ...this.#banners.keys()]);
 
     this.world.tiles().forEach(({ x, y }) => squares.add(`${x},${y}`));
     squares.forEach((key) => {
@@ -2613,6 +2874,7 @@ export class MapView3D implements MapRenderer {
     this.#showYields();
     this.#stage.view(this.#orbit, this.#lookHeight ?? 0, this.#period());
     this.#stage.render();
+    this.#drawBanners();
     this.#showMinimap();
     this.#keepDistance();
     this.#frameTime = performance.now() - started;
@@ -2820,9 +3082,24 @@ export class MapView3D implements MapRenderer {
 
     this.#size = size;
     this.#stage.resize(width, height, ratio);
+
+    // The banners' canvas over the map's, as big, in the screen's own pixels.
+    if (this.#bannerCanvas !== null) {
+      Object.assign(this.#bannerCanvas.style, {
+        height: `${height}px`,
+        left: `${this.#canvas.offsetLeft || 0}px`,
+        top: `${this.#canvas.offsetTop || 0}px`,
+        width: `${width}px`,
+      });
+      this.#bannerCanvas.width = Math.round(width * ratio);
+      this.#bannerCanvas.height = Math.round(height * ratio);
+      this.#bannerRatio = ratio;
+    }
+
     // What floats over the map sits elsewhere over it now.
     this.measureCovered();
     this.#stage.render();
+    this.#drawBanners();
   }
 }
 

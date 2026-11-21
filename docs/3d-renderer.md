@@ -862,6 +862,32 @@ canvas.
   pointer (`CityBanners.ts`).
 - **Hidden cities:** a banner whose city is hidden behind a mountain still shows, faded.
 
+**As built, first part (drawing):**
+
+- **Painted by the page:** the interface's layer for the cities' labels (`cityLabels`) paints one city's banner alone,
+  on a canvas of its own (`CityNames#paintBanner`), laid out as the 2D map lays it at the 2D art's scale. It's painted
+  with as many of the screen's pixels to each of the 2D map's as the 2D map shows them: the pixel ratio times the zoom
+  over the whole scale it draws at. So it's as big, and says as much (a compact banner where the 2D map's is), as on
+  the 2D map, and as sharp as the screen. The 3D script imports none of it: the page's bundle hands it the painter
+  (`MapView3DDeps['cityBanners']`), and gives none for an interface whose layer paints no banner.
+- **When:** as a city's square is marked (a patch, `t`, an option), if what its banner says has changed, as the layer
+  says it (`bannerKey`); and every city's again as the theme, the fonts loaded or the art change, or as the art's
+  zoom or the screen's pixels do. A city kept as it was before a battle is painted as it's shown: what its banner
+  shows of it is copied when it's kept, as the page fills its objects in place. One that can't be painted (a browser
+  short of what the interface draws with) is named over its city instead, as before, and the map goes on.
+- **Where:** on a canvas after the map's in the page, so it's drawn over the map and under whatever floats over it, and
+  clicks go through it (`pointer-events: none`). Each banner hangs below its city's square as the camera sees it, from
+  the lowest corner of the square's outline on the screen, under its middle, as the 2D map hangs one below its square,
+  so the unit standing in front of the city and its flag stay clear of it. At every copy of the world the markers are
+  drawn at (`markerSight`), short of where the haze hides the land, and faded as it thickens, as the land is; the
+  lowest on the screen drawn last, over the rest, as the 2D map draws a lower row's over a higher one's
+  (`banners.ts`).
+- **The city's own name:** not drawn over a city with a banner. Where the interface paints none (the classic label,
+  which hangs off the 2D map's city sprite), the city's name and size stand over it as before.
+- **Hidden:** with the units (`t`), and with the yields (`y`) where the interface's banners give way to them, as on
+  the 2D map.
+- **Still to do:** clicking and hovering over a banner (plan 1.3), and fading one whose city is hidden behind the land.
+
 ### 7.6 Wonders
 
 A Wonder stands on one of its city's squares, near the city, as Civ5 places them.

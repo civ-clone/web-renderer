@@ -662,6 +662,39 @@ const run = async (): Promise<void> => {
     ],
     ['0', '0', '-3', '0', '-0.3', '1,234', '-∞', 'NaN']
   );
+  // Each formatter made once and kept, counted as `Intl` makes them.
+  const RealNumberFormat = Intl.NumberFormat;
+  let formattersMade = 0;
+
+  Object.assign(Intl, {
+    NumberFormat: function (
+      ...args: ConstructorParameters<typeof RealNumberFormat>
+    ) {
+      formattersMade++;
+
+      return new RealNumberFormat(...args);
+    },
+  });
+
+  const keeper = new LocaleProvider('en', ['en']),
+    kept = [
+      keeper.percent(0.256),
+      keeper.number(0.256, { maximumFractionDigits: 2 }),
+      keeper.number(0.256),
+      keeper.percent(0.256),
+      keeper.number(0.256, { maximumFractionDigits: 2 }),
+      keeper.number(1.5, { maximumFractionDigits: undefined }),
+      keeper.number(1.5, {}),
+    ];
+
+  Object.assign(Intl, { NumberFormat: RealNumberFormat });
+
+  expect(
+    'each with its own options, though each is made once and kept: a percentage, two places, and none again; and the default’s places given as undefined told from none given',
+    [kept, formattersMade],
+    // A percentage, two places, none, and the places left undefined: none given is the same as none.
+    [['26%', '0.26', '0', '26%', '0.26', '1.5', '2'], 4]
+  );
   expect(
     'and in en-GB, and in a script with its own digits',
     [

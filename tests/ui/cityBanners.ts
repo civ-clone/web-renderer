@@ -494,6 +494,204 @@ expect(
   null
 );
 
+// A banner on its own, for the 3D map to place (docs/3d-renderer.md §7.5): the canvas sized to it, the banner drawn as
+//  on its square but at the canvas's corner, and how far across it its square's middle is. The classic label isn't.
+const alone = (city: object, form = 'full', density?: number) => {
+  const { calls, canvas } = fakeCanvas(320, 320),
+    context = canvas.getContext('2d') as any;
+
+  context.roundRect = (...args: any[]) => calls.push(['roundRect', ...args]);
+  context.fill = () => {};
+  context.stroke = () => {};
+  context.setTransform = (...args: any[]) =>
+    calls.push(['setTransform', ...args]);
+  TestCityBanners.form = form;
+
+  const placed = world({ '2,2': city }),
+    layer = new TestCityBanners(placed, 2, { width: 16, height: 16 }, canvas);
+
+  calls.length = 0;
+
+  const painted = layer.paintBanner(placed.get(2, 2), density);
+
+  return {
+    painted,
+    canvas: [canvas.width, canvas.height],
+    // How many of the canvas's pixels it drew each of the map's with, as it began and as it finished.
+    transforms: calls
+      .filter(([name]) => name === 'setTransform')
+      .map(([, scale]) => scale),
+    texts: calls
+      .filter(([name]) => name === 'fillText')
+      .map(([, text]) => text),
+    pills: calls
+      .filter(([name]) => name === 'roundRect')
+      .map(([, x, y, width, height]) => ({ x, y, width, height })),
+  };
+};
+
+const ownAlone = alone(ownCity()),
+  [ownPill2D] = own.pills;
+
+expect(
+  'your own banner alone: the canvas just big enough for it and its food bar, the pill at its corner',
+  [ownAlone.canvas, ownAlone.pills[0]],
+  [
+    [ownPill2D.width + 1, ownPill2D.height + 1 + 2],
+    { x: 0.5, y: 0.5, width: ownPill2D.width, height: ownPill2D.height },
+  ]
+);
+expect(
+  'as it says, and saying as much as on the map, with its square’s middle as far across it as on the map',
+  [ownAlone.painted, ownAlone.texts],
+  [
+    {
+      width: ownPill2D.width + 1,
+      height: ownPill2D.height + 3,
+      centre: 2 * 32 + 16 - (ownPill2D.x - 0.5),
+    },
+    own.texts,
+  ]
+);
+
+const doubled = alone(ownCity(), 'full', 2);
+
+expect(
+  'painted with twice the pixels: a canvas twice the size, drawn at twice the scale and put back after, saying the same, with its square’s middle twice as far across',
+  [
+    doubled.canvas,
+    doubled.transforms,
+    doubled.texts,
+    doubled.pills[0],
+    doubled.painted?.centre,
+  ],
+  [
+    ownAlone.canvas.map((size) => size * 2),
+    [2, 1],
+    ownAlone.texts,
+    ownAlone.pills[0],
+    ownAlone.painted!.centre * 2,
+  ]
+);
+
+const rivalAlone = alone(rivalCity);
+
+expect(
+  "a rival's alone: its size and name, with no food bar under it",
+  [rivalAlone.texts, rivalAlone.canvas[1], rivalAlone.pills[0]?.height],
+  [
+    ['7', 'Ur'],
+    (rivalAlone.pills[0]?.height ?? 0) + 1,
+    rivalAlone.canvas[1]! - 1,
+  ]
+);
+expect(
+  "the classic label isn't painted alone, and the canvas is left as it was",
+  [alone(ownCity(), 'label').painted, alone(ownCity(), 'label').canvas],
+  [null, [320, 320]]
+);
+
+// What a banner says, to tell when it's to be painted again (`bannerKey`), on cities shaped as the page has them, every
+//  part with an id of its own: the same for the same banner; changed by everything the banner shows, and by nothing it
+//  doesn't. None for the classic label.
+{
+  const keyOf = (city: object, form = 'full') => {
+      TestCityBanners.form = form;
+
+      const placed = world({ '2,2': city });
+
+      return new TestCityBanners(
+        placed,
+        2,
+        { width: 16, height: 16 },
+        fakeCanvas(320, 320).canvas
+      ).bannerKey(placed.get(2, 2));
+    },
+    // As the page has a city: its growth, what it builds and what it yields, each with an id, as every engine object.
+    shaped = (extra: object = {}) => {
+      const city = ownCity(extra) as { [key: string]: any };
+
+      return {
+        ...city,
+        id: 'City-1',
+        growth: {
+          ...city.growth,
+          id: 'CityGrowth-1',
+          ...(city.growth.progress
+            ? { progress: { ...city.growth.progress, id: 'Progress-1' } }
+            : {}),
+          ...(city.growth.cost
+            ? { cost: { ...city.growth.cost, id: 'Cost-1' } }
+            : {}),
+        },
+        build: city.build && {
+          ...city.build,
+          id: 'CityBuild-1',
+          building: city.build.building && {
+            ...city.build.building,
+            id: 'BuildItem-1',
+          },
+          progress: { ...city.build.progress, id: 'Progress-2' },
+          cost: { ...city.build.cost, id: 'Cost-2' },
+        },
+        yields: city.yields.map((each: object, index: number) => ({
+          ...each,
+          id: `Yield-${index}`,
+        })),
+      };
+    },
+    base = keyOf(shaped()),
+    changes = (extra: object) => keyOf(shaped(extra)) !== base,
+    building = (item: string, progress: number, cost = 20) => ({
+      building: { item: { _: item } },
+      progress: { value: progress },
+      cost: { value: cost },
+    });
+
+  expect(
+    'the same banner, the same key',
+    [base !== null, keyOf(shaped()) === base],
+    [true, true]
+  );
+  expect(
+    'changed by all the banner shows: its size, its name, the turns to finish what it builds, building nothing, a build held, how far it is to its next size, starving, disorder, celebration, and who holds it',
+    [
+      changes({
+        growth: { size: 4, progress: { value: 10 }, cost: { value: 40 } },
+      }),
+      changes({ name: 'Kish' }),
+      changes({ build: building('Warriors', 12) }),
+      changes({ build: { ...building('Warriors', 0), building: null } }),
+      changes({
+        build: {
+          ...building('Settlers', 42, 40),
+          remaining: -2,
+          held: ['civ1-enhanced:city/hold/settlers-until-size-two'],
+        },
+      }),
+      changes({
+        growth: { size: 3, progress: { value: 30 }, cost: { value: 40 } },
+      }),
+      changes({
+        yields: [
+          { _: 'Production', __: ['Production', 'Yield'], value: 4 },
+          { _: 'Food', __: ['Food', 'Yield'], value: -1 },
+        ],
+      }),
+      changes({ civilDisorderDeclared: true }),
+      changes({ celebrateLeader: true }),
+      changes({ player: theirs }),
+    ],
+    Array(10).fill(true)
+  );
+  expect(
+    'not changed by what it doesn’t show: another item built at the same cost, as far along',
+    changes({ build: building('Phalanx', 0) }),
+    false
+  );
+  expect('none for the classic label', keyOf(shaped(), 'label'), null);
+}
+
 finished = true;
 
 if (failures.length > 0) {
