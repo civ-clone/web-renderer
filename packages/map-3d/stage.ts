@@ -399,6 +399,9 @@ export const createStage: StageFactory = (
         placed.at[2] + offsetV
       );
       parent.add(drawn);
+      // Where it stands at once, not only once it's drawn: a unit marked since the last frame is picked where it stands
+      //  (`unitAt`), not where its clone's matrices left it.
+      drawn.updateMatrixWorld(true);
 
       return drawn;
     });
@@ -695,8 +698,8 @@ export const createStage: StageFactory = (
       overlays.set(key, overlay);
     },
     unitAt: (ndc): string | null => {
-      // As last drawn: drawing brings every marker's matrices up to date, so asking on each move of the pointer costs
-      //  no walk of the whole scene.
+      // Each copy's matrices are brought up to date as it's made (`copiesOf`), and a walker's as it's drawn, so asking
+      //  on each move of the pointer costs no walk of the whole scene.
       camera.updateMatrixWorld();
 
       return unitUnder(

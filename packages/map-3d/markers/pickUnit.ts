@@ -1,4 +1,4 @@
-// Which square's unit is under a point on the screen, by what's drawn of it (docs/3d-renderer.md §9.1). Units are drawn
+// Which square's unit is under a point on the screen, by what's drawn of it (docs/3d-renderer.md §9.2). Units are drawn
 //  twice life size, and an aircraft flies over its stand, so a unit's figures can stand over the ground of the square
 //  behind it: a click, a GoTo's square or a tooltip there goes to the square whose unit it's on, as it's seen, not to
 //  the ground the figures hide.
