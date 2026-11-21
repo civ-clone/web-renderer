@@ -116,9 +116,16 @@ const start = (script: Map3DScript): void => {
       mapCanvas: canvas,
       minimapCanvas: document.querySelector<HTMLCanvasElement>('#minimap'),
       playerId: 'debug',
-      // No game: a click centres the map on its square, as a click on a square with nothing to open does.
+      // No game: a click centres the map on its square, or the city's whose banner it's on, as a click on a square with
+      //  nothing to open does.
       squares: {
-        click: (portal, tile) => portal.setCenter(tile.x, tile.y),
+        click: (portal, tile, bannerCity) => {
+          const { x, y } = bannerCity?.tile ?? tile ?? {};
+
+          if (x !== undefined && y !== undefined) {
+            portal.setCenter(x, y);
+          }
+        },
         prompt: () => ({ close: () => {} }),
         menu: () => {},
         menuOnRightClick: () => false,

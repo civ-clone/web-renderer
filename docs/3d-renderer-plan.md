@@ -226,8 +226,9 @@ Building another world from the form starts it in the middle again.
   or centre on the square; the unit's menu; and choosing a square for a long-range order.
 - **Tooltips:** the mouse resting on a square opens its tooltip, or its city's, after a moment, as on the 2D map, through
   the page's own; a key, a press, the camera moving or the other players' turns close it.
-- **Still to do:** a city's banner as something to click and hover over of its own (on the 2D map it hangs past its
-  square), and waiting's cursor (the page's, not the map's).
+- **Banners:** a city's banner takes clicks and hovers of its own, as it hangs past its square on the 2D map (spec
+  §7.5, "As built, second part").
+- **Still to do:** waiting's cursor (the page's, not the map's).
 
 - **What:**
   - a ray to what's shown, then to a square: the land, or the water's surface where the land is below it (spec §9.2);
@@ -495,8 +496,11 @@ Still to do: worked squares further out, side streets, eras and modernising.
 **Banners, first part (drawing): done** (spec §7.5, "As built"). The interface's own banners, as the 2D map draws
 them, painted by the page one city at a time and hung below each city's square on a canvas over the map, the lowest
 on the screen over the rest, at every copy of the world in sight. Hidden with the units and, where they give way to
-them, with the yields. Still to do: clicking and hovering over them, fading those hidden behind the land, and the
-states (disorder, celebration, captured and destroyed) on the map itself.
+them, with the yields.
+
+**Banners, second part (clicks and hovers): done** (spec §7.5). A click on a banner is for its city, and resting on one
+opens its tooltip over it, as on the 2D map. Still to do: fading those hidden behind the land, and the states
+(disorder, celebration, captured and destroyed) on the map itself.
 
 **Yields (`y`): done.** The 2D map's icons for what each square yields (the map's pack's own, or the interface's) stand
 in the world over each square's middle, as strategy maps show them, rather than on the screen:

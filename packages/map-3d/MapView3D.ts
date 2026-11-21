@@ -133,6 +133,10 @@ const HEIGHT_EASE = 0.25;
 // How long the mouse rests on a square before its tooltip opens, as on the 2D map.
 const HOVER_DELAY = 400;
 
+// How clear of the haze a city's banner is to take clicks and the mouse resting on it, from 1 short of the haze to 0
+//  where it hides the land: one fainter lets them through to the land, faded as it is.
+const BANNER_TAKES_POINTER = 0.5;
+
 // What was on a square attacked as a battle there came (`MapView3D#fight`): its city and units, and whether the
 //  battle's patch has been released for it since, the page's world as it is after the battle there.
 type Before = {
@@ -156,7 +160,8 @@ type Marked = {
   inCity: boolean;
 };
 
-// The square the mouse rests on: where the mouse is on the page, the timer before its tooltip opens, and whether it has.
+// What the mouse rests on (a square, or a city's banner, `key`, with its city's square): where the mouse is on the
+//  page, the timer before its tooltip opens, and whether it has.
 type Hover = {
   key: string;
   x: number;
@@ -315,8 +320,11 @@ export class MapView3D implements MapRenderer {
   };
   #transport: MapView3DDeps['transport'];
   #picking: Picking | null = null;
-  // The square the mouse rests on, waiting to show its tooltip or showing it, and whose tooltips they'd be.
+  // The square the mouse rests on, waiting to show its tooltip or showing it, and whose tooltips they'd be; and whether
+  //  an open one is to be shown again once the frame's banners are drawn: its square has changed, or the banners have
+  //  been painted again, hidden or shown.
   #hover: Hover | null = null;
+  #hoverChanged = false;
   #playerId: string;
   #endHover = (): void => {
     const hover = this.#hover;
@@ -359,6 +367,15 @@ export class MapView3D implements MapRenderer {
   #bannerSites = new Map<string, BannerSite>();
   // The banners' canvas's pixels to each of the page's, as it was last sized, or none before it was.
   #bannerRatio: number | null = null;
+  // The banners drawn the last frame that take the pointer, in the order they were drawn: each city's square, and where
+  //  its banner is on the canvas, in the page's px.
+  #bannersShown: {
+    key: string;
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
+  }[] = [];
   #bannerCanvas: HTMLCanvasElement | null = null;
   #stopRestyled: () => void = (): void => {};
   // A frame asked for to draw in, if one is.
@@ -1976,6 +1993,8 @@ export class MapView3D implements MapRenderer {
     this.#unitsShown = !this.#unitsShown;
     this.#land.showTowns(this.#unitsShown, ...this.#focus());
     this.#markAll();
+    // The banners hidden or shown: an open tooltip over one goes, or one over the land may be over one now.
+    this.#hoverChanged = true;
     this.#draw();
   }
 
@@ -1983,6 +2002,8 @@ export class MapView3D implements MapRenderer {
   toggleYields(): void {
     this.#yieldsShown = !this.#yieldsShown;
     this.#yieldsStale = true;
+    // The banners may give way to them, or come back.
+    this.#hoverChanged = true;
     this.#draw();
   }
 
@@ -2105,7 +2126,31 @@ export class MapView3D implements MapRenderer {
     );
   }
 
-  // A click on the map: for the square being chosen, if one is, or else what a click does, as on the 2D map.
+  // The city whose banner is under (`x`, `y`) in the canvas's px, as the banners were last drawn, and where its banner
+  //  is: of banners that overlap, the one on top. Not one whose city has gone since, which lets it through to any
+  //  beneath.
+  #bannerAt(
+    x: number,
+    y: number
+  ): { tile: Tile; box: { left: number; top: number; bottom: number } } | null {
+    for (let index = this.#bannersShown.length - 1; index >= 0; index--) {
+      const { key, left, top, right, bottom } = this.#bannersShown[index]!;
+
+      if (x >= left && x < right && y >= top && y < bottom) {
+        const [tileX, tileY] = key.split(',').map(Number) as [number, number],
+          tile = this.world.get(tileX, tileY);
+
+        if (tile?.city) {
+          return { tile, box: { left, top, bottom } };
+        }
+      }
+    }
+
+    return null;
+  }
+
+  // A click on the map: for the square being chosen, if one is, or else what a click does, as on the 2D map, with the
+  //  city whose banner it's on, if it's on one.
   #clicked(x: number, y: number): void {
     const tile = this.#tileAt(x, y);
 
@@ -2124,8 +2169,11 @@ export class MapView3D implements MapRenderer {
       return;
     }
 
-    if (tile !== null) {
-      this.#squares.click(this.portal, tile);
+    // A city's banner hangs past its square, over the land below it, as on the 2D map (#747).
+    const bannerCity = this.#bannerAt(x, y)?.tile.city ?? null;
+
+    if (tile !== null || bannerCity !== null) {
+      this.#squares.click(this.portal, tile, bannerCity);
     }
   }
 
@@ -2159,26 +2207,55 @@ export class MapView3D implements MapRenderer {
     return true;
   }
 
-  // The mouse rests at a point on the canvas, or has left it (`null`): the square under it's tooltip opens after a moment,
-  //  if the interface has one for it. Not while the other players move, or over a menu.
+  // What has a tooltip under (`x`, `y`) in the canvas's px: a city's banner, about its city's square, or else the
+  //  square. Over a banner, it opens over the banner, so moving off it onto the land is a new hover.
+  #subjectAt(
+    x: number,
+    y: number
+  ): {
+    key: string;
+    tile: Tile;
+    box: { left: number; top: number; bottom: number } | null;
+  } | null {
+    const banner = this.#bannerAt(x, y);
+
+    if (banner !== null) {
+      return {
+        key: `banner ${banner.tile.x},${banner.tile.y}`,
+        ...banner,
+      };
+    }
+
+    const tile = this.#tileAt(x, y);
+
+    return tile === null
+      ? null
+      : { key: `${tile.x},${tile.y}`, tile, box: null };
+  }
+
+  // The mouse rests at a point on the canvas, or has left it (`null`): the tooltip for the city's banner or the square
+  //  under it opens after a moment, if the interface has one for it. Not while the other players move, or over a menu.
   #hovered(
     at: { x: number; y: number; clientX: number; clientY: number } | null
   ): void {
-    const tile =
+    const subject =
         at === null || this.#waiting || this.#squares.menuOpen()
           ? null
-          : this.#tileAt(at.x, at.y),
+          : this.#subjectAt(at.x, at.y),
       current = this.#hover;
 
-    if (tile === null || at === null) {
+    if (subject === null || at === null) {
       this.#endHover();
 
       return;
     }
 
-    const key = `${tile.x},${tile.y}`;
+    const {
+      key,
+      tile: { x, y },
+    } = subject;
 
-    // Still the same square: wait on, or leave it open.
+    // Still the same square or banner: wait on, or leave it open.
     if (current !== null && current.key === key) {
       Object.assign(current, {
         canvasX: at.x,
@@ -2194,8 +2271,8 @@ export class MapView3D implements MapRenderer {
 
     const hover: Hover = {
       key,
-      x: tile.x,
-      y: tile.y,
+      x,
+      y,
       canvasX: at.x,
       canvasY: at.y,
       clientX: at.clientX,
@@ -2214,26 +2291,40 @@ export class MapView3D implements MapRenderer {
     document.addEventListener('keydown', this.#endHover, true);
   }
 
-  // The tooltip for the square the mouse rests on, as it is now, over the mouse: or none, if a window has opened over
-  //  the map since, or the square under the mouse is another now, or it has nothing to say any more.
+  // The tooltip for the banner or the square the mouse rests on, as it is now, over the banner, or the mouse: or none,
+  //  if a window has opened over the map since, or what's under the mouse is something else now, or it has nothing to
+  //  say any more.
   #showHover(hover: Hover): void {
     const over =
         typeof document.elementFromPoint !== 'function' ||
         document.elementFromPoint(hover.clientX, hover.clientY) ===
           this.#canvas,
-      under = over ? this.#tileAt(hover.canvasX, hover.canvasY) : null;
+      under = over ? this.#subjectAt(hover.canvasX, hover.canvasY) : null;
 
-    if (under === null || `${under.x},${under.y}` !== hover.key) {
+    if (under === null || under.key !== hover.key) {
       this.#endHover();
 
       return;
     }
 
-    const opened = this.#squares.tooltip(this.#canvas, under, this.#playerId, {
-      left: hover.clientX - 10,
-      top: hover.clientY - 10,
-      bottom: hover.clientY + 10,
-    });
+    const canvas =
+        under.box === null ? null : this.#canvas.getBoundingClientRect(),
+      opened = this.#squares.tooltip(
+        this.#canvas,
+        under.tile,
+        this.#playerId,
+        canvas === null || under.box === null
+          ? {
+              left: hover.clientX - 10,
+              top: hover.clientY - 10,
+              bottom: hover.clientY + 10,
+            }
+          : {
+              left: canvas.left + under.box.left,
+              top: canvas.top + under.box.top,
+              bottom: canvas.top + under.box.bottom,
+            }
+      );
 
     // Open before, with nothing to say now: it goes.
     if (!opened && hover.open) {
@@ -2445,7 +2536,8 @@ export class MapView3D implements MapRenderer {
     //  square newly seen says which, as for the yields.
     reshaped.forEach(([x, y]) => this.#bannerSites.delete(`${x},${y}`));
 
-    // The square an open tooltip is about has changed: it says what's there now.
+    // The square an open tooltip is about has changed: it says what's there now, once the banners are drawn as they are
+    //  now, so one over a banner moves with it, or goes if it's no longer under the mouse.
     const hover = this.#hover;
 
     if (
@@ -2453,7 +2545,7 @@ export class MapView3D implements MapRenderer {
       hover.open &&
       squares.some(([x, y]) => x === hover.x && y === hover.y)
     ) {
-      this.#showHover(hover);
+      this.#hoverChanged = true;
     }
 
     if (squares.length > 0 || replaced) {
@@ -2654,6 +2746,8 @@ export class MapView3D implements MapRenderer {
     this.#bannersPaintedFor = this.#bannersFor();
     this.#banners.clear();
     this.#markAll();
+    // Painted at another size: an open tooltip over one moves with it.
+    this.#hoverChanged = true;
   }
 
   // The banners over the map, drawn after it each frame: each below its city's square as the camera sees it now, the
@@ -2672,6 +2766,9 @@ export class MapView3D implements MapRenderer {
     }
 
     const context = canvas.getContext('2d');
+
+    // None to take the pointer till they're drawn again.
+    this.#bannersShown = [];
 
     if (context === null) {
       return;
@@ -2724,14 +2821,23 @@ export class MapView3D implements MapRenderer {
       const banner = this.#banners.get(key)?.banner;
 
       if (banner) {
+        const left = Math.round(x * ratio - banner.centre),
+          top = Math.round(y * ratio) + gap;
+
         // Faded into the haze as the land is.
         context.globalAlpha = clear;
-        context.drawImage(
-          banner.image,
-          Math.round(x * ratio - banner.centre),
-          Math.round(y * ratio) + gap
-        );
+        context.drawImage(banner.image, left, top);
         this.#bannersDrawn = true;
+
+        if (clear >= BANNER_TAKES_POINTER) {
+          this.#bannersShown.push({
+            key,
+            left: left / ratio,
+            top: top / ratio,
+            right: (left + banner.width) / ratio,
+            bottom: (top + banner.height) / ratio,
+          });
+        }
       }
     });
     context.globalAlpha = 1;
@@ -2875,6 +2981,15 @@ export class MapView3D implements MapRenderer {
     this.#stage.view(this.#orbit, this.#lookHeight ?? 0, this.#period());
     this.#stage.render();
     this.#drawBanners();
+
+    if (this.#hoverChanged) {
+      this.#hoverChanged = false;
+
+      if (this.#hover?.open) {
+        this.#showHover(this.#hover);
+      }
+    }
+
     this.#showMinimap();
     this.#keepDistance();
     this.#frameTime = performance.now() - started;
