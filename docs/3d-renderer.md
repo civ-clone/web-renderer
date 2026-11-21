@@ -886,7 +886,21 @@ canvas.
   which hangs off the 2D map's city sprite), the city's name and size stand over it as before.
 - **Hidden:** with the units (`t`), and with the yields (`y`) where the interface's banners give way to them, as on
   the 2D map.
-- **Still to do:** clicking and hovering over a banner (plan 1.3), and fading one whose city is hidden behind the land.
+
+**As built, second part (clicks and hovers):**
+
+- **Clicks:** a click on a banner is for its city as well as the square under it, as on the 2D map
+  (`mapSquares.ts`, `clickSquare`): its city opens, or the map centres on it, unless the square under the banner has a
+  city, or units of the player's, which the click opens or offers as ever. A click on a banner past a pole the camera
+  stops at, where there's no square under it, is still for its city.
+- **Tooltips:** the mouse resting on a banner opens its city's tooltip over the banner, about its city's square, as on
+  the 2D map: what your city's building, or else what's on the square, where the interface has square tooltips.
+  Moving off it onto the land is a new hover, for the square under the mouse.
+- **Which banner:** the banners as they were drawn the last frame, so what's on the screen is what's clicked. Of
+  banners that overlap, the one drawn over the other (the lower on the screen) takes it. One more than half faded into
+  the haze lets clicks and the mouse through to the land, as faded as it is. None with the units hidden (`t`), nor
+  once its city has gone, nor while a square's being chosen for a long-range order, which takes the click as ever.
+- **Still to do:** fading a banner whose city is hidden behind the land.
 
 ### 7.6 Wonders
 
