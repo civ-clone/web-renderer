@@ -647,8 +647,8 @@ const run = async (): Promise<void> => {
     'Temple',
   ]);
 
-  // A Wonder's effects say where they act (#1196): in all its owner's cities, on its continent, or (with no scope) its
-  //  own city.
+  // A Wonder’s effects say where they act (#1196): in all its owner’s cities, on its continent, or (no scope) its
+  //  own city, said for the types that act on a city (#1318).
   const research = { class: 'Research', name: 'Research' },
     wonder = entry('IsaacNewtonsCollege', 'wonder', {
       effects: [
@@ -689,7 +689,7 @@ const run = async (): Promise<void> => {
       ?.split('Requirements')[0],
     '+33% of the city’s base Science, for each Library and University, in all your cities' +
       'Makes 2 unhappy citizens content, in your cities on the same continent' +
-      'Makes every unhappy citizen content' +
+      'Makes every unhappy citizen content, in its city' +
       '+1 move for your ships' +
       'Makes 2 more unhappy citizens content, in all your cities with a Temple, with Mysticism'
   );

@@ -8,6 +8,7 @@
 import {
   CivilopediaEffect,
   CivilopediaEffectValue,
+  CivilopediaKind,
 } from '@civ-clone/ui-protocol/civilopedia';
 import { EntriesByKey, classLink } from './requirements';
 import i18next, { t } from 'i18next';
@@ -250,13 +251,21 @@ const rank = ({ type }: CivilopediaEffect): number =>
  */
 export const effectLines = (
   effects: CivilopediaEffect[],
-  entries: EntriesByKey
+  entries: EntriesByKey,
+  kind: CivilopediaKind | null = null
 ): string[] =>
   Array.from(
     new Set(
       // `sort` is stable, so the rest keep the rules' order.
       [...effects]
         .sort((a, b) => rank(a) - rank(b))
+        // A Wonder's effect with no scope acts in its own city, which an improvement's plainly does but a Wonder's
+        //  might not (#1318): said as the `city` scope, worded only for the types that act on a city.
+        .map((effect) =>
+          kind === 'wonder' && effect.scope === undefined
+            ? { ...effect, scope: 'city' }
+            : effect
+        )
         .map((effect) => effectLine(effect, entries))
         .filter((line): line is string => line !== null)
     )

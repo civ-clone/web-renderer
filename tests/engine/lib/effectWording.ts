@@ -9,6 +9,7 @@ import {
   CivilopediaEffectValue,
   CivilopediaEntry,
 } from '@civ-clone/ui-protocol/civilopedia';
+import { RequirementData } from '@civ-clone/ui-protocol/requirements';
 
 const translations = (): string =>
   readFileSync(
@@ -87,6 +88,37 @@ export const missingWording = (
         .map(({ class: key }) => key)
     ),
   };
+};
+
+/**
+ * The conditions `requirements` name with no wording in en (#1317), by the keys `conditionText` looks up: the whole id,
+ *  then the id without its package, `:` as `.`. Without either the page shows the id itself.
+ */
+export const missingConditions = (
+  requirements: RequirementData[]
+): string[] => {
+  const source = translations();
+
+  return Array.from(
+    new Set(
+      requirements.flatMap(({ targets }) =>
+        targets.flatMap((target) =>
+          'condition' in target ? [target.condition] : []
+        )
+      )
+    )
+  )
+    .filter(
+      (id) =>
+        !has(source, `Civilopedia.condition.${id.replace(/:/g, '.')}`) &&
+        !has(
+          source,
+          `Civilopedia.condition.${id
+            .replace(/^[^:]*:/, '')
+            .replace(/:/g, '.')}`
+        )
+    )
+    .sort();
 };
 
 export default missingWording;
