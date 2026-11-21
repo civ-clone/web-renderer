@@ -16,6 +16,10 @@ export const setOptionDefaults = (): void => {
   options.defaults({
     autoEndOfTurn: true,
     autoEndOfTurnExceptions: ['CivilDisorder'],
+    // The game's help as it plays (#1295), each tip once a game: see `GameTips`. `helpSeen` is the tips this game has
+    //  shown, cleared as a new game starts.
+    showHelp: true,
+    helpSeen: [],
     unitEdgeMargin: 2,
     // Each set's own zoom (#97, #1063): Civ1's `zoom.civ1`, Civ2's `zoom.civ2`, the pixel art's `zoom.civ1-pixelart`,
     //  so a zoom chosen for any of them comes back.
