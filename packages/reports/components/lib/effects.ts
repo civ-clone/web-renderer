@@ -27,6 +27,8 @@ export const clauses: string[] = [
   'notFor',
   'from',
   'until',
+  'below',
+  'atLeast',
 ];
 
 const isClass = (
@@ -193,7 +195,8 @@ export const effectLine = (
               }
             );
       })
-      .filter((clause): clause is string => clause !== null),
+      // A type whose own wording already says a clause words it as nothing (`clause.against_attack_multiplier`).
+      .filter((clause): clause is string => clause !== null && clause !== ''),
     // A type may word its scope its own way (`scope.player_unit_movement`), or not at all (an empty wording).
     scopeKey =
       typeof effect.scope === 'string'

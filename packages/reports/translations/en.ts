@@ -115,14 +115,13 @@ i18next.addResources('en', 'default', {
   'Civilopedia.effect.promotion_chance':
     'Every unit that wins a battle becomes a veteran',
   'Civilopedia.effect.unit_upgrade':
-    'Upgrades each of your units by one step whenever you gain an advance',
+    'Upgrades each of your units by one step whenever you gain an advance, and when it’s built or captured',
   'Civilopedia.effect.anarchy_turns_one':
     'Changing government takes only {{count}} turn of Anarchy',
   'Civilopedia.effect.anarchy_turns_other':
     'Changing government takes only {{count}} turns of Anarchy',
   'Civilopedia.effect.embassy_with_all':
     'Gives you an embassy with every civilization',
-  'Civilopedia.effect.reputation': 'Other leaders think better of you',
   'Civilopedia.effect.reveals_map': 'Reveals the whole map',
   'Civilopedia.effect.enables': 'Lets {{what}} be built',
   // Where a type's own wording already says it (or its scope would read oddly), it says nothing more.
@@ -155,6 +154,85 @@ i18next.addResources('en', 'default', {
     'Gives you any advance that {{count}} other civilizations know',
   'Civilopedia.effect.free_advances_one': 'Gives you {{count}} free advance',
   'Civilopedia.effect.free_advances_other': 'Gives you {{count}} free advances',
+  // The Civilization II effects #1196 left out (#1291).
+  'Civilopedia.effect.barbarian_attack':
+    'Barbarians attack the city with their strength ×{{value}}',
+  'Civilopedia.effect.barbarian_attack_scope_player':
+    'Barbarians attack your units with their strength ×{{value}}',
+  'Civilopedia.effect.barbarian_defender_rerolls':
+    'When barbarians attack the city, its defender rolls again on each round it loses',
+  'Civilopedia.effect.attack_multiplier_barbarians':
+    'Your units attack barbarian defenders at ×{{value}}',
+  'Civilopedia.effect.clause.against_attack_multiplier': '',
+  'Civilopedia.effect.civil_war':
+    'If its city is captured, a computer player’s empire may split in a civil war',
+  'Civilopedia.effect.relocates':
+    'Building it in another city moves your capital there',
+  'Civilopedia.effect.free_in_first_city': 'Your first city has one free',
+  'Civilopedia.effect.palace_escape':
+    'If its city is captured, you may pay {{value, number}} {{yield}} to move it to another city',
+  // Always lost, or, with a chance, lost that often.
+  'Civilopedia.effect.lost_on_capture': 'Lost when the city is captured',
+  'Civilopedia.effect.lost_on_capture_other':
+    'Lost {{percent}}% of the time when the city is conquered',
+  'Civilopedia.effect.lost_on_capture_founder':
+    'Lost when the city is captured, unless by the civilization that founded it',
+  'Civilopedia.effect.lost_on_capture_founder_other':
+    'Lost {{percent}}% of the time when the city is conquered, unless by the civilization that founded it',
+  'Civilopedia.effect.incite_distance':
+    'Makes the city dearer for an enemy to incite: its distance from your capital counts ÷{{value}}',
+  'Civilopedia.effect.trade_route_link_both':
+    'Trade routes to a city that also has one earn at least as much as by road',
+  'Civilopedia.effect.trade_route_link_own':
+    'The city’s trade routes earn as though their road link were {{value}} step better',
+  'Civilopedia.effect.sold_on':
+    'Every one you have is sold, for its cost in gold',
+  'Civilopedia.effect.clause.with_sold_on': 'when you discover {{targets}}',
+  'Civilopedia.effect.clause.below': 'below {{targets}} difficulty',
+  'Civilopedia.effect.clause.atLeast': 'at {{targets}} difficulty and above',
+  'Civilopedia.effect.global_warming_fewer':
+    'Each city with one lowers the risk of global warming',
+  'Civilopedia.effect.pollution_step_population_one':
+    'The city’s people cause pollution {{count}} step lower',
+  'Civilopedia.effect.pollution_step_population_other':
+    'The city’s people cause pollution {{count}} steps lower',
+  'Civilopedia.effect.protects_from_lost_at_sea_units':
+    'No {{unit}} of yours is ever lost at sea',
+  'Civilopedia.effect.heals_nearby':
+    'Damaged {{unit}} within {{radius}} squares, for which this is the nearest city, recover {{value}} tenths of their hit points a turn more, rather than 1',
+  'Civilopedia.effect.repairs_allies':
+    'An ally’s land unit that moves against the city is repaired {{value}} tenths of its hit points, rather than 1, and stays outside',
+  'Civilopedia.effect.talks_peace':
+    'Computer leaders always accept your offers of peace',
+  'Civilopedia.effect.talks_no_tribute':
+    'Computer leaders rarely make aggressive demands for tribute',
+  'Civilopedia.effect.talks_attitude':
+    'Computer leaders are {{value}} points warmer to you in talks',
+  'Civilopedia.effect.tribute_demand_more':
+    'A computer player that owns it demands more tribute',
+  'Civilopedia.effect.shared_maps':
+    'Lets you exchange maps without an alliance',
+  'Civilopedia.effect.talks_patience_one':
+    'Computer leaders hear {{count}} more of your proposals before ending talks',
+  'Civilopedia.effect.talks_patience_other':
+    'Computer leaders hear {{count}} more of your proposals before ending talks',
+  'Civilopedia.effect.reputation_spared_one':
+    'Breaking a treaty costs you {{count}} point less reputation',
+  'Civilopedia.effect.reputation_spared_other':
+    'Breaking a treaty costs you {{count}} points less reputation',
+  'Civilopedia.effect.reputation_recovery':
+    'Your reputation recovers more often, and all the way',
+  'Civilopedia.effect.attitude_drift':
+    'Computer leaders’ attitude to you warms a little each turn',
+  'Civilopedia.effect.reputation_halved':
+    'Repairs half the damage to your reputation the first time you own it',
+  'Civilopedia.effect.attitude_improved':
+    'Every other leader’s attitude to you improves by {{value}} points the first time you own it',
+  'Civilopedia.effect.vendettas_end':
+    'Every vendetta against you ends the first time you own it',
+  'Civilopedia.effect.reputation_recovers':
+    'Every civilization’s reputation recovers halfway when it’s built, to {{value}} at worst',
+  'Civilopedia.effect.scope.world_reputation_recovers': '',
   'Civilopedia.loading': 'Loading…',
   'Civilopedia.nothing-known': 'Nothing more is known about this yet.',
   'Civilopedia.stats':
@@ -216,6 +294,8 @@ i18next.addResources('en', 'default', {
   'Civilopedia.class.CoastBound': 'ships that must stay by the coast',
   'Civilopedia.class.Waste': 'Waste',
   'Civilopedia.class.Part': 'spaceship parts',
+  // The difficulty a Civilization II rule changes at (#1291).
+  'Civilopedia.class.Prince': 'Prince',
   // A condition a rule decides, by its name without the rule set's prefix, so every rule set that has one shares its
   //  wording (#1051). One rule set's own wording goes under its full id (`civ1-unit.coastal-city`), which comes first.
   'Civilopedia.condition.coastal-city': 'a coastal city',

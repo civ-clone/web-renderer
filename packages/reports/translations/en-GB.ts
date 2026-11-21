@@ -12,6 +12,12 @@ i18next.addResources('en-GB', 'default', {
     'Gives you any advance that {{count}} other civilisations know',
   'Civilopedia.effect.defence_multiplier':
     'Defence of the units in the city ×{{value}}',
+  'Civilopedia.effect.lost_on_capture_founder':
+    'Lost when the city is captured, unless by the civilisation that founded it',
+  'Civilopedia.effect.lost_on_capture_founder_other':
+    'Lost {{percent}}% of the time when the city is conquered, unless by the civilisation that founded it',
+  'Civilopedia.effect.reputation_recovers':
+    'Every civilisation’s reputation recovers halfway when it’s built, to {{value}} at worst',
   'Civilopedia.kind.advance': 'Civilisation Advance',
   'Civilopedia.stats':
     'Attack: {{attack, number}} · Defence: {{defense, number}} · Moves: {{movement, number}}',
