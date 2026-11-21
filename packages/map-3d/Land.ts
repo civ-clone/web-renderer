@@ -68,7 +68,8 @@ export class Land {
   // The city shown on a square, where it's shown otherwise than the world has it (`keepCities`).
   #keptCity: (x: number, y: number) => Tile['city'] | undefined = () =>
     undefined;
-  // Whether the towns are laid: hidden (`t`), every square's laid as though no city stood on it.
+  // Whether the towns are laid: hidden (`t`), every square's laid as though no city stood on it, but for the spot in
+  //  front of where a city's buildings are, kept clear for its unit (`front`).
   #townsShown = true;
   // Where the map was last centred, for what's laid to be made nearest it first.
   #focus: [number, number] = [0, 0];
@@ -291,8 +292,9 @@ export class Land {
 
   /**
    * Shows the towns, or hides them (`t`): hidden, every square's laid as though no city stood on it, so the land shows as
-   *  it is, without a city's buildings or the houses round it, and with the woods and fields they took whole again.
-   *  The squares cities stand on, and those beside them, are laid again, the nearest to (`u`, `v`) first.
+   *  it is, without a city's buildings or the houses round it, and with the woods and fields they took whole again, but
+   *  for the spot a city's unit stands on, in front of where its buildings are, which what grows keeps clear of. The
+   *  squares cities stand on, and those beside them, are laid again, the nearest to (`u`, `v`) first.
    */
   showTowns(shown: boolean, u: number, v: number): void {
     if (shown === this.#townsShown) {
@@ -456,23 +458,30 @@ export class Land {
 
   // What's laid on the square at (`x`, `y`), as its tile and its neighbours' say.
   #overlayAt(x: number, y: number): SquareOverlay | null {
-    const topology = this.#world.topology();
+    const topology = this.#world.topology(),
+      overlay = overlayFor(
+        this.#shownAt(x, y),
+        topology.directions().flatMap((direction) => {
+          const at = topology.neighbour(x, y, direction);
 
-    return overlayFor(
-      this.#shownAt(x, y),
-      topology.directions().flatMap((direction) => {
-        const at = topology.neighbour(x, y, direction);
+          return at === null
+            ? []
+            : [
+                {
+                  offset: topology.offset(direction, x, y),
+                  tile: this.#shownAt(at[0], at[1]),
+                } as OverlayNeighbour,
+              ];
+        })
+      ),
+      kept = this.#keptCity(x, y);
 
-        return at === null
-          ? []
-          : [
-              {
-                offset: topology.offset(direction, x, y),
-                tile: this.#shownAt(at[0], at[1]),
-              } as OverlayNeighbour,
-            ];
-      })
-    );
+    // A city whose town is hidden: a unit there still stands in front of where its buildings are.
+    return overlay !== null &&
+      !this.#townsShown &&
+      Boolean(kept === undefined ? this.#world.get(x, y).city : kept)
+      ? { ...overlay, front: true }
+      : overlay;
   }
 
   /**

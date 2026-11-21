@@ -2827,9 +2827,11 @@ expect(
         land.queueAll(0, 0);
         land.build(stage, null);
 
+        // On ground where nothing grows, so hidden, its own square is laid as with no city, the way in front clear or
+        //  not (checked below).
         Object.assign(at, {
           city,
-          terrain: { _: 'Grassland', __: ['Grassland'], features: [] },
+          terrain: { _: 'River', __: ['River'], features: [] },
           improvements: [{ _: 'Road' }],
         });
         land.changed([[at.x, at.y]], 0, 0);
@@ -2886,6 +2888,150 @@ expect(
   expect(
     'the towns hidden: every chunk as in the same world with no city, and shown again as laid afresh, for a city on a chunk’s edge, one kept for a battle, and `t` pressed half way through its chunk, on every grid',
     faults.slice(0, 5),
+    []
+  );
+}
+
+// The towns hidden (`t`), on a city in woods: its square's trees keep clear of where a unit stands in front of where
+//  its buildings are, as of the square's middle, and still grow on the rest of it. Nothing tall within a unit's stand
+//  of that spot, for cities on every grid in forest, jungle and swamp: the world's, or one kept for a battle where the
+//  world has none. Kept as none where the world has one, the spot's no city's, and some have trees there.
+{
+  const faults: string[] = [];
+  let wooded = 0,
+    crowded = 0;
+
+  (['square', 'staggered-iso', 'hex-odd-r'] as TopologyId[]).forEach(
+    (topologyId) =>
+      ['Forest', 'Jungle', 'Swamp'].forEach((terrain) => {
+        for (let n = 0; n < 4; n++) {
+          const width = 12,
+            height = 8,
+            [cx, cy] = [3 + n * 2, 3 + (n % 2)],
+            { tiles, land } = landOf(topologyId, width, height, () => ({
+              terrain,
+            })),
+            town = tiles[cy * width + cx]!,
+            [u, v] = land.layout.centre(cx, cy),
+            // How many points stand taller than a small plant within `reach` of (`pu`, `pv`), as the square's chunk is
+            //  laid afresh.
+            tallNear = (pu: number, pv: number, reach: number): number => {
+              const mesh = land.overlayOf(
+                ...(land.overlayKeyOf(cx, cy).split(',').map(Number) as [
+                  number,
+                  number
+                ])
+              );
+              let tall = 0;
+
+              for (let at = 0; mesh && at < mesh.positions.length; at += 3) {
+                const mu = mesh.positions[at]! + mesh.u,
+                  mv = mesh.positions[at + 2]! + mesh.v;
+
+                if (
+                  Math.hypot(mu - pu, mv - pv) < reach &&
+                  mesh.positions[at + 1]! - land.surfaceAt(mu, mv) > 0.04
+                ) {
+                  tall++;
+                }
+              }
+
+              return tall;
+            };
+
+          Object.assign(town, {
+            city: { id: `City-${n}`, name: `Wood ${n}`, growth: { size: 3 } },
+            improvements: [{ _: 'Road' }],
+          });
+          land.showTowns(false, 0, 0);
+
+          const city = town.city,
+            inFront = tallNear(u, v + IN_FRONT_OF_CITY, 0.1),
+            onSquare = tallNear(u, v, 0.45),
+            // Kept for a battle (`keepCities`) as `kept` on the town's square, the world's as `world`.
+            keptAs = (
+              kept: Tile['city'] | undefined,
+              world: Tile['city']
+            ): number => {
+              town.city = world;
+              land.keepCities((x, y) =>
+                x === cx && y === cy ? kept : undefined
+              );
+
+              return tallNear(u, v + IN_FRONT_OF_CITY, 0.1);
+            },
+            keptOnly = keptAs(city as Tile['city'], null);
+
+          crowded += keptAs(null, city as Tile['city']) > 0 ? 1 : 0;
+          wooded += onSquare > 0 ? 1 : 0;
+
+          if (inFront > 0) {
+            faults.push(`${topologyId} ${terrain} ${n}: ${inFront} in front`);
+          }
+
+          if (keptOnly > 0) {
+            faults.push(
+              `${topologyId} ${terrain} ${n}: ${keptOnly} in front, kept`
+            );
+          }
+        }
+      })
+  );
+
+  expect(
+    'the towns hidden, a city in woods, the world’s or kept for a battle: nothing tall where a unit stands in front of its buildings, and the woods still on every square; kept as none, trees there on some',
+    [faults.slice(0, 5), wooded, crowded > 0],
+    [[], 36, true]
+  );
+}
+
+// The towns hidden, a city's lot with a mine, specials and a hut on hills: each, and what grows there, is claimed clear
+//  of where its unit stands in front of where its buildings are, as of its middle, on many squares, each turned its own
+//  way.
+{
+  const crowding: string[] = [];
+
+  for (let n = 0; n < 40; n++) {
+    const at = place(n, 2),
+      { taken } = layOverlay(
+        {
+          ...overlayFor(
+            square(['Mine'], {
+              terrain: 'Hills',
+              features: ['Coal', 'Wine'],
+              hut: true,
+            }),
+            []
+          )!,
+          front: true,
+        },
+        at,
+        soup()
+      ),
+      front: [number, number] = [at.centre[0], at.centre[1] + IN_FRONT_OF_CITY],
+      stand = taken.find(
+        ([tu, tv]) => Math.hypot(tu - front[0], tv - front[1]) < 1e-9
+      );
+
+    if (stand === undefined || taken.length < 5) {
+      crowding.push(`${n}: ${taken.length} claimed, the stand's ${stand}`);
+    }
+
+    taken
+      .filter((claim) => claim !== stand)
+      .forEach(([tu, tv, room]) => {
+        if (
+          stand !== undefined &&
+          Math.hypot(tu - front[0], tv - front[1]) < stand[2] + room - 1e-9
+        ) {
+          crowding.push(`${n}: a claim at ${tu.toFixed(3)},${tv.toFixed(3)}`);
+        }
+      });
+  }
+
+  expect(
+    'the towns hidden, a city’s lot with a mine, specials and a hut: each claimed clear of where its unit stands in front',
+    crowding.slice(0, 5),
     []
   );
 }

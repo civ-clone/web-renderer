@@ -713,7 +713,7 @@ expect(
 
       return turned;
     })(),
-    // Its city's walls and name hidden (`t`), still in front of the buildings, which stay, with nothing of the city.
+    // Its city hidden (`t`), still in front of where its buildings stand, with nothing of the city.
     (() => {
       const hidden = drawMarker(kit, {
         city: null,
@@ -1130,7 +1130,7 @@ expect(
       city: { name: 'Ostia', size: 2, colours, walled: false, disorder: false },
       unit: unit('Trireme'),
     }),
-    // In port with cities hidden (`t`): still in front of the buildings.
+    // In port with cities hidden (`t`): still in front of where the buildings stand.
     inHiddenPort = drawMarker(kit, {
       city: null,
       unit: unit('Trireme'),

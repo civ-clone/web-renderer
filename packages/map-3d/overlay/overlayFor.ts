@@ -60,6 +60,9 @@ export type SquareOverlay = {
   // Where it has them, every city beside it, whatever its size, by offset: each builds on its own side, and the ways in
   //  to each are kept clear.
   beside: (readonly [number, number])[];
+  // A city's lot with its town hidden (`t`, `Land#showTowns`), laid as the land it stands on: a unit there still stands
+  //  in front of where its buildings are, so what grows keeps clear of that spot, as of the middle.
+  front?: true;
 };
 
 // Terrain a city's quay runs down to.

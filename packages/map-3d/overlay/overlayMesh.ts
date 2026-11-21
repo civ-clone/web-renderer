@@ -1679,6 +1679,12 @@ export const layOverlay = (
     railroad(layer, overlay.railroad);
   }
 
+  // A city's lot with its town hidden: the unit standing in front of where its buildings are has its stand clear, as at
+  //  the middle.
+  if (overlay.front === true) {
+    layer.taken.push([centre[0], centre[1] + IN_FRONT_OF_CITY, STAND_CLEAR]);
+  }
+
   if (overlay.mine) {
     mine(layer, layer.claim(...SPOTS.mine, 0.1));
   }
