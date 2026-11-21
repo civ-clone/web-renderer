@@ -2686,6 +2686,33 @@ expect(
   );
 }
 
+// A mesh as it's laid, to compare: nothing and an empty mesh alike.
+const meshKey = (mesh: OverlayMesh | null | undefined): string =>
+  mesh === undefined
+    ? 'unset'
+    : mesh === null || mesh.positions.length === 0
+    ? 'none'
+    : [mesh.u, mesh.v, mesh.positions, mesh.normals, mesh.colours]
+        .map((part) =>
+          typeof part === 'number'
+            ? String(part)
+            : Buffer.from(
+                part.buffer,
+                part.byteOffset,
+                part.byteLength
+              ).toString('base64')
+        )
+        .join(' ');
+
+// The chunks where `laid` isn't as `expected` has them.
+const differing = (
+  laid: Map<string, OverlayMesh | null>,
+  expected: Map<string, OverlayMesh | null>
+): string[] =>
+  [...expected.keys()].filter(
+    (key) => meshKey(laid.get(key)) !== meshKey(expected.get(key))
+  );
+
 // The towns hidden (`t`, `Land#showTowns`): every chunk is laid as in the same world with no city in it, and shown
 //  again, as a land laid afresh lays it. For a city of 12 on a chunk's edge, whose houses reach the next chunk; for a
 //  city kept for a battle whose world's city is gone; and with `t` pressed while the city's chunk is half made, past
@@ -2693,32 +2720,7 @@ expect(
 {
   const width = 24,
     height = 8,
-    faults: string[] = [],
-    // A mesh as it's laid, to compare: nothing and an empty mesh alike.
-    keyOf = (mesh: OverlayMesh | null | undefined): string =>
-      mesh === undefined
-        ? 'unset'
-        : mesh === null || mesh.positions.length === 0
-        ? 'none'
-        : [mesh.u, mesh.v, mesh.positions, mesh.colours]
-            .map((part) =>
-              typeof part === 'number'
-                ? String(part)
-                : Buffer.from(
-                    part.buffer,
-                    part.byteOffset,
-                    part.byteLength
-                  ).toString('base64')
-            )
-            .join(' '),
-    // The chunks where `laid` isn't as `expected` has them.
-    differing = (
-      laid: Map<string, OverlayMesh | null>,
-      expected: Map<string, OverlayMesh | null>
-    ): string[] =>
-      [...expected.keys()].filter(
-        (key) => keyOf(laid.get(key)) !== keyOf(expected.get(key))
-      );
+    faults: string[] = [];
 
   (['square', 'staggered-iso', 'hex-odd-r'] as TopologyId[]).forEach(
     (topologyId) => {
@@ -2888,6 +2890,403 @@ expect(
   expect(
     'the towns hidden: every chunk as in the same world with no city, and shown again as laid afresh, for a city on a chunk’s edge, one kept for a battle, and `t` pressed half way through its chunk, on every grid',
     faults.slice(0, 5),
+    []
+  );
+}
+
+// The towns hidden and shown again, over and over (`t`): each chunk's mesh as it was made with the towns that way is
+//  taken again, the same mesh, where nothing on it has changed; and every chunk, at every press, is as a land laid
+//  afresh lays it. Between presses, with the towns hidden or shown: a road built beside a town, a town grown,
+//  destroyed and founded again, one kept for a battle and let go, and the land changed in a town's chunk and in the
+//  one beside it, short of its squares' neighbours. On every grid.
+{
+  const width = 24,
+    height = 8,
+    faults: string[] = [];
+
+  (['square', 'staggered-iso', 'hex-odd-r'] as TopologyId[]).forEach(
+    (topologyId) => {
+      const { tiles, land, laid, order, stage } = landOf(
+          topologyId,
+          width,
+          height,
+          (x, y) => ({
+            terrain: (x * 7 + y * 3) % 9 === 0 ? 'Forest' : 'Grassland',
+            improvements:
+              (x + 2 * y) % 3 === 0
+                ? ['Road']
+                : (x * y) % 4 === 1
+                ? ['Irrigation']
+                : [],
+          })
+        ),
+        topology = new World({
+          _: 'World',
+          __: ['World', 'DataObject'],
+          id: 'world',
+          width,
+          height,
+          topologyId,
+          tiles: tiles as never,
+        }).topology(),
+        tileAt = (x: number, y: number) => tiles[y * width + x]!,
+        neighbours = (x: number, y: number) =>
+          topology
+            .directions()
+            .map((direction) => topology.neighbour(x, y, direction))
+            .filter((at): at is [number, number] => at !== null),
+        kept = new Map<string, Tile['city']>(),
+        keep = (x: number, y: number): Tile['city'] | undefined =>
+          kept.get(`${x},${y}`),
+        // Laid afresh, over the same tiles and the same cities kept, the towns `shown` or not.
+        fresh = (shown: boolean) => {
+          const other = new Land(
+              new World({
+                _: 'World',
+                __: ['World', 'DataObject'],
+                id: 'world',
+                width,
+                height,
+                topologyId,
+                tiles: tiles as never,
+              })
+            ),
+            laidAfresh = new Map<string, OverlayMesh | null>();
+
+          other.keepCities(keep);
+          other.showTowns(shown, 0, 0);
+          other.queueAll(0, 0);
+          other.build(
+            {
+              setChunk: () => undefined,
+              setOverlay: (i: number, j: number, mesh: OverlayMesh | null) =>
+                void laidAfresh.set(`${i},${j}`, mesh),
+            } as unknown as Stage,
+            null
+          );
+
+          return laidAfresh;
+        },
+        a = tileAt(5, 3),
+        b = tileAt(16, 4),
+        cityA = { id: 'City-A', name: 'A', growth: { size: 8 } },
+        cityB = { id: 'City-B', name: 'B', growth: { size: 4 } },
+        townChunk = land.overlayKeyOf(a.x, a.y),
+        // Every chunk's mesh as it was laid when each step was checked.
+        seen = new Map<string, Map<string, OverlayMesh | null>>();
+      let shown = true;
+
+      const step = (label: string, change: () => void = () => undefined) => {
+          change();
+          land.build(stage, null);
+
+          const wrong = differing(laid, fresh(shown));
+
+          if (wrong.length > 0) {
+            faults.push(`${topologyId}: ${label}: chunks ${wrong.join(' ')}`);
+          }
+
+          seen.set(label, new Map(laid));
+        },
+        press = (label: string) =>
+          step(label, () => {
+            shown = !shown;
+            land.showTowns(shown, 0, 0);
+          }),
+        // As `press`, but built a frame at a time with no time to spare: each frame hands the stage one chunk at most,
+        //  whether it's made or taken.
+        pressSlowly = (label: string) =>
+          step(label, () => {
+            shown = !shown;
+            land.showTowns(shown, 0, 0);
+
+            let frames = 0,
+              most = 0;
+
+            while (land.overlaysPending() > 0 && frames < 10000) {
+              const before = order.length;
+
+              land.build(stage, 0);
+              most = Math.max(most, order.length - before);
+              frames++;
+            }
+
+            if (most !== 1) {
+              faults.push(
+                `${topologyId}: ${label}: ${most} chunks at most in a frame`
+              );
+            }
+          }),
+        changed = (...squares: { x: number; y: number }[]) =>
+          land.changed(
+            squares.map(({ x, y }) => [x, y]),
+            0,
+            0
+          ),
+        // Whether each chunk's mesh is the very one laid at `earlier`, taken again rather than made.
+        taken = (label: string, earlier: string) => {
+          const now = seen.get(label)!,
+            then = seen.get(earlier)!,
+            made = [...now.keys()].filter(
+              (key) => now.get(key) !== then.get(key)
+            );
+
+          if (made.length > 0) {
+            faults.push(
+              `${topologyId}: ${label}: chunks ${made.join(
+                ' '
+              )} made again, not taken as at ${earlier}`
+            );
+          }
+        };
+
+      land.keepCities(keep);
+      Object.assign(a, { city: cityA, improvements: [{ _: 'Road' }] });
+      Object.assign(b, { city: cityB, improvements: [{ _: 'Road' }] });
+      land.queueAll(0, 0);
+
+      step('laid');
+      press('hidden');
+      press('shown');
+      taken('shown', 'laid');
+      press('hidden again');
+      taken('hidden again', 'hidden');
+      pressSlowly('shown slowly');
+      taken('shown slowly', 'laid');
+      pressSlowly('hidden slowly');
+      taken('hidden slowly', 'hidden');
+
+      // A field in A's chunk, too far from A for what's laid on A's square or round it to change, with the towns
+      //  hidden: shown again, the chunk's made again with it.
+      const nearA = new Set(
+          neighbours(a.x, a.y)
+            .flatMap(([x, y]) => [
+              [x, y] as [number, number],
+              ...neighbours(x, y),
+            ])
+            .flatMap(([x, y]) => [
+              [x, y] as [number, number],
+              ...neighbours(x, y),
+            ])
+            .map((at) => at.join())
+        ),
+        field = tiles.find(
+          (tile) =>
+            land.overlayKeyOf(tile.x, tile.y) === townChunk &&
+            !nearA.has(`${tile.x},${tile.y}`) &&
+            tile.improvements.length === 0
+        );
+
+      if (field === undefined) {
+        faults.push(`${topologyId}: no square in A's chunk away from A`);
+      } else {
+        step('a field away from A', () => {
+          field.improvements = [{ _: 'Irrigation' }];
+          changed(field);
+        });
+      }
+
+      press('shown, with the field');
+
+      press('hidden, for the road');
+
+      // A road built beside A, with the towns hidden: the chunk it's on is made again both ways.
+      const beside = neighbours(a.x, a.y)
+        .map(([x, y]) => tileAt(x, y))
+        .find((tile) => tile.improvements.length === 0)!;
+
+      step('a road beside A', () => {
+        beside.improvements = [{ _: 'Road' }];
+        changed(beside);
+      });
+      // A frame at a time: the road's chunk laid again, and the other town's taken, one a frame.
+      pressSlowly('shown, with the road');
+      press('hidden, with the road');
+      taken('hidden, with the road', 'a road beside A');
+
+      step('B grown', () => {
+        b.city = { ...cityB, growth: { size: 9 } };
+        changed(b);
+      });
+      press('shown, B grown');
+      press('hidden, B grown');
+      step('B destroyed', () => {
+        b.city = null;
+        changed(b);
+      });
+      press('shown, B destroyed');
+      step('B founded again', () => {
+        b.city = cityB;
+        changed(b);
+      });
+      press('hidden, B founded again');
+
+      // A kept as it was before a battle, the world's city gone, and let go.
+      step('A kept', () => {
+        kept.set(`${a.x},${a.y}`, cityA as unknown as Tile['city']);
+        a.city = null;
+        changed(a);
+      });
+      press('shown, A kept');
+      step('A let go', () => {
+        kept.delete(`${a.x},${a.y}`);
+        changed(a);
+      });
+      press('hidden, A let go');
+      step('A back', () => {
+        a.city = cityA;
+        changed(a);
+      });
+      press('shown, A back');
+
+      // The land changed: in the chunk beside A's, and in A's, on a square none of whose neighbours is one of A's
+      //  chunk's, then on one of its own.
+      const ownSquares = tiles.filter(
+          ({ x, y }) => land.overlayKeyOf(x, y) === townChunk
+        ),
+        touches = new Set(
+          ownSquares.flatMap(({ x, y }) =>
+            [[x, y] as [number, number], ...neighbours(x, y)].map((at) =>
+              at.join()
+            )
+          )
+        ),
+        [au, av] = land.layout.centre(a.x, a.y),
+        away = tiles
+          .filter(({ x, y }) => !touches.has(`${x},${y}`) && x < b.x - 2)
+          .sort((one, other) => {
+            const [ou, ov] = land.layout.centre(one.x, one.y),
+              [tu, tv] = land.layout.centre(other.x, other.y);
+
+            return Math.hypot(ou - au, ov - av) - Math.hypot(tu - au, tv - av);
+          })[0]!,
+        own = ownSquares.find(
+          (tile) =>
+            tile !== a &&
+            !neighbours(a.x, a.y).some(([x, y]) => tileAt(x, y) === tile)
+        )!;
+
+      step('land changed beside', () => {
+        away.terrain = { _: 'Mountains', __: ['Mountains'], features: [] };
+        changed(away);
+      });
+      press('hidden, land changed beside');
+      press('shown, land changed beside');
+      step('land changed in its chunk', () => {
+        own.terrain = { _: 'Hills', __: ['Hills'], features: [] };
+        changed(own);
+      });
+      press('hidden, land changed in its chunk');
+      press('shown, land changed in its chunk');
+
+      if (land.overlayKeyOf(away.x, away.y) === townChunk) {
+        faults.push(`${topologyId}: the land changed beside is in A's chunk`);
+      }
+    }
+  );
+
+  expect(
+    'the towns hidden and shown again, over and over: each chunk’s mesh taken again where nothing on it has changed, and every chunk as laid afresh, through roads, towns grown, destroyed, founded and kept, and the land changed, between presses, on every grid',
+    faults.slice(0, 5),
+    []
+  );
+}
+
+// The land changed far from any town (a square seen for the first time, say): the towns' chunks keep what was laid on
+//  them both ways, and `t` takes them again; the chunks near the change are laid afresh. On every grid.
+{
+  // Wide enough for several chunks either way round between the town and the change, on every grid.
+  const width = 128,
+    height = 4,
+    faults: string[] = [];
+
+  (['square', 'staggered-iso', 'hex-odd-r'] as TopologyId[]).forEach(
+    (topologyId) => {
+      const { tiles, land, laid, stage } = landOf(
+          topologyId,
+          width,
+          height,
+          (x, y) => ({
+            terrain: (x * 7 + y * 3) % 9 === 0 ? 'Forest' : 'Grassland',
+            improvements: (x + 2 * y) % 3 === 0 ? ['Road'] : [],
+          })
+        ),
+        fresh = (shown: boolean) => {
+          const other = new Land(
+              new World({
+                _: 'World',
+                __: ['World', 'DataObject'],
+                id: 'world',
+                width,
+                height,
+                topologyId,
+                tiles: tiles as never,
+              })
+            ),
+            laidAfresh = new Map<string, OverlayMesh | null>();
+
+          other.showTowns(shown, 0, 0);
+          other.queueAll(0, 0);
+          other.build(
+            {
+              setChunk: () => undefined,
+              setOverlay: (i: number, j: number, mesh: OverlayMesh | null) =>
+                void laidAfresh.set(`${i},${j}`, mesh),
+            } as unknown as Stage,
+            null
+          );
+
+          return laidAfresh;
+        },
+        town = tiles[1 * width + 4]!,
+        // Half the world away, where it's furthest from the town both ways round.
+        far = tiles[2 * width + 4 + width / 2]!,
+        townChunk = land.overlayKeyOf(town.x, town.y);
+
+      Object.assign(town, {
+        city: { id: 'City-T', name: 'T', growth: { size: 8 } },
+        improvements: [{ _: 'Road' }],
+      });
+      land.queueAll(0, 0);
+      land.build(stage, null);
+      land.showTowns(false, 0, 0);
+      land.build(stage, null);
+
+      const hidden = laid.get(townChunk);
+
+      land.showTowns(true, 0, 0);
+      land.build(stage, null);
+      far.terrain = { _: 'Mountains', __: ['Mountains'], features: [] };
+      land.changed([[far.x, far.y]], 0, 0);
+      land.build(stage, null);
+
+      const shownWrong = differing(laid, fresh(true));
+
+      land.showTowns(false, 0, 0);
+      land.build(stage, null);
+
+      const hiddenWrong = differing(laid, fresh(false));
+
+      if (
+        land.overlayKeyOf(far.x, far.y) === townChunk ||
+        shownWrong.length > 0 ||
+        hiddenWrong.length > 0 ||
+        laid.get(townChunk) !== hidden
+      ) {
+        faults.push(
+          `${topologyId}: shown ${shownWrong.join(
+            ' '
+          )}, hidden ${hiddenWrong.join(' ')}, the town's chunk ${
+            laid.get(townChunk) === hidden ? 'taken' : 'made again'
+          }`
+        );
+      }
+    }
+  );
+
+  expect(
+    'the land changed far from any town: the town’s chunk taken again by `t` as it was laid, and every chunk as laid afresh, on every grid',
+    faults,
     []
   );
 }
