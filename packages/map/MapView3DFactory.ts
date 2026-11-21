@@ -94,6 +94,9 @@ export type MapView3DDeps = {
   cityName?: (city: City) => string;
   // How a city opens from the map (`lib/cityOpeners.ts`): the player's own, or a watcher's.
   cityOpener: CityOpener;
+  // A set of models to draw units with (docs/3d-renderer.md §10), by its manifest's address: each unit type it has a
+  //  model for is drawn with it once it's loaded, and the rest with the built-in set's figures, as all are till then.
+  models?: { url: string };
   // What floats over the map (the sidebar's sections, #697).
   coveredBy: HTMLElement[];
   // `?debug=1`: an overlay of what each frame costs (docs/3d-renderer.md §12).

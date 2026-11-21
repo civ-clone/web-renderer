@@ -6858,6 +6858,90 @@ expect(
     holder.remove();
   }
 
+  // A set of models (docs/3d-renderer.md §10): the stage asked to load the set the page asks for, and each unit type a
+  //  model's loaded for marked again with it as it arrives, the rest as they were; a set that can't be loaded said
+  //  once, the units left as they are; nothing marked for one arriving after the map's taken down. The stage isn't
+  //  asked where the page asks for none.
+  {
+    const asked: string[] = [],
+      warned: unknown[][] = [],
+      warn = console.warn;
+    let told: ((id: string, types: readonly string[]) => void) | null = null,
+      reject: (error: unknown) => void = () => {};
+
+    const withLoading = (): Stage => ({
+        ...fakeStage(),
+        loadModels: (url, loaded) => {
+          asked.push(url);
+          told = loaded;
+
+          return new Promise<void>((_, rejected) => {
+            reject = rejected;
+          });
+        },
+      }),
+      spear = tiles[1 * width + 1] as Tile,
+      bow = tiles[1 * width + 2] as Tile,
+      unitOf = (id: string, type: string) => ({
+        id,
+        _: type,
+        __: ['Land'],
+        defence: { value: 1 },
+        player: owner,
+        busy: null,
+        improvements: [],
+      }),
+      modelled = new MapView3D(
+        { ...given!, models: { url: '/sets/0ad/manifest.json' } },
+        withLoading
+      ),
+      modelAt = (tile: Tile) =>
+        markers.get(`${tile.x},${tile.y}`)?.unit?.model ?? null;
+
+    Object.assign(spear, { city: null, units: [unitOf('Unit-S', 'Spearman')] });
+    Object.assign(bow, { city: null, units: [unitOf('Unit-A', 'Archer')] });
+    [spear, bow].forEach((tile) => modelled.queueTile(tile));
+    modelled.releaseTiles();
+    modelled.flush();
+
+    const before = [modelAt(spear), modelAt(bow)];
+
+    told!('hoplite', ['Spearman', 'Phalanx']);
+    modelled.flush();
+
+    const after = [modelAt(spear), modelAt(bow)];
+
+    console.warn = (...args: unknown[]) => void warned.push(args);
+    reject(new Error('404'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    console.warn = warn;
+
+    // Taken down, and a model arriving after: nothing marked with it.
+    modelled.dispose();
+    told!('archer', ['Archer']);
+
+    const afterDown = modelAt(bow),
+      // Where the page asks for no set.
+      none = new MapView3D(given!, withLoading);
+
+    none.dispose();
+
+    expect(
+      'the stage is asked for the set the page asks for, and each type marked again with its model as it arrives, the rest as they were; one that can’t be loaded is said once; none marked after the map’s taken down, and none asked for where the page asks for none',
+      [asked, before, after, warned.length, String(warned[0]?.[1]), afterDown],
+      [
+        ['/sets/0ad/manifest.json'],
+        [null, null],
+        ['hoplite', null],
+        1,
+        'Error: 404',
+        null,
+      ]
+    );
+
+    [spear, bow].forEach((tile) => Object.assign(tile, { units: [] }));
+  }
+
   // A city kept as it was before a battle, as its banner and marker show it: the page fills its objects in place as
   //  patches come, so what's shown of it (what it's building and how far, how it grows, what it yields) is copied.
   {

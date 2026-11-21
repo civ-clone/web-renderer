@@ -1274,6 +1274,50 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
   them wherever it's chosen.
 - **Not in saves:** which set draws the map isn't kept in a save, the same as map art (#1063's decision).
 
+**As built, first part (drawing units with a set's models):**
+
+- **The manifest** (`packages/map-3d/models/modelSet.ts`): as above, and checked as it's read:
+  - its licence, with the credit it asks for where it asks for one (`licence.attribution`, as a tileset's);
+  - its credits, each naming the work, its author, a link and the licence;
+  - its scale, the 3D map's squares to each of its models' units, which a model may set for itself;
+  - each model's file, a glTF binary (`.glb`) beside the manifest: not the site's root, above the set, nor another
+    site, nor with anything a URL reads as other than it says (`%`, `?`, `#`, a space or a control character);
+  - each unit type it draws, by the engine's name for it, drawn by one of its models.
+
+  A manifest that isn't one is refused, saying why, and the map draws the built-in set's figures.
+- **Loading** (`loadModels.ts`): the stage fetches the manifest, then each model that draws a unit type, glTF
+  binaries read with three.js's `GLTFLoader`. Only from this site:
+  - each address is checked before it's fetched (`onSite`), a redirect is refused, and each model must be beside the
+    manifest;
+  - a model must be whole in itself (`selfContained`: its chunks read as three.js reads them, one JSON chunk and a
+    binary one, as long as it says; no `uri` anywhere in it, its buffers and images as lists, and no extensions), and
+    it's parsed from its bytes;
+  - what it's loaded with refuses any address but what's in the file itself (`modelManager`: this site's `blob:`
+    addresses and `data:` ones), so nothing else is fetched for it, whatever it says. Nothing's sent with what's
+    fetched (no cookies).
+
+  A model's parts are its meshes, each a geometry and a texture:
+  - in its owner's colour where its material says (`extras.playerColour`), its texture's alpha the mask, as `rgb ×
+    mix(owner, white, alpha)`;
+  - or cut out where its alpha is under a half (`alphaMode` `MASK`), both sides drawn.
+
+  As each arrives, every unit of a type it draws is marked again with it (`UnitMarker.model`). Units of other types,
+  and all of them till then, are the built-in set's figures. A set that can't be loaded is said once, and each model
+  that can't be is said, its types left as they were.
+- **Drawn** (`MarkerKit.modelFigures`):
+  - **Figures:** as many as stand for one unit of the type's look (D6), in its formation, merged in a mesh for each of
+    the model's parts. So a unit is a draw call for each part, one or two, besides its stand.
+  - **Size:** the set's size times the player's (§6.2).
+  - **Where:** on the built-in set's stand, and behind its wall when fortified. A ship sits on the water in its
+    ripples, with no stand.
+  - **Colour:** `TintedMaterial` (`markers/tinted.ts`) mixes the owner's colour in. It's a class of its own, so a
+    unit faded as it arrives or falls keeps its colour.
+  - **Flags:** a unit's flag and labels stand over what the model reaches.
+- **Asking for one:** the page draws with a set only where it's asked to, `?models=` with its manifest's path on the
+  site, for trying one out (`map3dModelsAsked`). It's read as the browser reads it, and taken only if it's a path on
+  this site, however it's spelled. No set ships with civ.one yet: the first, 0 A.D.'s ancient units
+  (CC BY-SA 3.0, its own repository), comes with the credits list D3 asks for.
+
 ---
 
 ## 11. Everything the 2D map shows today (parity)

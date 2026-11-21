@@ -145,6 +145,7 @@
     "test:figures": "node tools/run-suite.js ui figures",
     "test:map3d": "node tools/run-suite.js ui map3d",
     "test:banners-3d": "node tools/run-suite.js ui banners3d",
+    "test:models-3d": "node tools/run-suite.js ui models3d",
     "test:overlay": "node tools/run-suite.js ui overlay",
     "test:woods": "node tools/run-suite.js ui woods",
     "test:ground-layouts": "node tools/run-suite.js ui groundLayouts",
