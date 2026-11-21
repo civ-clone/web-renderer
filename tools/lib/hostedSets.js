@@ -4,6 +4,10 @@
 //  (`civ-clone.hostedSets`: the descriptor of each, whose sprites are the PNGs beside it), and is told the names in a
 //  module written beside it (`sheets.js`, git-ignored, typed by the `sheets.d.ts` it keeps).
 //
+// A set of models for the 3D map (docs/3d-renderer.md §10) ships the same way: declared in `civ-clone.hostedModels` (its
+//  manifest), its models copied beside the page under names with its manifest's hash in them, and its manifest naming
+//  them so, the package told where it is in `modelSets.js` (git-ignored, typed by the `modelSets.d.ts` it keeps).
+//
 // Run before anything is built or bundled: by `esbuild.js` (the build, the dev build and `watch`), by the suites'
 //  runners (`tools/lib/suite.js`, `npm test`), and by `npm run build:generate-hosted-sets`. It fails when a sprite a
 //  descriptor requires has no PNG, as the pack's own CI does.
@@ -18,8 +22,9 @@ const { webRenderer } = require('./paths');
 /** Where the sheets go, and the path the page fetches them by: beside the bundle. */
 const OUTPUT = path.join('dist', 'sets');
 
-/** The module each declaring package is told its sheets' names in. */
-const GENERATED = 'sheets.js';
+/** The module each declaring package is told its sheets' names in, and its sets of models'. */
+const GENERATED = 'sheets.js',
+  GENERATED_MODELS = 'modelSets.js';
 
 /**
  * Lays out `sprites` (`{ name, width, height }`) in rows, tallest first and then by name, in a sheet as wide as the
@@ -234,7 +239,156 @@ const buildHostedSets = (root = webRenderer) => {
     )
   );
 
+  buildHostedModels(root);
+
   return Object.assign({}, ...byPackage.values());
 };
 
-module.exports = { buildHostedSets, buildSheet, declaredSets, layOut };
+/**
+ * Every hosted set of models the workspace packages declare (`civ-clone.hostedModels` in their `package.json`, the 3D
+ *  map's units, docs/3d-renderer.md §10), as `{ directory, manifest }`: the declaring package's directory, and the path
+ *  of each set's manifest, resolved from that package as an import would be.
+ */
+const declaredModelSets = (root = webRenderer) => {
+  const packages = path.join(root, 'packages');
+
+  return fs
+    .readdirSync(packages, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join(packages, entry.name))
+    .filter((directory) => fs.existsSync(path.join(directory, 'package.json')))
+    .sort()
+    .flatMap((directory) => {
+      const declared = JSON.parse(
+        fs.readFileSync(path.join(directory, 'package.json'), 'utf8')
+      );
+
+      return ((declared['civ-clone'] ?? {}).hostedModels ?? []).map(
+        ({ manifest }) => ({
+          directory,
+          manifest: require.resolve(manifest, { paths: [directory] }),
+        })
+      );
+    });
+};
+
+// A set's id, or a model's name, as it's written into a file's name: letters, digits and dashes.
+const NAME = /^[a-z0-9][a-z0-9-]*$/;
+
+/**
+ * Builds the set of models whose manifest is at `manifestPath` into `output`: each model copied beside the page as
+ *  `<id>.<hash>.<name>.glb`, as its SHA-256 in the manifest says it is, and the manifest, naming them so, as
+ *  `<id>.<hash>.json`, the hash the manifest's as it ships, so the browser keeps them until they change. The set's
+ *  files from before are removed, by name: nothing else under `output`. Returns where the manifest is, as the page
+ *  fetches it, and what the library shows of the set. Fails, saying why, for a model that's missing, isn't beside the
+ *  manifest, or isn't the file the manifest says.
+ */
+const buildModelSet = (manifestPath, output) => {
+  const text = fs.readFileSync(manifestPath),
+    manifest = JSON.parse(text),
+    directory = path.dirname(manifestPath),
+    hash = crypto.createHash('sha256').update(text).digest('hex').slice(0, 12),
+    base = `${manifest.id}.${hash}`,
+    models = {};
+
+  if (typeof manifest.id !== 'string' || !NAME.test(manifest.id)) {
+    throw new Error(`${manifestPath}: no id to name its files by`);
+  }
+
+  Object.entries(manifest.models ?? {}).forEach(([name, model]) => {
+    const source = path.resolve(directory, String(model.file));
+
+    if (!NAME.test(name) || !source.startsWith(directory + path.sep)) {
+      throw new Error(
+        `${manifest.id}: model ${name} isn't beside its manifest`
+      );
+    }
+
+    if (!fs.existsSync(source)) {
+      throw new Error(`${manifest.id}: model ${name} has no ${model.file}`);
+    }
+
+    const bytes = fs.readFileSync(source);
+
+    if (
+      typeof model.sha256 === 'string' &&
+      crypto.createHash('sha256').update(bytes).digest('hex') !== model.sha256
+    ) {
+      throw new Error(
+        `${manifest.id}: ${model.file} isn't the file its manifest says`
+      );
+    }
+
+    models[name] = { ...model, file: `${base}.${name}.glb` };
+    write(path.join(output, `${base}.${name}.glb`), bytes);
+  });
+
+  write(
+    path.join(output, `${base}.json`),
+    Buffer.from(`${JSON.stringify({ ...manifest, models }, null, 2)}\n`)
+  );
+
+  // The set's files from before this one, by name: nothing else under `output`.
+  fs.readdirSync(output)
+    .filter(
+      (file) =>
+        file.startsWith(`${manifest.id}.`) &&
+        /^[0-9a-f]{12}\.(json|[a-z0-9][a-z0-9-]*\.glb)$/.test(
+          file.slice(manifest.id.length + 1)
+        ) &&
+        !file.startsWith(`${base}.`)
+    )
+    .forEach((file) => fs.unlinkSync(path.join(output, file)));
+
+  return {
+    manifest: `${OUTPUT.split(path.sep).join('/')}/${base}.json`,
+    name: manifest.name,
+    licence: manifest.licence,
+    credits: manifest.credits,
+  };
+};
+
+/**
+ * Builds every declared set of models into `dist/sets` under `root` (`buildModelSet`), and tells each declaring
+ *  package where each is (`modelSets.js`). Returns them, by set id.
+ */
+const buildHostedModels = (root = webRenderer) => {
+  const output = path.join(root, OUTPUT),
+    byPackage = new Map();
+
+  fs.mkdirSync(output, { recursive: true });
+
+  declaredModelSets(root).forEach(({ directory, manifest }) => {
+    const built = buildModelSet(manifest, output),
+      { id } = JSON.parse(fs.readFileSync(manifest, 'utf8'));
+
+    byPackage.set(directory, {
+      ...(byPackage.get(directory) ?? {}),
+      [id]: built,
+    });
+  });
+
+  byPackage.forEach((sets, directory) =>
+    write(
+      path.join(directory, GENERATED_MODELS),
+      Buffer.from(
+        `// Written by \`tools/lib/hostedSets.js\` (docs/3d-renderer.md §10): where each hosted set of models' manifest is,\n` +
+          `//  and what the library shows of it, by set id.\n` +
+          `export const modelSets = ${JSON.stringify(sets, null, 2)};\n\n` +
+          `export default modelSets;\n`
+      )
+    )
+  );
+
+  return Object.assign({}, ...byPackage.values());
+};
+
+module.exports = {
+  buildHostedModels,
+  buildHostedSets,
+  buildModelSet,
+  buildSheet,
+  declaredModelSets,
+  declaredSets,
+  layOut,
+};

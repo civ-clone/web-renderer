@@ -409,6 +409,9 @@ importers:
       '@civ-clone/library-unit':
         specifier: ^0.1.15
         version: 0.1.15
+      '@civ-clone/models-0ad':
+        specifier: github:civ-clone/models-0ad
+        version: https://codeload.github.com/civ-clone/models-0ad/tar.gz/07e22cf97725a862decf5042462b807008fee567
       '@civ-clone/simple-ai-client':
         specifier: github:civ-clone/simple-ai-client
         version: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/6b64b38d5f74fefca52150cf47406b488cf08b8b
@@ -481,6 +484,9 @@ importers:
       '@civ-clone/ui-menus':
         specifier: workspace:*
         version: link:packages/menus
+      '@civ-clone/ui-models-0ad':
+        specifier: workspace:*
+        version: link:packages/models-0ad
       '@civ-clone/ui-models-builtin':
         specifier: workspace:*
         version: link:packages/models-builtin
@@ -730,6 +736,9 @@ importers:
       '@civ-clone/ui-menus':
         specifier: workspace:*
         version: link:../menus
+      '@civ-clone/ui-models-0ad':
+        specifier: workspace:*
+        version: link:../models-0ad
       '@civ-clone/ui-platform':
         specifier: workspace:*
         version: link:../platform
@@ -979,6 +988,9 @@ importers:
       '@civ-clone/ui-map':
         specifier: workspace:*
         version: link:../map
+      '@civ-clone/ui-models-0ad':
+        specifier: workspace:*
+        version: link:../models-0ad
       '@civ-clone/ui-platform':
         specifier: workspace:*
         version: link:../platform
@@ -991,6 +1003,8 @@ importers:
       '@civ-clone/ui-widgets':
         specifier: workspace:*
         version: link:../widgets
+
+  packages/models-0ad: {}
 
   packages/models-builtin: {}
 
@@ -2911,6 +2925,10 @@ packages:
 
   '@civ-clone/library-world@0.1.0':
     resolution: {integrity: sha512-OSd1jsJiN+/MQtA56spokVxsTDt5bQN34utkK+ZZ6jUhKE06sYtyjXf5D8qP9BVxEwc8qv+J3weM3GCUvaQVbw==}
+
+  '@civ-clone/models-0ad@https://codeload.github.com/civ-clone/models-0ad/tar.gz/07e22cf97725a862decf5042462b807008fee567':
+    resolution: {gitHosted: true, integrity: sha512-155xJ7PkWtJ3/x0RvLRIHGtUUOH6Hy9GTuOED6ld4Ex0qrSVhqbsyhSFK0uTlTLuF5DYJK44Fek7XPEye+HVQg==, tarball: https://codeload.github.com/civ-clone/models-0ad/tar.gz/07e22cf97725a862decf5042462b807008fee567}
+    version: 0.1.0
 
   '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/6b64b38d5f74fefca52150cf47406b488cf08b8b':
     resolution: {gitHosted: true, integrity: sha512-DRNchqV8qMEoOVNKpkHgq04z2ZshQbvu5TkXJUnVitoZB1BI9Vgt6WyBWysvyz4H7WKf0bLwdwDpYneoEMO7Eg==, tarball: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/6b64b38d5f74fefca52150cf47406b488cf08b8b}
@@ -9353,6 +9371,8 @@ snapshots:
       '@civ-clone/base-tile-improvement-pollution': 0.1.0
       '@civ-clone/base-tile-improvement-railroad': 0.1.0
       '@civ-clone/base-tile-improvement-road': 0.1.0
+
+  '@civ-clone/models-0ad@https://codeload.github.com/civ-clone/models-0ad/tar.gz/07e22cf97725a862decf5042462b807008fee567': {}
 
   '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/6b64b38d5f74fefca52150cf47406b488cf08b8b':
     dependencies:

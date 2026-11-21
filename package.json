@@ -146,6 +146,7 @@
     "test:map3d": "node tools/run-suite.js ui map3d",
     "test:banners-3d": "node tools/run-suite.js ui banners3d",
     "test:models-3d": "node tools/run-suite.js ui models3d",
+    "test:hosted-models": "node tools/run-suite.js ui hostedModels",
     "test:overlay": "node tools/run-suite.js ui overlay",
     "test:woods": "node tools/run-suite.js ui woods",
     "test:ground-layouts": "node tools/run-suite.js ui groundLayouts",
@@ -308,7 +309,8 @@
     "excludes": [
       "civ1-asset-extractor",
       "civ1-tileset-pixelart",
-      "civ2-asset-extractor"
+      "civ2-asset-extractor",
+      "models-0ad"
     ],
     "sets": {
       "civ1": {
@@ -626,6 +628,7 @@
     "@civ-clone/library-government": "^0.1.2",
     "@civ-clone/library-science": "^0.1.1",
     "@civ-clone/library-unit": "^0.1.15",
+    "@civ-clone/models-0ad": "github:civ-clone/models-0ad",
     "@civ-clone/simple-ai-client": "github:civ-clone/simple-ai-client",
     "@civ-clone/simple-world-generator": "github:civ-clone/simple-world-generator",
     "@civ-clone/simple-world-path": "github:civ-clone/simple-world-path",
@@ -650,6 +653,7 @@
     "@civ-clone/ui-map-isometric": "workspace:*",
     "@civ-clone/ui-map-square": "workspace:*",
     "@civ-clone/ui-menus": "workspace:*",
+    "@civ-clone/ui-models-0ad": "workspace:*",
     "@civ-clone/ui-models-builtin": "workspace:*",
     "@civ-clone/ui-protocol": "workspace:*",
     "@civ-clone/ui-rules-civ1": "workspace:*",

@@ -75,6 +75,9 @@ than bright and fun. So:
 
 Stylised low-poly packs, however well made, don't fit, and the licence survey (D3) leaves them out.
 
+**Widened (2026-11-21):** realistic models are still preferred, but a cartoon-like set might work under a realistic
+texture, as units are drawn small and low in detail. Such a set can be tried where nothing realistic covers a unit.
+
 ### D3. Where the models come from
 
 The land, water, vegetation and buildings can be built by code, as the pixel art's sprites are. Units and Wonders are
@@ -107,6 +110,12 @@ the hard part.
   model needs a licence or permission in writing that allows hosting it on civ.one. "Free for mods" isn't enough
   alone.
 - **Commissioned models** remain an option for later.
+
+**Widened (2026-11-21):** CC BY-SA sets may be used too, as hosted sets in repositories of their own under the same
+licence, never folded into a CC0, CC BY or MIT set. The first is 0 A.D.'s ancient units, adapted from Wildfire Games'
+art ([civ-clone/models-0ad](https://github.com/civ-clone/models-0ad)). It's credited as CC BY-SA asks, wherever it's
+used: its library entry gives its licence, linked, and its credit (`licence.attribution`), which names Wildfire Games
+with a link, and says what was changed.
 
 ### D4. What "isometric" means in 3D
 
@@ -1313,10 +1322,27 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
   - **Colour:** `TintedMaterial` (`markers/tinted.ts`) mixes the owner's colour in. It's a class of its own, so a
     unit faded as it arrives or falls keeps its colour.
   - **Flags:** a unit's flag and labels stand over what the model reaches.
-- **Asking for one:** the page draws with a set only where it's asked to, `?models=` with its manifest's path on the
-  site, for trying one out (`map3dModelsAsked`). It's read as the browser reads it, and taken only if it's a path on
-  this site, however it's spelled. No set ships with civ.one yet: the first, 0 A.D.'s ancient units
-  (CC BY-SA 3.0, its own repository), comes with the credits list D3 asks for.
+- **Asking for one:** `?models=` with a manifest's path on the site draws with that set instead, for trying one out
+  (`map3dModelsAsked`). It's read as the browser reads it, and taken only if it's a path on this site, however it's
+  spelled.
+
+**As built, second part (the set that ships):**
+
+- **0 A.D.'s ancient units** ([civ-clone/models-0ad](https://github.com/civ-clone/models-0ad), CC BY-SA 3.0, adapted
+  from Wildfire Games' art):
+  - 15 models, 12 of them drawing a unit type (Warrior, Spearman, Archer, Swordman, Pikeman, Settlers, Horseman,
+    Chariot, Elephant, Catapult, Caravan, Trireme);
+  - 3.8 MB in all, each a unit posed as it stands still, from one atlas (and a second for what's see-through).
+
+  It's a dependency of the renderer, pinned by its commit in the lockfile, and its package here
+  (`packages/models-0ad`) declares it (`civ-clone.hostedModels`).
+- **The build** (`tools/lib/hostedSets.js`) copies its models beside the page as `dist/sets/<id>.<hash>.<name>.glb`, each
+  as its manifest's SHA-256 says it is, and its manifest, naming them so, as `<id>.<hash>.json`. The hash is the
+  manifest's, so the browser keeps them until the set changes. The set's files from before are removed by name, and
+  the package is told where its manifest is (`modelSets.js`).
+- **The page** draws with it under `?3d=1`, unless `?models=` asks for another.
+- **The library** lists it, where the page asked for the 3D map, under Units on the 3D map. It says it comes with
+  civ.one, its licence, linked, and the credit it asks for (`licence.attribution`).
 
 ---
 

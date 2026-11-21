@@ -170,10 +170,12 @@ i18next.addResources('en', 'default', {
   'LibraryWindow.map': 'Map art',
   'LibraryWindow.themes': 'Themes',
   'LibraryWindow.sound': 'Sound',
+  'LibraryWindow.models': 'Units on the 3D map',
   // What a set gives the game.
   'LibraryWindow.provides.map': '{{grid}} map art',
   'LibraryWindow.provides.interface': 'Interface art',
   'LibraryWindow.provides.music': 'Music',
+  'LibraryWindow.provides.units-3d': 'Units for the 3D map',
   // Where a set comes from.
   'LibraryWindow.imported': 'From your copy of {{game}}',
   'LibraryWindow.hosted': 'Comes with civ.one',
