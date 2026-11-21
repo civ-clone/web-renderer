@@ -210,6 +210,13 @@ export const copiesNear = (
   );
 };
 
+/**
+ * How far from the camera's focus the markers are drawn, at every copy of the world that comes within it: nearer than
+ *  the land, as they're small that far off. The cities' banners are drawn at the same copies (`banners.ts`).
+ */
+export const markerSight = (orbit: Orbit): number =>
+  Math.min(sightFor(orbit.distance).far, orbit.distance * 2.2);
+
 /** The planes that keep what lies between the poles, from 0 to `extent` down the ground: three.js keeps n·p + c ≥ 0. */
 export const polesAt = (extent: number): Plane[] => [
   new Plane(new Vector3(0, 0, 1), 0),
@@ -514,11 +521,7 @@ export const createStage: StageFactory = (
     const inSight = copiesNear(orbit.focus, far, seen),
       // What's laid past the poles is drawn round the world too when they're stopped at.
       key = `${inSight.join(';')}${stopped ? ' stopped' : ''}`,
-      markersInSight = copiesNear(
-        orbit.focus,
-        Math.min(far, orbit.distance * 2.2),
-        seen
-      ),
+      markersInSight = copiesNear(orbit.focus, markerSight(orbit), seen),
       markersKey = markersInSight.join(';');
 
     if (key !== copiesKey) {

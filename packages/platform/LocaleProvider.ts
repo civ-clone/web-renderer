@@ -4,6 +4,12 @@ export class LocaleProvider {
   #defaultLocale: string;
   #locale: string;
   #locales: string[];
+  // Each number formatter made, and the locale's own zero, by the locales and options it was made for: making one is
+  //  slow next to using it, and the map's banners write numbers for every city they paint.
+  #numberFormats = new Map<
+    string,
+    { formatter: Intl.NumberFormat; zero: string }
+  >();
 
   constructor(
     locale: string = navigator.language,
@@ -41,17 +47,28 @@ export class LocaleProvider {
   }
 
   number(number: number, options?: Intl.NumberFormatOptions): string {
-    const formatter = new Intl.NumberFormat(this.locales(), {
-      maximumFractionDigits: 0,
-      ...options,
-    });
+    // By the options as the formatter's made with them, so one given as `undefined` is told from one not given.
+    const locales = this.locales(),
+      merged = { maximumFractionDigits: 0, ...options },
+      key = JSON.stringify([locales, merged]);
+    let made = this.#numberFormats.get(key);
+
+    if (made === undefined) {
+      const formatter = new Intl.NumberFormat(locales, merged);
+
+      made = {
+        formatter,
+        // The locale's own zero, which isn't 0 in every script (٠ in Arabic, for one).
+        zero:
+          formatter.formatToParts(0).find(({ type }) => type === 'integer')
+            ?.value ?? '0',
+      };
+      this.#numberFormats.set(key, made);
+    }
 
     // -0, or a small negative rounded to 0, reads 0 rather than -0 (#816). `signDisplay: 'negative'` would say so, but
     //  older browsers reject it.
-    // The locale's own zero, which isn't 0 in every script (٠ in Arabic, for one).
-    const zero =
-        formatter.formatToParts(0).find(({ type }) => type === 'integer')
-          ?.value ?? '0',
+    const { formatter, zero } = made,
       parts = formatter.formatToParts(number),
       digits = parts.filter(
         ({ type }) => type === 'integer' || type === 'fraction'

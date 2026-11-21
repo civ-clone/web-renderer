@@ -49,6 +49,15 @@ export type MapSquares = {
   endTooltip(over: HTMLElement): void;
 };
 
+/** A city's banner painted alone (`MapView3DDeps['cityBanners']`): its image, its size, and how far across it the
+ *  middle of its city's square is. */
+export type CityBannerImage = {
+  image: CanvasImageSource;
+  width: number;
+  height: number;
+  centre: number;
+};
+
 export type MapView3DDeps = {
   // A unit picked on the map, or in a city screen's units (the portal's `activate-unit`).
   activateUnit: (unit: Unit) => void;
@@ -64,6 +73,20 @@ export type MapView3DDeps = {
   cameraDistance: {
     get(): number | null;
     set(distance: number): void;
+  };
+  // The interface's banners for cities, as the 2D map hangs them below each city's square (docs/3d-renderer.md §7.5),
+  //  where it has them: one painted alone for `tile`'s city, laid out as the 2D map lays it at its art's scale
+  //  (`art.scale()`), with `density` of its image's pixels to each of the 2D map's; or nothing where it draws none (the
+  //  classic label, by the theme), which leaves the city's name standing over it. Whether they give way to the yields
+  //  (`y`), as on the 2D map; and what tells of the theme or the fonts loaded changing, which they're painted with,
+  //  returning what stops it.
+  cityBanners?: {
+    paint(tile: Tile, density: number): CityBannerImage | null;
+    // What `tile`'s city's banner would say if painted now: the same for the same banner, so it's painted again only
+    //  when this changes (or the theme, the fonts, the art or the density do).
+    key(tile: Tile): string | null;
+    giveWayToYields: boolean;
+    restyled(changed: () => void): () => void;
   };
   // A city's name as the page's other maps and windows give it (the locale's, by its founder), or its own name.
   cityName?: (city: City) => string;

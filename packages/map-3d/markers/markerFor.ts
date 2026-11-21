@@ -16,6 +16,8 @@ export type CityMarker = {
   walled: boolean;
   // In civil disorder, as the engine has declared it.
   disorder: boolean;
+  // Its banner hung below its square in its place (`MapView3DDeps['cityBanners']`): no name over it.
+  unnamed?: true;
 };
 
 export type UnitMarker = {

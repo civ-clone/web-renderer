@@ -99,9 +99,12 @@ export class MapPortal3D
 
   /**
    * The 2D art's zoom, which Options sets and keeps for the city screen before it calls this: the 3D camera's own
-   *  distance is an option of its own (slice 1.2).
+   *  distance is an option of its own (slice 1.2). Drawn again, as the cities' banners are as big as the 2D map shows
+   *  them at that zoom.
    */
-  setZoom(): void {}
+  setZoom(): void {
+    this.#camera.changed();
+  }
 
   transport(): Transport {
     return this.#deps.transport;
