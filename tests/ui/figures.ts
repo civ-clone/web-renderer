@@ -53,6 +53,7 @@ import {
   partMatrix,
 } from '@civ-clone/ui-map-3d/markers/figures';
 import { UnitMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
+import { CRUISE } from '@civ-clone/ui-map-3d/walks';
 import { UNIT_SIZES } from '@civ-clone/ui-client/lib/map3dOptions';
 import { landTypes, seaTypes } from '@civ-clone/ui-map-3d/debug/populate';
 
@@ -740,8 +741,8 @@ expect(
 
 // Drawn to fly, as a walker is: an aircraft's figures, its hit points' bar, flag and label, and the pointer over it,
 //  are a part of their own, to climb off its stand and the ring at its feet, which stay on the ground; its figures as
-//  high on their own as on the stand, and the two together all of it. On its square, or a unit on foot drawn to fly,
-//  one part as ever.
+//  high on their own as on the stand, and the two together all of it. Standing on its square out of a city, the same
+//  part, resting in the air as high as it flies; in a city, or a unit on foot drawn to fly, one part as ever.
 {
   const flier = unit('Fighter', {
       kinds: ['Air'],
@@ -774,7 +775,7 @@ expect(
       Math.round((n ?? NaN) * 1000) / 1000;
 
   expect(
-    'drawn to fly, an aircraft’s figures, flag, label and pointer climb as a part of their own, off its stand and ring; its figures as high as on the stand, and with it all of it; on its square, or on foot, one part; helicopters and missiles fly too, not ships',
+    'drawn to fly, an aircraft’s figures, flag, label and pointer climb as a part of their own, off its stand and ring; its figures as high as on the stand, and with it all of it; standing out of a city, resting in the air; in a city, or on foot, one part; helicopters and missiles fly too, not ships',
     [
       kinds(part.children).sort(),
       aloft === undefined ? null : kinds(aloft.children).sort(),
@@ -784,7 +785,13 @@ expect(
       rounded(figures.boundingBox?.min.y) > 0.02,
       rounded(base.boundingBox?.max.y) < 0.05,
       count(figures) + count(base) === count(whole),
-      drawMarker(kit, { city: null, unit: flier }).getObjectByName(ALOFT_PART),
+      drawMarker(kit, { city: null, unit: flier }).getObjectByName(ALOFT_PART)
+        ?.position.y,
+      drawMarker(kit, {
+        city: null,
+        unit: flier,
+        inCity: true,
+      }).getObjectByName(ALOFT_PART),
       drawMarker(
         kit,
         { city: null, unit: unit('Spearman') },
@@ -808,6 +815,7 @@ expect(
       true,
       true,
       true,
+      CRUISE,
       undefined,
       undefined,
       [true, true, true, true, false],
