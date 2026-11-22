@@ -392,10 +392,11 @@ export class MapView3D implements MapRenderer {
   // How big units are drawn: `UNIT_SCALE` times life size, times the size the player chose; and what stops a change to
   //  it being told.
   #unitSize: number;
-  // The model each unit type is drawn with, by its type, from the set of models (`MapView3DDeps['models']`), as each
-  //  model's loaded: the built-in set's figures for the rest.
-  #models = new Map<string, string>();
-  #modelOf = (type: string): string | null => this.#models.get(type) ?? null;
+  // The model each unit type is drawn with, by its type, from the sets of models (`MapView3DDeps['models']`), as each
+  //  model's loaded, with the rank of the set it's from: the built-in set's figures for the rest.
+  #models = new Map<string, { id: string; rank: number }>();
+  #modelOf = (type: string): string | null =>
+    this.#models.get(type)?.id ?? null;
   // Whether models have arrived since the squares were last marked: they're all marked again at the next frame, once
   //  however many arrived.
   #modelsArrived = false;
@@ -586,21 +587,28 @@ export class MapView3D implements MapRenderer {
         }
       }) ?? ((): void => {});
 
-    if (deps.models !== undefined) {
-      this.#loadModels(deps.models.url);
-    }
+    deps.models?.forEach(({ url }, rank) => this.#loadModels(url, rank));
   }
 
-  // The set of models at `url` loaded, each unit type its models draw marked again with its model as each arrives. One
-  //  that can't be had leaves the built-in set's figures, said once.
-  #loadModels(url: string): void {
+  // The set of models at `url`, `rank`th of the page's, loaded: each unit type its models draw marked again with its
+  //  model as each arrives, unless an earlier set's (a lower rank's) already has. One that can't be had leaves what
+  //  the type was drawn with, a later set's or the built-in set's figures, said once.
+  #loadModels(url: string, rank: number): void {
     this.#stage
       .loadModels?.(url, (id, types) => {
         if (this.#disposed) {
           return;
         }
 
-        types.forEach((type) => this.#models.set(type, id));
+        const taken = types.filter(
+          (type) => (this.#models.get(type)?.rank ?? Infinity) >= rank
+        );
+
+        if (taken.length === 0) {
+          return;
+        }
+
+        taken.forEach((type) => this.#models.set(type, { id, rank }));
         this.#modelsArrived = true;
         this.#draw();
       })

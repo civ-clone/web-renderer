@@ -89,7 +89,7 @@ import { Color } from 'three';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { unitStatus } from '@civ-clone/ui-assets/lib/renderUnit';
 import { setBuild } from '@civ-clone/ui-client/lib/build';
-import ancientUnits from '@civ-clone/ui-models-0ad';
+import { ancientUnits, laterUnits } from '@civ-clone/ui-models-hosted';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import { sourcesUnder, specifiersOf } from './lib/imports';
@@ -6885,16 +6885,17 @@ expect(
     holder.remove();
   }
 
-  // A set of models (docs/3d-renderer.md §10): the stage asked to load the set the page asks for, and each unit type a
+  // Sets of models (docs/3d-renderer.md §10): the stage asked to load each set the page asks for, and each unit type a
   //  model's loaded for marked again with it as it arrives, the rest as they were; a set that can't be loaded said
   //  once, the units left as they are; nothing marked for one arriving after the map's taken down. The stage isn't
-  //  asked where the page asks for none.
+  //  asked where the page asks for none. Where there are several, a type is drawn by the first set's model for it.
   {
-    // Asked for no set, the page asks for the one that ships with civ.one: 0 A.D.'s ancient units.
+    // Asked for no set, the page asks for the ones that ship with civ.one: 0 A.D.'s ancient units, then Cimpletoon's
+    //  later units.
     expect(
-      'asked for no set, the page draws units with the one that ships with civ.one',
+      'asked for no set, the page draws units with the ones that ship with civ.one, 0 A.D.’s first',
       given!.models,
-      { url: ancientUnits.manifest }
+      [{ url: ancientUnits.manifest }, { url: laterUnits.manifest }]
     );
 
     const asked: string[] = [],
@@ -6926,7 +6927,7 @@ expect(
         improvements: [],
       }),
       modelled = new MapView3D(
-        { ...given!, models: { url: '/sets/0ad/manifest.json' } },
+        { ...given!, models: [{ url: '/sets/0ad/manifest.json' }] },
         withLoading
       ),
       modelAt = (tile: Tile) =>
@@ -6971,6 +6972,79 @@ expect(
         'Error: 404',
         null,
       ]
+    );
+
+    // Two sets, the first first: each told of its models in any order.
+    const tellers = new Map<
+        string,
+        (id: string, types: readonly string[]) => void
+      >(),
+      layered = new MapView3D(
+        {
+          ...given!,
+          models: [{ url: '/sets/first.json' }, { url: '/sets/second.json' }],
+        },
+        () => ({
+          ...fakeStage(),
+          loadModels: (url, loaded) => {
+            tellers.set(url, loaded);
+
+            return new Promise<void>(() => {});
+          },
+        })
+      ),
+      marked: (string | null)[][] = [],
+      tell = (url: string, id: string, types: string[]): void => {
+        tellers.get(url)!(id, types);
+        layered.flush();
+        marked.push([modelAt(spear), modelAt(bow)]);
+      };
+
+    [spear, bow].forEach((tile) => layered.queueTile(tile));
+    layered.releaseTiles();
+    layered.flush();
+
+    tell('/sets/second.json', 'second-spear', ['Spearman']);
+    tell('/sets/first.json', 'first-spear', ['Spearman']);
+    tell('/sets/second.json', 'second-spear-again', ['Spearman']);
+    tell('/sets/second.json', 'second-both', ['Spearman', 'Archer']);
+
+    expect(
+      'each set asked for, in order; a type drawn by a later set’s model till the first’s arrives, then by the first’s, whatever arrives after; a later model that draws it and a type only its set has draws only that type',
+      [[...tellers.keys()], marked],
+      [
+        ['/sets/first.json', '/sets/second.json'],
+        [
+          ['second-spear', null],
+          ['first-spear', null],
+          ['first-spear', null],
+          ['first-spear', 'second-both'],
+        ],
+      ]
+    );
+    layered.dispose();
+
+    // A set the page asks to try out: drawn with instead of the ones that ship, not beside them.
+    fresh();
+    await prepareMap3D({
+      say,
+      search: '?3d=1&models=/sets/try/manifest.json',
+      webgl2: () => true,
+      load,
+    });
+
+    const trying = makeMapView(deps2D),
+      triedWith = (given as MapView3DDeps | null)?.models;
+
+    trying.dispose();
+    // The page as it was, for what follows.
+    fresh();
+    await prepareMap3D({ say, search: '?3d=1', webgl2: () => true, load });
+
+    expect(
+      'asked to try a set, the page draws units with it alone, not beside the ones that ship',
+      triedWith,
+      [{ url: '/sets/try/manifest.json' }]
     );
 
     [spear, bow].forEach((tile) => Object.assign(tile, { units: [] }));

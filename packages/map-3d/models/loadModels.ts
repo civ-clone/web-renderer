@@ -183,6 +183,9 @@ export const onSite = (url: string, here: string): string | null => {
   }
 };
 
+/** The model `id` of the set whose manifest is at `url`, by a key of its own among every set's. */
+export const modelKey = (url: string, id: string): string => `${url}#${id}`;
+
 /**
  * Loads the set whose manifest is at `url`: its manifest, then each model that draws a unit type, each given to
  *  `loaded` as it arrives, with the unit types it draws. Resolves with the manifest once all have been tried, or

@@ -1,0 +1,20 @@
+{
+  "name": "@civ-clone/ui-models-hosted",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The sets of models that ship with civ.one for the 3D map, served beside the game: 0 A.D.'s ancient units (civ-clone/models-0ad, CC BY-SA 3.0, by Wildfire Games) and Cimpletoon's later units (civ-clone/models-cimpletoon, CC0 1.0, by yd), each a dependency of the renderer. The build reads their manifests (civ-clone.hostedModels); the page imports only where they are.",
+  "license": "MIT",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "civ-clone": {
+    "hostedModels": [
+      {
+        "manifest": "@civ-clone/models-0ad/manifest.json"
+      },
+      {
+        "manifest": "@civ-clone/models-cimpletoon/manifest.json"
+      }
+    ]
+  }
+}

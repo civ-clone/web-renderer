@@ -310,7 +310,8 @@
       "civ1-asset-extractor",
       "civ1-tileset-pixelart",
       "civ2-asset-extractor",
-      "models-0ad"
+      "models-0ad",
+      "models-cimpletoon"
     ],
     "sets": {
       "civ1": {
@@ -629,6 +630,7 @@
     "@civ-clone/library-science": "^0.1.1",
     "@civ-clone/library-unit": "^0.1.15",
     "@civ-clone/models-0ad": "github:civ-clone/models-0ad",
+    "@civ-clone/models-cimpletoon": "github:civ-clone/models-cimpletoon",
     "@civ-clone/simple-ai-client": "github:civ-clone/simple-ai-client",
     "@civ-clone/simple-world-generator": "github:civ-clone/simple-world-generator",
     "@civ-clone/simple-world-path": "github:civ-clone/simple-world-path",
@@ -653,8 +655,8 @@
     "@civ-clone/ui-map-isometric": "workspace:*",
     "@civ-clone/ui-map-square": "workspace:*",
     "@civ-clone/ui-menus": "workspace:*",
-    "@civ-clone/ui-models-0ad": "workspace:*",
     "@civ-clone/ui-models-builtin": "workspace:*",
+    "@civ-clone/ui-models-hosted": "workspace:*",
     "@civ-clone/ui-protocol": "workspace:*",
     "@civ-clone/ui-rules-civ1": "workspace:*",
     "@civ-clone/ui-rules-civ2": "workspace:*",

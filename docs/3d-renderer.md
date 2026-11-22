@@ -115,7 +115,9 @@ the hard part.
 licence, never folded into a CC0, CC BY or MIT set. The first is 0 A.D.'s ancient units, adapted from Wildfire Games'
 art ([civ-clone/models-0ad](https://github.com/civ-clone/models-0ad)). It's credited as CC BY-SA asks, wherever it's
 used: its library entry gives its licence, linked, and its credit (`licence.attribution`), which names Wildfire Games
-with a link, and says what was changed.
+with a link, and says what was changed. The second is CC0: Cimpletoon's later units, converted from yd's models
+([civ-clone/models-cimpletoon](https://github.com/civ-clone/models-cimpletoon)). It asks for no credit, but its
+library entry gives one all the same.
 
 ### D4. What "isometric" means in 3D
 
@@ -1330,6 +1332,10 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
   As each arrives, every unit of a type it draws is marked again with it (`UnitMarker.model`). Units of other types,
   and all of them till then, are the built-in set's figures. A set that can't be loaded is said once, and each model
   that can't be is said, its types left as they were.
+- **Several sets:** the page gives the map its sets in order (`MapView3DDeps.models`), and each is loaded at once. A
+  unit type is drawn by the first set's model for it: a later set's draws it till the first's arrives, or if the
+  first's can't be had. Two sets may name a model the same, so each set's are kept apart by a key of their own
+  (`modelKey`: the manifest's address and the model's name).
 - **Drawn** (`MarkerKit.modelFigures`):
   - **Figures:** as many as stand for one unit of the type's look (D6), in its formation, merged in a mesh for each of
     the model's parts. So a unit is a draw call for each part, one or two, besides its stand.
@@ -1339,11 +1345,11 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
   - **Colour:** `TintedMaterial` (`markers/tinted.ts`) mixes the owner's colour in. It's a class of its own, so a
     unit faded as it arrives or falls keeps its colour.
   - **Flags:** a unit's flag and labels stand over what the model reaches.
-- **Asking for one:** `?models=` with a manifest's path on the site draws with that set instead, for trying one out
-  (`map3dModelsAsked`). It's read as the browser reads it, and taken only if it's a path on this site, however it's
-  spelled.
+- **Asking for one:** `?models=` with a manifest's path on the site draws with that set instead of the ones that ship,
+  for trying one out (`map3dModelsAsked`). It's read as the browser reads it, and taken only if it's a path on this
+  site, however it's spelled.
 
-**As built, second part (the set that ships):**
+**As built, second part (the sets that ship):**
 
 - **0 A.D.'s ancient units** ([civ-clone/models-0ad](https://github.com/civ-clone/models-0ad), CC BY-SA 3.0, adapted
   from Wildfire Games' art):
@@ -1352,15 +1358,25 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
     heavy cavalry for Knight, a mounted scout for Explorer, and a Norse knarr for Sail;
   - 3.8 MB in all, each a unit posed as it stands still, from one atlas (and a second for what's see-through).
 
-  It's a dependency of the renderer, pinned by its commit in the lockfile, and its package here
-  (`packages/models-0ad`) declares it (`civ-clone.hostedModels`).
-- **The build** (`tools/lib/hostedSets.js`) copies its models beside the page as `dist/sets/<id>.<hash>.<name>.glb`, each
-  as its manifest's SHA-256 says it is, and its manifest, naming them so, as `<id>.<hash>.json`. The hash is the
-  manifest's, so the browser keeps them until the set changes. The set's files from before are removed by name, and
-  the package is told where its manifest is (`modelSets.js`).
-- **The page** draws with it under `?3d=1`, unless `?models=` asks for another.
-- **The library** lists it, where the page asked for the 3D map, under Units on the 3D map. It says it comes with
-  civ.one, its licence, linked, and the credit it asks for (`licence.attribution`).
+- **Cimpletoon's later units** ([civ-clone/models-cimpletoon](https://github.com/civ-clone/models-cimpletoon), CC0 1.0,
+  converted from yd's Cimpletoon):
+  - 18 models, each drawing a unit type: Musketman, Rifleman, Diplomat, Cavalry, Cannon, Artillery, Mech. Inf., Tank,
+    Fighter, Bomber, Nuclear, Frigate, Ironclad, Transport, Cruiser, Battleship, Submarine and Carrier;
+  - 3.3 MB in all, low-poly, each part one colour from a small atlas, some with made-up grain, both sides drawn;
+  - each ship floats with its waterline at its origin. All but the Musketman and Diplomat have scales of their own
+    (the riders, vehicles, aircraft and ships, and the Riflemen, whose model is bigger), so they sit beside the people
+    and 0 A.D.'s units.
+
+  Each is a dependency of the renderer, pinned by its commit in the lockfile. One package here
+  (`packages/models-hosted`) declares both (`civ-clone.hostedModels`), and gives the page them in order, 0 A.D.'s
+  first (`hostedModelSets`). No unit type is drawn by both.
+- **The build** (`tools/lib/hostedSets.js`) copies each set's models beside the page as
+  `dist/sets/<id>.<hash>.<name>.glb`, each as its manifest's SHA-256 says it is, and its manifest, naming them so, as
+  `<id>.<hash>.json`. The hash is the manifest's, so the browser keeps them until the set changes. The set's files from
+  before are removed by name, and the package is told where each manifest is (`modelSets.js`).
+- **The page** draws with them under `?3d=1`, unless `?models=` asks for another.
+- **The library** lists each, where the page asked for the 3D map, under Units on the 3D map. It says it comes with
+  civ.one, its licence, linked, and the credit it gives (`licence.attribution`).
 
 ---
 
