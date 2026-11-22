@@ -1362,9 +1362,10 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
   converted from yd's Cimpletoon):
   - 18 models, each drawing a unit type: Musketman, Rifleman, Diplomat, Cavalry, Cannon, Artillery, Mech. Inf., Tank,
     Fighter, Bomber, Nuclear, Frigate, Ironclad, Transport, Cruiser, Battleship, Submarine and Carrier;
-  - 3.4 MB in all, low-poly, each part one colour from a small atlas, some with made-up grain, both sides drawn;
-  - each ship floats with its waterline at its origin, and the riders, vehicles and aircraft have scales of their
-    own, so they sit beside the people and 0 A.D.'s units.
+  - 3.3 MB in all, low-poly, each part one colour from a small atlas, some with made-up grain, both sides drawn;
+  - each ship floats with its waterline at its origin. All but the Musketman and Diplomat have scales of their own
+    (the riders, vehicles, aircraft and ships, and the Riflemen, whose model is bigger), so they sit beside the people
+    and 0 A.D.'s units.
 
   Each is a dependency of the renderer, pinned by its commit in the lockfile. One package here
   (`packages/models-hosted`) declares both (`civ-clone.hostedModels`), and gives the page them in order, 0 A.D.'s

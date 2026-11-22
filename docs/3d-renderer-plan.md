@@ -369,8 +369,9 @@ riders and chariot at three-quarters of its scale, and a click on a unit's figur
 behind them. An aircraft drawn with a model flies over its stand, as the built-in set's do. A dark owner's colour is
 lightened on a model so its shading shows, and a model's parts are drawn from both sides where its file says.
 
-**Fourth part, the later units: done.** Cimpletoon's CC0 models (OpenGameArt, by yd) ship beside 0 A.D.'s, for 18 of
-the later units, from the Musketmen on, each sized and floated as they were tried in a game. The map takes several
+**Fourth part, the later units: done.** Cimpletoon's CC0 models (OpenGameArt, by yd) ship beside 0 A.D.'s, for 18
+unit types 0 A.D.'s set hasn't, from the Diplomat and the Musketmen to the Carrier, each sized and floated as they were
+tried in a game. The map takes several
 sets in order, a unit type drawn by the first that has a model for it, and the library lists each. Still to do: their
 surfaces textured (CC0 photo textures), or realistic replacements (CC BY), each credited.
 

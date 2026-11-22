@@ -276,6 +276,48 @@ expect(
   );
 }
 
+// Cimpletoon's set built the same way: its manifest read as a set of models, and each model copied as it is, as its
+//  SHA-256 says, a glTF binary whole in itself.
+{
+  const laterOutput = mkdtempSync(join(tmpdir(), 'hosted-models-later-')),
+    laterBuilt = buildModelSet(laterShipped, laterOutput),
+    laterBase = `${laterSource.id}.${sha256(laterText).slice(0, 12)}`,
+    laterManifest = JSON.parse(
+      readFileSync(join(laterOutput, `${laterBase}.json`), 'utf8')
+    ) as typeof laterSource,
+    laterRead = readModelManifest(laterManifest);
+
+  expect(
+    'Cimpletoon’s set built: its manifest under its id and hash, read as a set of models, each model copied as it is, whole in itself',
+    [
+      laterBuilt.manifest,
+      typeof laterRead === 'string' ? laterRead : 'read',
+      Object.entries(laterSource.models).map(([name, model]) => {
+        const copied = readFileSync(
+          join(laterOutput, `${laterBase}.${name}.glb`)
+        );
+
+        return [
+          name,
+          laterManifest.models[name]?.file === `${laterBase}.${name}.glb`,
+          sha256(copied) === model.sha256,
+          selfContained(
+            copied.buffer.slice(
+              copied.byteOffset,
+              copied.byteOffset + copied.byteLength
+            ) as ArrayBuffer
+          ),
+        ];
+      }),
+    ],
+    [
+      `dist/sets/${laterBase}.json`,
+      'read',
+      Object.keys(laterSource.models).map((name) => [name, true, true, true]),
+    ]
+  );
+}
+
 // What the page has of the set: where its manifest is, beside the page, as built for the suite, and what the library
 //  shows of it.
 expect(

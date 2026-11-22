@@ -7007,10 +7007,10 @@ expect(
     tell('/sets/second.json', 'second-spear', ['Spearman']);
     tell('/sets/first.json', 'first-spear', ['Spearman']);
     tell('/sets/second.json', 'second-spear-again', ['Spearman']);
-    tell('/sets/second.json', 'second-bow', ['Archer']);
+    tell('/sets/second.json', 'second-both', ['Spearman', 'Archer']);
 
     expect(
-      'each set asked for, in order; a type drawn by a later set’s model till the first’s arrives, then by the first’s, whatever arrives after; a type only a later set has drawn by its',
+      'each set asked for, in order; a type drawn by a later set’s model till the first’s arrives, then by the first’s, whatever arrives after; a later model that draws it and a type only its set has draws only that type',
       [[...tellers.keys()], marked],
       [
         ['/sets/first.json', '/sets/second.json'],
@@ -7018,11 +7018,34 @@ expect(
           ['second-spear', null],
           ['first-spear', null],
           ['first-spear', null],
-          ['first-spear', 'second-bow'],
+          ['first-spear', 'second-both'],
         ],
       ]
     );
     layered.dispose();
+
+    // A set the page asks to try out: drawn with instead of the ones that ship, not beside them.
+    fresh();
+    await prepareMap3D({
+      say,
+      search: '?3d=1&models=/sets/try/manifest.json',
+      webgl2: () => true,
+      load,
+    });
+
+    const trying = makeMapView(deps2D),
+      triedWith = (given as MapView3DDeps | null)?.models;
+
+    trying.dispose();
+    // The page as it was, for what follows.
+    fresh();
+    await prepareMap3D({ say, search: '?3d=1', webgl2: () => true, load });
+
+    expect(
+      'asked to try a set, the page draws units with it alone, not beside the ones that ship',
+      triedWith,
+      [{ url: '/sets/try/manifest.json' }]
+    );
 
     [spear, bow].forEach((tile) => Object.assign(tile, { units: [] }));
   }

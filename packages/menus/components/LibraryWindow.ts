@@ -197,8 +197,8 @@ const soundLibrarySets = (): LibrarySet[] =>
   }));
 
 /**
- * The sets of models the 3D map draws units with (docs/3d-renderer.md §10), where the page asked for the 3D map: the ones
- *  that ship with civ.one, each shown with its licence and the credit it gives, wherever it's used.
+ * The sets of models the 3D map draws units with (docs/3d-renderer.md §10), where the page asked for the 3D map: the
+ *  ones that ship with civ.one, each shown with its licence and the credit it gives, wherever it's used.
  */
 const modelLibrarySets = (
   search: string = typeof location === 'undefined' ? '' : location.search

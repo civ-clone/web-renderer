@@ -935,7 +935,8 @@ export const createStage: StageFactory = (
           kit.addModel(key, model);
           loaded(key, types);
         },
-        (id, error) => console.warn(`The 3D map's model ${id}:`, error)
+        (id, error) =>
+          console.warn(`The 3D map's model ${modelKey(url, id)}:`, error)
       );
     },
     stats: (): StageStats => ({
