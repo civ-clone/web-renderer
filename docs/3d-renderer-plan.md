@@ -359,9 +359,7 @@ set's figures. Posed as they stand still: no clips yet.
 **Second part, the first set: done.** 0 A.D.'s ancient units ship with civ.one: under `?3d=1` the map draws the 15 unit
 types they have models for with them (Knight, Explorer and Sail by stand-ins), and the library lists them with their
 licence and credit. Still to do:
-- **More sets:** the eras 0 A.D. doesn't reach. Cimpletoon's CC0 Freeciv models (OpenGameArt, by yd) were tried in a
-  game for the later units: the Mech. Inf. and Bomber kept, the rest to get their own textures, or realistic
-  replacements;
+- **More sets:** realistic models for the later units, where they can be had, to replace Cimpletoon's (below);
 - **Clips:** idle, walk, attack, death;
 - **Squads:** instancing them;
 - **Textures:** KTX2.
@@ -370,6 +368,11 @@ licence and credit. Still to do:
 riders and chariot at three-quarters of its scale, and a click on a unit's figures picks its square, not the ground
 behind them. An aircraft drawn with a model flies over its stand, as the built-in set's do. A dark owner's colour is
 lightened on a model so its shading shows, and a model's parts are drawn from both sides where its file says.
+
+**Fourth part, the later units: done.** Cimpletoon's CC0 models (OpenGameArt, by yd) ship beside 0 A.D.'s, for 18 of
+the later units, from the Musketmen on, each sized and floated as they were tried in a game. The map takes several
+sets in order, a unit type drawn by the first that has a model for it, and the library lists each. Still to do: their
+surfaces textured (CC0 photo textures), or realistic replacements (CC BY), each credited.
 
 - **What:**
   - loading `.glb` with KTX2 textures;

@@ -1,9 +1,9 @@
 // A set of models that ships with civ.one (docs/3d-renderer.md §10, `tools/lib/hostedSets.js`): its models copied
 //  beside the page under names with its manifest's hash in them, each as the manifest's SHA-256 says it is, and its
 //  manifest naming them so, which the 3D map reads and loads as it does any set's; the set's files from before removed,
-//  and nothing else; a model missing, not beside its manifest, or not the file it says, failing the build. The set the
-//  renderer declares, 0 A.D.'s ancient units, is built as the suite's runner builds it, and the page asks for it under
-//  `?3d=1`, unless it asked for another.
+//  and nothing else; a model missing, not beside its manifest, or not the file it says, failing the build. The sets the
+//  renderer declares, 0 A.D.'s ancient units and Cimpletoon's later units, are built as the suite's runner builds them,
+//  and the page asks for them under `?3d=1`, unless it asked for another.
 
 import { createHash } from 'crypto';
 import {
@@ -19,7 +19,10 @@ import { tmpdir } from 'os';
 import { dirname, join } from 'path';
 import { readModelManifest } from '@civ-clone/ui-map-3d/models/modelSet';
 import { selfContained } from '@civ-clone/ui-map-3d/models/loadModels';
-import ancientUnits from '@civ-clone/ui-models-0ad';
+import hostedModelSets, {
+  ancientUnits,
+  laterUnits,
+} from '@civ-clone/ui-models-hosted';
 
 const { buildHostedModels, buildModelSet, declaredModelSets } =
   require('../../tools/lib/hostedSets') as {
@@ -65,14 +68,29 @@ const sha256 = (bytes: Buffer | string): string =>
   hash = sha256(shippedText).slice(0, 12),
   output = mkdtempSync(join(tmpdir(), 'hosted-models-'));
 
-// The renderer's own set, declared by the package that ships it.
+// Beside it, Cimpletoon's later units.
+const laterShipped = require.resolve(
+    '@civ-clone/models-cimpletoon/manifest.json',
+    { paths: [root] }
+  ),
+  laterText = readFileSync(laterShipped),
+  laterSource = JSON.parse(laterText.toString()) as typeof source;
+
+// The renderer's own sets, declared by the package that ships them, 0 A.D.'s first.
 expect(
-  'the renderer declares 0 A.D.’s ancient units, from the package that ships them',
+  'the renderer declares 0 A.D.’s ancient units, then Cimpletoon’s later units, from the package that ships them',
   declaredModelSets(root).map(({ directory, manifest }) => [
     directory.split(/[\\/]/).slice(-2).join('/'),
-    manifest === shipped,
+    manifest === shipped
+      ? 'ancient'
+      : manifest === laterShipped
+      ? 'later'
+      : manifest,
   ]),
-  [['packages/models-0ad', true]]
+  [
+    ['packages/models-hosted', 'ancient'],
+    ['packages/models-hosted', 'later'],
+  ]
 );
 
 // Beside it, from before: the set's own, built from another manifest, and files that are no one's to remove.
@@ -270,6 +288,35 @@ expect(
     ancientUnits.credits.map(({ author }) => author),
   ],
   [`dist/sets/${base}.json`, true, 'CC BY-SA 3.0', true, ['Wildfire Games']]
+);
+
+expect(
+  'and of Cimpletoon’s, after 0 A.D.’s: where its manifest is, as it’s built beside it, and its licence with the credit it gives',
+  [
+    hostedModelSets.map(({ id }) => id),
+    laterUnits.manifest,
+    existsSync(join(root, laterUnits.manifest)),
+    laterUnits.licence.name,
+    laterUnits.licence.attribution?.includes('Cimpletoon by yd'),
+    laterUnits.credits.map(({ author }) => author),
+  ],
+  [
+    ['0ad-ancient', 'cimpletoon'],
+    `dist/sets/${laterSource.id}.${sha256(laterText).slice(0, 12)}.json`,
+    true,
+    'CC0 1.0',
+    true,
+    ['yd'],
+  ]
+);
+
+// Each unit type drawn by one set: none is drawn by both.
+expect(
+  'no unit type is drawn by both sets',
+  Object.keys(source.names.unit).filter((type) =>
+    Object.prototype.hasOwnProperty.call(laterSource.names.unit, type)
+  ),
+  []
 );
 
 if (failures.length > 0) {

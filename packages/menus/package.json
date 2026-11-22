@@ -13,7 +13,7 @@
     "@civ-clone/ui-component-window": "workspace:*",
     "@civ-clone/ui-hud": "workspace:*",
     "@civ-clone/ui-map": "workspace:*",
-    "@civ-clone/ui-models-0ad": "workspace:*",
+    "@civ-clone/ui-models-hosted": "workspace:*",
     "@civ-clone/ui-platform": "workspace:*",
     "@civ-clone/ui-protocol": "workspace:*",
     "@civ-clone/ui-reports": "workspace:*",

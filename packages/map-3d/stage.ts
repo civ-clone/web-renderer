@@ -51,7 +51,7 @@ import { FIELD_OF_VIEW, Orbit, eye, sightFor } from './camera/orbit';
 import Water, { Clouds, Ground } from './water';
 import YieldIcons from './yieldIcons';
 import { YieldMesh } from './yields';
-import { loadModels } from './models/loadModels';
+import { loadModels, modelKey } from './models/loadModels';
 
 /** What the stage has drawn, for the debug overlay. */
 export type StageStats = {
@@ -145,8 +145,8 @@ export interface Stage {
   stats(): StageStats;
   /**
    * Loads the set of models whose manifest is at `url` (`models/loadModels.ts`), to draw units with: `loaded` is told
-   *  of each model as it's ready, with the unit types it draws. Resolves once all have been tried, or rejects saying
-   *  why there's none. A stage that draws no models has none.
+   *  of each model as it's ready, by an id of its own among every set's (`modelKey`), with the unit types it draws.
+   *  Resolves once all have been tried, or rejects saying why there's none. A stage that draws no models has none.
    */
   loadModels?(
     url: string,
@@ -929,8 +929,11 @@ export const createStage: StageFactory = (
             return;
           }
 
-          kit.addModel(id, model);
-          loaded(id, types);
+          // Two sets may each name a model the same.
+          const key = modelKey(url, id);
+
+          kit.addModel(key, model);
+          loaded(key, types);
         },
         (id, error) => console.warn(`The 3D map's model ${id}:`, error)
       );

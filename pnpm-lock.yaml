@@ -412,6 +412,9 @@ importers:
       '@civ-clone/models-0ad':
         specifier: github:civ-clone/models-0ad
         version: https://codeload.github.com/civ-clone/models-0ad/tar.gz/230e6780c06799520c44ecffde5c8557c3583b07
+      '@civ-clone/models-cimpletoon':
+        specifier: github:civ-clone/models-cimpletoon
+        version: https://codeload.github.com/civ-clone/models-cimpletoon/tar.gz/2b8e312a046dcdb56ddb2873231ef2746a269678
       '@civ-clone/simple-ai-client':
         specifier: github:civ-clone/simple-ai-client
         version: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/6b64b38d5f74fefca52150cf47406b488cf08b8b
@@ -484,12 +487,12 @@ importers:
       '@civ-clone/ui-menus':
         specifier: workspace:*
         version: link:packages/menus
-      '@civ-clone/ui-models-0ad':
-        specifier: workspace:*
-        version: link:packages/models-0ad
       '@civ-clone/ui-models-builtin':
         specifier: workspace:*
         version: link:packages/models-builtin
+      '@civ-clone/ui-models-hosted':
+        specifier: workspace:*
+        version: link:packages/models-hosted
       '@civ-clone/ui-protocol':
         specifier: workspace:*
         version: link:packages/protocol
@@ -736,9 +739,9 @@ importers:
       '@civ-clone/ui-menus':
         specifier: workspace:*
         version: link:../menus
-      '@civ-clone/ui-models-0ad':
+      '@civ-clone/ui-models-hosted':
         specifier: workspace:*
-        version: link:../models-0ad
+        version: link:../models-hosted
       '@civ-clone/ui-platform':
         specifier: workspace:*
         version: link:../platform
@@ -988,9 +991,9 @@ importers:
       '@civ-clone/ui-map':
         specifier: workspace:*
         version: link:../map
-      '@civ-clone/ui-models-0ad':
+      '@civ-clone/ui-models-hosted':
         specifier: workspace:*
-        version: link:../models-0ad
+        version: link:../models-hosted
       '@civ-clone/ui-platform':
         specifier: workspace:*
         version: link:../platform
@@ -1004,9 +1007,9 @@ importers:
         specifier: workspace:*
         version: link:../widgets
 
-  packages/models-0ad: {}
-
   packages/models-builtin: {}
+
+  packages/models-hosted: {}
 
   packages/platform: {}
 
@@ -2928,6 +2931,10 @@ packages:
 
   '@civ-clone/models-0ad@https://codeload.github.com/civ-clone/models-0ad/tar.gz/230e6780c06799520c44ecffde5c8557c3583b07':
     resolution: {gitHosted: true, integrity: sha512-rhSiEyrLvJRvu4/evmwQwThT/K/L32Jo3ioQxcC866hhHlkA35DYM8mDwYaG0PSvAJENToUAbHcUVynFJ/nBVg==, tarball: https://codeload.github.com/civ-clone/models-0ad/tar.gz/230e6780c06799520c44ecffde5c8557c3583b07}
+    version: 0.1.0
+
+  '@civ-clone/models-cimpletoon@https://codeload.github.com/civ-clone/models-cimpletoon/tar.gz/2b8e312a046dcdb56ddb2873231ef2746a269678':
+    resolution: {gitHosted: true, integrity: sha512-9BfE70hMjS05FG74wN0sXIi95l4PfxjdVE0thwsvINTYpgFshYnMf/QW7L54V70SMRq1dKYfxKxwdS6AdhHSDg==, tarball: https://codeload.github.com/civ-clone/models-cimpletoon/tar.gz/2b8e312a046dcdb56ddb2873231ef2746a269678}
     version: 0.1.0
 
   '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/6b64b38d5f74fefca52150cf47406b488cf08b8b':
@@ -9373,6 +9380,8 @@ snapshots:
       '@civ-clone/base-tile-improvement-road': 0.1.0
 
   '@civ-clone/models-0ad@https://codeload.github.com/civ-clone/models-0ad/tar.gz/230e6780c06799520c44ecffde5c8557c3583b07': {}
+
+  '@civ-clone/models-cimpletoon@https://codeload.github.com/civ-clone/models-cimpletoon/tar.gz/2b8e312a046dcdb56ddb2873231ef2746a269678': {}
 
   '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/6b64b38d5f74fefca52150cf47406b488cf08b8b':
     dependencies:

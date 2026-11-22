@@ -2289,6 +2289,37 @@ const run = async (): Promise<void> => {
           ],
         ]
       );
+
+      // Beside it, Cimpletoon's later units, which ship with civ.one too.
+      const later = section?.querySelector('[data-set="cimpletoon"]');
+
+      expect(
+        'asked for the 3D map, the library lists every set of units that ships with civ.one, 0 A.D.’s first, then Cimpletoon’s, with its licence linked and the credit it gives',
+        [
+          Array.from(
+            section?.querySelectorAll('[data-set]') ?? [],
+            (entry) => (entry as HTMLElement).dataset.set
+          ),
+          later?.querySelector('.name')?.textContent,
+          later?.querySelector('.status')?.textContent,
+          later?.querySelector('.source')?.textContent,
+          Array.from(
+            later?.querySelectorAll('.source a') ?? [],
+            (link) => (link as HTMLAnchorElement).href
+          ),
+        ],
+        [
+          ['0ad-ancient', 'cimpletoon'],
+          'Cimpletoon: later units',
+          'Ready',
+          'Comes with civ.one · License: CC0 1.0 · From Cimpletoon by yd (https://opengameart.org/content/cimpletoon), CC0 1.0 (https://creativecommons.org/publicdomain/zero/1.0/): posed, reduced, converted and atlased by dom111.',
+          [
+            'https://creativecommons.org/publicdomain/zero/1.0/',
+            'https://opengameart.org/content/cimpletoon',
+            'https://creativecommons.org/publicdomain/zero/1.0/',
+          ],
+        ]
+      );
       with3D.close();
       without.close();
       trying.close();

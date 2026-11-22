@@ -36,7 +36,7 @@ import { soundSets } from '@civ-clone/ui-assets/sounds/SoundDescriptor';
 import i18next, { t } from 'i18next';
 // Civilization's music, a set of its own: registered wherever the library can open.
 import '../lib/civ1Sound';
-import ancientUnits from '@civ-clone/ui-models-0ad';
+import hostedModelSets from '@civ-clone/ui-models-hosted';
 import {
   map3dAsked,
   map3dModelsAsked,
@@ -197,23 +197,21 @@ const soundLibrarySets = (): LibrarySet[] =>
   }));
 
 /**
- * The sets of models the 3D map draws units with (docs/3d-renderer.md §10), where the page asked for the 3D map: the one
- *  that ships with civ.one, shown with its licence and the credit it asks for, wherever it's used.
+ * The sets of models the 3D map draws units with (docs/3d-renderer.md §10), where the page asked for the 3D map: the ones
+ *  that ship with civ.one, each shown with its licence and the credit it gives, wherever it's used.
  */
 const modelLibrarySets = (
   search: string = typeof location === 'undefined' ? '' : location.search
 ): LibrarySet[] =>
   // Not where it asked for another set to try, which the map draws with instead.
   map3dAsked(search) && map3dModelsAsked(search) === undefined
-    ? [
-        {
-          id: '0ad-ancient',
-          name: ancientUnits.name,
-          source: 'hosted',
-          licence: ancientUnits.licence,
-          provides: [t('LibraryWindow.provides.units-3d')],
-        },
-      ]
+    ? hostedModelSets.map(({ id, name, licence }) => ({
+        id,
+        name,
+        source: 'hosted',
+        licence,
+        provides: [t('LibraryWindow.provides.units-3d')],
+      }))
     : [];
 
 /**

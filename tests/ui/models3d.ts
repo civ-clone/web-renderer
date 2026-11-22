@@ -44,6 +44,7 @@ import {
 } from '@civ-clone/ui-map-3d/models/modelSet';
 import {
   LoadedModel,
+  modelKey,
   modelManager,
   onSite,
   partsOf,
@@ -350,6 +351,17 @@ expect(
       'https://site.test//example.com/manifest.json',
       null,
     ]
+  );
+
+  expect(
+    'two sets’ models named the same are kept apart, each set’s by its own key',
+    [
+      modelKey('/sets/0ad.json', 'cannon') ===
+        modelKey('/sets/0ad.json', 'cannon'),
+      modelKey('/sets/0ad.json', 'cannon') ===
+        modelKey('/sets/later.json', 'cannon'),
+    ],
+    [true, false]
   );
 
   expect(
