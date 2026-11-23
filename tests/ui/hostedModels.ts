@@ -19,6 +19,7 @@ import { tmpdir } from 'os';
 import { dirname, join } from 'path';
 import { readModelManifest } from '@civ-clone/ui-map-3d/models/modelSet';
 import { selfContained } from '@civ-clone/ui-map-3d/models/loadModels';
+import { unitTable } from '@civ-clone/ui-models-builtin/units';
 import hostedModelSets, {
   ancientUnits,
   creditedUnits,
@@ -389,6 +390,18 @@ expect(
           .some(({ names: later }) =>
             Object.prototype.hasOwnProperty.call(later.unit, type)
           )
+      )
+  ),
+  []
+);
+
+// And between them, every unit type the 3D map knows (Civ1's and Civ2's) is drawn by one.
+expect(
+  'every unit type the 3D map knows is drawn by one of the sets that ship',
+  Object.keys(unitTable).filter(
+    (type) =>
+      ![source, ...realistic.map(({ source }) => source)].some(({ names }) =>
+        Object.prototype.hasOwnProperty.call(names.unit, type)
       )
   ),
   []
