@@ -31,6 +31,7 @@ import {
   clampOrbit,
   defaultOrbit,
   groundAt,
+  lowestPitch,
   settled,
   sightFor,
   toScreen,
@@ -468,7 +469,12 @@ export class MapView3D implements MapRenderer {
     this.portal = new MapPortal3D(deps, {
       centre: () => this.#centreSquare(),
       centreOn: (x, y) => this.#centreSoon(x, y),
-      changed: () => this.#draw(),
+      // Drawn again, and the camera settled again: stopping at the poles, or not, changes how far round the world
+      //  repeats, and so how far down it looks drawn back (`lowestPitch`).
+      changed: () => {
+        this.#orbit = this.#settle(this.#orbit);
+        this.#draw();
+      },
       visible: (x, y, margin) => this.#visible(x, y, margin),
     });
 
@@ -533,6 +539,7 @@ export class MapView3D implements MapRenderer {
         orbit: () => this.#orbit,
         lookHeight: () => this.#lookHeight ?? 0,
         setOrbit: (orbit) => this.setOrbit(orbit),
+        settle: (orbit) => this.#settle(orbit),
       },
       {
         click: (x, y) => this.#clicked(x, y),
@@ -2049,12 +2056,13 @@ export class MapView3D implements MapRenderer {
   /** Brings the camera `steps` nearer, or further away for fewer than none, about the point it looks at. */
   zoomBy(steps: number): void {
     this.#endHover();
-    this.#orbit = zoomed(this.#orbit, steps);
+    this.#orbit = this.#settle(zoomed(this.#orbit, steps));
 
-    // Both ends of a glide, so it carries on at the new distance rather than easing back to the old one.
+    // Both ends of a glide, so it carries on at the new distance rather than easing back to the old one, each settled
+    //  as the camera is: drawn back, looking down as far as it does.
     if (this.#glide !== null) {
-      this.#glide.from = zoomed(this.#glide.from, steps);
-      this.#glide.to = zoomed(this.#glide.to, steps);
+      this.#glide.from = this.#settle(zoomed(this.#glide.from, steps));
+      this.#glide.to = this.#settle(zoomed(this.#glide.to, steps));
     }
 
     this.#draw();
@@ -2436,9 +2444,20 @@ export class MapView3D implements MapRenderer {
   }
 
   // The camera kept on the world, round its period, or within its rows where it doesn't wrap over the poles or the
-  //  player stops it at them; and its pitch and distance within their ranges.
+  //  player stops it at them; its pitch and distance within their ranges; and looking down at least as far as its
+  //  distance needs on this world (`lowestPitch`), so drawn back, it doesn't see the world repeat to the horizon.
   #settle(orbit: Orbit): Orbit {
-    return settled(clampOrbit(orbit), this.#period(), this.#land.extentV());
+    const kept = clampOrbit(orbit),
+      period = this.#period();
+
+    return settled(
+      {
+        ...kept,
+        pitch: Math.max(kept.pitch, lowestPitch(kept.distance, period)),
+      },
+      period,
+      this.#land.extentV()
+    );
   }
 
   // How far along the world repeats as the camera goes round it: across, and down unless it doesn't wrap over the poles
@@ -3102,7 +3121,7 @@ export class MapView3D implements MapRenderer {
 
     const aspect = width / height,
       look = this.#lookHeight ?? 0,
-      far = sightFor(this.#orbit.distance).far,
+      far = sightFor(this.#orbit.distance, this.#period()).far,
       [focusU, focusV] = this.#orbit.focus,
       corner = (x: number, y: number): [number, number] | null => {
         // Down the edge from the corner until it meets the ground.

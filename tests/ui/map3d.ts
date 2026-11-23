@@ -39,6 +39,7 @@ import {
   PITCH_MAX,
   PITCH_MIN,
   ZOOM_STEP,
+  lowestPitch,
 } from '@civ-clone/ui-map-3d/camera/orbit';
 import { instance as optionsRegistry } from '@civ-clone/ui-platform/GameOptionsRegistry';
 import Transport from '@civ-clone/ui-client/Transport';
@@ -6887,6 +6888,120 @@ expect(
     patch([lagash, null]);
     view.dispose();
     holder.remove();
+  }
+
+  // Drawn back from a wide world (#1316), the camera looks down at least as far as its distance needs, so the world
+  //  isn't seen repeating to the horizon: as far as the world's period, across and down where it wraps, says, which
+  //  stopping at the poles changes. Brought in again, it looks down as it did until it's tilted. On the small world the
+  //  rest of these use, which repeats wherever it looks, it looks as low as ever.
+  {
+    const across = 64,
+      down = 40,
+      wideTiles = Array.from({ length: across * down }, (_, index) => ({
+        ...(tiles[0] as Tile),
+        id: `Tile-${index % across}-${Math.floor(index / across)}`,
+        x: index % across,
+        y: Math.floor(index / across),
+      })) as unknown as Tile[],
+      wide = new MapView3D(
+        {
+          ...given!,
+          world: new World({
+            ...worldData,
+            width: across,
+            height: down,
+            tiles: wideTiles,
+          } as unknown as WorldData),
+        },
+        fakeStage
+      ),
+      put = (pitch: number, distance: number) => {
+        wide.setOrbit({ ...wide.orbit(), pitch, distance });
+
+        return wide.orbit().pitch;
+      },
+      zoomTo = (distance: number) => {
+        // As the keys zoom it, a step at a time, to as near `distance` as a step comes.
+        const steps = Math.round(
+          Math.log(wide.orbit().distance / distance) / Math.log(ZOOM_STEP)
+        );
+
+        wide.zoomBy(steps);
+
+        return wide.orbit();
+      },
+      round = (value: number) => Math.round(value * 1000) / 1000,
+      // How far round the world repeats as the camera goes: down only where it isn't stopped at the poles.
+      period = (locked: boolean) => {
+        const { u, v } = wide.land().layout.period();
+
+        return { u, v: locked ? null : v };
+      },
+      wraps = wide.land().layout.period().v !== null;
+
+    wide.portal.setLockVerticalEdges(false);
+
+    const drawnBack = put(PITCH_MIN, DISTANCE_MAX),
+      broughtIn = zoomTo(DISTANCE_MIN),
+      tiltedLow = put(PITCH_MIN, DISTANCE_MIN),
+      chosenHigh = put(1.2, DISTANCE_MIN),
+      outHigh = zoomTo(DISTANCE_MAX);
+
+    expect(
+      'drawn back from a wide world, the camera looks down further than it can close in, as far as its distance needs on the world as it repeats',
+      [wraps, drawnBack > PITCH_MIN + 0.1, round(drawnBack)],
+      [true, true, round(lowestPitch(DISTANCE_MAX, period(false)))]
+    );
+
+    expect(
+      'brought in, it looks down as it did until it is tilted; tilted close in, it looks as low as ever; a pitch above what its distance needs is kept as it draws back',
+      [
+        round(broughtIn.pitch),
+        round(tiltedLow),
+        round(chosenHigh),
+        round(outHigh.pitch),
+      ],
+      [round(drawnBack), round(PITCH_MIN), 1.2, 1.2]
+    );
+
+    // Stopped at the poles, the world repeats only across, further round, so drawn back it needn't look down as far;
+    //  let go of them, it repeats down too, and looks down further at once.
+    wide.portal.setLockVerticalEdges(true);
+
+    const stopped = put(PITCH_MIN, DISTANCE_MAX);
+
+    wide.portal.setLockVerticalEdges(false);
+
+    const letGo = wide.orbit().pitch;
+
+    expect(
+      'stopped at the poles, drawn back it looks down as far as the world repeating only across needs; let go of them, further at once',
+      [round(stopped), round(letGo), stopped < letGo],
+      [
+        round(lowestPitch(DISTANCE_MAX, period(true))),
+        round(lowestPitch(DISTANCE_MAX, period(false))),
+        true,
+      ]
+    );
+
+    wide.dispose();
+
+    // The small world, drawn back: as low as ever.
+    const small = new MapView3D(given!, fakeStage);
+
+    small.setOrbit({
+      ...small.orbit(),
+      pitch: PITCH_MIN,
+      distance: DISTANCE_MAX,
+    });
+
+    expect(
+      'on a world too small to keep from repeating, it looks as low as ever, however far back',
+      round(small.orbit().pitch),
+      round(PITCH_MIN)
+    );
+
+    small.dispose();
   }
 
   // Sets of models (docs/3d-renderer.md §10): the stage asked to load each set the page asks for, and each unit type a

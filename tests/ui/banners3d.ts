@@ -1,7 +1,8 @@
 // Where the cities' banners hang on the 3D map (docs/3d-renderer.md §7.5, `banners.ts`): below each city's square as
 //  the camera sees it, under its middle, from the lowest corner of its outline on the screen however the camera's
 //  turned; at every copy of the world the stage marks; none for a square behind the camera, past the haze, or too far
-//  off the screen to reach on to it; and the lowest on the screen last, to be drawn over the rest.
+//  off the screen to reach on to it; none, drawn back, further past where the camera looks than half the world round,
+//  where the haze stops (#1316); and the lowest on the screen last, to be drawn over the rest.
 
 import {
   BannerSite,
@@ -299,6 +300,28 @@ const width = 800,
     'no fading short of the haze, and as much as the haze thickens there in it',
     [clearAt(short), round(clearAt(middle) ?? -1)],
     [1, round(1 - through * through * (3 - 2 * through))]
+  );
+}
+
+// Drawn back from a wide world, looking low (#1316): the haze stops half the world round past where the camera looks,
+//  so a city further ahead than that has no banner, though it's on the screen; one 40 ahead has.
+{
+  const back = { ...defaultOrbit([64, 40]), pitch: PITCH_MIN, distance: 90 },
+    round = { u: 128, v: null },
+    placed = (v: number) =>
+      bannerPlaces([site(`${v}`, 64, v)], view(back, { period: round })).length,
+    seen = (v: number) => {
+      const point = toScreen(back, 0, [64, 0, v], width / height);
+
+      return (
+        point !== null && Math.abs(point[0]) <= 1 && Math.abs(point[1]) <= 1
+      );
+    };
+
+  expect(
+    'drawn back from a wide world, a city 80 ahead, past half the world round, has no banner, though it’s on the screen; one 40 ahead has',
+    [placed(0), seen(-40), placed(-40), sightFor(90, round).far],
+    [1, true, 0, 154]
   );
 }
 

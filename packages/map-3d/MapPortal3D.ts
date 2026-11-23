@@ -93,8 +93,13 @@ export class MapPortal3D
     this.#camera.centreOn(x, y);
   }
 
+  /**
+   * Stops the camera at the poles, or lets it go over them: the world then repeats down too, or doesn't, so the view
+   *  settles the camera again and draws it (`lowestPitch`).
+   */
   setLockVerticalEdges(lock: boolean): void {
     this.#lockVerticalEdges = lock;
+    this.#camera.changed();
   }
 
   /**
