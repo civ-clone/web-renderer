@@ -35,7 +35,11 @@ import {
   drawMarker,
 } from '@civ-clone/ui-map-3d/markers/drawMarker';
 import { readModelManifest } from '@civ-clone/ui-map-3d/models/modelSet';
-import { LoadedModel, LoadedRig } from '@civ-clone/ui-map-3d/models/loadModels';
+import {
+  LoadedModel,
+  LoadedRig,
+  clipsOf,
+} from '@civ-clone/ui-map-3d/models/loadModels';
 import {
   FIGURE_STAGGER,
   LOOPED_ROLES,
@@ -161,8 +165,14 @@ const round = (value: number) => Math.round(value * 10000) / 10000,
           (json.models.partisan.rigged.file = 'https://elsewhere/partisan.glb')
       ),
       rigOf((json) => delete json.models.partisan.rigged.clips),
-      rigOf((json) => (json.models.partisan.rigged.clips = {})),
-      rigOf((json) => (json.models.partisan.rigged.clips = { dance: 'x' })),
+      rigOf((json) => {
+        json.models.partisan.rigged.clips = {};
+        delete json.models.partisan.rigged.shots;
+      }),
+      rigOf((json) => {
+        json.models.partisan.rigged.clips = { dance: 'x' };
+        delete json.models.partisan.rigged.shots;
+      }),
       rigOf((json) => (json.models.partisan.rigged.clips.idle = '')),
       rigOf((json) => (json.models.partisan.rigged.shots = [])),
       rigOf((json) => (json.models.partisan.rigged.shots.fight = {})),
@@ -249,6 +259,69 @@ const rigged = (): LoadedRig => {
     scale: 0.1,
   };
 };
+
+// The clip each role plays, of those a rigged copy's file has, as its manifest names them (`clipsOf`): one its file
+//  hasn't, or with a track moving a node it can't name, as GLTFLoader names one with none, refused, saying why.
+{
+  const made = rigged(),
+    animations = [...made.clips.values()],
+    entry = {
+      file: 'models/rigged/partisan.glb',
+      clips: { move: 'walk', die: 'fall' },
+      shots: { move: [{ at: 0.25, joint: 'arm' }] },
+    },
+    tried = (
+      change: (each: { animations: AnimationClip[]; entry: any }) => void
+    ): unknown => {
+      const each = {
+        animations: animations.map((clip) => clip.clone()),
+        entry: JSON.parse(JSON.stringify(entry)),
+      };
+
+      change(each);
+
+      try {
+        const { clips, shots } = clipsOf(
+          { animations: each.animations, scene: made.scene },
+          each.entry
+        );
+
+        return [
+          [...clips].map(([role, clip]) => [role, clip.name]),
+          [...shots],
+        ];
+      } catch (error) {
+        return (error as Error).message;
+      }
+    };
+
+  expect(
+    'each role’s clip is the one its manifest names, with its shots; one its file hasn’t, or moving a node it can’t name, is refused',
+    [
+      tried(() => {}),
+      tried(({ entry }) => (entry.clips.idle = 'stand')),
+      tried(({ animations }) => {
+        const [walk] = animations;
+
+        walk!.tracks[0]!.name = `${made.scene.uuid}x.quaternion`;
+      }),
+    ],
+    [
+      [
+        [
+          ['move', 'walk'],
+          ['die', 'fall'],
+        ],
+        [
+          ['move', [{ at: 0.25, joint: 'arm' }]],
+          ['die', []],
+        ],
+      ],
+      'models/rigged/partisan.glb: no clip stand',
+      `models/rigged/partisan.glb: clip walk moves a node it can't name (${made.scene.uuid}x.quaternion)`,
+    ]
+  );
+}
 
 const colours: [string, string] = ['#2060c0', '#ffffff'],
   model: LoadedModel = {
@@ -387,6 +460,17 @@ kit.addRig('partisan', rig);
     [true, true, true]
   );
 
+  // The model's own parts, made after the rig's: their own materials, not the rig's of the same part.
+  const own = kit
+    .modelFigures('partisan', look, colours)!
+    .meshes.map(([, material]) => material as TintedMaterial);
+
+  expect(
+    'the model’s own parts are drawn with materials of their own, not its rigged copy’s',
+    [own.length, own[0] === materials[0]![0], own[0]!.map],
+    [1, false, null]
+  );
+
   expect(
     'a model with no rigged copy has no rigged figures',
     [kit.rigOf('statue'), kit.rigFigures('statue', look, colours)],
@@ -495,9 +579,9 @@ expect(
   );
 }
 
-// A walker's copies, one for each copy of the world in sight (`copyOf`): drawn with a rigged copy, each with bones of its
-//  own, so posing one leaves the others standing; a plain copy's would be bound to the original's. And let go of, each
-//  skeleton's texture of its bones with it.
+// A walker's copies, one for each copy of the world in sight (`copyOf`): drawn with a rigged copy, each with bones of
+//  its own, so posing one leaves the others standing; a plain copy's would be bound to the original's. And let go of,
+//  each skeleton's texture of its bones with it.
 {
   const original = drawMarker(
       kit,
@@ -550,10 +634,13 @@ expect(
 
 // Let go of with its model: added again, the model's rigged copy goes, with what it's made of.
 const rigGeometries = meshesOf(rig.scene).map(({ geometry }) => geometry),
+  rigTextures = meshesOf(rig.scene)
+    .map(({ material }) => (material as MeshStandardMaterial).map)
+    .filter((map): map is Texture => map !== null),
   geometriesGone = new Set<unknown>();
 
-rigGeometries.forEach((geometry) =>
-  geometry.addEventListener('dispose', () => geometriesGone.add(geometry))
+[...rigGeometries, ...rigTextures].forEach((each) =>
+  each.addEventListener('dispose', () => geometriesGone.add(each))
 );
 kit.addModel('partisan', { ...model, parts: [...model.parts] });
 
@@ -563,8 +650,10 @@ expect(
     kit.rigOf('partisan'),
     kit.rigFigures('partisan', look, colours),
     rigGeometries.every((geometry) => geometriesGone.has(geometry)),
+    rigTextures.length > 0 &&
+      rigTextures.every((texture) => geometriesGone.has(texture)),
   ],
-  [null, null, true]
+  [null, null, true, true]
 );
 
 if (failures.length > 0) {

@@ -11,9 +11,9 @@ import { RIG_FIGURE } from './drawMarker';
 export const LOOPED_ROLES: readonly ClipRole[] = ['idle', 'move', 'work'];
 
 /**
- * How far a unit walks, in squares, for each second of its walk's clip: its figures' legs keep up with how fast it goes,
- *  quicker for a rival's walk or a quick one, slower as it gets going and stops. At a quarter of a second a square, as
- *  a player's units walk, the clip plays twice as quick as it's made.
+ * How far a unit walks, in squares, for each second of its walk's clip: its figures' legs keep up with how fast it
+ *  goes, quicker for a rival's walk or a quick one, slower as it gets going and stops. At a quarter of a second a
+ *  square, as a player's units walk, the clip plays twice as quick as it's made.
  */
 export const STRIDE = 2;
 

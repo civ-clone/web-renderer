@@ -2824,9 +2824,16 @@ expect(
   repatched([3, 1, []], [0, 2, [walker]]);
   walkersSet.length = 0;
   walkersPlaced.clear();
+  walkersPosed.clear();
   stepped(walker, [0, 2], [1, 2]);
   runFrames();
 
+  // Its figures walked, then, waiting, stand (plan 2.2).
+  const [poses] = [...walkersPosed.values()],
+    waitingPose = [
+      poses?.some(([role]) => role === 'move'),
+      poses?.at(-1)?.[0],
+    ];
   const [unpatchedWay] = [...walkersPlaced.values()],
     unpatched = [
       unitOn(0, 2),
@@ -2850,6 +2857,12 @@ expect(
       [1, 'Unit-A', 0, ['Unit-A', 1], null],
       [null, null, 1, groundAt(1, 2), 0, null, ['Unit-A', 1], 0],
     ]
+  );
+
+  expect(
+    'a walk over before its patch has its figures walk as it goes, and stand once it’s there',
+    waitingPose,
+    [true, null]
   );
 
   // A GoTo of two steps whose patches are all held, as meeting a leader holds them: it stands where it ended, not back

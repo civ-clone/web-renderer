@@ -21,6 +21,7 @@ import {
   ClipRole,
   ClipShot,
   ModelManifest,
+  RiggedModel,
   readModelManifest,
   scaleOf,
   unitTypesOf,
@@ -106,6 +107,55 @@ export const partsOf = (scene: {
   });
 
   return parts;
+};
+
+/**
+ * The clip each role plays of those a rigged copy's file has (`animations`, its scene `scene`), as its manifest names
+ *  them (`rigged`), and the shots each lets fly. Throws, saying why, for a clip its file hasn't, or one with a track
+ *  moving a node it can't find by name, as each figure's copy of the scene finds it: GLTFLoader names a track moving a
+ *  node with no name by its uuid, which would move nothing on a copy.
+ */
+export const clipsOf = (
+  { animations, scene }: { animations: AnimationClip[]; scene: Object3D },
+  rigged: RiggedModel
+): {
+  clips: Map<ClipRole, AnimationClip>;
+  shots: Map<ClipRole, ClipShot[]>;
+} => {
+  const clips = new Map<ClipRole, AnimationClip>(),
+    shots = new Map<ClipRole, ClipShot[]>();
+
+  CLIP_ROLES.forEach((role) => {
+    const name = rigged.clips[role];
+
+    if (name === undefined) {
+      return;
+    }
+
+    const clip = animations.find((each) => each.name === name);
+
+    if (clip === undefined) {
+      throw new Error(`${rigged.file}: no clip ${name}`);
+    }
+
+    const lost = clip.tracks.find(
+      ({ name: track }) =>
+        scene.getObjectByName(
+          PropertyBinding.parseTrackName(track).nodeName
+        ) === undefined
+    );
+
+    if (lost !== undefined) {
+      throw new Error(
+        `${rigged.file}: clip ${name} moves a node it can't name (${lost.name})`
+      );
+    }
+
+    clips.set(role, clip);
+    shots.set(role, rigged.shots?.[role] ?? []);
+  });
+
+  return { clips, shots };
 };
 
 /**
@@ -311,42 +361,7 @@ export const loadModels = async (
 
       try {
         const gltf = await parsed(entry.rigged.file),
-          clips = new Map<ClipRole, AnimationClip>(),
-          shots = new Map<ClipRole, ClipShot[]>();
-
-        CLIP_ROLES.forEach((role) => {
-          const name = entry.rigged!.clips[role],
-            clip =
-              name === undefined
-                ? undefined
-                : gltf.animations.find((each) => each.name === name);
-
-          if (name !== undefined && clip === undefined) {
-            throw new Error(`${entry.rigged!.file}: no clip ${name}`);
-          }
-
-          // Each of its tracks moving a node found by its name, as each figure's copy of the scene finds it: one
-          //  moving a node with none, which GLTFLoader names by its uuid, would move nothing on a copy.
-          const lost = clip?.tracks.find(
-            ({ name: track }) =>
-              gltf.scene.getObjectByName(
-                PropertyBinding.parseTrackName(track).nodeName
-              ) === undefined
-          );
-
-          if (lost !== undefined) {
-            throw new Error(
-              `${
-                entry.rigged!.file
-              }: clip ${name} moves a node it can't name (${lost.name})`
-            );
-          }
-
-          if (clip !== undefined) {
-            clips.set(role, clip);
-            shots.set(role, entry.rigged!.shots?.[role] ?? []);
-          }
-        });
+          { clips, shots } = clipsOf(gltf, entry.rigged);
 
         rigged(
           id,

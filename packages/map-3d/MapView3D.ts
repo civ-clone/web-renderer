@@ -1163,12 +1163,12 @@ export class MapView3D implements MapRenderer {
 
     if (going) {
       const last = this.#walked.get(walker.id),
-        step =
-          last === undefined
+        // Where it is goes on round the world, not back over its seam (`walks.ts`), so every step's walked.
+        by =
+          (last?.by ?? 0) +
+          (last === undefined
             ? 0
-            : Math.hypot(walker.at[0] - last.at[0], walker.at[1] - last.at[1]),
-        // A jump, as over the world's seam, isn't walked.
-        by = (last?.by ?? 0) + (step < 2 ? step : 0);
+            : Math.hypot(walker.at[0] - last.at[0], walker.at[1] - last.at[1]));
 
       this.#walked.set(walker.id, { at: [walker.at[0], walker.at[1]], by });
       clip = { role: 'move', seconds: by / STRIDE };
