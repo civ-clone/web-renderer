@@ -4238,11 +4238,15 @@ expect(
       takenAway![0] >= 850 && takenAway![0] < 866,
       [
         hitFrames[0]![0] >= 850 && hitFrames[0]![0] < 866,
+        // Landed at the blow itself, as its clip let it go, though the frame was later.
+        Math.abs(hitFrames[0]![1] - (hitFrames[0]![0] - 850) / 500) < 1e-9,
         hitFrames.every(
           ([, through], at) => at === 0 || through > hitFrames[at - 1]![1]
         ),
         near(hitFrames[0]![2], groundAt(2, 1), 0.06),
-        hitFrames.at(-1)![0] < 850 + 500 && hitFrames.at(-1)![1] < 1,
+        hitFrames.at(-1)![0] >= 850 + 500 - 16 &&
+          hitFrames.at(-1)![0] < 850 + 500 &&
+          hitFrames.at(-1)![1] < 1,
       ],
     ],
     [
@@ -4254,7 +4258,7 @@ expect(
       true,
       true,
       true,
-      [true, true, true, true],
+      [true, true, true, true, true],
     ]
   );
 
@@ -4265,6 +4269,58 @@ expect(
       ['Unit-R', 1],
       ['Unit-T', 1],
     ]
+  );
+
+  // Thrown over the world's seam, a shot flies the short way, a square west, not three east; and a step while it's in
+  //  flight ends the battle at once, the shot with it.
+  rigFactsFor.set('Unit-A', {
+    figures: 1,
+    stagger: 0.13,
+    clips: { fight: { duration: 1.5, shots: [{ at: 0.5, joint: 'prop' }] } },
+  });
+  rigFactsFor.set('Unit-R', {
+    figures: 1,
+    stagger: 0.13,
+    clips: { die: { duration: 1.6, shots: [] } },
+  });
+  repatched([0, 1, [walker]], [3, 1, [rival]]);
+  shotsDrawn.clear();
+  fought(walker, [0, 1], rival, [3, 1], 'attacker');
+  patch([0, 1, [walker]], [3, 1, []]);
+  runFrames(40);
+
+  const [westU] = groundAt(0, 1),
+    overSeam = [...shotsDrawn.values()]
+      .flat()
+      .flatMap((at) => (at === null ? [] : [at[0]!]));
+
+  shotsDrawn.clear();
+  stepped(walker, [0, 1], [0, 2]);
+  patch([0, 1, []], [0, 2, [walker]]);
+  runFrames(1);
+
+  const cutMidFlight = [...shotsDrawn.values()].map((points) => points.at(-1));
+
+  shotsDrawn.clear();
+  runFrames();
+
+  const drawnAfter = shotsDrawn.size;
+
+  rigFactsFor.clear();
+  repatched([0, 2, []], [3, 1, []]);
+  walkersSet.length = 0;
+  walkersPlaced.clear();
+  walkersPosed.clear();
+
+  expect(
+    'thrown over the world’s seam, a shot flies the short way, a square west; a step while it’s in flight ends the battle, the shot taken away with it',
+    [
+      overSeam.length > 0 &&
+        overSeam.every((u) => u <= westU! + 0.01 && u >= westU! - 1.05),
+      cutMidFlight,
+      drawnAfter,
+    ],
+    [true, [null], 0]
   );
 
   // The active unit attacks with its last move, and the game chooses the next: the ring and the camera wait till the
