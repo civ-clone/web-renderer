@@ -4101,7 +4101,13 @@ expect(
   const thrownAt = now,
     // Each frame: how long since it was fought, in ms; the attacker's pose; and the loser's, how solid it is, and how
     //  far through its puff is, once it's drawn.
-    thrown: [number, unknown, unknown, number | null, number | null][] = [],
+    thrown: [
+      number,
+      [string | null, number] | null,
+      [string | null, number] | null,
+      number | null,
+      number | null
+    ][] = [],
     // Each frame a shot was drawn or taken away: how long since it was fought, its id, numbers taken out, and where it
     //  was; and each frame the puff where it lands was drawn, how far through it was, and where.
     shotFrames: [number, string, readonly number[] | null][] = [],
@@ -4121,7 +4127,7 @@ expect(
     const ids = [...walkersPosed.keys()],
       attackerId = ids.find((id) => kind(id) === 'battle'),
       fallenId = ids.find((id) => kind(id) === 'battle-fallen'),
-      lastPose = (id: string | undefined) => {
+      lastPose = (id: string | undefined): [string | null, number] | null => {
         const pose =
           id === undefined ? undefined : walkersPosed.get(id)?.at(-1);
 
