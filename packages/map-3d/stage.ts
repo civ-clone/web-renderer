@@ -295,9 +295,7 @@ export const jointOf = (
     return null;
   }
 
-  // Whatever's been posed or placed since it was last drawn.
-  node.updateWorldMatrix(true, false);
-
+  // As it's posed and placed now, whatever's changed since it was last drawn: three.js works its matrices out afresh.
   const at = node.getWorldPosition(new Vector3());
 
   return [at.x - offsetU, at.y, at.z - offsetV];
