@@ -58,6 +58,8 @@ import Battles, {
   Battle,
   Fighter,
   REACH,
+  battleLength,
+  clipPace,
   quickerBattle,
 } from './battles';
 import pickGround from './camera/pick';
@@ -80,7 +82,8 @@ const shortTurn = (delta: number): number =>
 // How long the camera takes to glide to a square it's centred on, or to turn, in ms.
 const GLIDE = 350;
 
-// How far behind a unit's battles may fall before those under way are over at once, as the spec has the queue (§8.2).
+// How far behind a unit's battles may fall before those under way are over at once, as the spec has the queue (§8.2),
+//  or, for a battle that takes longer, its fighters playing their clips, two of it.
 const BATTLES_BEHIND = 2000;
 
 // The most units that may start fading in or out as one batch of tiles is taken: past that, as when a turn's handed over
@@ -794,7 +797,9 @@ export class MapView3D implements MapRenderer {
   }
 
   // A battle: the attacker lunges to the edge between the two squares, and goes back, or fades away there if it lost;
-  //  the loser fades away where it stood (`battles.ts`). Till the blow, the square attacked is shown as it was before.
+  //  the loser fades away where it stood (`battles.ts`). Where they're drawn with rigged copies, it's paced for their
+  //  clips (`clipPace`): one that shoots stands to, and the loser falls, then fades. Till the blow, the square attacked
+  //  is shown as it was before.
   //  Not where there are no frames, or the player has asked for less motion, or for units to move at once; nor
   //  between other players with their moves not shown, nor off the screen; nor one whose defender the page doesn't
   //  have where it fought: those show how it went at once. The attacker walking there, it's fought once it's there, as
@@ -851,9 +856,28 @@ export class MapView3D implements MapRenderer {
       return;
     }
 
-    const busy = this.#battles.busyUntil([attacker.id, defender.id]);
+    // Paced for the clips its fighters play, where they're drawn with rigged copies: the attacker as it's drawn, and
+    //  the loser as it stood.
+    const facts = (unit: Unit | undefined) => {
+        const marker = unit === undefined ? null : this.#unitsMarker([unit]);
 
-    if (busy !== null && busy - now > BATTLES_BEHIND) {
+        return marker === null ? null : this.#stage.rigFacts?.(marker) ?? null;
+      },
+      attackerSeen = attackerUnit ?? this.#walkingUnits.get(attacker.id),
+      paced = clipPace(
+        BATTLE_PACE,
+        facts(attackerSeen),
+        winner === 'attacker'
+          ? facts(before.find(({ id }) => id === defender.id))
+          : facts(attackerSeen)
+      ),
+      pace = speed === 'fast' ? quickerBattle(paced) : paced,
+      busy = this.#battles.busyUntil([attacker.id, defender.id]);
+
+    if (
+      busy !== null &&
+      busy - now > Math.max(BATTLES_BEHIND, 2 * battleLength(pace))
+    ) {
       this.#battlesOver(
         this.#battles.endWhere(
           (battle) =>
@@ -893,7 +917,7 @@ export class MapView3D implements MapRenderer {
             this.#facings.get(defender.id) ?? Math.atan2(-du, -dv),
         },
         now,
-        speed === 'fast' ? quickerBattle(BATTLE_PACE) : BATTLE_PACE,
+        pace,
         // Walking there: once it's there.
         this.#walks.endsAt(attacker.id) ?? now
       );
@@ -1665,7 +1689,7 @@ export class MapView3D implements MapRenderer {
       ? this.#unitsMarker(fallen!)
       : this.#walkerMarker([fighter.unit]);
 
-    this.#drawFigure(fighter, marker, fighter.opacity);
+    this.#drawFigure(fighter, marker, fighter.opacity, fighter.clip ?? null);
 
     // The loser, drawn fading: what fell where it stood, or the attacker at the edge, having lost.
     return marker !== null && (fighter.fallen || fighter.opacity < 1);

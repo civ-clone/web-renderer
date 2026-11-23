@@ -12,9 +12,14 @@
 //   as soon as they can.
 // - An attacker's drawn once, in the first battle it's in: one attacking again stands in the next battle only once the
 //   last's over.
+// - Where its fighters are drawn with their models' rigged copies (plan 2.2), it's paced for their clips (`clipPace`):
+//   the attacker plays `fight` from the start, the blow falling as its first shot lands, standing where it is to shoot;
+//   the loser plays `die` from the blow, solid till it's fallen, then fades.
 //
 // Where a fighter is is on the ground (`u`, `v`), with a `lift`, as a walker's is.
 
+import type { RigFacts } from './markers/clips';
+import { ClipRole } from './models/modelSet';
 import { WalkPoint, WalkSquare } from './walks';
 
 /** How fast a battle goes, in ms. */
@@ -25,17 +30,93 @@ export type BattlePace = {
   back: number;
   // From the blow to gone, for the loser.
   fade: number;
+  // How far towards the edge the attacker goes, from 0, standing where it is, to 1, the whole way: 1 where it's not
+  //  said.
+  lunge?: number;
+  // From the blow to when the loser starts to fade, solid as it falls: none where it's not said.
+  falls?: number;
+  // The clips its fighters play (plan 2.2): none where it's not said.
+  clips?: BattleClips;
+};
+
+/** The clips a battle's fighters play, and how quick. */
+export type BattleClips = {
+  // How many seconds of a clip are played in a second: 2 for a battle twice as quick.
+  rate: number;
+  // Whether the attacker plays `fight`, from the start.
+  fight: boolean;
+  // Whether the loser plays `die`, from the blow.
+  die: boolean;
 };
 
 /** How battles go: the blow a fifth of a second in, over a little under a second after it. */
 export const BATTLE_PACE: BattlePace = { reach: 200, back: 300, fade: 600 };
 
-/** A pace twice as quick, as the player can choose (`walks` in `MapView3DDeps`). */
+/** How long a shot takes from leaving the attacker's figure to landing, in ms, as the clips have it thrown. */
+export const SHOT_FLIGHT = 350;
+
+/** A pace twice as quick, as the player can choose (`walks` in `MapView3DDeps`): its clips played twice as quick. */
 export const quickerBattle = (pace: BattlePace): BattlePace => ({
+  ...pace,
   reach: pace.reach / 2,
   back: pace.back / 2,
   fade: pace.fade / 2,
+  ...(pace.falls === undefined ? {} : { falls: pace.falls / 2 }),
+  ...(pace.clips === undefined
+    ? {}
+    : { clips: { ...pace.clips, rate: pace.clips.rate * 2 } }),
 });
+
+/**
+ * `pace`, for a battle whose attacker's drawn with a rigged copy as `attacker` says (`RigFacts`), and its loser as
+ *  `loser` says, or as it is where neither has a clip to play:
+ * - the attacker plays `fight` from the start; where it shoots, it stands, the blow falling as its first figure's first
+ *   shot lands (`SHOT_FLIGHT`), and where it doesn't, the blow falls as it would; it's drawn till its last figure's
+ *   clip is over;
+ * - the loser plays `die` from the blow, solid till its last figure's fallen, then fades.
+ */
+export const clipPace = (
+  pace: BattlePace,
+  attacker: RigFacts | null,
+  loser: RigFacts | null
+): BattlePace => {
+  const fight = attacker?.clips.fight,
+    die = loser?.clips.die;
+
+  if (fight === undefined && die === undefined) {
+    return pace;
+  }
+
+  // A squad's figures play a clip that's played once each a little after the one before (`FIGURE_STAGGER`).
+  const tail = (facts: RigFacts | null | undefined): number =>
+      Math.max(0, (facts?.figures ?? 1) - 1) * (facts?.stagger ?? 0),
+    shot = fight?.shots[0],
+    reach = shot === undefined ? pace.reach : shot.at * 1000 + SHOT_FLIGHT;
+
+  return {
+    ...pace,
+    reach,
+    back:
+      fight === undefined
+        ? pace.back
+        : Math.max(pace.back, (fight.duration + tail(attacker)) * 1000 - reach),
+    ...(shot === undefined ? {} : { lunge: 0 }),
+    ...(die === undefined
+      ? {}
+      : { falls: (die.duration + tail(loser)) * 1000 }),
+    clips: { rate: 1, fight: fight !== undefined, die: die !== undefined },
+  };
+};
+
+// How long a battle at `pace` goes on after its blow: the attacker back where it stood, won, and the loser gone.
+const afterBlow = (pace: BattlePace, won: boolean): number =>
+  won
+    ? Math.max(pace.back, (pace.falls ?? 0) + pace.fade)
+    : (pace.falls ?? 0) + pace.fade;
+
+/** How long a battle at `pace` takes, from the start to over, won or lost. */
+export const battleLength = (pace: BattlePace, won = true): number =>
+  pace.reach + afterBlow(pace, won);
 
 /** How far towards the square it attacks the attacker goes: to the edge between them, from its middle. */
 export const REACH = 0.45;
@@ -82,6 +163,8 @@ export type Fighter = {
   lift: number;
   facing: number;
   opacity: number;
+  // The clip its figures play, and how far in, in seconds, where its battle's paced for clips (`clipPace`).
+  clip?: { role: ClipRole; seconds: number };
 };
 
 /** When the blow falls in `battle`. */
@@ -90,10 +173,7 @@ export const blowAt = (battle: Battle): number =>
 
 /** When `battle` is over: the attacker back where it stood, and the loser gone. */
 export const battleEnds = (battle: Battle): number =>
-  blowAt(battle) +
-  (battle.won
-    ? Math.max(battle.pace.back, battle.pace.fade)
-    : battle.pace.fade);
+  blowAt(battle) + afterBlow(battle.pace, battle.won);
 
 const clamp = (value: number): number => Math.min(1, Math.max(0, value));
 
@@ -102,31 +182,33 @@ const easeIn = (t: number): number => t * t;
 const easeInOut = (t: number): number => t * t * (3 - 2 * t);
 
 /**
- * How far to the edge the attacker is at `now`, from 0 (where it stands) to 1 (the blow), and how solid it and the
- *  loser are drawn.
+ * How far to the edge the attacker is at `now`, from 0 (where it stands) to 1 (the blow), as far as it lunges
+ *  (`lunge`), and how solid it and the loser are drawn: the loser solid as it falls (`falls`), then fading.
  */
 export const battleAt = (
   battle: Battle,
   now: number
 ): { reach: number; attacker: number; fallen: number } => {
-  const { reach, back, fade } = battle.pace,
+  const { reach, back, fade, lunge = 1, falls = 0 } = battle.pace,
     since = now - blowAt(battle),
-    fading = 1 - clamp(fade <= 0 ? 1 : since / fade);
+    fading =
+      since < falls ? 1 : 1 - clamp(fade <= 0 ? 1 : (since - falls) / fade);
 
   if (since < 0) {
     return {
-      reach: easeIn(clamp(reach <= 0 ? 1 : (now - battle.start) / reach)),
+      reach:
+        easeIn(clamp(reach <= 0 ? 1 : (now - battle.start) / reach)) * lunge,
       attacker: 1,
       fallen: 1,
     };
   }
 
   if (!battle.won) {
-    return { reach: 1, attacker: fading, fallen: 0 };
+    return { reach: lunge, attacker: fading, fallen: 0 };
   }
 
   return {
-    reach: 1 - easeInOut(clamp(back <= 0 ? 1 : since / back)),
+    reach: (1 - easeInOut(clamp(back <= 0 ? 1 : since / back))) * lunge,
     attacker: 1,
     fallen: fading,
   };
@@ -322,10 +404,24 @@ export class Battles {
   }
 
   // What's drawn of `battle` at `now`: the attacker, unless it's gone, or drawn already (`drawn`) in a battle before; and
-  //  the loser where it fell, from the blow till it's gone.
+  //  the loser where it fell, from the blow till it's gone. Paced for clips, each with the clip it plays: the attacker
+  //  `fight` from the start, or, lost, `die` from the blow, and the loser `die` from the blow.
   #fighters(battle: Battle, now: number, drawn: Set<string>): Fighter[] {
     const { reach, attacker, fallen } = battleAt(battle, now),
       { from, edge, fallsAt } = battle,
+      { clips } = battle.pace,
+      blow = blowAt(battle),
+      playing = (role: ClipRole, since: number) => ({
+        clip: { role, seconds: ((now - since) / 1000) * (clips?.rate ?? 1) },
+      }),
+      attackerPlays =
+        clips === undefined
+          ? {}
+          : !battle.won && now >= blow && clips.die
+          ? playing('die', blow)
+          : clips.fight
+          ? playing('fight', battle.start)
+          : {},
       fighters: Fighter[] = [],
       first = !drawn.has(battle.attacker);
 
@@ -344,6 +440,7 @@ export class Battles {
         lift: from.lift * (1 - reach),
         facing: battle.facing,
         opacity: attacker,
+        ...attackerPlays,
       });
     }
 
@@ -357,6 +454,7 @@ export class Battles {
         lift: fallsAt.lift,
         facing: battle.defenderFacing,
         opacity: fallen,
+        ...(clips?.die ? playing('die', blow) : {}),
       });
     }
 

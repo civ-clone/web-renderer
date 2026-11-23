@@ -3,7 +3,7 @@
 //  figures are a little apart in it, so they don't move as one. Without a clip, a figure stands as the model does.
 
 import { AnimationMixer, LoopRepeat, Object3D } from 'three';
-import { ClipRole } from '../models/modelSet';
+import { ClipRole, ClipShot } from '../models/modelSet';
 import { LoadedRig } from '../models/loadModels';
 import { RIG_FIGURE } from './drawMarker';
 
@@ -17,8 +17,36 @@ export const LOOPED_ROLES: readonly ClipRole[] = ['idle', 'move', 'work'];
  */
 export const STRIDE = 2;
 
-/** How far apart in its clip each figure of a squad is, in seconds. */
+/**
+ * How far apart in its clip each figure of a squad is, in seconds: each further on in one that loops, and each a little
+ *  after the one before in one played once, so none is ahead of the clip's start.
+ */
 export const FIGURE_STAGGER = 0.13;
+
+/** A role's clip on a rigged copy: how long it is, in seconds, and the shots its figures fire in it (`ClipShot`). */
+export type ClipFacts = { duration: number; shots: readonly ClipShot[] };
+
+/**
+ * What a unit drawn with a rigged copy plays, as battles are paced for it (`clipPace`): its clips, by role; how many
+ *  figures it's drawn with; and how far apart in a clip each is, in seconds (`FIGURE_STAGGER`).
+ */
+export type RigFacts = {
+  figures: number;
+  stagger: number;
+  clips: Partial<Record<ClipRole, ClipFacts>>;
+};
+
+/** What `rig` plays, drawn with `figures` figures (`RigFacts`). */
+export const rigFacts = (rig: LoadedRig, figures: number): RigFacts => ({
+  figures,
+  stagger: FIGURE_STAGGER,
+  clips: Object.fromEntries(
+    [...rig.clips].map(([role, clip]) => [
+      role,
+      { duration: clip.duration, shots: rig.shots.get(role) ?? [] },
+    ])
+  ),
+});
 
 /**
  * How far into `role`'s clip, `duration` seconds long, it is `seconds` after it began: round and round for one that
@@ -45,8 +73,8 @@ export type Playing = { mixer: AnimationMixer; role: ClipRole | null };
 
 /**
  * Each of `drawn`'s figures drawn with `rig` (`RIG_FIGURE`) posed as `role`'s clip has it `seconds` in, the second
- *  figure `FIGURE_STAGGER` further in, and so on; or, for no role, or one `rig` has no clip for, as the model stands.
- *  What each figure plays is kept in `playing`.
+ *  figure `FIGURE_STAGGER` further in a clip that loops, and that far behind in one played once, and so on; or, for no
+ *  role, or one `rig` has no clip for, as the model stands. What each figure plays is kept in `playing`.
  */
 export const poseFigures = (
   drawn: Object3D,
@@ -78,7 +106,13 @@ export const poseFigures = (
 
     if (clip !== undefined && asked !== null) {
       now.mixer.setTime(
-        clipTime(asked, clip.duration, seconds + index * FIGURE_STAGGER)
+        clipTime(
+          asked,
+          clip.duration,
+          LOOPED_ROLES.includes(asked)
+            ? seconds + index * FIGURE_STAGGER
+            : seconds - index * FIGURE_STAGGER
+        )
       );
     }
   });

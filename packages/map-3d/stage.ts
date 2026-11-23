@@ -42,6 +42,7 @@ import {
   UNIT_PART,
   drawMarker,
   fade,
+  markerFigures,
   unfade,
   unfaded,
 } from './markers/drawMarker';
@@ -54,7 +55,7 @@ import YieldIcons from './yieldIcons';
 import { YieldMesh } from './yields';
 import { LoadedRig, loadModels, modelKey } from './models/loadModels';
 import { ClipRole } from './models/modelSet';
-import { Playing, poseFigures } from './markers/clips';
+import { Playing, RigFacts, poseFigures, rigFacts } from './markers/clips';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 
 /** What the stage has drawn, for the debug overlay. */
@@ -116,6 +117,11 @@ export interface Stage {
    *  them `seconds` in (plan 2.2, `clips.ts`): or, for none, standing as the model does.
    */
   poseWalker?(id: string, role: ClipRole | null, seconds: number): void;
+  /**
+   * What the unit `marker` marks plays where it's drawn with its model's rigged copy (`RigFacts`), as a battle's paced
+   *  for it (`clipPace`): nothing where its model has none, or isn't loaded.
+   */
+  rigFacts?(marker: TileMarker): RigFacts | null;
   /**
    * How solid the unit marked on the square `key` is drawn, from 0 to 1, as a unit arriving with no move fades in
    *  (`fades.ts`): its city stays solid, and no other marker fades with it. Marked again (`setMarker`), it's solid.
@@ -884,6 +890,14 @@ export const createStage: StageFactory = (
       walker.drawn.forEach((drawn) =>
         poseFigures(drawn, walker.rig!, role, seconds, playing)
       );
+    },
+    rigFacts: (marker): RigFacts | null => {
+      const { unit } = marker,
+        rig = unit?.model === undefined ? null : kit.rigOf(unit.model);
+
+      return unit === null || rig === null
+        ? null
+        : rigFacts(rig, markerFigures(unit));
     },
     fadeMarker: (key, opacity): void => {
       const marker = markers.get(key),
