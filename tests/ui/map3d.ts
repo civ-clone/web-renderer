@@ -249,6 +249,10 @@ const staged: string[] = [],
   unitUnderPointer: { key: string | null } = { key: null },
   // What each unit, by its id, plays where it's drawn with a rigged copy, as the stage would say: none by default.
   rigFactsFor = new Map<string, RigFacts>(),
+  // Every shot drawn since last cleared, by id, where it was each frame, `null` taken away; and the nodes asked where
+  //  they are, by walker, figure and node, the stage saying a fifth of a square over where the walker was last put.
+  shotsDrawn = new Map<string, (readonly number[] | null)[]>(),
+  jointsAsked: [string, number, string][] = [],
   fakeStage = (): Stage => ({
     render: () => void staged.push('render'),
     unitAt: () => unitUnderPointer.key,
@@ -297,6 +301,17 @@ const staged: string[] = [],
         [role, seconds],
       ]),
     rigFacts: (marker) => rigFactsFor.get(marker.unit?.id ?? '') ?? null,
+    jointAt: (id, figure, joint) => {
+      const placed = walkersPlaced.get(id)?.at(-1);
+
+      jointsAsked.push([id, figure, joint]);
+
+      return placed === undefined
+        ? null
+        : [placed[0]!, placed[1]! + 0.2, placed[2]!];
+    },
+    shot: (id, at) =>
+      void shotsDrawn.set(id, [...(shotsDrawn.get(id) ?? []), at]),
     fadeMarker: (key, opacity) => {
       if (opacity < 1 || markersFaded.has(key)) {
         markersFaded.set(key, opacity);
@@ -4080,11 +4095,18 @@ expect(
   walkersPlaced.clear();
   walkersPosed.clear();
   puffsPlaced.clear();
+  shotsDrawn.clear();
+  jointsAsked.length = 0;
 
   const thrownAt = now,
     // Each frame: how long since it was fought, in ms; the attacker's pose; and the loser's, how solid it is, and how
     //  far through its puff is, once it's drawn.
-    thrown: [number, unknown, unknown, number | null, number | null][] = [];
+    thrown: [number, unknown, unknown, number | null, number | null][] = [],
+    // Each frame a shot was drawn or taken away: how long since it was fought, its id, numbers taken out, and where it
+    //  was; and each frame the puff where it lands was drawn, how far through it was, and where.
+    shotFrames: [number, string, readonly number[] | null][] = [],
+    hitFrames: [number, number, readonly number[]][] = [],
+    shorn = (id: string) => id.replace(/-\d+/g, '');
 
   fought(walker, [1, 1], rival, [2, 1], 'attacker');
   patch([1, 1, [walker]], [2, 1, []]);
@@ -4115,12 +4137,27 @@ expect(
       fallenId === undefined || !walkers.has(fallenId)
         ? null
         : Math.round((walkersFaded.get(fallenId) ?? 1) * 100) / 100,
-      [...puffs.values()][0]?.through ?? null,
+      [...puffs.entries()].find(([id]) => kind(id) === 'battle-puff')?.[1]
+        .through ?? null,
     ]);
+    shotsDrawn.forEach((points, id) =>
+      points.forEach((at) => shotFrames.push([now - thrownAt, shorn(id), at]))
+    );
+    shotsDrawn.clear();
+    puffs.forEach(({ at, through }, id) => {
+      if (shorn(id) === 'battle-shot-hit') {
+        hitFrames.push([now - thrownAt, through, at]);
+      }
+    });
     walkersPosed.clear();
   }
 
-  const [stood] = placedSince(),
+  const askedWhere = jointsAsked.map(([id, figure, joint]) => [
+      kind(id),
+      figure,
+      joint,
+    ]),
+    [stood] = placedSince(),
     firstFallen = thrown.find(([, , fell]) => fell !== null),
     fadingFrom = thrown.find(([, , , solid]) => solid !== null && solid < 1),
     lastAttacker = thrown.filter(([, attacking]) => attacking !== null).at(-1),
@@ -4179,6 +4216,47 @@ expect(
   walkersSet.length = 0;
   walkersPlaced.clear();
   walkersPosed.clear();
+
+  const inFlight = shotFrames.filter(([, , at]) => at !== null),
+    [left, landed] = [inFlight[0]!, inFlight.at(-1)!],
+    takenAway = shotFrames.find(([, , at]) => at === null),
+    highest = Math.max(...inFlight.map(([, , at]) => at![1]!)),
+    handAt = groundAt(1, 1).map((n, index) => (index === 1 ? n + 0.2 : n)),
+    near = (at: readonly number[], to: readonly number[], by: number) =>
+      at.every((n, index) => Math.abs(n - to[index]!) < by);
+
+  expect(
+    'its throw: one shot, from the node its clip names on its one figure, leaving half a second in where the figure’s hand is, flying in an arc, rising over both ends, to the square attacked, landing at the blow, and bursting in a puff there that’s gone half a second later',
+    [
+      askedWhere,
+      [...new Set(shotFrames.map(([, id]) => id))],
+      left[0] >= 500 && left[0] < 516,
+      near(left[2]!, handAt, 0.05),
+      landed[0] >= 834 && landed[0] < 850,
+      near(landed[2]!, groundAt(2, 1), 0.12),
+      highest > left[2]![1]! && highest > landed[2]![1]!,
+      takenAway![0] >= 850 && takenAway![0] < 866,
+      [
+        hitFrames[0]![0] >= 850 && hitFrames[0]![0] < 866,
+        hitFrames.every(
+          ([, through], at) => at === 0 || through > hitFrames[at - 1]![1]
+        ),
+        near(hitFrames[0]![2], groundAt(2, 1), 0.06),
+        hitFrames.at(-1)![0] < 850 + 500 && hitFrames.at(-1)![1] < 1,
+      ],
+    ],
+    [
+      [['battle', 0, 'prop']],
+      ['battle-shot'],
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      [true, true, true, true],
+    ]
+  );
 
   expect(
     'a rigged attacker attacking again at once: the second battle waits for the first, rather than ending it',

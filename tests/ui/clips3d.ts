@@ -262,7 +262,8 @@ const rigged = (): LoadedRig => {
 };
 
 // The clip each role plays, of those a rigged copy's file has, as its manifest names them (`clipsOf`): one its file
-//  hasn't, or with a track moving a node it can't name, as GLTFLoader names one with none, refused, saying why.
+//  hasn't, or with a track moving a node it can't name, as GLTFLoader names one with none, refused, saying why. Its
+//  shots leave nodes named as the file has them, found as three.js names them: one from a node it hasn't, refused.
 {
   const made = rigged(),
     animations = [...made.clips.values()],
@@ -297,9 +298,11 @@ const rigged = (): LoadedRig => {
     };
 
   expect(
-    'each role’s clip is the one its manifest names, with its shots; one its file hasn’t, or moving a node it can’t name, is refused',
+    'each role’s clip is the one its manifest names, with its shots, each leaving a node as three.js names it; one its file hasn’t, moving a node it can’t name, or shooting from a node it hasn’t, is refused',
     [
       tried(() => {}),
+      tried(({ entry }) => (entry.shots.move[0].joint = 'ar.m')),
+      tried(({ entry }) => (entry.shots.move[0].joint = 'hand')),
       tried(({ entry }) => (entry.clips.idle = 'stand')),
       tried(({ animations }) => {
         const [walk] = animations;
@@ -318,6 +321,17 @@ const rigged = (): LoadedRig => {
           ['die', []],
         ],
       ],
+      [
+        [
+          ['move', 'walk'],
+          ['die', 'fall'],
+        ],
+        [
+          ['move', [{ at: 0.25, joint: 'arm' }]],
+          ['die', []],
+        ],
+      ],
+      "models/rigged/partisan.glb: clip walk shoots from a node it hasn't (hand)",
       'models/rigged/partisan.glb: no clip stand',
       `models/rigged/partisan.glb: clip walk moves a node it can't name (${made.scene.uuid}x.quaternion)`,
     ]
