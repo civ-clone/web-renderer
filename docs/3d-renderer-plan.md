@@ -375,15 +375,16 @@ tried in a game. The map takes several
 sets in order, a unit type drawn by the first that has a model for it, and the library lists each. Still to do: their
 surfaces textured (CC0 photo textures), or realistic replacements (CC BY), each credited.
 
-**Fifth part, realistic units: done.** Two sets of realistic models replace Cimpletoon's, and five of 0 A.D.'s
-stand-ins (Warrior, Settlers, Knight, Explorer and Sail): one made for civ.one with Meshy, and from Meshy's community
+**Fifth part, realistic units: done.** Two sets of realistic models replace Cimpletoon's, and five of 0 A.D.'s (Warrior,
+Settlers, and the stand-ins for Knight, Explorer and Sail): one made for civ.one with Meshy, and from Meshy's community
 (CC0), and one adapted from their authors' on Sketchfab (CC BY 4.0). Between them and 0 A.D.'s, every unit type in
 Civ1's and Civ2's rules has a model. Each set's library entry lists every work it's made from, with its author, its
 licence and a link: the art credits list (D3). Paratroopers are drawn once, under their canopy. Still to do:
 - **Owner's colour:** none has a mask for it yet, so a unit's owner shows by its flag and stand alone;
-- **Textures:** 512 and 1024 px, against 0 A.D.'s 128 px atlases, so about 130 MB on the GPU before mipmaps: smaller,
-  or KTX2;
-- **Clips:** the Diplomat's file has 25 by its author, and 0 A.D.'s riggable ones.
+- **Textures:** 512 and 1024 px each, where 0 A.D.'s pack each part at no more than 128 px, so about 130 MB on the GPU
+  before mipmaps: smaller, or KTX2;
+- **Clips:** the shipped Fighter's and Helicopter's files have their propellers' and rotor's, and the set's rigged
+  Diplomat, not shipped, 25 by its author; 0 A.D.'s could be fitted to the rest.
 
 - **What:**
   - loading `.glb` with KTX2 textures;

@@ -1,9 +1,9 @@
 // The sets of models that ship with civ.one for the 3D map (docs/3d-renderer.md §10), beside the game: 0 A.D.'s ancient
-//  units, converted from 0 A.D.'s art by Wildfire Games (civ-clone/models-0ad, CC BY-SA 3.0), and realistic units, in two
-//  sets by their licence: those made for civ.one (civ-clone/models-realistic-cc0, CC0 1.0), and those adapted from their
-//  authors' on Sketchfab (civ-clone/models-realistic-by, CC BY 4.0). Under `?3d=1` the map draws each unit type one of
-//  them has a model for with it, unless the page asks for another set (`?models=`); the library shows each with its
-//  licence and the credit it gives.
+//  units, converted from 0 A.D.'s art by Wildfire Games (civ-clone/models-0ad, CC BY-SA 3.0), and realistic units, in
+//  two sets by their licence: those made for civ.one (civ-clone/models-realistic-cc0, CC0 1.0), and those adapted from
+//  their authors' on Sketchfab (civ-clone/models-realistic-by, CC BY 4.0). Under `?3d=1` the map draws each unit type
+//  one of them has a model for with it, unless the page asks for another set (`?models=`); the library shows each with
+//  its licence and the credit it gives.
 
 import modelSets from './modelSets';
 

@@ -162,11 +162,13 @@ them.
 **Recommendation:** a set chooses for each unit type: a `formation` with a count and a spacing (§6.1). The built-in
 set uses three figures for foot units and one for vehicles, ships and aircraft.
 
-**As built:** the count is the unit type's look's (`unitTable`'s `squad`), whichever set draws it: three for most foot
-units, two for riders, one for the rest. Paratroopers are one, as a parachutist is drawn under his canopy, and three
-canopies would cut through each other.
-
 **Decided (2026-11-18):** agreed.
+
+**As built (2026-11-23):** the count is the unit type's look's (`unitTable`'s `squad`). The built-in figures use it as
+it is: three for most foot units, two for riders, one for the rest. A hosted set's model is drawn as many times as that
+for a foot unit, and once for anything else, riders too (`MarkerKit.modelFigures`). Paratroopers are one: a model draws
+a parachutist under his canopy, and three canopies would cut through each other. The built-in figure, which has only
+his pack, is one too, so a unit looks the same whichever draws it.
 
 ### D7. Rotation
 
@@ -1348,7 +1350,8 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
   (`modelKey`: the manifest's address and the model's name).
 - **Drawn** (`MarkerKit.modelFigures`):
   - **Figures:** as many as stand for one unit of the type's look (D6), in its formation, merged in a mesh for each of
-    the model's parts. So a unit is a draw call for each part, one or two, besides its stand.
+    the model's parts. So a unit is a draw call for each part, besides its stand: mostly one or two, and eight for
+    the realistic Fighter and Helicopter.
   - **Size:** the set's size, or the model's own, times twice life size and the player's choice (§6.2).
   - **Where:** on the built-in set's stand, and behind its wall when fortified. A ship sits on the water in its
     ripples, with no stand.
@@ -1383,9 +1386,10 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
   - 6.5 MB in all.
 
   The realistic ones are reduced from far finer models, each to a few thousand triangles, with its colours baked into
-  one texture (JPEG, 512 px for people and 1024 px for the rest). Each ship floats with its waterline at its origin,
-  and each but the people has a scale of its own, so all sit beside each other and 0 A.D.'s units. None has a mask for
-  its owner's colour yet: a unit's whose is shown by its flag, and on land by its stand.
+  one texture (JPEG, 512 px for people and 1024 px for the rest), and a second where a prop was put in (the Partisan's
+  molotov, the Diplomat's hat, the Paratrooper's canopy, the Fanatic's torch). Each ship floats with its waterline at
+  its origin, and each but the people has a scale of its own, so all sit beside each other and 0 A.D.'s units. None has
+  a mask for its owner's colour yet: a unit's whose is shown by its flag, and on land by its stand.
 
   Each is a dependency of the renderer, pinned by its commit in the lockfile. One package here
   (`packages/models-hosted`) declares the three (`civ-clone.hostedModels`), and gives the page them in order, 0 A.D.'s

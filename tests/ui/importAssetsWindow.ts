@@ -2365,38 +2365,57 @@ const run = async (): Promise<void> => {
         ]
       );
 
-      // A credit whose work or licence isn't at an https: address names it, not links it: a manifest's words aren't
-      //  markup, nor its addresses scripts.
+      // Every credit listed as its manifest gives it: the work, by its author, under its licence, as text, the work and
+      //  licence linked where they're at https: addresses.
+      expect(
+        'every credit is listed, each as its manifest gives it, linked where it’s at an https: address',
+        Array.from(credits?.querySelectorAll('li') ?? [], (item) => [
+          item.textContent,
+          Array.from(item.querySelectorAll('a'), (link) => link.href),
+          item.querySelectorAll('*').length - item.querySelectorAll('a').length,
+        ]),
+        creditedUnits.credits.map(({ work, author, url, licence }) => [
+          `${work} by ${author} · ${licence.name}`,
+          [url, licence.url],
+          0,
+        ])
+      );
+
+      // A credit whose words are markup, or have an apostrophe, says them as they are; and one whose work or licence
+      //  isn't at an https: address names it, not links it: a manifest's words aren't markup, nor its addresses scripts.
       {
         const credit = creditedUnits.credits[0]!,
-          { url, licence } = credit;
+          { work, author, url, licence } = credit;
 
-        credit.url = 'javascript:alert(1)';
-        credit.licence = {
-          ...licence,
-          url: 'http://example.com/<b>licence</b>',
-        };
+        try {
+          credit.work = "<b>Work</b> & co's";
+          credit.author = "<img src=x onerror=alert(1)> O'Brien";
+          credit.url = 'javascript:alert(1)';
+          credit.licence = {
+            name: "<i>Licence</i> d'auteur",
+            url: 'http://example.com/<b>licence</b>',
+          };
 
-        const odd = new LibraryWindow({}, { search: '?3d=1' });
+          const odd = new LibraryWindow({}, { search: '?3d=1' });
 
-        await settle();
+          await settle();
 
-        const item = odd
-          .element()
-          .querySelector('[data-set="realistic-by"] details.credits li');
+          const item = odd
+            .element()
+            .querySelector('[data-set="realistic-by"] details.credits li');
 
-        credit.url = url;
-        credit.licence = licence;
-
-        expect(
-          'a credit whose work or licence isn’t at an https: address names it, not links it',
-          [item?.querySelectorAll('a').length, item?.textContent],
-          [
-            0,
-            'Business Man - Low Polygon game character by manoeldarochadeoliveira · CC BY 4.0',
-          ]
-        );
-        odd.close();
+          expect(
+            'a credit’s words are said as they are, not as markup, and one not at an https: address is named, not linked',
+            [item?.querySelectorAll('*').length, item?.textContent],
+            [
+              2,
+              "<b>Work</b> & co's by <img src=x onerror=alert(1)> O'Brien · <i>Licence</i> d'auteur",
+            ]
+          );
+          odd.close();
+        } finally {
+          Object.assign(credit, { work, author, url, licence });
+        }
       }
       with3D.close();
       without.close();
