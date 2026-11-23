@@ -4396,7 +4396,10 @@ expect(
   patch([1, 1, [walker]], [2, 1, []]);
   runFrames();
 
-  const ringedThrows = shotsDrawn.size;
+  // Each drawn in flight, not only taken away.
+  const ringedThrows = [...shotsDrawn.values()].filter((points) =>
+    points.some((at) => at !== null)
+  ).length;
 
   glider.toggleUnits();
   glider.setActiveUnit(null);
