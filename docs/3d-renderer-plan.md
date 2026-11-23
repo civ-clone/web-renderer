@@ -180,7 +180,8 @@ Building another world from the form starts it in the middle again.
   - the camera stops at the poles when the player asks the map to (`lockVerticalEdges`);
   - it follows the land's height under the focus, eased, so it doesn't jolt over hills;
   - the world's copies follow the camera: every copy the haze doesn't hide is drawn, however far it sees;
-  - the haze, and how far the camera sees, follow its distance.
+  - the haze, and how far the camera sees, follow its distance, and never reach past half the world from its focus;
+    drawn back, the camera looks down further, so the world isn't seen repeating to the horizon (#1316).
 - **Keys:** through `InputController`, as the zoom keys are. `[` and `]` turn the view an eighth of a turn, and `\`
   turns it back to north, or the keys where those are on a US keyboard, for layouts that type them with AltGr. `z` and `x` zoom. A 2D map ignores the turn keys.
 - **The keys that move a unit** turn with the camera (`MapRenderer#heading`, `turnedDirectionKeys` in

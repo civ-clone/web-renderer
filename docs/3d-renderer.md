@@ -1229,6 +1229,19 @@ mapEvent:
   hides everything by 3.5 times it. The keys are `[` and `]` to turn an eighth of a turn and `\` to face north: none is a
   unit's order or one the numeric keypad sends (`mappedKey`). Two fingers on a touch screen also tilt the view by
   moving up or down together. The distance is kept in the `map3dDistance` option.
+- **As built (2026-11-23, #1316): drawn back, it looks down.** Drawn back from a world, the camera used to see the world
+  repeat into the distance, the copies' banners piling up along the horizon. Now:
+  - **The haze:** it hides everything no further past the focus than half the world round, the narrower way where it
+    wraps both ways, so no copy of the world is seen whole (`sightFor`, given the world's period). It starts at 1.2
+    times the distance, or halfway to where it ends where that's sooner. A world so small that half of it is nearer
+    than the camera ever comes (5) repeats wherever it looks, so it's seen as before.
+  - **The lowest pitch:** 25° while the haze is as far off as close in, and higher as it's drawn in
+    (`lowestPitch`), so the top of the view is as deep in it as close in: at the furthest, about 39° on a world 128
+    round, or 52° on one 104 by 65 that wraps both ways. Drawn back, the camera looks down on the land rather than out
+    to the horizon, as strategy games' cameras do.
+  - **The pitch the player chose** is kept (`MapView3D#chosenPitch`): zooming leaves it, so brought in again the
+    camera looks down from it as before. Tilting chooses another. What's drawn of a world drawn back is a fraction
+    of what it was: on that world at the furthest and lowest, 4,488 draw calls rather than 11,686.
 
 ### 9.2 Picking
 
