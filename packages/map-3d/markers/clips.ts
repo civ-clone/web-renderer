@@ -2,7 +2,7 @@
 //  the clock, not by what's passed since the last frame, so a frame drawn late or twice poses it the same. A squad's
 //  figures are a little apart in it, so they don't move as one. Without a clip, a figure stands as the model does.
 
-import { AnimationMixer, LoopRepeat, Object3D, SkinnedMesh } from 'three';
+import { AnimationMixer, LoopRepeat, Object3D } from 'three';
 import { ClipRole } from '../models/modelSet';
 import { LoadedRig } from '../models/loadModels';
 import { RIG_FIGURE } from './drawMarker';
@@ -11,10 +11,11 @@ import { RIG_FIGURE } from './drawMarker';
 export const LOOPED_ROLES: readonly ClipRole[] = ['idle', 'move', 'work'];
 
 /**
- * How much quicker than its clip's own pace a walk plays: a unit crosses a square in a quarter of a second or less, far
- *  quicker than a stride, so its figures trot, rather than stroll and slide.
+ * How far a unit walks, in squares, for each second of its walk's clip: its figures' legs keep up with how fast it goes,
+ *  quicker for a rival's walk or a quick one, slower as it gets going and stops. At a quarter of a second a square, as
+ *  a player's units walk, the clip plays twice as quick as it's made.
  */
-export const MOVE_RATE = 2;
+export const STRIDE = 2;
 
 /** How far apart in its clip each figure of a squad is, in seconds. */
 export const FIGURE_STAGGER = 0.13;
@@ -65,18 +66,12 @@ export const poseFigures = (
     playing.set(figure, now);
 
     if (now.role !== asked) {
+      // Stopped, a clip puts back what it moved as it was before it played: the figure as the model stands.
       now.mixer.stopAllAction();
       now.role = asked;
 
-      if (clip === undefined) {
-        // As the model stands: its bind pose.
-        figure.traverse((object) => {
-          if ((object as SkinnedMesh).isSkinnedMesh) {
-            (object as SkinnedMesh).skeleton.pose();
-          }
-        });
-      } else {
-        // Round and round, as `clipTime` says when it's at, so it never pauses at its end.
+      // Round and round, as `clipTime` says when it's at, so it never pauses at its end.
+      if (clip !== undefined) {
         now.mixer.clipAction(clip).setLoop(LoopRepeat, Infinity).play();
       }
     }

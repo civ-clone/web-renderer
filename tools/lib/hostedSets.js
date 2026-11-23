@@ -444,11 +444,11 @@ const SET_FILE = /dist\/sets\/[A-Za-z0-9._-]+\.(?:png|json)/g;
 const MODEL_FILE = /^[A-Za-z0-9._-]+\.glb$/;
 
 /**
- * The hosted sets' files that the build published in `site` asks for, as paths under it: the sheets, their indexes
- *  and the manifests its `dist/frontend.js` names (#1114), and the models, and their rigged copies, that each of those
- *  manifests names (#1324), which only the manifest does. The deploy keeps them for one more deploy, so a page cached from before it still finds
- *  them. Nothing, for a site with no build; no models, for a manifest that's missing, or one that can't be read, which
- *  is told to `warn`.
+ * The hosted sets' files that the build published in `site` asks for, as paths under it: the sheets, their indexes and
+ *  the manifests its `dist/frontend.js` names (#1114), and the models, and their rigged copies, that each of those
+ *  manifests names (#1324), which only the manifest does. The deploy keeps them for one more deploy, so a page cached
+ *  from before it still finds them. Nothing, for a site with no build; no models, for a manifest that's missing, or one
+ *  that can't be read, which is told to `warn`.
  */
 const setsAskedFor = (site, warn = () => {}) => {
   const script = path.join(site, 'dist', 'frontend.js');

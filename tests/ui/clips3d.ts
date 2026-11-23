@@ -1,11 +1,14 @@
 // Clips on the 3D map (plan 2.2), without a GPU:
 //  - a model's rigged copy in a set's manifest, read and checked: its file beside the manifest, the clip each role
-//    plays, and the shots each lets fly; anything else refused, saying why;
+//    plays, and the shots each lets fly; a clip for a role the map doesn't play left out; one it can't play dropped,
+//    its model and the rest of the set kept;
 //  - the marker kit draws a unit's figures with its model's rigged copy where it's asked to, as many and where its
 //    model's would be, each with a skeleton of its own, in its owner's colour where its parts say, drawn however far a
 //    clip takes it; with none, or not asked, as before;
 //  - each figure posed as a role's clip has it a time in, by the clock: round and round for one that loops, held at
-//    its end for one that doesn't, a squad's figures a little apart; with no clip, standing as the model does.
+//    its end for one that doesn't, a squad's figures a little apart; with no clip, standing as the model does;
+//  - a walker's copies, one for each copy of the world, each with bones of its own, and let go of with their bones'
+//    textures; and a rigged copy let go of with its model.
 
 import {
   AnimationClip,
@@ -41,6 +44,7 @@ import {
   poseFigures,
 } from '@civ-clone/ui-map-3d/markers/clips';
 import TintedMaterial, { ownerTint } from '@civ-clone/ui-map-3d/markers/tinted';
+import { copyOf, letGoOfSkeletons } from '@civ-clone/ui-map-3d/stage';
 import { UnitMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
 import { formation } from '@civ-clone/ui-map-3d/markers/figures';
 import { unitTable } from '@civ-clone/ui-models-builtin/units';
@@ -67,7 +71,7 @@ const round = (value: number) => Math.round(value * 10000) / 10000,
   ),
   still = new Quaternion();
 
-// A model's rigged copy in a manifest, and what's refused.
+// A model's rigged copy in a manifest, and what's dropped.
 {
   const manifest = (): Record<string, any> => ({
       schema: 1,
@@ -103,62 +107,81 @@ const round = (value: number) => Math.round(value * 10000) / 10000,
       },
       names: { unit: { Partisans: 'partisan' } },
     }),
-    read = (change: (json: Record<string, any>) => void): string => {
+    // The model's rigged copy as the manifest's read with `change` made to it: or that it's dropped, the model kept.
+    rigOf = (change: (json: Record<string, any>) => void): unknown => {
       const json = manifest();
 
       change(json);
 
       const result = readModelManifest(json);
 
-      return typeof result === 'string' ? result : 'read';
-    },
-    refused =
-      "model partisan: no glTF binary beside the manifest, no scale, or a rigged copy the map can't play";
+      return typeof result === 'string'
+        ? result
+        : result.models.partisan?.rigged ??
+            (result.models.partisan === undefined ? 'no model' : 'dropped');
+    };
 
   expect(
-    'a model’s rigged copy is read with it: its file, the clip each role plays, and the shots each lets fly',
+    'a model’s rigged copy is read with it: its file, the clip each role plays, and the shots each lets fly; a clip for a role the map doesn’t play is left out',
     [
-      read(() => {}),
-      read((json) => delete json.models.partisan.rigged.shots),
-      read((json) => {
-        json.models.partisan.rigged.clips = { work: 'dig' };
-        delete json.models.partisan.rigged.shots;
+      rigOf(() => {}),
+      rigOf((json) => delete json.models.partisan.rigged.shots),
+      rigOf((json) => {
+        json.models.partisan.rigged.clips.sink = 'sink';
+        json.models.partisan.rigged.shots.sink = [{ at: 1, joint: 'hull' }];
       }),
     ],
-    ['read', 'read', 'read']
+    [
+      {
+        file: 'models/rigged/partisan.glb',
+        clips: { idle: 'idle', move: 'walk', fight: 'throw', die: 'die' },
+        shots: { fight: [{ at: 0.5, joint: 'prop' }] },
+      },
+      {
+        file: 'models/rigged/partisan.glb',
+        clips: { idle: 'idle', move: 'walk', fight: 'throw', die: 'die' },
+      },
+      {
+        file: 'models/rigged/partisan.glb',
+        clips: { idle: 'idle', move: 'walk', fight: 'throw', die: 'die' },
+        shots: { fight: [{ at: 0.5, joint: 'prop' }] },
+      },
+    ]
   );
 
   expect(
-    'a rigged copy that isn’t one the map can play is refused, saying why',
+    'a rigged copy the map can’t play is dropped, its model drawn as it stands, and the rest of the set read',
     [
-      read((json) => (json.models.partisan.rigged = 'partisan.glb')),
-      read((json) => (json.models.partisan.rigged.file = '../partisan.glb')),
-      read((json) => (json.models.partisan.rigged.file = 'rigged.gltf')),
-      read(
+      rigOf((json) => (json.models.partisan.rigged = null)),
+      rigOf((json) => (json.models.partisan.rigged = 'partisan.glb')),
+      rigOf((json) => (json.models.partisan.rigged.file = '../partisan.glb')),
+      rigOf((json) => (json.models.partisan.rigged.file = 'rigged.gltf')),
+      rigOf(
         (json) =>
           (json.models.partisan.rigged.file = 'https://elsewhere/partisan.glb')
       ),
-      read((json) => delete json.models.partisan.rigged.clips),
-      read((json) => (json.models.partisan.rigged.clips = {})),
-      read((json) => (json.models.partisan.rigged.clips.dance = 'dance')),
-      read((json) => (json.models.partisan.rigged.clips.idle = '')),
-      read((json) => (json.models.partisan.rigged.shots = [])),
-      read((json) => (json.models.partisan.rigged.shots.fight = {})),
-      read((json) => (json.models.partisan.rigged.shots.fight[0].at = -1)),
-      read(
+      rigOf((json) => delete json.models.partisan.rigged.clips),
+      rigOf((json) => (json.models.partisan.rigged.clips = {})),
+      rigOf((json) => (json.models.partisan.rigged.clips = { dance: 'x' })),
+      rigOf((json) => (json.models.partisan.rigged.clips.idle = '')),
+      rigOf((json) => (json.models.partisan.rigged.shots = [])),
+      rigOf((json) => (json.models.partisan.rigged.shots.fight = {})),
+      rigOf((json) => (json.models.partisan.rigged.shots.fight[0].at = -1)),
+      rigOf(
         (json) => (json.models.partisan.rigged.shots.fight[0].at = Number.NaN)
       ),
-      read((json) => (json.models.partisan.rigged.shots.fight[0].joint = '')),
+      rigOf((json) => (json.models.partisan.rigged.shots.fight[0].joint = '')),
       // Shots in a role it names no clip for.
-      read((json) => delete json.models.partisan.rigged.clips.fight),
+      rigOf((json) => delete json.models.partisan.rigged.clips.fight),
     ],
-    Array.from({ length: 14 }, () => refused)
+    Array.from({ length: 15 }, () => 'dropped')
   );
 }
 
 // A rigged copy made here, as a set's file would load: a scene, posed as its model stands, whose two parts are bound
 //  to one skeleton of two bones (the arm's the top half of a post), one part in its owner's colour; its walk turns the
-//  arm a quarter and back over a second, and its fall tips the whole over two.
+//  arm a quarter and back over a second, and its fall tips the whole over a second and a half: not a whole number of
+//  the walk's, so a walk left playing under it would show.
 const rigged = (): LoadedRig => {
   const scene = new Group(),
     hips = new Bone(),
@@ -213,10 +236,10 @@ const rigged = (): LoadedRig => {
       ],
       [
         'die',
-        new AnimationClip('fall', 2, [
+        new AnimationClip('fall', 1.5, [
           new QuaternionKeyframeTrack(
             'hips.quaternion',
-            [0, 2],
+            [0, 1.5],
             [...still.toArray(), ...quarter.toArray()]
           ),
         ]),
@@ -472,13 +495,76 @@ expect(
   );
 }
 
-// Let go of with its model: added again, the model's rigged copy goes.
+// A walker's copies, one for each copy of the world in sight (`copyOf`): drawn with a rigged copy, each with bones of its
+//  own, so posing one leaves the others standing; a plain copy's would be bound to the original's. And let go of, each
+//  skeleton's texture of its bones with it.
+{
+  const original = drawMarker(
+      kit,
+      { city: null, unit: unit('Spearman', { model: 'partisan' }) },
+      true,
+      true
+    ),
+    [first, second] = [copyOf(original, true)(), copyOf(original, true)()],
+    plain = copyOf(original, false)(),
+    playing = new WeakMap<Object3D, Playing>(),
+    skinnedIn = (copy: Object3D) =>
+      meshesOf(copy).filter(
+        (mesh): mesh is SkinnedMesh => (mesh as SkinnedMesh).isSkinnedMesh
+      ),
+    bonesIn = (copy: Object3D) =>
+      skinnedIn(copy).flatMap((mesh) => mesh.skeleton.bones),
+    ownBones = (copy: Object3D) =>
+      bonesIn(copy).every((bone) => copy.getObjectById(bone.id) === bone);
+
+  poseFigures(first!, rig, 'move', 0.5, playing);
+
+  const armOf = (copy: Object3D) =>
+      copy.getObjectsByProperty('name', RIG_FIGURE)[0]!.getObjectByName('arm'),
+    textures = skinnedIn(second!).map(({ skeleton }) => {
+      skeleton.computeBoneTexture();
+
+      return skeleton.boneTexture!;
+    }),
+    disposed = new Set<unknown>();
+
+  textures.forEach((texture) =>
+    texture.addEventListener('dispose', () => disposed.add(texture))
+  );
+  letGoOfSkeletons(second!);
+
+  expect(
+    'a walker drawn with a rigged copy is copied with bones of its own for each copy of the world, posed alone; a plain copy shares the original’s; let go of, each skeleton’s texture goes',
+    [
+      ownBones(first!),
+      ownBones(second!),
+      bonesIn(first!).some((bone) => bonesIn(second!).includes(bone)),
+      turned(armOf(first!), quarter),
+      turned(armOf(second!), still),
+      ownBones(plain),
+      textures.length > 0 && textures.every((texture) => disposed.has(texture)),
+    ],
+    [true, true, false, true, true, false, true]
+  );
+}
+
+// Let go of with its model: added again, the model's rigged copy goes, with what it's made of.
+const rigGeometries = meshesOf(rig.scene).map(({ geometry }) => geometry),
+  geometriesGone = new Set<unknown>();
+
+rigGeometries.forEach((geometry) =>
+  geometry.addEventListener('dispose', () => geometriesGone.add(geometry))
+);
 kit.addModel('partisan', { ...model, parts: [...model.parts] });
 
 expect(
-  'a model let go of takes its rigged copy with it',
-  [kit.rigOf('partisan'), kit.rigFigures('partisan', look, colours)],
-  [null, null]
+  'a model let go of takes its rigged copy with it, and what that’s made of',
+  [
+    kit.rigOf('partisan'),
+    kit.rigFigures('partisan', look, colours),
+    rigGeometries.every((geometry) => geometriesGone.has(geometry)),
+  ],
+  [null, null, true]
 );
 
 if (failures.length > 0) {

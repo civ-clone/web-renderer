@@ -94,32 +94,67 @@ const isFile = (value: unknown): value is string =>
 const isRole = (value: string): value is ClipRole =>
   (CLIP_ROLES as readonly string[]).includes(value);
 
-// A rigged copy as a manifest gives it: its file, as a model's is; a clip named for at least one role, each a role the
-//  map plays; and its shots, each when and from which joint, in a role it names a clip for.
-const isRigged = (value: unknown): value is RiggedModel =>
+const isShot = (value: unknown): value is ClipShot =>
   isObject(value) &&
-  isFile(value.file) &&
-  isObject(value.clips) &&
-  Object.keys(value.clips).length > 0 &&
-  Object.entries(value.clips).every(
-    ([role, name]) => isRole(role) && isText(name)
-  ) &&
-  (value.shots === undefined ||
-    (isObject(value.shots) &&
-      Object.entries(value.shots).every(
-        ([role, shots]) =>
-          isRole(role) &&
-          (value.clips as Record<string, unknown>)[role] !== undefined &&
-          Array.isArray(shots) &&
-          shots.every(
-            (shot) =>
-              isObject(shot) &&
-              typeof shot.at === 'number' &&
-              Number.isFinite(shot.at) &&
-              shot.at >= 0 &&
-              isText(shot.joint)
-          )
-      )));
+  typeof value.at === 'number' &&
+  Number.isFinite(value.at) &&
+  value.at >= 0 &&
+  isText(value.joint);
+
+// A rigged copy as a manifest gives it, as far as the map can play it: its file, as a model's is; the clip it names for
+//  each role the map plays (any for another role, which a later map may play, left out); and their shots, each when
+//  and from which joint, in a role it names a clip for. Nothing, for one with no clip the map can play, or anything
+//  else wrong with it: its model's drawn as it stands, and the rest of the set as it is.
+const riggedOf = (value: unknown): RiggedModel | undefined => {
+  if (!isObject(value) || !isFile(value.file) || !isObject(value.clips)) {
+    return undefined;
+  }
+
+  const clips: RiggedModel['clips'] = {};
+
+  Object.entries(value.clips).forEach(([role, name]) => {
+    if (isRole(role) && isText(name)) {
+      clips[role] = name;
+    }
+  });
+
+  if (
+    Object.keys(clips).length === 0 ||
+    Object.entries(value.clips).some(
+      ([role, name]) => isRole(role) && !isText(name)
+    )
+  ) {
+    return undefined;
+  }
+
+  if (value.shots === undefined) {
+    return { file: value.file, clips };
+  }
+
+  if (!isObject(value.shots)) {
+    return undefined;
+  }
+
+  const shots: NonNullable<RiggedModel['shots']> = {},
+    played = Object.entries(value.shots).filter(([role]) => isRole(role));
+
+  if (
+    !played.every(
+      ([role, each]) =>
+        clips[role as ClipRole] !== undefined &&
+        Array.isArray(each) &&
+        each.every(isShot)
+    )
+  ) {
+    return undefined;
+  }
+
+  played.forEach(
+    ([role, each]) => (shots[role as ClipRole] = each as ClipShot[])
+  );
+
+  return { file: value.file, clips, shots };
+};
 
 /**
  * `json` as a set of models' manifest, or what's wrong with it: a set must say its licence and credit whose work it's
@@ -171,12 +206,11 @@ export const readModelManifest = (json: unknown): ModelManifest | string => {
     ([, entry]) =>
       !isObject(entry) ||
       !isFile(entry.file) ||
-      (entry.scale !== undefined && !isScale(entry.scale)) ||
-      (entry.rigged !== undefined && !isRigged(entry.rigged))
+      (entry.scale !== undefined && !isScale(entry.scale))
   );
 
   if (bad !== undefined) {
-    return `model ${bad[0]}: no glTF binary beside the manifest, no scale, or a rigged copy the map can't play`;
+    return `model ${bad[0]}: no glTF binary beside the manifest, or no scale`;
   }
 
   const names = json.names;
@@ -193,7 +227,21 @@ export const readModelManifest = (json: unknown): ModelManifest | string => {
     return `unit ${unknown[0]}: drawn by a model the set hasn't`;
   }
 
-  return json as unknown as ModelManifest;
+  // Each model with its rigged copy as far as the map can play it, or none.
+  return {
+    ...json,
+    models: Object.fromEntries(
+      Object.entries(models).map(([id, entry]) => {
+        const { rigged, ...model } = entry as Record<string, unknown>,
+          playable = riggedOf(rigged);
+
+        return [
+          id,
+          playable === undefined ? model : { ...model, rigged: playable },
+        ];
+      })
+    ),
+  } as unknown as ModelManifest;
 };
 
 /** The unit types each of `manifest`'s models draws, by the model. */

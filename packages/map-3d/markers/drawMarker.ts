@@ -27,6 +27,7 @@ import {
   SRGBColorSpace,
   Sprite,
   SpriteMaterial,
+  Texture,
   TorusGeometry,
 } from 'three';
 import { CityMarker, TileMarker, UnitMarker } from './markerFor';
@@ -212,10 +213,11 @@ export class MarkerKit {
         }
 
         mesh.material = this.#modelMaterial(
-          `${id} rigged`,
+          id,
           index++,
           { ...rigPart(mesh), geometry: mesh.geometry },
-          colours
+          colours,
+          true
         );
         // A skinned mesh's bounds are its bind pose's, which a clip can take it far from.
         mesh.frustumCulled = false;
@@ -225,11 +227,23 @@ export class MarkerKit {
     });
   }
 
-  // Lets go of the model `id`, and of what was made from it, its rigged copy's too.
+  // Lets go of the model `id`, and of what was made from it, and of its rigged copy, with what it's made of.
   #letGoOfModel(id: string, model: LoadedModel): void {
-    const ours = (key: string): boolean =>
-      [id, `${id} rigged`].includes(JSON.parse(key)[0]);
+    const ours = (key: string): boolean => JSON.parse(key)[0] === id;
 
+    this.#rigs.get(id)?.scene.traverse((object) => {
+      const mesh = object as Mesh;
+
+      if (mesh.isMesh) {
+        mesh.geometry.dispose();
+        [mesh.material]
+          .flat()
+          .forEach((material: Material & { map?: Texture | null }) => {
+            material.map?.dispose();
+            material.dispose();
+          });
+      }
+    });
     this.#rigs.delete(id);
 
     model.parts.forEach(({ geometry, map }) => {
@@ -332,9 +346,16 @@ export class MarkerKit {
     id: string,
     index: number,
     part: LoadedModel['parts'][number],
-    colours: FigureColours
+    colours: FigureColours,
+    // For its rigged copy's part `index`, not its own.
+    rigged = false
   ): Material {
-    const key = JSON.stringify([id, index, part.tinted ? colours[0] : null]);
+    const key = JSON.stringify([
+      id,
+      index,
+      part.tinted ? colours[0] : null,
+      rigged,
+    ]);
     let material = this.#modelMaterials.get(key);
 
     if (material === undefined) {

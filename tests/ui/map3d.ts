@@ -29,7 +29,7 @@ import {
 import MapView2D from '@civ-clone/ui-game/MapView2D';
 import MapView3D, { keptCity } from '@civ-clone/ui-map-3d/MapView3D';
 import { bannerPlaces } from '@civ-clone/ui-map-3d/banners';
-import { MOVE_RATE } from '@civ-clone/ui-map-3d/markers/clips';
+import { STRIDE } from '@civ-clone/ui-map-3d/markers/clips';
 import {
   applyInterface,
   interfaceMode,
@@ -2320,13 +2320,10 @@ expect(
 
   runFrames();
 
-  // As it went, its figures walking (plan 2.2), by the clock, a frame's 16 ms further each time, played twice as quick.
+  // As it went, its figures walking (plan 2.2), their legs keeping up with how far it's gone: from the start of their
+  //  walk, never back, to a square's width over the stride when it's there.
   const posed = [...walkersPosed.values()].flat(),
-    walkedBy = posed
-      .slice(1)
-      .map(([, seconds], index) =>
-        Math.round((seconds - posed[index]![1]) * 1000)
-      );
+    walkedTo = posed.map(([, seconds]) => seconds);
 
   const firstStep = {
       arrived: unitOn(1, 3),
@@ -2424,13 +2421,18 @@ expect(
   );
 
   expect(
-    'as it walks, its figures play their walk, by the clock: a frame further each frame, twice as quick as the clip',
+    'as it walks, its figures play their walk, their legs keeping up with how far it’s gone: from the start, never back, a square over the stride by the time it’s there',
     [
       posed.length > 2,
       posed.every(([role]) => role === 'move'),
-      [...new Set(walkedBy)],
+      walkedTo.every(
+        (seconds, index) => index === 0 || seconds >= walkedTo[index - 1]!
+      ),
+      Math.round(walkedTo[0]! * 100),
+      // The last frame before it's there, all but there.
+      Math.round(Math.max(...walkedTo) * STRIDE * 10) / 10,
     ],
-    [true, true, [Math.round((16 / 1000) * MOVE_RATE * 1000)]]
+    [true, true, true, 0, 1]
   );
 
   // Along a road, between two squares with one: the unit walks along it as it bends (`Land#roadPath`), not straight

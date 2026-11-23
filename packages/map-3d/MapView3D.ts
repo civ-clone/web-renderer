@@ -24,7 +24,7 @@ import groundDirections from './layouts/directions';
 import World from '@civ-clone/ui-map/components/World';
 import { Stage, StageFactory, createStage } from './stage';
 import { ClipRole } from './models/modelSet';
-import { MOVE_RATE } from './markers/clips';
+import { STRIDE } from './markers/clips';
 import Land from './Land';
 import {
   Orbit,
@@ -238,6 +238,8 @@ export class MapView3D implements MapRenderer {
   #heldFor = new Map<string, Set<string>>();
   // What each walker was last drawn as.
   #walkersDrawn = new Map<string, string>();
+  // How far each walker's gone, by its id, and where it was last drawn: its figures' legs keep up (`STRIDE`).
+  #walked = new Map<string, { at: [number, number]; by: number }>();
   // Walks over before the patch for their units' last step has come, as when meeting a leader holds the patches: each
   //  stands where it ended, its units still left off their squares, until it comes. By its id, with the units it has.
   #unpatched = new Map<string, Walker>();
@@ -1096,7 +1098,7 @@ export class MapView3D implements MapRenderer {
 
     this.#walksEnded(ended);
     going.forEach((walker) => {
-      const marker = this.#drawWalker(walker, now);
+      const marker = this.#drawWalker(walker, true);
 
       // Drawn sailing, a ship among its units, on top or carrying the one that is: its wake laid behind it.
       if (
@@ -1152,19 +1154,27 @@ export class MapView3D implements MapRenderer {
     });
   }
 
-  // A walker drawn as its units are now, where it is: what it's drawn as. Going, at `now`, its figures walk, where
-  //  they're drawn with a rigged copy (plan 2.2); waiting where it's come, they stand.
-  #drawWalker(walker: Walker, now?: number): TileMarker | null {
+  // A walker drawn as its units are now, where it is: what it's drawn as. Going, its figures walk, where they're drawn
+  //  with a rigged copy (plan 2.2), their legs keeping up with how far it's gone (`STRIDE`), from the start of their
+  //  walk as it sets off; waiting where it's come, they stand.
+  #drawWalker(walker: Walker, going = false): TileMarker | null {
     const marker = this.#walkerMarker(walker.units);
+    let clip: { role: ClipRole; seconds: number } | null = null;
 
-    this.#drawFigure(
-      walker,
-      marker,
-      1,
-      now === undefined
-        ? null
-        : { role: 'move', seconds: (now / 1000) * MOVE_RATE }
-    );
+    if (going) {
+      const last = this.#walked.get(walker.id),
+        step =
+          last === undefined
+            ? 0
+            : Math.hypot(walker.at[0] - last.at[0], walker.at[1] - last.at[1]),
+        // A jump, as over the world's seam, isn't walked.
+        by = (last?.by ?? 0) + (step < 2 ? step : 0);
+
+      this.#walked.set(walker.id, { at: [walker.at[0], walker.at[1]], by });
+      clip = { role: 'move', seconds: by / STRIDE };
+    }
+
+    this.#drawFigure(walker, marker, 1, clip);
 
     return marker;
   }
@@ -1227,6 +1237,8 @@ export class MapView3D implements MapRenderer {
 
   // The walker `id` taken off the stage, if it's drawn.
   #takeAway(id: string): void {
+    this.#walked.delete(id);
+
     if (this.#walkersDrawn.delete(id)) {
       this.#stage.setWalker(id, null);
     }

@@ -11,6 +11,7 @@ import {
   Mesh,
   MeshStandardMaterial,
   Object3D,
+  PropertyBinding,
   Texture,
 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -218,9 +219,9 @@ export const modelKey = (url: string, id: string): string => `${url}#${id}`;
 
 /**
  * Loads the set whose manifest is at `url`: its manifest, then each model that draws a unit type, each given to
- *  `loaded` as it arrives, with the unit types it draws; and then its rigged copy, where it has one, given to `rigged`. Resolves with the manifest once all have been tried, or
- *  rejects saying why there's none (it can't be fetched, or isn't a set of models). A model that can't be had is said
- *  in `failed`, and the rest go on.
+ *  `loaded` as it arrives, with the unit types it draws; and then its rigged copy, where it has one, given to `rigged`.
+ *  Resolves with the manifest once all have been tried, or rejects saying why there's none (it can't be fetched, or
+ *  isn't a set of models). A model that can't be had is said in `failed`, and the rest go on.
  */
 export const loadModels = async (
   url: string,
@@ -322,6 +323,23 @@ export const loadModels = async (
 
           if (name !== undefined && clip === undefined) {
             throw new Error(`${entry.rigged!.file}: no clip ${name}`);
+          }
+
+          // Each of its tracks moving a node found by its name, as each figure's copy of the scene finds it: one
+          //  moving a node with none, which GLTFLoader names by its uuid, would move nothing on a copy.
+          const lost = clip?.tracks.find(
+            ({ name: track }) =>
+              gltf.scene.getObjectByName(
+                PropertyBinding.parseTrackName(track).nodeName
+              ) === undefined
+          );
+
+          if (lost !== undefined) {
+            throw new Error(
+              `${
+                entry.rigged!.file
+              }: clip ${name} moves a node it can't name (${lost.name})`
+            );
           }
 
           if (clip !== undefined) {

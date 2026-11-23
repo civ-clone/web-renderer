@@ -27,6 +27,7 @@ import {
   Plane,
   SRGBColorSpace,
   Scene,
+  SkinnedMesh,
   Vector3,
   WebGLRenderer,
 } from 'three';
@@ -189,8 +190,10 @@ type Walking = Placed & {
   aloft: number;
   opacity: number;
   faded: Faded;
-  // The rigged copy its figures are drawn with, if they are, to play its clips.
+  // The rigged copy its figures are drawn with, if they are, to play its clips; and how they were last posed, to pose
+  //  copies made afresh as they were.
   rig: LoadedRig | null;
+  posed: { role: ClipRole | null; seconds: number } | null;
 };
 
 export type StageFactory = (
@@ -247,6 +250,22 @@ export const markerSight = (
   period?: { u: number; v: number | null }
 ): number =>
   Math.min(sightFor(orbit.distance, period).far, orbit.distance * 2.2);
+
+/**
+ * Makes copies of `original` for the copies of the world in sight: with figures drawn with a rigged copy (`rigged`),
+ *  each with skeletons of its own (`SkeletonUtils.clone`), as a plain clone's would be bound to the original's bones,
+ *  and every copy posed with them.
+ */
+export const copyOf = (original: Object3D, rigged: boolean) => (): Object3D =>
+  rigged ? cloneSkinned(original) : original.clone();
+
+/** Lets go of the skeletons of what's in `drawn`: each skinned mesh's has a texture of its bones, once it's drawn. */
+export const letGoOfSkeletons = (drawn: Object3D): void =>
+  drawn.traverse((object) => {
+    if ((object as SkinnedMesh).isSkinnedMesh) {
+      (object as SkinnedMesh).skeleton.dispose();
+    }
+  });
 
 /**
  * What the camera sees from `orbit` on a world that repeats every `period` (across, and down where it wraps): where the
@@ -622,10 +641,21 @@ export const createStage: StageFactory = (
         ...puffs.values(),
         ...wakes.values(),
       ].forEach((marker) => {
-        marker.drawn.forEach((drawn) => markersGroup.remove(drawn));
+        marker.drawn.forEach((drawn) => {
+          markersGroup.remove(drawn);
+          letGoOfSkeletons(drawn);
+        });
         marker.drawn = copiesOf(marker, markersGroup, markerCopies);
       });
       walkers.forEach(pose);
+      // Posed as they were, mid-stride, not standing for a frame.
+      walkers.forEach(({ drawn, rig, posed }) => {
+        if (rig !== null && posed !== null) {
+          drawn.forEach((copy) =>
+            poseFigures(copy, rig, posed.role, posed.seconds, playing)
+          );
+        }
+      });
       puffs.forEach(shapePuff);
       // Copies made afresh, from the kit's materials: those faded, faded again.
       walkers.forEach((walker) => {
@@ -785,7 +815,14 @@ export const createStage: StageFactory = (
     setWalker: (id, marker): void => {
       const old = walkers.get(id);
 
-      old?.drawn.forEach((drawn) => markersGroup.remove(drawn));
+      old?.drawn.forEach((drawn) => {
+        markersGroup.remove(drawn);
+        letGoOfSkeletons(drawn);
+      });
+
+      if (old?.original !== undefined) {
+        letGoOfSkeletons(old.original);
+      }
 
       if (old !== undefined) {
         unfade(old.faded);
@@ -807,11 +844,11 @@ export const createStage: StageFactory = (
           aloft: old?.aloft ?? 0,
           opacity: 1,
           faded: new Map(),
-          make: () =>
-            rig === null ? original.clone() : cloneSkinned(original),
+          make: copyOf(original, rig !== null),
           drawn: [],
           original,
           rig,
+          posed: null,
         };
 
       walker.drawn = copiesOf(walker, markersGroup, markerCopies);
@@ -843,6 +880,7 @@ export const createStage: StageFactory = (
         return;
       }
 
+      walker.posed = { role, seconds };
       walker.drawn.forEach((drawn) =>
         poseFigures(drawn, walker.rig!, role, seconds, playing)
       );
@@ -1020,7 +1058,12 @@ export const createStage: StageFactory = (
       overlayMaterial.dispose();
       markers.forEach(({ faded }) => faded !== undefined && unfade(faded));
       markers.clear();
-      walkers.forEach(({ faded }) => unfade(faded));
+      walkers.forEach(({ faded, drawn, original }) => {
+        unfade(faded);
+        [...drawn, ...(original === undefined ? [] : [original])].forEach(
+          letGoOfSkeletons
+        );
+      });
       walkers.clear();
       puffs.clear();
       wakes.forEach(({ shape }) => shape.dispose());
