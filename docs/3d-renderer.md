@@ -119,7 +119,7 @@ with a link, and says what was changed.
 
 **As built (2026-11-23):** the rest are realistic units, in two sets by their licence: those made for civ.one with Meshy
 and from Meshy's community (CC0, [civ-clone/models-realistic-cc0](https://github.com/civ-clone/models-realistic-cc0)),
-and those adapted from their authors' on Sketchfab (CC BY 4.0,
+and those mostly adapted from their authors' on Sketchfab (CC BY 4.0,
 [civ-clone/models-realistic-by](https://github.com/civ-clone/models-realistic-by)). Each set's library entry gives its
 licence and credit, and lists every work it's made from, each linked, with its author and its licence: that list is
 the art credits list. Cimpletoon's later units (CC0,
@@ -1379,17 +1379,18 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
   - 6.7 MB in all.
 
 - **Realistic units adapted from their authors'**
-  ([civ-clone/models-realistic-by](https://github.com/civ-clone/models-realistic-by), CC BY 4.0, from Sketchfab):
+  ([civ-clone/models-realistic-by](https://github.com/civ-clone/models-realistic-by), CC BY 4.0, from Sketchfab, but
+  for the Paratrooper, generated for civ.one under the canopy from Sketchfab):
   - 21 models, each drawing a unit type: Diplomat, Paratrooper, Fanatic, Mech. Inf., Cannon, Artillery, Howitzer,
     Tank, Freight, Nuclear, Cruise Missile, Fighter, Helicopter, Stealth Fighter, Galleon, Destroyer, Cruiser, AEGIS
     Cruiser, Battleship, Submarine and Carrier;
   - 6.5 MB in all.
 
   The realistic ones are reduced from far finer models, each to a few thousand triangles, with its colours baked into
-  one texture (JPEG, 512 px for people and 1024 px for the rest), and a second where a prop was put in (the Partisan's
-  molotov, the Diplomat's hat, the Paratrooper's canopy, the Fanatic's torch). Each ship floats with its waterline at
-  its origin, and each but the people has a scale of its own, so all sit beside each other and 0 A.D.'s units. None has
-  a mask for its owner's colour yet: a unit's whose is shown by its flag, and on land by its stand.
+  one texture (JPEG, 512 px for people and 1024 px for the rest), and a second, of up to 512 px, where a prop was put in
+  (the Partisan's molotov, the Diplomat's hat, the Paratrooper's canopy, the Fanatic's torch). Each ship floats with its
+  waterline at its origin, and each but the people has a scale of its own, so all sit beside each other and 0 A.D.'s
+  units. None has a mask for its owner's colour yet: whose a unit is shows by its flag, and on land by its stand.
 
   Each is a dependency of the renderer, pinned by its commit in the lockfile. One package here
   (`packages/models-hosted`) declares the three (`civ-clone.hostedModels`), and gives the page them in order, 0 A.D.'s

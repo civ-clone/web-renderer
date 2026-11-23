@@ -2406,9 +2406,14 @@ const run = async (): Promise<void> => {
 
           expect(
             'a credit’s words are said as they are, not as markup, and one not at an https: address is named, not linked',
-            [item?.querySelectorAll('*').length, item?.textContent],
             [
-              2,
+              Array.from(item?.querySelectorAll('*') ?? [], ({ tagName }) =>
+                tagName.toLowerCase()
+              ),
+              item?.textContent,
+            ],
+            [
+              ['span', 'span'],
               "<b>Work</b> & co's by <img src=x onerror=alert(1)> O'Brien · <i>Licence</i> d'auteur",
             ]
           );

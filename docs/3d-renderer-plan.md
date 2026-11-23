@@ -356,9 +356,9 @@ Epic's UE4 skeleton or only match its bone names.
 model's parts in their owner's colour, the squad merged in each, on the built-in set's stand. The rest are the built-in
 set's figures. Posed as they stand still: no clips yet.
 
-**Second part, the first set: done.** 0 A.D.'s ancient units ship with civ.one: under `?3d=1` the map draws the 15 unit
-types they have models for with them (Knight, Explorer and Sail by stand-ins), and the library lists them with their
-licence and credit. Still to do:
+**Second part, the first set: done.** 0 A.D.'s ancient units ship with civ.one: under `?3d=1` the map draws the unit
+types they have models for with them (15 at first, Knight, Explorer and Sail by stand-ins; 10 since the fifth part),
+and the library lists them with their licence and credit. Still to do:
 - **More sets:** realistic models for the later units, to replace Cimpletoon's: done (below);
 - **Clips:** idle, walk, attack, death;
 - **Squads:** instancing them;
@@ -377,9 +377,10 @@ surfaces textured (CC0 photo textures), or realistic replacements (CC BY), each 
 
 **Fifth part, realistic units: done.** Two sets of realistic models replace Cimpletoon's, and five of 0 A.D.'s (Warrior,
 Settlers, and the stand-ins for Knight, Explorer and Sail): one made for civ.one with Meshy, and from Meshy's community
-(CC0), and one adapted from their authors' on Sketchfab (CC BY 4.0). Between them and 0 A.D.'s, every unit type in
-Civ1's and Civ2's rules has a model. Each set's library entry lists every work it's made from, with its author, its
-licence and a link: the art credits list (D3). Paratroopers are drawn once, under their canopy. Still to do:
+(CC0), and one adapted from their authors' on Sketchfab (CC BY 4.0), but for its Paratrooper, generated under a canopy
+from there. Between them and 0 A.D.'s, every unit type in Civ1's and Civ2's rules has a model. Each set's library entry
+lists every work it's made from, with its author, its licence and a link: the art credits list (D3). Paratroopers are
+drawn once, under their canopy. Still to do:
 - **Owner's colour:** none has a mask for it yet, so a unit's owner shows by its flag and stand alone;
 - **Textures:** 512 and 1024 px each, where 0 A.D.'s pack each part at no more than 128 px, so about 130 MB on the GPU
   before mipmaps: smaller, or KTX2;
