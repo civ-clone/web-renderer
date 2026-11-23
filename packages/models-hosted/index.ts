@@ -1,8 +1,9 @@
 // The sets of models that ship with civ.one for the 3D map (docs/3d-renderer.md §10), beside the game: 0 A.D.'s ancient
-//  units, converted from 0 A.D.'s art by Wildfire Games (civ-clone/models-0ad, CC BY-SA 3.0), and Cimpletoon's later
-//  units, converted from Cimpletoon by yd (civ-clone/models-cimpletoon, CC0 1.0). Under `?3d=1` the map draws each unit
-//  type one of them has a model for with it, unless the page asks for another set (`?models=`); the library shows each
-//  with its licence and the credit it gives.
+//  units, converted from 0 A.D.'s art by Wildfire Games (civ-clone/models-0ad, CC BY-SA 3.0), and realistic units, in two
+//  sets by their licence: those made for civ.one (civ-clone/models-realistic-cc0, CC0 1.0), and those adapted from their
+//  authors' on Sketchfab (civ-clone/models-realistic-by, CC BY 4.0). Under `?3d=1` the map draws each unit type one of
+//  them has a model for with it, unless the page asks for another set (`?models=`); the library shows each with its
+//  licence and the credit it gives.
 
 import modelSets from './modelSets';
 
@@ -37,8 +38,11 @@ const shipped = (id: string): ShippedModelSet => ({ id, ...modelSets[id]! });
 /** 0 A.D.'s ancient units. */
 export const ancientUnits: ShippedModelSet = shipped('0ad-ancient');
 
-/** Cimpletoon's later units. */
-export const laterUnits: ShippedModelSet = shipped('cimpletoon');
+/** Realistic units made for civ.one, under CC0. */
+export const realisticUnits: ShippedModelSet = shipped('realistic-cc0');
+
+/** Realistic units adapted from their authors', under CC BY: its credit links each author's. */
+export const creditedUnits: ShippedModelSet = shipped('realistic-by');
 
 /**
  * Every set that ships with civ.one, in the order the 3D map takes them: a unit type is drawn by the first that has a
@@ -46,7 +50,8 @@ export const laterUnits: ShippedModelSet = shipped('cimpletoon');
  */
 export const hostedModelSets: readonly ShippedModelSet[] = [
   ancientUnits,
-  laterUnits,
+  realisticUnits,
+  creditedUnits,
 ];
 
 export default hostedModelSets;

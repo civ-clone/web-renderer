@@ -157,7 +157,8 @@ export const unitTable: { readonly [type: string]: UnitLook } = {
   // Modern.
   MechanizedInfantry: { shape: 'vehicle', era: 'modern', squad: 1 },
   Marine: foot('modern', 'rifle'),
-  Paratrooper: { ...foot('modern', 'rifle'), dress: 'parachute' },
+  // One, not a squad: a parachutist's drawn under his canopy (D6), and three canopies would cut through each other.
+  Paratrooper: { ...foot('modern', 'rifle', 1), dress: 'parachute' },
   Tank: { shape: 'vehicle', era: 'modern', squad: 1, large: true },
   Howitzer: { shape: 'siege', era: 'modern', squad: 1, large: true },
   Destroyer: ship('modern', 'steam', false, 1),

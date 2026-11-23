@@ -50,9 +50,17 @@ import {
 //  a new page (`chooseUiTheme`); but nothing is imported, as an import loads the page again, which would lose the
 //  game.
 
+/** Whose work a set is made from: a work, its author, where it is, and its licence. */
+interface SetCredit {
+  work: string;
+  author: string;
+  url: string;
+  licence: SetLicence;
+}
+
 /**
  * A set as the library lists it: its manifest's head, what it gives the game, the grid it draws maps on if it does,
- *  and its import if it has one.
+ *  its import if it has one, and whose work it's made from, where it says.
  */
 interface LibrarySet {
   id: string;
@@ -62,6 +70,7 @@ interface LibrarySet {
   licence?: SetLicence;
   provides: string[];
   pack?: PackImport;
+  credits?: SetCredit[];
 }
 
 /** A set with an import, and the parts of its entry that change: its status and its button. */
@@ -205,12 +214,13 @@ const modelLibrarySets = (
 ): LibrarySet[] =>
   // Not where it asked for another set to try, which the map draws with instead.
   map3dAsked(search) && map3dModelsAsked(search) === undefined
-    ? hostedModelSets.map(({ id, name, licence }) => ({
+    ? hostedModelSets.map(({ id, name, licence, credits }) => ({
         id,
         name,
         source: 'hosted',
         licence,
         provides: [t('LibraryWindow.provides.units-3d')],
+        credits,
       }))
     : [];
 
@@ -241,6 +251,56 @@ const isHttps = (url: string): boolean => {
   } catch {
     return false;
   }
+};
+
+/** `text`, linked to `url` if it's an https: page, or else alone: set as text and as an attribute, not markup. */
+const linkedTo = (text: string, url: string): HTMLElement => {
+  const linked = isHttps(url),
+    link = linked
+      ? s<HTMLAnchorElement>(
+          '<a target="_blank" rel="noopener noreferrer"></a>'
+        )
+      : s<HTMLSpanElement>('<span></span>');
+
+  if (linked) {
+    (link as HTMLAnchorElement).href = url;
+  }
+
+  link.textContent = text;
+
+  return link;
+};
+
+/**
+ * Whose work `set` is made from, as it credits each (docs/3d-renderer.md D3): each work, linked, its author, and its
+ *  licence, linked, in a list a player opens. Nothing where it credits none.
+ */
+const creditsOf = ({ credits }: LibrarySet): HTMLElement[] => {
+  if (credits === undefined || credits.length === 0) {
+    return [];
+  }
+
+  const summary = s<HTMLElement>('<summary></summary>'),
+    list = s<HTMLUListElement>('<ul></ul>');
+
+  summary.textContent = t('LibraryWindow.credits', { count: credits.length });
+  credits.forEach(({ work, author, url, licence }) => {
+    const item = s<HTMLLIElement>('<li></li>');
+
+    item.append(
+      linkedTo(work, url),
+      ' ',
+      t('LibraryWindow.credit-author', {
+        author,
+        interpolation: { escapeValue: false },
+      }),
+      ' · ',
+      linkedTo(licence.name, licence.url)
+    );
+    list.append(item);
+  });
+
+  return [s<HTMLElement>('<details class="credits"></details>', summary, list)];
 };
 
 /** Where `set` comes from: the player's own copy of a game, or civ.one, and its licence when it has one. */
@@ -405,7 +465,8 @@ export class LibraryWindow extends Window {
               '<div class="provides"></div>',
               ...set.provides.map((provides) => s(`<span>${provides}</span>`))
             ),
-            sourceOf(set)
+            sourceOf(set),
+            ...creditsOf(set)
           );
 
         element.dataset.set = set.id;

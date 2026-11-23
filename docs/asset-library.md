@@ -267,6 +267,8 @@ page again, and the library says so. Map art and themes can still be chosen.
   - its name, and what it provides: map art for which grids, interface art, sound;
   - where it comes from: "Comes with civ.one", or "From your copy of Civilization" (or II);
   - its licence and any attribution;
+  - for a set of models, every work it's made from (its `credits`), each linked, with its author and licence, in a list
+    the player opens;
   - its status: _Ready_, _Needs …_ (the files still wanted, each marked required or optional), or _Not imported_;
   - for an imported set, the space it uses in the browser.
 - **Each set's actions:**

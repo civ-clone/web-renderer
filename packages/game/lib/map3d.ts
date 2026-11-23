@@ -368,7 +368,7 @@ export const makeMapView = (
       mapCanvas: deps.mapPortal,
       minimapCanvas: deps.minimapCanvas,
       // A set of models to try out, where the page asked for one, or else the ones that ship with civ.one: 0 A.D.'s
-      //  ancient units and Cimpletoon's later units.
+      //  ancient units and the realistic ones.
       models:
         modelsAsked !== undefined
           ? [modelsAsked]

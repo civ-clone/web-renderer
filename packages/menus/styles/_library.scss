@@ -59,8 +59,18 @@
 
   .provides,
   .source,
-  .art {
+  .art,
+  .credits {
     color: var(--ui-fg-muted);
+  }
+
+  .credits {
+    margin-top: 0.25em;
+
+    ul {
+      margin: 0.25em 0 0;
+      padding-left: 1.25em;
+    }
   }
 
   .actions {

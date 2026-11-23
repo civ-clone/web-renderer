@@ -180,6 +180,9 @@ i18next.addResources('en', 'default', {
   'LibraryWindow.imported': 'From your copy of {{game}}',
   'LibraryWindow.hosted': 'Comes with civ.one',
   'LibraryWindow.licence': 'License:',
+  // Whose work a set is made from: the list a player opens, how many there are, and each work's author.
+  'LibraryWindow.credits': 'Credits ({{count}})',
+  'LibraryWindow.credit-author': 'by {{author}}',
   // A set's status: ready, the files it still needs (and the optional ones it can add), or nothing of it imported.
   'LibraryWindow.status.ready': 'Ready',
   'LibraryWindow.status.needs': 'Needs {{files, list}}',

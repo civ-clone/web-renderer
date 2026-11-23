@@ -232,7 +232,7 @@ expect(
 const one = (look: UnitLook): number => figureParts(look, colours).parts.length;
 
 expect(
-  'a squad is as many figures as it says: three soldiers, two riders, one ship',
+  'a squad is as many figures as it says: three soldiers, two riders, one ship, and one parachutist, whose canopy three would cut through',
   [
     one({ ...unitTable['Spearman']!, squad: 3 }) /
       one({ ...unitTable['Spearman']!, squad: 1 }),
@@ -241,8 +241,9 @@ expect(
     unitTable['Spearman']!.squad,
     unitTable['Knight']!.squad,
     unitTable['Battleship']!.squad,
+    unitTable['Paratrooper']!.squad,
   ],
-  [3, 2, 3, 2, 1]
+  [3, 2, 3, 2, 1, 1]
 );
 
 // A soldier turned in its squad turns its tilted shield with it: the shield's face turned as the soldier is, not rolled.

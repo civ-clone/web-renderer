@@ -359,7 +359,7 @@ set's figures. Posed as they stand still: no clips yet.
 **Second part, the first set: done.** 0 A.D.'s ancient units ship with civ.one: under `?3d=1` the map draws the 15 unit
 types they have models for with them (Knight, Explorer and Sail by stand-ins), and the library lists them with their
 licence and credit. Still to do:
-- **More sets:** realistic models for the later units, where they can be had, to replace Cimpletoon's (below);
+- **More sets:** realistic models for the later units, to replace Cimpletoon's: done (below);
 - **Clips:** idle, walk, attack, death;
 - **Squads:** instancing them;
 - **Textures:** KTX2.
@@ -374,6 +374,16 @@ unit types 0 A.D.'s set hasn't, from the Diplomat and the Musketmen to the Carri
 tried in a game. The map takes several
 sets in order, a unit type drawn by the first that has a model for it, and the library lists each. Still to do: their
 surfaces textured (CC0 photo textures), or realistic replacements (CC BY), each credited.
+
+**Fifth part, realistic units: done.** Two sets of realistic models replace Cimpletoon's, and five of 0 A.D.'s
+stand-ins (Warrior, Settlers, Knight, Explorer and Sail): one made for civ.one with Meshy, and from Meshy's community
+(CC0), and one adapted from their authors' on Sketchfab (CC BY 4.0). Between them and 0 A.D.'s, every unit type in
+Civ1's and Civ2's rules has a model. Each set's library entry lists every work it's made from, with its author, its
+licence and a link: the art credits list (D3). Paratroopers are drawn once, under their canopy. Still to do:
+- **Owner's colour:** none has a mask for it yet, so a unit's owner shows by its flag and stand alone;
+- **Textures:** 512 and 1024 px, against 0 A.D.'s 128 px atlases, so about 130 MB on the GPU before mipmaps: smaller,
+  or KTX2;
+- **Clips:** the Diplomat's file has 25 by its author, and 0 A.D.'s riggable ones.
 
 - **What:**
   - loading `.glb` with KTX2 textures;
