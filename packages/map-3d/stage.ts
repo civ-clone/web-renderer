@@ -13,6 +13,7 @@ import {
   BufferAttribute,
   BufferGeometry,
   Color,
+  CylinderGeometry,
   DirectionalLight,
   DoubleSide,
   Fog,
@@ -39,9 +40,11 @@ import {
   FIGURES_PART,
   Faded,
   MarkerKit,
+  RIG_FIGURE,
   UNIT_PART,
   drawMarker,
   fade,
+  markerFigures,
   unfade,
   unfaded,
 } from './markers/drawMarker';
@@ -54,7 +57,7 @@ import YieldIcons from './yieldIcons';
 import { YieldMesh } from './yields';
 import { LoadedRig, loadModels, modelKey } from './models/loadModels';
 import { ClipRole } from './models/modelSet';
-import { Playing, poseFigures } from './markers/clips';
+import { Playing, RigFacts, poseFigures, rigFacts } from './markers/clips';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 
 /** What the stage has drawn, for the debug overlay. */
@@ -116,6 +119,29 @@ export interface Stage {
    *  them `seconds` in (plan 2.2, `clips.ts`): or, for none, standing as the model does.
    */
   poseWalker?(id: string, role: ClipRole | null, seconds: number): void;
+  /**
+   * What the unit `marker` marks plays where it's drawn with its model's rigged copy (`RigFacts`), as a battle's paced
+   *  for it (`clipPace`): nothing where its model has none, or isn't loaded.
+   */
+  rigFacts?(marker: TileMarker): RigFacts | null;
+  /**
+   * Where the node `joint` of the walker `id`'s figure `figure` is, as it's posed now (`u`, height, `v`, on the world's
+   *  own copy), as a shot leaves it (`shots.ts`): nothing where it isn't drawn with a rigged copy that has it.
+   */
+  jointAt?(
+    id: string,
+    figure: number,
+    joint: string
+  ): [number, number, number] | null;
+  /**
+   * A shot (`id`, `shots.ts`) in flight at `at` (`u`, height, `v`, on the world's own copy), `through` its flight from 0
+   *  to 1, tumbling as it goes, drawn at every copy of the world in sight; `null` takes it away.
+   */
+  shot?(
+    id: string,
+    at: readonly [number, number, number] | null,
+    through?: number
+  ): void;
   /**
    * How solid the unit marked on the square `key` is drawn, from 0 to 1, as a unit arriving with no move fades in
    *  (`fades.ts`): its city stays solid, and no other marker fades with it. Marked again (`setMarker`), it's solid.
@@ -252,6 +278,30 @@ export const markerSight = (
   Math.min(sightFor(orbit.distance, period).far, orbit.distance * 2.2);
 
 /**
+ * Where the node `joint` of figure `figure` (`RIG_FIGURE`) is in `drawn`, a thing drawn at the copy of the world at
+ *  `offset`, as it's posed and placed now (`u`, height, `v`, on the world's own copy); or nothing, for no such node.
+ */
+export const jointOf = (
+  drawn: Object3D | undefined,
+  figure: number,
+  joint: string,
+  [offsetU, offsetV]: readonly [number, number]
+): [number, number, number] | null => {
+  const node = drawn
+    ?.getObjectsByProperty('name', RIG_FIGURE)
+    [figure]?.getObjectByName(joint);
+
+  if (node === undefined) {
+    return null;
+  }
+
+  // As it's posed and placed now, whatever's changed since it was last drawn: three.js works its matrices out afresh.
+  const at = node.getWorldPosition(new Vector3());
+
+  return [at.x - offsetU, at.y, at.z - offsetV];
+};
+
+/**
  * Makes copies of `original` for the copies of the world in sight: with figures drawn with a rigged copy (`rigged`),
  *  each with skeletons of its own (`SkeletonUtils.clone`), as a plain clone's would be bound to the original's bones,
  *  and every copy posed with them.
@@ -384,6 +434,17 @@ export const createStage: StageFactory = (
         flatShading: true,
       }),
     puffGreys = [puffGrey('#d8d5cf'), puffGrey('#a9a59d')] as const,
+    // The shots in flight, by id, how far through each is; and what each is made of, shared: a bottle, alight at its
+    //  neck, as a thrown one is.
+    shots = new Map<string, Placed & { through: number }>(),
+    bottleShape = new CylinderGeometry(0.006, 0.009, 0.03, 6),
+    bottleGlass = new MeshStandardMaterial({
+      color: new Color('#3d5a3a'),
+      roughness: 0.3,
+      metalness: 0,
+    }),
+    flameShape = new IcosahedronGeometry(0.011, 0),
+    flame = new MeshBasicMaterial({ color: new Color('#ffb347') }),
     // The wakes ships leave, by their walk's id, each its foam's own shape; and the foam they're drawn in, solid, so
     //  it's drawn with the land and the units, over the sea, as the ripples round a ship are. Unlit, so where a line
     //  folds over itself, round a turn, it's the same white either way up.
@@ -497,6 +558,12 @@ export const createStage: StageFactory = (
       if (aloft !== undefined) {
         aloft.position.y = walker.aloft;
       }
+    });
+
+  // A shot's copies, each turned as far as it's tumbled `through` its flight: end over end, a turn and a half.
+  const tumble = (shot: { drawn: Object3D[]; through: number }): void =>
+    shot.drawn.forEach((drawn) => {
+      drawn.rotation.x = shot.through * Math.PI * 3;
     });
 
   // A puff's copies, each blob where it is and as big as it is `through` the puff; one that's shrunk to nothing not
@@ -640,6 +707,7 @@ export const createStage: StageFactory = (
         ...walkers.values(),
         ...puffs.values(),
         ...wakes.values(),
+        ...shots.values(),
       ].forEach((marker) => {
         marker.drawn.forEach((drawn) => {
           markersGroup.remove(drawn);
@@ -657,6 +725,7 @@ export const createStage: StageFactory = (
         }
       });
       puffs.forEach(shapePuff);
+      shots.forEach(tumble);
       // Copies made afresh, from the kit's materials: those faded, faded again.
       walkers.forEach((walker) => {
         if (walker.opacity < 1) {
@@ -885,6 +954,60 @@ export const createStage: StageFactory = (
         poseFigures(drawn, walker.rig!, role, seconds, playing)
       );
     },
+    rigFacts: (marker): RigFacts | null => {
+      const { unit } = marker,
+        rig = unit?.model === undefined ? null : kit.rigOf(unit.model);
+
+      return unit === null || rig === null
+        ? null
+        : rigFacts(rig, markerFigures(unit));
+    },
+    jointAt: (id, figure, joint): [number, number, number] | null => {
+      const walker = walkers.get(id);
+
+      return walker === undefined || walker.rig === null
+        ? null
+        : jointOf(walker.drawn[0], figure, joint, markerCopies[0] ?? [0, 0]);
+    },
+    shot: (id, at, through = 0): void => {
+      const old = shots.get(id);
+
+      if (at === null) {
+        old?.drawn.forEach((drawn) => markersGroup.remove(drawn));
+        shots.delete(id);
+
+        return;
+      }
+
+      const shot = old ?? {
+        at,
+        through,
+        make: (): Object3D => {
+          const group = new Group(),
+            alight = new Mesh(flameShape, flame);
+
+          alight.position.y = 0.02;
+          group.add(new Mesh(bottleShape, bottleGlass), alight);
+
+          return group;
+        },
+        drawn: [],
+      };
+
+      if (old === undefined) {
+        shot.drawn = copiesOf(shot, markersGroup, markerCopies);
+        shots.set(id, shot);
+      }
+
+      shot.at = at;
+      shot.through = through;
+      shot.drawn.forEach((drawn, copy) => {
+        const [offsetU, offsetV] = markerCopies[copy] ?? [0, 0];
+
+        drawn.position.set(at[0] + offsetU, at[1], at[2] + offsetV);
+      });
+      tumble(shot);
+    },
     fadeMarker: (key, opacity): void => {
       const marker = markers.get(key),
         solid = Math.min(1, Math.max(0, opacity));
@@ -1071,6 +1194,11 @@ export const createStage: StageFactory = (
       foam.dispose();
       puffShape.dispose();
       puffGreys.forEach((grey) => grey.dispose());
+      shots.clear();
+      bottleShape.dispose();
+      bottleGlass.dispose();
+      flameShape.dispose();
+      flame.dispose();
       kit.dispose();
       yields.dispose();
       water.dispose();

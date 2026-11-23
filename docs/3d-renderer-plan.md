@@ -388,9 +388,11 @@ band along a hull, the wingtips). Still to do:
 - **Poses: done.** The Riflemen, Explorers, Spies, Partisans and Marines, and the Fanatics, stood in an A-pose.
   They're posed with their arms at their sides in the sets' own files, which needed nothing here;
 - **Clips, first part: done** (spec §10, "As built, third part"). A model's rigged copy, in its set's manifest, is
-  built, loaded and drawn while its unit walks, playing `move`; the Partisans' is the first. Still to do:
-  `fight` with its shots and `die`, on the battles' frames, then `idle`, measured first as it needs frames all the
-  time.
+  built, loaded and drawn while its unit walks, playing `move`; the Partisans' is the first.
+- **Clips, second part: done** (spec §10, "As built, fourth part"). Battles are paced for their fighters' clips: the
+  attacker plays `fight`, standing to throw or shoot, the blow falling as its shot lands; the loser plays `die`,
+  falling before it fades; and the shots fly, a bottle alight for the Partisans. Still to do: `idle`, measured first as
+  it needs frames all the time, and what flies for each kind of shot (a rifle's, a cannon's).
 - **Clips, as planned:** rigged copies are to sit beside the static models, which their manifests go on naming. The
   clips are idle, moving and dying for every unit, fighting for combat units (shots in flight for ranged ones), Settlers
   working and settling, ships sinking and vehicles exploding. The map's side is to play them (`AnimationMixer`, skinned

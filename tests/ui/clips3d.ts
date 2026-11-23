@@ -46,9 +46,10 @@ import {
   Playing,
   clipTime,
   poseFigures,
+  rigFacts,
 } from '@civ-clone/ui-map-3d/markers/clips';
 import TintedMaterial, { ownerTint } from '@civ-clone/ui-map-3d/markers/tinted';
-import { copyOf, letGoOfSkeletons } from '@civ-clone/ui-map-3d/stage';
+import { copyOf, jointOf, letGoOfSkeletons } from '@civ-clone/ui-map-3d/stage';
 import { UnitMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
 import { formation } from '@civ-clone/ui-map-3d/markers/figures';
 import { unitTable } from '@civ-clone/ui-models-builtin/units';
@@ -261,7 +262,8 @@ const rigged = (): LoadedRig => {
 };
 
 // The clip each role plays, of those a rigged copy's file has, as its manifest names them (`clipsOf`): one its file
-//  hasn't, or with a track moving a node it can't name, as GLTFLoader names one with none, refused, saying why.
+//  hasn't, or with a track moving a node it can't name, as GLTFLoader names one with none, refused, saying why. Its
+//  shots leave nodes named as the file has them, found as three.js names them: one from a node it hasn't, refused.
 {
   const made = rigged(),
     animations = [...made.clips.values()],
@@ -296,9 +298,11 @@ const rigged = (): LoadedRig => {
     };
 
   expect(
-    'each role’s clip is the one its manifest names, with its shots; one its file hasn’t, or moving a node it can’t name, is refused',
+    'each role’s clip is the one its manifest names, with its shots, each leaving a node as three.js names it; one its file hasn’t, moving a node it can’t name, or shooting from a node it hasn’t, is refused',
     [
       tried(() => {}),
+      tried(({ entry }) => (entry.shots.move[0].joint = 'ar.m')),
+      tried(({ entry }) => (entry.shots.move[0].joint = 'hand')),
       tried(({ entry }) => (entry.clips.idle = 'stand')),
       tried(({ animations }) => {
         const [walk] = animations;
@@ -317,6 +321,17 @@ const rigged = (): LoadedRig => {
           ['die', []],
         ],
       ],
+      [
+        [
+          ['move', 'walk'],
+          ['die', 'fall'],
+        ],
+        [
+          ['move', [{ at: 0.25, joint: 'arm' }]],
+          ['die', []],
+        ],
+      ],
+      "models/rigged/partisan.glb: clip walk shoots from a node it hasn't (hand)",
       'models/rigged/partisan.glb: no clip stand',
       `models/rigged/partisan.glb: clip walk moves a node it can't name (${made.scene.uuid}x.quaternion)`,
     ]
@@ -577,7 +592,54 @@ expect(
     [again, fallen, unplayed, standing],
     [true, [true, true], figures.map(() => true), figures.map(() => true)]
   );
+
+  // A fall, played once, half a second in, and a tenth: each figure after the first a little behind it, none ahead
+  //  of the blow; one not yet falling stands as it was at the fall's start.
+  const tipped = (seconds: number) =>
+    figures.map((figure, index) =>
+      turned(
+        bonesOf(figure).get('hips'),
+        new Quaternion().slerpQuaternions(
+          still,
+          quarter,
+          Math.max(0, seconds - index * FIGURE_STAGGER) / 1.5
+        )
+      )
+    );
+
+  poseFigures(drawn, rig, 'die', 0.5, playing);
+
+  const halfASecond = tipped(0.5);
+
+  poseFigures(drawn, rig, 'die', 0.1, playing);
+
+  expect(
+    'a fall, played once: each figure after the first a little behind it, half a second in and a tenth, and none ahead',
+    [figures.length, halfASecond, tipped(0.1)],
+    [3, [true, true, true], [true, true, true]]
+  );
 }
+
+// What a rigged copy plays, as a battle's paced for it (`rigFacts`): each clip's length and shots, by role, and how
+//  many figures, how far apart.
+expect(
+  'what a rigged copy plays: each role’s clip, how long, and its shots; and its figures, how far apart in a clip',
+  rigFacts(
+    {
+      ...rig,
+      shots: new Map([['die', [{ at: 0.2, joint: 'arm' }]]]),
+    },
+    3
+  ),
+  {
+    figures: 3,
+    stagger: FIGURE_STAGGER,
+    clips: {
+      move: { duration: 1, shots: [] },
+      die: { duration: 1.5, shots: [{ at: 0.2, joint: 'arm' }] },
+    },
+  }
+);
 
 // A walker's copies, one for each copy of the world in sight (`copyOf`): drawn with a rigged copy, each with bones of
 //  its own, so posing one leaves the others standing; a plain copy's would be bound to the original's. And let go of,
@@ -629,6 +691,50 @@ expect(
       textures.length > 0 && textures.every((texture) => disposed.has(texture)),
     ],
     [true, true, false, true, true, false, true]
+  );
+}
+
+// Where a figure's node is as it's posed, as a shot leaves it (`jointOf`): on the world's own copy, from the copy of the
+//  world it's drawn at; moved as its clip moves it; each figure's its own; and nothing for a node or figure it hasn't.
+{
+  const drawn = copyOf(
+      drawMarker(
+        kit,
+        { city: null, unit: unit('Spearman', { model: 'partisan' }) },
+        true,
+        true
+      ),
+      true
+    )(),
+    playing = new WeakMap<Object3D, Playing>(),
+    figure = drawn.getObjectsByProperty('name', RIG_FIGURE)[0]!,
+    // The arm's a figure's height over its hips, at its scale.
+    reach = figure.scale.y;
+
+  drawn.position.set(5 + 8, 0.1, 7);
+
+  const standing = jointOf(drawn, 0, 'arm', [8, 0])!,
+    unmoved = jointOf(drawn, 0, 'arm', [0, 0])!;
+
+  poseFigures(drawn, rig, 'die', 10, playing);
+
+  const fallen = jointOf(drawn, 0, 'arm', [8, 0])!,
+    rounded = (point: readonly number[]) =>
+      point.map((n) => Math.round(n * 1e6) / 1e6);
+
+  expect(
+    'a figure’s node, as a shot leaves it: on the world’s own copy, moved as its clip moves it, each figure’s its own; none for a node or figure it hasn’t',
+    [
+      Math.abs(standing[0] - 5) < 0.3 && Math.abs(standing[2] - 7) < 0.3,
+      rounded([unmoved[0] - 8, unmoved[1], unmoved[2]]),
+      Math.round(((standing[1] - fallen[1]) / reach) * 1000) / 1000,
+      rounded(jointOf(drawn, 1, 'arm', [8, 0])!).join() !==
+        rounded(fallen).join(),
+      jointOf(drawn, 0, 'muzzle', [8, 0]),
+      jointOf(drawn, 9, 'arm', [8, 0]),
+      jointOf(undefined, 0, 'arm', [8, 0]),
+    ],
+    [true, rounded(standing), 1, true, null, null, null]
   );
 }
 

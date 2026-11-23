@@ -194,7 +194,7 @@ export class MarkerKit {
 
     const afloat = look.shape === 'ship',
       flies = airborne(look),
-      squad = look.shape === 'foot' ? look.squad : 1,
+      squad = figuresOf(look),
       scale = rig.scale * size,
       lift = afloat ? 0 : STAND_HEIGHT + (flies ? AIRBORNE_LIFT * size : 0);
 
@@ -288,7 +288,7 @@ export class MarkerKit {
 
     const afloat = look.shape === 'ship',
       flies = airborne(look),
-      squad = look.shape === 'foot' ? look.squad : 1,
+      squad = figuresOf(look),
       shape = JSON.stringify([id, squad, size, afloat, flies]),
       key = JSON.stringify([id, squad, size, afloat, flies, colours[0]]);
     let merged = this.#modelGeometries.get(shape),
@@ -840,6 +840,14 @@ export const UNIT_PART = 'unit';
 
 /** The name of a unit's figures, on their stand: what turns as a unit walking turns. */
 export const FIGURES_PART = 'figures';
+
+/** How many figures a unit that looks as `look` is drawn with: a squad on foot, or one. */
+export const figuresOf = (look: UnitLook): number =>
+  look.shape === 'foot' ? look.squad : 1;
+
+/** How many figures a unit's drawn with, as `marker` has it (`figuresOf`). */
+export const markerFigures = ({ type, kinds }: UnitMarker): number =>
+  figuresOf(unitLook(type, kinds));
 
 /** Each figure drawn with a model's rigged copy (`MarkerKit#rigFigures`), whose clip plays on it alone. */
 export const RIG_FIGURE = 'rig figure';

@@ -29,7 +29,7 @@ import {
 import MapView2D from '@civ-clone/ui-game/MapView2D';
 import MapView3D, { keptCity } from '@civ-clone/ui-map-3d/MapView3D';
 import { bannerPlaces } from '@civ-clone/ui-map-3d/banners';
-import { STRIDE } from '@civ-clone/ui-map-3d/markers/clips';
+import { RigFacts, STRIDE } from '@civ-clone/ui-map-3d/markers/clips';
 import {
   applyInterface,
   interfaceMode,
@@ -247,6 +247,12 @@ const staged: string[] = [],
   yieldsSet: (YieldMesh | null)[] = [],
   // The square whose unit's drawn under the pointer, as the stage would say, if any.
   unitUnderPointer: { key: string | null } = { key: null },
+  // What each unit, by its id, plays where it's drawn with a rigged copy, as the stage would say: none by default.
+  rigFactsFor = new Map<string, RigFacts>(),
+  // Every shot drawn since last cleared, by id, where it was each frame, `null` taken away; and the nodes asked where
+  //  they are, by walker, figure and node, the stage saying a fifth of a square over where the walker was last put.
+  shotsDrawn = new Map<string, (readonly number[] | null)[]>(),
+  jointsAsked: [string, number, string][] = [],
   fakeStage = (): Stage => ({
     render: () => void staged.push('render'),
     unitAt: () => unitUnderPointer.key,
@@ -294,6 +300,18 @@ const staged: string[] = [],
         ...(walkersPosed.get(id) ?? []),
         [role, seconds],
       ]),
+    rigFacts: (marker) => rigFactsFor.get(marker.unit?.id ?? '') ?? null,
+    jointAt: (id, figure, joint) => {
+      const placed = walkersPlaced.get(id)?.at(-1);
+
+      jointsAsked.push([id, figure, joint]);
+
+      return placed === undefined
+        ? null
+        : [placed[0]!, placed[1]! + 0.2, placed[2]!];
+    },
+    shot: (id, at) =>
+      void shotsDrawn.set(id, [...(shotsDrawn.get(id) ?? []), at]),
     fadeMarker: (key, opacity) => {
       if (opacity < 1 || markersFaded.has(key)) {
         markersFaded.set(key, opacity);
@@ -4052,6 +4070,379 @@ expect(
         ['Unit-R', 1],
       ],
       [0, null, ['walk'], true, ['Unit-A', 1], 0],
+    ]
+  );
+
+  // Drawn with rigged copies (plan 2.2), a battle's paced for their clips (`clipPace`): the attacker, throwing, stands
+  //  where it is, playing `fight` from the start, drawn till its clip's over; the blow falls as its throw lands, half a
+  //  second in and its flight after; the loser plays `die` from the blow, solid till its last figure's fallen, then
+  //  fades in its puff of smoke.
+  rigFactsFor.set('Unit-A', {
+    figures: 1,
+    stagger: 0.13,
+    clips: {
+      fight: { duration: 1.5, shots: [{ at: 0.5, joint: 'prop' }] },
+      die: { duration: 1.6, shots: [] },
+    },
+  });
+  rigFactsFor.set('Unit-R', {
+    figures: 2,
+    stagger: 0.13,
+    clips: { die: { duration: 1.6, shots: [] } },
+  });
+  repatched([1, 1, [walker]], [2, 1, [rival]]);
+  walkersSet.length = 0;
+  walkersPlaced.clear();
+  walkersPosed.clear();
+  puffsPlaced.clear();
+  shotsDrawn.clear();
+  jointsAsked.length = 0;
+
+  const thrownAt = now,
+    // Each frame: how long since it was fought, in ms; the attacker's pose; and the loser's, how solid it is, and how
+    //  far through its puff is, once it's drawn.
+    thrown: [
+      number,
+      [string | null, number] | null,
+      [string | null, number] | null,
+      number | null,
+      number | null
+    ][] = [],
+    // Each frame a shot was drawn or taken away: how long since it was fought, its id, numbers taken out, and where it
+    //  was; and each frame the puff where it lands was drawn, how far through it was, and where.
+    shotFrames: [number, string, readonly number[] | null][] = [],
+    hitFrames: [number, number, readonly number[]][] = [],
+    shorn = (id: string) => id.replace(/-\d+/g, '');
+
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  patch([1, 1, [walker]], [2, 1, []]);
+
+  for (
+    let frame = 0;
+    frame < 400 && (frame === 0 || walkers.size > 0);
+    frame++
+  ) {
+    runFrames(1);
+
+    const ids = [...walkersPosed.keys()],
+      attackerId = ids.find((id) => kind(id) === 'battle'),
+      fallenId = ids.find((id) => kind(id) === 'battle-fallen'),
+      lastPose = (id: string | undefined): [string | null, number] | null => {
+        const pose =
+          id === undefined ? undefined : walkersPosed.get(id)?.at(-1);
+
+        return pose === undefined
+          ? null
+          : [pose[0], Math.round(pose[1] * 1000)];
+      };
+
+    thrown.push([
+      now - thrownAt,
+      lastPose(attackerId),
+      lastPose(fallenId),
+      fallenId === undefined || !walkers.has(fallenId)
+        ? null
+        : Math.round((walkersFaded.get(fallenId) ?? 1) * 100) / 100,
+      [...puffs.entries()].find(([id]) => kind(id) === 'battle-puff')?.[1]
+        .through ?? null,
+    ]);
+    shotsDrawn.forEach((points, id) =>
+      points.forEach((at) => shotFrames.push([now - thrownAt, shorn(id), at]))
+    );
+    shotsDrawn.clear();
+    puffs.forEach(({ at, through }, id) => {
+      if (shorn(id) === 'battle-shot-hit') {
+        hitFrames.push([now - thrownAt, through, at]);
+      }
+    });
+    walkersPosed.clear();
+  }
+
+  const askedWhere = jointsAsked.map(([id, figure, joint]) => [
+      kind(id),
+      figure,
+      joint,
+    ]),
+    [stood] = placedSince(),
+    firstFallen = thrown.find(([, , fell]) => fell !== null),
+    fadingFrom = thrown.find(([, , , solid]) => solid !== null && solid < 1),
+    lastAttacker = thrown.filter(([, attacking]) => attacking !== null).at(-1),
+    over = thrown.find(
+      ([, attacking, fell]) => attacking === null && fell === null
+    );
+
+  expect(
+    'drawn with rigged copies, the attacker throwing stands where it is, playing its fight from the start; the blow falls as its throw lands, 0.85 s in; the loser plays its fall from the blow, solid as it falls, 1.73 s with its second figure, then fades in a puff; and the attacker stands till its clip and the fall are over',
+    [
+      stood!.every((point) => along(point) === 0),
+      thrown[0]![1],
+      [
+        firstFallen![0] > 850 && firstFallen![0] <= 866,
+        firstFallen![2],
+        firstFallen![3],
+      ],
+      thrown
+        .filter(([at, , fell]) => fell !== null && at <= 850 + 1730)
+        .every(([, , , solid, through]) => solid === 1 && (through ?? 0) === 0),
+      fadingFrom![0] > 850 + 1730 && fadingFrom![0] <= 850 + 1730 + 16,
+      [
+        lastAttacker![1]![0],
+        lastAttacker![0] > 3160 && lastAttacker![0] <= 3180,
+      ],
+      over![0] > 3180 && over![0] <= 3196,
+      [unitOn(1, 1), unitOn(2, 1), walkers.size, puffs.size],
+    ],
+    [
+      true,
+      ['fight', 16],
+      [true, ['die', firstFallen![0] - 850], 1],
+      true,
+      true,
+      ['fight', true],
+      true,
+      [['Unit-A', 1], null, 0, 0],
+    ]
+  );
+
+  // A rigged attacker attacking again at once, its first battle three seconds long: the second waits for the first, not
+  //  ending it, as it's no more than two of them behind.
+  repatched([1, 1, [walker]], [2, 1, [rival]], [1, 2, [rivalMate]]);
+  rigFactsFor.set('Unit-T', rigFactsFor.get('Unit-R')!);
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  patch([1, 1, [walker]], [2, 1, []]);
+  fought(walker, [1, 1], rivalMate, [1, 2], 'attacker');
+  patch([1, 1, [walker]], [1, 2, []]);
+  runFrames(1);
+
+  const againAtOnce = [unitOn(2, 1), unitOn(1, 2)];
+
+  runFrames();
+  rigFactsFor.clear();
+  repatched([1, 1, []], [2, 1, []], [1, 2, []]);
+  walkersSet.length = 0;
+  walkersPlaced.clear();
+  walkersPosed.clear();
+
+  const inFlight = shotFrames.filter(([, , at]) => at !== null),
+    [left, landed] = [inFlight[0]!, inFlight.at(-1)!],
+    takenAway = shotFrames.find(([, , at]) => at === null),
+    highest = Math.max(...inFlight.map(([, , at]) => at![1]!)),
+    handAt = groundAt(1, 1).map((n, index) => (index === 1 ? n + 0.2 : n)),
+    near = (at: readonly number[], to: readonly number[], by: number) =>
+      at.every((n, index) => Math.abs(n - to[index]!) < by);
+
+  expect(
+    'its throw: one shot, from the node its clip names on its one figure, leaving half a second in where the figure’s hand is, flying in an arc, rising over both ends, to the square attacked, landing at the blow, and bursting in a puff there that’s gone half a second later',
+    [
+      askedWhere,
+      [...new Set(shotFrames.map(([, id]) => id))],
+      left[0] >= 500 && left[0] < 516,
+      near(left[2]!, handAt, 0.05),
+      landed[0] >= 834 && landed[0] < 850,
+      near(landed[2]!, groundAt(2, 1), 0.12),
+      highest > left[2]![1]! && highest > landed[2]![1]!,
+      takenAway![0] >= 850 && takenAway![0] < 866,
+      [
+        hitFrames[0]![0] >= 850 && hitFrames[0]![0] < 866,
+        // Landed at the blow itself, as its clip let it go, though the frame was later.
+        Math.abs(hitFrames[0]![1] - (hitFrames[0]![0] - 850) / 500) < 1e-9,
+        hitFrames.every(
+          ([, through], at) => at === 0 || through > hitFrames[at - 1]![1]
+        ),
+        near(hitFrames[0]![2], groundAt(2, 1), 0.06),
+        hitFrames.at(-1)![0] >= 850 + 500 - 16 &&
+          hitFrames.at(-1)![0] < 850 + 500 &&
+          hitFrames.at(-1)![1] < 1,
+      ],
+    ],
+    [
+      [['battle', 0, 'prop']],
+      ['battle-shot'],
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      [true, true, true, true, true],
+    ]
+  );
+
+  expect(
+    'a rigged attacker attacking again at once: the second battle waits for the first, rather than ending it',
+    againAtOnce,
+    [
+      ['Unit-R', 1],
+      ['Unit-T', 1],
+    ]
+  );
+
+  // Thrown over the world's seam, a shot flies the short way, a square west, not three east; and a step while it's in
+  //  flight ends the battle at once, the shot with it.
+  rigFactsFor.set('Unit-A', {
+    figures: 1,
+    stagger: 0.13,
+    clips: { fight: { duration: 1.5, shots: [{ at: 0.5, joint: 'prop' }] } },
+  });
+  rigFactsFor.set('Unit-R', {
+    figures: 1,
+    stagger: 0.13,
+    clips: { die: { duration: 1.6, shots: [] } },
+  });
+  repatched([0, 1, [walker]], [3, 1, [rival]]);
+  shotsDrawn.clear();
+  fought(walker, [0, 1], rival, [3, 1], 'attacker');
+  patch([0, 1, [walker]], [3, 1, []]);
+  runFrames(40);
+
+  const [westU] = groundAt(0, 1),
+    overSeam = [...shotsDrawn.values()]
+      .flat()
+      .flatMap((at) => (at === null ? [] : [at[0]!]));
+
+  shotsDrawn.clear();
+  stepped(walker, [0, 1], [0, 2]);
+  patch([0, 1, []], [0, 2, [walker]]);
+  runFrames(1);
+
+  const cutMidFlight = [...shotsDrawn.values()].map((points) => points.at(-1));
+
+  shotsDrawn.clear();
+  runFrames();
+
+  const drawnAfter = shotsDrawn.size;
+
+  rigFactsFor.clear();
+  repatched([0, 2, []], [3, 1, []]);
+  walkersSet.length = 0;
+  walkersPlaced.clear();
+  walkersPosed.clear();
+
+  expect(
+    'thrown over the world’s seam, a shot flies the short way, a square west; a step while it’s in flight ends the battle, the shot taken away with it',
+    [
+      overSeam.length > 0 &&
+        overSeam.every((u) => u <= westU! + 0.01 && u >= westU! - 1.05),
+      cutMidFlight,
+      drawnAfter,
+    ],
+    [true, [null], 0]
+  );
+
+  // Twice as quick, a squad's throws and the puffs where they land are over with their battle, none left drawn once the
+  //  frames stop.
+  rigFactsFor.set('Unit-A', {
+    figures: 3,
+    stagger: 0.13,
+    clips: { fight: { duration: 1.5, shots: [{ at: 0.5, joint: 'prop' }] } },
+  });
+  optionsRegistry.set(MAP3D_WALKS_OPTION, 'fast');
+  repatched([1, 1, [walker]], [2, 1, [rival]]);
+  shotsDrawn.clear();
+  puffsPlaced.clear();
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  patch([1, 1, [walker]], [2, 1, []]);
+  runFrames();
+
+  const hitsThrough = [...puffsPlaced.entries()]
+      .filter(([id]) => id.endsWith('-hit'))
+      .map(([, through]) => Math.max(...through)),
+    quickOver = [
+      hitsThrough.length,
+      // Each burst all but whole before it's gone, as quick as its battle.
+      hitsThrough.every((through) => through > 0.9),
+      [...shotsDrawn.values()].map((points) => points.at(-1)),
+      puffs.size,
+    ];
+
+  optionsRegistry.set(MAP3D_WALKS_OPTION, 'normal');
+
+  // With units hidden (`t`) mid-flight, the shot's taken away, and none's thrown while they're hidden; but the one
+  //  ringed, drawn still, throws.
+  repatched([1, 1, [walker]], [2, 1, [rival]]);
+  shotsDrawn.clear();
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  patch([1, 1, [walker]], [2, 1, []]);
+  runFrames(40);
+
+  const beforeHidden = shotsDrawn.size;
+
+  shotsDrawn.clear();
+  glider.toggleUnits();
+  runFrames(1);
+
+  const hiddenMidFlight = [...shotsDrawn.values()].map((points) =>
+    points.at(-1)
+  );
+
+  shotsDrawn.clear();
+  runFrames();
+
+  const thrownHidden = [...shotsDrawn.values()]
+    .flat()
+    .filter((at) => at !== null).length;
+
+  glider.toggleUnits();
+
+  // The one ringed is drawn with units hidden, throwing: its throws fly.
+  repatched([1, 1, [walker]], [2, 1, [rival]]);
+  shotsDrawn.clear();
+  glider.setActiveUnit({
+    ...walker,
+    tile: tiles[1 * 4 + 1],
+  } as unknown as Unit);
+  glider.toggleUnits();
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  patch([1, 1, [walker]], [2, 1, []]);
+  runFrames();
+
+  // Each drawn in flight, not only taken away.
+  const ringedThrows = [...shotsDrawn.values()].filter((points) =>
+    points.some((at) => at !== null)
+  ).length;
+
+  glider.toggleUnits();
+  glider.setActiveUnit(null);
+
+  // An attacker with no clip that's beaten a Partisan, falling for 1.9 s, attacking again at once a unit with no clip:
+  //  the second battle waits for the first, though it's short, rather than ending the first and its fall.
+  rigFactsFor.clear();
+  rigFactsFor.set('Unit-R', {
+    figures: 2,
+    stagger: 0.13,
+    clips: { die: { duration: 1.6, shots: [] } },
+  });
+  repatched([1, 1, [walker]], [2, 1, [rival]], [1, 2, [rivalMate]]);
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  patch([1, 1, [walker]], [2, 1, []]);
+  fought(walker, [1, 1], rivalMate, [1, 2], 'attacker');
+  patch([1, 1, [walker]], [1, 2, []]);
+  runFrames(1);
+
+  const shortAfterLong = [unitOn(2, 1), unitOn(1, 2)];
+
+  runFrames();
+  rigFactsFor.clear();
+  repatched([1, 1, []], [2, 1, []], [1, 2, []]);
+  walkersSet.length = 0;
+  walkersPlaced.clear();
+  walkersPosed.clear();
+  shotsDrawn.clear();
+
+  expect(
+    'twice as quick, a squad’s throws and their puffs are over with their battle; units hidden mid-flight, the shot’s taken away, and none’s thrown while they’re hidden, but the one ringed throws; a short battle after a long one by the same attacker waits for it',
+    [
+      quickOver,
+      [beforeHidden, hiddenMidFlight, thrownHidden, ringedThrows],
+      shortAfterLong,
+    ],
+    [
+      [3, true, [null, null, null], 0],
+      [2, [null, null], 0, 3],
+      [
+        ['Unit-R', 1],
+        ['Unit-T', 1],
+      ],
     ]
   );
 

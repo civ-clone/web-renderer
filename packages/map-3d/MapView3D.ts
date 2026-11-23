@@ -24,7 +24,15 @@ import groundDirections from './layouts/directions';
 import World from '@civ-clone/ui-map/components/World';
 import { Stage, StageFactory, createStage } from './stage';
 import { ClipRole } from './models/modelSet';
-import { STRIDE } from './markers/clips';
+import { RigFacts, STRIDE } from './markers/clips';
+import {
+  HIT_PUFF,
+  SHOT_TARGET,
+  ShotTime,
+  landsAt,
+  shotAt,
+  shotTimes,
+} from './shots';
 import Land from './Land';
 import {
   Orbit,
@@ -58,6 +66,9 @@ import Battles, {
   Battle,
   Fighter,
   REACH,
+  SHOT_FLIGHT,
+  battleLength,
+  clipPace,
   quickerBattle,
 } from './battles';
 import pickGround from './camera/pick';
@@ -80,7 +91,8 @@ const shortTurn = (delta: number): number =>
 // How long the camera takes to glide to a square it's centred on, or to turn, in ms.
 const GLIDE = 350;
 
-// How far behind a unit's battles may fall before those under way are over at once, as the spec has the queue (§8.2).
+// How far behind a unit's battles may fall before those under way are over at once, as the spec has the queue (§8.2),
+//  or, where a battle takes longer, its fighters playing their clips, two of the longest: the new one, or one it's in.
 const BATTLES_BEHIND = 2000;
 
 // The most units that may start fading in or out as one batch of tiles is taken: past that, as when a turn's handed over
@@ -284,8 +296,33 @@ export class MapView3D implements MapRenderer {
   #markedAtRelease: Set<string> | null = null;
   #before = new Map<string, Before>();
   #fallen = new Map<string, Unit[]>();
-  // The puffs of smoke drawn where losers fall, by id (`#puff`).
+  // The puffs of smoke drawn where losers fall, and where shots land, by id (`#puff`, `#placeShots`).
   #puffs = new Set<string>();
+  // The shots of battles whose attackers shoot (`shots.ts`), by battle: when each of its figures' shots leaves, in its
+  //  clip, which have, where they land, on the world's own copy, how many figures it has, and how quick its clip plays.
+  #shotsOf = new Map<
+    string,
+    {
+      times: ShotTime[];
+      left: Set<number>;
+      target: [number, number, number];
+      figures: number;
+      rate: number;
+    }
+  >();
+  // The shots in flight, or landed and bursting, by id: their battle, from where to where, when they leave and land,
+  //  and how quick their battle's clips play.
+  #flying = new Map<
+    string,
+    {
+      battle: string;
+      from: [number, number, number];
+      to: [number, number, number];
+      leaves: number;
+      lands: number;
+      rate: number;
+    }
+  >();
   #gone = new Set<string>();
   // How the player chose units to move, and whether others' are shown walking.
   #walkOptions: MapView3DDeps['walks'];
@@ -722,6 +759,8 @@ export class MapView3D implements MapRenderer {
     this.#unitSquare.clear();
     this.#before.clear();
     this.#fallen.clear();
+    this.#shotsOf.clear();
+    this.#flying.clear();
     this.#gone.clear();
     this.#unpatched.clear();
     this.#unpatchedUnits.clear();
@@ -794,7 +833,9 @@ export class MapView3D implements MapRenderer {
   }
 
   // A battle: the attacker lunges to the edge between the two squares, and goes back, or fades away there if it lost;
-  //  the loser fades away where it stood (`battles.ts`). Till the blow, the square attacked is shown as it was before.
+  //  the loser fades away where it stood (`battles.ts`). Where they're drawn with rigged copies, it's paced for their
+  //  clips (`clipPace`): one that shoots stands to, and the loser falls, then fades. Till the blow, the square attacked
+  //  is shown as it was before.
   //  Not where there are no frames, or the player has asked for less motion, or for units to move at once; nor
   //  between other players with their moves not shown, nor off the screen; nor one whose defender the page doesn't
   //  have where it fought: those show how it went at once. The attacker walking there, it's fought once it's there, as
@@ -851,9 +892,31 @@ export class MapView3D implements MapRenderer {
       return;
     }
 
-    const busy = this.#battles.busyUntil([attacker.id, defender.id]);
+    // Paced for the clips its fighters play, where they're drawn with rigged copies: the attacker as it's drawn, and
+    //  the loser as it stood.
+    const facts = (unit: Unit | undefined): RigFacts | null => {
+        const marker = unit === undefined ? null : this.#unitsMarker([unit]);
 
-    if (busy !== null && busy - now > BATTLES_BEHIND) {
+        return marker === null ? null : this.#stage.rigFacts?.(marker) ?? null;
+      },
+      attackerFacts = facts(
+        attackerUnit ?? this.#walkingUnits.get(attacker.id)
+      ),
+      paced = clipPace(
+        BATTLE_PACE,
+        attackerFacts,
+        winner === 'attacker'
+          ? facts(before.find(({ id }) => id === defender.id))
+          : attackerFacts
+      ),
+      pace = speed === 'fast' ? quickerBattle(paced) : paced,
+      busy = this.#battles.busyUntil([attacker.id, defender.id]),
+      longest = Math.max(
+        battleLength(pace),
+        this.#battles.longest([attacker.id, defender.id])
+      );
+
+    if (busy !== null && busy - now > Math.max(BATTLES_BEHIND, 2 * longest)) {
       this.#battlesOver(
         this.#battles.endWhere(
           (battle) =>
@@ -893,10 +956,26 @@ export class MapView3D implements MapRenderer {
             this.#facings.get(defender.id) ?? Math.atan2(-du, -dv),
         },
         now,
-        speed === 'fast' ? quickerBattle(BATTLE_PACE) : BATTLE_PACE,
+        pace,
         // Walking there: once it's there.
         this.#walks.endsAt(attacker.id) ?? now
       );
+
+    // Its attacker's shots, where it shoots, each landing on the square attacked, by the loser's feet.
+    const shots = attackerFacts?.clips.fight?.shots ?? [];
+
+    if (pace.clips?.fight && attackerFacts !== null && shots.length > 0) {
+      this.#shotsOf.set(battle.id, {
+        times: shotTimes(shots, attackerFacts.figures, attackerFacts.stagger),
+        left: new Set(),
+        target: this.#onLand(
+          battle.fallsAt.at,
+          battle.fallsAt.lift + SHOT_TARGET
+        ),
+        figures: attackerFacts.figures,
+        rate: pace.clips.rate,
+      });
+    }
 
     this.#before.set(battle.id, {
       square: defenderSquare,
@@ -1377,8 +1456,101 @@ export class MapView3D implements MapRenderer {
         puffed.add(this.#puff(fighter));
       }
     });
+    this.#placeShots(now, going, puffed);
     this.#battlesEnded(ended);
     this.#puffsOver(puffed);
+  }
+
+  // The shots of the battles under way at `now` (`shots.ts`): each figure's leaving the node its clip names as the
+  //  attacker's clip comes to it, where the figure's drawn now, or where the attacker is, and flying to the square
+  //  attacked in an arc; each landed bursting in a puff of smoke there (`HIT_PUFF`, as quick as the battle's clips),
+  //  added to `puffed`, then gone. Its attacker not drawn, as with units hidden (`t`) but for the one ringed, none is.
+  #placeShots(now: number, going: Fighter[], puffed: Set<string>): void {
+    going.forEach(({ id, battle, at, lift, fallen, clip }) => {
+      const plan = this.#shotsOf.get(battle);
+
+      if (plan === undefined || fallen || clip?.role !== 'fight') {
+        return;
+      }
+
+      plan.times.forEach((time, index) => {
+        if (plan.left.has(index) || clip.seconds < time.leaves) {
+          return;
+        }
+
+        const from =
+            this.#stage.jointAt?.(id, time.figure, time.joint) ??
+            this.#onLand(at, lift + SHOT_TARGET),
+          // Its target's copy nearest where it leaves, over the world's seam or not.
+          { u: periodU, v: periodV } = this.#land.layout.period(),
+          near = (value: number, to: number, period: number | null) =>
+            period === null
+              ? value
+              : value + period * Math.round((to - value) / period),
+          target: [number, number, number] = [
+            near(plan.target[0], from[0], periodU),
+            plan.target[1],
+            near(plan.target[2], from[2], periodV),
+          ],
+          // As its clip came to it, though the frame's later.
+          leaves = now - ((clip.seconds - time.leaves) * 1000) / plan.rate;
+
+        plan.left.add(index);
+        this.#flying.set(`${battle}-shot-${index}`, {
+          battle,
+          from,
+          to: landsAt(from, target, time.figure, plan.figures),
+          leaves,
+          lands: leaves + SHOT_FLIGHT / plan.rate,
+          rate: plan.rate,
+        });
+      });
+    });
+
+    this.#flying.forEach(({ battle, from, to, leaves, lands, rate }, id) => {
+      if (!this.#walkersDrawn.has(battle)) {
+        this.#stage.shot?.(id, null);
+        this.#flying.delete(id);
+
+        return;
+      }
+
+      if (now < lands) {
+        const through = (now - leaves) / (lands - leaves);
+
+        this.#stage.shot?.(id, shotAt(from, to, through), through);
+
+        return;
+      }
+
+      this.#stage.shot?.(id, null);
+
+      const hit = `${id}-hit`,
+        through = ((now - lands) * rate) / HIT_PUFF;
+
+      if (through < 1) {
+        this.#puffs.add(hit);
+        this.#stage.puff(hit, to, through);
+        puffed.add(hit);
+
+        return;
+      }
+
+      this.#flying.delete(id);
+    });
+  }
+
+  // The shots of `battle`, over: those in flight taken away, and those bursting gone with their puffs.
+  #shotsOver(battle: string): void {
+    this.#shotsOf.delete(battle);
+    this.#flying.forEach((shot, id) => {
+      if (shot.battle === battle) {
+        this.#stage.shot?.(id, null);
+        this.#stage.puff(`${id}-hit`, null);
+        this.#puffs.delete(`${id}-hit`);
+        this.#flying.delete(id);
+      }
+    });
   }
 
   // A puff of smoke where the loser `fighter` falls (`markers/puff.ts`), as far through as it's faded: its id.
@@ -1665,7 +1837,7 @@ export class MapView3D implements MapRenderer {
       ? this.#unitsMarker(fallen!)
       : this.#walkerMarker([fighter.unit]);
 
-    this.#drawFigure(fighter, marker, fighter.opacity);
+    this.#drawFigure(fighter, marker, fighter.opacity, fighter.clip ?? null);
 
     // The loser, drawn fading: what fell where it stood, or the attacker at the edge, having lost.
     return marker !== null && (fighter.fallen || fighter.opacity < 1);
@@ -1683,6 +1855,7 @@ export class MapView3D implements MapRenderer {
     ended.forEach((battle) => {
       const { id, attacker, won, from, attackerSquare, facing } = battle;
 
+      this.#shotsOver(id);
       this.#takeAway(`${id}-fallen`);
       this.#fallen.delete(id);
 

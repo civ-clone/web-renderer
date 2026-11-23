@@ -7,17 +7,24 @@
 //  - a unit's battles go on till the last it attacks in is over; an attacker's drawn once, in each battle in turn; one
 //    walking there is fought once it's there; those waiting for one ended at once start as soon as they can;
 //  - the square attacked awaits the first blow still to fall there;
-//  - battles ended at once have their blows told, those not told already, and are over.
+//  - battles ended at once have their blows told, those not told already, and are over;
+//  - paced for its fighters' clips (`clipPace`), the attacker that shoots stands, the blow falling as its first shot
+//    lands, and is drawn till its clip's over; the loser falls, solid, then fades; each plays its clip, by the clock.
 
 import Battles, {
   BATTLE_PACE,
   BattleOf,
   BattlePace,
+  SHOT_FLIGHT,
   battleAt,
   battleEnds,
+  battleLength,
   blowAt,
+  clipPace,
   quickerBattle,
 } from '@civ-clone/ui-map-3d/battles';
+import { RigFacts } from '@civ-clone/ui-map-3d/markers/clips';
+import { HIT_PUFF } from '@civ-clone/ui-map-3d/shots';
 
 const failures: string[] = [];
 let checks = 0;
@@ -467,6 +474,189 @@ expect(
   [quickerBattle(BATTLE_PACE), BATTLE_PACE.reach],
   [{ reach: 100, back: 150, fade: 300 }, 200]
 );
+
+{
+  // A squad of three that throws, half a second into its fight, and falls over 1.6 s; and one that fights hand to hand.
+  const thrower: RigFacts = {
+      figures: 3,
+      stagger: 0.13,
+      clips: {
+        fight: { duration: 1.5, shots: [{ at: 0.5, joint: 'prop' }] },
+        die: { duration: 1.6, shots: [] },
+      },
+    },
+    brawler: RigFacts = {
+      figures: 1,
+      stagger: 0.13,
+      clips: { fight: { duration: 1.2, shots: [] } },
+    },
+    // Its shots listed late first, the last landing after its clip's over.
+    lateShooter: RigFacts = {
+      figures: 1,
+      stagger: 0.13,
+      clips: {
+        fight: {
+          duration: 1,
+          shots: [
+            { at: 0.9, joint: 'muzzle' },
+            { at: 0.2, joint: 'muzzle' },
+          ],
+        },
+      },
+    },
+    // Rounded, as the stagger's tenths add up in floating point.
+    rounded = (paced: BattlePace) =>
+      Object.fromEntries(
+        Object.entries(paced).map(([key, value]) => [
+          key,
+          typeof value === 'number' ? round(value) : value,
+        ])
+      );
+
+  expect(
+    'paced for clips: none to play, as it was; a thrower stands, the blow as its throw lands, drawn till its last figure’s throw is over, and a loser that falls is solid till its last figure’s fallen; hand to hand, it lunges, the blow as it would; one that only falls falls; the blow as the first shot lands, whatever order they’re listed in, and drawn till the last has landed and burst',
+    [
+      clipPace(pace, null, null) === pace,
+      clipPace(pace, { ...brawler, clips: {} }, null) === pace,
+      rounded(clipPace(pace, thrower, thrower)),
+      rounded(clipPace(pace, brawler, null)),
+      rounded(clipPace(pace, null, thrower)),
+      rounded(clipPace(pace, lateShooter, null)),
+    ],
+    [
+      true,
+      true,
+      {
+        reach: 500 + SHOT_FLIGHT,
+        back: 1760 - 850,
+        fade: 600,
+        lunge: 0,
+        falls: 1860,
+        clips: { rate: 1, fight: true, die: true },
+      },
+      {
+        reach: 200,
+        back: 1000,
+        fade: 600,
+        clips: { rate: 1, fight: true, die: false },
+      },
+      {
+        reach: 200,
+        back: 300,
+        fade: 600,
+        falls: 1860,
+        clips: { rate: 1, fight: false, die: true },
+      },
+      {
+        reach: 200 + SHOT_FLIGHT,
+        back: 900 + SHOT_FLIGHT + HIT_PUFF - 550,
+        fade: 600,
+        lunge: 0,
+        clips: { rate: 1, fight: true, die: false },
+      },
+    ]
+  );
+
+  const paced = clipPace(pace, thrower, thrower),
+    quick = quickerBattle(paced),
+    battles = new Battles(),
+    won = battles.add(battleOf('a', 'd', true), 1000, paced),
+    lost = battles.add(battleOf('b', 'e', false, [2, 2], [3, 2]), 1000, paced),
+    // What's drawn of each battle at a time: who, where along the way, how solid, and what it plays how far in.
+    drawn = (at: number) =>
+      battles
+        .at(at)
+        .going.map(({ unit, at: [u], opacity, clip }) => [
+          unit,
+          round(u, 2),
+          round(opacity, 2),
+          clip === undefined ? null : [clip.role, round(clip.seconds)],
+        ]);
+
+  expect(
+    'paced for clips, twice as quick: half as long, falling too, its clips played twice as quick; how long it takes, won or lost',
+    [
+      rounded(quick),
+      round(battleLength(paced)),
+      round(battleLength(paced, false)),
+      [round(battleEnds(won)), round(battleEnds(lost))],
+    ],
+    [
+      {
+        reach: 425,
+        back: 455,
+        fade: 300,
+        lunge: 0,
+        falls: 930,
+        clips: { rate: 2, fight: true, die: true },
+      },
+      850 + 1860 + 600,
+      850 + 1860 + 600,
+      [1000 + 3310, 1000 + 3310],
+    ]
+  );
+
+  expect(
+    'paced for clips: the attacker stands where it is, playing its fight from the start; at the blow, the loser plays its fall, solid till it’s fallen, then fades; lost, the attacker falls where it stands, then fades',
+    [drawn(1000), drawn(1849), drawn(1850), drawn(3709), drawn(4010)],
+    [
+      [
+        ['a', 0, 1, ['fight', 0]],
+        ['b', 2, 1, ['fight', 0]],
+      ],
+      [
+        ['a', 0, 1, ['fight', 0.849]],
+        ['b', 2, 1, ['fight', 0.849]],
+      ],
+      [
+        ['a', 0, 1, ['fight', 0.85]],
+        ['d', 1, 1, ['die', 0]],
+        ['b', 2, 1, ['die', 0]],
+      ],
+      [
+        ['a', 0, 1, ['fight', 2.709]],
+        ['d', 1, 1, ['die', 1.859]],
+        ['b', 2, 1, ['die', 1.859]],
+      ],
+      [
+        ['a', 0, 1, ['fight', 3.01]],
+        ['d', 1, 0.5, ['die', 2.16]],
+        ['b', 2, 0.5, ['die', 2.16]],
+      ],
+    ]
+  );
+}
+
+{
+  // A squad that throws but has no fall, losing: it fades as it would, but its battle goes on, it drawn as nothing,
+  //  till its last throw has landed and burst.
+  const noFall: RigFacts = {
+      figures: 3,
+      stagger: 0.13,
+      clips: {
+        fight: { duration: 1.5, shots: [{ at: 0.5, joint: 'prop' }] },
+      },
+    },
+    paced = clipPace(pace, noFall, noFall),
+    battles = new Battles(),
+    lost = battles.add(battleOf('b', 'e', false), 0, paced),
+    seen = (at: number) =>
+      battles
+        .at(at)
+        .going.map(({ unit, opacity }) => [unit, round(opacity, 2)]);
+
+  expect(
+    'a thrower with no fall, losing: it fades as it would, then is drawn as nothing till its last throw has landed and burst',
+    [
+      round(battleLength(paced, false)),
+      // Its last figure's throw leaving 0.76 s in, landing, and its burst over.
+      760 + SHOT_FLIGHT + HIT_PUFF <= battleEnds(lost),
+      seen(850 + 300),
+      seen(850 + 700),
+    ],
+    [1760, true, [['b', 0.5]], [['b', 0]]]
+  );
+}
 
 if (failures.length > 0) {
   process.stderr.write(

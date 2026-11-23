@@ -151,8 +151,23 @@ export const clipsOf = (
       );
     }
 
+    // Named as the file has them, and found as three.js names them, as a clip's tracks are.
+    const fired = (rigged.shots?.[role] ?? []).map((shot) => ({
+        ...shot,
+        joint: PropertyBinding.sanitizeNodeName(shot.joint),
+      })),
+      nowhere = fired.find(
+        ({ joint }) => scene.getObjectByName(joint) === undefined
+      );
+
+    if (nowhere !== undefined) {
+      throw new Error(
+        `${rigged.file}: clip ${name} shoots from a node it hasn't (${nowhere.joint})`
+      );
+    }
+
     clips.set(role, clip);
-    shots.set(role, rigged.shots?.[role] ?? []);
+    shots.set(role, fired);
   });
 
   return { clips, shots };
