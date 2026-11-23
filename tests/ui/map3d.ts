@@ -4344,11 +4344,16 @@ expect(
   patch([1, 1, [walker]], [2, 1, []]);
   runFrames();
 
-  const quickOver = [
-    [...puffsPlaced.keys()].filter((id) => id.endsWith('-hit')).length,
-    [...shotsDrawn.values()].map((points) => points.at(-1)),
-    puffs.size,
-  ];
+  const hitsThrough = [...puffsPlaced.entries()]
+      .filter(([id]) => id.endsWith('-hit'))
+      .map(([, through]) => Math.max(...through)),
+    quickOver = [
+      hitsThrough.length,
+      // Each burst all but whole before it's gone, as quick as its battle.
+      hitsThrough.every((through) => through > 0.9),
+      [...shotsDrawn.values()].map((points) => points.at(-1)),
+      puffs.size,
+    ];
 
   optionsRegistry.set(MAP3D_WALKS_OPTION, 'normal');
 
@@ -4407,7 +4412,7 @@ expect(
     'twice as quick, a squad’s throws and their puffs are over with their battle; units hidden mid-flight, the shot’s taken away, and none’s thrown while they’re hidden; a short battle after a long one by the same attacker waits for it',
     [quickOver, [beforeHidden, hiddenMidFlight, thrownHidden], shortAfterLong],
     [
-      [3, [null, null, null], 0],
+      [3, true, [null, null, null], 0],
       [2, [null, null], 0],
       [
         ['Unit-R', 1],

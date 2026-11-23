@@ -1464,7 +1464,7 @@ export class MapView3D implements MapRenderer {
   // The shots of the battles under way at `now` (`shots.ts`): each figure's leaving the node its clip names as the
   //  attacker's clip comes to it, where the figure's drawn now, or where the attacker is, and flying to the square
   //  attacked in an arc; each landed bursting in a puff of smoke there (`HIT_PUFF`, as quick as the battle's clips),
-  //  added to `puffed`, then gone. With units hidden (`t`), none's drawn, nor any let go meanwhile once they're shown.
+  //  added to `puffed`, then gone. With units hidden (`t`), each's taken away as it's let go, or at once if it's flying.
   #placeShots(now: number, going: Fighter[], puffed: Set<string>): void {
     going.forEach(({ id, battle, at, lift, fallen, clip }) => {
       const plan = this.#shotsOf.get(battle);
@@ -1475,12 +1475,6 @@ export class MapView3D implements MapRenderer {
 
       plan.times.forEach((time, index) => {
         if (plan.left.has(index) || clip.seconds < time.leaves) {
-          return;
-        }
-
-        if (!this.#unitsShown) {
-          plan.left.add(index);
-
           return;
         }
 
