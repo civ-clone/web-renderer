@@ -477,7 +477,7 @@ expect(
 // How far down it looks at the furthest, in degrees: on a world 128 round that doesn't wrap down, one 128 by 80 that
 //  does, and one 104 by 65 that does, as a game's world is.
 expect(
-  'at the furthest, it looks down at least 39.2° on a world 128 round, 47.8° on one 128 by 80, and 51.9° on one 104 by 65',
+  'at the furthest, the lowest it looks is 39.2° on a world 128 round, 47.8° on one 128 by 80, and 51.9° on one 104 by 65',
   [wide, round, { u: 104, v: 65 }].map(
     (period) =>
       Math.round(((lowestPitch(DISTANCE_MAX, period) * 180) / Math.PI) * 10) /
