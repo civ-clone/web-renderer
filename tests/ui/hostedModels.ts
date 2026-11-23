@@ -3,8 +3,10 @@
 //  manifest naming them so, which the 3D map reads and loads as it does any set's; the set's files from before removed,
 //  and nothing else; a model missing, not beside its manifest, or not the file it says, failing the build. The sets the
 //  renderer declares, 0 A.D.'s ancient units and the two sets of realistic ones, are built as the suite's runner builds
-//  them, and the page asks for them under `?3d=1`, unless it asked for another.
+//  them, and the page asks for them under `?3d=1`, unless it asked for another. The deploy keeps the last build's sets
+//  for one more deploy, models and all (`setsAskedFor`).
 
+import { execFileSync } from 'child_process';
 import { createHash } from 'crypto';
 import {
   existsSync,
@@ -26,7 +28,7 @@ import hostedModelSets, {
   realisticUnits,
 } from '@civ-clone/ui-models-hosted';
 
-const { buildHostedModels, buildModelSet, declaredModelSets } =
+const { buildHostedModels, buildModelSet, declaredModelSets, setsAskedFor } =
   require('../../tools/lib/hostedSets') as {
     buildHostedModels: (root: string) => object;
     buildModelSet: (
@@ -36,6 +38,7 @@ const { buildHostedModels, buildModelSet, declaredModelSets } =
     declaredModelSets: (
       root?: string
     ) => { directory: string; manifest: string }[];
+    setsAskedFor: (site: string, warn?: (warning: string) => void) => string[];
   };
 
 const failures: string[] = [];
@@ -377,6 +380,128 @@ expect(
   'each realistic set has every credit its manifest gives, for the library to list',
   [realisticUnits, creditedUnits].map(({ credits }) => credits),
   realistic.map(({ source: { credits } }) => credits)
+);
+
+// What the deploy keeps of the last build for one more deploy (#1114, #1324): the sheets and manifests its frontend.js
+//  names, and the models each set of models' manifest names, which only the manifest does.
+const site = mkdtempSync(join(tmpdir(), 'hosted-models-site-')),
+  siteSets = join(site, 'dist', 'sets');
+
+mkdirSync(siteSets, { recursive: true });
+
+const published = buildModelSet(shipped, siteSets),
+  publishedBase = published.manifest.slice(0, -'.json'.length);
+
+expect('nothing is kept for a site with no build', setsAskedFor(site), []);
+
+// A manifest naming models it mustn't (elsewhere, or not glTF binaries), one that isn't JSON, a sheet's index (not a
+//  set of models), and a manifest that's gone, beside the set as built.
+writeFileSync(
+  join(siteSets, 'odd.000000000000.json'),
+  JSON.stringify({
+    kind: 'models',
+    models: {
+      up: { file: '../up.glb' },
+      below: { file: 'below/it.glb' },
+      notes: { file: 'notes.txt' },
+      none: {},
+      empty: null,
+      number: { file: 3 },
+      fine: { file: 'odd.000000000000.fine.glb' },
+      after: { file: 'odd.000000000000.fine.glb.txt' },
+    },
+  })
+);
+writeFileSync(join(siteSets, 'odd.000000000000.fine.glb'), '');
+writeFileSync(join(siteSets, 'broken.000000000000.json'), '{ not JSON');
+writeFileSync(join(siteSets, 'sheet.000000000000.png'), '');
+writeFileSync(
+  join(siteSets, 'sheet.000000000000.json'),
+  JSON.stringify({ id: 'sheet', models: { x: { file: 'sheet.x.glb' } } })
+);
+writeFileSync(
+  join(site, 'dist', 'frontend.js'),
+  [
+    published.manifest,
+    'dist/sets/sheet.000000000000.png',
+    'dist/sets/sheet.000000000000.json',
+    'dist/sets/odd.000000000000.json',
+    'dist/sets/broken.000000000000.json',
+    'dist/sets/gone.000000000000.json',
+    published.manifest,
+  ]
+    .map((file, index) => `const file${index} = "${file}";`)
+    .join('\n')
+);
+
+const keptFiles = [
+  published.manifest,
+  ...Object.keys(source.models).map((name) => `${publishedBase}.${name}.glb`),
+  'dist/sets/sheet.000000000000.png',
+  'dist/sets/sheet.000000000000.json',
+  'dist/sets/odd.000000000000.json',
+  'dist/sets/odd.000000000000.fine.glb',
+  'dist/sets/broken.000000000000.json',
+  'dist/sets/gone.000000000000.json',
+].sort();
+
+const keptWarnings: string[] = [];
+
+expect(
+  'kept: what frontend.js names, once each, and the glTF binaries each set of models names beside it, and no others',
+  setsAskedFor(site, (warning) => keptWarnings.push(warning)),
+  keptFiles
+);
+
+expect(
+  'kept: a manifest that can’t be read is warned of, and one that’s gone isn’t (the deploy warns of it)',
+  keptWarnings,
+  [
+    "dist/sets/broken.000000000000.json can't be read, so the models it names aren't kept",
+  ]
+);
+
+expect(
+  'kept: each is a file in the site, but for a manifest that’s gone',
+  keptFiles.filter((file) => !existsSync(join(site, file))),
+  ['dist/sets/gone.000000000000.json']
+);
+
+// As the deploy asks: one to a line, from its tool.
+expect(
+  'the deploy’s tool prints what’s kept, one to a line',
+  execFileSync(
+    process.execPath,
+    [join(root, 'tools', 'sets-asked-for.js'), site],
+    {
+      encoding: 'utf8',
+      stdio: 'pipe',
+    }
+  ),
+  keptFiles.map((file) => `${file}\n`).join('')
+);
+
+expect(
+  'the deploy’s tool fails, saying how it’s used, when it isn’t told where the site is',
+  (() => {
+    try {
+      execFileSync(
+        process.execPath,
+        [join(root, 'tools', 'sets-asked-for.js')],
+        {
+          encoding: 'utf8',
+          stdio: 'pipe',
+        }
+      );
+
+      return 'ran';
+    } catch (error) {
+      const { status, stderr } = error as { status: number; stderr: string };
+
+      return [status, stderr.trim()];
+    }
+  })(),
+  [2, 'usage: sets-asked-for.js <site>']
 );
 
 // Each unit type drawn by one set: none is drawn by two.

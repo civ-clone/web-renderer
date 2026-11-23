@@ -266,12 +266,15 @@ ed25519 key, replace both, and delete the old deploy key.
 
 It mirrors `dist/` with `rsync --delete`, so superseded hashed assets are
 removed rather than accumulating as they did with `update.sh`'s `cp -R`.
-The one exception is the hosted sets' sheets the last build asked for
-(`dist/sets/`, named in the old `frontend.js`), which are put back for one more
-deploy (#1114). A page opened before the deploy, or cached from before it (the
-site has a ten-minute cache), still asks for them, as it fetches a sheet only when
-it needs one: without them, that art would be left uninstalled. A page opened
-before two deploys can still find a sheet it hasn't fetched yet gone.
+The one exception is the hosted sets' files the last build asked for
+(`dist/sets/`), which are put back for one more deploy: the sheets and sets of
+models' manifests named in the old `frontend.js` (#1114), and the models those
+manifests name (#1324), which `frontend.js` doesn't (`tools/sets-asked-for.js`).
+A page opened before the deploy, or cached from before it (the site has a
+ten-minute cache), still asks for them, as it fetches a sheet only when it needs
+one: without them, that art would be left uninstalled, and the 3D map would
+find a set's manifest but none of its models. A page opened before two deploys
+can still find a sheet it hasn't fetched yet gone.
 `CNAME` and `favicon.ico` exist only in the site repository and are left alone.
 
 To look at a build before pushing:

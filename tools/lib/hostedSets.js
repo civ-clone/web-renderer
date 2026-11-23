@@ -418,6 +418,61 @@ const buildHostedModels = (root = webRenderer) => {
   return Object.assign({}, ...byPackage.values());
 };
 
+/** A sheet, its index, or a set of models' manifest, as a page's `frontend.js` names it. */
+const SET_FILE = /dist\/sets\/[A-Za-z0-9._-]+\.(?:png|json)/g;
+
+/** A model, as `buildModelSet` names it in its manifest: beside it. */
+const MODEL_FILE = /^[A-Za-z0-9._-]+\.glb$/;
+
+/**
+ * The hosted sets' files that the build published in `site` asks for, as paths under it: the sheets, their indexes
+ *  and the manifests its `dist/frontend.js` names (#1114), and the models that each of those manifests names (#1324),
+ *  which only the manifest does. The deploy keeps them for one more deploy, so a page cached from before it still finds
+ *  them. Nothing, for a site with no build; no models, for a manifest that's missing, or one that can't be read, which
+ *  is told to `warn`.
+ */
+const setsAskedFor = (site, warn = () => {}) => {
+  const script = path.join(site, 'dist', 'frontend.js');
+
+  if (!fs.existsSync(script)) {
+    return [];
+  }
+
+  const named = new Set(fs.readFileSync(script, 'utf8').match(SET_FILE) ?? []);
+
+  [...named]
+    .filter((file) => file.endsWith('.json'))
+    .forEach((file) => {
+      const at = path.join(site, file);
+      let manifest;
+
+      // One that's gone is warned of as it's put back.
+      if (!fs.existsSync(at)) {
+        return;
+      }
+
+      try {
+        manifest = JSON.parse(fs.readFileSync(at, 'utf8'));
+      } catch {
+        warn(`${file} can't be read, so the models it names aren't kept`);
+
+        return;
+      }
+
+      if (manifest?.kind !== 'models') {
+        return;
+      }
+
+      Object.values(manifest.models ?? {}).forEach((model) => {
+        if (typeof model?.file === 'string' && MODEL_FILE.test(model.file)) {
+          named.add(`${path.posix.dirname(file)}/${model.file}`);
+        }
+      });
+    });
+
+  return [...named].sort();
+};
+
 module.exports = {
   buildHostedModels,
   buildHostedSets,
@@ -426,4 +481,5 @@ module.exports = {
   declaredModelSets,
   declaredSets,
   layOut,
+  setsAskedFor,
 };
