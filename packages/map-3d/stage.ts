@@ -278,6 +278,32 @@ export const markerSight = (
   Math.min(sightFor(orbit.distance, period).far, orbit.distance * 2.2);
 
 /**
+ * Where the node `joint` of figure `figure` (`RIG_FIGURE`) is in `drawn`, a thing drawn at the copy of the world at
+ *  `offset`, as it's posed and placed now (`u`, height, `v`, on the world's own copy); or nothing, for no such node.
+ */
+export const jointOf = (
+  drawn: Object3D | undefined,
+  figure: number,
+  joint: string,
+  [offsetU, offsetV]: readonly [number, number]
+): [number, number, number] | null => {
+  const node = drawn
+    ?.getObjectsByProperty('name', RIG_FIGURE)
+    [figure]?.getObjectByName(joint);
+
+  if (node === undefined) {
+    return null;
+  }
+
+  // Whatever's been posed or placed since it was last drawn.
+  node.updateWorldMatrix(true, false);
+
+  const at = node.getWorldPosition(new Vector3());
+
+  return [at.x - offsetU, at.y, at.z - offsetV];
+};
+
+/**
  * Makes copies of `original` for the copies of the world in sight: with figures drawn with a rigged copy (`rigged`),
  *  each with skeletons of its own (`SkeletonUtils.clone`), as a plain clone's would be bound to the original's bones,
  *  and every copy posed with them.
@@ -939,23 +965,11 @@ export const createStage: StageFactory = (
         : rigFacts(rig, markerFigures(unit));
     },
     jointAt: (id, figure, joint): [number, number, number] | null => {
-      const walker = walkers.get(id),
-        drawn = walker?.drawn[0],
-        node = drawn
-          ?.getObjectsByProperty('name', RIG_FIGURE)
-          [figure]?.getObjectByName(joint);
+      const walker = walkers.get(id);
 
-      if (walker === undefined || walker.rig === null || node === undefined) {
-        return null;
-      }
-
-      // As it's posed and placed now, whatever's been drawn since; on its world's copy, and back on the world's own.
-      node.updateWorldMatrix(true, false);
-
-      const [offsetU, offsetV] = markerCopies[0] ?? [0, 0],
-        at = node.getWorldPosition(new Vector3());
-
-      return [at.x - offsetU, at.y, at.z - offsetV];
+      return walker === undefined || walker.rig === null
+        ? null
+        : jointOf(walker.drawn[0], figure, joint, markerCopies[0] ?? [0, 0]);
     },
     shot: (id, at, through = 0): void => {
       const old = shots.get(id);

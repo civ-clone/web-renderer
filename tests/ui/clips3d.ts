@@ -49,7 +49,7 @@ import {
   rigFacts,
 } from '@civ-clone/ui-map-3d/markers/clips';
 import TintedMaterial, { ownerTint } from '@civ-clone/ui-map-3d/markers/tinted';
-import { copyOf, letGoOfSkeletons } from '@civ-clone/ui-map-3d/stage';
+import { copyOf, jointOf, letGoOfSkeletons } from '@civ-clone/ui-map-3d/stage';
 import { UnitMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
 import { formation } from '@civ-clone/ui-map-3d/markers/figures';
 import { unitTable } from '@civ-clone/ui-models-builtin/units';
@@ -691,6 +691,50 @@ expect(
       textures.length > 0 && textures.every((texture) => disposed.has(texture)),
     ],
     [true, true, false, true, true, false, true]
+  );
+}
+
+// Where a figure's node is as it's posed, as a shot leaves it (`jointOf`): on the world's own copy, from the copy of the
+//  world it's drawn at; moved as its clip moves it; each figure's its own; and nothing for a node or figure it hasn't.
+{
+  const drawn = copyOf(
+      drawMarker(
+        kit,
+        { city: null, unit: unit('Spearman', { model: 'partisan' }) },
+        true,
+        true
+      ),
+      true
+    )(),
+    playing = new WeakMap<Object3D, Playing>(),
+    figure = drawn.getObjectsByProperty('name', RIG_FIGURE)[0]!,
+    // The arm's a figure's height over its hips, at its scale.
+    reach = figure.scale.y;
+
+  drawn.position.set(5 + 8, 0.1, 7);
+
+  const standing = jointOf(drawn, 0, 'arm', [8, 0])!,
+    unmoved = jointOf(drawn, 0, 'arm', [0, 0])!;
+
+  poseFigures(drawn, rig, 'die', 10, playing);
+
+  const fallen = jointOf(drawn, 0, 'arm', [8, 0])!,
+    rounded = (point: readonly number[]) =>
+      point.map((n) => Math.round(n * 1e6) / 1e6);
+
+  expect(
+    'a figure’s node, as a shot leaves it: on the world’s own copy, moved as its clip moves it, each figure’s its own; none for a node or figure it hasn’t',
+    [
+      Math.abs(standing[0] - 5) < 0.3 && Math.abs(standing[2] - 7) < 0.3,
+      rounded([unmoved[0] - 8, unmoved[1], unmoved[2]]),
+      Math.round(((standing[1] - fallen[1]) / reach) * 1000) / 1000,
+      rounded(jointOf(drawn, 1, 'arm', [8, 0])!).join() !==
+        rounded(fallen).join(),
+      jointOf(drawn, 0, 'muzzle', [8, 0]),
+      jointOf(drawn, 9, 'arm', [8, 0]),
+      jointOf(undefined, 0, 'arm', [8, 0]),
+    ],
+    [true, rounded(standing), 1, true, null, null, null]
   );
 }
 
