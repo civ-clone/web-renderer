@@ -238,6 +238,30 @@ export const markerSight = (
 ): number =>
   Math.min(sightFor(orbit.distance, period).far, orbit.distance * 2.2);
 
+/**
+ * What the camera sees from `orbit` on a world that repeats every `period` (across, and down where it wraps): where the
+ *  haze begins and where it hides everything (`sightFor`), and the copies of the world drawn, the land's as far as the
+ *  haze and the markers' nearer (`markerSight`). The fewer, the less there is to draw (#1316).
+ */
+export const sightOf = (
+  orbit: Orbit,
+  period: { u: number; v: number | null }
+): {
+  near: number;
+  far: number;
+  land: [number, number][];
+  markers: [number, number][];
+} => {
+  const { near, far } = sightFor(orbit.distance, period);
+
+  return {
+    near,
+    far,
+    land: copiesNear(orbit.focus, far, period),
+    markers: copiesNear(orbit.focus, markerSight(orbit, period), period),
+  };
+};
+
 /** The planes that keep what lies between the poles, from 0 to `extent` down the ground: three.js keeps n·p + c ≥ 0. */
 export const polesAt = (extent: number): Plane[] => [
   new Plane(new Vector3(0, 0, 1), 0),
@@ -500,7 +524,8 @@ export const createStage: StageFactory = (
   ): void => {
     const [u, v] = orbit.focus,
       [x, y, z] = eye(orbit, height),
-      { near, far } = sightFor(orbit.distance, seen);
+      sight = sightOf(orbit, seen),
+      { near, far } = sight;
 
     camera.position.set(x, y, z);
     camera.lookAt(u, height, v);
@@ -545,10 +570,10 @@ export const createStage: StageFactory = (
 
     // The copies of the world the haze doesn't hide: when they change, every chunk is drawn at the new ones. And the
     //  markers', nearer.
-    const inSight = copiesNear(orbit.focus, far, seen),
+    const inSight = sight.land,
       // What's laid past the poles is drawn round the world too when they're stopped at.
       key = `${inSight.join(';')}${stopped ? ' stopped' : ''}`,
-      markersInSight = copiesNear(orbit.focus, markerSight(orbit, seen), seen),
+      markersInSight = sight.markers,
       markersKey = markersInSight.join(';');
 
     if (key !== copiesKey) {

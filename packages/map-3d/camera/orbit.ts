@@ -302,9 +302,10 @@ export const between = (
 
 /**
  * How far the camera sees before the haze hides everything, for an orbit `distance` from its focus: and, on a world
- *  that repeats every `period` (across, and down where it wraps), no further along the way it looks than half of it
- *  past its focus, so it never sees past the far side of the world from where it looks (#1316). A world so small that
- *  half of it is nearer than the camera ever comes repeats wherever it looks, so it's seen as far as any.
+ *  that repeats every `period` (across, and down where it wraps), no deeper along the way it looks than half of it past
+ *  its focus, so drawn back, it doesn't see the world repeat into the distance (#1316). The haze is by depth, so on the
+ *  ground, looking down, it reaches further than that: part of the next copy ahead can show faintly. A world so small
+ *  that half of it is nearer than the camera ever comes repeats wherever it looks, so it's seen as far as any.
  */
 export const sightFor = (
   distance: number,

@@ -2058,10 +2058,11 @@ export class MapView3D implements MapRenderer {
     this.#endHover();
     this.#orbit = this.#settle(zoomed(this.#orbit, steps));
 
-    // Both ends of a glide, so it carries on at the new distance rather than easing back to the old one.
+    // Both ends of a glide, so it carries on at the new distance rather than easing back to the old one, each settled
+    //  as the camera is: drawn back, looking down as far as it does.
     if (this.#glide !== null) {
-      this.#glide.from = zoomed(this.#glide.from, steps);
-      this.#glide.to = zoomed(this.#glide.to, steps);
+      this.#glide.from = this.#settle(zoomed(this.#glide.from, steps));
+      this.#glide.to = this.#settle(zoomed(this.#glide.to, steps));
     }
 
     this.#draw();

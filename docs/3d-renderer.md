@@ -1231,12 +1231,13 @@ mapEvent:
   moving up or down together. The distance is kept in the `map3dDistance` option.
 - **As built (2026-11-23, #1316): drawn back, it looks down.** Drawn back from a world, the camera used to see the world
   repeat into the distance, the copies' banners piling up along the horizon. Now:
-  - **The haze:** it hides everything further along the way the camera looks than half the world round past the focus,
-    the narrower way where it wraps both ways (`sightFor`, given the world's period). So the camera never sees past
-    the far side of the world from where it looks, though drawn right back, a world narrower than the view still shows
-    a copy at either side. The haze starts at 1.2 times the distance, or halfway to where it ends where that's sooner.
-    A world so small that half of it is nearer than the camera ever comes (5) repeats wherever it looks, so it's seen
-    as before.
+  - **The haze:** it hides everything deeper along the way the camera looks than half the world round past the focus,
+    the narrower way where it wraps both ways (`sightFor`, given the world's period). The haze is by depth, as
+    three.js's fog is, so on the ground, looking down, it reaches further than half the world. Drawn right back on a
+    world that wraps both ways, part of the next copy ahead shows faintly at the top of the view, and a world narrower
+    than the view shows a copy at either side. The haze starts at 1.2 times the distance, or halfway to where it ends
+    where that's sooner. A world so small that half of it is nearer than the camera ever comes (5) repeats wherever it
+    looks, so it's seen as before.
   - **The lowest pitch:** 25° while the haze is as far off as close in, and higher as it's drawn in
     (`lowestPitch`), so the top of the view is as deep in it as close in: at the furthest, about 39° on a world 128
     round, or 52° on one 104 by 65 that wraps both ways. Drawn back, the camera looks down on the land rather than out

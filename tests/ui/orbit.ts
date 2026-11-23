@@ -4,8 +4,8 @@
 //  - dragging keeps the ground under the pointer;
 //  - its pitch and distance stay in range, its focus on the world, and a glide goes the short way round;
 //  - the presets, and the copies of the world it sees;
-//  - how far it sees, never past the far side of a world from its focus, and how far down it looks as it draws back
-//    from one (#1316).
+//  - how far it sees, no deeper than half a world past its focus, and how far down it looks as it draws back from one
+//    (#1316).
 
 import {
   DISTANCE_MAX,
@@ -28,7 +28,7 @@ import {
   toScreen,
   zoomed,
 } from '@civ-clone/ui-map-3d/camera/orbit';
-import { copiesNear } from '@civ-clone/ui-map-3d/stage';
+import { copiesNear, sightOf } from '@civ-clone/ui-map-3d/stage';
 
 const failures: string[] = [];
 let checks = 0;
@@ -352,7 +352,7 @@ expect(
 );
 
 // How far it sees (#1316): as far as ever without a world, or on one too small to keep from repeating; on a wide one,
-//  no further along the way it looks than half the world round past its focus, the narrower way where it wraps both
+//  no deeper along the way it looks than half the world round past its focus, the narrower way where it wraps both
 //  ways; and the haze beginning before it ends.
 const wide = { u: 128, v: null },
   round = { u: 128, v: 80 },
@@ -473,6 +473,54 @@ expect(
   ),
   distances.flatMap(() => ['in the haze', 'in the haze', 'in the haze'])
 );
+
+// How far down it looks at the furthest, in degrees: on a world 128 round that doesn't wrap down, one 128 by 80 that
+//  does, and one 104 by 65 that does, as a game's world is.
+expect(
+  'at the furthest, it looks down at least 39.2° on a world 128 round, 47.8° on one 128 by 80, and 51.9° on one 104 by 65',
+  [wide, round, { u: 104, v: 65 }].map(
+    (period) =>
+      Math.round(((lowestPitch(DISTANCE_MAX, period) * 180) / Math.PI) * 10) /
+      10
+  ),
+  [39.2, 47.8, 51.9]
+);
+
+// On a world just big enough to keep from repeating (half of it 15, under a fifth of the furthest distance), the haze
+//  begins halfway to where it ends, not further.
+expect(
+  'on a world too small for the haze to begin as far as close in, it begins halfway to where it ends',
+  [sightFor(DISTANCE_MAX, { u: 30, v: null })].map(({ near, far }) => [
+    near,
+    far,
+  ]),
+  [[97.5, 105]]
+);
+
+// What the stage draws (`sightOf`), drawn back from a wide world: the land at fewer copies of it than the haze reached
+//  before, and the markers at fewer still.
+{
+  const back = {
+      ...defaultOrbit([64, 40]),
+      pitch: PITCH_MIN,
+      distance: DISTANCE_MAX,
+    },
+    sight = sightOf(back, wide),
+    before = sightFor(DISTANCE_MAX).far;
+
+  expect(
+    'drawn back from a wide world, the stage draws the land at fewer copies than it did, and the markers at no more than the land',
+    [
+      sight.far,
+      sight.land.length < copiesNear(back.focus, before, wide).length,
+      sight.markers.length <= sight.land.length,
+      sight.markers.length <
+        copiesNear(back.focus, Math.min(before, DISTANCE_MAX * 2.2), wide)
+          .length,
+    ],
+    [154, true, true, true]
+  );
+}
 
 if (failures.length > 0) {
   process.stderr.write(
