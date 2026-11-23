@@ -119,9 +119,10 @@ export const clipPace = (
   };
 };
 
-// How long a battle at `pace` goes on after its blow: the attacker back where it stood, won, and the loser gone.
+// How long a battle at `pace` goes on after its blow: the attacker back where it stood, won, and the loser gone; and,
+//  where the attacker plays `fight`, its shots landed and burst, won or lost (`clipPace`).
 const afterBlow = (pace: BattlePace, won: boolean): number =>
-  won
+  won || pace.clips?.fight === true
     ? Math.max(pace.back, (pace.falls ?? 0) + pace.fade)
     : (pace.falls ?? 0) + pace.fade;
 
@@ -448,7 +449,8 @@ export class Battles {
 
     drawn.add(battle.attacker);
 
-    if (attacker > 0 && first) {
+    // Gone, lost, while its last shots are still to land: drawn as nothing till they have.
+    if (first && (attacker > 0 || clips?.fight === true)) {
       fighters.push({
         id: battle.id,
         battle: battle.id,

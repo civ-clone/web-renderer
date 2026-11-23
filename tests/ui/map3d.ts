@@ -4357,7 +4357,8 @@ expect(
 
   optionsRegistry.set(MAP3D_WALKS_OPTION, 'normal');
 
-  // With units hidden (`t`) mid-flight, the shot's taken away, and none's thrown while they're hidden.
+  // With units hidden (`t`) mid-flight, the shot's taken away, and none's thrown while they're hidden; but the one
+  //  ringed, drawn still, throws.
   repatched([1, 1, [walker]], [2, 1, [rival]]);
   shotsDrawn.clear();
   fought(walker, [1, 1], rival, [2, 1], 'attacker');
@@ -4382,6 +4383,23 @@ expect(
     .filter((at) => at !== null).length;
 
   glider.toggleUnits();
+
+  // The one ringed is drawn with units hidden, throwing: its throws fly.
+  repatched([1, 1, [walker]], [2, 1, [rival]]);
+  shotsDrawn.clear();
+  glider.setActiveUnit({
+    ...walker,
+    tile: tiles[1 * 4 + 1],
+  } as unknown as Unit);
+  glider.toggleUnits();
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  patch([1, 1, [walker]], [2, 1, []]);
+  runFrames();
+
+  const ringedThrows = shotsDrawn.size;
+
+  glider.toggleUnits();
+  glider.setActiveUnit(null);
 
   // An attacker with no clip that's beaten a Partisan, falling for 1.9 s, attacking again at once a unit with no clip:
   //  the second battle waits for the first, though it's short, rather than ending the first and its fall.
@@ -4409,11 +4427,15 @@ expect(
   shotsDrawn.clear();
 
   expect(
-    'twice as quick, a squad’s throws and their puffs are over with their battle; units hidden mid-flight, the shot’s taken away, and none’s thrown while they’re hidden; a short battle after a long one by the same attacker waits for it',
-    [quickOver, [beforeHidden, hiddenMidFlight, thrownHidden], shortAfterLong],
+    'twice as quick, a squad’s throws and their puffs are over with their battle; units hidden mid-flight, the shot’s taken away, and none’s thrown while they’re hidden, but the one ringed throws; a short battle after a long one by the same attacker waits for it',
+    [
+      quickOver,
+      [beforeHidden, hiddenMidFlight, thrownHidden, ringedThrows],
+      shortAfterLong,
+    ],
     [
       [3, true, [null, null, null], 0],
-      [2, [null, null], 0],
+      [2, [null, null], 0, 3],
       [
         ['Unit-R', 1],
         ['Unit-T', 1],

@@ -627,6 +627,37 @@ expect(
   );
 }
 
+{
+  // A squad that throws but has no fall, losing: it fades as it would, but its battle goes on, it drawn as nothing,
+  //  till its last throw has landed and burst.
+  const noFall: RigFacts = {
+      figures: 3,
+      stagger: 0.13,
+      clips: {
+        fight: { duration: 1.5, shots: [{ at: 0.5, joint: 'prop' }] },
+      },
+    },
+    paced = clipPace(pace, noFall, noFall),
+    battles = new Battles(),
+    lost = battles.add(battleOf('b', 'e', false), 0, paced),
+    seen = (at: number) =>
+      battles
+        .at(at)
+        .going.map(({ unit, opacity }) => [unit, round(opacity, 2)]);
+
+  expect(
+    'a thrower with no fall, losing: it fades as it would, then is drawn as nothing till its last throw has landed and burst',
+    [
+      round(battleLength(paced, false)),
+      // Its last figure's throw leaving 0.76 s in, landing, and its burst over.
+      760 + SHOT_FLIGHT + HIT_PUFF <= battleEnds(lost),
+      seen(850 + 300),
+      seen(850 + 700),
+    ],
+    [1760, true, [['b', 0.5]], [['b', 0]]]
+  );
+}
+
 if (failures.length > 0) {
   process.stderr.write(
     `FAIL battles: ${

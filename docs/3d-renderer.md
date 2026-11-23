@@ -1481,17 +1481,19 @@ has a clip to play is paced as before.
   solid till its last figure has fallen (`falls`), then fades in its puff of smoke as before.
 - **A squad's figures** are 0.13 s apart in a clip that loops, as walking, and each 0.13 s behind the one before in a
   clip played once (`poseFigures`), so none is ahead of the blow, and the battle waits for the last.
-- **The Partisans' battle,** a throw half a second in and a fall of 1.6 s, takes 3.3 s won, against 1.1 s for a battle
+- **The Partisans' battle,** a throw half a second in and a fall of 1.6 s, takes 3.3 s won, against 0.8 s for a battle
   without clips; twice as quick, as the player can choose, its clips play twice as quick and it takes half as long.
-  A unit's battles too far behind (§8.2) are over at once when they're more than two seconds behind, or two of the new
-  battle's length where that's longer, so a rigged attacker attacking again waits rather than cutting its first battle
-  short.
+  An attacker's drawn till its last shot has landed and burst, won or lost: lost with no `die` clip, it fades as it
+  would, then is drawn as nothing till then. A unit's battles too far behind (§8.2) are over at once when they're more
+  than two seconds behind, or two of the longest battle, the new one or one its units are in, where that's longer, so
+  an attacker attacking again waits rather than cutting a long battle short.
 - **Shots** (`shots.ts`): each figure's leaves the node its clip names (found as three.js names it, and checked as the
   clip's tracks are), as that figure's clip comes to it, from where the node is as the figure's posed then
   (`Stage#jointAt`, `jointOf`). It flies the short way to the square attacked, over the world's seam or not, in an arc
   (`SHOT_ARC`), landing by the loser's feet, a squad's a little apart (`SHOT_SPREAD`). Where it lands, it bursts in a
   puff of smoke of its own (`HIT_PUFF`, half a second). The Partisans' is a bottle, alight at its neck, tumbling end
-  over end (`Stage#shot`). A battle ended at once takes its shots with it.
+  over end (`Stage#shot`). A battle ended at once takes its shots and their puffs with it. An attacker not drawn, as
+  with units hidden (`t`) but for the one ringed, throws nothing that's drawn.
 
 ---
 
