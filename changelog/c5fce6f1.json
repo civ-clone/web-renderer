@@ -1,0 +1,1 @@
+{"version":"0.1.0@c5fce6f1","date":"2026-11-23T10:07:26.000Z","localChanges":["chore: the deploy keeps the last build's 3D models for one more deploy, as it keeps its sheets, so a page cached from before it still draws them (#1326)"],"externalChanges":{}}
