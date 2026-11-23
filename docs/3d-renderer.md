@@ -1465,8 +1465,33 @@ in its set (plan 2.2). It's in the model's entry:
   for a rival's or a quick walk, slower as it gets going and stops. Each walk starts the clip from its start, and a
   squad's figures are 0.13 s apart. Waiting where it's come, or fighting, it stands as its model does, till `fight` and
   `die` are played. The Partisans' is the first.
-- **Still to come:** `fight` with its shots, and `die`, on the battles' own frames; then `idle`, which needs frames all
-  the time, so its cost is measured first.
+- **Still to come:** `fight` with its shots, and `die`, on the battles' own frames (the fourth part, below); then
+  `idle`, which needs frames all the time, so its cost is measured first.
+
+**As built, fourth part (clips, 2026-11-23): fighting and falling.** A battle whose fighters are drawn with rigged
+copies is paced for their clips (`clipPace` in `battles.ts`), as the stage says what each plays (`Stage#rigFacts`): how
+long each role's clip is, its shots, how many figures, and how far apart in a clip. A battle neither of whose fighters
+has a clip to play is paced as before.
+
+- **The attacker** plays `fight` from the start. Where its clip has shots, it stands where it is to shoot rather than
+  lunging (`lunge` 0), and the blow falls as its first figure's first shot lands, the shot's time in the clip and its
+  flight after (`SHOT_FLIGHT`, 350 ms). Where it has none, it lunges, and the blow falls a fifth of a second in, as
+  before. It's drawn till its last figure's clip is over, or the battle is.
+- **The loser** plays `die` from the blow: the defender where it stood, or the attacker where it is, lost. It stays
+  solid till its last figure has fallen (`falls`), then fades in its puff of smoke as before.
+- **A squad's figures** are 0.13 s apart in a clip that loops, as walking, and each 0.13 s behind the one before in a
+  clip played once (`poseFigures`), so none is ahead of the blow, and the battle waits for the last.
+- **The Partisans' battle,** a throw half a second in and a fall of 1.6 s, takes 3.3 s won, against 1.1 s for a battle
+  without clips; twice as quick, as the player can choose, its clips play twice as quick and it takes half as long.
+  A unit's battles too far behind (§8.2) are over at once when they're more than two seconds behind, or two of the new
+  battle's length where that's longer, so a rigged attacker attacking again waits rather than cutting its first battle
+  short.
+- **Shots** (`shots.ts`): each figure's leaves the node its clip names (found as three.js names it, and checked as the
+  clip's tracks are), as that figure's clip comes to it, from where the node is as the figure's posed then
+  (`Stage#jointAt`, `jointOf`). It flies the short way to the square attacked, over the world's seam or not, in an arc
+  (`SHOT_ARC`), landing by the loser's feet, a squad's a little apart (`SHOT_SPREAD`). Where it lands, it bursts in a
+  puff of smoke of its own (`HIT_PUFF`, half a second). The Partisans' is a bottle, alight at its neck, tumbling end
+  over end (`Stage#shot`). A battle ended at once takes its shots with it.
 
 ---
 
