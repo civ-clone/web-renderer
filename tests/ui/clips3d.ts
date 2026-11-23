@@ -185,7 +185,7 @@ const rigged = (): LoadedRig => {
     plain = part(new MeshStandardMaterial({ map: new Texture() })),
     owner = part(new MeshStandardMaterial());
 
-  owner.material.userData.playerColour = true;
+  (owner.material as MeshStandardMaterial).userData.playerColour = true;
   hips.name = 'hips';
   arm.name = 'arm';
   arm.position.set(0, 1, 0);

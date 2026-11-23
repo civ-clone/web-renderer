@@ -29,6 +29,7 @@ import {
 import MapView2D from '@civ-clone/ui-game/MapView2D';
 import MapView3D, { keptCity } from '@civ-clone/ui-map-3d/MapView3D';
 import { bannerPlaces } from '@civ-clone/ui-map-3d/banners';
+import { MOVE_RATE } from '@civ-clone/ui-map-3d/markers/clips';
 import {
   applyInterface,
   interfaceMode,
@@ -225,6 +226,8 @@ const staged: string[] = [],
   walkersPlaced = new Map<string, number[][]>(),
   // How high each walker was flown off its stand each frame it was put, by its id: an aircraft's.
   walkersAloft = new Map<string, number[]>(),
+  // How each walker's figures were posed each frame it was put, by its id: the clip's role, or none, and how far in.
+  walkersPosed = new Map<string, [string | null, number][]>(),
   // The puffs of smoke drawn now, by id, where each bursts from and how far through it is; and every puff drawn since
   //  last cleared, by id, how far through it was each time.
   puffs = new Map<string, { at: readonly number[]; through: number }>(),
@@ -286,6 +289,11 @@ const staged: string[] = [],
       ]);
       walkersAloft.set(id, [...(walkersAloft.get(id) ?? []), aloft]);
     },
+    poseWalker: (id, role, seconds) =>
+      void walkersPosed.set(id, [
+        ...(walkersPosed.get(id) ?? []),
+        [role, seconds],
+      ]),
     fadeMarker: (key, opacity) => {
       if (opacity < 1 || markersFaded.has(key)) {
         markersFaded.set(key, opacity);
@@ -2304,12 +2312,21 @@ expect(
 
   const leftAtOnce = unitOn(0, 3);
 
+  walkersPosed.clear();
   patch([0, 3, []], [1, 3, [walker]]);
   runFrames(1);
 
   const whileWalking = [unitOn(1, 3), [...walkers.values()][0]?.unit?.id];
 
   runFrames();
+
+  // As it went, its figures walking (plan 2.2), by the clock, a frame's 16 ms further each time, played twice as quick.
+  const posed = [...walkersPosed.values()].flat(),
+    walkedBy = posed
+      .slice(1)
+      .map(([, seconds], index) =>
+        Math.round((seconds - posed[index]![1]) * 1000)
+      );
 
   const firstStep = {
       arrived: unitOn(1, 3),
@@ -2404,6 +2421,16 @@ expect(
       true,
       groundAt(0, 2),
     ]
+  );
+
+  expect(
+    'as it walks, its figures play their walk, by the clock: a frame further each frame, twice as quick as the clip',
+    [
+      posed.length > 2,
+      posed.every(([role]) => role === 'move'),
+      [...new Set(walkedBy)],
+    ],
+    [true, true, [Math.round((16 / 1000) * MOVE_RATE * 1000)]]
   );
 
   // Along a road, between two squares with one: the unit walks along it as it bends (`Land#roadPath`), not straight

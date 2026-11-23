@@ -1424,6 +1424,43 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
   civ.one, its licence, linked, and the credit it gives (`licence.attribution`). Under it, a list the player opens
   names every work the set's made from (`credits`): each work linked, its author, and its licence, linked.
 
+**As built, third part (clips, 2026-11-23): units walking.** A model may have a rigged copy that plays clips, beside it
+in its set (plan 2.2). It's in the model's entry:
+
+```json
+"partisan": {
+  "file": "models/partisan.glb",
+  "rigged": {
+    "file": "models/rigged/partisan.glb",
+    "sha256": "…",
+    "clips": { "idle": "idle", "move": "move", "fight": "fight", "die": "die" },
+    "shots": { "fight": [{ "at": 0.5, "joint": "prop" }] }
+  }
+}
+```
+
+- **The rigged copy** is posed as the model stands (its bind pose), so the two can be swapped without a jump. It has
+  one skeleton, at most four joints to a point, and no clip moves it off where it stands.
+- **The roles** are `idle`, `move`, `fight`, `die`, `work` and `settle`. `clips` names the clip in the file that each
+  role plays. `idle`, `move` and `work` loop; the rest play once, and `die` holds its last frame (`clips.ts`).
+- **`shots`** say when, in seconds into a role's clip, a shot leaves, and from which joint. The map draws what flies,
+  by the unit's type, from that joint to its target. A shot may be given only in a role that has a clip.
+- **Checked as it's read** (`modelSet.ts`): its file as a model's is, a known role for each clip and a name for each,
+  and each shot's time and joint. A manifest with one that isn't is refused, saying why.
+- **Built** (`tools/lib/hostedSets.js`): copied beside the page with its model, as `<id>.<hash>.<name>.rigged.glb`,
+  as its SHA-256 says it is, the manifest naming it so. The deploy keeps it for one more deploy, as it keeps the
+  model (`setsAskedFor`).
+- **Loaded** (`loadModels.ts`) once its model's drawing, with every check the model has. One that can't be had, or
+  names a clip its file hasn't, is said, and the model's drawn as before.
+- **Drawn:** a unit at rest is drawn with its model's parts, merged, as before. While it walks, it's drawn with the
+  rigged copy (`MarkerKit#rigFigures`): each figure a copy of its own, its skeleton its own, in its owner's colour as
+  the model's are, and never culled, as a clip can take it past the bounds it had. Each copy of the world's has a copy
+  of its own (`SkeletonUtils.clone`). As it goes, its figures play `move`, by the clock, twice as quick as the clip
+  (`MOVE_RATE`), since units cross a square in a quarter of a second; a squad's figures 0.13 s apart. Waiting where
+  it's come, it stands as its model does. The Partisans' is the first.
+- **Still to come:** `fight` with its shots, and `die`, on the battles' own frames; then `idle`, which needs frames all
+  the time, so its cost is measured first.
+
 ---
 
 ## 11. Everything the 2D map shows today (parity)
