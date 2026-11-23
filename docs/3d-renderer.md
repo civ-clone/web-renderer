@@ -1391,8 +1391,8 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
   (the Partisan's molotov, the Diplomat's hat, the Paratrooper's canopy, the Fanatic's torch). Each ship floats with its
   waterline at its origin, and each but the people has a scale of its own, so all sit beside each other and 0 A.D.'s
   units. Each takes its owner's colour on one part, such as a coat, a sail, a band along a hull or the wingtips: a
-  second material says so (`extras.playerColour`) over the faces that take it, with a grey PNG at half the texture's
-  size whose alpha is the mask. The Paratrooper, canopy and all, is as tall as the Knight.
+  second material says so (`extras.playerColour`) over the faces that take it, with a PNG at half the texture's size,
+  grey where the colour goes, whose alpha is the mask. The Paratrooper, canopy and all, is as tall as the Knight.
 
   Each is a dependency of the renderer, pinned by its commit in the lockfile. One package here
   (`packages/models-hosted`) declares the three (`civ-clone.hostedModels`), and gives the page them in order, 0 A.D.'s

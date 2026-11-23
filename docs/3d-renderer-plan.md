@@ -382,7 +382,7 @@ from there. Between them and 0 A.D.'s, every unit type in Civ1's and Civ2's rule
 lists every work it's made from, with its author, its licence and a link: the art credits list (D3). Paratroopers are
 drawn once, under their canopy, as tall as a Knight. Each model takes its owner's colour on one part (a coat, a sail, a
 band along a hull, the wingtips). Still to do:
-- **Textures:** 512 and 1024 px each, where 0 A.D.'s pack each part at no more than 128 px, so about 165 MB on the GPU
+- **Textures:** 512 and 1024 px each, where 0 A.D.'s pack each part at no more than 128 px, so about 163 MB on the GPU
   before mipmaps, with the owner's colours' masks: smaller, or KTX2;
 - **Poses:** most of the people stand in an A-pose. They're being posed in the sets' own files first, which needs
   nothing here;
