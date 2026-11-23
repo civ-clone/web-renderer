@@ -38,7 +38,7 @@ const { buildHostedModels, buildModelSet, declaredModelSets, setsAskedFor } =
     declaredModelSets: (
       root?: string
     ) => { directory: string; manifest: string }[];
-    setsAskedFor: (site: string) => string[];
+    setsAskedFor: (site: string, warn?: (warning: string) => void) => string[];
   };
 
 const failures: string[] = [];
