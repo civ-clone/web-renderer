@@ -33,14 +33,14 @@ So write each message for a player when you commit, not at release time. Once co
 - **Talk to the other sessions** working on web-renderer before releasing, so release notes aren't lost or doubled
   (see Releasing), and before running regression tests or other heavy CPU or GPU work, so the machine isn't overrun.
   - **Only those active in the last hour:** check `lastActivityAt` in the session list, or whether `ListAgents` shows
-    the session busy. Activity that only answered your own message doesn't count.
+    the session busy. Activity that only answered your own message doesn't count. If you can't tell, treat it as quiet.
   - **Don't message or wait on sessions that have been quiet for longer,** whether you're asking first or sending a
     base or merge SHA. If none is active, carry on.
   - **A quiet session's open PR doesn't hold you up:** whichever branch merges first carries the notes `main` owes,
-    and the other drops its copy when it rebases.
-- **Merge order:** the branch that merges next carries the notes `main` owes. Before merging, tell the recently active
-  sessions (see above) your base SHA and wait for no objection; after merging, send them the merge SHA. Otherwise it's
-  first ready, first merged.
+    and the other's session drops its copy at its next rebase.
+- **Merge order:** the branch that merges next carries the notes `main` owes. Before merging, tell the sessions
+  active in the last hour (see above) your base SHA and wait for no objection; after merging, send them the merge SHA.
+  Otherwise it's first ready, first merged.
 - **Lockfile drag-ins:** `github:` dependencies and `pnpm update` pull in other sessions' newer engine commits. Read the
   lockfile diff for packages you didn't change, and either agree with their owner to take them, or pin them back by hand
   and check with `pnpm install --frozen-lockfile`. Keep one copy of each (`npm run civ -- duplicates`), and keep the
