@@ -428,9 +428,10 @@ const MODEL_FILE = /^[A-Za-z0-9._-]+\.glb$/;
  * The hosted sets' files that the build published in `site` asks for, as paths under it: the sheets, their indexes
  *  and the manifests its `dist/frontend.js` names (#1114), and the models that each of those manifests names (#1324),
  *  which only the manifest does. The deploy keeps them for one more deploy, so a page cached from before it still finds
- *  them. Nothing, for a site with no build; no models, for a manifest that's missing or can't be read.
+ *  them. Nothing, for a site with no build; no models, for a manifest that's missing, or one that can't be read, which
+ *  is told to `warn`.
  */
-const setsAskedFor = (site) => {
+const setsAskedFor = (site, warn = () => {}) => {
   const script = path.join(site, 'dist', 'frontend.js');
 
   if (!fs.existsSync(script)) {
@@ -442,15 +443,23 @@ const setsAskedFor = (site) => {
   [...named]
     .filter((file) => file.endsWith('.json'))
     .forEach((file) => {
+      const at = path.join(site, file);
       let manifest;
 
-      try {
-        manifest = JSON.parse(fs.readFileSync(path.join(site, file), 'utf8'));
-      } catch {
+      // One that's gone is warned of as it's put back.
+      if (!fs.existsSync(at)) {
         return;
       }
 
-      if (manifest?.kind !== 'models' || typeof manifest.models !== 'object') {
+      try {
+        manifest = JSON.parse(fs.readFileSync(at, 'utf8'));
+      } catch {
+        warn(`${file} can't be read, so the models it names aren't kept`);
+
+        return;
+      }
+
+      if (manifest?.kind !== 'models') {
         return;
       }
 

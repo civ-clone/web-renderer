@@ -408,6 +408,7 @@ writeFileSync(
       empty: null,
       number: { file: 3 },
       fine: { file: 'odd.000000000000.fine.glb' },
+      after: { file: 'odd.000000000000.fine.glb.txt' },
     },
   })
 );
@@ -444,10 +445,20 @@ const keptFiles = [
   'dist/sets/gone.000000000000.json',
 ].sort();
 
+const keptWarnings: string[] = [];
+
 expect(
   'kept: what frontend.js names, once each, and the glTF binaries each set of models names beside it, and no others',
-  setsAskedFor(site),
+  setsAskedFor(site, (warning) => keptWarnings.push(warning)),
   keptFiles
+);
+
+expect(
+  'kept: a manifest that can’t be read is warned of, and one that’s gone isn’t (the deploy warns of it)',
+  keptWarnings,
+  [
+    "dist/sets/broken.000000000000.json can't be read, so the models it names aren't kept",
+  ]
 );
 
 expect(
@@ -464,6 +475,7 @@ expect(
     [join(root, 'tools', 'sets-asked-for.js'), site],
     {
       encoding: 'utf8',
+      stdio: 'pipe',
     }
   ),
   keptFiles.map((file) => `${file}\n`).join('')

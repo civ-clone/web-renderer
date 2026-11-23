@@ -14,4 +14,6 @@ if (site === undefined) {
   process.exit(2);
 }
 
-setsAskedFor(site).forEach((file) => console.log(file));
+setsAskedFor(site, (message) =>
+  console.error(`sets-asked-for: ${message}`)
+).forEach((file) => console.log(file));
