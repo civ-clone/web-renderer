@@ -20,6 +20,7 @@
 
 import type { RigFacts } from './markers/clips';
 import { ClipRole } from './models/modelSet';
+import { HIT_PUFF } from './shots';
 import { WalkPoint, WalkSquare } from './walks';
 
 /** How fast a battle goes, in ms. */
@@ -72,7 +73,7 @@ export const quickerBattle = (pace: BattlePace): BattlePace => ({
  *  `loser` says, or as it is where neither has a clip to play:
  * - the attacker plays `fight` from the start; where it shoots, it stands, the blow falling as its first figure's first
  *   shot lands (`SHOT_FLIGHT`), and where it doesn't, the blow falls as it would; it's drawn till its last figure's
- *   clip is over;
+ *   clip is over, and its last shot has landed and burst (`HIT_PUFF`);
  * - the loser plays `die` from the blow, solid till its last figure's fallen, then fades.
  */
 export const clipPace = (
@@ -90,8 +91,14 @@ export const clipPace = (
   // A squad's figures play a clip that's played once each a little after the one before (`FIGURE_STAGGER`).
   const tail = (facts: RigFacts | null | undefined): number =>
       Math.max(0, (facts?.figures ?? 1) - 1) * (facts?.stagger ?? 0),
-    shot = fight?.shots[0],
-    reach = shot === undefined ? pace.reach : shot.at * 1000 + SHOT_FLIGHT;
+    times = (fight?.shots ?? []).map(({ at }) => at),
+    // The first shot to leave, of the first figure, and the last, of the last figure, landed and burst.
+    first = times.length === 0 ? undefined : Math.min(...times),
+    last =
+      times.length === 0
+        ? 0
+        : (Math.max(...times) + tail(attacker)) * 1000 + SHOT_FLIGHT + HIT_PUFF,
+    reach = first === undefined ? pace.reach : first * 1000 + SHOT_FLIGHT;
 
   return {
     ...pace,
@@ -99,8 +106,12 @@ export const clipPace = (
     back:
       fight === undefined
         ? pace.back
-        : Math.max(pace.back, (fight.duration + tail(attacker)) * 1000 - reach),
-    ...(shot === undefined ? {} : { lunge: 0 }),
+        : Math.max(
+            pace.back,
+            (fight.duration + tail(attacker)) * 1000 - reach,
+            last - reach
+          ),
+    ...(first === undefined ? {} : { lunge: 0 }),
     ...(die === undefined
       ? {}
       : { falls: (die.duration + tail(loser)) * 1000 }),
@@ -356,6 +367,16 @@ export class Battles {
     }
 
     return { struck, ended };
+  }
+
+  /** How long the longest battle any of `units` attacks in takes, start to over, or nothing with none. */
+  longest(units: readonly string[]): number {
+    return this.#battles
+      .filter(({ attacker }) => units.includes(attacker))
+      .reduce(
+        (longest, { pace, won }) => Math.max(longest, battleLength(pace, won)),
+        0
+      );
   }
 
   /** When the last battle any of `units` attacks in is over, or nothing with none. */

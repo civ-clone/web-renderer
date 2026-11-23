@@ -92,7 +92,7 @@ const shortTurn = (delta: number): number =>
 const GLIDE = 350;
 
 // How far behind a unit's battles may fall before those under way are over at once, as the spec has the queue (§8.2),
-//  or, for a battle that takes longer, its fighters playing their clips, two of it.
+//  or, where a battle takes longer, its fighters playing their clips, two of the longest: the new one, or one it's in.
 const BATTLES_BEHIND = 2000;
 
 // The most units that may start fading in or out as one batch of tiles is taken: past that, as when a turn's handed over
@@ -310,7 +310,8 @@ export class MapView3D implements MapRenderer {
       rate: number;
     }
   >();
-  // The shots in flight, or landed and bursting, by id: their battle, from where to where, and when they leave and land.
+  // The shots in flight, or landed and bursting, by id: their battle, from where to where, when they leave and land,
+  //  and how quick their battle's clips play.
   #flying = new Map<
     string,
     {
@@ -319,6 +320,7 @@ export class MapView3D implements MapRenderer {
       to: [number, number, number];
       leaves: number;
       lands: number;
+      rate: number;
     }
   >();
   #gone = new Set<string>();
@@ -908,12 +910,13 @@ export class MapView3D implements MapRenderer {
           : attackerFacts
       ),
       pace = speed === 'fast' ? quickerBattle(paced) : paced,
-      busy = this.#battles.busyUntil([attacker.id, defender.id]);
+      busy = this.#battles.busyUntil([attacker.id, defender.id]),
+      longest = Math.max(
+        battleLength(pace),
+        this.#battles.longest([attacker.id, defender.id])
+      );
 
-    if (
-      busy !== null &&
-      busy - now > Math.max(BATTLES_BEHIND, 2 * battleLength(pace))
-    ) {
+    if (busy !== null && busy - now > Math.max(BATTLES_BEHIND, 2 * longest)) {
       this.#battlesOver(
         this.#battles.endWhere(
           (battle) =>
@@ -1460,7 +1463,8 @@ export class MapView3D implements MapRenderer {
 
   // The shots of the battles under way at `now` (`shots.ts`): each figure's leaving the node its clip names as the
   //  attacker's clip comes to it, where the figure's drawn now, or where the attacker is, and flying to the square
-  //  attacked in an arc; each landed bursting in a puff of smoke there (`HIT_PUFF`), added to `puffed`, then gone.
+  //  attacked in an arc; each landed bursting in a puff of smoke there (`HIT_PUFF`, as quick as the battle's clips),
+  //  added to `puffed`, then gone. With units hidden (`t`), none's drawn, nor any let go meanwhile once they're shown.
   #placeShots(now: number, going: Fighter[], puffed: Set<string>): void {
     going.forEach(({ id, battle, at, lift, fallen, clip }) => {
       const plan = this.#shotsOf.get(battle);
@@ -1471,6 +1475,12 @@ export class MapView3D implements MapRenderer {
 
       plan.times.forEach((time, index) => {
         if (plan.left.has(index) || clip.seconds < time.leaves) {
+          return;
+        }
+
+        if (!this.#unitsShown) {
+          plan.left.add(index);
+
           return;
         }
 
@@ -1498,11 +1508,19 @@ export class MapView3D implements MapRenderer {
           to: landsAt(from, target, time.figure, plan.figures),
           leaves,
           lands: leaves + SHOT_FLIGHT / plan.rate,
+          rate: plan.rate,
         });
       });
     });
 
-    this.#flying.forEach(({ from, to, leaves, lands }, id) => {
+    this.#flying.forEach(({ from, to, leaves, lands, rate }, id) => {
+      if (!this.#unitsShown) {
+        this.#stage.shot?.(id, null);
+        this.#flying.delete(id);
+
+        return;
+      }
+
       if (now < lands) {
         const through = (now - leaves) / (lands - leaves);
 
@@ -1514,7 +1532,7 @@ export class MapView3D implements MapRenderer {
       this.#stage.shot?.(id, null);
 
       const hit = `${id}-hit`,
-        through = (now - lands) / HIT_PUFF;
+        through = ((now - lands) * rate) / HIT_PUFF;
 
       if (through < 1) {
         this.#puffs.add(hit);
@@ -1534,6 +1552,8 @@ export class MapView3D implements MapRenderer {
     this.#flying.forEach((shot, id) => {
       if (shot.battle === battle) {
         this.#stage.shot?.(id, null);
+        this.#stage.puff(`${id}-hit`, null);
+        this.#puffs.delete(`${id}-hit`);
         this.#flying.delete(id);
       }
     });
