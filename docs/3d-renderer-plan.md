@@ -385,8 +385,8 @@ drawn once, under their canopy, as tall as a Knight. Each model takes its owner'
 band along a hull, the wingtips). Still to do:
 - **Textures:** 512 and 1024 px each, where 0 A.D.'s pack each part at no more than 128 px, so about 163 MB on the GPU
   before mipmaps, with the owner's colours' masks: smaller, or KTX2;
-- **Poses:** most of the people stand in an A-pose. They're being posed in the sets' own files first, which needs
-  nothing here;
+- **Poses: done.** The Riflemen, Explorer, Spy, Partisans and Marines, and the Fanatics, stood in an A-pose. They're
+  posed with their arms at their sides in the sets' own files, which needed nothing here;
 - **Clips:** rigged copies are to sit beside the static models, which their manifests go on naming. The clips are
   idle, moving and dying for every unit, fighting for combat units (shots in flight for ranged ones), Settlers working
   and settling, ships sinking and vehicles exploding. The map's side is to play them (`AnimationMixer`, skinned meshes,
