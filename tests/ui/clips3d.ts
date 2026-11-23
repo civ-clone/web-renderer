@@ -46,6 +46,7 @@ import {
   Playing,
   clipTime,
   poseFigures,
+  rigFacts,
 } from '@civ-clone/ui-map-3d/markers/clips';
 import TintedMaterial, { ownerTint } from '@civ-clone/ui-map-3d/markers/tinted';
 import { copyOf, letGoOfSkeletons } from '@civ-clone/ui-map-3d/stage';
@@ -577,7 +578,54 @@ expect(
     [again, fallen, unplayed, standing],
     [true, [true, true], figures.map(() => true), figures.map(() => true)]
   );
+
+  // A fall, played once, half a second in, and a tenth: each figure after the first a little behind it, none ahead
+  //  of the blow; one not yet falling stands as it was at the fall's start.
+  const tipped = (seconds: number) =>
+    figures.map((figure, index) =>
+      turned(
+        bonesOf(figure).get('hips'),
+        new Quaternion().slerpQuaternions(
+          still,
+          quarter,
+          Math.max(0, seconds - index * FIGURE_STAGGER) / 1.5
+        )
+      )
+    );
+
+  poseFigures(drawn, rig, 'die', 0.5, playing);
+
+  const halfASecond = tipped(0.5);
+
+  poseFigures(drawn, rig, 'die', 0.1, playing);
+
+  expect(
+    'a fall, played once: each figure after the first a little behind it, half a second in and a tenth, and none ahead',
+    [figures.length, halfASecond, tipped(0.1)],
+    [3, [true, true, true], [true, true, true]]
+  );
 }
+
+// What a rigged copy plays, as a battle's paced for it (`rigFacts`): each clip's length and shots, by role, and how
+//  many figures, how far apart.
+expect(
+  'what a rigged copy plays: each role’s clip, how long, and its shots; and its figures, how far apart in a clip',
+  rigFacts(
+    {
+      ...rig,
+      shots: new Map([['die', [{ at: 0.2, joint: 'arm' }]]]),
+    },
+    3
+  ),
+  {
+    figures: 3,
+    stagger: FIGURE_STAGGER,
+    clips: {
+      move: { duration: 1, shots: [] },
+      die: { duration: 1.5, shots: [{ at: 0.2, joint: 'arm' }] },
+    },
+  }
+);
 
 // A walker's copies, one for each copy of the world in sight (`copyOf`): drawn with a rigged copy, each with bones of
 //  its own, so posing one leaves the others standing; a plain copy's would be bound to the original's. And let go of,

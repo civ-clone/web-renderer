@@ -29,7 +29,7 @@ import {
 import MapView2D from '@civ-clone/ui-game/MapView2D';
 import MapView3D, { keptCity } from '@civ-clone/ui-map-3d/MapView3D';
 import { bannerPlaces } from '@civ-clone/ui-map-3d/banners';
-import { STRIDE } from '@civ-clone/ui-map-3d/markers/clips';
+import { RigFacts, STRIDE } from '@civ-clone/ui-map-3d/markers/clips';
 import {
   applyInterface,
   interfaceMode,
@@ -247,6 +247,8 @@ const staged: string[] = [],
   yieldsSet: (YieldMesh | null)[] = [],
   // The square whose unit's drawn under the pointer, as the stage would say, if any.
   unitUnderPointer: { key: string | null } = { key: null },
+  // What each unit, by its id, plays where it's drawn with a rigged copy, as the stage would say: none by default.
+  rigFactsFor = new Map<string, RigFacts>(),
   fakeStage = (): Stage => ({
     render: () => void staged.push('render'),
     unitAt: () => unitUnderPointer.key,
@@ -294,6 +296,7 @@ const staged: string[] = [],
         ...(walkersPosed.get(id) ?? []),
         [role, seconds],
       ]),
+    rigFacts: (marker) => rigFactsFor.get(marker.unit?.id ?? '') ?? null,
     fadeMarker: (key, opacity) => {
       if (opacity < 1 || markersFaded.has(key)) {
         markersFaded.set(key, opacity);
@@ -4052,6 +4055,137 @@ expect(
         ['Unit-R', 1],
       ],
       [0, null, ['walk'], true, ['Unit-A', 1], 0],
+    ]
+  );
+
+  // Drawn with rigged copies (plan 2.2), a battle's paced for their clips (`clipPace`): the attacker, throwing, stands
+  //  where it is, playing `fight` from the start, drawn till its clip's over; the blow falls as its throw lands, half a
+  //  second in and its flight after; the loser plays `die` from the blow, solid till its last figure's fallen, then
+  //  fades in its puff of smoke.
+  rigFactsFor.set('Unit-A', {
+    figures: 1,
+    stagger: 0.13,
+    clips: {
+      fight: { duration: 1.5, shots: [{ at: 0.5, joint: 'prop' }] },
+      die: { duration: 1.6, shots: [] },
+    },
+  });
+  rigFactsFor.set('Unit-R', {
+    figures: 2,
+    stagger: 0.13,
+    clips: { die: { duration: 1.6, shots: [] } },
+  });
+  repatched([1, 1, [walker]], [2, 1, [rival]]);
+  walkersSet.length = 0;
+  walkersPlaced.clear();
+  walkersPosed.clear();
+  puffsPlaced.clear();
+
+  const thrownAt = now,
+    // Each frame: how long since it was fought, in ms; the attacker's pose; and the loser's, how solid it is, and how
+    //  far through its puff is, once it's drawn.
+    thrown: [number, unknown, unknown, number | null, number | null][] = [];
+
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  patch([1, 1, [walker]], [2, 1, []]);
+
+  for (
+    let frame = 0;
+    frame < 400 && (frame === 0 || walkers.size > 0);
+    frame++
+  ) {
+    runFrames(1);
+
+    const ids = [...walkersPosed.keys()],
+      attackerId = ids.find((id) => kind(id) === 'battle'),
+      fallenId = ids.find((id) => kind(id) === 'battle-fallen'),
+      lastPose = (id: string | undefined) => {
+        const pose =
+          id === undefined ? undefined : walkersPosed.get(id)?.at(-1);
+
+        return pose === undefined
+          ? null
+          : [pose[0], Math.round(pose[1] * 1000)];
+      };
+
+    thrown.push([
+      now - thrownAt,
+      lastPose(attackerId),
+      lastPose(fallenId),
+      fallenId === undefined || !walkers.has(fallenId)
+        ? null
+        : Math.round((walkersFaded.get(fallenId) ?? 1) * 100) / 100,
+      [...puffs.values()][0]?.through ?? null,
+    ]);
+    walkersPosed.clear();
+  }
+
+  const [stood] = placedSince(),
+    firstFallen = thrown.find(([, , fell]) => fell !== null),
+    fadingFrom = thrown.find(([, , , solid]) => solid !== null && solid < 1),
+    lastAttacker = thrown.filter(([, attacking]) => attacking !== null).at(-1),
+    over = thrown.find(
+      ([, attacking, fell]) => attacking === null && fell === null
+    );
+
+  expect(
+    'drawn with rigged copies, the attacker throwing stands where it is, playing its fight from the start; the blow falls as its throw lands, 0.85 s in; the loser plays its fall from the blow, solid as it falls, 1.73 s with its second figure, then fades in a puff; and the attacker stands till its clip and the fall are over',
+    [
+      stood!.every((point) => along(point) === 0),
+      thrown[0]![1],
+      [
+        firstFallen![0] > 850 && firstFallen![0] <= 866,
+        firstFallen![2],
+        firstFallen![3],
+      ],
+      thrown
+        .filter(([at, , fell]) => fell !== null && at <= 850 + 1730)
+        .every(([, , , solid, through]) => solid === 1 && (through ?? 0) === 0),
+      fadingFrom![0] > 850 + 1730 && fadingFrom![0] <= 850 + 1730 + 16,
+      [
+        lastAttacker![1]![0],
+        lastAttacker![0] > 3160 && lastAttacker![0] <= 3180,
+      ],
+      over![0] > 3180 && over![0] <= 3196,
+      [unitOn(1, 1), unitOn(2, 1), walkers.size, puffs.size],
+    ],
+    [
+      true,
+      ['fight', 16],
+      [true, ['die', firstFallen![0] - 850], 1],
+      true,
+      true,
+      ['fight', true],
+      true,
+      [['Unit-A', 1], null, 0, 0],
+    ]
+  );
+
+  // A rigged attacker attacking again at once, its first battle three seconds long: the second waits for the first, not
+  //  ending it, as it's no more than two of them behind.
+  repatched([1, 1, [walker]], [2, 1, [rival]], [1, 2, [rivalMate]]);
+  rigFactsFor.set('Unit-T', rigFactsFor.get('Unit-R')!);
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  patch([1, 1, [walker]], [2, 1, []]);
+  fought(walker, [1, 1], rivalMate, [1, 2], 'attacker');
+  patch([1, 1, [walker]], [1, 2, []]);
+  runFrames(1);
+
+  const againAtOnce = [unitOn(2, 1), unitOn(1, 2)];
+
+  runFrames();
+  rigFactsFor.clear();
+  repatched([1, 1, []], [2, 1, []], [1, 2, []]);
+  walkersSet.length = 0;
+  walkersPlaced.clear();
+  walkersPosed.clear();
+
+  expect(
+    'a rigged attacker attacking again at once: the second battle waits for the first, rather than ending it',
+    againAtOnce,
+    [
+      ['Unit-R', 1],
+      ['Unit-T', 1],
     ]
   );
 
