@@ -38,7 +38,8 @@ import {
   figureGeometry,
   unitBodyGeometry,
 } from './figures';
-import { LoadedModel } from '../models/loadModels';
+import { LoadedModel, LoadedRig, rigPart } from '../models/loadModels';
+import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import TintedMaterial, { ownerTint } from './tinted';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {
@@ -105,6 +106,8 @@ export class MarkerKit {
   >();
   #modelFigures = new Map<string, ModelFigures>();
   #modelMaterials = new Map<string, Material>();
+  // The models' rigged copies (`addRig`), by the models' ids, drawn in their place while a clip plays (`rigFigures`).
+  #rigs = new Map<string, LoadedRig>();
   #walls: BufferGeometry | null = null;
   #flats = new Map<string, SpriteMaterial>();
   #pointer: SpriteMaterial | null = null;
@@ -156,9 +159,78 @@ export class MarkerKit {
     this.#models.set(id, model);
   }
 
-  // Lets go of the model `id`, and of what was made from it.
+  /**
+   * The model `id`'s rigged copy (plan 2.2), drawn in its place while a clip plays (`rigFigures`): added after the
+   *  model, and let go of with it.
+   */
+  addRig(id: string, rig: LoadedRig): void {
+    if (this.#models.has(id)) {
+      this.#rigs.set(id, rig);
+    }
+  }
+
+  /** The model `id`'s rigged copy, if it has one. */
+  rigOf(id: string): LoadedRig | null {
+    return this.#rigs.get(id) ?? null;
+  }
+
+  /**
+   * A unit's figures drawn with the model `id`'s rigged copy, if it has one, to play its clips (plan 2.2): as many as
+   *  `modelFigures` draws, where it draws them, as big and in `colours`, each a copy of the rig's scene with a skeleton
+   *  of its own (`RIG_FIGURE`), drawn however far its clip takes it from where its bounds were worked out.
+   */
+  rigFigures(
+    id: string,
+    look: UnitLook,
+    colours: FigureColours,
+    size: number = 1
+  ): Object3D[] | null {
+    const rig = this.#rigs.get(id);
+
+    if (rig === undefined) {
+      return null;
+    }
+
+    const afloat = look.shape === 'ship',
+      flies = airborne(look),
+      squad = look.shape === 'foot' ? look.squad : 1,
+      scale = rig.scale * size,
+      lift = afloat ? 0 : STAND_HEIGHT + (flies ? AIRBORNE_LIFT * size : 0);
+
+    return formation(squad).map(([x, z]) => {
+      const figure = cloneSkinned(rig.scene);
+      let index = 0;
+
+      figure.name = RIG_FIGURE;
+      figure.position.set(x * size, lift, z * size);
+      figure.scale.setScalar(scale);
+      figure.traverse((object) => {
+        const mesh = object as Mesh;
+
+        if (!mesh.isMesh) {
+          return;
+        }
+
+        mesh.material = this.#modelMaterial(
+          `${id} rigged`,
+          index++,
+          { ...rigPart(mesh), geometry: mesh.geometry },
+          colours
+        );
+        // A skinned mesh's bounds are its bind pose's, which a clip can take it far from.
+        mesh.frustumCulled = false;
+      });
+
+      return figure;
+    });
+  }
+
+  // Lets go of the model `id`, and of what was made from it, its rigged copy's too.
   #letGoOfModel(id: string, model: LoadedModel): void {
-    const ours = (key: string): boolean => JSON.parse(key)[0] === id;
+    const ours = (key: string): boolean =>
+      [id, `${id} rigged`].includes(JSON.parse(key)[0]);
+
+    this.#rigs.delete(id);
 
     model.parts.forEach(({ geometry, map }) => {
       geometry.dispose();
@@ -600,7 +672,8 @@ const drawUnit = (
   unit: UnitMarker,
   badges: { at: [number, number, number]; over: number } | null = null,
   flying = false,
-  atSea = badges === null
+  atSea = badges === null,
+  rigged = false
 ): Group => {
   const group = new Group(),
     { ring } = kit.geometries,
@@ -639,9 +712,21 @@ const drawUnit = (
   const figures =
     modelled === null ? new Mesh(body!, kit.figureMaterial) : new Group();
 
-  modelled?.meshes.forEach(([geometry, material]) =>
-    figures.add(new Mesh(geometry, material))
-  );
+  // Drawn to play a clip (`rigged`), with its model's rigged copy, where it has one: as the model stands till a clip's
+  //  played, its badges as high over it.
+  const rig =
+    rigged && modelled !== null && unit.model !== undefined
+      ? kit.rigFigures(unit.model, look, unit.colours, unit.size)
+      : null;
+
+  if (rig !== null) {
+    rig.forEach((figure) => figures.add(figure));
+  } else {
+    modelled?.meshes.forEach(([geometry, material]) =>
+      figures.add(new Mesh(geometry, material))
+    );
+  }
+
   figures.name = FIGURES_PART;
   figures.rotation.y = unit.facing;
   aloft.add(figures);
@@ -735,6 +820,9 @@ export const UNIT_PART = 'unit';
 /** The name of a unit's figures, on their stand: what turns as a unit walking turns. */
 export const FIGURES_PART = 'figures';
 
+/** Each figure drawn with a model's rigged copy (`MarkerKit#rigFigures`), whose clip plays on it alone. */
+export const RIG_FIGURE = 'rig figure';
+
 /**
  * The name of an aircraft's part that climbs as it flies, drawn to fly: its figures, and its flag and all over them;
  *  not its stand, nor the ring at its feet.
@@ -752,7 +840,8 @@ export const IN_FRONT_OF_CITY = 0.26;
 export const drawMarker = (
   kit: MarkerKit,
   marker: TileMarker,
-  flying = false
+  flying = false,
+  rigged = false
 ): Group => {
   const group = new Group();
 
@@ -774,7 +863,8 @@ export const drawMarker = (
             },
         flying,
         // In front of a city's buildings, or where they stand with the towns hidden: in port, not out at sea.
-        inFront === 0
+        inFront === 0,
+        rigged
       );
 
     pawn.name = UNIT_PART;

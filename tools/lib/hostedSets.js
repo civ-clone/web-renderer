@@ -306,17 +306,20 @@ const buildModelSet = (manifestPath, output) => {
     throw new Error(`${manifestPath}: no id to name its files by`);
   }
 
-  Object.entries(manifest.models ?? {}).forEach(([name, model]) => {
-    const named = path.resolve(directory, String(model.file));
+  // A file of model `name`'s, as the manifest says it: beside it, however it's reached, and the file its SHA-256 says,
+  //  its name beside the page changing only as the manifest does, so a file the manifest doesn't pin can't change
+  //  under a name the browser keeps. Its bytes.
+  const bytesOf = (name, file, sha256, what) => {
+    const named = path.resolve(directory, String(file));
 
     if (!NAME.test(name) || !named.startsWith(directory + path.sep)) {
       throw new Error(
-        `${manifest.id}: model ${name} isn't beside its manifest`
+        `${manifest.id}: model ${name}${what} isn't beside its manifest`
       );
     }
 
     if (!fs.existsSync(named) || !fs.statSync(named).isFile()) {
-      throw new Error(`${manifest.id}: model ${name} has no ${model.file}`);
+      throw new Error(`${manifest.id}: model ${name}${what} has no ${file}`);
     }
 
     // As it is on disk, a link followed: still beside its manifest.
@@ -324,28 +327,44 @@ const buildModelSet = (manifestPath, output) => {
 
     if (!source.startsWith(directory + path.sep)) {
       throw new Error(
-        `${manifest.id}: model ${name} isn't beside its manifest`
+        `${manifest.id}: model ${name}${what} isn't beside its manifest`
       );
     }
 
-    // Each model as its manifest says it is: its name beside the page changes only as the manifest does, so a file the
-    //  manifest doesn't pin could change under a name the browser keeps.
-    if (typeof model.sha256 !== 'string') {
-      throw new Error(`${manifest.id}: model ${name} has no SHA-256`);
+    if (typeof sha256 !== 'string') {
+      throw new Error(`${manifest.id}: model ${name}${what} has no SHA-256`);
     }
 
     const bytes = fs.readFileSync(source);
 
-    if (
-      crypto.createHash('sha256').update(bytes).digest('hex') !== model.sha256
-    ) {
+    if (crypto.createHash('sha256').update(bytes).digest('hex') !== sha256) {
       throw new Error(
-        `${manifest.id}: ${model.file} isn't the file its manifest says`
+        `${manifest.id}: ${file} isn't the file its manifest says`
       );
     }
 
+    return bytes;
+  };
+
+  Object.entries(manifest.models ?? {}).forEach(([name, model]) => {
+    write(
+      path.join(output, `${base}.${name}.glb`),
+      bytesOf(name, model.file, model.sha256, '')
+    );
     models[name] = { ...model, file: `${base}.${name}.glb` };
-    write(path.join(output, `${base}.${name}.glb`), bytes);
+
+    // Its rigged copy (plan 2.2), where it has one: beside it as `<id>.<hash>.<name>.rigged.glb`, which no model's
+    //  name can make, as a model's name has no dot.
+    if (model.rigged !== undefined && model.rigged !== null) {
+      write(
+        path.join(output, `${base}.${name}.rigged.glb`),
+        bytesOf(name, model.rigged.file, model.rigged.sha256, "'s rigged copy")
+      );
+      models[name].rigged = {
+        ...model.rigged,
+        file: `${base}.${name}.rigged.glb`,
+      };
+    }
   });
 
   write(
@@ -358,7 +377,7 @@ const buildModelSet = (manifestPath, output) => {
     .filter(
       (file) =>
         file.startsWith(`${manifest.id}.`) &&
-        /^[0-9a-f]{12}\.(json|[a-z0-9][a-z0-9-]*\.glb)$/.test(
+        /^[0-9a-f]{12}\.(json|[a-z0-9][a-z0-9-]*(\.rigged)?\.glb)$/.test(
           file.slice(manifest.id.length + 1)
         ) &&
         !file.startsWith(`${base}.`)
@@ -426,8 +445,8 @@ const MODEL_FILE = /^[A-Za-z0-9._-]+\.glb$/;
 
 /**
  * The hosted sets' files that the build published in `site` asks for, as paths under it: the sheets, their indexes
- *  and the manifests its `dist/frontend.js` names (#1114), and the models that each of those manifests names (#1324),
- *  which only the manifest does. The deploy keeps them for one more deploy, so a page cached from before it still finds
+ *  and the manifests its `dist/frontend.js` names (#1114), and the models, and their rigged copies, that each of those
+ *  manifests names (#1324), which only the manifest does. The deploy keeps them for one more deploy, so a page cached from before it still finds
  *  them. Nothing, for a site with no build; no models, for a manifest that's missing, or one that can't be read, which
  *  is told to `warn`.
  */
@@ -463,11 +482,14 @@ const setsAskedFor = (site, warn = () => {}) => {
         return;
       }
 
-      Object.values(manifest.models ?? {}).forEach((model) => {
-        if (typeof model?.file === 'string' && MODEL_FILE.test(model.file)) {
-          named.add(`${path.posix.dirname(file)}/${model.file}`);
-        }
-      });
+      // Each model's file, and its rigged copy's (plan 2.2).
+      Object.values(manifest.models ?? {}).forEach((model) =>
+        [model?.file, model?.rigged?.file].forEach((each) => {
+          if (typeof each === 'string' && MODEL_FILE.test(each)) {
+            named.add(`${path.posix.dirname(file)}/${each}`);
+          }
+        })
+      );
     });
 
   return [...named].sort();

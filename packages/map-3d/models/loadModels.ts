@@ -4,16 +4,21 @@
 //  (`extras.playerColour`, the texture's alpha the mask), or cut out by its alpha (see-through).
 
 import {
+  AnimationClip,
   BufferGeometry,
   DoubleSide,
   Material,
   Mesh,
   MeshStandardMaterial,
+  Object3D,
   Texture,
 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { LoadingManager } from 'three';
 import {
+  CLIP_ROLES,
+  ClipRole,
+  ClipShot,
   ModelManifest,
   readModelManifest,
   scaleOf,
@@ -38,6 +43,38 @@ export type LoadedModel = {
   scale: number;
 };
 
+/**
+ * A model's rigged copy (plan 2.2), as its figures are drawn while a clip plays: its file's scene, posed as the model
+ *  stands, each mesh a part as `partsOf` would take it (`rigPart`); the clip each role plays, of those its file has;
+ *  the shots each lets fly; and the 3D map's squares to each of its units, as the model's.
+ */
+export type LoadedRig = {
+  scene: Object3D;
+  clips: Map<ClipRole, AnimationClip>;
+  shots: Map<ClipRole, ClipShot[]>;
+  scale: number;
+};
+
+/** What's drawn of a mesh of a rigged copy's, as `partsOf` takes a model's: its texture, and how it's coloured. */
+export const rigPart = (mesh: Mesh): Omit<ModelPart, 'geometry'> =>
+  partOf(
+    mesh.geometry,
+    (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material)!
+  );
+
+// A mesh's geometry drawn with `material`, as a part of a model.
+const partOf = (geometry: BufferGeometry, material: Material): ModelPart => {
+  const standard = material as MeshStandardMaterial;
+
+  return {
+    geometry,
+    map: standard.map ?? null,
+    tinted: standard.userData?.playerColour === true,
+    cutout: standard.alphaTest > 0,
+    doubleSided: standard.side === DoubleSide,
+  };
+};
+
 /** What's had from a model's file: its meshes' parts. */
 export const partsOf = (scene: {
   updateMatrixWorld(force?: boolean): void;
@@ -59,18 +96,11 @@ export const partsOf = (scene: {
 
     // A mesh with one material each, as the set's converter writes them.
     materials.slice(0, 1).forEach((material) => {
-      const standard = material as MeshStandardMaterial,
-        geometry = mesh.geometry.clone();
+      const geometry = mesh.geometry.clone();
 
       geometry.applyMatrix4(mesh.matrixWorld);
       geometry.computeBoundingBox();
-      parts.push({
-        geometry,
-        map: standard.map ?? null,
-        tinted: standard.userData?.playerColour === true,
-        cutout: standard.alphaTest > 0,
-        doubleSided: standard.side === DoubleSide,
-      });
+      parts.push(partOf(geometry, material));
     });
   });
 
@@ -188,14 +218,19 @@ export const modelKey = (url: string, id: string): string => `${url}#${id}`;
 
 /**
  * Loads the set whose manifest is at `url`: its manifest, then each model that draws a unit type, each given to
- *  `loaded` as it arrives, with the unit types it draws. Resolves with the manifest once all have been tried, or
+ *  `loaded` as it arrives, with the unit types it draws; and then its rigged copy, where it has one, given to `rigged`. Resolves with the manifest once all have been tried, or
  *  rejects saying why there's none (it can't be fetched, or isn't a set of models). A model that can't be had is said
  *  in `failed`, and the rest go on.
  */
 export const loadModels = async (
   url: string,
   loaded: (id: string, model: LoadedModel, types: readonly string[]) => void,
-  failed: (id: string, error: unknown) => void
+  failed: (id: string, error: unknown) => void,
+  rigged: (
+    id: string,
+    rig: LoadedRig,
+    types: readonly string[]
+  ) => void = () => {}
 ): Promise<ModelManifest> => {
   // Only this site's, the manifest and its models: whatever asked for it, nothing's fetched from another.
   const at = onSite(url, location.href);
@@ -222,38 +257,82 @@ export const loadModels = async (
     // Where the manifest is: each model's beside it.
     beside = new URL('.', at).href;
 
+  // A file the manifest names, as a model's is: on this site, beside the manifest, not sent on elsewhere, and a glTF
+  //  binary whole in itself, parsed.
+  const parsed = async (named: string) => {
+    const file = onSite(named, at);
+
+    if (file === null || !file.startsWith(beside)) {
+      throw new Error(`${named}: not beside the manifest`);
+    }
+
+    const got = await fetch(file, {
+      redirect: 'error',
+      credentials: 'omit',
+    });
+
+    if (!got.ok) {
+      throw new Error(`${file}: ${got.status}`);
+    }
+
+    // A glTF binary, whole in itself: nothing more is fetched for it.
+    const data = await got.arrayBuffer();
+
+    if (!selfContained(data)) {
+      throw new Error(`${file}: not a glTF binary whole in itself`);
+    }
+
+    return loader.parseAsync(data, '');
+  };
+
   await Promise.all(
     [...types.keys()].map(async (id) => {
+      const entry = manifest.models[id]!;
+
       try {
-        const file = onSite(manifest.models[id]!.file, at);
-
-        if (file === null || !file.startsWith(beside)) {
-          throw new Error(
-            `${manifest.models[id]!.file}: not beside the manifest`
-          );
-        }
-
-        const got = await fetch(file, {
-          redirect: 'error',
-          credentials: 'omit',
-        });
-
-        if (!got.ok) {
-          throw new Error(`${file}: ${got.status}`);
-        }
-
-        // A glTF binary, whole in itself: nothing more is fetched for it.
-        const data = await got.arrayBuffer();
-
-        if (!selfContained(data)) {
-          throw new Error(`${file}: not a glTF binary whole in itself`);
-        }
-
-        const gltf = await loader.parseAsync(data, '');
+        const gltf = await parsed(entry.file);
 
         loaded(
           id,
           { parts: partsOf(gltf.scene), scale: scaleOf(manifest, id) },
+          types.get(id) ?? []
+        );
+      } catch (error) {
+        failed(id, error);
+
+        return;
+      }
+
+      // Its rigged copy, once the model's drawing, where it has one: one that can't be had leaves the model as it is.
+      if (entry.rigged === undefined) {
+        return;
+      }
+
+      try {
+        const gltf = await parsed(entry.rigged.file),
+          clips = new Map<ClipRole, AnimationClip>(),
+          shots = new Map<ClipRole, ClipShot[]>();
+
+        CLIP_ROLES.forEach((role) => {
+          const name = entry.rigged!.clips[role],
+            clip =
+              name === undefined
+                ? undefined
+                : gltf.animations.find((each) => each.name === name);
+
+          if (name !== undefined && clip === undefined) {
+            throw new Error(`${entry.rigged!.file}: no clip ${name}`);
+          }
+
+          if (clip !== undefined) {
+            clips.set(role, clip);
+            shots.set(role, entry.rigged!.shots?.[role] ?? []);
+          }
+        });
+
+        rigged(
+          id,
+          { scene: gltf.scene, clips, shots, scale: scaleOf(manifest, id) },
           types.get(id) ?? []
         );
       } catch (error) {

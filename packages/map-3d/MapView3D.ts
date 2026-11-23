@@ -23,6 +23,8 @@ import type { MapHeading } from '@civ-clone/ui-client/lib/unitActionKeys';
 import groundDirections from './layouts/directions';
 import World from '@civ-clone/ui-map/components/World';
 import { Stage, StageFactory, createStage } from './stage';
+import { ClipRole } from './models/modelSet';
+import { MOVE_RATE } from './markers/clips';
 import Land from './Land';
 import {
   Orbit,
@@ -1094,7 +1096,7 @@ export class MapView3D implements MapRenderer {
 
     this.#walksEnded(ended);
     going.forEach((walker) => {
-      const marker = this.#drawWalker(walker);
+      const marker = this.#drawWalker(walker, now);
 
       // Drawn sailing, a ship among its units, on top or carrying the one that is: its wake laid behind it.
       if (
@@ -1150,17 +1152,25 @@ export class MapView3D implements MapRenderer {
     });
   }
 
-  // A walker drawn as its units are now, where it is: what it's drawn as.
-  #drawWalker(walker: Walker): TileMarker | null {
+  // A walker drawn as its units are now, where it is: what it's drawn as. Going, at `now`, its figures walk, where
+  //  they're drawn with a rigged copy (plan 2.2); waiting where it's come, they stand.
+  #drawWalker(walker: Walker, now?: number): TileMarker | null {
     const marker = this.#walkerMarker(walker.units);
 
-    this.#drawFigure(walker, marker);
+    this.#drawFigure(
+      walker,
+      marker,
+      1,
+      now === undefined
+        ? null
+        : { role: 'move', seconds: (now / 1000) * MOVE_RATE }
+    );
 
     return marker;
   }
 
   // Something walking or fighting (`id`) drawn as `marker`, where it is, `opacity` solid; an aircraft flying, `aloft`
-  //  over its stand.
+  //  over its stand; its figures posed as `clip` has them, where they're drawn with a rigged copy, or standing.
   #drawFigure(
     {
       id,
@@ -1171,7 +1181,8 @@ export class MapView3D implements MapRenderer {
     }: Pick<Walker, 'id' | 'at' | 'lift' | 'facing'> &
       Partial<Pick<Walker, 'aloft'>>,
     marker: TileMarker | null,
-    opacity = 1
+    opacity = 1,
+    clip: { role: ClipRole; seconds: number } | null = null
   ): void {
     const signature = marker === null ? null : JSON.stringify(marker);
 
@@ -1191,6 +1202,7 @@ export class MapView3D implements MapRenderer {
 
     this.#stage.placeWalker(id, this.#onLand(at, lift), facing, aloft);
     this.#stage.fadeWalker(id, opacity);
+    this.#stage.poseWalker?.(id, clip?.role ?? null, clip?.seconds ?? 0);
   }
 
   // Where the point `at` on the ground is on the world's own copy.

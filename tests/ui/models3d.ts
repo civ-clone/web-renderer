@@ -206,7 +206,7 @@ const manifest = (): Record<string, unknown> => ({
       'no scale',
       'no scale',
       'no models',
-      'model spare: no glTF binary beside the manifest, or no scale',
+      'model spare: no glTF binary beside the manifest, no scale, or a rigged copy the map can’t play',
       'no unit names',
       'no unit names',
       'unit Archer: drawn by a model the set hasn’t',

@@ -15,8 +15,39 @@ export type ModelCredit = {
   licence: ModelLicence;
 };
 
-/** A model in a set: its file, beside the manifest, and how big it's drawn, where that isn't the set's scale. */
-export type ModelEntry = { file: string; scale?: number };
+/**
+ * What a unit's figures do, as a clip plays (plan 2.2): stand, walk, fight, fall, and the Settlers' work and settling.
+ *  `idle`, `move` and `work` loop; the rest play once, `die` holding its last frame.
+ */
+export type ClipRole = 'idle' | 'move' | 'fight' | 'die' | 'work' | 'settle';
+
+export const CLIP_ROLES: readonly ClipRole[] = [
+  'idle',
+  'move',
+  'fight',
+  'die',
+  'work',
+  'settle',
+];
+
+/** A shot leaving a figure as a clip plays: when, in seconds into it, and from which of its joints. */
+export type ClipShot = { at: number; joint: string };
+
+/**
+ * A model's rigged copy (plan 2.2): its file, beside the manifest, whose bind pose is the model's own, and the name in
+ *  it of the clip each role plays; and the shots each role's clip lets fly, which the map draws.
+ */
+export type RiggedModel = {
+  file: string;
+  clips: { [role in ClipRole]?: string };
+  shots?: { [role in ClipRole]?: ClipShot[] };
+};
+
+/**
+ * A model in a set: its file, beside the manifest, how big it's drawn, where that isn't the set's scale, and its
+ *  rigged copy, where it has one.
+ */
+export type ModelEntry = { file: string; scale?: number; rigged?: RiggedModel };
 
 export type ModelManifest = {
   schema: 1;
@@ -59,6 +90,36 @@ const isFile = (value: unknown): value is string =>
   value
     .split('/')
     .every((part) => part !== '' && part !== '.' && part !== '..');
+
+const isRole = (value: string): value is ClipRole =>
+  (CLIP_ROLES as readonly string[]).includes(value);
+
+// A rigged copy as a manifest gives it: its file, as a model's is; a clip named for at least one role, each a role the
+//  map plays; and its shots, each when and from which joint, in a role it names a clip for.
+const isRigged = (value: unknown): value is RiggedModel =>
+  isObject(value) &&
+  isFile(value.file) &&
+  isObject(value.clips) &&
+  Object.keys(value.clips).length > 0 &&
+  Object.entries(value.clips).every(
+    ([role, name]) => isRole(role) && isText(name)
+  ) &&
+  (value.shots === undefined ||
+    (isObject(value.shots) &&
+      Object.entries(value.shots).every(
+        ([role, shots]) =>
+          isRole(role) &&
+          (value.clips as Record<string, unknown>)[role] !== undefined &&
+          Array.isArray(shots) &&
+          shots.every(
+            (shot) =>
+              isObject(shot) &&
+              typeof shot.at === 'number' &&
+              Number.isFinite(shot.at) &&
+              shot.at >= 0 &&
+              isText(shot.joint)
+          )
+      )));
 
 /**
  * `json` as a set of models' manifest, or what's wrong with it: a set must say its licence and credit whose work it's
@@ -110,11 +171,12 @@ export const readModelManifest = (json: unknown): ModelManifest | string => {
     ([, entry]) =>
       !isObject(entry) ||
       !isFile(entry.file) ||
-      (entry.scale !== undefined && !isScale(entry.scale))
+      (entry.scale !== undefined && !isScale(entry.scale)) ||
+      (entry.rigged !== undefined && !isRigged(entry.rigged))
   );
 
   if (bad !== undefined) {
-    return `model ${bad[0]}: no glTF binary beside the manifest, or no scale`;
+    return `model ${bad[0]}: no glTF binary beside the manifest, no scale, or a rigged copy the map can't play`;
   }
 
   const names = json.names;

@@ -51,7 +51,10 @@ import { FIELD_OF_VIEW, Orbit, eye, sightFor } from './camera/orbit';
 import Water, { Clouds, Ground } from './water';
 import YieldIcons from './yieldIcons';
 import { YieldMesh } from './yields';
-import { loadModels, modelKey } from './models/loadModels';
+import { LoadedRig, loadModels, modelKey } from './models/loadModels';
+import { ClipRole } from './models/modelSet';
+import { Playing, poseFigures } from './markers/clips';
+import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 
 /** What the stage has drawn, for the debug overlay. */
 export type StageStats = {
@@ -107,6 +110,11 @@ export interface Stage {
    *  materials of its own, so no other marker fades with it. Drawn again for it (`setWalker`), it's solid.
    */
   fadeWalker(id: string, opacity: number): void;
+  /**
+   * The walker `id`'s figures, where its unit's drawn with a model that has a rigged copy, posed as `role`'s clip has
+   *  them `seconds` in (plan 2.2, `clips.ts`): or, for none, standing as the model does.
+   */
+  poseWalker?(id: string, role: ClipRole | null, seconds: number): void;
   /**
    * How solid the unit marked on the square `key` is drawn, from 0 to 1, as a unit arriving with no move fades in
    *  (`fades.ts`): its city stays solid, and no other marker fades with it. Marked again (`setMarker`), it's solid.
@@ -181,6 +189,8 @@ type Walking = Placed & {
   aloft: number;
   opacity: number;
   faded: Faded;
+  // The rigged copy its figures are drawn with, if they are, to play its clips.
+  rig: LoadedRig | null;
 };
 
 export type StageFactory = (
@@ -341,6 +351,8 @@ export const createStage: StageFactory = (
     // The units walking, by their walk's id (`walks.ts`), and fighting, by their battle's (`battles.ts`), each drawn as
     //  its own marker, with no city; the way each faces, how solid it's drawn, and its own materials, once faded.
     walkers = new Map<string, Walking>(),
+    // What each figure drawn with a rigged copy plays (`clips.ts`).
+    playing = new WeakMap<Object3D, Playing>(),
     // The puffs of smoke where units fell, by their battle's id: how far through each is, and its seed.
     puffs = new Map<string, Placed & { through: number; seed: number }>(),
     // What every puff's blobs are made of: one shape, and two greys.
@@ -496,8 +508,12 @@ export const createStage: StageFactory = (
 
   // A marker's original, made from what it marks: casting shadows on the land, as the models will. A walker's drawn to
   //  fly (`flying`).
-  const markerOf = (marker: TileMarker, flying = false): Object3D => {
-    const original = drawMarker(kit, marker, flying);
+  const markerOf = (
+    marker: TileMarker,
+    flying = false,
+    rigged = false
+  ): Object3D => {
+    const original = drawMarker(kit, marker, flying, rigged);
 
     original.traverse((object) => {
       object.castShadow = object instanceof Mesh;
@@ -781,16 +797,21 @@ export const createStage: StageFactory = (
         return;
       }
 
-      const original = markerOf(marker, true),
+      // Drawn with its model's rigged copy, where it has one, to play its clips: each copy with a skeleton of its own.
+      const model = marker.unit?.model,
+        rig = model === undefined ? null : kit.rigOf(model),
+        original = markerOf(marker, true, rig !== null),
         walker: Walking = {
           at: old?.at ?? [0, 0, 0],
           facing: old?.facing ?? marker.unit?.facing ?? 0,
           aloft: old?.aloft ?? 0,
           opacity: 1,
           faded: new Map(),
-          make: () => original.clone(),
+          make: () =>
+            rig === null ? original.clone() : cloneSkinned(original),
           drawn: [],
           original,
+          rig,
         };
 
       walker.drawn = copiesOf(walker, markersGroup, markerCopies);
@@ -814,6 +835,17 @@ export const createStage: StageFactory = (
         drawn.position.set(at[0] + offsetU, at[1], at[2] + offsetV);
       });
       pose(walker);
+    },
+    poseWalker: (id, role, seconds): void => {
+      const walker = walkers.get(id);
+
+      if (walker === undefined || walker.rig === null) {
+        return;
+      }
+
+      walker.drawn.forEach((drawn) =>
+        poseFigures(drawn, walker.rig!, role, seconds, playing)
+      );
     },
     fadeMarker: (key, opacity): void => {
       const marker = markers.get(key),
@@ -965,7 +997,13 @@ export const createStage: StageFactory = (
           loaded(key, types);
         },
         (id, error) =>
-          console.warn(`The 3D map's model ${modelKey(url, id)}:`, error)
+          console.warn(`The 3D map's model ${modelKey(url, id)}:`, error),
+        // Its rigged copy, drawn for what walks (plan 2.2): not drawn again till something does.
+        (id, rig) => {
+          if (!disposed) {
+            kit.addRig(modelKey(url, id), rig);
+          }
+        }
       );
     },
     stats: (): StageStats => ({
