@@ -4329,6 +4329,93 @@ expect(
     [true, [null], 0]
   );
 
+  // Twice as quick, a squad's throws and the puffs where they land are over with their battle, none left drawn once the
+  //  frames stop.
+  rigFactsFor.set('Unit-A', {
+    figures: 3,
+    stagger: 0.13,
+    clips: { fight: { duration: 1.5, shots: [{ at: 0.5, joint: 'prop' }] } },
+  });
+  optionsRegistry.set(MAP3D_WALKS_OPTION, 'fast');
+  repatched([1, 1, [walker]], [2, 1, [rival]]);
+  shotsDrawn.clear();
+  puffsPlaced.clear();
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  patch([1, 1, [walker]], [2, 1, []]);
+  runFrames();
+
+  const quickOver = [
+    [...puffsPlaced.keys()].filter((id) => id.endsWith('-hit')).length,
+    [...shotsDrawn.values()].map((points) => points.at(-1)),
+    puffs.size,
+  ];
+
+  optionsRegistry.set(MAP3D_WALKS_OPTION, 'normal');
+
+  // With units hidden (`t`) mid-flight, the shot's taken away, and none's thrown while they're hidden.
+  repatched([1, 1, [walker]], [2, 1, [rival]]);
+  shotsDrawn.clear();
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  patch([1, 1, [walker]], [2, 1, []]);
+  runFrames(40);
+
+  const beforeHidden = shotsDrawn.size;
+
+  shotsDrawn.clear();
+  glider.toggleUnits();
+  runFrames(1);
+
+  const hiddenMidFlight = [...shotsDrawn.values()].map((points) =>
+    points.at(-1)
+  );
+
+  shotsDrawn.clear();
+  runFrames();
+
+  const thrownHidden = [...shotsDrawn.values()]
+    .flat()
+    .filter((at) => at !== null).length;
+
+  glider.toggleUnits();
+
+  // An attacker with no clip that's beaten a Partisan, falling for 1.9 s, attacking again at once a unit with no clip:
+  //  the second battle waits for the first, though it's short, rather than ending the first and its fall.
+  rigFactsFor.clear();
+  rigFactsFor.set('Unit-R', {
+    figures: 2,
+    stagger: 0.13,
+    clips: { die: { duration: 1.6, shots: [] } },
+  });
+  repatched([1, 1, [walker]], [2, 1, [rival]], [1, 2, [rivalMate]]);
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  patch([1, 1, [walker]], [2, 1, []]);
+  fought(walker, [1, 1], rivalMate, [1, 2], 'attacker');
+  patch([1, 1, [walker]], [1, 2, []]);
+  runFrames(1);
+
+  const shortAfterLong = [unitOn(2, 1), unitOn(1, 2)];
+
+  runFrames();
+  rigFactsFor.clear();
+  repatched([1, 1, []], [2, 1, []], [1, 2, []]);
+  walkersSet.length = 0;
+  walkersPlaced.clear();
+  walkersPosed.clear();
+  shotsDrawn.clear();
+
+  expect(
+    'twice as quick, a squad’s throws and their puffs are over with their battle; units hidden mid-flight, the shot’s taken away, and none’s thrown while they’re hidden; a short battle after a long one by the same attacker waits for it',
+    [quickOver, [beforeHidden, hiddenMidFlight, thrownHidden], shortAfterLong],
+    [
+      [3, [null, null, null], 0],
+      [2, [null, null], 0],
+      [
+        ['Unit-R', 1],
+        ['Unit-T', 1],
+      ],
+    ]
+  );
+
   // The active unit attacks with its last move, and the game chooses the next: the ring and the camera wait till the
   //  battle's over. A key while they wait ends it at once, and they go to the next.
   const attackedLast = () => {

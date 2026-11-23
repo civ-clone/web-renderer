@@ -24,6 +24,7 @@ import Battles, {
   quickerBattle,
 } from '@civ-clone/ui-map-3d/battles';
 import { RigFacts } from '@civ-clone/ui-map-3d/markers/clips';
+import { HIT_PUFF } from '@civ-clone/ui-map-3d/shots';
 
 const failures: string[] = [];
 let checks = 0;
@@ -489,6 +490,20 @@ expect(
       stagger: 0.13,
       clips: { fight: { duration: 1.2, shots: [] } },
     },
+    // Its shots listed late first, the last landing after its clip's over.
+    lateShooter: RigFacts = {
+      figures: 1,
+      stagger: 0.13,
+      clips: {
+        fight: {
+          duration: 1,
+          shots: [
+            { at: 0.9, joint: 'muzzle' },
+            { at: 0.2, joint: 'muzzle' },
+          ],
+        },
+      },
+    },
     // Rounded, as the stagger's tenths add up in floating point.
     rounded = (paced: BattlePace) =>
       Object.fromEntries(
@@ -499,13 +514,14 @@ expect(
       );
 
   expect(
-    'paced for clips: none to play, as it was; a thrower stands, the blow as its throw lands, drawn till its last figure’s throw is over, and a loser that falls is solid till its last figure’s fallen; hand to hand, it lunges, the blow as it would; one that only falls falls',
+    'paced for clips: none to play, as it was; a thrower stands, the blow as its throw lands, drawn till its last figure’s throw is over, and a loser that falls is solid till its last figure’s fallen; hand to hand, it lunges, the blow as it would; one that only falls falls; the blow as the first shot lands, whatever order they’re listed in, and drawn till the last has landed and burst',
     [
       clipPace(pace, null, null) === pace,
       clipPace(pace, { ...brawler, clips: {} }, null) === pace,
       rounded(clipPace(pace, thrower, thrower)),
       rounded(clipPace(pace, brawler, null)),
       rounded(clipPace(pace, null, thrower)),
+      rounded(clipPace(pace, lateShooter, null)),
     ],
     [
       true,
@@ -530,6 +546,13 @@ expect(
         fade: 600,
         falls: 1860,
         clips: { rate: 1, fight: false, die: true },
+      },
+      {
+        reach: 200 + SHOT_FLIGHT,
+        back: 900 + SHOT_FLIGHT + HIT_PUFF - 550,
+        fade: 600,
+        lunge: 0,
+        clips: { rate: 1, fight: true, die: false },
       },
     ]
   );
