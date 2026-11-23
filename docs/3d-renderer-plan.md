@@ -387,11 +387,15 @@ band along a hull, the wingtips). Still to do:
   before mipmaps, with the owner's colours' masks: smaller, or KTX2;
 - **Poses: done.** The Riflemen, Explorers, Spies, Partisans and Marines, and the Fanatics, stood in an A-pose.
   They're posed with their arms at their sides in the sets' own files, which needed nothing here;
-- **Clips:** rigged copies are to sit beside the static models, which their manifests go on naming. The clips are
-  idle, moving and dying for every unit, fighting for combat units (shots in flight for ranged ones), Settlers working
-  and settling, ships sinking and vehicles exploding. The map's side is to play them (`AnimationMixer`, skinned meshes,
-  each figure drawn on its own rather than merged into its squad), and the shots, sinking and explosions. The shipped
-  Fighter's and Helicopter's files already have their propellers' and rotor's.
+- **Clips, first part: done** (spec §10, "As built, third part"). A model's rigged copy, in its set's manifest, is
+  built, loaded and drawn while its unit walks, playing `move`; the Partisans' is the first. Still to do:
+  `fight` with its shots and `die`, on the battles' frames, then `idle`, measured first as it needs frames all the
+  time.
+- **Clips, as planned:** rigged copies are to sit beside the static models, which their manifests go on naming. The
+  clips are idle, moving and dying for every unit, fighting for combat units (shots in flight for ranged ones), Settlers
+  working and settling, ships sinking and vehicles exploding. The map's side is to play them (`AnimationMixer`, skinned
+  meshes, each figure drawn on its own rather than merged into its squad), and the shots, sinking and explosions. The
+  shipped Fighter's and Helicopter's files already have their propellers' and rotor's.
 
 - **What:**
   - loading `.glb` with KTX2 textures;

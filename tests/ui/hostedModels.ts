@@ -253,6 +253,130 @@ expect(
   );
 }
 
+// A model's rigged copy (plan 2.2): copied beside the page with the model, as its SHA-256 says it is, the manifest
+//  naming it so, and the copy from before removed with the model's; one missing, not beside its manifest, or not the
+//  file it says, failing the build, saying why.
+{
+  const set = mkdtempSync(join(tmpdir(), 'hosted-models-rigged-')),
+    out = mkdtempSync(join(tmpdir(), 'hosted-models-rigged-out-')),
+    model = Buffer.from('glTF model'),
+    rig = Buffer.from('glTF rigged model'),
+    manifestOf = (change: (json: any) => void = () => {}): any => {
+      const json: any = {
+        id: 'test-set',
+        name: 'A test set',
+        models: {
+          soldier: {
+            file: 'models/soldier.glb',
+            sha256: sha256(model),
+            rigged: {
+              file: 'models/rigged/soldier.glb',
+              sha256: sha256(rig),
+              clips: { move: 'walk' },
+            },
+          },
+        },
+        names: { unit: { Warrior: 'soldier' } },
+      };
+
+      change(json);
+      writeFileSync(join(set, 'manifest.json'), JSON.stringify(json));
+
+      return json;
+    },
+    failure = (change: (json: any) => void): string => {
+      manifestOf(change);
+
+      try {
+        buildModelSet(
+          join(set, 'manifest.json'),
+          mkdtempSync(join(tmpdir(), 'hosted-models-rigged-bad-'))
+        );
+
+        return 'built';
+      } catch (error) {
+        return (error as Error).message;
+      }
+    };
+
+  mkdirSync(join(set, 'models', 'rigged'), { recursive: true });
+  writeFileSync(join(set, 'models', 'soldier.glb'), model);
+  writeFileSync(join(set, 'models', 'rigged', 'soldier.glb'), rig);
+  writeFileSync(join(set, 'elsewhere.glb'), rig);
+  // From before: the set's rigged copy under another hash, and a file of someone else's.
+  writeFileSync(join(out, 'test-set.000000000000.soldier.rigged.glb'), '');
+  writeFileSync(join(out, 'test-set.000000000000.soldier.rigged.txt'), '');
+
+  manifestOf();
+
+  const built = buildModelSet(join(set, 'manifest.json'), out),
+    shipped = JSON.parse(
+      readFileSync(join(out, built.manifest.split('/').pop()!), 'utf8')
+    ),
+    base = built.manifest.split('/').pop()!.slice(0, -'.json'.length);
+
+  expect(
+    'a model’s rigged copy is copied beside the page with it, named for the set, its hash and the model, the manifest naming it so, and the copy from before removed',
+    [
+      shipped.models.soldier.rigged.file,
+      shipped.models.soldier.rigged.clips,
+      readFileSync(join(out, `${base}.soldier.rigged.glb`)).equals(rig),
+      readdirSync(out).sort(),
+    ],
+    [
+      `${base}.soldier.rigged.glb`,
+      { move: 'walk' },
+      true,
+      [
+        `${base}.json`,
+        `${base}.soldier.glb`,
+        `${base}.soldier.rigged.glb`,
+        'test-set.000000000000.soldier.rigged.txt',
+      ].sort(),
+    ]
+  );
+
+  expect(
+    'a rigged copy missing, not beside its manifest, not the file it says, or without a SHA-256 to say so, fails the build, saying why',
+    [
+      failure(
+        (json) => (json.models.soldier.rigged.file = 'models/rigged/gone.glb')
+      ),
+      failure((json) => (json.models.soldier.rigged.file = '../elsewhere.glb')),
+      failure((json) => (json.models.soldier.rigged.sha256 = sha256('other'))),
+      failure((json) => delete json.models.soldier.rigged.sha256),
+    ],
+    [
+      "test-set: model soldier's rigged copy has no models/rigged/gone.glb",
+      "test-set: model soldier's rigged copy isn't beside its manifest",
+      "test-set: models/rigged/soldier.glb isn't the file its manifest says",
+      "test-set: model soldier's rigged copy has no SHA-256",
+    ]
+  );
+}
+
+// The Partisans' rigged copy, in the realistic units made for civ.one, ships with them.
+{
+  const [cc0] = realistic,
+    built = buildModelSet(
+      cc0!.path,
+      mkdtempSync(join(tmpdir(), 'hosted-models-partisan-'))
+    ),
+    entry = cc0!.source.models.partisan as unknown as {
+      rigged?: { file: string; clips: object };
+    };
+
+  expect(
+    'the realistic units made for civ.one ship the Partisans’ rigged copy, with its walk',
+    [
+      typeof entry.rigged?.file,
+      Object.keys(entry.rigged?.clips ?? {}).includes('move'),
+      built.manifest.endsWith('.json'),
+    ],
+    ['string', true, true]
+  );
+}
+
 // Two packages declaring sets under one id, which would remove each other's files, or one declaring a set that isn't
 //  installed: the build fails, saying why.
 {
@@ -407,12 +531,21 @@ writeFileSync(
       none: {},
       empty: null,
       number: { file: 3 },
-      fine: { file: 'odd.000000000000.fine.glb' },
+      fine: {
+        file: 'odd.000000000000.fine.glb',
+        rigged: { file: 'odd.000000000000.fine.rigged.glb' },
+      },
+      outRigged: {
+        file: 'odd.000000000000.kept.glb',
+        rigged: { file: '../up.rigged.glb' },
+      },
       after: { file: 'odd.000000000000.fine.glb.txt' },
     },
   })
 );
 writeFileSync(join(siteSets, 'odd.000000000000.fine.glb'), '');
+writeFileSync(join(siteSets, 'odd.000000000000.fine.rigged.glb'), '');
+writeFileSync(join(siteSets, 'odd.000000000000.kept.glb'), '');
 writeFileSync(join(siteSets, 'broken.000000000000.json'), '{ not JSON');
 writeFileSync(join(siteSets, 'sheet.000000000000.png'), '');
 writeFileSync(
@@ -441,6 +574,8 @@ const keptFiles = [
   'dist/sets/sheet.000000000000.json',
   'dist/sets/odd.000000000000.json',
   'dist/sets/odd.000000000000.fine.glb',
+  'dist/sets/odd.000000000000.fine.rigged.glb',
+  'dist/sets/odd.000000000000.kept.glb',
   'dist/sets/broken.000000000000.json',
   'dist/sets/gone.000000000000.json',
 ].sort();

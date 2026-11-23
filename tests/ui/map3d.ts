@@ -29,6 +29,7 @@ import {
 import MapView2D from '@civ-clone/ui-game/MapView2D';
 import MapView3D, { keptCity } from '@civ-clone/ui-map-3d/MapView3D';
 import { bannerPlaces } from '@civ-clone/ui-map-3d/banners';
+import { STRIDE } from '@civ-clone/ui-map-3d/markers/clips';
 import {
   applyInterface,
   interfaceMode,
@@ -225,6 +226,8 @@ const staged: string[] = [],
   walkersPlaced = new Map<string, number[][]>(),
   // How high each walker was flown off its stand each frame it was put, by its id: an aircraft's.
   walkersAloft = new Map<string, number[]>(),
+  // How each walker's figures were posed each frame it was put, by its id: the clip's role, or none, and how far in.
+  walkersPosed = new Map<string, [string | null, number][]>(),
   // The puffs of smoke drawn now, by id, where each bursts from and how far through it is; and every puff drawn since
   //  last cleared, by id, how far through it was each time.
   puffs = new Map<string, { at: readonly number[]; through: number }>(),
@@ -286,6 +289,11 @@ const staged: string[] = [],
       ]);
       walkersAloft.set(id, [...(walkersAloft.get(id) ?? []), aloft]);
     },
+    poseWalker: (id, role, seconds) =>
+      void walkersPosed.set(id, [
+        ...(walkersPosed.get(id) ?? []),
+        [role, seconds],
+      ]),
     fadeMarker: (key, opacity) => {
       if (opacity < 1 || markersFaded.has(key)) {
         markersFaded.set(key, opacity);
@@ -2304,12 +2312,18 @@ expect(
 
   const leftAtOnce = unitOn(0, 3);
 
+  walkersPosed.clear();
   patch([0, 3, []], [1, 3, [walker]]);
   runFrames(1);
 
   const whileWalking = [unitOn(1, 3), [...walkers.values()][0]?.unit?.id];
 
   runFrames();
+
+  // As it went, its figures walking (plan 2.2), their legs keeping up with how far it's gone: from the start of their
+  //  walk, never back, to a square's width over the stride when it's there.
+  const posed = [...walkersPosed.values()].flat(),
+    walkedTo = posed.map(([, seconds]) => seconds);
 
   const firstStep = {
       arrived: unitOn(1, 3),
@@ -2404,6 +2418,21 @@ expect(
       true,
       groundAt(0, 2),
     ]
+  );
+
+  expect(
+    'as it walks, its figures play their walk, their legs keeping up with how far it’s gone: from the start, never back, a square over the stride by the time it’s there',
+    [
+      posed.length > 2,
+      posed.every(([role]) => role === 'move'),
+      walkedTo.every(
+        (seconds, index) => index === 0 || seconds >= walkedTo[index - 1]!
+      ),
+      Math.round(walkedTo[0]! * 100),
+      // The last frame before it's there, all but there.
+      Math.round(Math.max(...walkedTo) * STRIDE * 10) / 10,
+    ],
+    [true, true, true, 0, 1]
   );
 
   // Along a road, between two squares with one: the unit walks along it as it bends (`Land#roadPath`), not straight
@@ -2795,9 +2824,16 @@ expect(
   repatched([3, 1, []], [0, 2, [walker]]);
   walkersSet.length = 0;
   walkersPlaced.clear();
+  walkersPosed.clear();
   stepped(walker, [0, 2], [1, 2]);
   runFrames();
 
+  // Its figures walked, then, waiting, stand (plan 2.2).
+  const [poses] = [...walkersPosed.values()],
+    waitingPose = [
+      poses?.some(([role]) => role === 'move'),
+      poses?.at(-1)?.[0],
+    ];
   const [unpatchedWay] = [...walkersPlaced.values()],
     unpatched = [
       unitOn(0, 2),
@@ -2821,6 +2857,12 @@ expect(
       [1, 'Unit-A', 0, ['Unit-A', 1], null],
       [null, null, 1, groundAt(1, 2), 0, null, ['Unit-A', 1], 0],
     ]
+  );
+
+  expect(
+    'a walk over before its patch has its figures walk as it goes, and stand once it’s there',
+    waitingPose,
+    [true, null]
   );
 
   // A GoTo of two steps whose patches are all held, as meeting a leader holds them: it stands where it ended, not back
