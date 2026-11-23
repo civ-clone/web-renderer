@@ -3,7 +3,8 @@
 //  - a ray from above the horizon never meets the ground;
 //  - dragging keeps the ground under the pointer;
 //  - its pitch and distance stay in range, its focus on the world, and a glide goes the short way round;
-//  - the presets, and the copies of the world it sees.
+//  - the presets, and the copies of the world it sees;
+//  - how far it sees, no copy of a world seen whole, and how far down it looks as it draws back from one (#1316).
 
 import {
   DISTANCE_MAX,
@@ -18,9 +19,11 @@ import {
   defaultOrbit,
   eye,
   groundAt,
+  lowestPitch,
   panned,
   presetFor,
   settled,
+  sightFor,
   toScreen,
   zoomed,
 } from '@civ-clone/ui-map-3d/camera/orbit';
@@ -345,6 +348,129 @@ expect(
     Math.round(((Math.PI * 5) / 8) * 1000),
     Math.round((-(Math.PI * 3) / 8) * 1000),
   ]
+);
+
+// How far it sees (#1316): as far as ever without a world, or on one too small to keep from repeating; on a wide one,
+//  no further past its focus than half the world round, the narrower way where it wraps both ways, so no copy of it is
+//  seen whole; and the haze beginning before it ends.
+const wide = { u: 128, v: null },
+  round = { u: 128, v: 80 },
+  tiny = { u: 4, v: null },
+  distances = [DISTANCE_MIN, 10, 24, 40, 60, DISTANCE_MAX],
+  sights = (period?: { u: number; v: number | null }) =>
+    distances.map((distance) => {
+      const { near, far } = sightFor(distance, period);
+
+      return [
+        distance,
+        Math.round(near * 100) / 100,
+        Math.round(far * 100) / 100,
+      ];
+    });
+
+expect(
+  'without a world, or on one too small to keep from repeating, it sees as far as ever: the haze from 1.2 to 3.5 times its distance',
+  [sights(), sights(tiny)],
+  [
+    distances.map((distance) => [
+      distance,
+      Math.round(distance * 120) / 100,
+      distance * 3.5,
+    ]),
+    distances.map((distance) => [
+      distance,
+      Math.round(distance * 120) / 100,
+      distance * 3.5,
+    ]),
+  ]
+);
+
+expect(
+  'on a wide world it sees no further past its focus than half the world round, the narrower way round, and the haze begins before it ends',
+  [wide, round].map(
+    (period) =>
+      sightFor(DISTANCE_MAX, period).far - DISTANCE_MAX <=
+        Math.min(period.u, period.v ?? Infinity) / 2 + 1e-9 &&
+      distances.every((distance) => {
+        const { near, far } = sightFor(distance, period);
+
+        return near < far && far <= sightFor(distance).far && near > distance;
+      })
+  ),
+  [true, true]
+);
+
+expect(
+  'drawn back from a wide world, the haze comes in to half the world past the focus: at the furthest, 154 along from 315, or 130 on a world 80 round',
+  [sightFor(DISTANCE_MAX, wide).far, sightFor(DISTANCE_MAX, round).far],
+  [154, 130]
+);
+
+// How far down it looks, at the least, as it draws back (#1316): as low as ever close in, and on a world too small to
+//  keep from repeating; drawn back from a wide one, higher the further, so the top of the view is in the haze as it is
+//  close in, never out over a copy of the world beyond it.
+const topOfView = (orbit: Orbit, period?: { u: number; v: number | null }) => {
+  const from = eye(orbit, 0),
+    ground = groundAt(orbit, 0, [0, 1], 16 / 9),
+    { far } = sightFor(orbit.distance, period);
+
+  if (ground === null) {
+    return 'over the horizon';
+  }
+
+  // How far along the way it looks the ground at the top of the view is, past where the haze hides everything.
+  const along =
+    ((ground[0] - from[0]) * (orbit.focus[0] - from[0]) +
+      (0 - from[1]) * (0 - from[1]) +
+      (ground[1] - from[2]) * (orbit.focus[1] - from[2])) /
+    orbit.distance;
+
+  return along >= far - 1e-6 ? 'in the haze' : `${Math.round(along)} of ${far}`;
+};
+
+expect(
+  'as low as ever close in, and on a world too small to keep from repeating',
+  [
+    lowestPitch(DISTANCE_MIN, wide),
+    lowestPitch(24, wide),
+    lowestPitch(DISTANCE_MAX),
+    lowestPitch(DISTANCE_MAX, tiny),
+  ],
+  [PITCH_MIN, PITCH_MIN, PITCH_MIN, PITCH_MIN]
+);
+
+expect(
+  'drawn back from a wide world, it looks down further the further it is, within its range',
+  [wide, round].map((period) => {
+    const pitches = distances.map((distance) => lowestPitch(distance, period));
+
+    return (
+      pitches.every(
+        (pitch, index) =>
+          pitch >= PITCH_MIN &&
+          pitch <= PITCH_MAX &&
+          (index === 0 || pitch >= pitches[index - 1]!)
+      ) && pitches[pitches.length - 1]! > PITCH_MIN + (10 * Math.PI) / 180
+    );
+  }),
+  [true, true]
+);
+
+expect(
+  'at the lowest it looks, the top of the view is in the haze, as it is close in, however far it is from a wide world or one round both ways',
+  [undefined, wide, round].flatMap((period) =>
+    distances.map((distance) =>
+      topOfView(
+        {
+          ...defaultOrbit([64, 40]),
+          pitch: lowestPitch(distance, period),
+          distance,
+        },
+        period
+      )
+    )
+  ),
+  distances.flatMap(() => ['in the haze', 'in the haze', 'in the haze'])
 );
 
 if (failures.length > 0) {

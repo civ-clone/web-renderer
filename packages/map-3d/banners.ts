@@ -52,8 +52,8 @@ export const bannerPlaces = (
       (orbit.focus[1] - from[2]) / orbit.distance,
     ],
     // Where the haze begins, and past where it hides the land, and the city with it.
-    { near, far } = sightFor(orbit.distance),
-    copies = copiesNear(orbit.focus, markerSight(orbit), period),
+    { near, far } = sightFor(orbit.distance, period),
+    copies = copiesNear(orbit.focus, markerSight(orbit, period), period),
     onScreen = ([x, y]: [number, number]): [number, number] => [
       ((x + 1) / 2) * width,
       ((1 - y) / 2) * height,

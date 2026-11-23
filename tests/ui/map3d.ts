@@ -39,6 +39,7 @@ import {
   PITCH_MAX,
   PITCH_MIN,
   ZOOM_STEP,
+  lowestPitch,
 } from '@civ-clone/ui-map-3d/camera/orbit';
 import { instance as optionsRegistry } from '@civ-clone/ui-platform/GameOptionsRegistry';
 import Transport from '@civ-clone/ui-client/Transport';
@@ -6887,6 +6888,102 @@ expect(
     patch([lagash, null]);
     view.dispose();
     holder.remove();
+  }
+
+  // Drawn back from a wide world (#1316), the camera looks down further, as far as its distance needs, so no copy of
+  //  the world is seen whole; brought in again, it looks down from the pitch the player chose, which zooming keeps and
+  //  tilting changes. On the small world the rest of these use, which repeats wherever it looks, it looks as low as
+  //  ever.
+  {
+    const across = 64,
+      down = 40,
+      wideTiles = Array.from({ length: across * down }, (_, index) => ({
+        ...(tiles[0] as Tile),
+        id: `Tile-${index % across}-${Math.floor(index / across)}`,
+        x: index % across,
+        y: Math.floor(index / across),
+      })) as unknown as Tile[],
+      wide = new MapView3D(
+        {
+          ...given!,
+          world: new World({
+            ...worldData,
+            width: across,
+            height: down,
+            tiles: wideTiles,
+          } as unknown as WorldData),
+        },
+        fakeStage
+      ),
+      put = (pitch: number, distance: number) => {
+        wide.setOrbit({ ...wide.orbit(), pitch, distance });
+
+        return wide.orbit().pitch;
+      },
+      zoomTo = (distance: number) => {
+        // As the keys zoom it, a step at a time, to as near `distance` as a step comes.
+        const steps = Math.round(
+          Math.log(wide.orbit().distance / distance) / Math.log(ZOOM_STEP)
+        );
+
+        wide.zoomBy(steps);
+
+        return wide.orbit();
+      },
+      round = (value: number) => Math.round(value * 1000) / 1000,
+      drawnBack = put(PITCH_MIN, DISTANCE_MAX),
+      // The world's period as the camera goes round it: across, and down where it wraps.
+      period = wide.land().layout.period(),
+      broughtIn = zoomTo(DISTANCE_MIN),
+      outAgain = zoomTo(DISTANCE_MAX),
+      chosenHigh = put(1.2, DISTANCE_MAX),
+      inHigh = zoomTo(DISTANCE_MIN),
+      tiltedLow = put(PITCH_MIN, DISTANCE_MIN),
+      outLow = zoomTo(DISTANCE_MAX);
+
+    expect(
+      'drawn back from a wide world, the camera looks down further than it can close in, as far as its distance needs there',
+      [
+        drawnBack > PITCH_MIN + 0.1,
+        [
+          lowestPitch(DISTANCE_MAX, { u: period.u, v: null }),
+          lowestPitch(DISTANCE_MAX, period),
+        ].some((pitch) => round(pitch) === round(drawnBack)),
+      ],
+      [true, true]
+    );
+
+    expect(
+      'brought in, it looks down from the pitch chosen, kept as it zooms; drawn back again, down further; a pitch chosen above what its distance needs is kept, and one chosen low comes back as it is brought in',
+      [
+        round(broughtIn.pitch),
+        round(outAgain.pitch) === round(drawnBack),
+        round(chosenHigh),
+        round(inHigh.pitch),
+        round(tiltedLow),
+        round(outLow.pitch) === round(drawnBack),
+      ],
+      [round(PITCH_MIN), true, 1.2, 1.2, round(PITCH_MIN), true]
+    );
+
+    wide.dispose();
+
+    // The small world, drawn back: as low as ever.
+    const small = new MapView3D(given!, fakeStage);
+
+    small.setOrbit({
+      ...small.orbit(),
+      pitch: PITCH_MIN,
+      distance: DISTANCE_MAX,
+    });
+
+    expect(
+      'on a world too small to keep from repeating, it looks as low as ever, however far back',
+      round(small.orbit().pitch),
+      round(PITCH_MIN)
+    );
+
+    small.dispose();
   }
 
   // Sets of models (docs/3d-renderer.md §10): the stage asked to load each set the page asks for, and each unit type a

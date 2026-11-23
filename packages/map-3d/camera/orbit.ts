@@ -300,8 +300,51 @@ export const between = (
   };
 };
 
-/** How far the camera sees before the haze hides everything, for an orbit `distance` from its focus. */
-export const sightFor = (distance: number): { near: number; far: number } => ({
-  near: distance * 1.2,
-  far: distance * 3.5,
-});
+/**
+ * How far the camera sees before the haze hides everything, for an orbit `distance` from its focus: and, on a world
+ *  that repeats every `period` (across, and down where it wraps), no further past its focus than half of it, so no copy
+ *  of the world is ever seen whole (#1316). A world so small that half of it is nearer than the camera ever comes
+ *  repeats wherever it looks, so it's seen as far as any.
+ */
+export const sightFor = (
+  distance: number,
+  period?: { u: number; v: number | null }
+): { near: number; far: number } => {
+  const repeat =
+      period === undefined
+        ? Infinity
+        : Math.min(period.u, period.v ?? Infinity) / 2,
+    half = repeat < DISTANCE_MIN ? Infinity : repeat,
+    far = Math.min(distance * 3.5, distance + half);
+
+  // The haze starting no nearer than it did, but for a world so small it has to, to thicken before it's all there is.
+  return { near: Math.min(distance * 1.2, (distance + far) / 2), far };
+};
+
+/**
+ * The lowest the camera looks, `distance` from its focus on a world that repeats every `period`: `PITCH_MIN` while the
+ *  haze is as far off as it is close in, and higher as the world's size draws it in (`sightFor`), so the top of the
+ *  view is as deep in it as close in. Drawn back from the world, it looks down on the land rather than out over it to
+ *  the horizon, as strategy games' cameras do (#1316).
+ */
+export const lowestPitch = (
+  distance: number,
+  period?: { u: number; v: number | null }
+): number => {
+  const half = FIELD_OF_VIEW / 2,
+    // The pitch at which the top of the view, half the field of view above where the camera looks, meets the ground
+    //  `far` along the way it looks: by the sine rule, sin(pitch) / sin(pitch - half) = far / (distance cos(half)).
+    meeting = (far: number): number => {
+      const reach = far / (distance * Math.cos(half));
+
+      return Math.atan2(reach * Math.sin(half), reach * Math.cos(half) - 1);
+    };
+
+  return clamp(
+    PITCH_MIN +
+      meeting(sightFor(distance, period).far) -
+      meeting(sightFor(distance).far),
+    PITCH_MIN,
+    PITCH_MAX
+  );
+};
