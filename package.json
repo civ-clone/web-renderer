@@ -311,7 +311,8 @@
       "civ1-tileset-pixelart",
       "civ2-asset-extractor",
       "models-0ad",
-      "models-cimpletoon"
+      "models-realistic-by",
+      "models-realistic-cc0"
     ],
     "sets": {
       "civ1": {
@@ -630,7 +631,8 @@
     "@civ-clone/library-science": "^0.1.1",
     "@civ-clone/library-unit": "^0.1.15",
     "@civ-clone/models-0ad": "github:civ-clone/models-0ad",
-    "@civ-clone/models-cimpletoon": "github:civ-clone/models-cimpletoon",
+    "@civ-clone/models-realistic-by": "github:civ-clone/models-realistic-by",
+    "@civ-clone/models-realistic-cc0": "github:civ-clone/models-realistic-cc0",
     "@civ-clone/simple-ai-client": "github:civ-clone/simple-ai-client",
     "@civ-clone/simple-world-generator": "github:civ-clone/simple-world-generator",
     "@civ-clone/simple-world-path": "github:civ-clone/simple-world-path",

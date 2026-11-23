@@ -70,6 +70,7 @@ import { metadataKey } from '@civ-clone/ui-assets/lib/packs';
 import civ2ExtractData from '@civ-clone/civ2-asset-extractor/extract-data.json';
 import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';
 import i18next from 'i18next';
+import { creditedUnits } from '@civ-clone/ui-models-hosted';
 import { readFileSync } from 'fs';
 
 const failures: string[] = [];
@@ -2290,36 +2291,137 @@ const run = async (): Promise<void> => {
         ]
       );
 
-      // Beside it, Cimpletoon's later units, which ship with civ.one too.
-      const later = section?.querySelector('[data-set="cimpletoon"]');
+      // Beside it, the realistic units, made for civ.one and adapted from their authors', which ship with civ.one too.
+      const credited = section?.querySelector('[data-set="realistic-by"]'),
+        credits = credited?.querySelector('details.credits'),
+        first = credits?.querySelector('li');
 
       expect(
-        'asked for the 3D map, the library lists every set of units that ships with civ.one, 0 A.D.’s first, then Cimpletoon’s, with its licence linked and the credit it gives',
+        'asked for the 3D map, the library lists every set of units that ships with civ.one, 0 A.D.’s first, then the realistic ones, each with its licence linked and the credit it gives',
         [
           Array.from(
             section?.querySelectorAll('[data-set]') ?? [],
             (entry) => (entry as HTMLElement).dataset.set
           ),
-          later?.querySelector('.name')?.textContent,
-          later?.querySelector('.status')?.textContent,
-          later?.querySelector('.source')?.textContent,
+          credited?.querySelector('.name')?.textContent,
+          credited?.querySelector('.status')?.textContent,
+          credited?.querySelector('.source')?.textContent,
           Array.from(
-            later?.querySelectorAll('.source a') ?? [],
+            credited?.querySelectorAll('.source a') ?? [],
             (link) => (link as HTMLAnchorElement).href
           ),
         ],
         [
-          ['0ad-ancient', 'cimpletoon'],
-          'Cimpletoon: later units',
+          ['0ad-ancient', 'realistic-cc0', 'realistic-by'],
+          'Realistic: CC BY',
           'Ready',
-          'Comes with civ.one · License: CC0 1.0 · From Cimpletoon by yd (https://opengameart.org/content/cimpletoon), CC0 1.0 (https://creativecommons.org/publicdomain/zero/1.0/): posed, reduced, converted and atlased by dom111.',
+          'Comes with civ.one · License: CC BY 4.0 · Models by the authors listed at https://github.com/civ-clone/models-realistic-by/blob/main/CREDITS.md, CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/): reduced, rebaked, assembled and converted by dom111.',
           [
-            'https://creativecommons.org/publicdomain/zero/1.0/',
-            'https://opengameart.org/content/cimpletoon',
-            'https://creativecommons.org/publicdomain/zero/1.0/',
+            'https://creativecommons.org/licenses/by/4.0/',
+            'https://github.com/civ-clone/models-realistic-by/blob/main/CREDITS.md',
+            'https://creativecommons.org/licenses/by/4.0/',
           ],
         ]
       );
+
+      // And whose work each is made from, as its manifest credits each (D3), in a list the player opens: each work
+      //  linked, its author, and its licence linked.
+      expect(
+        'each set lists whose work it’s made from, closed until opened: each work linked, by its author, under its licence, linked',
+        [
+          Array.from(section?.querySelectorAll('[data-set]') ?? [], (entry) => [
+            (entry as HTMLElement).dataset.set,
+            entry.querySelector('details.credits summary')?.textContent,
+            entry.querySelectorAll('details.credits li').length,
+          ]),
+          (credits as HTMLDetailsElement | null)?.open,
+          first?.textContent,
+          Array.from(first?.querySelectorAll('a') ?? [], (link) => [
+            link.href,
+            link.target,
+            link.rel,
+          ]),
+        ],
+        [
+          [
+            ['0ad-ancient', 'Credits (1)', 1],
+            ['realistic-cc0', 'Credits (5)', 5],
+            ['realistic-by', 'Credits (24)', 24],
+          ],
+          false,
+          'Business Man - Low Polygon game character by manoeldarochadeoliveira · CC BY 4.0',
+          [
+            [
+              'https://sketchfab.com/3d-models/business-man-low-polygon-game-character-b6f6740f883b4749abac47af0045a9dd',
+              '_blank',
+              'noopener noreferrer',
+            ],
+            [
+              'https://creativecommons.org/licenses/by/4.0/',
+              '_blank',
+              'noopener noreferrer',
+            ],
+          ],
+        ]
+      );
+
+      // Every credit listed as its manifest gives it: the work, by its author, under its licence, as text, the work and
+      //  licence linked where they're at https: addresses.
+      expect(
+        'every credit is listed, each as its manifest gives it, linked where it’s at an https: address',
+        Array.from(credits?.querySelectorAll('li') ?? [], (item) => [
+          item.textContent,
+          Array.from(item.querySelectorAll('a'), (link) => link.href),
+          item.querySelectorAll('*').length - item.querySelectorAll('a').length,
+        ]),
+        creditedUnits.credits.map(({ work, author, url, licence }) => [
+          `${work} by ${author} · ${licence.name}`,
+          [url, licence.url],
+          0,
+        ])
+      );
+
+      // A credit whose words are markup, or have an apostrophe, says them as they are; and one whose work or licence
+      //  isn't at an https: address names it, not links it: a manifest's words aren't markup, nor its addresses scripts.
+      {
+        const credit = creditedUnits.credits[0]!,
+          { work, author, url, licence } = credit;
+
+        try {
+          credit.work = "<b>Work</b> & co's";
+          credit.author = "<img src=x onerror=alert(1)> O'Brien";
+          credit.url = 'javascript:alert(1)';
+          credit.licence = {
+            name: "<i>Licence</i> d'auteur",
+            url: 'http://example.com/<b>licence</b>',
+          };
+
+          const odd = new LibraryWindow({}, { search: '?3d=1' });
+
+          await settle();
+
+          const item = odd
+            .element()
+            .querySelector('[data-set="realistic-by"] details.credits li');
+
+          expect(
+            'a credit’s words are said as they are, not as markup, and one not at an https: address is named, not linked',
+            [
+              Array.from(item?.querySelectorAll('*') ?? [], ({ tagName }) =>
+                tagName.toLowerCase()
+              ),
+              item?.textContent,
+            ],
+            [
+              ['span', 'span'],
+              "<b>Work</b> & co's by <img src=x onerror=alert(1)> O'Brien · <i>Licence</i> d'auteur",
+            ]
+          );
+          odd.close();
+        } finally {
+          Object.assign(credit, { work, author, url, licence });
+        }
+      }
       with3D.close();
       without.close();
       trying.close();

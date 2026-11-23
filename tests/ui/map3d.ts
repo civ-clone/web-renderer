@@ -89,7 +89,11 @@ import { Color } from 'three';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { unitStatus } from '@civ-clone/ui-assets/lib/renderUnit';
 import { setBuild } from '@civ-clone/ui-client/lib/build';
-import { ancientUnits, laterUnits } from '@civ-clone/ui-models-hosted';
+import {
+  ancientUnits,
+  creditedUnits,
+  realisticUnits,
+} from '@civ-clone/ui-models-hosted';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import { sourcesUnder, specifiersOf } from './lib/imports';
@@ -6890,12 +6894,16 @@ expect(
   //  once, the units left as they are; nothing marked for one arriving after the map's taken down. The stage isn't
   //  asked where the page asks for none. Where there are several, a type is drawn by the first set's model for it.
   {
-    // Asked for no set, the page asks for the ones that ship with civ.one: 0 A.D.'s ancient units, then Cimpletoon's
-    //  later units.
+    // Asked for no set, the page asks for the ones that ship with civ.one: 0 A.D.'s ancient units, then the realistic
+    //  units made for civ.one, then those adapted from their authors'.
     expect(
       'asked for no set, the page draws units with the ones that ship with civ.one, 0 A.D.’s first',
       given!.models,
-      [{ url: ancientUnits.manifest }, { url: laterUnits.manifest }]
+      [
+        { url: ancientUnits.manifest },
+        { url: realisticUnits.manifest },
+        { url: creditedUnits.manifest },
+      ]
     );
 
     const asked: string[] = [],

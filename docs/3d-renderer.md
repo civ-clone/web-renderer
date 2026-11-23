@@ -115,9 +115,15 @@ the hard part.
 licence, never folded into a CC0, CC BY or MIT set. The first is 0 A.D.'s ancient units, adapted from Wildfire Games'
 art ([civ-clone/models-0ad](https://github.com/civ-clone/models-0ad)). It's credited as CC BY-SA asks, wherever it's
 used: its library entry gives its licence, linked, and its credit (`licence.attribution`), which names Wildfire Games
-with a link, and says what was changed. The second is CC0: Cimpletoon's later units, converted from yd's models
-([civ-clone/models-cimpletoon](https://github.com/civ-clone/models-cimpletoon)). It asks for no credit, but its
-library entry gives one all the same.
+with a link, and says what was changed.
+
+**As built (2026-11-23):** the rest are realistic units, in two sets by their licence: those made for civ.one with Meshy
+and from Meshy's community (CC0, [civ-clone/models-realistic-cc0](https://github.com/civ-clone/models-realistic-cc0)),
+and those mostly adapted from their authors' on Sketchfab (CC BY 4.0,
+[civ-clone/models-realistic-by](https://github.com/civ-clone/models-realistic-by)). Each set's library entry gives its
+licence and credit, and lists every work it's made from, each linked, with its author and its licence: that list is
+the art credits list. Cimpletoon's later units (CC0,
+[civ-clone/models-cimpletoon](https://github.com/civ-clone/models-cimpletoon)) shipped for a day before them.
 
 ### D4. What "isometric" means in 3D
 
@@ -157,6 +163,12 @@ them.
 set uses three figures for foot units and one for vehicles, ships and aircraft.
 
 **Decided (2026-11-18):** agreed.
+
+**As built (2026-11-23):** the count is the unit type's look's (`unitTable`'s `squad`). The built-in figures use it as
+it is: three for most foot units, two for riders, one for the rest. A hosted set's model is drawn as many times as that
+for a foot unit, and once for anything else, riders too (`MarkerKit.modelFigures`). Paratroopers are one: a model draws
+a parachutist under his canopy, and three canopies would cut through each other. The built-in figure, which has only
+his pack, is one too, so a unit looks the same whichever draws it.
 
 ### D7. Rotation
 
@@ -1338,7 +1350,8 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
   (`modelKey`: the manifest's address and the model's name).
 - **Drawn** (`MarkerKit.modelFigures`):
   - **Figures:** as many as stand for one unit of the type's look (D6), in its formation, merged in a mesh for each of
-    the model's parts. So a unit is a draw call for each part, one or two, besides its stand.
+    the model's parts. So a unit is a draw call for each part, besides its stand: mostly one or two, and eight for
+    the realistic Fighter and Helicopter.
   - **Size:** the set's size, or the model's own, times twice life size and the player's choice (§6.2).
   - **Where:** on the built-in set's stand, and behind its wall when fortified. A ship sits on the water in its
     ripples, with no stand.
@@ -1353,30 +1366,43 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
 
 - **0 A.D.'s ancient units** ([civ-clone/models-0ad](https://github.com/civ-clone/models-0ad), CC BY-SA 3.0, adapted
   from Wildfire Games' art):
-  - 15 models, each drawing a unit type: Warrior, Spearman, Archer, Swordman, Pikeman, Settlers, Horseman, Chariot,
-    Elephant, Catapult, Caravan and Trireme. Three stand in where 0 A.D. has nothing quite like Civilization's: Roman
-    heavy cavalry for Knight, a mounted scout for Explorer, and a Norse knarr for Sail;
-  - 3.8 MB in all, each a unit posed as it stands still, from one atlas (and a second for what's see-through).
+  - 10 models, each drawing a unit type: Spearman, Archer, Swordman, Pikeman, Horseman, Chariot, Elephant, Catapult,
+    Caravan and Trireme;
+  - 2.7 MB in all, each a unit posed as it stands still, from one atlas (and a second for what's see-through).
 
-- **Cimpletoon's later units** ([civ-clone/models-cimpletoon](https://github.com/civ-clone/models-cimpletoon), CC0 1.0,
-  converted from yd's Cimpletoon):
-  - 18 models, each drawing a unit type: Musketman, Rifleman, Diplomat, Cavalry, Cannon, Artillery, Mech. Inf., Tank,
-    Fighter, Bomber, Nuclear, Frigate, Ironclad, Transport, Cruiser, Battleship, Submarine and Carrier;
-  - 3.3 MB in all, low-poly, each part one colour from a small atlas, some with made-up grain, both sides drawn;
-  - each ship floats with its waterline at its origin. All but the Musketman and Diplomat have scales of their own
-    (the riders, vehicles, aircraft and ships, and the Riflemen, whose model is bigger), so they sit beside the people
-    and 0 A.D.'s units.
+- **Realistic units made for civ.one**
+  ([civ-clone/models-realistic-cc0](https://github.com/civ-clone/models-realistic-cc0), CC0 1.0: generated with Meshy,
+  and Meshy's community's):
+  - 20 models, each drawing a unit type: Settlers, Warrior, Knight, Explorer, Sail, Crusader, Musketman, Rifleman,
+    Cavalry, Dragoon, Alpine Troops, Partisan, Spy, Marine, Engineer, Bomber, Stealth Bomber, Frigate, Ironclad and
+    Transport;
+  - 6.7 MB in all.
+
+- **Realistic units adapted from their authors'**
+  ([civ-clone/models-realistic-by](https://github.com/civ-clone/models-realistic-by), CC BY 4.0, from Sketchfab, but
+  for the Paratrooper, generated for civ.one under the canopy from Sketchfab):
+  - 21 models, each drawing a unit type: Diplomat, Paratrooper, Fanatic, Mech. Inf., Cannon, Artillery, Howitzer,
+    Tank, Freight, Nuclear, Cruise Missile, Fighter, Helicopter, Stealth Fighter, Galleon, Destroyer, Cruiser, AEGIS
+    Cruiser, Battleship, Submarine and Carrier;
+  - 6.5 MB in all.
+
+  The realistic ones are reduced from far finer models, each to a few thousand triangles, with its colours baked into
+  one texture (JPEG, 512 px for people and 1024 px for the rest), and a second, of up to 512 px, where a prop was put in
+  (the Partisan's molotov, the Diplomat's hat, the Paratrooper's canopy, the Fanatic's torch). Each ship floats with its
+  waterline at its origin, and each but the people has a scale of its own, so all sit beside each other and 0 A.D.'s
+  units. None has a mask for its owner's colour yet: whose a unit is shows by its flag, and on land by its stand.
 
   Each is a dependency of the renderer, pinned by its commit in the lockfile. One package here
-  (`packages/models-hosted`) declares both (`civ-clone.hostedModels`), and gives the page them in order, 0 A.D.'s
-  first (`hostedModelSets`). No unit type is drawn by both.
+  (`packages/models-hosted`) declares the three (`civ-clone.hostedModels`), and gives the page them in order, 0 A.D.'s
+  first (`hostedModelSets`). No unit type is drawn by two.
 - **The build** (`tools/lib/hostedSets.js`) copies each set's models beside the page as
   `dist/sets/<id>.<hash>.<name>.glb`, each as its manifest's SHA-256 says it is, and its manifest, naming them so, as
   `<id>.<hash>.json`. The hash is the manifest's, so the browser keeps them until the set changes. The set's files from
   before are removed by name, and the package is told where each manifest is (`modelSets.js`).
 - **The page** draws with them under `?3d=1`, unless `?models=` asks for another.
 - **The library** lists each, where the page asked for the 3D map, under Units on the 3D map. It says it comes with
-  civ.one, its licence, linked, and the credit it gives (`licence.attribution`).
+  civ.one, its licence, linked, and the credit it gives (`licence.attribution`). Under it, a list the player opens
+  names every work the set's made from (`credits`): each work linked, its author, and its licence, linked.
 
 ---
 

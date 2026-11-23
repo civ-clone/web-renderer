@@ -2,8 +2,8 @@
 //  beside the page under names with its manifest's hash in them, each as the manifest's SHA-256 says it is, and its
 //  manifest naming them so, which the 3D map reads and loads as it does any set's; the set's files from before removed,
 //  and nothing else; a model missing, not beside its manifest, or not the file it says, failing the build. The sets the
-//  renderer declares, 0 A.D.'s ancient units and Cimpletoon's later units, are built as the suite's runner builds them,
-//  and the page asks for them under `?3d=1`, unless it asked for another.
+//  renderer declares, 0 A.D.'s ancient units and the two sets of realistic ones, are built as the suite's runner builds
+//  them, and the page asks for them under `?3d=1`, unless it asked for another.
 
 import { createHash } from 'crypto';
 import {
@@ -19,9 +19,11 @@ import { tmpdir } from 'os';
 import { dirname, join } from 'path';
 import { readModelManifest } from '@civ-clone/ui-map-3d/models/modelSet';
 import { selfContained } from '@civ-clone/ui-map-3d/models/loadModels';
+import { unitTable } from '@civ-clone/ui-models-builtin/units';
 import hostedModelSets, {
   ancientUnits,
-  laterUnits,
+  creditedUnits,
+  realisticUnits,
 } from '@civ-clone/ui-models-hosted';
 
 const { buildHostedModels, buildModelSet, declaredModelSets } =
@@ -68,28 +70,38 @@ const sha256 = (bytes: Buffer | string): string =>
   hash = sha256(shippedText).slice(0, 12),
   output = mkdtempSync(join(tmpdir(), 'hosted-models-'));
 
-// Beside it, Cimpletoon's later units.
-const laterShipped = require.resolve(
-    '@civ-clone/models-cimpletoon/manifest.json',
-    { paths: [root] }
-  ),
-  laterText = readFileSync(laterShipped),
-  laterSource = JSON.parse(laterText.toString()) as typeof source;
+// Beside it, the realistic units: those made for civ.one (CC0), then those adapted from their authors' (CC BY).
+const realistic = (
+  ['models-realistic-cc0', 'models-realistic-by'] as const
+).map((name) => {
+  const path = require.resolve(`@civ-clone/${name}/manifest.json`, {
+      paths: [root],
+    }),
+    text = readFileSync(path);
+
+  return {
+    name,
+    path,
+    text,
+    source: JSON.parse(text.toString()) as typeof source & {
+      credits: object[];
+    },
+  };
+});
 
 // The renderer's own sets, declared by the package that ships them, 0 A.D.'s first.
 expect(
-  'the renderer declares 0 A.D.’s ancient units, then Cimpletoon’s later units, from the package that ships them',
+  'the renderer declares 0 A.D.’s ancient units, then the realistic units made for civ.one, then those adapted from their authors’, from the package that ships them',
   declaredModelSets(root).map(({ directory, manifest }) => [
     directory.split(/[\\/]/).slice(-2).join('/'),
     manifest === shipped
       ? 'ancient'
-      : manifest === laterShipped
-      ? 'later'
-      : manifest,
+      : realistic.find(({ path }) => path === manifest)?.name ?? manifest,
   ]),
   [
     ['packages/models-hosted', 'ancient'],
-    ['packages/models-hosted', 'later'],
+    ['packages/models-hosted', 'models-realistic-cc0'],
+    ['packages/models-hosted', 'models-realistic-by'],
   ]
 );
 
@@ -276,19 +288,19 @@ expect(
   );
 }
 
-// Cimpletoon's set built the same way: its manifest read as a set of models, and each model copied as it is, as its
+// Each realistic set built the same way: its manifest read as a set of models, and each model copied as it is, as its
 //  SHA-256 says, a glTF binary whole in itself.
-{
+realistic.forEach(({ name: setName, path, text, source: laterSource }) => {
   const laterOutput = mkdtempSync(join(tmpdir(), 'hosted-models-later-')),
-    laterBuilt = buildModelSet(laterShipped, laterOutput),
-    laterBase = `${laterSource.id}.${sha256(laterText).slice(0, 12)}`,
+    laterBuilt = buildModelSet(path, laterOutput),
+    laterBase = `${laterSource.id}.${sha256(text).slice(0, 12)}`,
     laterManifest = JSON.parse(
       readFileSync(join(laterOutput, `${laterBase}.json`), 'utf8')
     ) as typeof laterSource,
     laterRead = readModelManifest(laterManifest);
 
   expect(
-    'Cimpletoon’s set built: its manifest under its id and hash, read as a set of models, each model copied as it is, whole in itself',
+    `${setName} built: its manifest under its id and hash, read as a set of models, each model copied as it is, whole in itself`,
     [
       laterBuilt.manifest,
       typeof laterRead === 'string' ? laterRead : 'read',
@@ -316,7 +328,7 @@ expect(
       Object.keys(laterSource.models).map((name) => [name, true, true, true]),
     ]
   );
-}
+});
 
 // What the page has of the set: where its manifest is, beside the page, as built for the suite, and what the library
 //  shows of it.
@@ -333,30 +345,64 @@ expect(
 );
 
 expect(
-  'and of Cimpletoon’s, after 0 A.D.’s: where its manifest is, as it’s built beside it, and its licence with the credit it gives',
+  'and of the realistic units’, after 0 A.D.’s: where each manifest is, as it’s built beside it, and its licence with the credit it gives, which links its list of credits',
   [
     hostedModelSets.map(({ id }) => id),
-    laterUnits.manifest,
-    existsSync(join(root, laterUnits.manifest)),
-    laterUnits.licence.name,
-    laterUnits.licence.attribution?.includes('Cimpletoon by yd'),
-    laterUnits.credits.map(({ author }) => author),
+    [realisticUnits, creditedUnits].map(({ manifest, licence }) => [
+      manifest,
+      existsSync(join(root, manifest)),
+      licence.name,
+      licence.attribution?.includes(
+        `https://github.com/civ-clone/${
+          manifest.includes('realistic-cc0')
+            ? 'models-realistic-cc0'
+            : 'models-realistic-by'
+        }/blob/main/CREDITS.md`
+      ),
+    ]),
   ],
   [
-    ['0ad-ancient', 'cimpletoon'],
-    `dist/sets/${laterSource.id}.${sha256(laterText).slice(0, 12)}.json`,
-    true,
-    'CC0 1.0',
-    true,
-    ['yd'],
+    ['0ad-ancient', 'realistic-cc0', 'realistic-by'],
+    realistic.map(({ text, source: { id } }, index) => [
+      `dist/sets/${id}.${sha256(text).slice(0, 12)}.json`,
+      true,
+      ['CC0 1.0', 'CC BY 4.0'][index],
+      true,
+    ]),
   ]
 );
 
-// Each unit type drawn by one set: none is drawn by both.
+// Every work each is made from, as the library lists them: each credit its manifest gives, its author's among them.
 expect(
-  'no unit type is drawn by both sets',
-  Object.keys(source.names.unit).filter((type) =>
-    Object.prototype.hasOwnProperty.call(laterSource.names.unit, type)
+  'each realistic set has every credit its manifest gives, for the library to list',
+  [realisticUnits, creditedUnits].map(({ credits }) => credits),
+  realistic.map(({ source: { credits } }) => credits)
+);
+
+// Each unit type drawn by one set: none is drawn by two.
+expect(
+  'no unit type is drawn by two sets',
+  [source, ...realistic.map(({ source }) => source)].flatMap(
+    ({ names }, index, sets) =>
+      Object.keys(names.unit).filter((type) =>
+        sets
+          .slice(index + 1)
+          .some(({ names: later }) =>
+            Object.prototype.hasOwnProperty.call(later.unit, type)
+          )
+      )
+  ),
+  []
+);
+
+// And between them, every unit type the 3D map knows (Civ1's and Civ2's) is drawn by one.
+expect(
+  'every unit type the 3D map knows is drawn by one of the sets that ship',
+  Object.keys(unitTable).filter(
+    (type) =>
+      ![source, ...realistic.map(({ source }) => source)].some(({ names }) =>
+        Object.prototype.hasOwnProperty.call(names.unit, type)
+      )
   ),
   []
 );
