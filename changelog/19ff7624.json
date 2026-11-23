@@ -1,0 +1,1 @@
+{"version":"0.1.0@19ff7624","date":"2026-11-23T12:47:24.000Z","localChanges":["chore: work towards a 3D map, not offered yet: under ?3d=1 the camera looks down further as it draws back, so the world isn't seen repeating to the horizon (#1329)"],"externalChanges":{}}
