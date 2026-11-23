@@ -82,17 +82,19 @@ jobs:
         env:
           BUILD: ${{ github.sha }}
         run: |
-          # The hosted sets' sheets the last build asked for (#1114), kept for one more deploy: a page cached from
-          # before this one still asks for them, and they're named by their content's hash, so this build's
-          # differ wherever the art changed.
-          PREVIOUS_SHEETS="$(grep -ohE 'dist/sets/[A-Za-z0-9._-]+\.(png|json)' site/dist/frontend.js 2>/dev/null | sort -u || true)"
+          # The hosted sets' files the last build asked for, kept for one more deploy: a page cached from before
+          # this one still asks for them, and they're named by their content's hash, so this build's differ
+          # wherever the art changed. Its sheets and manifests (#1114), and the models those manifests name
+          # (#1324), which its frontend.js doesn't.
+          PREVIOUS_SETS="$(node tools/sets-asked-for.js site)" ||
+            echo "::warning::The last build's hosted sets couldn't be read, so none are kept."
 
           rsync -a --delete dist/ site/dist/
 
-          for sheet in $PREVIOUS_SHEETS; do
-            if [ ! -e "site/$sheet" ]; then
-              git -C site checkout HEAD -- "$sheet" ||
-                echo "::warning::The last build's $sheet isn't in the site to keep."
+          for kept in $PREVIOUS_SETS; do
+            if [ ! -e "site/$kept" ]; then
+              git -C site checkout HEAD -- "$kept" ||
+                echo "::warning::The last build's $kept isn't in the site to keep."
             fi
           done
 
