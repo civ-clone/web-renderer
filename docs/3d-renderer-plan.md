@@ -380,12 +380,17 @@ Settlers, and the stand-ins for Knight, Explorer and Sail): one made for civ.one
 (CC0), and one adapted from their authors' on Sketchfab (CC BY 4.0), but for its Paratrooper, generated under a canopy
 from there. Between them and 0 A.D.'s, every unit type in Civ1's and Civ2's rules has a model. Each set's library entry
 lists every work it's made from, with its author, its licence and a link: the art credits list (D3). Paratroopers are
-drawn once, under their canopy. Still to do:
-- **Owner's colour:** none has a mask for it yet, so a unit's owner shows by its flag and stand alone;
-- **Textures:** 512 and 1024 px each, where 0 A.D.'s pack each part at no more than 128 px, so about 130 MB on the GPU
-  before mipmaps: smaller, or KTX2;
-- **Clips:** the shipped Fighter's and Helicopter's files have their propellers' and rotor's, and the set's rigged
-  Diplomat, not shipped, 25 by its author; 0 A.D.'s could be fitted to the rest.
+drawn once, under their canopy, as tall as a Knight. Each model takes its owner's colour on one part (a coat, a sail, a
+band along a hull, the wingtips). Still to do:
+- **Textures:** 512 and 1024 px each, where 0 A.D.'s pack each part at no more than 128 px, so about 165 MB on the GPU
+  before mipmaps, with the owner's colours' masks: smaller, or KTX2;
+- **Poses:** most of the people stand in an A-pose. They're being posed in the sets' own files first, which needs
+  nothing here;
+- **Clips:** rigged copies are to sit beside the static models, which their manifests go on naming. The clips are
+  idle, moving and dying for every unit, fighting for combat units (shots in flight for ranged ones), Settlers working
+  and settling, ships sinking and vehicles exploding. The map's side is to play them (`AnimationMixer`, skinned meshes,
+  each figure drawn on its own rather than merged into its squad), and the shots, sinking and explosions. The shipped
+  Fighter's and Helicopter's files already have their propellers' and rotor's.
 
 - **What:**
   - loading `.glb` with KTX2 textures;

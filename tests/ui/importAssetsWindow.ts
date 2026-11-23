@@ -2315,7 +2315,7 @@ const run = async (): Promise<void> => {
           ['0ad-ancient', 'realistic-cc0', 'realistic-by'],
           'Realistic: CC BY',
           'Ready',
-          'Comes with civ.one · License: CC BY 4.0 · Models by the authors listed at https://github.com/civ-clone/models-realistic-by/blob/main/CREDITS.md, CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/): reduced, rebaked, assembled and converted by dom111.',
+          "Comes with civ.one · License: CC BY 4.0 · Models by the authors listed at https://github.com/civ-clone/models-realistic-by/blob/main/CREDITS.md, CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/): reduced, rebaked, assembled, given their owner's colour and converted by dom111.",
           [
             'https://creativecommons.org/licenses/by/4.0/',
             'https://github.com/civ-clone/models-realistic-by/blob/main/CREDITS.md',
