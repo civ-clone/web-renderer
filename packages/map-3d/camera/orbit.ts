@@ -302,9 +302,9 @@ export const between = (
 
 /**
  * How far the camera sees before the haze hides everything, for an orbit `distance` from its focus: and, on a world
- *  that repeats every `period` (across, and down where it wraps), no further past its focus than half of it, so no copy
- *  of the world is ever seen whole (#1316). A world so small that half of it is nearer than the camera ever comes
- *  repeats wherever it looks, so it's seen as far as any.
+ *  that repeats every `period` (across, and down where it wraps), no further along the way it looks than half of it
+ *  past its focus, so it never sees past the far side of the world from where it looks (#1316). A world so small that
+ *  half of it is nearer than the camera ever comes repeats wherever it looks, so it's seen as far as any.
  */
 export const sightFor = (
   distance: number,

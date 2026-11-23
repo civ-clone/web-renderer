@@ -3,7 +3,8 @@
 //  - a drag keeps the ground under the pointer, a press that doesn't move is left as a click, and a flick glides on,
 //    unless the player has asked for less motion;
 //  - the middle button, or Alt, turns and tilts; the right button is left to the unit's menu;
-//  - the wheel zooms about the pointer, keeping the ground under it;
+//  - the wheel zooms about the pointer, keeping the ground under it, even where the view looks down further as it does
+//    (#1316);
 //  - two fingers pinch, twist and tilt, and so do Safari's trackpad gestures;
 //  - taken down, it hears nothing more.
 
@@ -121,6 +122,10 @@ const start: Orbit = {
   },
   height = 0.1;
 
+// How the view keeps the camera as it's put, which the wheel asks before it moves the focus: as asked, or, drawn back,
+//  looking down further, as the 3D map does (`lowestPitch`).
+let settle = (next: Orbit): Orbit => next;
+
 let orbit: Orbit = start,
   menuOnRightClick = false,
   menuOpen = false;
@@ -137,6 +142,7 @@ const presses: string[] = [],
       setOrbit: (next) => {
         orbit = next;
       },
+      settle: (next) => settle(next),
     },
     {
       click: (x, y) => void presses.push(`click ${x},${y}`),
@@ -388,6 +394,35 @@ expect(
   ],
   [true, true]
 );
+
+// The wheel turned towards the player, where the view looks down further as the camera draws back: the ground under the
+//  pointer still stays under it.
+orbit = start;
+settle = (next) => ({
+  ...next,
+  pitch: Math.max(next.pitch, next.distance > start.distance ? 1.1 : 0),
+});
+
+fire('wheel', {
+  deltaMode: 0,
+  deltaY: 120,
+  ctrlKey: false,
+  timeStamp: 9000,
+  clientX: 600,
+  clientY: 450,
+});
+
+expect(
+  'the wheel turned towards the player zooms out a step, looking down further where the view does so, and the ground under the pointer stays under it',
+  [
+    near(orbit.distance, start.distance * ZOOM_STEP),
+    near(orbit.pitch, 1.1),
+    sameGround(groundAt(orbit, height, screen(600, 450), 4 / 3), wheelUnder),
+  ],
+  [true, true, true]
+);
+
+settle = (next) => next;
 
 // Two fingers: spread twice as far apart, twisted a quarter turn, and moved down together.
 orbit = start;

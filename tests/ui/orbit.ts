@@ -4,7 +4,8 @@
 //  - dragging keeps the ground under the pointer;
 //  - its pitch and distance stay in range, its focus on the world, and a glide goes the short way round;
 //  - the presets, and the copies of the world it sees;
-//  - how far it sees, no copy of a world seen whole, and how far down it looks as it draws back from one (#1316).
+//  - how far it sees, never past the far side of a world from its focus, and how far down it looks as it draws back
+//    from one (#1316).
 
 import {
   DISTANCE_MAX,
@@ -351,8 +352,8 @@ expect(
 );
 
 // How far it sees (#1316): as far as ever without a world, or on one too small to keep from repeating; on a wide one,
-//  no further past its focus than half the world round, the narrower way where it wraps both ways, so no copy of it is
-//  seen whole; and the haze beginning before it ends.
+//  no further along the way it looks than half the world round past its focus, the narrower way where it wraps both
+//  ways; and the haze beginning before it ends.
 const wide = { u: 128, v: null },
   round = { u: 128, v: 80 },
   tiny = { u: 4, v: null },

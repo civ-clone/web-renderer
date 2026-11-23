@@ -6890,10 +6890,10 @@ expect(
     holder.remove();
   }
 
-  // Drawn back from a wide world (#1316), the camera looks down further, as far as its distance needs, so no copy of
-  //  the world is seen whole; brought in again, it looks down from the pitch the player chose, which zooming keeps and
-  //  tilting changes. On the small world the rest of these use, which repeats wherever it looks, it looks as low as
-  //  ever.
+  // Drawn back from a wide world (#1316), the camera looks down at least as far as its distance needs, so the world
+  //  isn't seen repeating to the horizon: as far as the world's period, across and down where it wraps, says, which
+  //  stopping at the poles changes. Brought in again, it looks down as it did until it's tilted. On the small world the
+  //  rest of these use, which repeats wherever it looks, it looks as low as ever.
   {
     const across = 64,
       down = 40,
@@ -6931,39 +6931,57 @@ expect(
         return wide.orbit();
       },
       round = (value: number) => Math.round(value * 1000) / 1000,
-      drawnBack = put(PITCH_MIN, DISTANCE_MAX),
-      // The world's period as the camera goes round it: across, and down where it wraps.
-      period = wide.land().layout.period(),
+      // How far round the world repeats as the camera goes: down only where it isn't stopped at the poles.
+      period = (locked: boolean) => {
+        const { u, v } = wide.land().layout.period();
+
+        return { u, v: locked ? null : v };
+      },
+      wraps = wide.land().layout.period().v !== null;
+
+    wide.portal.setLockVerticalEdges(false);
+
+    const drawnBack = put(PITCH_MIN, DISTANCE_MAX),
       broughtIn = zoomTo(DISTANCE_MIN),
-      outAgain = zoomTo(DISTANCE_MAX),
-      chosenHigh = put(1.2, DISTANCE_MAX),
-      inHigh = zoomTo(DISTANCE_MIN),
       tiltedLow = put(PITCH_MIN, DISTANCE_MIN),
-      outLow = zoomTo(DISTANCE_MAX);
+      chosenHigh = put(1.2, DISTANCE_MIN),
+      outHigh = zoomTo(DISTANCE_MAX);
 
     expect(
-      'drawn back from a wide world, the camera looks down further than it can close in, as far as its distance needs there',
-      [
-        drawnBack > PITCH_MIN + 0.1,
-        [
-          lowestPitch(DISTANCE_MAX, { u: period.u, v: null }),
-          lowestPitch(DISTANCE_MAX, period),
-        ].some((pitch) => round(pitch) === round(drawnBack)),
-      ],
-      [true, true]
+      'drawn back from a wide world, the camera looks down further than it can close in, as far as its distance needs on the world as it repeats',
+      [wraps, drawnBack > PITCH_MIN + 0.1, round(drawnBack)],
+      [true, true, round(lowestPitch(DISTANCE_MAX, period(false)))]
     );
 
     expect(
-      'brought in, it looks down from the pitch chosen, kept as it zooms; drawn back again, down further; a pitch chosen above what its distance needs is kept, and one chosen low comes back as it is brought in',
+      'brought in, it looks down as it did until it is tilted; tilted close in, it looks as low as ever; a pitch above what its distance needs is kept as it draws back',
       [
         round(broughtIn.pitch),
-        round(outAgain.pitch) === round(drawnBack),
-        round(chosenHigh),
-        round(inHigh.pitch),
         round(tiltedLow),
-        round(outLow.pitch) === round(drawnBack),
+        round(chosenHigh),
+        round(outHigh.pitch),
       ],
-      [round(PITCH_MIN), true, 1.2, 1.2, round(PITCH_MIN), true]
+      [round(drawnBack), round(PITCH_MIN), 1.2, 1.2]
+    );
+
+    // Stopped at the poles, the world repeats only across, further round, so drawn back it needn't look down as far;
+    //  let go of them, it repeats down too, and looks down further at once.
+    wide.portal.setLockVerticalEdges(true);
+
+    const stopped = put(PITCH_MIN, DISTANCE_MAX);
+
+    wide.portal.setLockVerticalEdges(false);
+
+    const letGo = wide.orbit().pitch;
+
+    expect(
+      'stopped at the poles, drawn back it looks down as far as the world repeating only across needs; let go of them, further at once',
+      [round(stopped), round(letGo), stopped < letGo],
+      [
+        round(lowestPitch(DISTANCE_MAX, period(true))),
+        round(lowestPitch(DISTANCE_MAX, period(false))),
+        true,
+      ]
     );
 
     wide.dispose();

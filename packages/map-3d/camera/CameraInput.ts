@@ -46,6 +46,9 @@ export type CameraTarget = {
   lookHeight(): number;
   // Put the camera here at once, and draw it.
   setOrbit(orbit: Orbit): void;
+  // The camera as it would be put, kept within what the view allows: on the world, and looking down at least as far
+  //  as its distance needs.
+  settle(orbit: Orbit): Orbit;
 };
 
 // How far the view turns, and tilts, for each px dragged with the middle button.
@@ -482,29 +485,28 @@ export class CameraInput {
 
   #zoomAbout(steps: number, pointer: [number, number]): void {
     const orbit = this.#target.orbit(),
-      near = zoomed(orbit, steps),
-      under = groundAt(
-        orbit,
-        this.#target.lookHeight(),
-        this.#screen(pointer),
-        this.#aspect()
-      );
+      look = this.#target.lookHeight(),
+      at = this.#screen(pointer),
+      aspect = this.#aspect(),
+      // As the view will put it: drawn back, it may look down further.
+      near = this.#target.settle(zoomed(orbit, steps)),
+      under = groundAt(orbit, look, at, aspect),
+      after = groundAt(near, look, at, aspect);
 
     // Above the horizon, or zoomed no further: about the middle.
-    if (under === null || near.distance === orbit.distance) {
+    if (under === null || after === null || near.distance === orbit.distance) {
       this.#target.setOrbit(near);
 
       return;
     }
 
-    // The focus moves towards the point as far as the camera does towards the focus, so the point stays put.
-    const share = 1 - near.distance / orbit.distance;
-
+    // The focus moved by as much as brings the ground that was under the point back under it, however much nearer the
+    //  camera's come, or further down it looks.
     this.#target.setOrbit({
       ...near,
       focus: [
-        orbit.focus[0] + (under[0] - orbit.focus[0]) * share,
-        orbit.focus[1] + (under[1] - orbit.focus[1]) * share,
+        near.focus[0] + under[0] - after[0],
+        near.focus[1] + under[1] - after[1],
       ],
     });
   }

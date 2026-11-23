@@ -200,9 +200,6 @@ export class MapView3D implements MapRenderer {
   #focused = '';
   // The camera now, the one it's gliding to, if it is, and the height it looks at, following the land's.
   #orbit: Orbit;
-  // The pitch the player last chose, which the camera looks down from wherever its distance lets it (`lowestPitch`):
-  //  drawn back, it looks down further, and brought in again, back as it was. Nothing until the camera's first put.
-  #chosenPitch: number | null = null;
   // A glide: where from and to, when it started, how far it turns, as asked, the way asked, and how much of the way
   //  the camera was last drawn, eased.
   #glide: {
@@ -472,7 +469,12 @@ export class MapView3D implements MapRenderer {
     this.portal = new MapPortal3D(deps, {
       centre: () => this.#centreSquare(),
       centreOn: (x, y) => this.#centreSoon(x, y),
-      changed: () => this.#draw(),
+      // Drawn again, and the camera settled again: stopping at the poles, or not, changes how far round the world
+      //  repeats, and so how far down it looks drawn back (`lowestPitch`).
+      changed: () => {
+        this.#orbit = this.#settle(this.#orbit);
+        this.#draw();
+      },
       visible: (x, y, margin) => this.#visible(x, y, margin),
     });
 
@@ -537,6 +539,7 @@ export class MapView3D implements MapRenderer {
         orbit: () => this.#orbit,
         lookHeight: () => this.#lookHeight ?? 0,
         setOrbit: (orbit) => this.setOrbit(orbit),
+        settle: (orbit) => this.#settle(orbit),
       },
       {
         click: (x, y) => this.#clicked(x, y),
@@ -2440,21 +2443,16 @@ export class MapView3D implements MapRenderer {
   }
 
   // The camera kept on the world, round its period, or within its rows where it doesn't wrap over the poles or the
-  //  player stops it at them; its pitch and distance within their ranges; and looking down from the pitch the player
-  //  chose, or as far down as its distance needs on this world (`lowestPitch`), whichever is steeper. A pitch other
-  //  than the camera's now is chosen; one the same, as a zoom or a pan leaves it, keeps the one chosen before.
+  //  player stops it at them; its pitch and distance within their ranges; and looking down at least as far as its
+  //  distance needs on this world (`lowestPitch`), so drawn back, it doesn't see the world repeat to the horizon.
   #settle(orbit: Orbit): Orbit {
     const kept = clampOrbit(orbit),
       period = this.#period();
 
-    if (this.#chosenPitch === null || kept.pitch !== this.#orbit.pitch) {
-      this.#chosenPitch = kept.pitch;
-    }
-
     return settled(
       {
         ...kept,
-        pitch: Math.max(this.#chosenPitch, lowestPitch(kept.distance, period)),
+        pitch: Math.max(kept.pitch, lowestPitch(kept.distance, period)),
       },
       period,
       this.#land.extentV()
