@@ -1138,7 +1138,9 @@ mapEvent:
     - a unit that won defending goes on as it is, as the battle draws nothing of it.
     So the attacker's part ends as it moves on (`#attackerDone`), and the loser's when the battle's over. A battle that
     no longer holds its attacker doesn't hold the ring (`Battles#holds`); one it's still drawn in, falling, keeps it
-    off its square (`Battles#attacking`).
+    off its square (`Battles#attacking`). Those waiting for one moved on from, as a counterattack on the winner, start
+    at once; one moved on from isn't ended when its attacker's battles fall too far behind; and shots in flight land,
+    but with units hidden.
   - **Together, mostly:** one figure can't lunge twice at once, so a battle waits for those whose attacker is one of its
     units: a unit attacking again, or attacked as it lunges (a counterattack as the player ends the turn just after
     attacking), stands on its square till its last is over. Others are fought at once, several at a square together, as
@@ -1157,9 +1159,10 @@ mapEvent:
       the battle's over.
     - A second attack on a square whose first battle's patch the world hasn't taken is fought on what the first left,
       its loser gone; once it has, on the world, as in the player's own turn.
-  - **Ended at once:** the player's own unit stepping (attacking, then moving in), the defender stepping, a key or a
-    press while the ring waits for the battle, moving at once or less motion chosen mid-battle: the blow falls, and it's
-    over, with nothing left to fade. Those before it at its square whose blow's still to fall go with it, their blows
+  - **Ended at once:** before its blow, the player's own unit stepping (attacking, then moving in), the defender
+    stepping, or a key or a press while the ring waits for the battle; and, whenever, moving at once or less motion
+    chosen mid-battle: the blow falls, and it's over, with nothing left to fade. After the blow, a step or a key moves
+    on from it (below). Those before it at its square whose blow's still to fall go with it, their blows
     first, so blows there still fall in order; those waiting for it start as soon as they can. Blows at a square keep
     their order whatever their paces, as when walking quickly's chosen between two attacks.
   - **The game waits:** the active unit attacking with its last move holds the ring and the camera till its battle's

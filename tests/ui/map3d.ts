@@ -4859,7 +4859,19 @@ expect(
   runFrames(14);
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'w' }));
   runFrames(1);
-  heldPatch.push(ringOn(3, 3), [...walkers.keys()].map(kind).sort());
+  // The winner's walker standing where it fought from, not lunging: at the middle of its square.
+  const [standingId] = [...walkers.keys()].filter(
+      (id) => kind(id) === 'battle'
+    ),
+    stoodAt = walkersPlaced.get(standingId ?? '')?.at(-1) ?? [],
+    [fromU, , fromV] = groundAt(1, 1);
+
+  heldPatch.push(
+    ringOn(3, 3),
+    [...walkers.keys()].map(kind).sort(),
+    Math.abs(stoodAt[0]! - fromU!) < 0.01 &&
+      Math.abs(stoodAt[2]! - fromV!) < 0.01
+  );
   runFrames();
   heldPatch.push([...walkers.keys()].map(kind));
   repatched([1, 1, [walker]], [2, 1, []]);
@@ -4923,6 +4935,7 @@ expect(
         0,
         true,
         ['battle', 'battle-fallen'],
+        true,
         ['battle'],
         ['Unit-A', 1],
         0,

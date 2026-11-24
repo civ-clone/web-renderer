@@ -383,7 +383,9 @@ export class Battles {
    */
   endWhere(
     test: (battle: Battle) => boolean,
-    now: number
+    now: number,
+    // Those to go on whatever, as the battles a unit moves on from do (`moveOn`).
+    goesOn: (battle: Battle) => boolean = () => false
   ): {
     struck: Battle[];
     ended: Battle[];
@@ -393,6 +395,7 @@ export class Battles {
         (battle, index) =>
           picked.includes(battle) ||
           (!this.#struck.has(battle.id) &&
+            !goesOn(battle) &&
             picked.some(
               (later) =>
                 this.#battles.indexOf(later) > index &&
@@ -405,21 +408,26 @@ export class Battles {
     this.#take(ended);
 
     if (ended.length > 0) {
-      this.#battles.forEach((battle, index) => {
-        if (battle.start > now) {
-          battle.start = this.#startOf(
-            battle,
-            battle.pace,
-            this.#battles
-              .slice(0, index)
-              .filter((earlier) => !this.#movedOn(earlier)),
-            Math.max(now, battle.notBefore)
-          );
-        }
-      });
+      this.#restart(now);
     }
 
     return { struck, ended };
+  }
+
+  // Those yet to start started as soon as they can at `now`: the battles they waited for over, or moved on from.
+  #restart(now: number): void {
+    this.#battles.forEach((battle, index) => {
+      if (battle.start > now) {
+        battle.start = this.#startOf(
+          battle,
+          battle.pace,
+          this.#battles
+            .slice(0, index)
+            .filter((earlier) => !this.#movedOn(earlier)),
+          Math.max(now, battle.notBefore)
+        );
+      }
+    });
   }
 
   /** How long the longest battle any of `units` attacks in takes, start to over, or nothing with none. */
@@ -473,16 +481,21 @@ export class Battles {
 
     released.forEach((battle) => this.#released.add(battle.id));
 
-    return {
-      ...this.endWhere(
-        (battle) =>
-          (battle.attacker === unit ||
-            (!hurried && battle.defender === unit)) &&
-          !goesOn(battle),
-        now
-      ),
-      released,
-    };
+    const over = this.endWhere(
+      (battle) =>
+        (battle.attacker === unit || (!hurried && battle.defender === unit)) &&
+        !goesOn(battle),
+      now,
+      (battle) =>
+        (battle.attacker === unit || battle.defender === unit) && goesOn(battle)
+    );
+
+    // Those waiting for one moved on from, as a counterattack on it does, start as soon as they can.
+    if (released.length > 0) {
+      this.#restart(now);
+    }
+
+    return { ...over, released };
   }
 
   /** Every battle over at `now`, at once, as `endWhere` has them. */

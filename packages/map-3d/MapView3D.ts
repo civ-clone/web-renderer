@@ -773,6 +773,7 @@ export class MapView3D implements MapRenderer {
     this.#unitSquare.clear();
     this.#before.clear();
     this.#fallen.clear();
+    this.#attackersDone.clear();
     this.#shotsOf.clear();
     this.#flying.clear();
     this.#gone.clear();
@@ -931,10 +932,13 @@ export class MapView3D implements MapRenderer {
       );
 
     if (busy !== null && busy - now > Math.max(BATTLES_BEHIND, 2 * longest)) {
+      // Not those moved on from, whose losers fall on.
       this.#battlesOver(
         this.#battles.endWhere(
           (battle) =>
-            battle.attacker === attacker.id || battle.attacker === defender.id,
+            (battle.attacker === attacker.id ||
+              battle.attacker === defender.id) &&
+            !this.#battles.released(battle.id),
           now
         )
       );
@@ -1540,10 +1544,10 @@ export class MapView3D implements MapRenderer {
           hit = `${id}-hit`;
 
         // Its puffs, not drawn this frame, are taken away with the rest (`#puffsOver`). One in flight lands as its
-        //  attacker moves on from its battle.
+        //  attacker moves on from its battle, but with units hidden (`t`).
         if (
           !this.#walkersDrawn.has(battle) &&
-          !this.#battles.released(battle)
+          !(this.#battles.released(battle) && this.#unitsShown)
         ) {
           this.#stage.shot?.(id, null);
           this.#flying.delete(id);
