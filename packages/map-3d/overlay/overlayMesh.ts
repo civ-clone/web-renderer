@@ -402,13 +402,14 @@ class Layer {
 
         return [u + Math.cos(angle) * out, v + Math.sin(angle) * out];
       },
-      // Thick in the middle, thinning smoothly to nothing at the edge, each point a little thicker or thinner.
+      // Thick in the middle, thinning smoothly to nothing at the edge (its last ring), each point a little thicker or
+      //  thinner.
       solid = (ring: number, side: number): number => {
         const out = ring / rings,
           falls = (1 - out * out) ** 1.5,
           wisp = 0.65 + 0.35 * fraction(seed, ring * 97 + (side % sides));
 
-        return ring === rings ? 0 : alpha * falls * wisp;
+        return alpha * falls * wisp;
       },
       point = (ring: number, side: number): void => {
         const [pu, pv] = ring === 0 ? [u, v] : at(ring, side),
