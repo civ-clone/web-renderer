@@ -35,6 +35,7 @@ import {
   shotAt,
   shotHeading,
   shotTimes,
+  shotsFired,
 } from './shots';
 import Land from './Land';
 import {
@@ -977,7 +978,14 @@ export class MapView3D implements MapRenderer {
 
     if (pace.clips?.fight && attackerFacts !== null && shots.length > 0) {
       this.#shotsOf.set(battle.id, {
-        times: shotTimes(shots, attackerFacts.figures, attackerFacts.stagger),
+        // Lost, falling at the blow, only those its figures fire before they fall.
+        times: shotsFired(
+          shotTimes(shots, attackerFacts.figures, attackerFacts.stagger),
+          attackerFacts.stagger,
+          winner !== 'attacker' && pace.clips.die
+            ? (pace.reach / 1000) * pace.clips.rate
+            : null
+        ),
         left: new Set(),
         target: this.#onLand(
           battle.fallsAt.at,
@@ -1480,7 +1488,8 @@ export class MapView3D implements MapRenderer {
   //  (`t`) but for the one ringed, none is.
   #placeShots(now: number, going: Fighter[], puffed: Set<string>): void {
     // By the battle's clock (`fought`), not the clip its figures play: an attacker that's lost falls at the blow, its
-    //  last figures' shots, quick ones landing before they've all left, still to leave.
+    //  last figures' shots, quick ones landing before they've all left, still to leave (those it fires before it falls:
+    //  `shotsFired`).
     going.forEach(({ id, battle, at, lift, fallen, fought }) => {
       const plan = this.#shotsOf.get(battle);
 

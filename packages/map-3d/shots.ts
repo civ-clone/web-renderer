@@ -86,6 +86,20 @@ export const shotTimes = (
     .sort((a, b) => a.leaves - b.leaves);
 
 /**
+ * Of a clip's shots (`shotTimes`), those its figures fire: all of them, but where they fall at the blow, `falls` seconds
+ *  into the clip, as an attacker that's lost does. Then only those each figure fires before it falls, each figure
+ *  falling as far behind the one before as it fires (`FIGURE_STAGGER`, `stagger`): those its clip has before the blow.
+ */
+export const shotsFired = (
+  times: readonly ShotTime[],
+  stagger: number,
+  falls: number | null
+): ShotTime[] =>
+  falls === null
+    ? [...times]
+    : times.filter(({ leaves, figure }) => leaves - figure * stagger < falls);
+
+/**
  * Where the shot of figure `figure` of `figures` lands, going from `from` to `target`: a little to one side of it or
  *  the other, across the way it goes, so a squad's don't land as one.
  */

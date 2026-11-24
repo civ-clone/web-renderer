@@ -17,7 +17,9 @@ import {
   shotHeading,
   shotOver,
   shotTimes,
+  shotsFired,
 } from '@civ-clone/ui-map-3d/shots';
+import { seedOf } from '@civ-clone/ui-map-3d/stage';
 import { SHOT_KINDS } from '@civ-clone/ui-map-3d/models/modelSet';
 
 const failures: string[] = [];
@@ -125,7 +127,9 @@ expect(
     'a bottle goes as the first did; a bullet straight, and quickest, with smoke where it leaves; a shell highest and slowest, with smoke, its burst flashing; an arrow neither; every kind the map reads has a look',
     [
       SHOT_LOOKS.bottle.flight === 350 && SHOT_LOOKS.bottle.arc === SHOT_ARC,
-      SHOT_LOOKS.bottle.hit === 1 && SHOT_LOOKS.bottle.muzzle === 0,
+      SHOT_LOOKS.bottle.hit === 1 &&
+        SHOT_LOOKS.bottle.muzzle === 0 &&
+        !SHOT_LOOKS.bottle.burst,
       rounded(shotAt(from, to, 0.5, SHOT_LOOKS.bullet.arc)),
       Object.entries(SHOT_LOOKS)
         .sort(([, a], [, b]) => a.flight - b.flight)
@@ -202,6 +206,52 @@ expect(
     ]
   );
 }
+
+// Lost, falling at the blow: only the shots each figure fires before it falls, each figure falling as far behind the
+//  one before as it fires. Won, every one.
+{
+  const volleys = shotTimes(
+      [
+        { at: 0.4, joint: 'muzzle', kind: 'bullet' },
+        { at: 1, joint: 'muzzle', kind: 'bullet' },
+      ],
+      3,
+      0.13
+    ),
+    fired = (falls: number | null) =>
+      shotsFired(volleys, 0.13, falls).map(({ figure, shot }) => [
+        figure,
+        shot,
+      ]);
+
+  expect(
+    'won, every shot’s fired; lost, falling at the blow, each figure’s first volley, before it, and none of its second, after',
+    [fired(null).length, fired(0.48)],
+    [
+      6,
+      [
+        [0, 0],
+        [1, 0],
+        [2, 0],
+      ],
+    ]
+  );
+}
+
+// What's laid by an id: the same each time, and different for a shot's smoke where it left and its puff where it
+//  landed, a word apart.
+expect(
+  'seeds by the whole id: the same each time, a shot’s smoke and its puff apart',
+  [
+    seedOf('battle-1-shot-0-muzzle') === seedOf('battle-1-shot-0-muzzle'),
+    seedOf('battle-1-shot-0-muzzle') !== seedOf('battle-1-shot-0-hit'),
+    seedOf('battle-10-puff') !== seedOf('battle-1-shot-0-hit'),
+    [seedOf('a'), seedOf('battle-7')].every(
+      (seed) => Number.isInteger(seed) && seed >= 0 && seed < 100000
+    ),
+  ],
+  [true, true, true, true]
+);
 
 if (failures.length > 0) {
   process.stderr.write(

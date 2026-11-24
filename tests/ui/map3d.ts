@@ -4473,14 +4473,14 @@ expect(
   //  where it leaves, from the node its clip names, as big as a muzzle's; landing as quick as a bullet flies, the blow
   //  then, its puff as small as a bullet's; the battle drawn till its smoke and its puff are over. A frame drawn after
   //  it's both left and landed still shows its smoke where it left. A shell's burst flashes, and it flies slower.
-  const shooter = (kind: 'bullet' | 'shell', figures = 1) =>
+  const shooter = (kind: 'bullet' | 'shell', figures = 1, volleys = [0.4]) =>
       rigFactsFor.set('Unit-A', {
         figures,
         stagger: 0.13,
         clips: {
           fight: {
             duration: 1.2,
-            shots: [{ at: 0.4, joint: 'muzzle', kind }],
+            shots: volleys.map((at) => ({ at, joint: 'muzzle', kind })),
           },
           die: { duration: 1.5, shots: [] },
         },
@@ -4603,6 +4603,13 @@ expect(
 
   const lostSquad = looksAfter(undefined, 'defender');
 
+  // Firing twice, the second volley after the blow: lost, its figures have fallen by then, and fire none of it; won,
+  //  they fire both.
+  shooter('bullet', 3, [0.4, 1]);
+
+  const lostVolleys = looksAfter(undefined, 'defender'),
+    wonVolleys = looksAfter();
+
   shooter('bullet');
   optionsRegistry.set(MAP3D_WALKS_OPTION, 'fast');
 
@@ -4614,7 +4621,7 @@ expect(
   repatched([1, 1, []], [2, 1, []]);
 
   expect(
-    'a bullet’s drawn as one, straight, from the node its clip names, its smoke and flash a muzzle’s, landing as quick as a bullet flies, its puff a bullet’s, the battle over once they are; leaving and landing between frames, its smoke’s still drawn; a shell flies slower, its burst flashing; a squad that loses fires every bullet; twice as quick, a bullet flies half as long',
+    'a bullet’s drawn as one, straight, from the node its clip names, its smoke and flash a muzzle’s, landing as quick as a bullet flies, its puff a bullet’s, the battle over once they are; leaving and landing between frames, its smoke’s still drawn; a shell flies slower, its burst flashing; a squad that loses fires every bullet before it falls, none after; twice as quick, a bullet flies half as long',
     [
       bullet.kind,
       [bullet.straight, bullet.level],
@@ -4632,6 +4639,7 @@ expect(
         shell.inFlight[1]! - shell.inFlight[0]! >=
           SHOT_LOOKS.shell.flight - 2 * 16,
       [lostSquad.landed, lostSquad.puffsLeft],
+      [lostVolleys.landed, wonVolleys.landed],
       quickBullet.inFlight !== null &&
         quickBullet.inFlight[1]! - quickBullet.inFlight[0]! <
           SHOT_LOOKS.bullet.flight / 2,
@@ -4652,6 +4660,7 @@ expect(
       ['shell', [{ size: SHOT_LOOKS.shell.hit, flash: true }], false, false],
       true,
       [3, 0],
+      [3, 6],
       true,
     ]
   );

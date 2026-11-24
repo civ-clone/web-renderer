@@ -694,7 +694,8 @@ export const createStage: StageFactory = (
   };
 
   // A puff's copies, as big as it is, each blob where it is and as big as it is `through` the puff, one that's shrunk
-  //  to nothing not drawn; and its flash, if it has one, at its biggest as it begins, gone a fifth of the way through.
+  //  to nothing not drawn; and its flash, if it has one, where it bursts from, a muzzle or where a shell lands, at its
+  //  biggest as it begins, gone a fifth of the way through.
   const shapePuff = (puff: {
     drawn: Object3D[];
     through: number;
@@ -708,7 +709,7 @@ export const createStage: StageFactory = (
       copy.scale.setScalar(Math.max(puff.size, 1e-4));
       copy.children.forEach((part, index) => {
         if (part.name === PUFF_FLASH) {
-          part.position.set(0, 0.06, 0);
+          part.position.set(0, 0, 0);
           part.scale.setScalar(Math.max(0.07 * flash, 1e-4));
           part.visible = flash > 0;
 
