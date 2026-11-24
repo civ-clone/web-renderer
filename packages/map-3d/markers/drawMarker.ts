@@ -618,8 +618,8 @@ const flagText = (unit: UnitMarker): string =>
     .filter((part) => part !== '')
     .join(' ');
 
-// The order what stands over units and cities is drawn in: after the sea (1) and the cloud (2), so neither covers it;
-//  and among themselves the far before the near, but the pointer over all.
+// The order what stands over units and cities is drawn in: after the sea, the smog and the cloud (`water.ts`), so none
+//  covers it; and among themselves the far before the near, but the pointer over all.
 const BADGES = 3,
   POINTED = 4;
 

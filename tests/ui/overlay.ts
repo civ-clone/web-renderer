@@ -31,6 +31,7 @@ import overlayMesh, {
   ROOFS,
   layOverlay,
   roadHalf,
+  SMOG_LIFT,
   rowAround,
   soup,
 } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
@@ -310,7 +311,7 @@ const facesUp = (mesh: ReturnType<typeof overlayMesh>): boolean => {
 };
 
 expect(
-  'what’s laid flat faces up, so it isn’t culled: roads, railroads, fields, pollution',
+  'what’s laid flat faces up, so it isn’t culled: roads, railroads, fields',
   [
     facesUp(roadMesh),
     facesUp(
@@ -337,6 +338,92 @@ expect(
   ],
   [true, 18]
 );
+
+// Pollution as smog (#1335): no solid shapes, only a haze hanging over the land, following it up and down, between its
+//  lowest and highest; mostly solid at its middle, nothing at its edge, reaching 1.4 times the square's radius so
+//  polluted neighbours' join; laid relative to the chunk's corner, as what's solid is; facing up. Past the shore it
+//  carries on, riding the water's surface over the sea, not its floor.
+{
+  // Hills and hollows across and down, more than a road's land, all of it above the sea's level: a haze laid flat
+  //  wouldn't follow them.
+  const hilly = (u: number, v: number): number =>
+      0.2 + 0.15 * Math.sin(u * 3) * Math.cos(v * 2),
+    // The sea from a little east of the square's middle.
+    coast = (u: number): number => (u > 17.8 ? -0.3 : 0.1),
+    hazeOf = (height: (u: number, v: number) => number) => {
+      const mesh = overlayMesh(16, 0, [
+          {
+            overlay: overlayFor(square(['Pollution']), [])!,
+            place: place(17, 3, { height }),
+          },
+        ]),
+        { positions, colours } = mesh.haze;
+
+      return {
+        mesh,
+        points: Array.from({ length: positions.length / 3 }, (_, n) => ({
+          u: positions[n * 3]! + 16,
+          y: positions[n * 3 + 1]!,
+          v: positions[n * 3 + 2]!,
+          alpha: colours[n * 4 + 3]!,
+          away: Math.hypot(
+            positions[n * 3]! + 16 - 17.5,
+            positions[n * 3 + 2]! - 3.5
+          ),
+        })),
+        positions,
+      };
+    },
+    { mesh: smoggy, points, positions } = hazeOf(hilly),
+    reach = Math.max(...points.map(({ away }) => away)),
+    middle = points.filter(({ away }) => away < 1e-6),
+    // Each triangle facing up, so it's drawn from above.
+    up = Array.from({ length: positions.length / 9 }, (_, n) => {
+      const at = n * 9,
+        ax = positions[at + 3]! - positions[at]!,
+        az = positions[at + 5]! - positions[at + 2]!,
+        bx = positions[at + 6]! - positions[at]!,
+        bz = positions[at + 8]! - positions[at + 2]!;
+
+      return az * bx - ax * bz > 0;
+    }),
+    shore = hazeOf((u) => coast(u)).points;
+
+  expect(
+    'pollution is smog: no solid shapes, a haze following the land up and down, mostly solid at its middle, nothing at its edge, 1.4 times the square’s radius, facing up',
+    [
+      smoggy.positions.length,
+      points.every(
+        ({ u, v, y }) =>
+          y - hilly(u, v) > SMOG_LIFT[0] - 1e-6 &&
+          y - hilly(u, v) < SMOG_LIFT[1] + 1e-6
+      ),
+      Math.round(Math.max(...middle.map(({ alpha }) => alpha)) * 100) / 100 >
+        0.5,
+      Math.max(...middle.map(({ alpha }) => alpha)) <= 0.85,
+      points
+        .filter(({ away }) => away > reach - 1e-6)
+        .every(({ alpha }) => alpha === 0),
+      Math.round(reach * 1000) / 1000,
+      up.every(Boolean),
+    ],
+    [0, true, true, true, true, 0.7, true]
+  );
+
+  expect(
+    'past the shore it carries on, riding the water’s surface over the sea, not its floor; a square with no pollution has no haze',
+    [
+      shore
+        .filter(({ u }) => u > 17.8)
+        .every(({ y }) => y >= SMOG_LIFT[0] - 1e-6),
+      shore.some(({ u, alpha }) => u > 17.8 && alpha > 0.3),
+      overlayMesh(16, 0, [
+        { overlay: overlayFor(square(['Road']), [])!, place: place(17, 3) },
+      ]).haze.positions.length,
+    ],
+    [true, true, 0]
+  );
+}
 
 const across = overlayMesh(16, 0, [
   {

@@ -54,7 +54,7 @@ import { idleChanges } from './idling';
 import unitUnder from './markers/pickUnit';
 import { OverlayMesh } from './overlay/overlayMesh';
 import { FIELD_OF_VIEW, Orbit, eye, sightFor } from './camera/orbit';
-import Water, { Clouds, Ground } from './water';
+import Water, { Clouds, Ground, SMOG_ORDER } from './water';
 import YieldIcons from './yieldIcons';
 import { YieldMesh } from './yields';
 import { LoadedRig, loadModels, modelKey } from './models/loadModels';
@@ -460,7 +460,11 @@ export const createStage: StageFactory = (
     //  flicker with it where it lies close.
     overlays = new Map<
       string,
-      Placed & { geometry: BufferGeometry; span: [number, number] }
+      Placed & {
+        geometry: BufferGeometry;
+        haze: BufferGeometry | null;
+        span: [number, number];
+      }
     >(),
     overlayMaterial = new MeshStandardMaterial({
       vertexColors: true,
@@ -471,6 +475,19 @@ export const createStage: StageFactory = (
       polygonOffsetUnits: -6,
       // Its shadows clipped with it.
       clipShadows: true,
+    }),
+    // Smog over pollution: see-through, each point as solid as it says, its colour lit by nothing, as haze is; drawn
+    //  after what's solid, writing no depth, so what's behind it shows through and its layers don't hide each other.
+    //  Clipped past a pole the view's stopped at, as what's laid on the land is.
+    hazeMaterial = new MeshBasicMaterial({
+      vertexColors: true,
+      transparent: true,
+      depthWrite: false,
+      fog: true,
+      // Seen from below, as on a slope facing away steeper than the camera looks down; both sides in one pass, as it's
+      //  one colour, so the order its faces are drawn in doesn't show.
+      side: DoubleSide,
+      forceSinglePass: true,
     }),
     // What's laid on the land stops where the land does past a pole the view's stopped at: the last row's fields and
     //  roads on a staggered or hex world reach a little past it, where the land, the sea and the cloud stop (and are
@@ -881,6 +898,7 @@ export const createStage: StageFactory = (
     water.pastThePoles(seen.v !== null);
     clouds.pastThePoles(seen.v !== null);
     overlayMaterial.clippingPlanes = seen.v === null ? poles : null;
+    hazeMaterial.clippingPlanes = overlayMaterial.clippingPlanes;
     stopped = seen.v === null;
 
     // The copies of the world the haze doesn't hide: when they change, every chunk is drawn at the new ones. And the
@@ -1029,6 +1047,7 @@ export const createStage: StageFactory = (
       if (old !== undefined) {
         old.drawn.forEach((drawn) => land.remove(drawn));
         old.geometry.dispose();
+        old.haze?.dispose();
         overlays.delete(key);
       }
 
@@ -1044,12 +1063,31 @@ export const createStage: StageFactory = (
       geometry.computeBoundingSphere();
       geometry.computeBoundingBox();
 
-      const box = geometry.boundingBox,
+      // Its haze, smog over pollution, where it has any: its own geometry, drawn see-through with the haze's material.
+      const haze =
+        mesh.haze.positions.length === 0 ? null : new BufferGeometry();
+
+      if (haze !== null) {
+        haze.setAttribute(
+          'position',
+          new BufferAttribute(mesh.haze.positions, 3)
+        );
+        haze.setAttribute('color', new BufferAttribute(mesh.haze.colours, 4));
+        haze.computeBoundingSphere();
+        haze.computeBoundingBox();
+      }
+
+      // What's laid and its haze together: one may be all there is, as pollution alone.
+      const box = geometry
+          .boundingBox!.clone()
+          .union(haze?.boundingBox ?? geometry.boundingBox!),
         overlay: Placed & {
           geometry: BufferGeometry;
+          haze: BufferGeometry | null;
           span: [number, number];
         } = {
           geometry,
+          haze,
           // How far down the ground it reaches, from its top to its bottom.
           span: [mesh.v + (box?.min.z ?? 0), mesh.v + (box?.max.z ?? 0)],
           at: [mesh.u, 0, mesh.v],
@@ -1059,6 +1097,15 @@ export const createStage: StageFactory = (
             // Its specials, huts and mines cast shadows; what's laid flat takes the land's.
             drawn.castShadow = true;
             drawn.receiveShadow = true;
+
+            if (haze !== null) {
+              const smog = new Mesh(haze, hazeMaterial);
+
+              // After the sea and before the cloud (`SMOG_ORDER`): drawn before the sea, smog over the land where
+              //  the sea's behind it would be painted over, cut along the shore.
+              smog.renderOrder = SMOG_ORDER;
+              drawn.add(smog);
+            }
 
             return drawn;
           },
@@ -1475,9 +1522,13 @@ export const createStage: StageFactory = (
       disposed = true;
       chunks.forEach(({ geometry }) => geometry.dispose());
       chunks.clear();
-      overlays.forEach(({ geometry }) => geometry.dispose());
+      overlays.forEach(({ geometry, haze }) => {
+        geometry.dispose();
+        haze?.dispose();
+      });
       overlays.clear();
       overlayMaterial.dispose();
+      hazeMaterial.dispose();
       markers.forEach(({ faded, drawn, idling }) => {
         if (faded !== undefined) {
           unfade(faded);
