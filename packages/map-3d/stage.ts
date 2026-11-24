@@ -13,6 +13,7 @@ import {
   BufferAttribute,
   BufferGeometry,
   Color,
+  ConeGeometry,
   CylinderGeometry,
   DirectionalLight,
   DoubleSide,
@@ -57,7 +58,7 @@ import Water, { Clouds, Ground } from './water';
 import YieldIcons from './yieldIcons';
 import { YieldMesh } from './yields';
 import { LoadedRig, loadModels, modelKey } from './models/loadModels';
-import { ClipRole } from './models/modelSet';
+import { ClipRole, ShotKind } from './models/modelSet';
 import {
   Playing,
   RigFacts,
@@ -149,12 +150,15 @@ export interface Stage {
   ): [number, number, number] | null;
   /**
    * A shot (`id`, `shots.ts`) in flight at `at` (`u`, height, `v`, on the world's own copy), `through` its flight from 0
-   *  to 1, tumbling as it goes, drawn at every copy of the world in sight; `null` takes it away.
+   *  to 1, drawn at every copy of the world in sight as its `kind` is: a bottle alight, tumbling; an arrow, or a bullet's
+   *  streak, pointing the way it's `heading` (one long); a shell, a ball. `null` takes it away.
    */
   shot?(
     id: string,
     at: readonly [number, number, number] | null,
-    through?: number
+    through?: number,
+    kind?: ShotKind,
+    heading?: readonly [number, number, number]
   ): void;
   /**
    * How solid the unit marked on the square `key` is drawn, from 0 to 1, as a unit arriving with no move fades in
@@ -162,13 +166,17 @@ export interface Stage {
    */
   fadeMarker(key: string, opacity: number): void;
   /**
-   * A puff of smoke (`id`, `markers/puff.ts`) where a unit fell in battle, bursting from `at` (`u`, height, `v`, on the
-   *  world's own copy), `through` its time from 0 to 1, drawn at every copy of the world in sight; `null` takes it away.
+   * A puff of smoke (`id`, `markers/puff.ts`) where a unit fell in battle, or a shot left a muzzle or landed, bursting
+   *  from `at` (`u`, height, `v`, on the world's own copy), `through` its time from 0 to 1, `size` times a fallen unit's,
+   *  and with a `flash` at its start, a muzzle's or a shell's burst; drawn at every copy of the world in sight. `null`
+   *  takes it away.
    */
   puff(
     id: string,
     at: readonly [number, number, number] | null,
-    through?: number
+    through?: number,
+    size?: number,
+    flash?: boolean
   ): void;
   /**
    * A ship's wake (`id`, `wakes.ts`): the foam `shape` says (`wakeShape`), from `at` (`u`, height, `v`, on the world's
@@ -246,6 +254,9 @@ type Marked = Placed & {
   faded?: Faded;
   idling?: { rig: LoadedRig; original: Object3D; phase: number };
 };
+
+/** The name of a puff's flash (`Stage#puff`), a muzzle's or a shell's burst. */
+export const PUFF_FLASH = 'flash';
 
 export type StageFactory = (
   canvas: HTMLCanvasElement,
@@ -449,8 +460,12 @@ export const createStage: StageFactory = (
     walkers = new Map<string, Walking>(),
     // What each figure drawn with a rigged copy plays (`clips.ts`).
     playing = new WeakMap<Object3D, Playing>(),
-    // The puffs of smoke where units fell, by their battle's id: how far through each is, and its seed.
-    puffs = new Map<string, Placed & { through: number; seed: number }>(),
+    // The puffs of smoke where units fell, or shots left or landed, by id: how far through each is, its seed, how big,
+    //  and whether it flashes.
+    puffs = new Map<
+      string,
+      Placed & { through: number; seed: number; size: number; flash: boolean }
+    >(),
     // What every puff's blobs are made of: one shape, and two greys.
     puffShape = new IcosahedronGeometry(1, 1),
     puffGrey = (colour: string): MeshStandardMaterial =>
@@ -461,9 +476,35 @@ export const createStage: StageFactory = (
         flatShading: true,
       }),
     puffGreys = [puffGrey('#d8d5cf'), puffGrey('#a9a59d')] as const,
-    // The shots in flight, by id, how far through each is; and what each is made of, shared: a bottle, alight at its
-    //  neck, as a thrown one is.
-    shots = new Map<string, Placed & { through: number }>(),
+    // A puff's flash, a muzzle's or a shell's burst: unlit, so it's as bright whichever way the sun is.
+    flashShape = new IcosahedronGeometry(1, 0),
+    flashGlow = new MeshBasicMaterial({ color: new Color('#fff1b8') }),
+    // The shots in flight, by id, what each is, how far through each is and which way it's going; and what each kind
+    //  is made of, shared: a bottle, alight at its neck, as a thrown one is; an arrow's shaft and head; a bullet's
+    //  streak, unlit; and a shell, a dark ball.
+    shots = new Map<
+      string,
+      Placed & {
+        kind: ShotKind;
+        through: number;
+        heading: readonly [number, number, number];
+      }
+    >(),
+    shaftShape = new CylinderGeometry(0.0015, 0.0015, 0.07, 4),
+    arrowHeadShape = new ConeGeometry(0.004, 0.012, 4),
+    wood = new MeshStandardMaterial({
+      color: new Color('#7a5a3a'),
+      roughness: 0.8,
+      metalness: 0,
+    }),
+    streakShape = new CylinderGeometry(0.0025, 0.0025, 0.09, 4),
+    streakGlow = new MeshBasicMaterial({ color: new Color('#ffe08a') }),
+    shellShape = new IcosahedronGeometry(0.012, 1),
+    iron = new MeshStandardMaterial({
+      color: new Color('#2b2b2b'),
+      roughness: 0.5,
+      metalness: 0.6,
+    }),
     bottleShape = new CylinderGeometry(0.006, 0.009, 0.03, 6),
     bottleGlass = new MeshStandardMaterial({
       color: new Color('#3d5a3a'),
@@ -588,23 +629,75 @@ export const createStage: StageFactory = (
       }
     });
 
-  // A shot's copies, each turned as far as it's tumbled `through` its flight: end over end, a turn and a half.
-  const tumble = (shot: { drawn: Object3D[]; through: number }): void =>
+  // A shot's copies turned: a bottle's as far as it's tumbled `through` its flight, end over end, a turn and a half; an
+  //  arrow's and a bullet's streak's pointing the way it's going.
+  const up = new Vector3(0, 1, 0),
+    pointing = new Vector3();
+  const tumble = (shot: {
+    drawn: Object3D[];
+    kind: ShotKind;
+    through: number;
+    heading: readonly [number, number, number];
+  }): void =>
     shot.drawn.forEach((drawn) => {
-      drawn.rotation.x = shot.through * Math.PI * 3;
+      if (shot.kind === 'bottle') {
+        drawn.rotation.set(shot.through * Math.PI * 3, 0, 0);
+      } else if (shot.kind === 'arrow' || shot.kind === 'bullet') {
+        drawn.quaternion.setFromUnitVectors(
+          up,
+          pointing.set(...shot.heading).normalize()
+        );
+      }
     });
 
-  // A puff's copies, each blob where it is and as big as it is `through` the puff; one that's shrunk to nothing not
-  //  drawn.
+  // What a shot of `kind` is made of, as it's drawn, about its middle: a bullet's streak trails behind it.
+  const shotMade = (kind: ShotKind): Object3D => {
+    const group = new Group();
+
+    if (kind === 'arrow') {
+      const head = new Mesh(arrowHeadShape, iron);
+
+      head.position.y = 0.04;
+      group.add(new Mesh(shaftShape, wood), head);
+    } else if (kind === 'bullet') {
+      const streak = new Mesh(streakShape, streakGlow);
+
+      streak.position.y = -0.045;
+      group.add(streak);
+    } else if (kind === 'shell') {
+      group.add(new Mesh(shellShape, iron));
+    } else {
+      const alight = new Mesh(flameShape, flame);
+
+      alight.position.y = 0.02;
+      group.add(new Mesh(bottleShape, bottleGlass), alight);
+    }
+
+    return group;
+  };
+
+  // A puff's copies, as big as it is, each blob where it is and as big as it is `through` the puff, one that's shrunk
+  //  to nothing not drawn; and its flash, if it has one, at its biggest as it begins, gone a fifth of the way through.
   const shapePuff = (puff: {
     drawn: Object3D[];
     through: number;
     seed: number;
+    size: number;
   }): void => {
-    const blobs = puffAt(puff.through, puff.seed);
+    const blobs = puffAt(puff.through, puff.seed),
+      flash = Math.max(0, 1 - puff.through * 5);
 
-    puff.drawn.forEach((copy) =>
+    puff.drawn.forEach((copy) => {
+      copy.scale.setScalar(Math.max(puff.size, 1e-4));
       copy.children.forEach((part, index) => {
+        if (part.name === PUFF_FLASH) {
+          part.position.set(0, 0.06, 0);
+          part.scale.setScalar(Math.max(0.07 * flash, 1e-4));
+          part.visible = flash > 0;
+
+          return;
+        }
+
         const blob = blobs[index];
 
         if (blob === undefined) {
@@ -616,8 +709,8 @@ export const createStage: StageFactory = (
         part.position.set(...blob.at);
         part.scale.setScalar(Math.max(blob.size, 1e-4));
         part.visible = blob.size > 0;
-      })
-    );
+      });
+    });
   };
 
   // A marker's original, made from what it marks: casting shadows on the land, as the models will. A walker's drawn to
@@ -1108,7 +1201,13 @@ export const createStage: StageFactory = (
         ? null
         : jointOf(walker.drawn[0], figure, joint, markerCopies[0] ?? [0, 0]);
     },
-    shot: (id, at, through = 0): void => {
+    shot: (
+      id,
+      at,
+      through = 0,
+      kind = 'bottle',
+      heading = [0, -1, 0]
+    ): void => {
       const old = shots.get(id);
 
       if (at === null) {
@@ -1120,16 +1219,10 @@ export const createStage: StageFactory = (
 
       const shot = old ?? {
         at,
+        kind,
         through,
-        make: (): Object3D => {
-          const group = new Group(),
-            alight = new Mesh(flameShape, flame);
-
-          alight.position.y = 0.02;
-          group.add(new Mesh(bottleShape, bottleGlass), alight);
-
-          return group;
-        },
+        heading,
+        make: (): Object3D => shotMade(kind),
         drawn: [],
       };
 
@@ -1140,6 +1233,7 @@ export const createStage: StageFactory = (
 
       shot.at = at;
       shot.through = through;
+      shot.heading = heading;
       shot.drawn.forEach((drawn, copy) => {
         const [offsetU, offsetV] = markerCopies[copy] ?? [0, 0];
 
@@ -1210,7 +1304,7 @@ export const createStage: StageFactory = (
         drawn.position.set(at[0] + offsetU, at[1], at[2] + offsetV);
       });
     },
-    puff: (id, at, through = 0): void => {
+    puff: (id, at, through = 0, size = 1, flash = false): void => {
       const old = puffs.get(id);
 
       if (at === null) {
@@ -1225,13 +1319,22 @@ export const createStage: StageFactory = (
           at,
           through,
           seed,
-          // Its blobs, sharing the one shape and the two greys: nothing of its own to let go of.
+          size,
+          flash,
+          // Its blobs, sharing the one shape and the two greys, and its flash: nothing of its own to let go of.
           make: (): Object3D => {
             const group = new Group();
 
             puffAt(0, seed).forEach(({ shade }) =>
               group.add(new Mesh(puffShape, puffGreys[shade]))
             );
+
+            if (flash) {
+              const glow = new Mesh(flashShape, flashGlow);
+
+              glow.name = PUFF_FLASH;
+              group.add(glow);
+            }
 
             return group;
           },
@@ -1356,6 +1459,15 @@ export const createStage: StageFactory = (
       bottleGlass.dispose();
       flameShape.dispose();
       flame.dispose();
+      flashShape.dispose();
+      flashGlow.dispose();
+      shaftShape.dispose();
+      arrowHeadShape.dispose();
+      wood.dispose();
+      streakShape.dispose();
+      streakGlow.dispose();
+      shellShape.dispose();
+      iron.dispose();
       kit.dispose();
       yields.dispose();
       water.dispose();

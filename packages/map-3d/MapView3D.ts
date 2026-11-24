@@ -27,12 +27,16 @@ import { ClipRole } from './models/modelSet';
 import { RigFacts, STRIDE } from './markers/clips';
 import {
   HIT_PUFF,
+  MUZZLE_PUFF,
+  SHOT_LOOKS,
   SHOT_TARGET,
   ShotTime,
   landsAt,
   shotAt,
+  shotHeading,
   shotTimes,
 } from './shots';
+import { ShotKind } from './models/modelSet';
 import Land from './Land';
 import {
   Orbit,
@@ -66,7 +70,6 @@ import Battles, {
   Battle,
   Fighter,
   REACH,
-  SHOT_FLIGHT,
   battleLength,
   clipPace,
   quickerBattle,
@@ -311,12 +314,13 @@ export class MapView3D implements MapRenderer {
       rate: number;
     }
   >();
-  // The shots in flight, or landed and bursting, by id: their battle, from where to where, when they leave and land,
-  //  and how quick their battle's clips play.
+  // The shots in flight, or landed and bursting, or with smoke where they left, by id: their battle, what they are,
+  //  from where to where, when they leave and land, and how quick their battle's clips play.
   #flying = new Map<
     string,
     {
       battle: string;
+      kind: ShotKind;
       from: [number, number, number];
       to: [number, number, number];
       leaves: number;
@@ -1471,8 +1475,10 @@ export class MapView3D implements MapRenderer {
 
   // The shots of the battles under way at `now` (`shots.ts`): each figure's leaving the node its clip names as the
   //  attacker's clip comes to it, where the figure's drawn now, or where the attacker is, and flying to the square
-  //  attacked in an arc; each landed bursting in a puff of smoke there (`HIT_PUFF`, as quick as the battle's clips),
-  //  added to `puffed`, then gone. Its attacker not drawn, as with units hidden (`t`) but for the one ringed, none is.
+  //  attacked as its kind flies (`SHOT_LOOKS`), pointing the way it goes; one from a muzzle leaving smoke there, with a
+  //  flash (`MUZZLE_PUFF`); each landed bursting in a puff of smoke there (`HIT_PUFF`), a shell's with a flash. Each
+  //  puff's as quick as the battle's clips, added to `puffed`, then gone. Its attacker not drawn, as with units hidden
+  //  (`t`) but for the one ringed, none is.
   #placeShots(now: number, going: Fighter[], puffed: Set<string>): void {
     going.forEach(({ id, battle, at, lift, fallen, clip }) => {
       const plan = this.#shotsOf.get(battle);
@@ -1506,46 +1512,69 @@ export class MapView3D implements MapRenderer {
         plan.left.add(index);
         this.#flying.set(`${battle}-shot-${index}`, {
           battle,
+          kind: time.kind,
           from,
           to: landsAt(from, target, time.figure, plan.figures),
           leaves,
-          lands: leaves + SHOT_FLIGHT / plan.rate,
+          lands: leaves + SHOT_LOOKS[time.kind].flight / plan.rate,
           rate: plan.rate,
         });
       });
     });
 
-    this.#flying.forEach(({ battle, from, to, leaves, lands, rate }, id) => {
-      if (!this.#walkersDrawn.has(battle)) {
+    this.#flying.forEach(
+      ({ battle, kind, from, to, leaves, lands, rate }, id) => {
+        const look = SHOT_LOOKS[kind],
+          muzzle = `${id}-muzzle`,
+          hit = `${id}-hit`;
+
+        // Its puffs, not drawn this frame, are taken away with the rest (`#puffsOver`).
+        if (!this.#walkersDrawn.has(battle)) {
+          this.#stage.shot?.(id, null);
+          this.#flying.delete(id);
+
+          return;
+        }
+
+        // The smoke where it left a muzzle, with its flash, from when it left: seen though it lands in the same frame.
+        const leaving =
+            look.muzzle > 0 && ((now - leaves) * rate) / MUZZLE_PUFF,
+          // Its puff where it lands, from when it landed: a shell's bursts, with a flash.
+          landed = now < lands ? false : ((now - lands) * rate) / HIT_PUFF;
+
+        if (leaving !== false && leaving < 1) {
+          this.#puffs.add(muzzle);
+          this.#stage.puff(muzzle, from, leaving, look.muzzle, true);
+          puffed.add(muzzle);
+        }
+
+        if (landed === false) {
+          const through = (now - leaves) / (lands - leaves);
+
+          this.#stage.shot?.(
+            id,
+            shotAt(from, to, through, look.arc),
+            through,
+            kind,
+            shotHeading(from, to, through, look.arc)
+          );
+
+          return;
+        }
+
         this.#stage.shot?.(id, null);
-        this.#flying.delete(id);
 
-        return;
+        if (landed < 1) {
+          this.#puffs.add(hit);
+          this.#stage.puff(hit, to, landed, look.hit, look.burst);
+          puffed.add(hit);
+        }
+
+        if (landed >= 1 && (leaving === false || leaving >= 1)) {
+          this.#flying.delete(id);
+        }
       }
-
-      if (now < lands) {
-        const through = (now - leaves) / (lands - leaves);
-
-        this.#stage.shot?.(id, shotAt(from, to, through), through);
-
-        return;
-      }
-
-      this.#stage.shot?.(id, null);
-
-      const hit = `${id}-hit`,
-        through = ((now - lands) * rate) / HIT_PUFF;
-
-      if (through < 1) {
-        this.#puffs.add(hit);
-        this.#stage.puff(hit, to, through);
-        puffed.add(hit);
-
-        return;
-      }
-
-      this.#flying.delete(id);
-    });
+    );
   }
 
   // The shots of `battle`, over: those in flight taken away, and those bursting gone with their puffs.
@@ -1556,6 +1585,8 @@ export class MapView3D implements MapRenderer {
         this.#stage.shot?.(id, null);
         this.#stage.puff(`${id}-hit`, null);
         this.#puffs.delete(`${id}-hit`);
+        this.#stage.puff(`${id}-muzzle`, null);
+        this.#puffs.delete(`${id}-muzzle`);
         this.#flying.delete(id);
       }
     });

@@ -30,8 +30,19 @@ export const CLIP_ROLES: readonly ClipRole[] = [
   'settle',
 ];
 
-/** A shot leaving a figure as a clip plays: when, in seconds into it, and from which of its joints. */
-export type ClipShot = { at: number; joint: string };
+/**
+ * What a shot is (`shots.ts`), as it's drawn and as quick as it flies: a bottle thrown, alight; an arrow; a bullet, a
+ *  streak from a muzzle's flash; or a shell, a ball from a cannon's. A set says, as its model knows what it holds.
+ */
+export const SHOT_KINDS = ['bottle', 'arrow', 'bullet', 'shell'] as const;
+
+export type ShotKind = (typeof SHOT_KINDS)[number];
+
+/**
+ * A shot leaving a figure as a clip plays: when, in seconds into it, from which of its joints, and what it is (a bottle,
+ *  where it doesn't say, as the Partisans' first was).
+ */
+export type ClipShot = { at: number; joint: string; kind?: ShotKind };
 
 /**
  * A model's rigged copy (plan 2.2): its file, beside the manifest, whose bind pose is the model's own, and the name in
@@ -99,11 +110,13 @@ const isShot = (value: unknown): value is ClipShot =>
   typeof value.at === 'number' &&
   Number.isFinite(value.at) &&
   value.at >= 0 &&
-  isText(value.joint);
+  isText(value.joint) &&
+  (value.kind === undefined ||
+    (SHOT_KINDS as readonly unknown[]).includes(value.kind));
 
 // A rigged copy as a manifest gives it, as far as the map can play it: its file, as a model's is; the clip it names for
-//  each role the map plays (any for another role, which a later map may play, left out); and their shots, each when
-//  and from which joint, in a role it names a clip for. Nothing, for one with no clip the map can play, or anything
+//  each role the map plays (any for another role, which a later map may play, left out); and their shots, each when,
+//  from which joint and what it is, of the kinds the map draws, in a role it names a clip for. Nothing, for one with no clip the map can play, or anything
 //  else wrong with it: its model's drawn as it stands, and the rest of the set as it is.
 const riggedOf = (value: unknown): RiggedModel | undefined => {
   if (!isObject(value) || !isFile(value.file) || !isObject(value.clips)) {
