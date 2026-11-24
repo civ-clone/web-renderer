@@ -4685,6 +4685,47 @@ expect(
     ]
   );
 
+  // Stepping on right after its blow, a squad's bottles still in flight land, each bursting where it lands, and the
+  //  loser falls as it would (#1334).
+  rigFactsFor.set('Unit-A', {
+    figures: 3,
+    stagger: 0.13,
+    clips: { fight: { duration: 1.5, shots: [{ at: 0.5, joint: 'prop' }] } },
+  });
+  repatched([1, 1, [walker]], [2, 1, [rival]]);
+  puffLooks.clear();
+  shotsDrawn.clear();
+
+  const thrownFrom = now;
+
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  patch([1, 1, [walker]], [2, 1, []]);
+
+  while (now - thrownFrom < 880 && runFrames(1) > 0);
+
+  const inFlightAtStep = [...shotsDrawn.values()].filter(
+    (points) => points.at(-1) !== null
+  ).length;
+
+  stepped(walker, [1, 1], [1, 2]);
+  patch([1, 1, []], [1, 2, [walker]]);
+  runFrames();
+
+  const landedAfterStep = [
+    inFlightAtStep,
+    [...puffLooks.keys()].filter((key) => key.endsWith('-hit')).length,
+    puffs.size,
+  ];
+
+  rigFactsFor.clear();
+  repatched([1, 2, []]);
+
+  expect(
+    'stepping on right after its blow, a squad’s bottles in flight land, each bursting, all gone once over',
+    landedAfterStep,
+    [2, 3, 0]
+  );
+
   // The active unit attacks with its last move, and the game chooses the next: the ring and the camera wait till the
   //  battle's over. A key while they wait ends it at once, and they go to the next.
   const attackedLast = () => {
