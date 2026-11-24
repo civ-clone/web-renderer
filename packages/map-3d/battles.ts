@@ -18,7 +18,7 @@
 //
 // Where a fighter is is on the ground (`u`, `v`), with a `lift`, as a walker's is.
 
-import type { RigFacts } from './markers/clips';
+import type { ClipBefore, RigFacts } from './markers/clips';
 import { ClipRole } from './models/modelSet';
 import { SHOT_LOOKS, kindOf, shotOver } from './shots';
 import { WalkPoint, WalkSquare } from './walks';
@@ -189,8 +189,9 @@ export type Fighter = {
   lift: number;
   facing: number;
   opacity: number;
-  // The clip its figures play, and how far in, in seconds, where its battle's paced for clips (`clipPace`).
-  clip?: { role: ClipRole; seconds: number };
+  // The clip its figures play, and how far in, in seconds, where its battle's paced for clips (`clipPace`); and what
+  //  each plays till its own time in that comes (`poseFigures`): an attacker that's lost fights on till it falls.
+  clip?: { role: ClipRole; seconds: number; before?: ClipBefore };
   // The attacker, paced for its `fight` clip: how far into that it is, in seconds, by the battle's clock, though it's
   //  falling, lost, so its figures' shots still leave as that clip has them, each as it comes to it.
   fought?: number;
@@ -453,11 +454,19 @@ export class Battles {
       playing = (role: ClipRole, since: number) => ({
         clip: { role, seconds: ((now - since) / 1000) * (clips?.rate ?? 1) },
       }),
+      // Lost, each of its figures falls a little behind the one before, fighting till it does.
       attackerPlays =
         clips === undefined
           ? {}
           : !battle.won && now >= blow && clips.die
-          ? playing('die', blow)
+          ? {
+              clip: {
+                ...playing('die', blow).clip,
+                ...(clips.fight
+                  ? { before: playing('fight', battle.start).clip }
+                  : {}),
+              },
+            }
           : clips.fight
           ? playing('fight', battle.start)
           : {},

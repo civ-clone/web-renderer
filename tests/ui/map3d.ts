@@ -253,6 +253,8 @@ const staged: string[] = [],
   // Every shot drawn since last cleared, by id, where it was each frame, `null` taken away; and the nodes asked where
   //  they are, by walker, figure and node, the stage saying a fifth of a square over where the walker was last put.
   shotsDrawn = new Map<string, (readonly number[] | null)[]>(),
+  // Each clip a walker's figures were posed in with what they play till their own time in it comes.
+  walkersBefore = new Set<string>(),
   // What each shot was last drawn as, and every way it pointed; and each puff's size and whether it flashed.
   shotLooks = new Map<string, { kind: string; headings: number[][] }>(),
   puffLooks = new Map<string, { size: number; flash: boolean }>(),
@@ -303,11 +305,13 @@ const staged: string[] = [],
       ]);
       walkersAloft.set(id, [...(walkersAloft.get(id) ?? []), aloft]);
     },
-    poseWalker: (id, role, seconds) =>
-      void walkersPosed.set(id, [
-        ...(walkersPosed.get(id) ?? []),
-        [role, seconds],
-      ]),
+    poseWalker: (id, role, seconds, before) => {
+      walkersPosed.set(id, [...(walkersPosed.get(id) ?? []), [role, seconds]]);
+
+      if (before !== undefined) {
+        walkersBefore.add(`${role} after ${before.role}`);
+      }
+    },
     rigFacts: (marker) => rigFactsFor.get(marker.unit?.id ?? '') ?? null,
     idle: (keys, seconds) => {
       idleAsked.push([[...keys].sort(), seconds]);
@@ -4600,8 +4604,17 @@ expect(
   // A squad of three that loses falls at the blow, its first bullet landing before the others have left: they still
   //  leave, as its clip has them. Twice as quick, a bullet flies half as long.
   shooter('bullet', 3);
+  walkersBefore.clear();
 
-  const lostSquad = looksAfter(undefined, 'defender');
+  const lostSquad = looksAfter(undefined, 'defender'),
+    // Falling, its figures were posed fighting till each one's own fall began.
+    fellFighting = [...walkersBefore];
+
+  optionsRegistry.set(MAP3D_WALKS_OPTION, 'fast');
+
+  const lostQuick = looksAfter(undefined, 'defender');
+
+  optionsRegistry.set(MAP3D_WALKS_OPTION, 'normal');
 
   // Firing twice, the second volley after the blow: lost, its figures have fallen by then, and fire none of it; won,
   //  they fire both.
@@ -4638,7 +4651,7 @@ expect(
       shell.inFlight !== null &&
         shell.inFlight[1]! - shell.inFlight[0]! >=
           SHOT_LOOKS.shell.flight - 2 * 16,
-      [lostSquad.landed, lostSquad.puffsLeft],
+      [lostSquad.landed, lostSquad.puffsLeft, fellFighting, lostQuick.landed],
       [lostVolleys.landed, wonVolleys.landed],
       quickBullet.inFlight !== null &&
         quickBullet.inFlight[1]! - quickBullet.inFlight[0]! <
@@ -4659,7 +4672,7 @@ expect(
       ],
       ['shell', [{ size: SHOT_LOOKS.shell.hit, flash: true }], false, false],
       true,
-      [3, 0],
+      [3, 0, ['die after fight'], 3],
       [3, 6],
       true,
     ]

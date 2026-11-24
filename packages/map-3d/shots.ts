@@ -86,18 +86,19 @@ export const shotTimes = (
     .sort((a, b) => a.leaves - b.leaves);
 
 /**
- * Of a clip's shots (`shotTimes`), those its figures fire: all of them, but where they fall at the blow, `falls` seconds
- *  into the clip, as an attacker that's lost does. Then only those each figure fires before it falls, each figure
- *  falling as far behind the one before as it fires (`FIGURE_STAGGER`, `stagger`): those its clip has before the blow.
+ * Of the times of a clip's shots, `shots` (`shotTimes`), those its figures fire: all of them, but where they fall at
+ *  the blow, `falls` seconds into the clip, as an attacker that's lost does. Then only those each figure fires before
+ *  it falls, each falling as far behind the one before as it fires (`FIGURE_STAGGER`): those its clip has before the
+ *  blow, by the time the clip gives each.
  */
 export const shotsFired = (
   times: readonly ShotTime[],
-  stagger: number,
+  shots: readonly ClipShot[],
   falls: number | null
 ): ShotTime[] =>
   falls === null
     ? [...times]
-    : times.filter(({ leaves, figure }) => leaves - figure * stagger < falls);
+    : times.filter(({ shot }) => (shots[shot]?.at ?? Infinity) < falls);
 
 /**
  * Where the shot of figure `figure` of `figures` lands, going from `from` to `target`: a little to one side of it or

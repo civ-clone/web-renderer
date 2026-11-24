@@ -981,7 +981,7 @@ export class MapView3D implements MapRenderer {
         // Lost, falling at the blow, only those its figures fire before they fall.
         times: shotsFired(
           shotTimes(shots, attackerFacts.figures, attackerFacts.stagger),
-          attackerFacts.stagger,
+          shots,
           winner !== 'attacker' && pace.clips.die
             ? (pace.reach / 1000) * pace.clips.rate
             : null
@@ -1290,7 +1290,7 @@ export class MapView3D implements MapRenderer {
       Partial<Pick<Walker, 'aloft'>>,
     marker: TileMarker | null,
     opacity = 1,
-    clip: { role: ClipRole; seconds: number } | null = null
+    clip: Fighter['clip'] | null = null
   ): void {
     const signature = marker === null ? null : JSON.stringify(marker);
 
@@ -1310,7 +1310,12 @@ export class MapView3D implements MapRenderer {
 
     this.#stage.placeWalker(id, this.#onLand(at, lift), facing, aloft);
     this.#stage.fadeWalker(id, opacity);
-    this.#stage.poseWalker?.(id, clip?.role ?? null, clip?.seconds ?? 0);
+    this.#stage.poseWalker?.(
+      id,
+      clip?.role ?? null,
+      clip?.seconds ?? 0,
+      clip?.before
+    );
   }
 
   // Where the point `at` on the ground is on the world's own copy.

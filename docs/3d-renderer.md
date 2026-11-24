@@ -1546,9 +1546,11 @@ each kind goes as it would (`SHOT_LOOKS` in `shots.ts`):
 - **Pacing** (`clipPace`): the blow falls as the first shot to land lands, each as long after it leaves as its kind
   flies, so a bullet that leaves after a bottle can land first. The battle's drawn till the last shot's puff is over
   (`shotOver`); the smoke where each left, 400 ms (`MUZZLE_PUFF`), is over before it.
-- **A squad that loses** falls at the blow, which a bullet can bring before its last figures have fired. Shots leave
-  by the battle's clock (`Fighter.fought`), not the clip a figure plays, so each figure fires what its clip has before
-  the blow, as it falls behind the one before; none fires what its clip has after (`shotsFired`).
+- **A squad that loses,** with a `die` clip, falls at the blow, which a bullet can bring before its last figures have
+  fired. Shots leave by the battle's clock (`Fighter.fought`), not the clip a figure plays, and each figure fights on
+  till its own fall begins, a little behind the one before (`poseFigures`' `before`): so each fires what its clip has
+  before the blow, from where it aims, and none what its clip has after (`shotsFired`). With no `die` clip, it fades
+  as before, firing every shot.
 - **Drawn** (`#placeShots`, `Stage#shot`, `Stage#puff`): each points the way it's going (`shotHeading`), the arc's
   tangent, but for a bottle, which tumbles, and a shell, a ball. The smoke where it leaves a muzzle is timed from when
   it left, so a bullet that leaves and lands between one frame and the next still shows it. Its flash is solid and

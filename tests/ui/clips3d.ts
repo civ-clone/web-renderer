@@ -694,6 +694,40 @@ kit.addRig('partisan', rig);
     ],
     [formation(look.squad).map(() => RIG_FIGURE), false, model.parts.length]
   );
+
+  // A clip played once, each figure a little behind the one before: one whose own time hasn't come plays what it was
+  //  playing till it does, where it's told what; told nothing, it holds the clip's start. A clip that loops has no
+  //  such wait.
+  const roles = (
+      role: 'die' | 'move',
+      seconds: number,
+      before?: { role: 'move' | 'die'; seconds: number }
+    ) => {
+      const playing = new WeakMap<Object3D, Playing>();
+
+      poseFigures(asked, rig, role, seconds, playing, before);
+
+      return asked
+        .getObjectsByProperty('name', RIG_FIGURE)
+        .map((figure) => playing.get(figure)?.role);
+    },
+    squad = formation(look.squad);
+
+  expect(
+    'in a clip played once, a figure whose own time hasn’t come plays what it was, where it’s told; told nothing, it holds the clip’s start; in one that loops, none waits',
+    [
+      roles('die', 0.1, { role: 'move', seconds: 0.3 }),
+      roles('die', 0.1),
+      roles('move', 0, { role: 'die', seconds: 0 }),
+    ],
+    [
+      squad.map((_, index) =>
+        0.1 - index * FIGURE_STAGGER < 0 ? 'move' : 'die'
+      ),
+      squad.map(() => 'die'),
+      squad.map(() => 'move'),
+    ]
+  );
 }
 
 // How far into a clip it is: round and round for a role that loops, held at its end for one that doesn't.

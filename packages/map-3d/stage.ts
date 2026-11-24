@@ -60,6 +60,7 @@ import { YieldMesh } from './yields';
 import { LoadedRig, loadModels, modelKey } from './models/loadModels';
 import { ClipRole, ShotKind } from './models/modelSet';
 import {
+  ClipBefore,
   Playing,
   RigFacts,
   idlePhase,
@@ -124,9 +125,15 @@ export interface Stage {
   fadeWalker(id: string, opacity: number): void;
   /**
    * The walker `id`'s figures, where its unit's drawn with a model that has a rigged copy, posed as `role`'s clip has
-   *  them `seconds` in (plan 2.2, `clips.ts`): or, for none, standing as the model does.
+   *  them `seconds` in (plan 2.2, `clips.ts`), each playing `before` till its own time in it comes, where it's given:
+   *  or, for none, standing as the model does.
    */
-  poseWalker?(id: string, role: ClipRole | null, seconds: number): void;
+  poseWalker?(
+    id: string,
+    role: ClipRole | null,
+    seconds: number,
+    before?: ClipBefore
+  ): void;
   /**
    * The units marked on the squares `keys` (`x,y`) idling (plan 2.2), drawn with their models' rigged copies, each posed
    *  as its idle clip has it `seconds` in, each stack its own way into it (`idlePhase`); every other marker drawn as it
@@ -242,7 +249,11 @@ type Walking = Placed & {
   // The rigged copy its figures are drawn with, if they are, to play its clips; and how they were last posed, to pose
   //  copies made afresh as they were.
   rig: LoadedRig | null;
-  posed: { role: ClipRole | null; seconds: number } | null;
+  posed: {
+    role: ClipRole | null;
+    seconds: number;
+    before?: ClipBefore;
+  } | null;
 };
 
 // A square's marker as the stage has it: what it marks, how solid it's drawn and with what materials of its own once
@@ -708,8 +719,9 @@ export const createStage: StageFactory = (
     puff.drawn.forEach((copy) => {
       copy.scale.setScalar(Math.max(puff.size, 1e-4));
       copy.children.forEach((part, index) => {
+        // Half its own height up, so a shell's, where it lands, isn't half in the ground.
         if (part.name === PUFF_FLASH) {
-          part.position.set(0, 0, 0);
+          part.position.set(0, 0.035, 0);
           part.scale.setScalar(Math.max(0.07 * flash, 1e-4));
           part.visible = flash > 0;
 
@@ -911,7 +923,14 @@ export const createStage: StageFactory = (
       walkers.forEach(({ drawn, rig, posed }) => {
         if (rig !== null && posed !== null) {
           drawn.forEach((copy) =>
-            poseFigures(copy, rig, posed.role, posed.seconds, playing)
+            poseFigures(
+              copy,
+              rig,
+              posed.role,
+              posed.seconds,
+              playing,
+              posed.before
+            )
           );
         }
       });
@@ -1192,16 +1211,16 @@ export const createStage: StageFactory = (
       });
       pose(walker);
     },
-    poseWalker: (id, role, seconds): void => {
+    poseWalker: (id, role, seconds, before): void => {
       const walker = walkers.get(id);
 
       if (walker === undefined || walker.rig === null) {
         return;
       }
 
-      walker.posed = { role, seconds };
+      walker.posed = { role, seconds, before };
       walker.drawn.forEach((drawn) =>
-        poseFigures(drawn, walker.rig!, role, seconds, playing)
+        poseFigures(drawn, walker.rig!, role, seconds, playing, before)
       );
     },
     rigFacts: (marker): RigFacts | null => {
