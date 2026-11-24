@@ -1519,7 +1519,7 @@ stand. The map used to draw a frame only when something changed; while units idl
 - **Bounds** (`markers/rigBounds.ts`): a skinned mesh's own are its bind pose's, worked out once, so rigged copies
   weren't culled at all: each was drawn wherever it was. A rig's are now worked out as it's loaded, from the model's
   stance and every tenth of a second of each clip, and a tenth more, and taken by its copies, so one off the screen
-  is neither drawn nor casts a shadow, and a click tests a box before its points. They're worked out by its bones,
+  isn't drawn, nor its shadow unless that falls on the screen, and a click tests a box before its points. They're worked out by its bones,
   not its points: each point a bone moves lies within a reach of it, as far as the furthest it moves lay from it as
   the model stands. That takes a few milliseconds a rig, where every point at every pose took a twentieth of a
   second.

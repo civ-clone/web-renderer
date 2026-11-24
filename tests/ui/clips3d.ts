@@ -17,6 +17,8 @@ import {
   Color,
   Float32BufferAttribute,
   Group,
+  Matrix3,
+  Matrix4,
   Mesh,
   MeshStandardMaterial,
   Object3D,
@@ -50,7 +52,7 @@ import {
   poseFigures,
   rigFacts,
 } from '@civ-clone/ui-map-3d/markers/clips';
-import boundClips from '@civ-clone/ui-map-3d/markers/rigBounds';
+import boundClips, { stretchOf } from '@civ-clone/ui-map-3d/markers/rigBounds';
 import {
   IDLE_DISTANCE,
   IDLE_DISTANCE_OUT,
@@ -907,6 +909,60 @@ expect(
     'under an armature scaled and moved, its bounds cover every pose its clips take it to',
     [[...new Set(outside)], parts.length],
     [[], 2]
+  );
+}
+
+// How far a bone's move stretches anything, at most: exactly as far as its longest axis, turned and grown; sheared, as a
+//  stretched bone's turned child is, no less than the most it stretches anything, which its longest axis can be.
+{
+  const turned = new Quaternion().setFromAxisAngle(
+      new Vector3(1, 2, 3).normalize(),
+      0.7
+    ),
+    grown = new Matrix4().compose(
+      new Vector3(1, 2, 3),
+      turned,
+      new Vector3(2, 2, 2)
+    ),
+    stretched = new Matrix4().compose(
+      new Vector3(),
+      turned,
+      new Vector3(1, 4, 1)
+    ),
+    sheared = new Matrix4()
+      .makeScale(1, 4, 1)
+      .multiply(new Matrix4().makeRotationZ(Math.PI / 4)),
+    // The most it stretches any of many ways, a fine sweep round.
+    most = (matrix: Matrix4): number => {
+      let found = 0;
+
+      for (let a = 0; a < 64; a++) {
+        for (let b = 0; b < 32; b++) {
+          const way = new Vector3().setFromSphericalCoords(
+            1,
+            (b / 31) * Math.PI,
+            (a / 64) * Math.PI * 2
+          );
+
+          found = Math.max(
+            found,
+            way.applyMatrix3(new Matrix3().setFromMatrix4(matrix)).length()
+          );
+        }
+      }
+
+      return found;
+    };
+
+  expect(
+    'a bone turned and grown stretches as far as its longest axis; sheared, never less than it does',
+    [
+      round(stretchOf(grown)),
+      round(stretchOf(stretched)),
+      stretchOf(sheared) >= most(sheared) - 1e-6,
+      sheared.getMaxScaleOnAxis() < most(sheared) - 0.1,
+    ],
+    [2, 4, true, true]
   );
 }
 

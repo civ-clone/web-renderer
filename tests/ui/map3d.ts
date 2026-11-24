@@ -2113,7 +2113,7 @@ expect(
 
   // In a browser, drawing waits for a frame, and many asks in one are drawn once; taken down, a frame still to come is
   //  given up.
-  const frames = new Map<number, () => void>();
+  const frames = new Map<number, (time?: number) => void>();
   let nextFrame = 1;
 
   Object.assign(globalThis, {
@@ -2169,7 +2169,8 @@ expect(
 
         frames.clear();
         now += 16;
-        waiting.forEach((callback) => callback());
+        // Each given when its frame began, as a browser gives it.
+        waiting.forEach((callback) => callback(now));
         count++;
       }
 

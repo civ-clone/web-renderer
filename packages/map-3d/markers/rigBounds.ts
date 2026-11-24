@@ -2,9 +2,10 @@
 //  sun's shadows, would see it. A skinned mesh's own bounds are its bind pose's, worked out once, wherever a clip takes
 //  it after: these cover every pose its clips have instead, as the rig's loaded, and its copies take them with them.
 //
-// Worked out by its bones, not its points, which would take a tenth of a second a rig: each point a bone moves lies
+// Worked out by its bones, not its points, which would take a twentieth of a second a rig: each point a bone moves lies
 //  within a reach of it, as far as the furthest it moves lay from it as the model stands, however it's turned (and
-//  further, as far as it's grown). Where a point's moved by several, it lies between where each would take it.
+//  further, as far as it's grown or stretched). Where a point's moved by several, it lies between where each would
+//  take it.
 
 import {
   AnimationMixer,
@@ -35,6 +36,31 @@ const skinnedOf = (scene: Object3D): SkinnedMesh[] => {
   });
 
   return found;
+};
+
+/**
+ * How far `matrix` stretches anything, at most: its longest axis, where its axes are square to each other, as a bone's
+ *  turned and grown are; sheared, no more than its three axes together, which is never less.
+ */
+export const stretchOf = (matrix: Matrix4): number => {
+  const e = matrix.elements,
+    axes = [0, 4, 8].map((at) => [e[at]!, e[at + 1]!, e[at + 2]!]),
+    dot = (a: number[], b: number[]): number =>
+      a[0]! * b[0]! + a[1]! * b[1]! + a[2]! * b[2]!,
+    lengths = axes.map((axis) => dot(axis, axis)),
+    square = [
+      [0, 1],
+      [0, 2],
+      [1, 2],
+    ].every(
+      ([a, b]) =>
+        Math.abs(dot(axes[a!]!, axes[b!]!)) <=
+        1e-4 * Math.sqrt(lengths[a!]! * lengths[b!]!)
+    );
+
+  return Math.sqrt(
+    square ? Math.max(...lengths) : lengths.reduce((all, n) => all + n, 0)
+  );
 };
 
 /**
@@ -112,7 +138,7 @@ export const boundClips = (rig: LoadedRig): void => {
           moved.multiplyMatrices(bones[bone]!.matrixWorld, boneInverses[bone]!);
           centre.copy(at).applyMatrix4(moved);
 
-          const far = reach * moved.getMaxScaleOnAxis();
+          const far = reach * stretchOf(moved);
 
           world.expandByPoint(corner.copy(centre).addScalar(far));
           world.expandByPoint(corner.copy(centre).addScalar(-far));
