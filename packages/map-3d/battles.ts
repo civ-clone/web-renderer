@@ -378,8 +378,9 @@ export class Battles {
   /**
    * The battles `test` picks over at `now`, at once: the blow fallen in those it hadn't, told in `struck` as `at` tells
    *  it, and each in `ended`. Those before them at the squares they attack go with them, their blows first, so blows
-   *  there still fall in the order the battles came. Those yet to start that were waiting for them start as soon as
-   *  they can.
+   *  there still fall in the order the battles came; but one going on (`goesOn`), or moved on from (`moveOn`), is only
+   *  told its blow, in `struck` but not `ended`. Those yet to start that were waiting for them start as soon as they
+   *  can.
    */
   endWhere(
     test: (battle: Battle) => boolean,
@@ -390,19 +391,26 @@ export class Battles {
     struck: Battle[];
     ended: Battle[];
   } {
+    // Those it picks, and those before them at their squares whose blows are still to be told, in the order they came:
+    //  each told its blow, so blows there fall in order. Of those before, one going on still, or moved on from, is told
+    //  its blow and goes on; the rest are over.
     const picked = this.#battles.filter(test),
-      ended = this.#battles.filter(
+      spared = (battle: Battle): boolean =>
+        goesOn(battle) || this.#released.has(battle.id),
+      swept = this.#battles.filter(
         (battle, index) =>
           picked.includes(battle) ||
           (!this.#struck.has(battle.id) &&
-            !goesOn(battle) &&
             picked.some(
               (later) =>
                 this.#battles.indexOf(later) > index &&
                 sameSquare(later.defenderSquare, battle.defenderSquare)
             ))
       ),
-      struck = ended.filter((battle) => !this.#struck.has(battle.id));
+      ended = swept.filter(
+        (battle) => picked.includes(battle) || !spared(battle)
+      ),
+      struck = swept.filter((battle) => !this.#struck.has(battle.id));
 
     struck.forEach((battle) => this.#struck.add(battle.id));
     this.#take(ended);

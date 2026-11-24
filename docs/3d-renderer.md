@@ -1139,8 +1139,8 @@ mapEvent:
     So the attacker's part ends as it moves on (`#attackerDone`), and the loser's when the battle's over. A battle that
     no longer holds its attacker doesn't hold the ring (`Battles#holds`); one it's still drawn in, falling, keeps it
     off its square (`Battles#attacking`). Those waiting for one moved on from, as a counterattack on the winner, start
-    at once; one moved on from isn't ended when its attacker's battles fall too far behind; and shots in flight land,
-    but with units hidden.
+    as soon as they can; one moved on from isn't ended when its attacker's battles fall too far behind, nor by another
+    at its square ending, only told its blow, in order; and shots in flight land, but with units hidden.
   - **Together, mostly:** one figure can't lunge twice at once, so a battle waits for those whose attacker is one of its
     units: a unit attacking again, or attacked as it lunges (a counterattack as the player ends the turn just after
     attacking), stands on its square till its last is over. Others are fought at once, several at a square together, as
@@ -1162,7 +1162,7 @@ mapEvent:
   - **Ended at once:** before its blow, the player's own unit stepping (attacking, then moving in), the defender
     stepping, or a key or a press while the ring waits for the battle; and, whenever, moving at once or less motion
     chosen mid-battle: the blow falls, and it's over, with nothing left to fade. After the blow, a step or a key moves
-    on from it (below). Those before it at its square whose blow's still to fall go with it, their blows
+    on from it ("Moving on", above). Those before it at its square whose blow's still to fall go with it, their blows
     first, so blows there still fall in order; those waiting for it start as soon as they can. Blows at a square keep
     their order whatever their paces, as when walking quickly's chosen between two attacks.
   - **The game waits:** the active unit attacking with its last move holds the ring and the camera till its battle's

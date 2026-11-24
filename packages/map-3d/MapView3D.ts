@@ -1638,9 +1638,10 @@ export class MapView3D implements MapRenderer {
     });
   }
 
-  // Battles over at once, as `Battles#endWhere` has them: their blows fall now, with nothing left to fade.
+  // Battles over at once, as `Battles#endWhere` has them: their blows fall now, with nothing left to fade; but for one
+  //  only told its blow, going on, whose loser falls as it would.
   #battlesOver({ struck, ended }: { struck: Battle[]; ended: Battle[] }): void {
-    struck.forEach((battle) => this.#blow(battle, false));
+    struck.forEach((battle) => this.#blow(battle, !ended.includes(battle)));
     this.#battlesEnded(ended);
   }
 

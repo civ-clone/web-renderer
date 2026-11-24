@@ -813,6 +813,16 @@ expect(
   twice.at(100);
 
   const stepped = twice.moveOn('a', 210),
+    // Another's battle at the same square ended at once, after one moved on from whose blow's not yet told: that one's
+    //  told its blow first, and goes on.
+    others = new Battles(),
+    movedFrom = others.add(battleOf('a', 'd', true), 0, pace),
+    another = others.add(battleOf('x', 'y', true, [2, 0], [1, 0]), 0, pace),
+    ended = (() => {
+      others.moveOn('a', 210);
+
+      return others.endWhere(({ id }) => id === another.id, 215);
+    })(),
     counter = new Battles(),
     won = counter.add(battleOf('a', 'b', true), 0, pace),
     // C attacking A as A's battle goes on: it waits for it.
@@ -826,12 +836,20 @@ expect(
     'moved on as the blow falls by the clock, the next frame telling it; attacking a square twice, a step after the first blow ends the second alone; a counterattack starts once the winner’s hurried on',
     [
       [early.released.map(({ id }) => id), early.ended.length, told],
-      [stepped.released.map(({ id }) => id), stepped.ended.map(({ id }) => id)],
+      [
+        stepped.released.map(({ id }) => id),
+        stepped.ended.map(({ id }) => id),
+        // Both blows told, in the order the battles came, and not again.
+        stepped.struck.map(({ id }) => id),
+        twice.at(220).struck.length,
+      ],
+      [ended.struck.map(({ id }) => id), ended.ended.map(({ id }) => id)],
       [waited, answer.start, counter.released(won.id)],
     ],
     [
       [[alone.id], 0, [alone.id]],
-      [[first.id], [second.id]],
+      [[first.id], [second.id], [first.id, second.id], 0],
+      [[movedFrom.id, another.id], [another.id]],
       [battleEnds(won), 300, true],
     ]
   );
