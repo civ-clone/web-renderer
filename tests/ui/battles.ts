@@ -24,7 +24,7 @@ import Battles, {
   quickerBattle,
 } from '@civ-clone/ui-map-3d/battles';
 import { RigFacts } from '@civ-clone/ui-map-3d/markers/clips';
-import { HIT_PUFF } from '@civ-clone/ui-map-3d/shots';
+import { HIT_PUFF, SHOT_LOOKS, shotOver } from '@civ-clone/ui-map-3d/shots';
 
 const failures: string[] = [];
 let checks = 0;
@@ -550,6 +550,61 @@ expect(
       {
         reach: 200 + SHOT_FLIGHT,
         back: 900 + SHOT_FLIGHT + HIT_PUFF - 550,
+        fade: 600,
+        lunge: 0,
+        clips: { rate: 1, fight: true, die: false },
+      },
+    ]
+  );
+
+  // Each shot as quick as its kind flies (`SHOT_LOOKS`): a rifleman's bullet lands almost as it leaves; a bullet that
+  //  leaves after a bottle can land before it, and the blow falls as the first lands; a battle's drawn till the last
+  //  of each shot's own is over, its smoke where it left or its puff where it landed.
+  const rifle: RigFacts = {
+      figures: 2,
+      stagger: 0.13,
+      clips: {
+        fight: {
+          duration: 1.2,
+          shots: [{ at: 0.4, joint: 'muzzle', kind: 'bullet' }],
+        },
+      },
+    },
+    mixed: RigFacts = {
+      figures: 1,
+      stagger: 0.13,
+      clips: {
+        fight: {
+          duration: 1,
+          shots: [
+            { at: 0.2, joint: 'prop' },
+            { at: 0.4, joint: 'muzzle', kind: 'bullet' },
+            { at: 0.3, joint: 'barrel', kind: 'shell' },
+          ],
+        },
+      },
+    },
+    flies = (kind: 'bullet' | 'shell') => SHOT_LOOKS[kind].flight;
+
+  expect(
+    'each shot as quick as its kind flies: a bullet lands almost as it leaves, the blow then; a bullet after a bottle lands first, and the blow falls then; drawn till the last of every shot’s own is over',
+    [
+      rounded(clipPace(pace, rifle, null)),
+      rounded(clipPace(pace, mixed, null)),
+    ],
+    [
+      {
+        reach: 400 + flies('bullet'),
+        back: round(
+          Math.max(1200 + 130, 530 + shotOver('bullet')) - 400 - flies('bullet')
+        ),
+        fade: 600,
+        lunge: 0,
+        clips: { rate: 1, fight: true, die: false },
+      },
+      {
+        reach: 400 + flies('bullet'),
+        back: 300 + shotOver('shell') - 400 - flies('bullet'),
         fade: 600,
         lunge: 0,
         clips: { rate: 1, fight: true, die: false },
