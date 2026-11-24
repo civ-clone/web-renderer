@@ -12,9 +12,14 @@ export type SpecialShape =
   | 'rocks'
   // Something grown, in rows or bushes: wheat, spice, wine, silk, fruit.
   | 'crop'
-  // A beast or two: horses, buffalo, game, furs, ivory, seals.
-  | 'animal'
-  // A bird or two: pheasants.
+  // Beasts, a few together: horses, oxen (buffalo), deer (game, and caribou on the tundra), foxes (furs), an elephant
+  //  (ivory), seals; and birds (pheasants).
+  | 'horse'
+  | 'ox'
+  | 'deer'
+  | 'fox'
+  | 'elephant'
+  | 'seal'
   | 'bird'
   // In the sea, at its surface: a shoal, or a whale's back.
   | 'fish'
@@ -32,10 +37,14 @@ export type SpecialShape =
 
 export type SpecialLook = {
   shape: SpecialShape;
-  // Its colour, and a second for its detail (a crop's stems, a beast's legs).
+  // Its colour, a second for its detail (a crop's stems, a beast's mane, hooves or flippers, logs' cut ends) and a
+  //  third, pale, for a beast's horns, antlers, tusks or tail's tip.
   colour: string;
   detail?: string;
-  // How many: lumps, plants, beasts.
+  pale?: string;
+  // Other coats for a herd's beasts after the first, in turn, so a herd isn't all one colour.
+  coats?: readonly string[];
+  // How many: lumps, plants, logs, beasts.
   count: number;
 };
 
@@ -43,12 +52,16 @@ const look = (
   shape: SpecialShape,
   colour: string,
   count: number,
-  detail?: string
+  detail?: string,
+  pale?: string,
+  coats?: readonly string[]
 ): SpecialLook => ({
   shape,
   colour,
   count,
   ...(detail === undefined ? {} : { detail }),
+  ...(pale === undefined ? {} : { pale }),
+  ...(coats === undefined ? {} : { coats }),
 });
 
 export const specialTable: { readonly [feature: string]: SpecialLook } = {
@@ -63,15 +76,20 @@ export const specialTable: { readonly [feature: string]: SpecialLook } = {
   Wine: look('crop', '#6a2c5e', 4, '#5d7a2a'),
   Silk: look('crop', '#e9e2cf', 3, '#4f7a34'),
   Fruit: look('crop', '#e08a2a', 4, '#3f7a2a'),
-  // Beasts.
-  Horse: look('animal', '#7a4e2a', 2, '#3a2a1c'),
-  Buffalo: look('animal', '#4a3424', 3, '#2a1e16'),
-  Game: look('animal', '#a9835a', 2, '#5a4430'),
-  'Tundra:Game': look('animal', '#8f7e66', 2, '#e8e2d6'),
-  Furs: look('animal', '#b0602a', 2, '#f0e8dc'),
-  Ivory: look('animal', '#8a8580', 1, '#f2ead8'),
-  Seal: look('animal', '#6e7072', 2, '#4a4c4e'),
-  Pheasant: look('bird', '#8a3a22', 2, '#3d6a3a'),
+  // Beasts. Horses are a bay, a chestnut and a grey, so a herd shows on the plains' tan, whatever the light.
+  Horse: look('horse', '#6b4226', 3, '#241a12', '#e8e2d6', [
+    '#9c5b2e',
+    '#cfc9bd',
+  ]),
+  Buffalo: look('ox', '#4a3424', 3, '#2a1e16', '#d8ccb0'),
+  Game: look('deer', '#a9835a', 2, '#5a4430', '#ece2cc'),
+  // Caribou.
+  'Tundra:Game': look('deer', '#7d6c56', 2, '#4a3e30', '#ece6da'),
+  Furs: look('fox', '#b0602a', 2, '#2e2218', '#f0e8dc'),
+  Ivory: look('elephant', '#8a8580', 1, '#77726d', '#f2ead8'),
+  // Dark on the ice.
+  Seal: look('seal', '#55585b', 2, '#3a3c3e', '#8a8d90'),
+  Pheasant: look('bird', '#8a3a22', 3, '#2f5a3a', '#d8b040'),
   // In the sea.
   Fish: look('fish', '#b8c4cc', 5),
   Whales: look('whale', '#3a4048', 1),
@@ -79,7 +97,7 @@ export const specialTable: { readonly [feature: string]: SpecialLook } = {
   Oil: look('derrick', '#222224', 1, '#121214'),
   Oasis: look('oasis', '#3f7a32', 3, '#3f86a8'),
   Peat: look('peat', '#4a3624', 4),
-  Shield: look('logs', '#7a5532', 4, '#c9a47a'),
+  Shield: look('logs', '#7a5532', 6, '#e2c690'),
 };
 
 /** The cairn a feature the table doesn't know is drawn as. */

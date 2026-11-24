@@ -1,8 +1,10 @@
 // The debug page's made-up cities and units (docs/3d-renderer-plan.md 1.1b, 1.3, 2.1): a few civilizations' cities on
 //  its land, stacks of units of every era about them, and ships at sea, some fortified, veterans or hurt, for the 3D
-//  map's markers to be seen without a game. Seeded, as the world is. Units' types are the engine's names for them.
+//  map's markers to be seen without a game. Seeded, as the world is. Units' types are the engine's names for them. Or
+//  every unit type, or every special, laid out to be seen side by side.
 
 import { Tile } from '@civ-clone/ui-protocol/types';
+import { specialTable } from '@civ-clone/ui-models-builtin/specials';
 import { unitTable } from '@civ-clone/ui-models-builtin/units';
 
 // Civ1's colours for a few civilizations, as the engine sends them (`colors`), and some of their cities' names.
@@ -388,6 +390,98 @@ export const gallery = (tiles: Tile[], x: number, y: number): void => {
       ];
     })
   );
+};
+
+// The terrain each special is shown on in the page's specials, where it's found, by its feature's name: one drawn
+//  differently on a terrain of its own (`Tundra:Game`) is shown there.
+const homes: { readonly [feature: string]: string } = {
+  Coal: 'Hills',
+  Gold: 'Mountains',
+  Gems: 'Jungle',
+  Iron: 'Mountains',
+  Wheat: 'Plains',
+  Spice: 'Swamp',
+  Wine: 'Hills',
+  Silk: 'Forest',
+  Fruit: 'Jungle',
+  Horse: 'Plains',
+  Buffalo: 'Plains',
+  Game: 'Forest',
+  Furs: 'Tundra',
+  Ivory: 'Glacier',
+  Seal: 'Arctic',
+  Pheasant: 'Forest',
+  Fish: 'Ocean',
+  Whales: 'Ocean',
+  Oil: 'Desert',
+  Oasis: 'Desert',
+  Peat: 'Swamp',
+  Shield: 'Grassland',
+};
+
+/** What the page's specials show, as terrain and feature: every special the built-in set draws, then a cairn. */
+export const specialsShown = (): [string, string][] => [
+  ...Object.keys(specialTable).map((key): [string, string] => {
+    const [terrain, feature] = key.includes(':')
+      ? (key.split(':') as [string, string])
+      : [homes[key] ?? 'Plains', key];
+
+    return [terrain, feature];
+  }),
+  // A feature the table doesn't know.
+  ['Plains', 'Unobtainium'],
+];
+
+/**
+ * The page's specials (`?specials=1`): each of `specialsShown`, one to a square, every other square either way from
+ *  (`x`, `y`) so each is seen on its own, the nearest first, on its terrain, at sea on the sea and on land on land,
+ *  never on squares unseen. No cities or units.
+ */
+export const specialsGallery = (tiles: Tile[], x: number, y: number): void => {
+  const spaced = (tile: Tile): boolean =>
+      Math.abs(tile.x - x) % 2 === 0 && Math.abs(tile.y - y) % 2 === 0,
+    nearest = (water: boolean): Tile[] =>
+      tiles
+        .filter(
+          (tile) =>
+            spaced(tile) &&
+            (water ? !tile.isLand && tile.terrain._ !== 'Unknown' : tile.isLand)
+        )
+        .sort(
+          (a, b) =>
+            Math.abs(a.x - x) +
+              Math.abs(a.y - y) -
+              (Math.abs(b.x - x) + Math.abs(b.y - y)) ||
+            a.y - b.y ||
+            a.x - b.x
+        ),
+    shown = specialsShown(),
+    squares = {
+      sea: nearest(true),
+      land: nearest(false),
+    },
+    used = { sea: 0, land: 0 };
+
+  tiles.forEach((tile) => {
+    tile.city = null;
+    tile.units = [];
+  });
+
+  shown.forEach(([terrain, feature]) => {
+    const where = terrain === 'Ocean' ? 'sea' : 'land',
+      tile = squares[where][used[where]++];
+
+    if (tile === undefined) {
+      return;
+    }
+
+    tile.terrain = {
+      ...tile.terrain,
+      _: terrain,
+      __: [terrain, 'Terrain', 'DataObject'],
+      features: [{ _: feature, __: [], id: `Feature-${tile.x}-${tile.y}` }],
+    } as Tile['terrain'];
+  });
 };
 
 export default populate;

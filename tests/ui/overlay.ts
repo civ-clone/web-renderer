@@ -457,6 +457,117 @@ expect(
   [true, true]
 );
 
+// Specials are big enough to be seen at play's zoom (#1335): on flat land with nothing else on the square, a herd of
+//  horses, a stack of logs (Civ1's shield on grassland) and seals each reach across over a quarter of the square, and
+//  stand up off it; every beast stands on the land, not in it or over it; a herd of horses isn't all one coat; and
+//  where roads every way leave less room, a special takes less, so it's drawn smaller.
+{
+  const FLAT = 0.1,
+    laidOn = (feature: string) =>
+      overlayMesh(16, 0, [
+        {
+          overlay: overlayFor(
+            square([], { terrain: 'River', features: [feature] }),
+            []
+          )!,
+          place: place(17, 3, { height: () => FLAT }),
+        },
+      ]),
+    // How far it reaches across, the most any way round, and how tall it stands, and how low, over the land.
+    span = (feature: string) => {
+      const points = pointsOf(laidOn(feature)),
+        ys = points.map(([, y]) => y - FLAT);
+
+      return {
+        across: Math.max(
+          ...Array.from({ length: 36 }, (_, k) => {
+            const angle = (k / 36) * Math.PI,
+              along = points.map(
+                ([u, , v]) => u * Math.cos(angle) + v * Math.sin(angle)
+              );
+
+            return Math.max(...along) - Math.min(...along);
+          })
+        ),
+        tall: Math.max(...ys),
+        low: Math.min(...ys),
+      };
+    },
+    [horses, logs, seals] = ['Horse', 'Shield', 'Seal'].map(span),
+    beasts = ['Horse', 'Buffalo', 'Game', 'Furs', 'Ivory', 'Seal', 'Pheasant'],
+    herdColours = (() => {
+      const { colours } = laidOn('Horse');
+
+      return Array.from(
+        { length: colours.length / 3 },
+        (_, n) =>
+          new Color(colours[n * 3]!, colours[n * 3 + 1]!, colours[n * 3 + 2]!)
+      );
+    })(),
+    hasCoat = (css: string): boolean => {
+      const coat = new Color(css);
+
+      return herdColours.some(
+        ({ r, g, b }) =>
+          Math.abs(r - coat.r) + Math.abs(g - coat.g) + Math.abs(b - coat.b) <
+          1e-5
+      );
+    },
+    roomOn = (improvements: string[], neighbours: OverlayNeighbour[]) =>
+      layOverlay(
+        overlayFor(
+          square(improvements, { terrain: 'Hills', features: ['Coal'] }),
+          neighbours
+        )!,
+        place(17, 3, { height: () => FLAT }),
+        soup()
+      ).taken.find(([, , room]) => room >= 0.1)![2],
+    open = roomOn([], []),
+    crowded = roomOn(
+      ['Road'],
+      [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+        [1, 1],
+        [1, -1],
+        [-1, 1],
+        [-1, -1],
+      ].map((offset) => neighbour(offset as [number, number], ['Road']))
+    );
+
+  expect(
+    'horses, logs and seals each reach across over a quarter of the square and stand up off it',
+    [
+      horses.across > 0.25 && horses.tall > 0.15,
+      logs.across > 0.2 && logs.tall > 0.12,
+      seals.across > 0.25 && seals.tall > 0.06,
+    ],
+    [true, true, true]
+  );
+  expect(
+    'every beast stands on the land; a herd of horses is a bay, a chestnut and a grey',
+    [
+      beasts.filter((feature) => {
+        const { low } = span(feature);
+
+        return low < -0.004 || low > 0.004;
+      }),
+      [
+        specialTable['Horse']!.colour,
+        ...(specialTable['Horse']!.coats ?? []),
+      ].map(hasCoat),
+    ],
+    [[], [true, true, true]]
+  );
+  expect(
+    'where roads every way leave less room, a special takes less: drawn smaller, never under the old size',
+    [open, crowded < open, crowded >= 0.1],
+    [0.2, true, true]
+  );
+}
+
 // What stands on a square stands clear of the unit's stand at its middle, 0.2 across: every special, a mine and a hut,
 //  on 300 squares each, as where they stand is seeded from the square.
 const STAND = 0.2,
