@@ -247,12 +247,25 @@ const check = (): void => {
       'Road',
     ].map((key) => [key, typesOf(key)]),
     [
-      ['Airbase', ['build_turns', 'heals', 'refuels']],
+      [
+        'Airbase',
+        [
+          'build_turns',
+          'heals',
+          'no_bomber_cover',
+          'no_wear',
+          'paradrop_from',
+          'refuels',
+          'spares_stack',
+        ],
+      ],
       ['Farmland', ['square_yield_percent', 'squares.improvement_turns']],
       [
         'Fortress',
         [
           'heals_resting',
+          'not_away',
+          'spares_stack',
           'square_defence_multiplier',
           'squares.improvement_turns',
         ],
@@ -273,7 +286,15 @@ const check = (): void => {
           'squares.improvement_yield',
         ],
       ],
-      ['Pollution', ['caused_by', 'removal_turns', 'tile_yield_halved']],
+      [
+        'Pollution',
+        [
+          'caused_by',
+          'pollution_tolerance',
+          'removal_turns',
+          'tile_yield_halved',
+        ],
+      ],
       [
         'Railroad',
         [
@@ -317,6 +338,40 @@ const check = (): void => {
       classesOf(effectOf('Farmland', 'square_yield_percent')?.inCitiesWith),
     ],
     [3, 4, 4, 0.5, ['Supermarket']]
+  );
+
+  // What leads to Anarchy and for how long (#621), and the advances that move a city's pollution (#1343).
+  expect(
+    'Anarchy follows a revolution for 1 to 4 turns, and a Democracy overthrown for 5 to 8',
+    byKey
+      .get('Anarchy')
+      ?.effects.map(({ type, cause, min, max }) =>
+        [type, cause, min, max].join(' ')
+      ),
+    ['anarchy_follows chosen 1 4', 'anarchy_follows civil-disorder 5 8']
+  );
+  expect(
+    "Sanitation and Environmentalism each take a step off the people's pollution in all your cities",
+    ['Sanitation', 'Environmentalism'].map((key) =>
+      byKey
+        .get(key)
+        ?.effects.filter(({ type }) => type === 'pollution_step')
+        .map(({ value, source, scope }) => [value, source, scope])
+    ),
+    [[[1, 'population', 'player']], [[1, 'population', 'player']]]
+  );
+  expect(
+    "a Solar Plant takes away the 20 a city's pollution must pass, as Pollution's page says it is",
+    [
+      effectOf('Pollution', 'pollution_tolerance')?.value,
+      effectOf('SolarPlant', 'pollution_tolerance_removed')?.value,
+    ],
+    [20, 20]
+  );
+  expect(
+    'a Fortress near home: units on it within 3 squares cause no unhappiness',
+    effectOf('Fortress', 'not_away')?.radius,
+    3
   );
 
   finished = true;

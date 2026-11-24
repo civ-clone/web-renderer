@@ -270,18 +270,40 @@ export const effectsInForce = (
  */
 export const onSquaresTogether = (effects: Described[]): Described[] => {
   const ids = new Map<Function, number>(),
-    keyOf = ({ squares, ...fields }: Described): string =>
-      JSON.stringify(fields, (field: string, value: unknown) => {
-        if (typeof value !== 'function') {
-          return value;
-        }
-
+    // A value as the same text whatever order its fields, or a list of classes, came in (#1339): two rules saying the
+    //  same line needn't build it alike.
+    canonical = (value: unknown): unknown => {
+      if (typeof value === 'function') {
         if (!ids.has(value)) {
           ids.set(value, ids.size);
         }
 
         return `class:${ids.get(value)}`;
-      }),
+      }
+
+      if (Array.isArray(value)) {
+        const items = value.map(canonical);
+
+        return items.every(
+          (item) => typeof item === 'string' && item.startsWith('class:')
+        )
+          ? [...items].sort()
+          : items;
+      }
+
+      if (value !== null && typeof value === 'object') {
+        return Object.keys(value)
+          .sort()
+          .map((field) => [
+            field,
+            canonical((value as Record<string, unknown>)[field]),
+          ]);
+      }
+
+      return value;
+    },
+    keyOf = ({ squares, ...fields }: Described): string =>
+      JSON.stringify(canonical(fields)),
     together = new Map<string, Described>();
 
   effects.forEach((effect: Described): void => {
@@ -300,9 +322,11 @@ export const onSquaresTogether = (effects: Described[]): Described[] => {
     }
   });
 
-  // Each type's lines by their value, as the squares' order says nothing: 2 turns, then 4, then 6, and a line that
-  //  needs something (a River's road, Bridge Building) after the one with the same value that doesn't.
+  // Each type's lines by their yield, then their value, as the squares' order says nothing: each yield's lines
+  //  together (#1339), 2 turns, then 4, then 6, and a line that needs something (a River's road, Bridge Building)
+  //  after the one with the same value that doesn't.
   const types = [...new Set(effects.map(({ type }) => type))],
+    yields = [...new Set(effects.map(({ yield: yieldType }) => yieldType))],
     valueOf = ({ value }: Described): number =>
       typeof value === 'number' ? value : 0,
     needs = ({ with: needed }: Described): number =>
@@ -311,6 +335,7 @@ export const onSquaresTogether = (effects: Described[]): Described[] => {
   return [...together.values()].sort(
     (a: Described, b: Described): number =>
       types.indexOf(a.type) - types.indexOf(b.type) ||
+      yields.indexOf(a.yield) - yields.indexOf(b.yield) ||
       valueOf(a) - valueOf(b) ||
       needs(a) - needs(b)
   );
@@ -341,20 +366,31 @@ export const effectsOf = (
     //  no improvement here.
     improving = !(Item.prototype instanceof TileImprovement)
       ? []
-      : described
-          .filter(
-            ({ subject, improvement }) =>
-              improvement === Item &&
-              typeof subject === 'function' &&
-              // A square's: a terrain, or one of its base classes (`Land`).
-              (subject === Terrain || subject.prototype instanceof Terrain)
-          )
-          .map(
-            ({ subject, improvement, ...fields }) =>
-              ({ ...fields, squares: subject } as Described)
-          );
+      : described.filter(
+          ({ subject, improvement }) =>
+            // The improvement, or one it's a kind of (#1339): a rule set's own Road is still a Road.
+            typeof improvement === 'function' &&
+            (improvement === Item ||
+              // A function with no prototype (an arrow) can't be a class to be an instance of.
+              (typeof improvement.prototype === 'object' &&
+                Item.prototype instanceof improvement)) &&
+            typeof subject === 'function' &&
+            // A square's: a terrain, or one of its base classes (`Land`).
+            (subject === Terrain || subject.prototype instanceof Terrain)
+        ),
+    // Each square's effects as they stand on their own (#1339), so one square's next step can't hide another's, and
+    //  then on the squares they're on.
+    onSquares = [
+      ...new Set(improving.map(({ subject }) => subject as Function)),
+    ].flatMap((Square: Function): Described[] =>
+      inForce(
+        improving
+          .filter(({ subject }) => subject === Square)
+          .map(({ subject, improvement, ...fields }) => fields as Described)
+      ).map((fields) => ({ ...fields, squares: Square } as Described))
+    );
 
-  return [...inForce(about), ...onSquaresTogether(inForce(improving))].map(
+  return [...inForce(about), ...onSquaresTogether(onSquares)].map(
     (fields) =>
       effectValue(fields, entryClasses) as unknown as CivilopediaEffect
   );
