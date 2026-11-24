@@ -720,6 +720,141 @@ expect(
   );
 }
 
+// Moving on from a battle (#1334): once the blow's fallen, an attacker that won moves on, drawn no more there, nothing
+//  waiting for it, and the loser falls as it would; hurried on, one that lost frees the ring, falling still; one that
+//  won defending goes on as it is. Before the blow, the battle's over at once.
+{
+  const fighting = new Battles(),
+    // What's drawn of the battles at a time: who.
+    drawn = (at: number) =>
+      fighting
+        .at(at)
+        .going.map(({ unit, fallen }) => `${unit}${fallen ? ' fallen' : ''}`),
+    won = fighting.add(battleOf('a', 'd', true), 0, pace),
+    early = fighting.add(battleOf('b', 'e', true, [3, 3], [4, 3]), 0, pace),
+    lost = fighting.add(battleOf('c', 'f', false, [6, 6], [7, 6]), 0, pace),
+    defended = fighting.add(battleOf('g', 'h', false, [9, 9], [9, 8]), 0, pace),
+    names = (battles: { id: string }[]) => battles.map(({ id }) => id),
+    // Before the blow, 200 ms in.
+    beforeBlow = fighting.moveOn('b', 100);
+
+  fighting.at(250);
+
+  const movedOn = fighting.moveOn('a', 250),
+    afterMovedOn = [
+      fighting.attacking('a'),
+      fighting.holds('a'),
+      fighting.released(won.id),
+      fighting.busyUntil(['a']),
+    ],
+    hurried = fighting.moveOn('c', 250, true),
+    afterHurried = [fighting.attacking('c'), fighting.holds('c')],
+    stepped = fighting.moveOn('h', 250),
+    // Attacking again at once: it doesn't wait for the loser's fall.
+    again = fighting.add(battleOf('a', 'x', true, [0, 0], [0, 1]), 260, pace);
+
+  expect(
+    'won, the attacker moves on, drawn no more there, nothing waiting for it, the loser falling on; before the blow, over at once; lost and hurried, the ring free, it falling still; won defending, it goes on',
+    [
+      [names(movedOn.released), names(movedOn.ended)],
+      [
+        names(beforeBlow.released),
+        names(beforeBlow.ended),
+        names(beforeBlow.struck),
+      ],
+      afterMovedOn,
+      [names(hurried.released), names(hurried.ended)],
+      afterHurried,
+      [
+        names(stepped.released),
+        names(stepped.ended),
+        fighting.released(defended.id),
+      ],
+      again.start,
+      drawn(300),
+      fighting
+        .at(battleEnds(won))
+        .ended.map(({ id }) => id)
+        .includes(won.id),
+    ],
+    [
+      [[won.id], []],
+      [[], [early.id], [early.id]],
+      [false, false, true, null],
+      [[lost.id], []],
+      [true, false],
+      [[], [], false],
+      260,
+      ['d fallen', 'c', 'g', 'a'],
+      true,
+    ]
+  );
+
+  expect(
+    'once a battle it moved on from is over, nothing’s kept of it',
+    fighting.released(won.id),
+    false
+  );
+}
+
+// Moving on as the blow falls by the clock, no frame having told it: moved on from, and the next frame tells the blow.
+//  Attacking a square twice, the second waiting, a step just after the first's blow: the first goes on for its loser,
+//  the second's over, and the first isn't also ended. A counterattack on the winner, waiting for its battle, starts as
+//  soon as the winner's hurried on.
+{
+  const unseen = new Battles(),
+    alone = unseen.add(battleOf('a', 'd', true), 0, pace),
+    early = unseen.moveOn('a', 250),
+    told = unseen.at(260).struck.map(({ id }) => id),
+    twice = new Battles(),
+    first = twice.add(battleOf('a', 'd', true), 0, pace),
+    second = twice.add(battleOf('a', 'e', true), 0, pace);
+
+  twice.at(100);
+
+  const stepped = twice.moveOn('a', 210),
+    // Another's battle at the same square ended at once, after one moved on from whose blow's not yet told: that one's
+    //  told its blow first, and goes on.
+    others = new Battles(),
+    movedFrom = others.add(battleOf('a', 'd', true), 0, pace),
+    another = others.add(battleOf('x', 'y', true, [2, 0], [1, 0]), 0, pace),
+    ended = (() => {
+      others.moveOn('a', 210);
+
+      return others.endWhere(({ id }) => id === another.id, 215);
+    })(),
+    counter = new Battles(),
+    won = counter.add(battleOf('a', 'b', true), 0, pace),
+    // C attacking A as A's battle goes on: it waits for it.
+    answer = counter.add(battleOf('c', 'a', true, [0, 1], [0, 0]), 100, pace),
+    waited = answer.start;
+
+  counter.at(300);
+  counter.moveOn('a', 300, true);
+
+  expect(
+    'moved on as the blow falls by the clock, the next frame telling it; attacking a square twice, a step after the first blow ends the second alone; a counterattack starts once the winner’s hurried on',
+    [
+      [early.released.map(({ id }) => id), early.ended.length, told],
+      [
+        stepped.released.map(({ id }) => id),
+        stepped.ended.map(({ id }) => id),
+        // Both blows told, in the order the battles came, and not again.
+        stepped.struck.map(({ id }) => id),
+        twice.at(220).struck.length,
+      ],
+      [ended.struck.map(({ id }) => id), ended.ended.map(({ id }) => id)],
+      [waited, answer.start, counter.released(won.id)],
+    ],
+    [
+      [[alone.id], 0, [alone.id]],
+      [[first.id], [second.id], [first.id, second.id], 0],
+      [[movedFrom.id, another.id], [another.id]],
+      [battleEnds(won), 300, true],
+    ]
+  );
+}
+
 if (failures.length > 0) {
   process.stderr.write(
     `FAIL battles: ${

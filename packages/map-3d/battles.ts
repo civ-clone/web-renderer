@@ -256,6 +256,8 @@ export class Battles {
   #battles: Battle[] = [];
   // Those whose blow has been told.
   #struck = new Set<string>();
+  // Those the attacker's moved on from, its blow fallen (`moveOn`): it's no longer theirs, but for its fall if it lost.
+  #released = new Set<string>();
   #made = 0;
 
   /** How many battles are under way, or waiting. */
@@ -263,9 +265,34 @@ export class Battles {
     return this.#battles.length;
   }
 
-  /** Whether `unit` attacks in a battle that isn't over, waiting for its turn or fought. */
+  /**
+   * Whether `unit` attacks in a battle that isn't over, waiting for its turn or fought, and is drawn in it: not once it's
+   *  moved on from one it won (`moveOn`).
+   */
   attacking(unit: string): boolean {
-    return this.#battles.some((battle) => battle.attacker === unit);
+    return this.#battles.some(
+      (battle) => battle.attacker === unit && !this.#movedOn(battle)
+    );
+  }
+
+  /**
+   * Whether a battle `unit` attacks in holds it, as the ring waits for it: one that isn't over, that it hasn't moved on
+   *  from (`moveOn`), won or lost.
+   */
+  holds(unit: string): boolean {
+    return this.#battles.some(
+      (battle) => battle.attacker === unit && !this.#released.has(battle.id)
+    );
+  }
+
+  /** Whether the attacker in `battle` has moved on from it (`moveOn`). */
+  released(battle: string): boolean {
+    return this.#released.has(battle);
+  }
+
+  // Whether the attacker in `battle` won it and moved on: then nothing of it's drawn there, and nothing waits for it.
+  #movedOn(battle: Battle): boolean {
+    return battle.won && this.#released.has(battle.id);
   }
 
   /** Whether `unit` is in a battle that isn't over, attacking or defending. */
@@ -302,7 +329,12 @@ export class Battles {
     const battle: Battle = {
       ...of,
       id: `battle-${++this.#made}`,
-      start: this.#startOf(of, pace, this.#battles, Math.max(now, notBefore)),
+      start: this.#startOf(
+        of,
+        pace,
+        this.#battles.filter((earlier) => !this.#movedOn(earlier)),
+        Math.max(now, notBefore)
+      ),
       notBefore,
       pace,
     };
@@ -346,18 +378,26 @@ export class Battles {
   /**
    * The battles `test` picks over at `now`, at once: the blow fallen in those it hadn't, told in `struck` as `at` tells
    *  it, and each in `ended`. Those before them at the squares they attack go with them, their blows first, so blows
-   *  there still fall in the order the battles came. Those yet to start that were waiting for them start as soon as
-   *  they can.
+   *  there still fall in the order the battles came; but one going on (`goesOn`), or moved on from (`moveOn`), is only
+   *  told its blow, in `struck` but not `ended`. Those yet to start that were waiting for them start as soon as they
+   *  can.
    */
   endWhere(
     test: (battle: Battle) => boolean,
-    now: number
+    now: number,
+    // Those to go on whatever, as the battles a unit moves on from do (`moveOn`).
+    goesOn: (battle: Battle) => boolean = () => false
   ): {
     struck: Battle[];
     ended: Battle[];
   } {
+    // Those it picks, and those before them at their squares whose blows are still to be told, in the order they came:
+    //  each told its blow, so blows there fall in order. Of those before, one going on still, or moved on from, is told
+    //  its blow and goes on; the rest are over.
     const picked = this.#battles.filter(test),
-      ended = this.#battles.filter(
+      spared = (battle: Battle): boolean =>
+        goesOn(battle) || this.#released.has(battle.id),
+      swept = this.#battles.filter(
         (battle, index) =>
           picked.includes(battle) ||
           (!this.#struck.has(battle.id) &&
@@ -367,31 +407,43 @@ export class Battles {
                 sameSquare(later.defenderSquare, battle.defenderSquare)
             ))
       ),
-      struck = ended.filter((battle) => !this.#struck.has(battle.id));
+      ended = swept.filter(
+        (battle) => picked.includes(battle) || !spared(battle)
+      ),
+      struck = swept.filter((battle) => !this.#struck.has(battle.id));
 
     struck.forEach((battle) => this.#struck.add(battle.id));
     this.#take(ended);
 
     if (ended.length > 0) {
-      this.#battles.forEach((battle, index) => {
-        if (battle.start > now) {
-          battle.start = this.#startOf(
-            battle,
-            battle.pace,
-            this.#battles.slice(0, index),
-            Math.max(now, battle.notBefore)
-          );
-        }
-      });
+      this.#restart(now);
     }
 
     return { struck, ended };
   }
 
+  // Those yet to start started as soon as they can at `now`: the battles they waited for over, or moved on from.
+  #restart(now: number): void {
+    this.#battles.forEach((battle, index) => {
+      if (battle.start > now) {
+        battle.start = this.#startOf(
+          battle,
+          battle.pace,
+          this.#battles
+            .slice(0, index)
+            .filter((earlier) => !this.#movedOn(earlier)),
+          Math.max(now, battle.notBefore)
+        );
+      }
+    });
+  }
+
   /** How long the longest battle any of `units` attacks in takes, start to over, or nothing with none. */
   longest(units: readonly string[]): number {
     return this.#battles
-      .filter(({ attacker }) => units.includes(attacker))
+      .filter(
+        (battle) => units.includes(battle.attacker) && !this.#movedOn(battle)
+      )
       .reduce(
         (longest, { pace, won }) => Math.max(longest, battleLength(pace, won)),
         0
@@ -401,11 +453,57 @@ export class Battles {
   /** When the last battle any of `units` attacks in is over, or nothing with none. */
   busyUntil(units: readonly string[]): number | null {
     return this.#battles
-      .filter(({ attacker }) => units.includes(attacker))
+      .filter(
+        (battle) => units.includes(battle.attacker) && !this.#movedOn(battle)
+      )
       .reduce<number | null>(
         (latest, battle) => Math.max(latest ?? 0, battleEnds(battle)),
         null
       );
+  }
+
+  /**
+   * The battles `unit` is in as it moves on at `now`: stepping on, or `hurried` on by the player, as the ring waits for
+   *  it (only those it attacks in, then). Once the blow's fallen, the loser falls as it would:
+   * - one it attacked in and won, it moves on from, drawn no more there (`released`), the battle going on for the loser;
+   * - one it attacked in and lost, hurried, it moves on from, the ring no longer waiting, though it's still falling;
+   * - one it defended in and won goes on as it is, as nothing of it is drawn there.
+   * The rest are over at once, as `endWhere` has them.
+   */
+  moveOn(
+    unit: string,
+    now: number,
+    hurried = false
+  ): { struck: Battle[]; ended: Battle[]; released: Battle[] } {
+    const fallen = (battle: Battle): boolean =>
+        this.#struck.has(battle.id) || now >= blowAt(battle),
+      goesOn = (battle: Battle): boolean =>
+        fallen(battle) &&
+        (battle.attacker === unit ? battle.won || hurried : !battle.won),
+      released = this.#battles.filter(
+        (battle) =>
+          battle.attacker === unit &&
+          goesOn(battle) &&
+          !this.#released.has(battle.id)
+      );
+
+    released.forEach((battle) => this.#released.add(battle.id));
+
+    const over = this.endWhere(
+      (battle) =>
+        (battle.attacker === unit || (!hurried && battle.defender === unit)) &&
+        !goesOn(battle),
+      now,
+      (battle) =>
+        (battle.attacker === unit || battle.defender === unit) && goesOn(battle)
+    );
+
+    // Those waiting for one moved on from, as a counterattack on it does, start as soon as they can.
+    if (released.length > 0) {
+      this.#restart(now);
+    }
+
+    return { ...over, released };
   }
 
   /** Every battle over at `now`, at once, as `endWhere` has them. */
@@ -440,7 +538,10 @@ export class Battles {
     }
 
     this.#battles = this.#battles.filter((battle) => !ended.includes(battle));
-    ended.forEach((battle) => this.#struck.delete(battle.id));
+    ended.forEach((battle) => {
+      this.#struck.delete(battle.id);
+      this.#released.delete(battle.id);
+    });
   }
 
   // What's drawn of `battle` at `now`: the attacker, unless it's gone, or drawn already (`drawn`) in a battle before; and
@@ -471,9 +572,12 @@ export class Battles {
           ? playing('fight', battle.start)
           : {},
       fighters: Fighter[] = [],
-      first = !drawn.has(battle.attacker);
+      // Won, and moved on from: not drawn there, nor counted as drawn, so it's drawn in the next it's in.
+      first = !drawn.has(battle.attacker) && !this.#movedOn(battle);
 
-    drawn.add(battle.attacker);
+    if (!this.#movedOn(battle)) {
+      drawn.add(battle.attacker);
+    }
 
     // Gone, lost, while its last shots are still to land: drawn as nothing till they have.
     if (first && (attacker > 0 || clips?.fight === true)) {

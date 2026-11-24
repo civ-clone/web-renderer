@@ -1118,7 +1118,7 @@ mapEvent:
     nothing as the loser's gone, the middle one last. They're solid shapes made by code, as the figures are, not
     see-through smoke, so they're drawn with the land and the units, and neither the sea nor the cloud needs drawing in
     another order round them. Not with nothing drawn falling (units hidden), and not for a battle shown at once; a
-    battle ended at once, or hurried by a key, takes its puff with it.
+    battle ended at once, as one before its blow is by a step or a key, takes its puff with it.
   - **Fading:** a unit's figures, stand and ring fade by leaving out a share of their points (`alphaHash`), drawn with
     the solid models; see-through, they'd be drawn before the sea, and a ship's hull fading would cut a dark hole in it.
     Its flag and labels, drawn after the sea and the cloud, fade as see-through.
@@ -1130,6 +1130,17 @@ mapEvent:
   - **Waiting for its patch:** the battle's patch, both squares, comes just after the event, as a step's does. If it's
     held, as meeting a leader holds patches, the winner stands where it stood once the battle's over, and the loser's
     left off, till it comes.
+  - **Moving on** (#1334, `Battles#moveOn`): a step, or a key while the ring waits, before the blow ends the battle at
+    once, as it did. After it, the loser falls and fades as it would, its puff and any shots in flight with it:
+    - an attacker that won steps on, or stands where it fought from, there or on its square; it's drawn no more in the
+      battle, no battle of its waits for the fall, and the ring goes on;
+    - an attacker that lost, hurried, frees the ring, though it's still falling;
+    - a unit that won defending goes on as it is, as the battle draws nothing of it.
+    So the attacker's part ends as it moves on (`#attackerDone`), and the loser's when the battle's over. A battle that
+    no longer holds its attacker doesn't hold the ring (`Battles#holds`); one it's still drawn in, falling, keeps it
+    off its square (`Battles#attacking`). Those waiting for one moved on from, as a counterattack on the winner, start
+    as soon as they can; one moved on from isn't ended when its attacker's battles fall too far behind, nor by another
+    at its square ending, only told its blow, in order; and shots in flight land, but with units hidden.
   - **Together, mostly:** one figure can't lunge twice at once, so a battle waits for those whose attacker is one of its
     units: a unit attacking again, or attacked as it lunges (a counterattack as the player ends the turn just after
     attacking), stands on its square till its last is over. Others are fought at once, several at a square together, as
@@ -1148,9 +1159,10 @@ mapEvent:
       the battle's over.
     - A second attack on a square whose first battle's patch the world hasn't taken is fought on what the first left,
       its loser gone; once it has, on the world, as in the player's own turn.
-  - **Ended at once:** the player's own unit stepping (attacking, then moving in), the defender stepping, a key or a
-    press while the ring waits for the battle, moving at once or less motion chosen mid-battle: the blow falls, and it's
-    over, with nothing left to fade. Those before it at its square whose blow's still to fall go with it, their blows
+  - **Ended at once:** before its blow, the player's own unit stepping (attacking, then moving in), the defender
+    stepping, or a key or a press while the ring waits for the battle; and, whenever, moving at once or less motion
+    chosen mid-battle: the blow falls, and it's over, with nothing left to fade. After the blow, a step or a key moves
+    on from it ("Moving on", above). Those before it at its square whose blow's still to fall go with it, their blows
     first, so blows there still fall in order; those waiting for it start as soon as they can. Blows at a square keep
     their order whatever their paces, as when walking quickly's chosen between two attacks.
   - **The game waits:** the active unit attacking with its last move holds the ring and the camera till its battle's

@@ -300,6 +300,8 @@ export class MapView3D implements MapRenderer {
   #markedAtRelease: Set<string> | null = null;
   #before = new Map<string, Before>();
   #fallen = new Map<string, Unit[]>();
+  // The battles whose attackers have moved on from them, won (`#movedOn`): their parts over before the battles are.
+  #attackersDone = new Set<string>();
   // The puffs of smoke drawn where losers fall, and where shots land, by id (`#puff`, `#placeShots`).
   #puffs = new Set<string>();
   // The shots of battles whose attackers shoot (`shots.ts`), by battle: when each of its figures' shots leaves, in its
@@ -771,6 +773,7 @@ export class MapView3D implements MapRenderer {
     this.#unitSquare.clear();
     this.#before.clear();
     this.#fallen.clear();
+    this.#attackersDone.clear();
     this.#shotsOf.clear();
     this.#flying.clear();
     this.#gone.clear();
@@ -929,10 +932,13 @@ export class MapView3D implements MapRenderer {
       );
 
     if (busy !== null && busy - now > Math.max(BATTLES_BEHIND, 2 * longest)) {
+      // Not those moved on from, whose losers fall on.
       this.#battlesOver(
         this.#battles.endWhere(
           (battle) =>
-            battle.attacker === attacker.id || battle.attacker === defender.id,
+            (battle.attacker === attacker.id ||
+              battle.attacker === defender.id) &&
+            !this.#battles.released(battle.id),
           now
         )
       );
@@ -1054,14 +1060,9 @@ export class MapView3D implements MapRenderer {
       return;
     }
 
-    // In a battle: it's over at once, and the unit steps from where it is.
-    this.#battlesOver(
-      this.#battles.endWhere(
-        ({ attacker, defender }) =>
-          attacker === unit.id || defender === unit.id,
-        performance.now()
-      )
-    );
+    // In a battle: it's over at once, and the unit steps from where it is; or, its blow fallen, the unit steps on from
+    //  it, and the loser falls as it would (`Battles#moveOn`).
+    this.#movedOn(this.#battles.moveOn(unit.id, performance.now()));
 
     const walking = this.#walks.walking(unit.id),
       seen =
@@ -1431,7 +1432,7 @@ export class MapView3D implements MapRenderer {
       ringed !== null &&
       ringed !== (this.#activeUnit?.id ?? null) &&
       !this.#walks.walking(ringed) &&
-      !this.#battles.attacking(ringed)
+      !this.#battles.holds(ringed)
     ) {
       this.#caughtUp(squares);
     }
@@ -1542,8 +1543,12 @@ export class MapView3D implements MapRenderer {
           muzzle = `${id}-muzzle`,
           hit = `${id}-hit`;
 
-        // Its puffs, not drawn this frame, are taken away with the rest (`#puffsOver`).
-        if (!this.#walkersDrawn.has(battle)) {
+        // Its puffs, not drawn this frame, are taken away with the rest (`#puffsOver`). One in flight lands as its
+        //  attacker moves on from its battle, but with units hidden (`t`).
+        if (
+          !this.#walkersDrawn.has(battle) &&
+          !(this.#battles.released(battle) && this.#unitsShown)
+        ) {
           this.#stage.shot?.(id, null);
           this.#flying.delete(id);
 
@@ -1633,10 +1638,35 @@ export class MapView3D implements MapRenderer {
     });
   }
 
-  // Battles over at once, as `Battles#endWhere` has them: their blows fall now, with nothing left to fade.
+  // Battles over at once, as `Battles#endWhere` has them: their blows fall now, with nothing left to fade; but for one
+  //  only told its blow, going on, whose loser falls as it would.
   #battlesOver({ struck, ended }: { struck: Battle[]; ended: Battle[] }): void {
-    struck.forEach((battle) => this.#blow(battle, false));
+    struck.forEach((battle) => this.#blow(battle, !ended.includes(battle)));
     this.#battlesEnded(ended);
+  }
+
+  // A unit moved on from its battles (`Battles#moveOn`): those over at once, over; those it won attacking going on for
+  //  their losers, it drawn no more there, its square marked again unless it's walked on (`#attackerDone`); and the ring
+  //  free to go on, where it waited for one of them.
+  #movedOn({
+    struck,
+    ended,
+    released,
+  }: {
+    struck: Battle[];
+    ended: Battle[];
+    released: Battle[];
+  }): void {
+    const squares = new Set<string>();
+
+    this.#battlesOver({ struck, ended });
+    released.forEach((battle) => {
+      if (battle.won) {
+        this.#attackersDone.add(battle.id);
+        this.#attackerDone(battle, squares);
+      }
+    });
+    this.#released(squares);
   }
 
   // The blow falls in `battle`: the square attacked is shown as it is after it, or as it was before the next battle
@@ -1912,7 +1942,7 @@ export class MapView3D implements MapRenderer {
     const squares = new Set<string>();
 
     ended.forEach((battle) => {
-      const { id, attacker, won, from, attackerSquare, facing } = battle;
+      const { id } = battle;
 
       this.#shotsOver(id);
       this.#takeAway(`${id}-fallen`);
@@ -1925,35 +1955,47 @@ export class MapView3D implements MapRenderer {
         );
       }
 
-      if (this.#awaiting.has(attacker) && !this.#leftOff(attacker)) {
-        if (!won) {
-          this.#gone.add(attacker);
-        } else {
-          const standing: Walker = {
-            id,
-            units: [attacker],
-            at: [from.at[0], from.at[1]],
-            lift: from.lift,
-            aloft: 0,
-            facing,
-            from: attackerSquare,
-            before: attackerSquare,
-            to: attackerSquare,
-          };
-
-          this.#unpatched.set(id, standing);
-          this.#unpatchedUnits.add(attacker);
-          this.#drawWalker(standing);
-
-          return;
-        }
+      // Its attacker's part over already, as it moved on: what's drawn under its id now is the attacker's own.
+      if (!this.#attackersDone.delete(id)) {
+        this.#attackerDone(battle, squares);
       }
-
-      this.#takeAway(id);
-      this.#release([attacker], squares);
     });
 
     this.#released(squares);
+  }
+
+  // The attacker's part of `battle` over: drawn no more there, and back on the square it was left off, added to
+  //  `squares`, unless it's walking on; or, waiting for the patch that has it where it fought from, drawn standing there
+  //  till it comes (or let go of, lost). Once, as it moves on from it (`#movedOn`), or as the battle's over.
+  #attackerDone(battle: Battle, squares: Set<string>): void {
+    const { id, attacker, won, from, attackerSquare, facing } = battle;
+
+    if (this.#awaiting.has(attacker) && !this.#leftOff(attacker)) {
+      if (!won) {
+        this.#gone.add(attacker);
+      } else {
+        const standing: Walker = {
+          id,
+          units: [attacker],
+          at: [from.at[0], from.at[1]],
+          lift: from.lift,
+          aloft: 0,
+          facing,
+          from: attackerSquare,
+          before: attackerSquare,
+          to: attackerSquare,
+        };
+
+        this.#unpatched.set(id, standing);
+        this.#unpatchedUnits.add(attacker);
+        this.#drawWalker(standing);
+
+        return;
+      }
+    }
+
+    this.#takeAway(id);
+    this.#release([attacker], squares);
   }
 
   // The unit ringed is there: the ring on the active unit, the squares it moves between added to `squares`, to be marked
@@ -1985,7 +2027,7 @@ export class MapView3D implements MapRenderer {
     return (
       ringed !== null &&
       ringed !== (this.#activeUnit?.id ?? null) &&
-      (this.#walks.walking(ringed) || this.#battles.attacking(ringed))
+      (this.#walks.walking(ringed) || this.#battles.holds(ringed))
     );
   }
 
@@ -2000,12 +2042,7 @@ export class MapView3D implements MapRenderer {
     this.#walksEnded(
       this.#walks.endWhere((units) => units.includes(ringed), performance.now())
     );
-    this.#battlesOver(
-      this.#battles.endWhere(
-        ({ attacker }) => attacker === ringed,
-        performance.now()
-      )
-    );
+    this.#movedOn(this.#battles.moveOn(ringed, performance.now(), true));
     this.#draw();
   }
 

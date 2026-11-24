@@ -3999,7 +3999,8 @@ expect(
   runFrames();
   repatched([1, 1, []]);
 
-  // A step after the blow ends the battle at once: its puff of smoke goes with it.
+  // A step after the blow, won: the attacker walks on at once, and the loser falls as it would, its puff of smoke going
+  //  on till it's over (#1334).
   repatched([1, 1, [walker]], [2, 1, [rival]]);
   fought(walker, [1, 1], rival, [2, 1], 'attacker');
   patch([1, 1, [walker]], [2, 1, []]);
@@ -4008,8 +4009,9 @@ expect(
   stepped(walker, [1, 1], [1, 2]);
   patch([1, 1, []], [1, 2, [walker]]);
   runFrames(1);
-  offMidBattle.push(puffs.size);
+  offMidBattle.push(puffs.size, [...walkers.keys()].map(kind).sort());
   runFrames();
+  offMidBattle.push(puffs.size);
   repatched([1, 2, []]);
 
   // With units hidden (`t`), nothing's drawn falling, and no puff of smoke either, won or lost.
@@ -4083,10 +4085,10 @@ expect(
   walkersPlaced.clear();
 
   expect(
-    'moving at once chosen mid-battle ends it on the next frame, its puff with it; with units hidden, no puff, won or lost; a step after the blow takes its puff with it; walking as it attacks, it walks there, then lunges from its square, the square attacked as it was; a step mid-battle ends the battle, and it walks from its square',
+    'moving at once chosen mid-battle ends it on the next frame, its puff with it; with units hidden, no puff, won or lost; a step after the blow walks on, the loser falling and its puff going on till it’s over; walking as it attacks, it walks there, then lunges from its square, the square attacked as it was; a step mid-battle ends the battle, and it walks from its square',
     [offMidBattle, walkedThenFought, steppedMidBattle],
     [
-      [0, ['Unit-A', 1], null, 1, 0, 1, 0, 0],
+      [0, ['Unit-A', 1], null, 1, 0, 1, 1, ['battle-fallen', 'walk'], 0, 0],
       [
         ['walk'],
         null,
@@ -4683,6 +4685,85 @@ expect(
     ]
   );
 
+  // Attacking a square twice, the second waiting, and stepping on just after the first's blow, before a frame's told
+  //  it: the first's blow is told first, and its loser drawn falling; the second's over at once (#1334).
+  repatched([1, 1, [walker]], [2, 1, [rival, rivalMate]]);
+  walkersSet.length = 0;
+
+  const twiceFrom = now;
+
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  patch([1, 1, [walker]], [2, 1, [rivalMate]]);
+  fought(walker, [1, 1], rivalMate, [2, 1], 'attacker');
+  patch([1, 1, [walker]], [2, 1, []]);
+
+  // To just before the first's blow, then past it with no frame between.
+  while (now - twiceFrom < 180 && runFrames(1) > 0);
+
+  now += 40;
+  stepped(walker, [1, 1], [1, 2]);
+  patch([1, 1, []], [1, 2, [walker]]);
+  runFrames(1);
+
+  const toldInOrder = [
+    [...walkers.keys()].map(kind).sort(),
+    // What's drawn falling is what fell in the first: the one unit, not the second's too, its blow told first.
+    [...walkers.entries()]
+      .filter(([id]) => kind(id) === 'battle-fallen')
+      .map(([, marker]) => [marker.unit?.id, marker.unit?.count]),
+    unitOn(2, 1),
+  ];
+
+  runFrames();
+  repatched([1, 2, []], [2, 1, []]);
+
+  expect(
+    'attacking a square twice, a step just after the first blow, before a frame’s told it: its loser’s drawn falling, alone, its blow told first; the walk drawn; the second over, the square empty',
+    toldInOrder,
+    [['battle-fallen', 'walk'], [['Unit-R', 1]], null]
+  );
+
+  // Stepping on right after its blow, a squad's bottles still in flight land, each bursting where it lands, and the
+  //  loser falls as it would (#1334).
+  rigFactsFor.set('Unit-A', {
+    figures: 3,
+    stagger: 0.13,
+    clips: { fight: { duration: 1.5, shots: [{ at: 0.5, joint: 'prop' }] } },
+  });
+  repatched([1, 1, [walker]], [2, 1, [rival]]);
+  puffLooks.clear();
+  shotsDrawn.clear();
+
+  const thrownFrom = now;
+
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  patch([1, 1, [walker]], [2, 1, []]);
+
+  while (now - thrownFrom < 880 && runFrames(1) > 0);
+
+  const inFlightAtStep = [...shotsDrawn.values()].filter(
+    (points) => points.at(-1) !== null
+  ).length;
+
+  stepped(walker, [1, 1], [1, 2]);
+  patch([1, 1, []], [1, 2, [walker]]);
+  runFrames();
+
+  const landedAfterStep = [
+    inFlightAtStep,
+    [...puffLooks.keys()].filter((key) => key.endsWith('-hit')).length,
+    puffs.size,
+  ];
+
+  rigFactsFor.clear();
+  repatched([1, 2, []]);
+
+  expect(
+    'stepping on right after its blow, a squad’s bottles in flight land, each bursting, all gone once over',
+    landedAfterStep,
+    [2, 3, 0]
+  );
+
   // The active unit attacks with its last move, and the game chooses the next: the ring and the camera wait till the
   //  battle's over. A key while they wait ends it at once, and they go to the next.
   const attackedLast = () => {
@@ -4724,14 +4805,16 @@ expect(
   runFrames();
   keyedBattle.push(focusOn(3, 3));
 
-  // A key after the blow: the battle's over at once, and its puff of smoke goes with it.
+  // A key after the blow: the ring and the camera go to the next at once, the attacker back on its square, and the
+  //  loser falls as it would, its puff of smoke going on till it's over (#1334).
   attackedLast();
   runFrames(12);
   keyedBattle.push(puffs.size);
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'w' }));
   runFrames(1);
-  keyedBattle.push(puffs.size);
+  keyedBattle.push(puffs.size, ringOn(3, 3), unitOn(1, 1));
   runFrames();
+  keyedBattle.push(puffs.size);
 
   // Lost with its last move: the ring and the camera wait till it's faded away, then go to the next.
   repatched([1, 1, [walker]], [2, 1, [rival]], [3, 3, [nextUnit]]);
@@ -4748,17 +4831,33 @@ expect(
 
   runFrames();
   diedRinged.push(unitOn(1, 1), ringOn(3, 3), focusOn(3, 3));
+
+  // Lost, a key while it falls: the ring goes to the next at once, and it falls on as it would (#1334).
+  repatched([1, 1, [walker]], [2, 1, [rival]], [3, 3, [nextUnit]]);
+  glider.setActiveUnit(placed(walker, 1, 1));
+  glider.portal.setCenter(1, 1);
+  runFrames();
+  fought(walker, [1, 1], rival, [2, 1], 'defender');
+  patch([1, 1, []], [2, 1, [rival]]);
+  glider.setActiveUnit(placed(nextUnit, 3, 3));
+  glider.portal.setCenter(3, 3);
+  runFrames(20);
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'w' }));
+  runFrames(1);
+  diedRinged.push(ringOn(3, 3), [...walkers.keys()].map(kind));
+  runFrames();
+  diedRinged.push(walkers.size);
   glider.setActiveUnit(null);
   repatched([1, 1, []], [2, 1, []], [3, 3, []]);
 
   expect(
-    'the active unit attacking with its last move holds the ring and the camera till the battle’s over, then they go to the next; a key meanwhile ends it at once, after the blow its puff with it; lost, they wait till it’s gone',
+    'the active unit attacking with its last move holds the ring and the camera till the battle’s over, then they go to the next; a key meanwhile ends it at once; after the blow, they go to the next, the loser falling on, its puff till it’s over; lost, they wait till it’s gone, or, a key, go at once, it falling on',
     [heldForBattle, afterBattle, keyedBattle, diedRinged],
     [
       [true, false, true, ['Unit-T', 1], true, false, true],
       [['Unit-A', 1], false, true, true],
-      [['Unit-A', 1], null, 0, true, true, 1, 0],
-      [true, false, true, null, true, true],
+      [['Unit-A', 1], null, 0, true, true, 1, 1, true, ['Unit-A', 1], 0],
+      [true, false, true, null, true, true, true, ['battle'], 0],
     ]
   );
 
@@ -4784,6 +4883,39 @@ expect(
   runFrames();
   heldPatch.push(unitOn(1, 1), unitOn(2, 1), walkers.size);
   repatched([1, 1, []], [2, 1, []]);
+
+  // Its patch held, the ringed unit attacking with its last move, a key after the blow: the ring goes on at once, the
+  //  winner stands where it fought from till its patch comes, and the loser falls as it would; once the battle's over,
+  //  the winner still stands there (#1334).
+  repatched([1, 1, [walker]], [2, 1, [rival]], [3, 3, [nextUnit]]);
+  glider.setActiveUnit(placed(walker, 1, 1));
+  glider.portal.setCenter(1, 1);
+  runFrames();
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  glider.setActiveUnit(placed(nextUnit, 3, 3));
+  glider.portal.setCenter(3, 3);
+  runFrames(14);
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'w' }));
+  runFrames(1);
+  // The winner's walker standing where it fought from, not lunging: at the middle of its square.
+  const [standingId] = [...walkers.keys()].filter(
+      (id) => kind(id) === 'battle'
+    ),
+    stoodAt = walkersPlaced.get(standingId ?? '')?.at(-1) ?? [],
+    [fromU, , fromV] = groundAt(1, 1);
+
+  heldPatch.push(
+    ringOn(3, 3),
+    [...walkers.keys()].map(kind).sort(),
+    Math.abs(stoodAt[0]! - fromU!) < 0.01 &&
+      Math.abs(stoodAt[2]! - fromV!) < 0.01
+  );
+  runFrames();
+  heldPatch.push([...walkers.keys()].map(kind));
+  repatched([1, 1, [walker]], [2, 1, []]);
+  heldPatch.push(unitOn(1, 1), walkers.size);
+  glider.setActiveUnit(null);
+  repatched([1, 1, []], [3, 3, []]);
 
   // Two attacks on one square at once, two units holding it, as in a city, where one falls at a time: fought together,
   //  the square as it was till the blows, what fell in each fading alone.
@@ -4827,10 +4959,25 @@ expect(
   repatched([1, 1, []]);
 
   expect(
-    'its patch held, the winner stands where it stood once the battle’s over, and the loser’s left off, till it comes; two attacks on one square, fought together, what fell in each fading alone; with no frames, the first drawn again ends it',
+    'its patch held, the winner stands where it stood once the battle’s over, and the loser’s left off, till it comes; hurried on after the blow, the ring goes on, the winner standing there till its patch, the loser falling on; two attacks on one square, fought together, what fell in each fading alone; with no frames, the first drawn again ends it',
     [heldPatch, firstBlow, secondBlow, twoOver, outOfSight],
     [
-      [null, null, ['battle'], ['Unit-A', 1], 0, null, ['Unit-R', 1], 0],
+      [
+        null,
+        null,
+        ['battle'],
+        ['Unit-A', 1],
+        0,
+        null,
+        ['Unit-R', 1],
+        0,
+        true,
+        ['battle', 'battle-fallen'],
+        true,
+        ['battle'],
+        ['Unit-A', 1],
+        0,
+      ],
       [
         null,
         [
