@@ -4685,6 +4685,37 @@ expect(
     ]
   );
 
+  // Attacking a square twice, the second waiting, and stepping on just after the first's blow, before a frame's told
+  //  it: the first's blow is told first, and its loser drawn falling; the second's over at once (#1334).
+  repatched([1, 1, [walker]], [2, 1, [rival, rivalMate]]);
+  walkersSet.length = 0;
+
+  const twiceFrom = now;
+
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  patch([1, 1, [walker]], [2, 1, [rivalMate]]);
+  fought(walker, [1, 1], rivalMate, [2, 1], 'attacker');
+  patch([1, 1, [walker]], [2, 1, []]);
+
+  // To just before the first's blow, then past it with no frame between.
+  while (now - twiceFrom < 180 && runFrames(1) > 0);
+
+  now += 40;
+  stepped(walker, [1, 1], [1, 2]);
+  patch([1, 1, []], [1, 2, [walker]]);
+  runFrames(1);
+
+  const toldInOrder = [...walkers.keys()].map(kind).sort();
+
+  runFrames();
+  repatched([1, 2, []], [2, 1, []]);
+
+  expect(
+    'attacking a square twice, a step just after the first blow, before a frame’s told it: its loser’s drawn falling, the walk drawn, the second over',
+    toldInOrder,
+    ['battle-fallen', 'walk']
+  );
+
   // Stepping on right after its blow, a squad's bottles still in flight land, each bursting where it lands, and the
   //  loser falls as it would (#1334).
   rigFactsFor.set('Unit-A', {
