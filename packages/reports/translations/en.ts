@@ -282,6 +282,16 @@ i18next.addResources('en', 'default', {
     '{{unit}} clean it up in {{count}} turns',
   'Civilopedia.effect.tile_yield_halved':
     'Halves the {{yield}} of its square, rounded up',
+  // Civilization II's tile improvements (#1272).
+  'Civilopedia.effect.square_defence_multiplier':
+    'Defense ×{{value}} for {{unit}} here, outside a city, in place of being fortified',
+  'Civilopedia.effect.square_yield_percent':
+    '+{{percent}}% {{yield}} on its square, rounded down',
+  'Civilopedia.effect.heals_resting':
+    'Damaged units resting here recover {{value}} tenths of their hit points a turn, rather than 1',
+  'Civilopedia.effect.refuels': 'Refuels {{unit}} here',
+  'Civilopedia.effect.build_turns_one': '{{count}} turn of {{unit}} work',
+  'Civilopedia.effect.build_turns_other': '{{count}} turns of {{unit}} work',
   'Civilopedia.effect.caused_by_production':
     'Cities cause it from their shields',
   'Civilopedia.effect.caused_by_population':

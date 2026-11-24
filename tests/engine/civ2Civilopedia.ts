@@ -206,6 +206,119 @@ const check = (): void => {
     [['upkeep', 3, null, null, true, []]]
   );
 
+  // Every tile improvement says what it does (#1272, #621): on the squares it's on, and what it does beyond them. No
+  //  other kind's page says anything as if it were on squares (a Wonder's `acts_as` names its improvement too).
+  const byKey = new Map(entries.map((entry) => [entry.key, entry])),
+    typesOf = (key: string): string[] =>
+      Array.from(
+        new Set(
+          (byKey.get(key)?.effects ?? []).map(
+            ({ type, squares }) =>
+              `${squares === undefined ? '' : 'squares.'}${type}`
+          )
+        )
+      ).sort();
+
+  expect(
+    'every tile improvement says something it does',
+    silent('tileImprovement'),
+    []
+  );
+  expect(
+    "no other kind's page says anything as if it were on squares",
+    entries
+      .filter(({ kind }) => kind !== 'tileImprovement')
+      .filter(({ effects }) =>
+        effects.some(({ squares }) => squares !== undefined)
+      )
+      .map(({ key }) => key),
+    []
+  );
+  expect(
+    'each tile improvement says what it does',
+    [
+      'Airbase',
+      'Farmland',
+      'Fortress',
+      'Irrigation',
+      'Mine',
+      'Pollution',
+      'Railroad',
+      'Road',
+    ].map((key) => [key, typesOf(key)]),
+    [
+      ['Airbase', ['build_turns', 'heals', 'refuels']],
+      ['Farmland', ['square_yield_percent', 'squares.improvement_turns']],
+      [
+        'Fortress',
+        [
+          'heals_resting',
+          'square_defence_multiplier',
+          'squares.improvement_turns',
+        ],
+      ],
+      [
+        'Irrigation',
+        [
+          'squares.converts_to',
+          'squares.improvement_turns',
+          'squares.improvement_yield',
+        ],
+      ],
+      [
+        'Mine',
+        [
+          'squares.converts_to',
+          'squares.improvement_turns',
+          'squares.improvement_yield',
+        ],
+      ],
+      ['Pollution', ['caused_by', 'removal_turns', 'tile_yield_halved']],
+      [
+        'Railroad',
+        [
+          'route_free',
+          'squares.improvement_turns',
+          'squares.improvement_yield_percent',
+        ],
+      ],
+      [
+        'Road',
+        [
+          'route_squares',
+          'squares.improvement_turns',
+          'squares.improvement_yield',
+        ],
+      ],
+    ]
+  );
+
+  // And their figures, as the rules give them.
+  const effectOf = (key: string, type: string) =>
+      byKey.get(key)?.effects.find((effect) => effect.type === type),
+    classesOf = (value: unknown): string[] =>
+      (Array.isArray(value) ? value : [value]).map(
+        (item) => (item as { class: string }).class
+      ),
+    fortress = effectOf('Fortress', 'square_defence_multiplier');
+
+  expect(
+    'a Fortress doubles a land defender, except against aircraft and what ignores walls',
+    [fortress?.value, classesOf(fortress?.unit), classesOf(fortress?.except)],
+    [2, ['Land'], ['Air', 'IgnoresFortifications']]
+  );
+  expect(
+    'a Road takes land units 3 squares a move, and an Airbase and cleaning up Pollution take 4 turns',
+    [
+      effectOf('Road', 'route_squares')?.value,
+      effectOf('Airbase', 'build_turns')?.value,
+      effectOf('Pollution', 'removal_turns')?.value,
+      effectOf('Farmland', 'square_yield_percent')?.value,
+      classesOf(effectOf('Farmland', 'square_yield_percent')?.inCitiesWith),
+    ],
+    [3, 4, 4, 0.5, ['Supermarket']]
+  );
+
   finished = true;
 
   if (failures.length > 0) {

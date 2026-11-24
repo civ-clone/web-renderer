@@ -14,6 +14,8 @@ i18next.addResources('en-GB', 'default', {
     'Defence of the units in the city ×{{value}}',
   'Civilopedia.effect.defence_bonus':
     'Units defending here: defence ×{{value}}',
+  'Civilopedia.effect.square_defence_multiplier':
+    'Defence ×{{value}} for {{unit}} here, outside a city, in place of being fortified',
   'Civilopedia.effect.lost_on_capture_founder':
     'Lost when the city is captured, unless by the civilisation that founded it',
   'Civilopedia.effect.lost_on_capture_founder_other':

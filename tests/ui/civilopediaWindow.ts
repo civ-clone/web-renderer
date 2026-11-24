@@ -786,6 +786,48 @@ const run = async (): Promise<void> => {
       'Land units move along it for free'
   );
 
+  // Civilization II's (#1272): a Fortress's defence first, with what it doesn't hold against, an Airbase's turns
+  //  said once, and Farmland's food in a city with a Supermarket.
+  const air = { class: 'Air', name: 'Air', entry: false },
+    fortress = entry('Fortress', 'tileImprovement', {
+      effects: [
+        { type: 'heals_resting', value: 2 },
+        { type: 'build_turns', value: 4, unit: settlers },
+        { type: 'refuels', unit: air },
+        {
+          type: 'square_yield_percent',
+          yield: { class: 'Food', name: 'Food', entry: false },
+          value: 0.5,
+          inCitiesWith: { class: 'Supermarket', name: 'Supermarket' },
+        },
+        {
+          type: 'square_defence_multiplier',
+          value: 2,
+          unit: { class: 'Land', name: 'Land', entry: false },
+          except: [
+            air,
+            {
+              class: 'IgnoresFortifications',
+              name: 'IgnoresFortifications',
+              entry: false,
+            },
+          ],
+        },
+      ],
+    });
+
+  expect(
+    "Civilization II's tile improvements say what they do",
+    text(entryHtml(fortress, data))
+      .split('What it does')[1]
+      ?.split('Requirements')[0],
+    '+50% Food on its square, rounded down, in cities with a Supermarket' +
+      'Defense ×2 for land units here, outside a city, in place of being fortified, except against aircraft and units that ignore City Walls' +
+      'Damaged units resting here recover 2 tenths of their hit points a turn, rather than 1' +
+      '4 turns of Settlers work' +
+      'Refuels aircraft here'
+  );
+
   // Civilization II's (#1196): a wording that says its own scope, and a clause worded for its type.
   const civ2 = entry('SunTzusWarAcademy', 'wonder', {
     effects: [
