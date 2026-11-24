@@ -559,7 +559,7 @@ expect(
 
   // Each shot as quick as its kind flies (`SHOT_LOOKS`): a rifleman's bullet lands almost as it leaves; a bullet that
   //  leaves after a bottle can land before it, and the blow falls as the first lands; a battle's drawn till the last
-  //  of each shot's own is over, its smoke where it left or its puff where it landed.
+  //  of each shot's own is over, its puff where it landed.
   const rifle: RigFacts = {
       figures: 2,
       stagger: 0.13,

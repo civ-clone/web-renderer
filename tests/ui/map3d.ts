@@ -4503,14 +4503,16 @@ expect(
         between();
       }
 
-      // Each frame: how long since it was fought, and whether the shot was drawn in flight.
-      const inFlight: number[] = [];
+      // Each frame the shot was drawn in flight: how long since it was fought, and where it was.
+      const inFlight: number[] = [],
+        path: (readonly number[])[] = [];
 
       for (let frame = 0; frame < 400 && runFrames(1) > 0; frame++) {
         const drawn = [...shotsDrawn.values()].at(-1)?.at(-1);
 
         if (drawn !== undefined && drawn !== null) {
           inFlight.push(now - firedAt);
+          path.push(drawn);
         }
 
         shotsDrawn.forEach((points) => (points.length = 0));
@@ -4535,6 +4537,23 @@ expect(
                   heading[0]! > 0.5
               ),
         inFlight: inFlight.length === 0 ? null : [inFlight[0], inFlight.at(-1)],
+        // Where it was, from where it was first drawn, along the ground and up: as far up for each step along, a
+        //  straight line, or not, an arc.
+        level: (() => {
+          const [first] = path,
+            slopes = path.slice(1).map((point) => {
+              const along = Math.hypot(
+                point[0]! - first![0]!,
+                point[2]! - first![2]!
+              );
+
+              return (point[1]! - first![1]!) / along;
+            });
+
+          return slopes.length < 2
+            ? null
+            : slopes.every((slope) => Math.abs(slope - slopes[0]!) < 1e-6);
+        })(),
         muzzle: [...puffLooks.entries()]
           .filter(([key]) => key.endsWith('-muzzle'))
           .map(([, puff]) => puff),
@@ -4568,7 +4587,7 @@ expect(
     'a bullet’s drawn as one, straight, from the node its clip names, its smoke and flash a muzzle’s, landing as quick as a bullet flies, its puff a bullet’s, the battle over once they are; leaving and landing between frames, its smoke’s still drawn; a shell flies slower, its burst flashing',
     [
       bullet.kind,
-      bullet.straight,
+      [bullet.straight, bullet.level],
       bullet.joints,
       bullet.muzzle,
       bullet.hit,
@@ -4578,14 +4597,14 @@ expect(
         bullet.inFlight[1]! - bullet.inFlight[0]! < SHOT_LOOKS.bullet.flight,
       bullet.puffsLeft,
       [skipped.inFlight, skipped.muzzle, skipped.hit],
-      [shell.kind, shell.hit, shell.straight],
+      [shell.kind, shell.hit, shell.straight, shell.level],
       shell.inFlight !== null &&
         shell.inFlight[1]! - shell.inFlight[0]! >=
           SHOT_LOOKS.shell.flight - 2 * 16,
     ],
     [
       'bullet',
-      true,
+      [true, true],
       ['muzzle'],
       [{ size: SHOT_LOOKS.bullet.muzzle, flash: true }],
       [{ size: SHOT_LOOKS.bullet.hit, flash: false }],
@@ -4596,7 +4615,7 @@ expect(
         [{ size: SHOT_LOOKS.bullet.muzzle, flash: true }],
         [{ size: SHOT_LOOKS.bullet.hit, flash: false }],
       ],
-      ['shell', [{ size: SHOT_LOOKS.shell.hit, flash: true }], false],
+      ['shell', [{ size: SHOT_LOOKS.shell.hit, flash: true }], false, false],
       true,
     ]
   );

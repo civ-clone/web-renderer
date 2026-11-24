@@ -170,7 +170,7 @@ expect(
   );
 
   expect(
-    'what a shot doesn’t say it is, a bottle; each figure’s shot what its clip says; the last of a shot’s own over, its smoke or its puff',
+    'what a shot doesn’t say it is, a bottle; each figure’s shot what its clip says; the last of a shot’s own over, its puff, its smoke over first',
     [
       kindOf({}),
       kindOf({ kind: 'shell' }),
@@ -182,8 +182,10 @@ expect(
         2,
         0.1
       ).map(({ figure, kind }) => [figure, kind]),
-      shotOver('bullet') === Math.max(80 + HIT_PUFF, MUZZLE_PUFF),
+      shotOver('bullet'),
       shotOver('bottle'),
+      // The smoke where one leaves is over before the puff where it lands.
+      MUZZLE_PUFF <= HIT_PUFF,
     ],
     [
       'bottle',
@@ -194,8 +196,9 @@ expect(
         [0, 'bullet'],
         [1, 'bullet'],
       ],
-      true,
+      80 + HIT_PUFF,
       350 + HIT_PUFF,
+      true,
     ]
   );
 }

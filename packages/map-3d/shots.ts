@@ -51,18 +51,15 @@ export const SHOT_TARGET = 0.05;
 /** How long the puff where a shot lands lasts, in ms. */
 export const HIT_PUFF = 500;
 
-/** How long the smoke where a shot leaves a muzzle lasts, in ms. */
+/**
+ * How long the smoke where a shot leaves a muzzle lasts, in ms: no longer than the puff where it lands, so that's always
+ *  over last.
+ */
 export const MUZZLE_PUFF = 400;
 
-/**
- * How long after it leaves the last of a shot's own is over, in ms: the smoke where it left, if any, and the puff where
- *  it lands.
- */
-export const shotOver = (kind: ShotKind): number => {
-  const look = SHOT_LOOKS[kind];
-
-  return Math.max(look.flight + HIT_PUFF, look.muzzle > 0 ? MUZZLE_PUFF : 0);
-};
+/** How long after it leaves the last of a shot's own is over, in ms: the puff where it lands. */
+export const shotOver = (kind: ShotKind): number =>
+  SHOT_LOOKS[kind].flight + HIT_PUFF;
 
 /**
  * When each of `figures` figures' shots leaves in a clip whose shots are `shots`, each figure `stagger` seconds after
