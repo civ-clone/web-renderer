@@ -391,10 +391,12 @@ band along a hull, the wingtips). Still to do:
   built, loaded and drawn while its unit walks, playing `move`; the Partisans' is the first.
 - **Clips, second part: done** (spec §10, "As built, fourth part"). Battles are paced for their fighters' clips: the
   attacker plays `fight`, standing to throw or shoot, the blow falling as its shot lands; the loser plays `die`,
-  falling before it fades; and the shots fly, a bottle alight for the Partisans. Still to do: `idle`, measured first as
-  it needs frames all the time, and what flies for each kind of shot (a rifle's, a cannon's). The Partisans' clips
-  have since been reworked in their set: their feet stay planted as a throw or a fall begins, and the fall is 1.5 s
-  and steadier. That needed nothing here.
+  falling before it fades; and the shots fly, a bottle alight for the Partisans. Still to do: what flies for each kind
+  of shot (a rifle's, a cannon's). The Partisans' clips have since been reworked in their set: their feet stay planted
+  as a throw or a fall begins, and the fall is 1.5 s and steadier. That needed nothing here.
+- **Clips, third part: done** (spec §10, "As built, fifth part"). Units near the camera, with it close in, play `idle`,
+  frames drawn for them about 30 a second while they do. Rigged copies are bounded by every pose their clips take
+  them to, so one off the screen isn't drawn.
 - **Clips, as planned:** rigged copies are to sit beside the static models, which their manifests go on naming. The
   clips are idle, moving and dying for every unit, fighting for combat units (shots in flight for ranged ones), Settlers
   working and settling, ships sinking and vehicles exploding. The map's side is to play them (`AnimationMixer`, skinned

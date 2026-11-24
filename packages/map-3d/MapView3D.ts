@@ -75,6 +75,7 @@ import pickGround from './camera/pick';
 import Minimap3D from './minimap/Minimap3D';
 import { LaidYields, innerOf, laidYields, yieldMesh } from './yields';
 import { BannerSite, bannerPlaces } from './banners';
+import idleSquares, { IDLE_FRAME } from './idling';
 import { squareCity, squareYields } from '@civ-clone/ui-client/lib/yieldMap';
 
 // How long, in ms, each frame may go on building the land's chunks while any wait. A chunk is built whole, once a frame
@@ -420,8 +421,14 @@ export class MapView3D implements MapRenderer {
   }[] = [];
   #bannerCanvas: HTMLCanvasElement | null = null;
   #stopRestyled: () => void = (): void => {};
-  // A frame asked for to draw in, if one is.
+  // A frame asked for to draw in, if one is; and whether it's to draw what's changed (`#draw`), not only units idling.
   #frame: number | null = null;
+  #wanted = false;
+  // When the last frame was drawn, by the page's clock; and the squares whose units were asked to idle in it.
+  #drawnAt = -Infinity;
+  #idlers: ReadonlySet<string> = new Set();
+  // The squares marked with a unit, which may idle.
+  #unitsMarked = new Set<string>();
   // Keyed by the square, as the 2D map's: a tile waits in `#incomingTiles` until the world has it (`releaseTiles`).
   #incomingTiles = new Map<string, Tile>();
   #tilesToDraw = new Map<string, Tile>();
@@ -2920,6 +2927,12 @@ export class MapView3D implements MapRenderer {
     if (changed) {
       this.#stage.setMarker(key, at, marker);
       this.#remember(key, signature);
+
+      if (marker?.unit) {
+        this.#unitsMarked.add(key);
+      } else {
+        this.#unitsMarked.delete(key);
+      }
     }
   }
 
@@ -3221,10 +3234,28 @@ export class MapView3D implements MapRenderer {
 
   // A frame: the tiles released taken, as many chunks built as the budget allows (every one, where there are no
   //  frames to spread them over), the camera on the square the map is centred on, and the scene drawn. Another frame
-  //  is asked for while chunks wait.
-  #frameDrawn(budget: number | null): void {
-    const started = performance.now(),
-      moving = this.#moveCamera(started),
+  //  is asked for while chunks wait, and one only for units idling while they do. Drawn only for them (`idleOnly`),
+  //  nothing else has changed: they're posed, and the scene drawn.
+  #frameDrawn(budget: number | null, idleOnly = false): void {
+    const started = performance.now();
+
+    this.#drawnAt = started;
+
+    if (idleOnly) {
+      const idling = this.#idle(started, false);
+
+      this.#stage.render();
+      this.#frameTime = performance.now() - started;
+      this.#showStats();
+
+      if (idling) {
+        this.#ask();
+      }
+
+      return;
+    }
+
+    const moving = this.#moveCamera(started),
       [u, v] = this.#focus();
 
     if (this.#modelsArrived) {
@@ -3250,6 +3281,9 @@ export class MapView3D implements MapRenderer {
 
     this.#showYields();
     this.#stage.view(this.#orbit, this.#lookHeight ?? 0, this.#period());
+
+    const idling = this.#idle(started, true);
+
     this.#stage.render();
     this.#drawBanners();
 
@@ -3279,7 +3313,44 @@ export class MapView3D implements MapRenderer {
       rising
     ) {
       this.#draw();
+    } else if (idling) {
+      this.#ask();
     }
+  }
+
+  // The units idling (`Stage#idle`) posed as their clips have them `now`, by the page's clock: those near the camera,
+  //  worked out again (`again`) where anything may have changed; or none, where they may not idle now. Says whether
+  //  any idles, so another frame is to be drawn for them.
+  #idle(now: number, again: boolean): boolean {
+    if (this.#stage.idle === undefined) {
+      return false;
+    }
+
+    // Near the camera, as it looks now (`idling.ts`).
+    if (again || !this.#mayIdle()) {
+      this.#idlers = this.#mayIdle()
+        ? idleSquares(
+            this.#unitsMarked,
+            this.#orbit,
+            (x, y) => this.#land.layout.centre(x, y),
+            this.#period(),
+            this.#idlers,
+            (x, y, margin) => this.#visible(x, y, margin)
+          )
+        : new Set();
+    }
+
+    return this.#stage.idle(this.#idlers, now / 1000) && this.#mayIdle();
+  }
+
+  // Whether units may idle: not without frames to play their clips in, with motion reduced, nor with units' moves not
+  //  shown.
+  #mayIdle(): boolean {
+    return (
+      typeof requestAnimationFrame === 'function' &&
+      !prefersReducedMotion() &&
+      (this.#walkOptions?.speed() ?? 'normal') !== 'off'
+    );
   }
 
   // The minimap: its overview drawn again if the squares have changed, and the ground the camera sees over it.
@@ -3404,13 +3475,35 @@ export class MapView3D implements MapRenderer {
       return;
     }
 
-    if (this.#frame !== null) {
+    this.#wanted = true;
+    this.#ask();
+  }
+
+  // A frame asked for, if one isn't already: drawn whole if anything's asked for one by then (`#draw`), whenever it
+  //  comes; otherwise only for units idling, and only once `IDLE_FRAME` has passed since the last, the frames between
+  //  passed over.
+  #ask(): void {
+    if (this.#disposed || this.#frame !== null) {
       return;
     }
 
     this.#frame = requestAnimationFrame(() => {
       this.#frame = null;
-      this.#frameDrawn(BUILD_BUDGET);
+
+      if (this.#wanted) {
+        this.#wanted = false;
+        this.#frameDrawn(BUILD_BUDGET);
+
+        return;
+      }
+
+      if (performance.now() - this.#drawnAt < IDLE_FRAME) {
+        this.#ask();
+
+        return;
+      }
+
+      this.#frameDrawn(BUILD_BUDGET, true);
     });
   }
 

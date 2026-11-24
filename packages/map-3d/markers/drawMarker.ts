@@ -42,6 +42,7 @@ import {
 import { LoadedModel, LoadedRig, rigPart } from '../models/loadModels';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import TintedMaterial, { ownerTint } from './tinted';
+import boundClips from './rigBounds';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {
   UnitLook,
@@ -109,6 +110,8 @@ export class MarkerKit {
   #modelMaterials = new Map<string, Material>();
   // The models' rigged copies (`addRig`), by the models' ids, drawn in their place while a clip plays (`rigFigures`).
   #rigs = new Map<string, LoadedRig>();
+  // Those bounded as far as their clips take them (`boundClips`): once each.
+  #bounded = new WeakSet<LoadedRig>();
   #walls: BufferGeometry | null = null;
   #flats = new Map<string, SpriteMaterial>();
   #pointer: SpriteMaterial | null = null;
@@ -162,12 +165,20 @@ export class MarkerKit {
 
   /**
    * The model `id`'s rigged copy (plan 2.2), drawn in its place while a clip plays (`rigFigures`): added after the
-   *  model, and let go of with it.
+   *  model, and let go of with it. Bounded as far as its clips take it (`boundClips`), so it's drawn only where it's
+   *  seen.
    */
   addRig(id: string, rig: LoadedRig): void {
-    if (this.#models.has(id)) {
-      this.#rigs.set(id, rig);
+    if (!this.#models.has(id)) {
+      return;
     }
+
+    if (!this.#bounded.has(rig)) {
+      boundClips(rig);
+      this.#bounded.add(rig);
+    }
+
+    this.#rigs.set(id, rig);
   }
 
   /** The model `id`'s rigged copy, if it has one. */
@@ -178,7 +189,7 @@ export class MarkerKit {
   /**
    * A unit's figures drawn with the model `id`'s rigged copy, if it has one, to play its clips (plan 2.2): as many as
    *  `modelFigures` draws, where it draws them, as big and in `colours`, each a copy of the rig's scene with a skeleton
-   *  of its own (`RIG_FIGURE`), drawn however far its clip takes it from where its bounds were worked out.
+   *  of its own (`RIG_FIGURE`), with its bounds (`boundClips`).
    */
   rigFigures(
     id: string,
@@ -219,8 +230,6 @@ export class MarkerKit {
           colours,
           true
         );
-        // A skinned mesh's bounds are its bind pose's, which a clip can take it far from.
-        mesh.frustumCulled = false;
       });
 
       return figure;

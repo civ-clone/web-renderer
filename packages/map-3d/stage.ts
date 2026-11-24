@@ -49,6 +49,7 @@ import {
   unfaded,
 } from './markers/drawMarker';
 import { TileMarker } from './markers/markerFor';
+import { idleChanges } from './idling';
 import unitUnder from './markers/pickUnit';
 import { OverlayMesh } from './overlay/overlayMesh';
 import { FIELD_OF_VIEW, Orbit, eye, sightFor } from './camera/orbit';
@@ -57,7 +58,13 @@ import YieldIcons from './yieldIcons';
 import { YieldMesh } from './yields';
 import { LoadedRig, loadModels, modelKey } from './models/loadModels';
 import { ClipRole } from './models/modelSet';
-import { Playing, RigFacts, poseFigures, rigFacts } from './markers/clips';
+import {
+  Playing,
+  RigFacts,
+  idlePhase,
+  poseFigures,
+  rigFacts,
+} from './markers/clips';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 
 /** What the stage has drawn, for the debug overlay. */
@@ -120,6 +127,13 @@ export interface Stage {
    */
   poseWalker?(id: string, role: ClipRole | null, seconds: number): void;
   /**
+   * The units marked on the squares `keys` (`x,y`) idling (plan 2.2), drawn with their models' rigged copies, each posed
+   *  as its idle clip has it `seconds` in, each stack its own way into it (`idlePhase`); every other marker drawn as it
+   *  stands. One whose model has no idle clip, or fading, is left as it is, and only a few start idling at a time
+   *  (`idleChanges`), the rest the next. Says whether any idles, or is still to start: if so, it's to be asked again on the next frame.
+   */
+  idle?(keys: ReadonlySet<string>, seconds: number): boolean;
+  /**
    * What the unit `marker` marks plays where it's drawn with its model's rigged copy (`RigFacts`), as a battle's paced
    *  for it (`clipPace`): nothing where its model has none, or isn't loaded.
    */
@@ -180,7 +194,8 @@ export interface Stage {
   stats(): StageStats;
   /**
    * Loads the set of models whose manifest is at `url` (`models/loadModels.ts`), to draw units with: `loaded` is told
-   *  of each model as it's ready, by an id of its own among every set's (`modelKey`), with the unit types it draws.
+   *  of each model as it's ready, by an id of its own among every set's (`modelKey`), with the unit types it draws, and
+   *  again once its rigged copy is, where it has one.
    *  Resolves once all have been tried, or rejects saying why there's none. A stage that draws no models has none.
    */
   loadModels?(
@@ -220,6 +235,16 @@ type Walking = Placed & {
   //  copies made afresh as they were.
   rig: LoadedRig | null;
   posed: { role: ClipRole | null; seconds: number } | null;
+};
+
+// A square's marker as the stage has it: what it marks, how solid it's drawn and with what materials of its own once
+//  it's faded, and, idling (`idle`), the rigged copy it plays its idle clip with, the original its copies are made from
+//  then, and how far ahead of the clock in it it is.
+type Marked = Placed & {
+  marker: TileMarker;
+  opacity?: number;
+  faded?: Faded;
+  idling?: { rig: LoadedRig; original: Object3D; phase: number };
 };
 
 export type StageFactory = (
@@ -416,7 +441,9 @@ export const createStage: StageFactory = (
     extent = ground.rows * ground.spacingV,
     poles = polesAt(extent),
     // What's marked on each square, and, once its unit's faded, how solid and with what materials of its own.
-    markers = new Map<string, Placed & { opacity?: number; faded?: Faded }>(),
+    markers = new Map<string, Marked>(),
+    // The squares whose stacks idle (`idle`), and how far into their clips, by the clock, they were last posed.
+    idlers = new Set<string>(),
     // The units walking, by their walk's id (`walks.ts`), and fighting, by their battle's (`battles.ts`), each drawn as
     //  its own marker, with no city; the way each faces, how solid it's drawn, and its own materials, once faded.
     walkers = new Map<string, Walking>(),
@@ -462,6 +489,7 @@ export const createStage: StageFactory = (
     clouds = new Clouds(water.texture(), ground),
     fog = new Fog(SKY, 30, 110);
 
+  let idleSeconds = 0;
   // The copies of the world drawn now, and their key, to tell when they change.
   let copies: [number, number][] = [[0, 0]],
     copiesKey = '0,0',
@@ -611,10 +639,62 @@ export const createStage: StageFactory = (
   // Every city's size and name it has had would be kept otherwise.
   const sweep = (): void => {
     if (kit.sweepDue) {
-      kit.sweep(
-        [...markers.values(), ...walkers.values()].flatMap(({ original }) =>
+      kit.sweep([
+        ...[...markers.values(), ...walkers.values()].flatMap(({ original }) =>
           original === undefined ? [] : [original]
-        )
+        ),
+        ...[...markers.values()].flatMap(({ idling }) =>
+          idling === undefined ? [] : [idling.original]
+        ),
+      ]);
+    }
+  };
+
+  // The rigged copy the unit `marker` marks idles with: its model's, where that has an idle clip.
+  const idleRig = (marker: TileMarker): LoadedRig | null => {
+    const model = marker.unit?.model,
+      rig = model === undefined ? null : kit.rigOf(model);
+
+    return rig !== null && rig.clips.has('idle') ? rig : null;
+  };
+
+  // A marker drawn idling, with its rig's copy, where it has one, made from its own original; or, for none, standing.
+  const drawIdling = (
+    placed: Marked,
+    rig: LoadedRig | null,
+    phase: number
+  ): void => {
+    const standing = placed.original!;
+
+    if (rig === null) {
+      placed.idling = undefined;
+      placed.make = (): Object3D => standing.clone();
+
+      return;
+    }
+
+    const original = markerOf(placed.marker, false, true);
+
+    placed.idling = { rig, original, phase };
+    placed.make = copyOf(original, true);
+  };
+
+  // A marker's copies made afresh, as it's drawn now, its old ones let go of, with their skeletons.
+  const redraw = (placed: Marked): void => {
+    placed.drawn.forEach((drawn) => {
+      markersGroup.remove(drawn);
+      letGoOfSkeletons(drawn);
+    });
+    placed.drawn = copiesOf(placed, markersGroup, markerCopies);
+  };
+
+  // An idling marker's figures posed as its idle clip has them `seconds` in, by the clock, its own way into it.
+  const poseIdling = (placed: Marked, seconds: number): void => {
+    const { idling } = placed;
+
+    if (idling !== undefined) {
+      placed.drawn.forEach((drawn) =>
+        poseFigures(drawn, idling.rig, 'idle', seconds + idling.phase, playing)
       );
     }
   };
@@ -716,12 +796,19 @@ export const createStage: StageFactory = (
         marker.drawn = copiesOf(marker, markersGroup, markerCopies);
       });
       walkers.forEach(pose);
-      // Posed as they were, mid-stride, not standing for a frame.
+      // Posed as they were, mid-stride, not standing for a frame; and those idling, as they were last posed.
       walkers.forEach(({ drawn, rig, posed }) => {
         if (rig !== null && posed !== null) {
           drawn.forEach((copy) =>
             poseFigures(copy, rig, posed.role, posed.seconds, playing)
           );
+        }
+      });
+      idlers.forEach((key) => {
+        const placed = markers.get(key);
+
+        if (placed !== undefined) {
+          poseIdling(placed, idleSeconds);
         }
       });
       puffs.forEach(shapePuff);
@@ -854,32 +941,84 @@ export const createStage: StageFactory = (
     },
     setMarker: (key, at, marker): void => {
       // Its geometries and materials are the kit's, shared by every marker, and let go by the kit's sweep: those it
-      //  faded with are its own.
+      //  faded with are its own, and the skeletons it idled with.
       const old = markers.get(key);
 
-      old?.drawn.forEach((drawn) => markersGroup.remove(drawn));
+      old?.drawn.forEach((drawn) => {
+        markersGroup.remove(drawn);
+        letGoOfSkeletons(drawn);
+      });
+
+      if (old?.idling !== undefined) {
+        letGoOfSkeletons(old.idling.original);
+      }
 
       if (old?.faded !== undefined) {
         unfade(old.faded);
       }
 
       markers.delete(key);
+      idlers.delete(key);
 
       if (marker === null) {
         return;
       }
 
       const original = markerOf(marker),
-        placed: Placed = {
+        placed: Marked = {
           at,
+          marker,
           make: () => original.clone(),
           drawn: [],
           original,
         };
 
+      // Idling, it idles on, as far into its clip as it was, where what it marks now can: not standing for a frame.
+      if (old?.idling !== undefined) {
+        drawIdling(placed, idleRig(marker), old.idling.phase);
+      }
+
       placed.drawn = copiesOf(placed, markersGroup, markerCopies);
       markers.set(key, placed);
+
+      if (placed.idling !== undefined) {
+        idlers.add(key);
+        poseIdling(placed, idleSeconds);
+      }
+
       sweep();
+    },
+    idle: (keys, seconds): boolean => {
+      const { stand, start, waiting } = idleChanges(
+        keys,
+        idlers,
+        (key) => {
+          const placed = markers.get(key);
+
+          return placed !== undefined && idleRig(placed.marker) !== null;
+        },
+        (key) => (markers.get(key)?.opacity ?? 1) < 1
+      );
+
+      idleSeconds = seconds;
+      stand.forEach((key) => {
+        const placed = markers.get(key)!;
+
+        letGoOfSkeletons(placed.idling!.original);
+        drawIdling(placed, null, 0);
+        redraw(placed);
+        idlers.delete(key);
+      });
+      start.forEach((key) => {
+        const placed = markers.get(key)!;
+
+        drawIdling(placed, idleRig(placed.marker), idlePhase(key));
+        redraw(placed);
+        idlers.add(key);
+      });
+      idlers.forEach((key) => poseIdling(markers.get(key)!, seconds));
+
+      return idlers.size > 0 || waiting;
     },
     setWalker: (id, marker): void => {
       const old = walkers.get(id);
@@ -1159,10 +1298,19 @@ export const createStage: StageFactory = (
         },
         (id, error) =>
           console.warn(`The 3D map's model ${modelKey(url, id)}:`, error),
-        // Its rigged copy, drawn for what walks (plan 2.2): not drawn again till something does.
-        (id, rig) => {
-          if (!disposed) {
-            kit.addRig(modelKey(url, id), rig);
+        // Its rigged copy, drawn for what walks, fights and idles (plan 2.2): the view's told again, as what stands
+        //  near the camera may idle now.
+        (id, rig, types) => {
+          const key = modelKey(url, id);
+
+          if (disposed) {
+            return;
+          }
+
+          kit.addRig(key, rig);
+
+          if (kit.rigOf(key) === rig) {
+            loaded(key, types);
           }
         }
       );
@@ -1179,8 +1327,17 @@ export const createStage: StageFactory = (
       overlays.forEach(({ geometry }) => geometry.dispose());
       overlays.clear();
       overlayMaterial.dispose();
-      markers.forEach(({ faded }) => faded !== undefined && unfade(faded));
+      markers.forEach(({ faded, drawn, idling }) => {
+        if (faded !== undefined) {
+          unfade(faded);
+        }
+
+        [...drawn, ...(idling === undefined ? [] : [idling.original])].forEach(
+          letGoOfSkeletons
+        );
+      });
       markers.clear();
+      idlers.clear();
       walkers.forEach(({ faded, drawn, original }) => {
         unfade(faded);
         [...drawn, ...(original === undefined ? [] : [original])].forEach(

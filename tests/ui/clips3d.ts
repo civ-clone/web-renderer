@@ -42,12 +42,21 @@ import {
 } from '@civ-clone/ui-map-3d/models/loadModels';
 import {
   FIGURE_STAGGER,
+  IDLE_SPREAD,
   LOOPED_ROLES,
   Playing,
   clipTime,
+  idlePhase,
   poseFigures,
   rigFacts,
 } from '@civ-clone/ui-map-3d/markers/clips';
+import {
+  IDLE_DISTANCE,
+  IDLE_DISTANCE_OUT,
+  IDLE_SWAPS,
+  idleChanges,
+  idleSquares,
+} from '@civ-clone/ui-map-3d/idling';
 import TintedMaterial, { ownerTint } from '@civ-clone/ui-map-3d/markers/tinted';
 import { copyOf, jointOf, letGoOfSkeletons } from '@civ-clone/ui-map-3d/stage';
 import { UnitMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
@@ -452,7 +461,7 @@ kit.addRig('partisan', rig);
   );
 
   expect(
-    'its parts are in its owner’s colour where they say, the same materials for every figure, drawn however far a clip takes them',
+    'its parts are in its owner’s colour where they say, the same materials for every figure, drawn only where they’re seen, with bounds of their own',
     [
       materials.every(
         ([plain, owner]) =>
@@ -469,10 +478,84 @@ kit.addRig('partisan', rig);
           plain === materials[0]![0] && owner === materials[0]![1]
       ),
       figures.every((figure) =>
-        meshesOf(figure).every(({ frustumCulled }) => !frustumCulled)
+        meshesOf(figure).every(
+          (mesh) =>
+            mesh.frustumCulled &&
+            (mesh as SkinnedMesh).boundingSphere !== null &&
+            (mesh as SkinnedMesh).boundingSphere !==
+              (figures[0]!.children[0] as SkinnedMesh).boundingSphere
+        )
       ),
     ],
     [true, true, true]
+  );
+
+  // Each part posed at every twentieth of a second of each clip, and as the model stands: where it reaches, in its own
+  //  space, as far as its bounds say it does. The fall lays the post flat, a post's length from where it stood, which
+  //  its bounds as the model stands wouldn't cover.
+  const posed = figures[1]!,
+    parts = meshesOf(posed) as SkinnedMesh[],
+    reach = (each: SkinnedMesh): number => {
+      const sphere = each.boundingSphere!,
+        geometry = each.geometry,
+        point = new Vector3();
+      let furthest = 0;
+
+      for (let i = 0; i < geometry.getAttribute('position').count; i++) {
+        each.getVertexPosition(i, point);
+        furthest = Math.max(
+          furthest,
+          point.distanceTo(sphere.center) - sphere.radius
+        );
+      }
+
+      return furthest;
+    },
+    playing = new WeakMap<Object3D, Playing>(),
+    outside: string[] = [];
+
+  rig.clips.forEach((clip, role) => {
+    for (let at = 0; at <= clip.duration; at += 0.05) {
+      poseFigures(posed, rig, role, at, playing);
+      posed.updateMatrixWorld(true);
+      parts.forEach((each, index) => {
+        if (reach(each) > 1e-6) {
+          outside.push(`${role} ${round(at)} part ${index}`);
+        }
+      });
+    }
+  });
+
+  poseFigures(posed, rig, 'die', 1.5, playing);
+  posed.updateMatrixWorld(true);
+
+  const lying = parts[0]!;
+
+  // Its bounds as the model stands, as three.js would work them out.
+  lying.geometry.computeBoundingSphere();
+
+  const standingBounds = lying.geometry.boundingSphere!,
+    pastStanding = (() => {
+      const point = new Vector3();
+      let furthest = 0;
+
+      for (let i = 0; i < lying.geometry.getAttribute('position').count; i++) {
+        lying.getVertexPosition(i, point);
+        furthest = Math.max(
+          furthest,
+          point.distanceTo(standingBounds.center) - standingBounds.radius
+        );
+      }
+
+      return furthest;
+    })();
+
+  poseFigures(posed, rig, null, 0, playing);
+
+  expect(
+    'its bounds cover every pose each of its clips takes it to, the fall laying it flat, past its bounds as it stands',
+    [outside, round(pastStanding) > 0.5],
+    [[], true]
   );
 
   // The model's own parts, made after the rig's: their own materials, not the rig's of the same part.
@@ -761,6 +844,115 @@ expect(
   ],
   [null, null, true, true]
 );
+
+// Which stacks idle: those near the camera, with it close in, on the screen or nearly, those idling going on a little
+//  further; a few start at a time, one fading left as it is; each its own way into its clip.
+{
+  // A world 40 squares across that repeats, its squares a unit apart, and every square on the screen but those whose
+  //  `x` is past the margin asked about, as a screen 10 squares wide round the focus would have them.
+  const centre = (x: number, y: number): [number, number] => [x + 0.5, y + 0.5],
+    period = { u: 40, v: null },
+    seenFrom =
+      (focusX: number) =>
+      (x: number, _y: number, margin: number): boolean => {
+        const apart = Math.abs(((x - focusX + 60) % 40) - 20);
+
+        return apart <= 5 - margin;
+      },
+    near = (
+      squares: string[],
+      distance: number,
+      was: string[] = [],
+      focusX = 10
+    ): string[] =>
+      [
+        ...idleSquares(
+          squares,
+          { distance, focus: [focusX + 0.5, 10.5] },
+          centre,
+          period,
+          new Set(was),
+          seenFrom(focusX)
+        ),
+      ].sort();
+
+  expect(
+    'with the camera close in, those within its reach of its focus idle, the short way round the world: not those further, nor off the screen',
+    [
+      near(['10,10', '15,10', '10,18', '10,19', '17,10', '1,10'], 5),
+      near(['38,10', '2,10'], 5, [], 0),
+    ],
+    [
+      ['10,10', '10,18', '15,10'],
+      ['2,10', '38,10'],
+    ]
+  );
+
+  expect(
+    'those idling go on further, and further off the screen',
+    [
+      near(['10,20', '17,10'], 5, ['10,20', '17,10']),
+      near(['10,21', '18,10'], 5, ['10,21', '18,10']),
+    ],
+    [['10,20', '17,10'], []]
+  );
+
+  expect(
+    'with the camera drawn back, none start idling; those idling stop once it’s drawn back further',
+    [
+      near(['10,10'], IDLE_DISTANCE),
+      near(['10,10'], IDLE_DISTANCE + 0.5),
+      near(['10,10'], IDLE_DISTANCE_OUT, ['10,10']),
+      near(['10,10'], IDLE_DISTANCE_OUT + 0.5, ['10,10']),
+    ],
+    [['10,10'], [], ['10,10'], []]
+  );
+
+  const changes = (
+      keys: string[],
+      idling: string[],
+      cannot: string[] = [],
+      fading: string[] = []
+    ) =>
+      idleChanges(
+        new Set(keys),
+        new Set(idling),
+        (key) => !cannot.includes(key),
+        (key) => fading.includes(key)
+      ),
+    many = ['1,1', '2,1', '3,1', '4,1', '5,1', '6,1'];
+
+  expect(
+    'those asked start, those no longer asked stand, those idling go on; one that can’t idle, or fading, is left as it is; a few start at a time, the rest waiting',
+    [
+      changes(
+        ['1,1', '2,1', '3,1', '6,1'],
+        ['2,1', '4,1', '5,1'],
+        ['3,1'],
+        ['5,1', '6,1']
+      ),
+      changes(many, []),
+      changes(many, many.slice(0, IDLE_SWAPS)),
+    ],
+    [
+      { stand: ['4,1'], start: ['1,1'], waiting: false },
+      { stand: [], start: many.slice(0, IDLE_SWAPS), waiting: true },
+      { stand: [], start: many.slice(IDLE_SWAPS), waiting: false },
+    ]
+  );
+
+  const phases = ['0,0', '1,0', '0,1', '12,34', '99,99'].map(idlePhase);
+
+  expect(
+    'each stack is its own way into its clip, the same each time',
+    [
+      phases.every((phase) => phase >= 0 && phase < IDLE_SPREAD),
+      new Set(phases.map(round)).size,
+      idlePhase('12,34') === phases[3],
+    ],
+    [true, phases.length, true]
+  );
+}
 
 if (failures.length > 0) {
   process.stderr.write(
