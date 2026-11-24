@@ -206,6 +206,11 @@ i18next.addResources('en', 'default', {
     'The city’s people cause pollution {{count}} step lower',
   'Civilopedia.effect.pollution_step_population_other':
     'The city’s people cause pollution {{count}} steps lower',
+  // An advance's, in all its player's cities (#1343).
+  'Civilopedia.effect.pollution_step_population_scope_player_one':
+    'In all your cities, people who cause pollution cause it {{count}} step lower',
+  'Civilopedia.effect.pollution_step_population_scope_player_other':
+    'In all your cities, people who cause pollution cause it {{count}} steps lower',
   'Civilopedia.effect.protects_from_lost_at_sea_units':
     'No {{unit}} of yours is ever lost at sea',
   'Civilopedia.effect.heals_nearby':
@@ -256,8 +261,10 @@ i18next.addResources('en', 'default', {
   'Civilopedia.effect.defence_bonus':
     'Units defending here: defense ×{{value}}',
   'Civilopedia.effect.converts_to': '{{improvement}} turns it into {{terrain}}',
-  'Civilopedia.effect.improvement_turns':
-    '{{improvement}} here: {{value}} turns of {{unit}} work',
+  'Civilopedia.effect.improvement_turns_one':
+    '{{improvement}} here: {{count}} turn of {{unit}} work',
+  'Civilopedia.effect.improvement_turns_other':
+    '{{improvement}} here: {{count}} turns of {{unit}} work',
   // The same, on a tile improvement's own page, for the squares it's on (#1272).
   'Civilopedia.effect.squares.improvement_yield':
     '+{{value}} {{yield}} on {{squares}}',
@@ -265,23 +272,51 @@ i18next.addResources('en', 'default', {
     '−{{value}} {{yield}} on {{squares}}',
   'Civilopedia.effect.squares.improvement_yield_percent':
     '+{{percent}}% {{yield}} on {{squares}}, rounded down',
-  'Civilopedia.effect.squares.improvement_turns':
-    '{{value}} turns of {{unit}} work on {{squares}}',
+  'Civilopedia.effect.squares.improvement_turns_one':
+    '{{count}} turn of {{unit}} work on {{squares}}',
+  'Civilopedia.effect.squares.improvement_turns_other':
+    '{{count}} turns of {{unit}} work on {{squares}}',
   'Civilopedia.effect.squares.converts_to':
     'On {{squares}}, turns the square into {{terrain}} instead',
   'Civilopedia.square.Land': 'any land square',
+  'Civilopedia.square.Water': 'any water square',
   // What a tile improvement does beyond its squares' yields (#1272), and what Pollution does (#621).
   'Civilopedia.effect.route_squares_one':
     'Land units move {{count}} square along it for each move',
   'Civilopedia.effect.route_squares_other':
     'Land units move {{count}} squares along it for each move',
   'Civilopedia.effect.route_free': 'Land units move along it for free',
+  // Civ1 v474.05's railroad: free from it onto a road too (#1339).
+  'Civilopedia.effect.route_free_road':
+    'Land units move along it for free, and from it onto a road',
   'Civilopedia.effect.removal_turns_one':
     '{{unit}} clean it up in {{count}} turn',
   'Civilopedia.effect.removal_turns_other':
     '{{unit}} clean it up in {{count}} turns',
   'Civilopedia.effect.tile_yield_halved':
     'Halves the {{yield}} of its square, rounded up',
+  // The pages still empty after #1272 (#621): what Future Technology needs, and what leads to Anarchy.
+  'Civilopedia.effect.needs_every_other_advance':
+    'Can be discovered once every other advance is known, and again and again after that',
+  'Civilopedia.effect.anarchy_follows_chosen':
+    'Follows a revolution, for {{min}} to {{max}} turns',
+  'Civilopedia.effect.anarchy_follows_civil-disorder':
+    'Follows civil disorder that brings down a Democracy, for {{min}} to {{max}} turns',
+  // Only a city's pollution above this risks it (#1339).
+  'Civilopedia.effect.pollution_tolerance':
+    'A city risks it only when its shields and people together cause more than {{value}} pollution: the city screen shows only what’s beyond that',
+  // Civilization II's Solar Plant takes that allowance away with the pollution from shields.
+  'Civilopedia.effect.pollution_tolerance_removed':
+    'In its city there’s no allowance of {{value}}: any pollution from the city’s people risks Pollution',
+  // What else Civilization II's Fortress and Airbase do (#1343).
+  'Civilopedia.effect.spares_stack':
+    'When a unit defending here loses, the other units here survive',
+  'Civilopedia.effect.no_bomber_cover':
+    'A stack with a bomber here loses the cover that keeps all but fighters from attacking it',
+  'Civilopedia.effect.paradrop_from': 'Paratroopers can drop from here',
+  'Civilopedia.effect.no_wear': 'A {{unit}} here doesn’t wear down',
+  'Civilopedia.effect.not_away':
+    'Your {{unit}} on it within {{radius}} squares of one of your cities don’t count as away, so cause no unhappiness',
   // Civilization II's tile improvements (#1272).
   'Civilopedia.effect.square_defence_multiplier':
     'Defense ×{{value}} for {{unit}} here, outside a city, in place of being fortified',

@@ -18,8 +18,13 @@ import RuleRegistry from '@civ-clone/core-rule/RuleRegistry';
 import Build from '@civ-clone/core-city-build/Rules/Build';
 import { defaultGame } from '@civ-clone/core-game/defaultGame';
 import civilopediaData, {
+  effectsOf,
+  onSquaresTogether,
   unavailableBuildItems,
 } from '@civ-clone/ui-worker-client/lib/civilopedia';
+import { Desert, Grassland } from '@civ-clone/civ1-world/Terrains';
+import { Food, Production } from '@civ-clone/civ1-world/Yields';
+import { Road } from '@civ-clone/civ1-world/TileImprovements';
 import { CivilopediaEntry } from '@civ-clone/ui-protocol/civilopedia';
 import requirementsData from '@civ-clone/ui-worker-client/lib/requirements';
 import {
@@ -76,9 +81,9 @@ const check = async (): Promise<void> => {
     ).filter((key) => !byKey.has(key) && !baseClasses.includes(key)),
     []
   );
-  // Bar two that no requirement entry describes yet, which the page says it knows nothing more about: Future
-  //  Technology's need for every other advance is a hand-written rule, and Anarchy needs nothing. Ocean says what it
-  //  gives and costs (#620), and Pollution what it does, what causes it and what cleans it up (#621).
+  // Future Technology's need for every other advance is a hand-written rule, which says it, and Anarchy says what leads
+  //  to it (#621). Ocean says what it gives and costs (#620), and Pollution what it does, what causes it and what
+  //  cleans it up.
   expect(
     'and every entry says something: a requirement, something it leads to, numbers, a cost, what it does, or tile improvements that go on it',
     entries
@@ -94,7 +99,7 @@ const check = async (): Promise<void> => {
           )
       )
       .map((entry) => entry.key),
-    ['FutureTechnology', 'Anarchy']
+    []
   );
   expect(
     'each section has entries',
@@ -546,6 +551,36 @@ const check = async (): Promise<void> => {
     ])
   );
   expect(
+    'a Mine gives 1 Production on Desert and Mountains, and 3 on Hills, in 5 or 10 turns',
+    [
+      improving('Mine', 'improvement_yield'),
+      improving('Mine', 'improvement_turns'),
+    ],
+    [
+      [
+        [1, ['Production'], ['Desert', 'Mountains'], []],
+        [3, ['Production'], ['Hills'], []],
+      ],
+      [
+        [5, [], ['Desert'], []],
+        [10, [], ['Hills', 'Mountains'], []],
+      ],
+    ]
+  );
+  expect(
+    'Future Technology says it needs every other advance, and Anarchy what leads to it and for how long (#621)',
+    [
+      entry('FutureTechnology')?.effects.map(({ type }) => type),
+      entry('Anarchy')?.effects.map(({ type, cause, min, max }) =>
+        [type, cause, min, max].join(' ')
+      ),
+    ],
+    [
+      ['needs_every_other_advance'],
+      ['anarchy_follows chosen 1 4', 'anarchy_follows civil-disorder 2 8'],
+    ]
+  );
+  expect(
     'Irrigation turns Jungle and Swamp into Grassland, and Forest into Plains',
     improving('Irrigation', 'converts_to'),
     [
@@ -574,11 +609,150 @@ const check = async (): Promise<void> => {
     [
       'caused_by  population ',
       'caused_by  production ',
+      'pollution_tolerance   20',
       'removal_turns   4',
       'tile_yield_halved Food  ',
       'tile_yield_halved Production  ',
       'tile_yield_halved Trade  ',
     ]
+  );
+
+  // How a tile improvement's lines come together (#1339): the same line from two rules names its square once, whatever
+  //  order its fields or its lists came in; each yield's lines stay together; and each square's steps stand on
+  //  their own, so one square's next step doesn't hide another's.
+  const keyed = (effects: { [field: string]: unknown }[]) =>
+    effects.map((effect) =>
+      Object.fromEntries(
+        Object.entries(effect).map(([field, value]) => [
+          field,
+          Array.isArray(value)
+            ? value.map((item) => (item as Function).name)
+            : typeof value === 'function'
+            ? value.name
+            : value,
+        ])
+      )
+    );
+
+  expect(
+    'the same line from two rules names its square once, whatever the order of its fields and lists',
+    keyed(
+      onSquaresTogether([
+        {
+          type: 'improvement_turns',
+          value: 2,
+          with: [Gunpowder, BridgeBuilding],
+          squares: Desert,
+        },
+        {
+          with: [BridgeBuilding, Gunpowder],
+          value: 2,
+          type: 'improvement_turns',
+          squares: Desert,
+        },
+        {
+          type: 'improvement_turns',
+          value: 2,
+          with: [Gunpowder, BridgeBuilding],
+          squares: Grassland,
+        },
+      ])
+    ),
+    [
+      {
+        type: 'improvement_turns',
+        value: 2,
+        with: ['Gunpowder', 'BridgeBuilding'],
+        squares: ['Desert', 'Grassland'],
+      },
+    ]
+  );
+  expect(
+    "each yield's lines together, by value",
+    keyed(
+      onSquaresTogether([
+        { type: 'improvement_yield', yield: Food, value: 2, squares: Desert },
+        {
+          type: 'improvement_yield',
+          yield: Production,
+          value: 1,
+          squares: Desert,
+        },
+        {
+          type: 'improvement_yield',
+          yield: Food,
+          value: 1,
+          squares: Grassland,
+        },
+      ])
+    ).map(({ yield: yieldType, value }) => [yieldType, value]),
+    [
+      ['Food', 1],
+      ['Food', 2],
+      ['Production', 1],
+    ]
+  );
+  expect(
+    "one square's next step doesn't hide another's",
+    effectsOf(
+      Road,
+      [
+        {
+          type: 'improvement_yield',
+          subject: Desert,
+          improvement: Road,
+          yield: Food,
+          value: 1,
+          from: BridgeBuilding,
+          until: Gunpowder,
+        },
+        {
+          type: 'improvement_yield',
+          subject: Grassland,
+          improvement: Road,
+          yield: Food,
+          value: 2,
+          from: Gunpowder,
+        },
+      ],
+      new Set(),
+      { knows: () => false, difficulty: null }
+    ).map(({ value, squares }) => [
+      value,
+      (squares as { class: string }[]).map(({ class: key }) => key),
+    ]),
+    [
+      [1, ['Desert']],
+      [2, ['Grassland']],
+    ]
+  );
+
+  // A rule set's own kind of Road gets the lines that name Road (#1339), and an `improvement` that isn't a class (an
+  //  arrow function) names nothing, without throwing.
+  class TollRoad extends Road {}
+
+  expect(
+    "a kind of Road has Road's lines, and a non-class improvement names nothing",
+    effectsOf(TollRoad, [
+      {
+        type: 'improvement_yield',
+        subject: Desert,
+        improvement: Road,
+        yield: Food,
+        value: 1,
+      },
+      {
+        type: 'improvement_yield',
+        subject: Grassland,
+        improvement: () => Road,
+        yield: Food,
+        value: 2,
+      },
+    ]).map(({ value, squares }) => [
+      value,
+      (squares as { class: string }[]).map(({ class: key }) => key),
+    ]),
+    [[1, ['Desert']]]
   );
 
   // In a game, Barracks say what applies now (#1310): with Gunpowder, 1 gold until Combustion, then 2.

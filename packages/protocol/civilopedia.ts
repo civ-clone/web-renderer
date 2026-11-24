@@ -58,7 +58,11 @@ export type CivilopediaEffectValue =
   | CivilopediaEffectValue[]
   | { [field: string]: CivilopediaEffectValue };
 
-/** One effect, as a rule describes it (`@civ-clone/core-rule/Description`): its `type` says what its fields mean. */
+/**
+ * One effect, as a rule describes it (`@civ-clone/core-rule/Description`): its `type` says what its fields mean. The
+ *  worker sets `squares` on a tile improvement's effect on the squares it's on (#1272), so no rule's description may
+ *  use `squares` for anything else (#1339).
+ */
 export interface CivilopediaEffect {
   type: string;
   [field: string]: CivilopediaEffectValue;

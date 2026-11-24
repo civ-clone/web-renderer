@@ -816,6 +816,66 @@ const run = async (): Promise<void> => {
       ],
     });
 
+  // The pages still empty after #1272 (#621), and the rest of a Fortress and an Airbase (#1343).
+  const anarchy = entry('Anarchy', 'government', {
+    effects: [
+      { type: 'anarchy_follows', cause: 'chosen', min: 1, max: 4 },
+      { type: 'anarchy_follows', cause: 'civil-disorder', min: 2, max: 8 },
+      { type: 'needs_every_other_advance' },
+      { type: 'spares_stack' },
+      { type: 'no_wear', unit: { class: 'Helicopter', name: 'Helicopter' } },
+      {
+        type: 'not_away',
+        radius: 3,
+        unit: { class: 'Land', name: 'Land', entry: false },
+      },
+      { type: 'pollution_tolerance', value: 20 },
+      { type: 'pollution_tolerance_removed', value: 20 },
+      { type: 'no_bomber_cover' },
+      { type: 'paradrop_from' },
+      {
+        type: 'pollution_step',
+        value: 1,
+        source: 'population',
+        scope: 'player',
+      },
+      {
+        type: 'improvement_yield_percent',
+        yield: { class: 'Food', name: 'Food', entry: false },
+        value: 0.5,
+        squares: [{ class: 'Water', name: 'Water', entry: false }],
+      },
+      { type: 'route_free', onto: 'road' },
+      {
+        type: 'improvement_turns',
+        value: 1,
+        unit: settlers,
+        squares: [{ class: 'Desert', name: 'Desert', entry: true }],
+      },
+    ],
+  });
+
+  expect(
+    'Anarchy, Future Technology and the rest say what they do, each in its own words',
+    text(entryHtml(anarchy, data))
+      .split('What it does')[1]
+      ?.split('Requirements')[0],
+    '+50% Food on any water square, rounded down' +
+      'Follows a revolution, for 1 to 4 turns' +
+      'Follows civil disorder that brings down a Democracy, for 2 to 8 turns' +
+      'Can be discovered once every other advance is known, and again and again after that' +
+      'When a unit defending here loses, the other units here survive' +
+      'A Helicopter here doesn’t wear down' +
+      'Your land units on it within 3 squares of one of your cities don’t count as away, so cause no unhappiness' +
+      'A city risks it only when its shields and people together cause more than 20 pollution: the city screen shows only what’s beyond that' +
+      'In its city there’s no allowance of 20: any pollution from the city’s people risks Pollution' +
+      'A stack with a bomber here loses the cover that keeps all but fighters from attacking it' +
+      'Paratroopers can drop from here' +
+      'In all your cities, people who cause pollution cause it 1 step lower' +
+      'Land units move along it for free, and from it onto a road' +
+      '1 turn of Settlers work on Desert'
+  );
+
   expect(
     "Civilization II's tile improvements say what they do",
     text(entryHtml(fortress, data))
