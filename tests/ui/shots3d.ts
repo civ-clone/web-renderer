@@ -219,14 +219,7 @@ expect(
       0.13
     ),
     fired = (falls: number | null) =>
-      shotsFired(
-        volleys,
-        [
-          { at: 0.4, joint: 'muzzle', kind: 'bullet' },
-          { at: 1, joint: 'muzzle', kind: 'bullet' },
-        ],
-        falls
-      ).map(({ figure, shot }) => [figure, shot]);
+      shotsFired(volleys, falls).map(({ figure, shot }) => [figure, shot]);
 
   expect(
     'won, every shot’s fired; lost, falling at the blow, each figure’s first volley, before it, and none of its second, after',

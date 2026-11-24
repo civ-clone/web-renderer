@@ -7,14 +7,15 @@
 import { ClipShot, ShotKind } from './models/modelSet';
 
 /**
- * A figure's shot in a clip: the figure, which of the clip's shots, the node it leaves, when, in seconds in, and what
- *  it is.
+ * A figure's shot in a clip: the figure, which of the clip's shots, the node it leaves, when, in seconds in, the time
+ *  the clip gives it (the first figure's), and what it is.
  */
 export type ShotTime = {
   figure: number;
   shot: number;
   joint: string;
   leaves: number;
+  at: number;
   kind: ShotKind;
 };
 
@@ -80,25 +81,23 @@ export const shotTimes = (
         shot,
         joint,
         leaves: at + figure * stagger,
+        at,
         kind: kindOf({ kind }),
       }))
     )
     .sort((a, b) => a.leaves - b.leaves);
 
 /**
- * Of the times of a clip's shots, `shots` (`shotTimes`), those its figures fire: all of them, but where they fall at
- *  the blow, `falls` seconds into the clip, as an attacker that's lost does. Then only those each figure fires before
- *  it falls, each falling as far behind the one before as it fires (`FIGURE_STAGGER`): those its clip has before the
- *  blow, by the time the clip gives each.
+ * Of a clip's shots' times (`shotTimes`), those its figures fire: all of them, but where they fall at the blow, `falls`
+ *  seconds into the clip, as an attacker that's lost does. Then only those each figure fires before it falls, each
+ *  falling as far behind the one before as it fires (`FIGURE_STAGGER`): those its clip has before the blow, by the
+ *  time the clip gives each.
  */
 export const shotsFired = (
   times: readonly ShotTime[],
-  shots: readonly ClipShot[],
   falls: number | null
 ): ShotTime[] =>
-  falls === null
-    ? [...times]
-    : times.filter(({ shot }) => (shots[shot]?.at ?? Infinity) < falls);
+  falls === null ? [...times] : times.filter(({ at }) => at < falls);
 
 /**
  * Where the shot of figure `figure` of `figures` lands, going from `from` to `target`: a little to one side of it or

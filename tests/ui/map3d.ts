@@ -67,7 +67,7 @@ import {
   yieldIconFrom,
   prepareMap3D,
 } from '@civ-clone/ui-game/lib/map3d';
-import { Stage } from '@civ-clone/ui-map-3d/stage';
+import { FLASH_SIZE, Stage } from '@civ-clone/ui-map-3d/stage';
 import { movingKeys } from '@civ-clone/ui-client/lib/unitActionKeys';
 import { YieldMesh, yieldIconSize } from '@civ-clone/ui-map-3d/yields';
 import {
@@ -257,7 +257,7 @@ const staged: string[] = [],
   walkersBefore = new Set<string>(),
   // What each shot was last drawn as, and every way it pointed; and each puff's size and whether it flashed.
   shotLooks = new Map<string, { kind: string; headings: number[][] }>(),
-  puffLooks = new Map<string, { size: number; flash: boolean }>(),
+  puffLooks = new Map<string, { size: number; flash: number | null }>(),
   jointsAsked: [string, number, string][] = [],
   // Each time the stage was asked which units idle: the squares, in order, and how far in, by the clock; and whether it
   //  says some do, as a stage whose models have idle clips would.
@@ -352,7 +352,7 @@ const staged: string[] = [],
       wakesDrawn.set(id, { at, corners: shape.length / 3 });
       wakesEver.add(id);
     },
-    puff: (id, at, through = 0, size = 1, flash = false) => {
+    puff: (id, at, through = 0, size = 1, flash = null) => {
       if (at === null) {
         puffs.delete(id);
 
@@ -4634,7 +4634,7 @@ expect(
   repatched([1, 1, []], [2, 1, []]);
 
   expect(
-    'a bullet’s drawn as one, straight, from the node its clip names, its smoke and flash a muzzle’s, landing as quick as a bullet flies, its puff a bullet’s, the battle over once they are; leaving and landing between frames, its smoke’s still drawn; a shell flies slower, its burst flashing; a squad that loses fires every bullet before it falls, none after; twice as quick, a bullet flies half as long',
+    'a bullet’s drawn as one, straight, from the node its clip names, its smoke a muzzle’s and its flash at the muzzle, landing as quick as a bullet flies, its puff a bullet’s, the battle over once they are; leaving and landing between frames, its smoke’s still drawn; a shell flies slower, its burst flashing on the ground; a squad that loses fires every bullet before it falls, none after; twice as quick, a bullet flies half as long',
     [
       bullet.kind,
       [bullet.straight, bullet.level],
@@ -4661,16 +4661,21 @@ expect(
       'bullet',
       [true, true],
       ['muzzle'],
-      [{ size: SHOT_LOOKS.bullet.muzzle, flash: true }],
-      [{ size: SHOT_LOOKS.bullet.hit, flash: false }],
+      [{ size: SHOT_LOOKS.bullet.muzzle, flash: 0 }],
+      [{ size: SHOT_LOOKS.bullet.hit, flash: null }],
       true,
       0,
       [
         null,
-        [{ size: SHOT_LOOKS.bullet.muzzle, flash: true }],
-        [{ size: SHOT_LOOKS.bullet.hit, flash: false }],
+        [{ size: SHOT_LOOKS.bullet.muzzle, flash: 0 }],
+        [{ size: SHOT_LOOKS.bullet.hit, flash: null }],
       ],
-      ['shell', [{ size: SHOT_LOOKS.shell.hit, flash: true }], false, false],
+      [
+        'shell',
+        [{ size: SHOT_LOOKS.shell.hit, flash: FLASH_SIZE }],
+        false,
+        false,
+      ],
       true,
       [3, 0, ['die after fight'], 3],
       [3, 6],

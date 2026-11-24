@@ -718,7 +718,7 @@ kit.addRig('partisan', rig);
     [
       roles('die', 0.1, { role: 'move', seconds: 0.3 }),
       roles('die', 0.1),
-      roles('move', 0, { role: 'die', seconds: 0 }),
+      roles('move', -0.2, { role: 'die', seconds: 0 }),
     ],
     [
       squad.map((_, index) =>
@@ -727,6 +727,33 @@ kit.addRig('partisan', rig);
       squad.map(() => 'die'),
       squad.map(() => 'move'),
     ]
+  );
+
+  // The same figures posed on, frame after frame: the second still walking, a little further on in its walk than the
+  //  first would be, then falling once its own time in the fall has come, its walk stopped and its arm put back.
+  const onward = new WeakMap<Object3D, Playing>(),
+    second = asked.getObjectsByProperty('name', RIG_FIGURE)[1]!,
+    bone = (name: string) => second.getObjectByName(name),
+    part = (to: Quaternion, share: number) => still.clone().slerp(to, share);
+
+  poseFigures(asked, rig, 'die', 0.1, onward, { role: 'move', seconds: 0.3 });
+
+  const walking = [
+    onward.get(second)?.role,
+    turned(bone('arm'), part(quarter, (0.3 + FIGURE_STAGGER) / 0.5)),
+  ];
+
+  poseFigures(asked, rig, 'die', 0.3, onward, { role: 'move', seconds: 0.5 });
+
+  expect(
+    'posed on, a figure whose own time hasn’t come walks, as far on as it would; once it has, it falls as far in as its own time says, its walk stopped',
+    [
+      walking,
+      onward.get(second)?.role,
+      turned(bone('arm'), still),
+      turned(bone('hips'), part(quarter, (0.3 - FIGURE_STAGGER) / 1.5)),
+    ],
+    [['move', true], 'die', true, true]
   );
 }
 

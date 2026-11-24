@@ -22,7 +22,7 @@ import MapRenderer from '@civ-clone/ui-map/MapRenderer';
 import type { MapHeading } from '@civ-clone/ui-client/lib/unitActionKeys';
 import groundDirections from './layouts/directions';
 import World from '@civ-clone/ui-map/components/World';
-import { Stage, StageFactory, createStage } from './stage';
+import { FLASH_SIZE, Stage, StageFactory, createStage } from './stage';
 import { ClipRole, ShotKind } from './models/modelSet';
 import { RigFacts, STRIDE } from './markers/clips';
 import {
@@ -981,7 +981,6 @@ export class MapView3D implements MapRenderer {
         // Lost, falling at the blow, only those its figures fire before they fall.
         times: shotsFired(
           shotTimes(shots, attackerFacts.figures, attackerFacts.stagger),
-          shots,
           winner !== 'attacker' && pace.clips.die
             ? (pace.reach / 1000) * pace.clips.rate
             : null
@@ -1559,7 +1558,7 @@ export class MapView3D implements MapRenderer {
 
         if (leaving !== false && leaving < 1) {
           this.#puffs.add(muzzle);
-          this.#stage.puff(muzzle, from, leaving, look.muzzle, true);
+          this.#stage.puff(muzzle, from, leaving, look.muzzle, 0);
           puffed.add(muzzle);
         }
 
@@ -1581,7 +1580,13 @@ export class MapView3D implements MapRenderer {
 
         if (landed < 1) {
           this.#puffs.add(hit);
-          this.#stage.puff(hit, to, landed, look.hit, look.burst);
+          this.#stage.puff(
+            hit,
+            to,
+            landed,
+            look.hit,
+            look.burst ? FLASH_SIZE : null
+          );
           puffed.add(hit);
         }
 

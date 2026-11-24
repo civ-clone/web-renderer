@@ -175,15 +175,16 @@ export interface Stage {
   /**
    * A puff of smoke (`id`, `markers/puff.ts`) where a unit fell in battle, or a shot left a muzzle or landed, bursting
    *  from `at` (`u`, height, `v`, on the world's own copy), `through` its time from 0 to 1, `size` times a fallen
-   *  unit's, and with a `flash` at its start, a muzzle's or a shell's burst; drawn at every copy of the world in sight.
-   *  `null` takes it away.
+   *  unit's, and with a flash at its start, a muzzle's or a shell's burst, its middle `flash` over where it bursts from
+   *  (as big as the puff is: `FLASH_SIZE` sits it on the ground there), or none; drawn at every copy of the world in
+   *  sight. `null` takes it away.
    */
   puff(
     id: string,
     at: readonly [number, number, number] | null,
     through?: number,
     size?: number,
-    flash?: boolean
+    flash?: number | null
   ): void;
   /**
    * A ship's wake (`id`, `wakes.ts`): the foam `shape` says (`wakeShape`), from `at` (`u`, height, `v`, on the world's
@@ -276,6 +277,9 @@ export const seedOf = (id: string): number => {
 
   return (hash >>> 0) % 100000;
 };
+
+/** How big a puff's flash is as it begins, as far from its middle to its edge, as big as a fallen unit's puff is. */
+export const FLASH_SIZE = 0.07;
 
 /** The name of a puff's flash (`Stage#puff`), a muzzle's or a shell's burst. */
 export const PUFF_FLASH = 'flash';
@@ -486,7 +490,12 @@ export const createStage: StageFactory = (
     //  and whether it flashes.
     puffs = new Map<
       string,
-      Placed & { through: number; seed: number; size: number; flash: boolean }
+      Placed & {
+        through: number;
+        seed: number;
+        size: number;
+        flash: number | null;
+      }
     >(),
     // What every puff's blobs are made of: one shape, and two greys.
     puffShape = new IcosahedronGeometry(1, 1),
@@ -712,6 +721,7 @@ export const createStage: StageFactory = (
     through: number;
     seed: number;
     size: number;
+    flash: number | null;
   }): void => {
     const blobs = puffAt(puff.through, puff.seed),
       flash = Math.max(0, 1 - puff.through * 5);
@@ -719,10 +729,10 @@ export const createStage: StageFactory = (
     puff.drawn.forEach((copy) => {
       copy.scale.setScalar(Math.max(puff.size, 1e-4));
       copy.children.forEach((part, index) => {
-        // Half its own height up, so a shell's, where it lands, isn't half in the ground.
+        // As high over where it bursts from as it's asked: a muzzle's at it, a burst's on the ground.
         if (part.name === PUFF_FLASH) {
-          part.position.set(0, 0.035, 0);
-          part.scale.setScalar(Math.max(0.07 * flash, 1e-4));
+          part.position.set(0, puff.flash ?? 0, 0);
+          part.scale.setScalar(Math.max(FLASH_SIZE * flash, 1e-4));
           part.visible = flash > 0;
 
           return;
@@ -1341,7 +1351,7 @@ export const createStage: StageFactory = (
         drawn.position.set(at[0] + offsetU, at[1], at[2] + offsetV);
       });
     },
-    puff: (id, at, through = 0, size = 1, flash = false): void => {
+    puff: (id, at, through = 0, size = 1, flash = null): void => {
       const old = puffs.get(id);
 
       if (at === null) {
@@ -1367,7 +1377,7 @@ export const createStage: StageFactory = (
               group.add(new Mesh(puffShape, puffGreys[shade]))
             );
 
-            if (flash) {
+            if (flash !== null) {
               const glow = new Mesh(flashShape, flashGlow);
 
               glow.name = PUFF_FLASH;
