@@ -4705,15 +4705,22 @@ expect(
   patch([1, 1, []], [1, 2, [walker]]);
   runFrames(1);
 
-  const toldInOrder = [...walkers.keys()].map(kind).sort();
+  const toldInOrder = [
+    [...walkers.keys()].map(kind).sort(),
+    // What's drawn falling is what fell in the first: the one unit, not the second's too, its blow told first.
+    [...walkers.entries()]
+      .filter(([id]) => kind(id) === 'battle-fallen')
+      .map(([, marker]) => [marker.unit?.id, marker.unit?.count]),
+    unitOn(2, 1),
+  ];
 
   runFrames();
   repatched([1, 2, []], [2, 1, []]);
 
   expect(
-    'attacking a square twice, a step just after the first blow, before a frame’s told it: its loser’s drawn falling, the walk drawn, the second over',
+    'attacking a square twice, a step just after the first blow, before a frame’s told it: its loser’s drawn falling, alone, its blow told first; the walk drawn; the second over, the square empty',
     toldInOrder,
-    ['battle-fallen', 'walk']
+    [['battle-fallen', 'walk'], [['Unit-R', 1]], null]
   );
 
   // Stepping on right after its blow, a squad's bottles still in flight land, each bursting where it lands, and the
