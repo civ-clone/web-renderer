@@ -36,7 +36,11 @@ import {
   RIG_FIGURE,
   drawMarker,
 } from '@civ-clone/ui-map-3d/markers/drawMarker';
-import { readModelManifest } from '@civ-clone/ui-map-3d/models/modelSet';
+import {
+  RiggedModel,
+  SHOT_KINDS,
+  readModelManifest,
+} from '@civ-clone/ui-map-3d/models/modelSet';
 import {
   LoadedModel,
   LoadedRig,
@@ -61,6 +65,7 @@ import {
   idleSquares,
 } from '@civ-clone/ui-map-3d/idling';
 import TintedMaterial, { ownerTint } from '@civ-clone/ui-map-3d/markers/tinted';
+import { shotTimes } from '@civ-clone/ui-map-3d/shots';
 import { copyOf, jointOf, letGoOfSkeletons } from '@civ-clone/ui-map-3d/stage';
 import { UnitMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
 import { formation } from '@civ-clone/ui-map-3d/markers/figures';
@@ -196,8 +201,20 @@ const round = (value: number) => Math.round(value * 10000) / 10000,
       rigOf((json) => (json.models.partisan.rigged.shots.fight[0].joint = '')),
       // Shots in a role it names no clip for.
       rigOf((json) => delete json.models.partisan.rigged.clips.fight),
+      // A shot of a kind the map doesn't draw.
+      rigOf(
+        (json) => (json.models.partisan.rigged.shots.fight[0].kind = 'laser')
+      ),
     ],
-    Array.from({ length: 15 }, () => 'dropped')
+    Array.from({ length: 16 }, () => 'dropped')
+  );
+
+  expect(
+    'a shot says what it is, of the kinds the map draws',
+    SHOT_KINDS.map((kind) =>
+      rigOf((json) => (json.models.partisan.rigged.shots.fight[0].kind = kind))
+    ).map((rigged) => (rigged as RiggedModel).shots?.fight?.[0]?.kind),
+    [...SHOT_KINDS]
   );
 }
 
@@ -354,6 +371,64 @@ const rigged = (armature: Group | null = null): LoadedRig => {
       'models/rigged/partisan.glb: no clip stand',
       `models/rigged/partisan.glb: clip walk moves a node it can't name (${made.scene.uuid}x.quaternion)`,
     ]
+  );
+
+  // What a shot is, as its manifest says, kept as it's read, loaded, told of a battle and timed.
+  const read = readModelManifest({
+      schema: 1,
+      kind: 'models',
+      id: 'bows',
+      name: 'Bows',
+      licence: {
+        name: 'CC0 1.0',
+        url: 'https://creativecommons.org/publicdomain/zero/1.0/',
+      },
+      credits: [
+        {
+          work: 'Archer',
+          author: 'dom111',
+          url: 'https://github.com/civ-clone/models-realistic-cc0',
+          licence: {
+            name: 'CC0 1.0',
+            url: 'https://creativecommons.org/publicdomain/zero/1.0/',
+          },
+        },
+      ],
+      scale: 0.1,
+      models: {
+        archer: {
+          file: 'models/archer.glb',
+          rigged: {
+            file: 'models/rigged/archer.glb',
+            clips: { move: 'walk', die: 'fall' },
+            shots: { move: [{ at: 0.25, joint: 'arm', kind: 'arrow' }] },
+          },
+        },
+      },
+      names: { unit: { Archers: 'archer' } },
+    }),
+    archer = typeof read === 'string' ? undefined : read.models.archer?.rigged,
+    loaded =
+      archer === undefined
+        ? undefined
+        : clipsOf(
+            { animations: [...made.clips.values()], scene: made.scene },
+            archer
+          ),
+    facts =
+      loaded === undefined
+        ? undefined
+        : rigFacts({ ...made, clips: loaded.clips, shots: loaded.shots }, 2);
+
+  expect(
+    'what a shot is, as its manifest says, is kept as it’s read, loaded, told of a battle and timed',
+    [
+      archer?.shots?.move?.[0]?.kind,
+      loaded?.shots.get('move')?.[0]?.kind,
+      facts?.clips.move?.shots[0]?.kind,
+      shotTimes(facts?.clips.move?.shots ?? [], 2, 0.1).map(({ kind }) => kind),
+    ],
+    ['arrow', 'arrow', 'arrow', ['arrow', 'arrow']]
   );
 }
 
@@ -618,6 +693,67 @@ kit.addRig('partisan', rig);
       notAsked.children.length,
     ],
     [formation(look.squad).map(() => RIG_FIGURE), false, model.parts.length]
+  );
+
+  // A clip played once, each figure a little behind the one before: one whose own time hasn't come plays what it was
+  //  playing till it does, where it's told what; told nothing, it holds the clip's start. A clip that loops has no
+  //  such wait.
+  const roles = (
+      role: 'die' | 'move',
+      seconds: number,
+      before?: { role: 'move' | 'die'; seconds: number }
+    ) => {
+      const playing = new WeakMap<Object3D, Playing>();
+
+      poseFigures(asked, rig, role, seconds, playing, before);
+
+      return asked
+        .getObjectsByProperty('name', RIG_FIGURE)
+        .map((figure) => playing.get(figure)?.role);
+    },
+    squad = formation(look.squad);
+
+  expect(
+    'in a clip played once, a figure whose own time hasn’t come plays what it was, where it’s told; told nothing, it holds the clip’s start; in one that loops, none waits',
+    [
+      roles('die', 0.1, { role: 'move', seconds: 0.3 }),
+      roles('die', 0.1),
+      roles('move', -0.2, { role: 'die', seconds: 0 }),
+    ],
+    [
+      squad.map((_, index) =>
+        0.1 - index * FIGURE_STAGGER < 0 ? 'move' : 'die'
+      ),
+      squad.map(() => 'die'),
+      squad.map(() => 'move'),
+    ]
+  );
+
+  // The same figures posed on, frame after frame: the second still walking, a little further on in its walk than the
+  //  first would be, then falling once its own time in the fall has come, its walk stopped and its arm put back.
+  const onward = new WeakMap<Object3D, Playing>(),
+    second = asked.getObjectsByProperty('name', RIG_FIGURE)[1]!,
+    bone = (name: string) => second.getObjectByName(name),
+    part = (to: Quaternion, share: number) => still.clone().slerp(to, share);
+
+  poseFigures(asked, rig, 'die', 0.1, onward, { role: 'move', seconds: 0.3 });
+
+  const walking = [
+    onward.get(second)?.role,
+    turned(bone('arm'), part(quarter, (0.3 + FIGURE_STAGGER) / 0.5)),
+  ];
+
+  poseFigures(asked, rig, 'die', 0.3, onward, { role: 'move', seconds: 0.5 });
+
+  expect(
+    'posed on, a figure whose own time hasn’t come walks, as far on as it would; once it has, it falls as far in as its own time says, its walk stopped',
+    [
+      walking,
+      onward.get(second)?.role,
+      turned(bone('arm'), still),
+      turned(bone('hips'), part(quarter, (0.3 - FIGURE_STAGGER) / 1.5)),
+    ],
+    [['move', true], 'die', true, true]
   );
 }
 

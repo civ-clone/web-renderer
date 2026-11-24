@@ -89,24 +89,52 @@ export const idlePhase = (key: string): number => {
 export type Playing = { mixer: AnimationMixer; role: ClipRole | null };
 
 /**
+ * What a figure plays till its own time in a clip played once comes, as each is a little behind the one before: a role
+ *  and how far into it, by the same clock (an attacker that's lost goes on fighting till its own fall begins).
+ */
+export type ClipBefore = { role: ClipRole; seconds: number };
+
+// How far into `role`'s clip figure `index` is, `seconds` in for the first: each further on in one that loops, and
+//  each a little behind the one before in one played once (`FIGURE_STAGGER`).
+const figureSeconds = (
+  role: ClipRole,
+  seconds: number,
+  index: number
+): number =>
+  LOOPED_ROLES.includes(role)
+    ? seconds + index * FIGURE_STAGGER
+    : seconds - index * FIGURE_STAGGER;
+
+/**
  * Each of `drawn`'s figures drawn with `rig` (`RIG_FIGURE`) posed as `role`'s clip has it `seconds` in, the second
  *  figure `FIGURE_STAGGER` further in a clip that loops, and that far behind in one played once, and so on; or, for no
- *  role, or one `rig` has no clip for, as the model stands. What each figure plays is kept in `playing`.
+ *  role, or one `rig` has no clip for, as the model stands. In one played once, a figure whose own time hasn't come
+ *  plays `before`, where it's given, as it would. What each figure plays is kept in `playing`.
  */
 export const poseFigures = (
   drawn: Object3D,
   rig: LoadedRig,
   role: ClipRole | null,
   seconds: number,
-  playing: WeakMap<Object3D, Playing>
+  playing: WeakMap<Object3D, Playing>,
+  before?: ClipBefore
 ): void =>
   drawn.getObjectsByProperty('name', RIG_FIGURE).forEach((figure, index) => {
-    const clip = role === null ? undefined : rig.clips.get(role),
+    const own = role === null ? 0 : figureSeconds(role, seconds, index),
+      // Its own time in `role` not come yet: still playing what it was.
+      waiting =
+        role !== null &&
+        before !== undefined &&
+        !LOOPED_ROLES.includes(role) &&
+        own < 0,
+      plays = waiting ? before!.role : role,
+      at = waiting ? figureSeconds(before!.role, before!.seconds, index) : own,
+      clip = plays === null ? undefined : rig.clips.get(plays),
       now = playing.get(figure) ?? {
         mixer: new AnimationMixer(figure),
         role: null,
       },
-      asked = clip === undefined ? null : role;
+      asked = clip === undefined ? null : plays;
 
     playing.set(figure, now);
 
@@ -122,14 +150,6 @@ export const poseFigures = (
     }
 
     if (clip !== undefined && asked !== null) {
-      now.mixer.setTime(
-        clipTime(
-          asked,
-          clip.duration,
-          LOOPED_ROLES.includes(asked)
-            ? seconds + index * FIGURE_STAGGER
-            : seconds - index * FIGURE_STAGGER
-        )
-      );
+      now.mixer.setTime(clipTime(asked, clip.duration, at));
     }
   });

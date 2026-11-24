@@ -18,9 +18,9 @@
 //
 // Where a fighter is is on the ground (`u`, `v`), with a `lift`, as a walker's is.
 
-import type { RigFacts } from './markers/clips';
+import type { ClipBefore, RigFacts } from './markers/clips';
 import { ClipRole } from './models/modelSet';
-import { HIT_PUFF } from './shots';
+import { SHOT_LOOKS, kindOf, shotOver } from './shots';
 import { WalkPoint, WalkSquare } from './walks';
 
 /** How fast a battle goes, in ms. */
@@ -53,8 +53,8 @@ export type BattleClips = {
 /** How battles go: the blow a fifth of a second in, over a little under a second after it. */
 export const BATTLE_PACE: BattlePace = { reach: 200, back: 300, fade: 600 };
 
-/** How long a shot takes from leaving the attacker's figure to landing, in ms, as the clips have it thrown. */
-export const SHOT_FLIGHT = 350;
+/** How long a thrown bottle takes from leaving the attacker's figure to landing, in ms (each kind's: `SHOT_LOOKS`). */
+export const SHOT_FLIGHT = SHOT_LOOKS.bottle.flight;
 
 /** A pace twice as quick, as the player can choose (`walks` in `MapView3DDeps`): its clips played twice as quick. */
 export const quickerBattle = (pace: BattlePace): BattlePace => ({
@@ -72,8 +72,9 @@ export const quickerBattle = (pace: BattlePace): BattlePace => ({
  * `pace`, for a battle whose attacker's drawn with a rigged copy as `attacker` says (`RigFacts`), and its loser as
  *  `loser` says, or as it is where neither has a clip to play:
  * - the attacker plays `fight` from the start; where it shoots, it stands, the blow falling as its first figure's first
- *   shot lands (`SHOT_FLIGHT`), and where it doesn't, the blow falls as it would; it's drawn till its last figure's
- *   clip is over, and its last shot has landed and burst (`HIT_PUFF`);
+ *   shot to land lands, as long after it leaves as its kind flies (`SHOT_LOOKS`), and where it doesn't, the blow falls
+ *   as it would; it's drawn till its last figure's clip is over, and the last of its shots' own is (`shotOver`): the
+ *   puff where each landed, the smoke where each left over before it;
  * - the loser plays `die` from the blow, solid till its last figure's fallen, then fades.
  */
 export const clipPace = (
@@ -91,14 +92,27 @@ export const clipPace = (
   // A squad's figures play a clip that's played once each a little after the one before (`FIGURE_STAGGER`).
   const tail = (facts: RigFacts | null | undefined): number =>
       Math.max(0, (facts?.figures ?? 1) - 1) * (facts?.stagger ?? 0),
-    times = (fight?.shots ?? []).map(({ at }) => at),
-    // The first shot to leave, of the first figure, and the last, of the last figure, landed and burst.
-    first = times.length === 0 ? undefined : Math.min(...times),
+    shots = fight?.shots ?? [],
+    // The first shot to land, of the first figure, as long after it leaves as its kind flies; and the last of the
+    //  last figure's own over, its puff where it lands.
+    first =
+      shots.length === 0
+        ? undefined
+        : Math.min(
+            ...shots.map(
+              (shot) => shot.at * 1000 + SHOT_LOOKS[kindOf(shot)].flight
+            )
+          ),
     last =
-      times.length === 0
+      shots.length === 0
         ? 0
-        : (Math.max(...times) + tail(attacker)) * 1000 + SHOT_FLIGHT + HIT_PUFF,
-    reach = first === undefined ? pace.reach : first * 1000 + SHOT_FLIGHT;
+        : Math.max(
+            ...shots.map(
+              (shot) =>
+                (shot.at + tail(attacker)) * 1000 + shotOver(kindOf(shot))
+            )
+          ),
+    reach = first === undefined ? pace.reach : first;
 
   return {
     ...pace,
@@ -175,8 +189,12 @@ export type Fighter = {
   lift: number;
   facing: number;
   opacity: number;
-  // The clip its figures play, and how far in, in seconds, where its battle's paced for clips (`clipPace`).
-  clip?: { role: ClipRole; seconds: number };
+  // The clip its figures play, and how far in, in seconds, where its battle's paced for clips (`clipPace`); and what
+  //  each plays till its own time in that comes (`poseFigures`): an attacker that's lost fights on till it falls.
+  clip?: { role: ClipRole; seconds: number; before?: ClipBefore };
+  // The attacker, paced for its `fight` clip: how far into that it is, in seconds, by the battle's clock, though it's
+  //  falling, lost, so its figures' shots still leave as that clip has them, each as it comes to it.
+  fought?: number;
 };
 
 /** When the blow falls in `battle`. */
@@ -436,11 +454,19 @@ export class Battles {
       playing = (role: ClipRole, since: number) => ({
         clip: { role, seconds: ((now - since) / 1000) * (clips?.rate ?? 1) },
       }),
+      // Lost, each of its figures falls a little behind the one before, fighting till it does.
       attackerPlays =
         clips === undefined
           ? {}
           : !battle.won && now >= blow && clips.die
-          ? playing('die', blow)
+          ? {
+              clip: {
+                ...playing('die', blow).clip,
+                ...(clips.fight
+                  ? { before: playing('fight', battle.start).clip }
+                  : {}),
+              },
+            }
           : clips.fight
           ? playing('fight', battle.start)
           : {},
@@ -464,6 +490,9 @@ export class Battles {
         facing: battle.facing,
         opacity: attacker,
         ...attackerPlays,
+        ...(clips?.fight
+          ? { fought: ((now - battle.start) / 1000) * clips.rate }
+          : {}),
       });
     }
 

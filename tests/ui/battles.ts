@@ -24,7 +24,7 @@ import Battles, {
   quickerBattle,
 } from '@civ-clone/ui-map-3d/battles';
 import { RigFacts } from '@civ-clone/ui-map-3d/markers/clips';
-import { HIT_PUFF } from '@civ-clone/ui-map-3d/shots';
+import { HIT_PUFF, SHOT_LOOKS, shotOver } from '@civ-clone/ui-map-3d/shots';
 
 const failures: string[] = [];
 let checks = 0;
@@ -557,6 +557,61 @@ expect(
     ]
   );
 
+  // Each shot as quick as its kind flies (`SHOT_LOOKS`): a rifleman's bullet lands almost as it leaves; a bullet that
+  //  leaves after a bottle can land before it, and the blow falls as the first lands; a battle's drawn till the last
+  //  of each shot's own is over, its puff where it landed.
+  const rifle: RigFacts = {
+      figures: 2,
+      stagger: 0.13,
+      clips: {
+        fight: {
+          duration: 1.2,
+          shots: [{ at: 0.4, joint: 'muzzle', kind: 'bullet' }],
+        },
+      },
+    },
+    mixed: RigFacts = {
+      figures: 1,
+      stagger: 0.13,
+      clips: {
+        fight: {
+          duration: 1,
+          shots: [
+            { at: 0.2, joint: 'prop' },
+            { at: 0.4, joint: 'muzzle', kind: 'bullet' },
+            { at: 0.3, joint: 'barrel', kind: 'shell' },
+          ],
+        },
+      },
+    },
+    flies = (kind: 'bullet' | 'shell') => SHOT_LOOKS[kind].flight;
+
+  expect(
+    'each shot as quick as its kind flies: a bullet lands almost as it leaves, the blow then; a bullet after a bottle lands first, and the blow falls then; drawn till the last of every shot’s own is over',
+    [
+      rounded(clipPace(pace, rifle, null)),
+      rounded(clipPace(pace, mixed, null)),
+    ],
+    [
+      {
+        reach: 400 + flies('bullet'),
+        back: round(
+          Math.max(1200 + 130, 530 + shotOver('bullet')) - 400 - flies('bullet')
+        ),
+        fade: 600,
+        lunge: 0,
+        clips: { rate: 1, fight: true, die: false },
+      },
+      {
+        reach: 400 + flies('bullet'),
+        back: 300 + shotOver('shell') - 400 - flies('bullet'),
+        fade: 600,
+        lunge: 0,
+        clips: { rate: 1, fight: true, die: false },
+      },
+    ]
+  );
+
   const paced = clipPace(pace, thrower, thrower),
     quick = quickerBattle(paced),
     battles = new Battles(),
@@ -564,14 +619,21 @@ expect(
     lost = battles.add(battleOf('b', 'e', false, [2, 2], [3, 2]), 1000, paced),
     // What's drawn of each battle at a time: who, where along the way, how solid, and what it plays how far in.
     drawn = (at: number) =>
-      battles
-        .at(at)
-        .going.map(({ unit, at: [u], opacity, clip }) => [
-          unit,
-          round(u, 2),
-          round(opacity, 2),
-          clip === undefined ? null : [clip.role, round(clip.seconds)],
-        ]);
+      battles.at(at).going.map(({ unit, at: [u], opacity, clip }) => [
+        unit,
+        round(u, 2),
+        round(opacity, 2),
+        clip === undefined
+          ? null
+          : [
+              clip.role,
+              round(clip.seconds),
+              // What each of its figures plays till its own time in that comes.
+              ...(clip.before === undefined
+                ? []
+                : [clip.before.role, round(clip.before.seconds)]),
+            ],
+      ]);
 
   expect(
     'paced for clips, twice as quick: half as long, falling too, its clips played twice as quick; how long it takes, won or lost',
@@ -597,7 +659,7 @@ expect(
   );
 
   expect(
-    'paced for clips: the attacker stands where it is, playing its fight from the start; at the blow, the loser plays its fall, solid till it’s fallen, then fades; lost, the attacker falls where it stands, then fades',
+    'paced for clips: the attacker stands where it is, playing its fight from the start; at the blow, the loser plays its fall, solid till it’s fallen, then fades; lost, the attacker falls where it stands, each figure fighting on till its own fall begins, then fades',
     [drawn(1000), drawn(1849), drawn(1850), drawn(3709), drawn(4010)],
     [
       [
@@ -611,17 +673,17 @@ expect(
       [
         ['a', 0, 1, ['fight', 0.85]],
         ['d', 1, 1, ['die', 0]],
-        ['b', 2, 1, ['die', 0]],
+        ['b', 2, 1, ['die', 0, 'fight', 0.85]],
       ],
       [
         ['a', 0, 1, ['fight', 2.709]],
         ['d', 1, 1, ['die', 1.859]],
-        ['b', 2, 1, ['die', 1.859]],
+        ['b', 2, 1, ['die', 1.859, 'fight', 2.709]],
       ],
       [
         ['a', 0, 1, ['fight', 3.01]],
         ['d', 1, 0.5, ['die', 2.16]],
-        ['b', 2, 0.5, ['die', 2.16]],
+        ['b', 2, 0.5, ['die', 2.16, 'fight', 3.01]],
       ],
     ]
   );

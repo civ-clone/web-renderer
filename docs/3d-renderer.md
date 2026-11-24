@@ -1443,11 +1443,14 @@ in its set (plan 2.2). It's in the model's entry:
   one skeleton, at most four joints to a point, and no clip moves it off where it stands.
 - **The roles** are `idle`, `move`, `fight`, `die`, `work` and `settle`. `clips` names the clip in the file that each
   role plays. `idle`, `move` and `work` loop; the rest play once, and `die` holds its last frame (`clips.ts`).
-- **`shots`** say when, in seconds into a role's clip, a shot leaves, and from which joint. The map draws what flies,
-  by the unit's type, from that joint to its target. A shot may be given only in a role that has a clip.
-- **Checked as it's read** (`modelSet.ts`): its file as a model's is, a name for each clip, and each shot's time and
-  joint, in a role with a clip. A clip for a role the map doesn't play, as a later one may, is left out. One the map
-  can't play is dropped, and its model's drawn as it stands, the rest of the set as it is.
+- **`shots`** say when, in seconds into a role's clip, a shot leaves, from which joint, and what it is (`kind`, since
+  the sixth part: `bottle`, `arrow`, `bullet` or `shell`, a bottle where it doesn't say). The map draws it flying
+  from that joint to its target, as its kind flies. A shot may be given only in a role that has a clip. The set says
+  what flies, as its model knows what it holds, not the unit's type.
+- **Checked as it's read** (`modelSet.ts`): its file as a model's is, a name for each clip, and each shot's time,
+  joint and kind, of those the map draws, in a role with a clip. A clip for a role the map doesn't play, as a later
+  one may, is left out. One the map can't play is dropped, and its model's drawn as it stands, the rest of the set as
+  it is.
 - **Built** (`tools/lib/hostedSets.js`): copied beside the page with its model, as `<id>.<hash>.<name>.rigged.glb`,
   as its SHA-256 says it is, the manifest naming it so. The deploy keeps it for one more deploy, as it keeps the
   model (`setsAskedFor`).
@@ -1477,8 +1480,8 @@ has a clip to play is paced as before.
 
 - **The attacker** plays `fight` from the start. Where its clip has shots, it stands where it is to shoot rather than
   lunging (`lunge` 0), and the blow falls as its first figure's first shot lands, the shot's time in the clip and its
-  flight after (`SHOT_FLIGHT`, 350 ms). Where it has none, it lunges, and the blow falls a fifth of a second in, as
-  before. It's drawn till its last figure's clip is over, or the battle is.
+  flight after (a bottle's 350 ms; each kind's since the sixth part). Where it has none, it lunges, and the blow falls
+  a fifth of a second in, as before. It's drawn till its last figure's clip is over, or the battle is.
 - **The loser** plays `die` from the blow: the defender where it stood, or the attacker where it is, lost. It stays
   solid till its last figure has fallen (`falls`), then fades in its puff of smoke as before.
 - **A squad's figures** are 0.13 s apart in a clip that loops, as walking, and each 0.13 s behind the one before in a
@@ -1490,7 +1493,8 @@ has a clip to play is paced as before.
   than two seconds behind, or two of the longest battle, the new one or one its units are in, where that's longer, so
   an attacker attacking again waits rather than cutting a long battle short.
 - **Shots** (`shots.ts`): each figure's leaves the node its clip names (found as three.js names it, and checked as the
-  clip's tracks are), as that figure's clip comes to it, from where the node is as the figure's posed then
+  clip's tracks are), as that figure's clip comes to it (by the battle's clock since the sixth part), from where the
+  node is as the figure's posed then
   (`Stage#jointAt`, `jointOf`). It flies the short way to the square attacked, over the world's seam or not, in an arc
   (`SHOT_ARC`), landing by the loser's feet, a squad's a little apart (`SHOT_SPREAD`). Where it lands, it bursts in a
   puff of smoke of its own (`HIT_PUFF`, half a second). The Partisans' is a bottle, alight at its neck, tumbling end
@@ -1528,6 +1532,32 @@ stand. The map used to draw a frame only when something changed; while units idl
   idle frame takes 1.5 to 2.3 ms, with the camera at its closest and at 12, round the busiest stretch of units: about
   7% of the main thread at 30 a second, nearly all of it drawing the scene again. A whole frame there, the camera
   moving, takes 2 to 5.6 ms.
+
+**As built, sixth part (clips, 2026-11-24): what flies.** A shot says what it is (`kind` in the manifest, above), and
+each kind goes as it would (`SHOT_LOOKS` in `shots.ts`):
+
+| Kind | Flies | Arc, each square | Drawn | Leaving | Landing |
+|---|---|---|---|---|---|
+| `bottle` | 350 ms | 0.25 | a bottle, alight at its neck, tumbling | | a puff, as a fallen unit's |
+| `arrow` | 450 ms | 0.2 | a shaft and its head, pointing the way it goes | | a puff a third as big |
+| `bullet` | 80 ms | none, straight | a bright streak trailing it, pointing the way it goes | a flash, and smoke a third as big | a puff a third as big |
+| `shell` | 700 ms | 0.35 | a dark ball | a flash, and smoke most as big | a burst: a flash, and a puff 1.6 times as big |
+
+- **Pacing** (`clipPace`): the blow falls as the first shot to land lands, each as long after it leaves as its kind
+  flies, so a bullet that leaves after a bottle can land first. The battle's drawn till the last shot's puff is over
+  (`shotOver`); the smoke where each left, 400 ms (`MUZZLE_PUFF`), is over before it.
+- **A squad that loses,** with a `die` clip, falls at the blow, which a bullet can bring before its last figures have
+  fired. Shots leave by the battle's clock (`Fighter.fought`), not the clip a figure plays, and each figure fights on
+  till its own fall begins, a little behind the one before (`poseFigures`' `before`): so each fires what its clip has
+  before the blow, from where it aims, and none what its clip has after (`shotsFired`). With no `die` clip, it fades
+  as before, firing every shot.
+- **Drawn** (`#placeShots`, `Stage#shot`, `Stage#puff`): each points the way it's going (`shotHeading`), the arc's
+  tangent, but for a bottle, which tumbles, and a shell, a ball. The smoke where it leaves a muzzle is timed from when
+  it left, so a bullet that leaves and lands between one frame and the next still shows it. Its flash is solid and
+  unlit, as the bottle's flame is: no see-through shapes, so nothing needs drawing in another order. A puff takes a
+  size, and a flash.
+- **The Partisans' bottle** goes as it did: none of its numbers changed. Rifles and cannons fire once their models
+  have rigged copies whose `fight` clips say so; for now none do.
 
 ---
 

@@ -30,6 +30,7 @@ import MapView2D from '@civ-clone/ui-game/MapView2D';
 import MapView3D, { keptCity } from '@civ-clone/ui-map-3d/MapView3D';
 import { bannerPlaces } from '@civ-clone/ui-map-3d/banners';
 import { RigFacts, STRIDE } from '@civ-clone/ui-map-3d/markers/clips';
+import { SHOT_LOOKS } from '@civ-clone/ui-map-3d/shots';
 import {
   applyInterface,
   interfaceMode,
@@ -66,7 +67,7 @@ import {
   yieldIconFrom,
   prepareMap3D,
 } from '@civ-clone/ui-game/lib/map3d';
-import { Stage } from '@civ-clone/ui-map-3d/stage';
+import { FLASH_SIZE, Stage } from '@civ-clone/ui-map-3d/stage';
 import { movingKeys } from '@civ-clone/ui-client/lib/unitActionKeys';
 import { YieldMesh, yieldIconSize } from '@civ-clone/ui-map-3d/yields';
 import {
@@ -252,6 +253,11 @@ const staged: string[] = [],
   // Every shot drawn since last cleared, by id, where it was each frame, `null` taken away; and the nodes asked where
   //  they are, by walker, figure and node, the stage saying a fifth of a square over where the walker was last put.
   shotsDrawn = new Map<string, (readonly number[] | null)[]>(),
+  // Each clip a walker's figures were posed in with what they play till their own time in it comes.
+  walkersBefore = new Set<string>(),
+  // What each shot was last drawn as, and every way it pointed; and each puff's size and whether it flashed.
+  shotLooks = new Map<string, { kind: string; headings: number[][] }>(),
+  puffLooks = new Map<string, { size: number; flash: number | null }>(),
   jointsAsked: [string, number, string][] = [],
   // Each time the stage was asked which units idle: the squares, in order, and how far in, by the clock; and whether it
   //  says some do, as a stage whose models have idle clips would.
@@ -299,11 +305,13 @@ const staged: string[] = [],
       ]);
       walkersAloft.set(id, [...(walkersAloft.get(id) ?? []), aloft]);
     },
-    poseWalker: (id, role, seconds) =>
-      void walkersPosed.set(id, [
-        ...(walkersPosed.get(id) ?? []),
-        [role, seconds],
-      ]),
+    poseWalker: (id, role, seconds, before) => {
+      walkersPosed.set(id, [...(walkersPosed.get(id) ?? []), [role, seconds]]);
+
+      if (before !== undefined) {
+        walkersBefore.add(`${role} after ${before.role}`);
+      }
+    },
     rigFacts: (marker) => rigFactsFor.get(marker.unit?.id ?? '') ?? null,
     idle: (keys, seconds) => {
       idleAsked.push([[...keys].sort(), seconds]);
@@ -319,8 +327,16 @@ const staged: string[] = [],
         ? null
         : [placed[0]!, placed[1]! + 0.2, placed[2]!];
     },
-    shot: (id, at) =>
-      void shotsDrawn.set(id, [...(shotsDrawn.get(id) ?? []), at]),
+    shot: (id, at, _through, kind = 'bottle', heading = [0, -1, 0]) => {
+      shotsDrawn.set(id, [...(shotsDrawn.get(id) ?? []), at]);
+
+      if (at !== null) {
+        shotLooks.set(id, {
+          kind,
+          headings: [...(shotLooks.get(id)?.headings ?? []), [...heading]],
+        });
+      }
+    },
     fadeMarker: (key, opacity) => {
       if (opacity < 1 || markersFaded.has(key)) {
         markersFaded.set(key, opacity);
@@ -336,7 +352,7 @@ const staged: string[] = [],
       wakesDrawn.set(id, { at, corners: shape.length / 3 });
       wakesEver.add(id);
     },
-    puff: (id, at, through = 0) => {
+    puff: (id, at, through = 0, size = 1, flash = null) => {
       if (at === null) {
         puffs.delete(id);
 
@@ -344,6 +360,7 @@ const staged: string[] = [],
       }
 
       puffs.set(id, { at, through });
+      puffLooks.set(id, { size, flash });
       puffsPlaced.set(id, [...(puffsPlaced.get(id) ?? []), through]);
     },
     fadeWalker: (id, opacity) => {
@@ -4453,6 +4470,216 @@ expect(
         ['Unit-R', 1],
         ['Unit-T', 1],
       ],
+    ]
+  );
+
+  // A rifleman's bullet (`SHOT_LOOKS`): drawn as a bullet, flying straight, pointing the way it goes; a flash and smoke
+  //  where it leaves, from the node its clip names, as big as a muzzle's; landing as quick as a bullet flies, the blow
+  //  then, its puff as small as a bullet's; the battle drawn till its smoke and its puff are over. A frame drawn after
+  //  it's both left and landed still shows its smoke where it left. A shell's burst flashes, and it flies slower.
+  const shooter = (kind: 'bullet' | 'shell', figures = 1, volleys = [0.4]) =>
+      rigFactsFor.set('Unit-A', {
+        figures,
+        stagger: 0.13,
+        clips: {
+          fight: {
+            duration: 1.2,
+            shots: volleys.map((at) => ({ at, joint: 'muzzle', kind })),
+          },
+          die: { duration: 1.5, shots: [] },
+        },
+      }),
+    looksAfter = (
+      between?: () => void,
+      winner: 'attacker' | 'defender' = 'attacker'
+    ) => {
+      repatched([1, 1, [walker]], [2, 1, [rival]]);
+      shotsDrawn.clear();
+      shotLooks.clear();
+      puffsPlaced.clear();
+      puffLooks.clear();
+      jointsAsked.length = 0;
+
+      const firedAt = now;
+
+      fought(walker, [1, 1], rival, [2, 1], winner);
+      patch(
+        ...((winner === 'attacker'
+          ? [
+              [1, 1, [walker]],
+              [2, 1, []],
+            ]
+          : [
+              [1, 1, []],
+              [2, 1, [rival]],
+            ]) as [number, number, Tile['units'][number][]][])
+      );
+
+      if (between !== undefined) {
+        while (now - firedAt < 380 && runFrames(1) > 0);
+
+        between();
+      }
+
+      // Each frame the shot was drawn in flight: how long since it was fought, and where it was.
+      const inFlight: number[] = [],
+        path: (readonly number[])[] = [];
+
+      for (let frame = 0; frame < 400 && runFrames(1) > 0; frame++) {
+        const drawn = [...shotsDrawn.values()].at(-1)?.at(-1);
+
+        if (drawn !== undefined && drawn !== null) {
+          inFlight.push(now - firedAt);
+          path.push(drawn);
+        }
+
+        shotsDrawn.forEach((points) => (points.length = 0));
+      }
+
+      const [id] = [...shotLooks.keys()],
+        look = id === undefined ? undefined : shotLooks.get(id),
+        ended = now - firedAt;
+
+      return {
+        kind: look?.kind ?? null,
+        // Straight, the same way all its flight, one long, and towards the square attacked, a square east.
+        straight:
+          look === undefined
+            ? null
+            : look.headings.every(
+                (heading) =>
+                  heading.every(
+                    (n, axis) => Math.abs(n - look.headings[0]![axis]!) < 1e-9
+                  ) &&
+                  Math.abs(Math.hypot(...heading) - 1) < 1e-9 &&
+                  heading[0]! > 0.5
+              ),
+        inFlight: inFlight.length === 0 ? null : [inFlight[0], inFlight.at(-1)],
+        // Where it was, from where it was first drawn, along the ground and up: as far up for each step along, a
+        //  straight line, or not, an arc.
+        level: (() => {
+          const [first] = path,
+            slopes = path.slice(1).map((point) => {
+              const along = Math.hypot(
+                point[0]! - first![0]!,
+                point[2]! - first![2]!
+              );
+
+              return (point[1]! - first![1]!) / along;
+            });
+
+          return slopes.length < 2
+            ? null
+            : slopes.every((slope) => Math.abs(slope - slopes[0]!) < 1e-6);
+        })(),
+        muzzle: [...puffLooks.entries()]
+          .filter(([key]) => key.endsWith('-muzzle'))
+          .map(([, puff]) => puff),
+        hit: [...puffLooks.entries()]
+          .filter(([key]) => key.endsWith('-hit'))
+          .map(([, puff]) => puff),
+        joints: [...new Set(jointsAsked.map(([, , joint]) => joint))],
+        // How many landed, each with its puff.
+        landed: [...puffLooks.keys()].filter((key) => key.endsWith('-hit'))
+          .length,
+        ended,
+        puffsLeft: puffs.size,
+      };
+    };
+
+  rigFactsFor.clear();
+  shooter('bullet');
+
+  const bullet = looksAfter();
+
+  // Leaving and landing between one frame and the next.
+  const skipped = looksAfter(() => {
+    now += 150;
+  });
+
+  shooter('shell');
+
+  const shell = looksAfter();
+
+  // A squad of three that loses falls at the blow, its first bullet landing before the others have left: they still
+  //  leave, as its clip has them. Twice as quick, a bullet flies half as long.
+  shooter('bullet', 3);
+  walkersBefore.clear();
+
+  const lostSquad = looksAfter(undefined, 'defender'),
+    // Falling, its figures were posed fighting till each one's own fall began.
+    fellFighting = [...walkersBefore];
+
+  optionsRegistry.set(MAP3D_WALKS_OPTION, 'fast');
+
+  const lostQuick = looksAfter(undefined, 'defender');
+
+  optionsRegistry.set(MAP3D_WALKS_OPTION, 'normal');
+
+  // Firing twice, the second volley after the blow: lost, its figures have fallen by then, and fire none of it; won,
+  //  they fire both.
+  shooter('bullet', 3, [0.4, 1]);
+
+  const lostVolleys = looksAfter(undefined, 'defender'),
+    wonVolleys = looksAfter();
+
+  shooter('bullet');
+  optionsRegistry.set(MAP3D_WALKS_OPTION, 'fast');
+
+  const quickBullet = looksAfter();
+
+  optionsRegistry.set(MAP3D_WALKS_OPTION, 'normal');
+
+  rigFactsFor.clear();
+  repatched([1, 1, []], [2, 1, []]);
+
+  expect(
+    'a bullet’s drawn as one, straight, from the node its clip names, its smoke a muzzle’s and its flash at the muzzle, landing as quick as a bullet flies, its puff a bullet’s, the battle over once they are; leaving and landing between frames, its smoke’s still drawn; a shell flies slower, its burst flashing on the ground; a squad that loses fires every bullet before it falls, none after; twice as quick, a bullet flies half as long',
+    [
+      bullet.kind,
+      [bullet.straight, bullet.level],
+      bullet.joints,
+      bullet.muzzle,
+      bullet.hit,
+      // Leaving 0.4 s in, and in flight no longer than a bullet flies, a frame either side.
+      bullet.inFlight !== null &&
+        bullet.inFlight[0]! >= 400 &&
+        bullet.inFlight[1]! - bullet.inFlight[0]! < SHOT_LOOKS.bullet.flight,
+      bullet.puffsLeft,
+      [skipped.inFlight, skipped.muzzle, skipped.hit],
+      [shell.kind, shell.hit, shell.straight, shell.level],
+      shell.inFlight !== null &&
+        shell.inFlight[1]! - shell.inFlight[0]! >=
+          SHOT_LOOKS.shell.flight - 2 * 16,
+      [lostSquad.landed, lostSquad.puffsLeft, fellFighting, lostQuick.landed],
+      [lostVolleys.landed, wonVolleys.landed],
+      quickBullet.inFlight !== null &&
+        quickBullet.inFlight[1]! - quickBullet.inFlight[0]! <
+          SHOT_LOOKS.bullet.flight / 2,
+    ],
+    [
+      'bullet',
+      [true, true],
+      ['muzzle'],
+      [{ size: SHOT_LOOKS.bullet.muzzle, flash: 0 }],
+      [{ size: SHOT_LOOKS.bullet.hit, flash: null }],
+      true,
+      0,
+      [
+        null,
+        [{ size: SHOT_LOOKS.bullet.muzzle, flash: 0 }],
+        [{ size: SHOT_LOOKS.bullet.hit, flash: null }],
+      ],
+      [
+        'shell',
+        [{ size: SHOT_LOOKS.shell.hit, flash: FLASH_SIZE }],
+        false,
+        false,
+      ],
+      true,
+      [3, 0, ['die after fight'], 3],
+      [3, 6],
+      true,
     ]
   );
 
