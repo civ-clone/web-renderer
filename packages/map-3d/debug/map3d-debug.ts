@@ -4,8 +4,9 @@
 //
 // What it draws comes from its address, which the form on the page sets: `grid` (`square`, `staggered-iso` or
 //  `hex-odd-r`), `width`, `height`, `seed`, `seen` (how much has been seen, 0 to 1), and `x` and `y`, the square the map
-//  is centred on; `gallery=1` lays out every unit type about it, and `specials=1` every special. The arrow keys move the map two squares' width at a time, as the screen shows it; `[` and `]` turn
-//  it, `\` turns it back to north, and `z` and `x` zoom in and out, as in a game.
+//  is centred on; `gallery=1` lays out every unit type about it, and `specials=1` every special. The arrow keys move
+//  the map two squares' width at a time, as the screen shows it; `[` and `]` turn it, `\` turns it back to north, and
+//  `z` and `x` zoom in and out, as in a game.
 
 import { MAP3D_GLOBAL, Map3DScript } from '@civ-clone/ui-map/MapView3DFactory';
 import { PlayerTile, Tile } from '@civ-clone/ui-protocol/types';
