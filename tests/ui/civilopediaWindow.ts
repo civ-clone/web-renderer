@@ -694,6 +694,98 @@ const run = async (): Promise<void> => {
       'Makes 2 more unhappy citizens content, in all your cities with a Temple, with Mysticism'
   );
 
+  // A tile improvement says what it does on the squares it's on (#1272), its yields first: each square with an entry
+  //  links to it, and a class with none is said as squares ("any land square", where the class says "land units").
+  const desert = { class: 'Desert', name: 'Desert', entry: true },
+    grassland = { class: 'Grassland', name: 'Grassland', entry: true },
+    road = entry('Road', 'tileImprovement', {
+      effects: [
+        { type: 'route_squares', value: 3 },
+        {
+          type: 'improvement_turns',
+          value: 2,
+          unit: { class: 'Settlers', name: 'Settlers' },
+          squares: [desert, grassland],
+        },
+        {
+          type: 'improvement_yield',
+          yield: { class: 'Trade', name: 'Trade', entry: false },
+          value: 1,
+          squares: [desert, grassland],
+        },
+        {
+          type: 'improvement_yield_percent',
+          yield: { class: 'Food', name: 'Food', entry: false },
+          value: 0.5,
+          squares: [{ class: 'Land', name: 'Land', entry: false }],
+        },
+      ],
+    }),
+    roadHtml = entryHtml(road, data);
+
+  expect(
+    'a tile improvement says what it does on its squares, its yields first',
+    text(roadHtml).split('What it does')[1]?.split('Requirements')[0],
+    '+1 Trade on Desert and Grassland' +
+      '+50% Food on any land square, rounded down' +
+      'Land units move 3 squares along it for each move' +
+      '2 turns of Settlers work on Desert and Grassland'
+  );
+  expect(
+    'and its squares link to their entries',
+    roadHtml.includes('data-key="Desert"'),
+    true
+  );
+
+  // Pollution says what it takes from its square, what causes it and what cleans it up (#621), and a line that needs an
+  //  advance says so, each in its own wording.
+  const settlers = { class: 'Settlers', name: 'Settlers' },
+    pollution = entry('Pollution', 'tileImprovement', {
+      effects: [
+        { type: 'caused_by', source: 'production' },
+        {
+          type: 'caused_by',
+          source: 'population',
+          with: [
+            { class: 'Industrialization', name: 'Industrialization' },
+            { class: 'Automobile', name: 'Automobile' },
+          ],
+        },
+        { type: 'removal_turns', value: 4, unit: settlers },
+        {
+          type: 'tile_yield_halved',
+          yield: { class: 'Food', name: 'Food', entry: false },
+        },
+        {
+          type: 'improvement_turns',
+          value: 2,
+          unit: settlers,
+          squares: [{ class: 'River', name: 'River', entry: true }],
+          with: [{ class: 'BridgeBuilding', name: 'BridgeBuilding' }],
+        },
+        {
+          type: 'converts_to',
+          terrain: grassland,
+          squares: [{ class: 'Swamp', name: 'Swamp', entry: true }],
+        },
+        { type: 'route_free' },
+      ],
+    });
+
+  expect(
+    'Pollution says what it does, what causes it and what cleans it up',
+    text(entryHtml(pollution, data))
+      .split('What it does')[1]
+      ?.split('Requirements')[0],
+    'Halves the Food of its square, rounded up' +
+      'Cities cause it from their shields' +
+      'Cities cause it from their citizens, for each of Industrialization and Automobile you know' +
+      'Settlers clean it up in 4 turns' +
+      '2 turns of Settlers work on River, with BridgeBuilding' +
+      'On Swamp, turns the square into Grassland instead' +
+      'Land units move along it for free'
+  );
+
   // Civilization II's (#1196): a wording that says its own scope, and a clause worded for its type.
   const civ2 = entry('SunTzusWarAcademy', 'wonder', {
     effects: [

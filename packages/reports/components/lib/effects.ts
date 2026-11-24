@@ -54,7 +54,10 @@ const list = (items: string[], key: string): string =>
 const said = (
   value: CivilopediaEffectValue,
   entries: EntriesByKey,
-  listKey: string = 'Civilopedia.list'
+  listKey: string = 'Civilopedia.list',
+  // Wording to try first for a class with no entry, where the field says it its own way: the `squares` an effect is
+  //  on (`Civilopedia.square.Land`, "any land square", where the class alone says "land units").
+  wording: string | null = null
 ): string | null => {
   if (value === null) {
     return null;
@@ -68,6 +71,9 @@ const said = (
       : escape(
           t(
             [
+              ...(wording === null
+                ? []
+                : [`${wording}.${value.class}`, `${wording}.${value.name}`]),
               `Civilopedia.class.${value.class}`,
               `Civilopedia.class.${value.name}`,
             ],
@@ -80,7 +86,7 @@ const said = (
 
   if (Array.isArray(value)) {
     const items = value
-      .map((item) => said(item, entries))
+      .map((item) => said(item, entries, 'Civilopedia.list', wording))
       .filter((item): item is string => item !== null && item !== '');
 
     return items.length === 0 ? null : list(items, listKey);
@@ -106,7 +112,10 @@ export const effectLine = (
       )
       .map(([, fieldValue]) => fieldValue as string),
     sign = value !== null && value < 0 ? ['negative'] : [],
-    base = `Civilopedia.effect.${[effect.type, ...words].join('_')}`,
+    // An effect a tile improvement has on the `squares` it's on (#1272), worded from the improvement's side.
+    base = `Civilopedia.effect.${
+      effect.squares === undefined ? '' : 'squares.'
+    }${[effect.type, ...words].join('_')}`,
     // The wording with its whole context first; without `_zero` only if there's none for 0.
     whole = [base, ...sign, ...(value === 0 ? ['zero'] : [])].join('_'),
     // A wording may say its scope itself (`veteran_units_scope_player`), and then it isn't said again.
@@ -139,7 +148,15 @@ export const effectLine = (
           ([field]) =>
             field !== 'type' && field !== 'scope' && !clauses.includes(field)
         )
-        .map(([field, fieldValue]) => [field, said(fieldValue, entries) ?? ''])
+        .map(([field, fieldValue]) => [
+          field,
+          said(
+            fieldValue,
+            entries,
+            'Civilopedia.list',
+            field === 'squares' ? 'Civilopedia.square' : null
+          ) ?? '',
+        ])
     ),
     main = t(keys, {
       replace: {
@@ -229,11 +246,13 @@ export const effectLine = (
   return [main, ...qualified, ...scope].join(', ');
 };
 
-// What a square gives, said before what it costs (#620); what a city pays for an entry, said after what it does.
+// What a square gives, or what Pollution takes from it (#621), said before what it costs (#620); what a city pays for
+//  an entry, said after what it does.
 const first: string[] = [
     'terrain_yield',
     'improvement_yield',
     'improvement_yield_percent',
+    'tile_yield_halved',
   ],
   last: string[] = ['upkeep'];
 

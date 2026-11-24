@@ -76,9 +76,9 @@ const check = async (): Promise<void> => {
     ).filter((key) => !byKey.has(key) && !baseClasses.includes(key)),
     []
   );
-  // Bar three that no requirement entry describes yet, which the page says it knows nothing more about: Future
-  //  Technology's need for every other advance is a hand-written rule, Anarchy needs nothing, and Pollution isn't
-  //  built. Ocean says what it gives and costs (#620).
+  // Bar two that no requirement entry describes yet, which the page says it knows nothing more about: Future
+  //  Technology's need for every other advance is a hand-written rule, and Anarchy needs nothing. Ocean says what it
+  //  gives and costs (#620), and Pollution what it does, what causes it and what cleans it up (#621).
   expect(
     'and every entry says something: a requirement, something it leads to, numbers, a cost, what it does, or tile improvements that go on it',
     entries
@@ -94,7 +94,7 @@ const check = async (): Promise<void> => {
           )
       )
       .map((entry) => entry.key),
-    ['FutureTechnology', 'Anarchy', 'Pollution']
+    ['FutureTechnology', 'Anarchy']
   );
   expect(
     'each section has entries',
@@ -415,9 +415,9 @@ const check = async (): Promise<void> => {
     ['ApolloProgram', 'ManhattanProject']
   );
   expect(
-    'every effect, scope and class without an entry sent has wording in en',
+    'every effect, scope, class and square without an entry sent has wording in en',
     missingWording(entries),
-    { effects: [], scopes: [], classes: [] }
+    { effects: [], scopes: [], classes: [], squares: [] }
   );
   expect(
     'every condition a requirement names has wording in en (#1317)',
@@ -496,6 +496,88 @@ const check = async (): Promise<void> => {
       ['defence_bonus', null, 2],
       ['movement_cost', null, 2],
       ['terrain_yield', 'Food', 1],
+    ]
+  );
+
+  // A tile improvement says what it does on the squares it's on (#1272), from the rules that describe each terrain's
+  //  yield with it and the turns it takes there, as one line for all the squares where only the square differs.
+  const keysOf = (value: unknown): string[] =>
+      (Array.isArray(value) ? value : [value])
+        .filter((item) => item !== undefined && item !== null)
+        .map((item) => (item as { class: string }).class),
+    improving = (key: string, type: string) =>
+      entry(key)
+        ?.effects.filter((effect) => effect.type === type)
+        .map(({ value, yield: yieldType, squares, with: needs, terrain }) => [
+          value ?? null,
+          keysOf(yieldType ?? terrain),
+          keysOf(squares),
+          keysOf(needs),
+        ]);
+
+  expect(
+    'a Road gives 1 Trade on Desert, Grassland and Plains',
+    improving('Road', 'improvement_yield'),
+    [[1, ['Trade'], ['Desert', 'Grassland', 'Plains'], []]]
+  );
+  expect(
+    'a Road takes 2, 4 or 6 turns by terrain, its River line needing Bridge Building',
+    improving('Road', 'improvement_turns'),
+    [
+      [2, [], ['Desert', 'Grassland', 'Plains', 'Tundra'], []],
+      [2, [], ['River'], ['BridgeBuilding']],
+      [4, [], ['Arctic', 'Forest', 'Hills', 'Jungle', 'Swamp'], []],
+      [6, [], ['Mountains'], []],
+    ]
+  );
+  expect(
+    'a land unit moves 3 squares along a Road for each move, and along a Railroad for free',
+    [improving('Road', 'route_squares'), improving('Railroad', 'route_free')],
+    [[[3, [], [], []]], [[null, [], [], []]]]
+  );
+  expect(
+    'a Railroad adds half of each yield on any land square',
+    improving('Railroad', 'improvement_yield_percent'),
+    ['Food', 'Production', 'Trade'].map((yieldKey) => [
+      0.5,
+      [yieldKey],
+      ['Land'],
+      [],
+    ])
+  );
+  expect(
+    'Irrigation turns Jungle and Swamp into Grassland, and Forest into Plains',
+    improving('Irrigation', 'converts_to'),
+    [
+      [null, ['Grassland'], ['Jungle', 'Swamp'], []],
+      [null, ['Plains'], ['Forest'], []],
+    ]
+  );
+  expect(
+    "a terrain's own page says nothing as if it were on squares",
+    entries
+      .filter(({ kind }) => kind !== 'tileImprovement')
+      .filter(({ effects }) =>
+        effects.some(({ squares }) => squares !== undefined)
+      )
+      .map(({ key }) => key),
+    []
+  );
+  expect(
+    "Pollution halves its square's yields, comes from cities, and takes Settlers 4 turns to clean up",
+    // In whichever order the rules load: the page puts what it does to the square first.
+    entry('Pollution')
+      ?.effects.map(({ type, yield: yieldType, source, value }) =>
+        [type, keysOf(yieldType), source ?? null, value ?? null].join(' ')
+      )
+      .sort(),
+    [
+      'caused_by  population ',
+      'caused_by  production ',
+      'removal_turns   4',
+      'tile_yield_halved Food  ',
+      'tile_yield_halved Production  ',
+      'tile_yield_halved Trade  ',
     ]
   );
 
