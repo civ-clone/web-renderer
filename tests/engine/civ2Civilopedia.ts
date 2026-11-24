@@ -64,9 +64,9 @@ const check = (): void => {
     []
   );
   expect(
-    'every effect, scope and class without an entry sent has wording in en',
+    'every effect, scope, class and square without an entry sent has wording in en',
     missingWording(entries),
-    { effects: [], scopes: [], classes: [] }
+    { effects: [], scopes: [], classes: [], squares: [] }
   );
 
   expect(

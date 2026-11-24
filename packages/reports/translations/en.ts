@@ -258,6 +258,37 @@ i18next.addResources('en', 'default', {
   'Civilopedia.effect.converts_to': '{{improvement}} turns it into {{terrain}}',
   'Civilopedia.effect.improvement_turns':
     '{{improvement}} here: {{value}} turns of {{unit}} work',
+  // The same, on a tile improvement's own page, for the squares it's on (#1272).
+  'Civilopedia.effect.squares.improvement_yield':
+    '+{{value}} {{yield}} on {{squares}}',
+  'Civilopedia.effect.squares.improvement_yield_negative':
+    '−{{value}} {{yield}} on {{squares}}',
+  'Civilopedia.effect.squares.improvement_yield_percent':
+    '+{{percent}}% {{yield}} on {{squares}}, rounded down',
+  'Civilopedia.effect.squares.improvement_turns':
+    '{{value}} turns of {{unit}} work on {{squares}}',
+  'Civilopedia.effect.squares.converts_to':
+    'On {{squares}}, turns the square into {{terrain}} instead',
+  'Civilopedia.square.Land': 'any land square',
+  // What a tile improvement does beyond its squares' yields (#1272), and what Pollution does (#621).
+  'Civilopedia.effect.route_squares_one':
+    'Land units move {{count}} square along it for each move',
+  'Civilopedia.effect.route_squares_other':
+    'Land units move {{count}} squares along it for each move',
+  'Civilopedia.effect.route_free': 'Land units move along it for free',
+  'Civilopedia.effect.removal_turns_one':
+    '{{unit}} clean it up in {{count}} turn',
+  'Civilopedia.effect.removal_turns_other':
+    '{{unit}} clean it up in {{count}} turns',
+  'Civilopedia.effect.tile_yield_halved':
+    'Halves the {{yield}} of its square, rounded up',
+  'Civilopedia.effect.caused_by_production':
+    'Cities cause it from their shields',
+  'Civilopedia.effect.caused_by_population':
+    'Cities cause it from their citizens',
+  // Citizens pollute only with these advances, each adding to it (civ1-city-improvement's `pollutingAdvances`).
+  'Civilopedia.effect.clause.with_caused_by':
+    'for each of {{targets}} you know',
   'Civilopedia.loading': 'Loading…',
   'Civilopedia.nothing-known': 'Nothing more is known about this yet.',
   'Civilopedia.stats':

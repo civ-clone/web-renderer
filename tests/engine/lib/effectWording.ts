@@ -20,11 +20,13 @@ const translations = (): string =>
 const has = (source: string, key: string): boolean =>
   source.includes(`'${key}'`);
 
-// Each effect's wording: its type and string fields, bar `scope`, and `_negative` below 0. A plural or a `_zero` the
-//  page adds itself.
+// Each effect's wording: its type and string fields, bar `scope`, and `_negative` below 0, under `squares.` for a tile
+//  improvement's effect on the squares it's on (#1272). A plural or a `_zero` the page adds itself.
 const effectKey = (effect: CivilopediaEntry['effects'][number]): string =>
   [
-    `Civilopedia.effect.${effect.type}`,
+    `Civilopedia.effect.${effect.squares === undefined ? '' : 'squares.'}${
+      effect.type
+    }`,
     ...Object.entries(effect)
       .filter(
         ([field, value]) =>
@@ -55,7 +57,12 @@ const classes = (value: CivilopediaEffectValue): Named[] => {
 /** What `entries`' effects need wording for and have none, in en, by the keys the page would look up. */
 export const missingWording = (
   entries: CivilopediaEntry[]
-): { effects: string[]; scopes: string[]; classes: string[] } => {
+): {
+  effects: string[];
+  scopes: string[];
+  classes: string[];
+  squares: string[];
+} => {
   const source = translations(),
     keys = new Set(entries.map(({ key }) => key)),
     effects = entries.flatMap(({ effects }) => effects),
@@ -76,7 +83,7 @@ export const missingWording = (
       effects
         .flatMap((effect) =>
           Object.entries(effect)
-            .filter(([field]) => field !== 'type')
+            .filter(([field]) => field !== 'type' && field !== 'squares')
             .flatMap(([, value]) => classes(value))
         )
         .filter(({ class: key, entry }) => entry === false || !keys.has(key))
@@ -84,6 +91,19 @@ export const missingWording = (
           ({ class: key, name }) =>
             !has(source, `Civilopedia.class.${key}`) &&
             !has(source, `Civilopedia.class.${name}`)
+        )
+        .map(({ class: key }) => key)
+    ),
+    // The squares an effect is on with no entry of their own (a base class, `Land`) are said as squares, not by the
+    //  class's own wording, which can mean something else ("land units").
+    squares: unique(
+      effects
+        .flatMap(({ squares }) => classes(squares ?? null))
+        .filter(({ class: key, entry }) => entry === false || !keys.has(key))
+        .filter(
+          ({ class: key, name }) =>
+            !has(source, `Civilopedia.square.${key}`) &&
+            !has(source, `Civilopedia.square.${name}`)
         )
         .map(({ class: key }) => key)
     ),

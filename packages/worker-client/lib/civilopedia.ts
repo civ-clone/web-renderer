@@ -264,22 +264,97 @@ export const effectsInForce = (
     });
 };
 
-/** `Item`'s effects among `described`: those about it, or about one of its base classes, as they stand in `situation`. */
+/**
+ * Effects that are the same but for the `squares` they're on, as one on all of them: a Road's trade on Desert, on
+ *  Grassland and on Plains is one line.
+ */
+export const onSquaresTogether = (effects: Described[]): Described[] => {
+  const ids = new Map<Function, number>(),
+    keyOf = ({ squares, ...fields }: Described): string =>
+      JSON.stringify(fields, (field: string, value: unknown) => {
+        if (typeof value !== 'function') {
+          return value;
+        }
+
+        if (!ids.has(value)) {
+          ids.set(value, ids.size);
+        }
+
+        return `class:${ids.get(value)}`;
+      }),
+    together = new Map<string, Described>();
+
+  effects.forEach((effect: Described): void => {
+    const key = keyOf(effect),
+      seen = together.get(key);
+
+    if (seen === undefined) {
+      together.set(key, { ...effect, squares: [effect.squares] });
+
+      return;
+    }
+
+    // The same line from two rules (one describing what it replaces) names its square once.
+    if (!(seen.squares as unknown[]).includes(effect.squares)) {
+      (seen.squares as unknown[]).push(effect.squares);
+    }
+  });
+
+  // Each type's lines by their value, as the squares' order says nothing: 2 turns, then 4, then 6, and a line that
+  //  needs something (a River's road, Bridge Building) after the one with the same value that doesn't.
+  const types = [...new Set(effects.map(({ type }) => type))],
+    valueOf = ({ value }: Described): number =>
+      typeof value === 'number' ? value : 0,
+    needs = ({ with: needed }: Described): number =>
+      needed === undefined ? 0 : 1;
+
+  return [...together.values()].sort(
+    (a: Described, b: Described): number =>
+      types.indexOf(a.type) - types.indexOf(b.type) ||
+      valueOf(a) - valueOf(b) ||
+      needs(a) - needs(b)
+  );
+};
+
+/**
+ * `Item`'s effects among `described`, as they stand in `situation`: those about it, or about one of its base classes,
+ *  then those about a square it's the `improvement` on (#1272), as the improvement's own, on those `squares`. A
+ *  terrain's yield with a Road says it on the terrain's entry, and on the Road's as the trade it adds there.
+ */
 export const effectsOf = (
   Item: Class,
   described: Described[],
   entryClasses: Set<Function> = new Set(),
   situation: Situation | null = null
 ): CivilopediaEffect[] => {
-  const about = described
-    .filter(
-      ({ subject }) =>
-        typeof subject === 'function' &&
-        (subject === Item || Item.prototype instanceof subject)
-    )
-    .map(({ subject, ...fields }) => fields as Described);
+  const inForce = (effects: Described[]): Described[] =>
+      situation === null ? effects : effectsInForce(effects, situation),
+    about = described
+      .filter(
+        ({ subject }) =>
+          typeof subject === 'function' &&
+          (subject === Item || Item.prototype instanceof subject)
+      )
+      .map(({ subject, ...fields }) => fields as Described),
+    // Only for a tile improvement: a Wonder that `acts_as` City Walls names them as its `improvement` too, but isn't a
+    //  square they're on. And an effect's `improvement` can be a job with no entry (clearing a forest), which names
+    //  no improvement here.
+    improving = !(Item.prototype instanceof TileImprovement)
+      ? []
+      : described
+          .filter(
+            ({ subject, improvement }) =>
+              improvement === Item &&
+              typeof subject === 'function' &&
+              // A square's: a terrain, or one of its base classes (`Land`).
+              (subject === Terrain || subject.prototype instanceof Terrain)
+          )
+          .map(
+            ({ subject, improvement, ...fields }) =>
+              ({ ...fields, squares: subject } as Described)
+          );
 
-  return (situation === null ? about : effectsInForce(about, situation)).map(
+  return [...inForce(about), ...onSquaresTogether(inForce(improving))].map(
     (fields) =>
       effectValue(fields, entryClasses) as unknown as CivilopediaEffect
   );
