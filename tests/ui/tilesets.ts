@@ -1737,6 +1737,10 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
         families.mine.sprite,
         families.pollution.sprite,
         families.hut.sprite,
+        // The tile improvements only some rules have (#1243).
+        families.farmland!.sprite,
+        families.fortress!.sprite,
+        families.airbase!.sprite,
         ...Object.values(names.special).map((special) =>
           expandName(families.special.sprite, { special })
         ),

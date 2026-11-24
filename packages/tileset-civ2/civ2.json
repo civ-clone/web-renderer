@@ -168,6 +168,7 @@
       "terrain/jungle/fruit",
       "terrain/ocean/whales",
       "improvements/irrigation",
+      "improvements/farmland",
       "improvements/mine",
       "improvements/pollution",
       "improvements/road/isolated",
@@ -243,6 +244,8 @@
       "units/shield",
       "units/shield-back",
       "map/fortify",
+      "map/fortress",
+      "map/airbase",
       "city/stone-bronze/0",
       "city/stone-bronze/1",
       "city/stone-bronze/2",
@@ -719,6 +722,17 @@
     },
     "hut": {
       "sprite": "map/hut"
+    },
+    "farmland": {
+      "sprite": "improvements/farmland"
+    },
+    "fortress": {
+      "sprite": "map/fortress",
+      "anchors": { "Fortress": { "x": 0, "y": -16 } }
+    },
+    "airbase": {
+      "sprite": "map/airbase",
+      "anchors": { "Airbase": { "x": 0, "y": -16 } }
     }
   },
   "units": {

@@ -6,6 +6,7 @@ import {
 import {
   CoastCorner,
   CoastStrip,
+  SpriteFamily,
   TerrainPictures,
   TilesetDescriptor,
   expandName,
@@ -184,6 +185,7 @@ export class Landscape extends TerrainAbstract {
 
     this.renderImprovements(tile, offsetX, offsetY);
     this.renderFeatures(tile, offsetX, offsetY);
+    this.renderStructures(tile, offsetX, offsetY);
     this.renderGoodyHut(tile, offsetX, offsetY);
   }
 
@@ -332,21 +334,65 @@ export class Landscape extends TerrainAbstract {
     offsetX: number,
     offsetY: number
   ): void {
-    const hasIrrigation = tile.improvements.some(
-      (improvement: EntityInstance): boolean => improvement._ === 'Irrigation'
-    );
+    const { farmland, irrigation } = this.tileset().families;
 
-    if (!hasIrrigation) {
+    if (!this.hasImprovement(tile, 'Irrigation')) {
       return;
     }
 
-    this.drawFamily(
-      this.tileset().families.irrigation,
-      [],
-      {},
-      offsetX,
-      offsetY
+    // Farmland in place of the irrigation it's built on, for a tileset that draws it (Civ2's, #1243).
+    if (farmland !== undefined && this.hasImprovement(tile, 'Farmland')) {
+      this.drawOptionalFamily(farmland, 'Farmland', offsetX, offsetY);
+
+      return;
+    }
+
+    this.drawFamily(irrigation, [], {}, offsetX, offsetY);
+  }
+
+  /** Whether `tile` has the tile improvement whose engine name is `name`. */
+  protected hasImprovement(tile: Tile, name: string): boolean {
+    return tile.improvements.some(
+      (improvement: EntityInstance): boolean => improvement._ === name
     );
+  }
+
+  /**
+   * One of the families only some tilesets have (#1243), at its `anchors` entry for `name` (Civ2's Fortress and
+   *  Airbase are taller than the tile, and lifted above it), at this layer's scale.
+   */
+  protected drawOptionalFamily(
+    family: SpriteFamily,
+    name: string,
+    offsetX: number,
+    offsetY: number
+  ): void {
+    const { x, y } = family.anchors?.[name] ?? { x: 0, y: 0 },
+      scale = this.scale();
+
+    this.drawFamily(family, [], {}, offsetX + x * scale, offsetY + y * scale);
+  }
+
+  /**
+   * A Fortress or an Airbase on the square, over the rest of its scenery, for a tileset that draws them (#388, #1243).
+   */
+  protected renderStructures(
+    tile: Tile,
+    offsetX: number,
+    offsetY: number
+  ): void {
+    const { airbase, fortress } = this.tileset().families;
+
+    (
+      [
+        [fortress, 'Fortress'],
+        [airbase, 'Airbase'],
+      ] as [SpriteFamily | undefined, string][]
+    ).forEach(([family, name]): void => {
+      if (family !== undefined && this.hasImprovement(tile, name)) {
+        this.drawOptionalFamily(family, name, offsetX, offsetY);
+      }
+    });
   }
 
   protected renderTerrain(tile: Tile, offsetX: number, offsetY: number): void {

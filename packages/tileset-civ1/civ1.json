@@ -458,6 +458,9 @@
     },
     "hut": {
       "sprite": "map/hut"
+    },
+    "fortress": {
+      "sprite": "map/fort"
     }
   },
   "units": {

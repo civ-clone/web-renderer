@@ -49,6 +49,7 @@ i18next.addResources('en', 'unit', {
   'Action.Automate.name': 'Automate',
   'Action.BribeUnit.name': 'Bribe unit',
   'Action.BuildIrrigation.name': 'Build irrigation',
+  'Action.BuildFortress.name': 'Build fortress',
   'Action.BuildMine.name': 'Build mine',
   'Action.BuildRailroad.name': 'Build railroad',
   'Action.BuildRoad.name': 'Build road',
@@ -108,6 +109,7 @@ i18next.addResources('en', 'unit', {
   'Action.Sleep.icon': 'S',
 
   'Busy.BuildingIrrigation.name': 'Building irrigation',
+  'Busy.BuildingFortress.name': 'Building fortress',
   'Busy.BuildingMine.name': 'Building mine',
   'Busy.BuildingRoad.name': 'Building road',
   'Busy.BuildingRailroad.name': 'Building railroad',
@@ -125,6 +127,7 @@ i18next.addResources('en', 'unit', {
   'Busy.BuildingRoute.name': 'Building a route',
 
   'Busy.BuildingIrrigation.icon': 'I',
+  'Busy.BuildingFortress.icon': 'F',
   'Busy.BuildingMine.icon': 'M',
   'Busy.BuildingRoad.icon': 'R',
   'Busy.BuildingRailroad.icon': 'RR',
