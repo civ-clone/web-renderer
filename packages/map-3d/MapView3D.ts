@@ -424,7 +424,8 @@ export class MapView3D implements MapRenderer {
   // A frame asked for to draw in, if one is; and whether it's to draw what's changed (`#draw`), not only units idling.
   #frame: number | null = null;
   #wanted = false;
-  // When the last frame was drawn, by the page's clock; and the squares whose units were asked to idle in it.
+  // When the last frame drawn in a frame of the browser's began, by its clock; and the squares whose units were asked
+  //  to idle in the last, while any did.
   #drawnAt = -Infinity;
   #idlers: ReadonlySet<string> = new Set();
   // The squares marked with a unit, which may idle.
@@ -3239,8 +3240,6 @@ export class MapView3D implements MapRenderer {
   #frameDrawn(budget: number | null, idleOnly = false): void {
     const started = performance.now();
 
-    this.#drawnAt = started;
-
     if (idleOnly) {
       const idling = this.#idle(started, false);
 
@@ -3340,7 +3339,15 @@ export class MapView3D implements MapRenderer {
         : new Set();
     }
 
-    return this.#stage.idle(this.#idlers, now / 1000) && this.#mayIdle();
+    const idling =
+      this.#stage.idle(this.#idlers, now / 1000) && this.#mayIdle();
+
+    // None idling: none goes on further next time (`idleSquares`), as one idling would.
+    if (!idling) {
+      this.#idlers = new Set();
+    }
+
+    return idling;
   }
 
   // Whether units may idle: not without frames to play their clips in, with motion reduced, nor with units' moves not
@@ -3480,29 +3487,35 @@ export class MapView3D implements MapRenderer {
   }
 
   // A frame asked for, if one isn't already: drawn whole if anything's asked for one by then (`#draw`), whenever it
-  //  comes; otherwise only for units idling, and only once `IDLE_FRAME` has passed since the last, the frames between
-  //  passed over.
+  //  comes; otherwise only for units idling, and only once `IDLE_FRAME` has passed since the last began, the frames
+  //  between passed over.
   #ask(): void {
     if (this.#disposed || this.#frame !== null) {
       return;
     }
 
-    this.#frame = requestAnimationFrame(() => {
+    // Timed by when the browser's frame began, as it gives it, so one whose callback starts a little late isn't passed
+    //  over; or by the clock, where it doesn't.
+    this.#frame = requestAnimationFrame((time?: number) => {
+      const began = typeof time === 'number' ? time : performance.now();
+
       this.#frame = null;
 
       if (this.#wanted) {
         this.#wanted = false;
+        this.#drawnAt = began;
         this.#frameDrawn(BUILD_BUDGET);
 
         return;
       }
 
-      if (performance.now() - this.#drawnAt < IDLE_FRAME) {
+      if (began - this.#drawnAt < IDLE_FRAME) {
         this.#ask();
 
         return;
       }
 
+      this.#drawnAt = began;
       this.#frameDrawn(BUILD_BUDGET, true);
     });
   }

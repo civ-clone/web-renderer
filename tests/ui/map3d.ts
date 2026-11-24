@@ -6151,6 +6151,57 @@ expect(
     ]
   );
 
+  // Asked, but none idling (their models have no idle clip, say), none go on further: drawn back to 13, none are asked.
+  // A unit leaving its square isn't asked again. Taken down with a frame for them to come, the frame's given up.
+  idleSays.idling = false;
+  glider.portal.render();
+  runFrames();
+  zoomTo(13)();
+  runFrames();
+
+  const noneGoOn = idleAsked.splice(0).at(-1)?.[0];
+
+  zoomTo(5)();
+  idleSays.idling = true;
+  repatched([2, 1, []]);
+
+  const leftSquare = idleAsked.splice(0).at(-1)?.[0];
+
+  idleSays.idling = false;
+  runFrames();
+  repatched([2, 1, [guard]]);
+
+  const idleTakenDown = makeMapView(deps2D) as MapView3D;
+
+  idleSays.idling = true;
+  idleTakenDown.setOrbit({
+    ...idleTakenDown.orbit(),
+    focus: middleOf(tiles[1 * 4 + 1] as Tile),
+    distance: 5,
+  });
+  runFrames(4);
+
+  const pendingBefore = frames.size;
+
+  idleTakenDown.dispose();
+  staged.length = 0;
+
+  const framesAfterDown = runFrames();
+
+  idleSays.idling = false;
+
+  expect(
+    'asked but none idling, none go on further; a unit that’s left its square isn’t asked; taken down with a frame for its units to come, it’s given up',
+    [
+      noneGoOn,
+      leftSquare,
+      pendingBefore,
+      framesAfterDown,
+      staged.includes('render'),
+    ],
+    [[], ['1,1'], 1, 0, false]
+  );
+
   // Turns, frame by frame: how far the camera turns in all, the way it turns, each frame's step taken the short way.
   const turnedFrameByFrame = (between: () => void): number => {
     let turned = 0,

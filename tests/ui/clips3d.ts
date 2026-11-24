@@ -50,6 +50,7 @@ import {
   poseFigures,
   rigFacts,
 } from '@civ-clone/ui-map-3d/markers/clips';
+import boundClips from '@civ-clone/ui-map-3d/markers/rigBounds';
 import {
   IDLE_DISTANCE,
   IDLE_DISTANCE_OUT,
@@ -202,7 +203,7 @@ const round = (value: number) => Math.round(value * 10000) / 10000,
 //  to one skeleton of two bones (the arm's the top half of a post), one part in its owner's colour; its walk turns the
 //  arm a quarter and back over a second, and its fall tips the whole over a second and a half: not a whole number of
 //  the walk's, so a walk left playing under it would show.
-const rigged = (): LoadedRig => {
+const rigged = (armature: Group | null = null): LoadedRig => {
   const scene = new Group(),
     hips = new Bone(),
     arm = new Bone(),
@@ -233,7 +234,14 @@ const rigged = (): LoadedRig => {
   arm.name = 'arm';
   arm.position.set(0, 1, 0);
   hips.add(arm);
-  scene.add(hips, plain, owner);
+  // Under an armature of its own, as some files have, scaled and moved: the skeleton and the parts with it.
+  if (armature === null) {
+    scene.add(hips, plain, owner);
+  } else {
+    armature.add(hips, plain, owner);
+    scene.add(armature);
+  }
+
   scene.updateMatrixWorld(true);
 
   const skeleton = new Skeleton([hips, arm]);
@@ -461,7 +469,7 @@ kit.addRig('partisan', rig);
   );
 
   expect(
-    'its parts are in its owner’s colour where they say, the same materials for every figure, drawn only where they’re seen, with bounds of their own',
+    'its parts are in its owner’s colour where they say, the same materials for every figure, drawn only where they’re seen, each with bounds of its own, the same as the others’',
     [
       materials.every(
         ([plain, owner]) =>
@@ -477,24 +485,33 @@ kit.addRig('partisan', rig);
         ([plain, owner]) =>
           plain === materials[0]![0] && owner === materials[0]![1]
       ),
-      figures.every((figure) =>
-        meshesOf(figure).every(
-          (mesh) =>
+      figures.every((figure, index) =>
+        meshesOf(figure).every((mesh, part) => {
+          const { boundingSphere, boundingBox } = mesh as SkinnedMesh,
+            other = meshesOf(figures[(index + 1) % figures.length]!)[
+              part
+            ] as SkinnedMesh;
+
+          return (
             mesh.frustumCulled &&
-            (mesh as SkinnedMesh).boundingSphere !== null &&
-            (mesh as SkinnedMesh).boundingSphere !==
-              (figures[0]!.children[0] as SkinnedMesh).boundingSphere
-        )
+            boundingSphere !== null &&
+            boundingBox !== null &&
+            boundingSphere !== other.boundingSphere &&
+            boundingSphere.equals(other.boundingSphere!) &&
+            boundingBox !== other.boundingBox
+          );
+        })
       ),
     ],
     [true, true, true]
   );
 
   // Each part posed at every twentieth of a second of each clip, and as the model stands: where it reaches, in its own
-  //  space, as far as its bounds say it does. The fall lays the post flat, a post's length from where it stood, which
+  //  space, within its bounds, sphere and box. The fall lays the post flat, a post's length from where it stood, which
   //  its bounds as the model stands wouldn't cover.
   const posed = figures[1]!,
     parts = meshesOf(posed) as SkinnedMesh[],
+    // How far past its sphere its furthest point lies, or 1 if one's outside its box, which a ray's tested against.
     reach = (each: SkinnedMesh): number => {
       const sphere = each.boundingSphere!,
         geometry = each.geometry,
@@ -505,7 +522,8 @@ kit.addRig('partisan', rig);
         each.getVertexPosition(i, point);
         furthest = Math.max(
           furthest,
-          point.distanceTo(sphere.center) - sphere.radius
+          point.distanceTo(sphere.center) - sphere.radius,
+          each.boundingBox!.containsPoint(point) ? 0 : 1
         );
       }
 
@@ -844,6 +862,53 @@ expect(
   ],
   [null, null, true, true]
 );
+
+// A rig under an armature scaled and moved, as some files have it: its bounds are in each part's own space, so cover
+//  every pose its clips take it to there too.
+{
+  const armature = new Group();
+
+  armature.scale.setScalar(3);
+  armature.position.set(2, 1, -4);
+
+  const moved = rigged(armature);
+
+  boundClips(moved);
+
+  const parts = meshesOf(moved.scene) as SkinnedMesh[],
+    playing = new WeakMap<Object3D, Playing>(),
+    point = new Vector3(),
+    outside: string[] = [];
+
+  moved.clips.forEach((clip, role) => {
+    for (let at = 0; at <= clip.duration; at += 0.05) {
+      poseFigures(moved.scene, moved, role, at, playing);
+      moved.scene.updateMatrixWorld(true);
+      parts.forEach((each, index) => {
+        const sphere = each.boundingSphere!;
+
+        for (let i = 0; i < each.geometry.getAttribute('position').count; i++) {
+          each.getVertexPosition(i, point);
+
+          if (
+            point.distanceTo(sphere.center) > sphere.radius + 1e-6 ||
+            !each.boundingBox!.containsPoint(point)
+          ) {
+            outside.push(`${role} ${round(at)} part ${index}`);
+
+            break;
+          }
+        }
+      });
+    }
+  });
+
+  expect(
+    'under an armature scaled and moved, its bounds cover every pose its clips take it to',
+    [[...new Set(outside)], parts.length],
+    [[], 2]
+  );
+}
 
 // Which stacks idle: those near the camera, with it close in, on the screen or nearly, those idling going on a little
 //  further; a few start at a time, one fading left as it is; each its own way into its clip.
