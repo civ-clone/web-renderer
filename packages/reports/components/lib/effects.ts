@@ -253,6 +253,9 @@ const first: string[] = [
     'improvement_yield',
     'improvement_yield_percent',
     'tile_yield_halved',
+    'square_yield_percent',
+    // What a tile improvement does for a defender (#1272), with what it gives.
+    'square_defence_multiplier',
   ],
   last: string[] = ['upkeep'];
 
