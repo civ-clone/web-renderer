@@ -344,8 +344,8 @@ expect(
 //  polluted neighbours' join; laid relative to the chunk's corner, as what's solid is; facing up. Past the shore it
 //  carries on, riding the water's surface over the sea, not its floor.
 {
-  // Hills and hollows across and down, more than a road's land, all of it over the sea: a haze laid flat wouldn't
-  //  follow them.
+  // Hills and hollows across and down, more than a road's land, all of it above the sea's level: a haze laid flat
+  //  wouldn't follow them.
   const hilly = (u: number, v: number): number =>
       0.2 + 0.15 * Math.sin(u * 3) * Math.cos(v * 2),
     // The sea from a little east of the square's middle.

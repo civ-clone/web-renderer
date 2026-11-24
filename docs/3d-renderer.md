@@ -659,17 +659,21 @@ Each is looked up by its type name in the model set.
 - **Irrigation and Farmland:** fields laid over the square, with ditches running from water. Farmland is denser.
 - **Mine:** a shaft head and spoil heaps on hills; a cut on mountains.
 - **Fortress and Airbase:** a model on the square.
-- **Pollution and fallout:** smog, a low, sooty brown haze over the square (#1335), darker than any land, rock
-  included, so it shows over mountains: see-through, so the land and what's on it show through, thickest at its
+- **Pollution and fallout:** smog, a low, sooty brown haze over the square (#1335), darker than open land and rock,
+  so it shows over mountains (forest, jungle and swamp are about as dark, and it's told from them by its hue):
+  see-through, so the land and what's on it show through, thickest at its
   middle and thinning to nothing at its edges, reaching a little past the square's so polluted neighbours' join
   (`SMOG_REACH`, 1.4 times its radius), with wisps over it, higher and thinner. Draped over the land, as what's laid
   on it is, 0.07 to 0.16 over it, about a figure's height, so it hangs round units on the square, its spokes no
   further apart than its rings so it follows a slope. Past the shore it carries on over the water, riding its surface
   rather than the sea's floor. It's a mesh of its own in each chunk's overlay (`Layer#haze`, the overlay's `haze`),
   each point as solid as it says, drawn from both sides in one pass with one material, unlit, writing no depth, so its
-  layers don't hide each other. It's drawn after the sea and before the cloud (`renderOrder` 1.5, between their 1 and
-  2): the sea is one see-through plane across the world, which three.js can only order by that, and drawn before it,
-  smog over the land with the sea behind it would be painted over, cut along the shore. It doesn't drift: that would
+  layers don't hide each other. It's drawn after the sea and before the cloud (`SMOG_ORDER`, 1.5, between the sea's 1
+  and the cloud's 2, all in `water.ts`): the sea is one see-through plane across the world, which three.js can only
+  order by that, and drawn before it, smog over the land with the sea behind it would be painted over, cut along the
+  shore. On high land the smog can be over the cloud's plane, which is still drawn after it, as it's under it on low
+  land, which is more often. Dithering it (`alphaHash`, as fading units are) would need no order, but a soft haze,
+  mostly faint, would be grainy and shimmer as the camera moves. It doesn't drift: that would
   need frames drawn all the time, as idling does. Fallout, when a rule sends it, can take the same haze, darker.
 
 ---

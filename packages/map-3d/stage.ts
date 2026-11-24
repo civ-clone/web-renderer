@@ -54,7 +54,7 @@ import { idleChanges } from './idling';
 import unitUnder from './markers/pickUnit';
 import { OverlayMesh } from './overlay/overlayMesh';
 import { FIELD_OF_VIEW, Orbit, eye, sightFor } from './camera/orbit';
-import Water, { Clouds, Ground } from './water';
+import Water, { Clouds, Ground, SMOG_ORDER } from './water';
 import YieldIcons from './yieldIcons';
 import { YieldMesh } from './yields';
 import { LoadedRig, loadModels, modelKey } from './models/loadModels';
@@ -1101,12 +1101,9 @@ export const createStage: StageFactory = (
             if (haze !== null) {
               const smog = new Mesh(haze, hazeMaterial);
 
-              // After the sea and before the cloud (`water.ts`). The sea is one plane across the world, see-through
-              //  too, drawn after the land by its order alone: three.js orders what's see-through by its order, then
-              //  by how far each thing's middle is, which says nothing for a plane that size. Drawn before it, smog
-              //  over the land where the sea's behind it is painted over, cut along the shore. It's never under the
-              //  sea's surface, so after it is always right.
-              smog.renderOrder = 1.5;
+              // After the sea and before the cloud (`SMOG_ORDER`): drawn before the sea, smog over the land where
+              //  the sea's behind it would be painted over, cut along the shore.
+              smog.renderOrder = SMOG_ORDER;
               drawn.add(smog);
             }
 

@@ -50,7 +50,12 @@ import {
   unfaded,
 } from '@civ-clone/ui-map-3d/markers/drawMarker';
 import { PUFF_BLOBS, puffAt } from '@civ-clone/ui-map-3d/markers/puff';
-import Water, { Clouds } from '@civ-clone/ui-map-3d/water';
+import Water, {
+  CLOUD_ORDER,
+  Clouds,
+  SEA_ORDER,
+  SMOG_ORDER,
+} from '@civ-clone/ui-map-3d/water';
 import {
   Part,
   figureGeometry,
@@ -871,6 +876,17 @@ expect(
   ],
   // The city's name, and the unit's bar (back and front), flag, label and pointer.
   [6, true, true]
+);
+
+expect(
+  'what’s see-through is drawn in order: the sea, then smog over the land, then the cloud, then what stands over units',
+  [
+    sea.mesh.renderOrder === SEA_ORDER,
+    cloud.mesh.renderOrder === CLOUD_ORDER,
+    SEA_ORDER < SMOG_ORDER && SMOG_ORDER < CLOUD_ORDER,
+    badges.every((sprite) => sprite.renderOrder > SMOG_ORDER),
+  ],
+  [true, true, true, true]
 );
 cloud.dispose();
 sea.dispose();

@@ -38,6 +38,18 @@ export type Ground = {
   wrapsV: boolean;
 };
 
+/**
+ * The order what's see-through is drawn in, all of it after everything solid: the sea, then smog over the land, then
+ *  the cloud, then what stands over units and cities (`markers/drawMarker.ts`). The sea and the cloud are each one
+ *  plane across the world, which three.js can only order by this: it orders what's see-through by it, then by how far
+ *  each thing's middle is, which says nothing for a plane that size. Smog is never under the sea's surface, so after
+ *  it is always right. It can be over the cloud on high land, but the cloud's after it, as it's under it on low land,
+ *  which is more often.
+ */
+export const SEA_ORDER = 1,
+  SMOG_ORDER = 1.5,
+  CLOUD_ORDER = 2;
+
 // Clear and green-blue at the shore, deep blue out at sea, as linear colours.
 const SHALLOW = new Color('#3f8a8c'),
   DEEP = new Color('#173a52'),
@@ -179,8 +191,8 @@ export class Water {
 
     this.mesh = new Mesh(new PlaneGeometry(1, 1), material);
     this.mesh.rotation.x = -Math.PI / 2;
-    // Over the land, which it's drawn after.
-    this.mesh.renderOrder = 1;
+    // Over the land, drawn after it as everything solid is, and before the smog and the cloud.
+    this.mesh.renderOrder = SEA_ORDER;
   }
 
   /** The chunk at its corner (`u`, `v`): its points' heights written into the ground the surface reads. */
@@ -370,8 +382,8 @@ export class Clouds {
 
     this.mesh = new Mesh(new PlaneGeometry(1, 1), material);
     this.mesh.rotation.x = -Math.PI / 2;
-    // Over the land and the sea, which it's drawn after.
-    this.mesh.renderOrder = 2;
+    // Over the land and the sea, drawn after them and the smog.
+    this.mesh.renderOrder = CLOUD_ORDER;
   }
 
   /** Whether it's drawn past the poles: only on a world that wraps over them, and not where the map's stopped there. */
