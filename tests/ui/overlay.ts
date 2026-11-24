@@ -340,7 +340,7 @@ expect(
 );
 
 // Pollution as smog (#1335): no solid shapes, only a haze hanging over the land, following it, between its lowest and
-//  highest, as solid as a little under half at its middle and nothing at its edges, reaching past the square's so
+//  highest, as solid as three-quarters at its middle and nothing at its edges, reaching past the square's so
 //  polluted neighbours' join; laid relative to the chunk's corner, as what's solid is; and facing up.
 {
   const smoggy = overlayMesh(16, 0, [
@@ -372,14 +372,14 @@ expect(
     });
 
   expect(
-    'pollution is smog: no solid shapes, a haze over the land following it, as solid as a little under half at its middle and nothing at its edges, past the square’s edges, facing up',
+    'pollution is smog: no solid shapes, a haze over the land following it, as solid as three-quarters at its middle and nothing at its edges, past the square’s edges, facing up',
     [
       smoggy.positions.length,
       points.length > 0 && colours.length === points.length * 4,
       lifts.every(
         (lift) => lift > SMOG_LIFT[0] - 1e-6 && lift < SMOG_LIFT[1] + 1e-6
       ),
-      Math.max(...alphas) > 0.2 && Math.max(...alphas) <= 0.45,
+      Math.max(...alphas) > 0.5 && Math.max(...alphas) <= 0.75,
       Math.min(...alphas),
       reach > 0.5,
       up.every(Boolean),

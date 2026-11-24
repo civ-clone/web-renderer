@@ -509,7 +509,8 @@ export class Land {
       const [i, j] = making.key.split(',').map(Number) as [number, number],
         { stepsU, stepsV, spacingU, spacingV } = this.#grid,
         mesh =
-          making.laid.positions.length === 0
+          making.laid.positions.length === 0 &&
+          making.laid.haze.positions.length === 0
             ? null
             : meshOf(i * stepsU * spacingU, j * stepsV * spacingV, making.laid);
 

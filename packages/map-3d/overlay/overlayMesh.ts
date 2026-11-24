@@ -121,10 +121,10 @@ const LIFT = {
   SPOIL = '#7a6a58',
   THATCH = '#b89a5a',
   WALL = '#c9b48e',
-  SMOG = '#6a6353';
+  SMOG = '#968c76';
 
 /** How high smog hangs over the land, at its lowest and highest, in world units (a figure's about 0.15 tall). */
-export const SMOG_LIFT = [0.04, 0.12] as const;
+export const SMOG_LIFT = [0.07, 0.16] as const;
 
 // The shapes solids are made from: each a unit across, cut to size.
 const box = new BoxGeometry(1, 1, 1),
@@ -398,7 +398,7 @@ class Layer {
       // Thick in the middle, thinning smoothly to nothing at the edge, each point a little thicker or thinner.
       solid = (ring: number, side: number): number => {
         const out = ring / rings,
-          falls = (1 - out * out) ** 2,
+          falls = (1 - out * out) ** 1.5,
           wisp = 0.65 + 0.35 * fraction(seed, ring * 97 + (side % sides));
 
         return ring === rings ? 0 : alpha * falls * wisp;
@@ -1066,14 +1066,22 @@ const airbase = (layer: Layer): void => {
 const pollution = (layer: Layer): void => {
   const { radius, seed } = layer.place;
 
-  layer.haze(layer.place.centre, radius * 1.15, SMOG, 0.45, SMOG_LIFT[0], seed);
+  layer.haze(layer.place.centre, radius * 1.4, SMOG, 0.75, SMOG_LIFT[0], seed);
+  layer.haze(
+    layer.place.centre,
+    radius * 1.2,
+    SMOG,
+    0.5,
+    (SMOG_LIFT[0] + SMOG_LIFT[1]) / 2,
+    seed + 7
+  );
 
   for (let n = 0; n < 3; n++) {
     layer.haze(
       layer.spot(11 + n, 0.45),
-      radius * (0.4 + 0.15 * fraction(seed, 50 + n)),
+      radius * (0.55 + 0.2 * fraction(seed, 50 + n)),
       SMOG,
-      0.3,
+      0.5,
       SMOG_LIFT[0] + (SMOG_LIFT[1] - SMOG_LIFT[0]) * ((n + 1) / 3),
       seed + n + 1
     );
