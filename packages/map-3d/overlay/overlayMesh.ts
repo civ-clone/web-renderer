@@ -1,13 +1,15 @@
 // The shapes laid on the land (docs/3d-renderer.md §5.2, §5.4, plan 3.4), from what `overlayFor` says a square has, made
 //  by code for the built-in set:
-//  - roads, railroads, fields and pollution are draped over the land, sampled along it, a little above it;
+//  - roads, railroads and fields are draped over the land, sampled along it, a little above it;
+//  - pollution is smog, a see-through haze draped higher over it, a mesh of its own;
 //  - mines, fortresses, airbases, specials and huts are small solids standing on it, specials at sea on the water;
 //  - a city's lot is its sprawl, and a city's houses spill onto its neighbours' squares as it grows;
 //  - what stands on a square stands away from its middle, where a unit stands, each at a place of its own seeded from
 //    the square, so they don't line up from square to square.
 //
 // A chunk's squares are one mesh, their colours in its vertices: one draw call a chunk at each copy of the world, like
-//  the land's (#1204). Its points are relative to the chunk's corner, as the land's are.
+//  the land's (#1204), and one more for its smog, where it has any. Its points are relative to the chunk's corner, as
+//  the land's are.
 
 import {
   BoxGeometry,
@@ -125,6 +127,9 @@ const LIFT = {
 
 /** How high smog hangs over the land, at its lowest and highest, in world units (a figure's about 0.15 tall). */
 export const SMOG_LIFT = [0.07, 0.16] as const;
+
+/** How far smog reaches from a square's middle, in its radius (as far as its nearest edge), past it so neighbours join. */
+export const SMOG_REACH = 1.4;
 
 // The shapes solids are made from: each a unit across, cut to size.
 const box = new BoxGeometry(1, 1, 1),
@@ -375,7 +380,9 @@ class Layer {
 
   /**
    * A haze `radius` across hanging over the land round `centre`, `lift` over it, following it: as solid as `alpha` at
-   *  its middle, thinning to nothing at its edge, in wisps (`seed`), see-through, so the land shows through it.
+   *  its middle, thinning to nothing at its edge, in wisps (`seed`), see-through, so the land shows through it. It
+   *  thins to nothing at the shore, too, riding the water's surface rather than the sea's floor, as the sea's drawn
+   *  after it. Its spokes no further apart at its edge than its rings, so it follows a slope rather than cutting into it.
    */
   haze(
     centre: readonly [number, number],
@@ -383,12 +390,12 @@ class Layer {
     css: string,
     alpha: number,
     lift: number,
-    seed: number,
-    sides = 14
+    seed: number
   ): void {
     const [r, g, b] = colourOf(css),
       [u, v] = centre,
       rings = Math.max(2, Math.ceil(radius / STEP)),
+      sides = Math.max(14, Math.ceil((2 * Math.PI * radius) / STEP)),
       at = (ring: number, side: number): [number, number] => {
         const angle = (side / sides) * Math.PI * 2,
           out = (ring / rings) * radius;
@@ -404,10 +411,11 @@ class Layer {
         return ring === rings ? 0 : alpha * falls * wisp;
       },
       point = (ring: number, side: number): void => {
-        const [pu, pv] = ring === 0 ? [u, v] : at(ring, side);
+        const [pu, pv] = ring === 0 ? [u, v] : at(ring, side),
+          atSea = this.ground(pu, pv) < 0;
 
-        this.soup.haze.positions.push(pu, this.ground(pu, pv) + lift, pv);
-        this.soup.haze.colours.push(r, g, b, solid(ring, side));
+        this.soup.haze.positions.push(pu, this.ground(pu, pv, true) + lift, pv);
+        this.soup.haze.colours.push(r, g, b, atSea ? 0 : solid(ring, side));
       };
 
     for (let ring = 0; ring < rings; ring++) {
@@ -1066,7 +1074,14 @@ const airbase = (layer: Layer): void => {
 const pollution = (layer: Layer): void => {
   const { radius, seed } = layer.place;
 
-  layer.haze(layer.place.centre, radius * 1.4, SMOG, 0.75, SMOG_LIFT[0], seed);
+  layer.haze(
+    layer.place.centre,
+    radius * SMOG_REACH,
+    SMOG,
+    0.75,
+    SMOG_LIFT[0],
+    seed
+  );
   layer.haze(
     layer.place.centre,
     radius * 1.2,

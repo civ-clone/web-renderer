@@ -484,6 +484,8 @@ export const createStage: StageFactory = (
       transparent: true,
       depthWrite: false,
       fog: true,
+      // Seen from below, as on a slope facing away steeper than the camera looks down.
+      side: DoubleSide,
     }),
     // What's laid on the land stops where the land does past a pole the view's stopped at: the last row's fields and
     //  roads on a staggered or hex world reach a little past it, where the land, the sea and the cloud stop (and are

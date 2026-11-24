@@ -31,6 +31,7 @@ import overlayFor, {
 import overlayMesh, {
   NORMAL_STEP,
   OverlayMesh,
+  SMOG_REACH,
   OverlayPlace,
   Soup,
   layOverlay,
@@ -159,9 +160,6 @@ export class Land {
         step / 2 + WANDER * Math.SQRT2 + BEND
       );
 
-    this.#overhang =
-      corner + NORMAL_STEP + Math.max(this.#grid.spacingU, this.#grid.spacingV);
-
     // Each edge of a square's outline: how far it is from the middle, and which way it faces.
     const outline = this.layout.outline(0, 0),
       edges = outline.flatMap(([au, av], index) => {
@@ -181,6 +179,11 @@ export class Land {
       });
 
     this.#radius = Math.min(...edges.map(({ away }) => away));
+    // As far past a square as what's laid on it reads the land: its corners, or its smog where that reaches further.
+    this.#overhang =
+      Math.max(corner, SMOG_REACH * this.#radius) +
+      NORMAL_STEP +
+      Math.max(this.#grid.spacingU, this.#grid.spacingV);
     // A square of half-side h fits inside an edge `away` from the middle while |nu|·h + |nv|·h ≤ away.
     this.#inner = Math.min(
       ...edges.map(
