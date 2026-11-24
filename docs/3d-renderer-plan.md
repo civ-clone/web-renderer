@@ -486,7 +486,7 @@ Plants are scattered by seed, each where it has room. They stay clear of a unit'
 
 **Woods: done.** Forest, jungle and swamp grow as one canopy across their squares, as Civ1's forests run together (spec §5.1): trees stand at the points of a lattice over the whole ground, whole across the edge to the same woods and thinning to a fringe at the edge to other ground, so a forest is a wood rather than a clump on each square. An all-forest chunk is 48,000–58,000 triangles and 35–50 ms to lay, a few squares a frame.
 
-**3.4, first part: done.** What's laid on the land is made by code (`packages/map-3d/overlay/`), one vertex-coloured mesh a chunk, so it costs a draw call a chunk:
+**3.4, first part: done.** What's laid on the land is made by code (`packages/map-3d/overlay/`), one vertex-coloured mesh a chunk, so it costs a draw call a chunk (and one more for its smog, where it has any, since #1335):
 - roads and railroads are draped over the land, joined to their neighbours as the 2D map joins them, along the topology's directions, and at the nearest copy across the world's seams. Roads wind like country lanes, each half bowing its own way and meeting its neighbour's at the edge; railroads are straight;
 - irrigation and farmland are rows of crops with ditches; pollution is a dark smear (smog since #1335: a low,
   see-through haze over the square, spec §5.4);

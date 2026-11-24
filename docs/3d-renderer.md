@@ -661,11 +661,14 @@ Each is looked up by its type name in the model set.
 - **Fortress and Airbase:** a model on the square.
 - **Pollution and fallout:** smog, a low haze over the square (#1335): see-through, so the land and what's on it show
   through, thickest at its middle and thinning to nothing at its edges, reaching a little past the square's so
-  polluted neighbours' join, with wisps over it, higher and thinner. Draped over the land, as what's laid on it is,
-  0.07 to 0.16 over it, about a figure's height, so it hangs round units on the square. It's a mesh of its own in each
-  chunk's overlay (`Layer#haze`, the overlay's `haze`), each point as solid as it says, drawn with one material,
-  unlit, after what's solid and writing no depth, so its layers don't hide each other. It doesn't drift: that would
-  need frames drawn all the time, as idling does. Fallout, when a rule sends it, can take the same haze, darker.
+  polluted neighbours' join (`SMOG_REACH`, 1.4 times its radius), with wisps over it, higher and thinner. Draped over
+  the land, as what's laid on it is, 0.07 to 0.16 over it, about a figure's height, so it hangs round units on the
+  square, its spokes no further apart than its rings so it follows a slope. It thins to nothing at the shore, riding
+  the water's surface rather than the sea's floor, as the sea's drawn after it. It's a mesh of its own in each chunk's
+  overlay (`Layer#haze`, the overlay's `haze`), each point as solid as it says, drawn from both sides with one
+  material, unlit, after what's solid and writing no depth, so its layers don't hide each other. It doesn't drift:
+  that would need frames drawn all the time, as idling does. Fallout, when a rule sends it, can take the same haze,
+  darker.
 
 ---
 
