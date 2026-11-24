@@ -4846,6 +4846,27 @@ expect(
   heldPatch.push(unitOn(1, 1), unitOn(2, 1), walkers.size);
   repatched([1, 1, []], [2, 1, []]);
 
+  // Its patch held, the ringed unit attacking with its last move, a key after the blow: the ring goes on at once, the
+  //  winner stands where it fought from till its patch comes, and the loser falls as it would; once the battle's over,
+  //  the winner still stands there (#1334).
+  repatched([1, 1, [walker]], [2, 1, [rival]], [3, 3, [nextUnit]]);
+  glider.setActiveUnit(placed(walker, 1, 1));
+  glider.portal.setCenter(1, 1);
+  runFrames();
+  fought(walker, [1, 1], rival, [2, 1], 'attacker');
+  glider.setActiveUnit(placed(nextUnit, 3, 3));
+  glider.portal.setCenter(3, 3);
+  runFrames(14);
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'w' }));
+  runFrames(1);
+  heldPatch.push(ringOn(3, 3), [...walkers.keys()].map(kind).sort());
+  runFrames();
+  heldPatch.push([...walkers.keys()].map(kind));
+  repatched([1, 1, [walker]], [2, 1, []]);
+  heldPatch.push(unitOn(1, 1), walkers.size);
+  glider.setActiveUnit(null);
+  repatched([1, 1, []], [3, 3, []]);
+
   // Two attacks on one square at once, two units holding it, as in a city, where one falls at a time: fought together,
   //  the square as it was till the blows, what fell in each fading alone.
   repatched([1, 1, [walker]], [3, 1, [guard]], [2, 1, [rival, rivalMate]]);
@@ -4888,10 +4909,24 @@ expect(
   repatched([1, 1, []]);
 
   expect(
-    'its patch held, the winner stands where it stood once the battle’s over, and the loser’s left off, till it comes; two attacks on one square, fought together, what fell in each fading alone; with no frames, the first drawn again ends it',
+    'its patch held, the winner stands where it stood once the battle’s over, and the loser’s left off, till it comes; hurried on after the blow, the ring goes on, the winner standing there till its patch, the loser falling on; two attacks on one square, fought together, what fell in each fading alone; with no frames, the first drawn again ends it',
     [heldPatch, firstBlow, secondBlow, twoOver, outOfSight],
     [
-      [null, null, ['battle'], ['Unit-A', 1], 0, null, ['Unit-R', 1], 0],
+      [
+        null,
+        null,
+        ['battle'],
+        ['Unit-A', 1],
+        0,
+        null,
+        ['Unit-R', 1],
+        0,
+        true,
+        ['battle', 'battle-fallen'],
+        ['battle'],
+        ['Unit-A', 1],
+        0,
+      ],
       [
         null,
         [
