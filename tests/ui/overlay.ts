@@ -340,13 +340,14 @@ expect(
 );
 
 // Pollution as smog (#1335): no solid shapes, only a haze hanging over the land, following it up and down, between its
-//  lowest and highest; three-quarters solid at its middle, nothing at its edge, reaching 1.4 times the square's radius
-//  so polluted neighbours' join; laid relative to the chunk's corner, as what's solid is; facing up. At the shore it
-//  thins to nothing, riding the water's surface over the sea, not its floor.
+//  lowest and highest; mostly solid at its middle, nothing at its edge, reaching 1.4 times the square's radius so
+//  polluted neighbours' join; laid relative to the chunk's corner, as what's solid is; facing up. Past the shore it
+//  carries on, riding the water's surface over the sea, not its floor.
 {
-  // Hills and hollows across and down, more than a road's land: a haze laid flat wouldn't follow them.
+  // Hills and hollows across and down, more than a road's land, all of it over the sea: a haze laid flat wouldn't
+  //  follow them.
   const hilly = (u: number, v: number): number =>
-      0.1 + 0.15 * Math.sin(u * 3) * Math.cos(v * 2),
+      0.2 + 0.15 * Math.sin(u * 3) * Math.cos(v * 2),
     // The sea from a little east of the square's middle.
     coast = (u: number): number => (u > 17.8 ? -0.3 : 0.1),
     hazeOf = (height: (u: number, v: number) => number) => {
@@ -389,7 +390,7 @@ expect(
     shore = hazeOf((u) => coast(u)).points;
 
   expect(
-    'pollution is smog: no solid shapes, a haze following the land up and down, three-quarters solid at its middle, nothing at its edge, 1.4 times the square’s radius, facing up',
+    'pollution is smog: no solid shapes, a haze following the land up and down, mostly solid at its middle, nothing at its edge, 1.4 times the square’s radius, facing up',
     [
       smoggy.positions.length,
       points.every(
@@ -399,7 +400,7 @@ expect(
       ),
       Math.round(Math.max(...middle.map(({ alpha }) => alpha)) * 100) / 100 >
         0.5,
-      Math.max(...middle.map(({ alpha }) => alpha)) <= 0.75,
+      Math.max(...middle.map(({ alpha }) => alpha)) <= 0.85,
       points
         .filter(({ away }) => away > reach - 1e-6)
         .every(({ alpha }) => alpha === 0),
@@ -410,12 +411,12 @@ expect(
   );
 
   expect(
-    'at the shore it thins to nothing, riding the water’s surface over the sea; a square with no pollution has no haze',
+    'past the shore it carries on, riding the water’s surface over the sea, not its floor; a square with no pollution has no haze',
     [
       shore
         .filter(({ u }) => u > 17.8)
-        .every(({ alpha, y }) => alpha === 0 && y >= SMOG_LIFT[0] - 1e-6),
-      shore.some(({ u, alpha }) => u < 17.8 && alpha > 0.3),
+        .every(({ y }) => y >= SMOG_LIFT[0] - 1e-6),
+      shore.some(({ u, alpha }) => u > 17.8 && alpha > 0.3),
       overlayMesh(16, 0, [
         { overlay: overlayFor(square(['Road']), [])!, place: place(17, 3) },
       ]).haze.positions.length,

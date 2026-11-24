@@ -489,7 +489,7 @@ Plants are scattered by seed, each where it has room. They stay clear of a unit'
 **3.4, first part: done.** What's laid on the land is made by code (`packages/map-3d/overlay/`), one vertex-coloured mesh a chunk, so it costs a draw call a chunk (and one more for its smog, where it has any, since #1335):
 - roads and railroads are draped over the land, joined to their neighbours as the 2D map joins them, along the topology's directions, and at the nearest copy across the world's seams. Roads wind like country lanes, each half bowing its own way and meeting its neighbour's at the edge; railroads are straight;
 - irrigation and farmland are rows of crops with ditches; pollution is a dark smear (smog since #1335: a low,
-  see-through haze over the square, spec §5.4);
+  see-through, sooty brown haze over the square, drawn after the sea, spec §5.4);
 - mines, fortresses, airbases, specials (`packages/models-builtin/specials.ts`, every feature Civ1 and Civ2 name) and huts are small solids, standing clear of a unit's stand;
 - a chunk's overlay is made again with its land, or when what's laid on a square in it or next to it changes. A unit moving changes nothing laid, so it remakes nothing, and a road built rebuilds no land. Chunks are made nearest the camera first;
 - it's draped over the land as drawn (the chunks' flat triangles), so it never sinks into a hill, and read from the chunks' points, which also makes it cheap: about 15 ms a chunk on a populated world;

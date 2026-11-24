@@ -123,7 +123,7 @@ const LIFT = {
   SPOIL = '#7a6a58',
   THATCH = '#b89a5a',
   WALL = '#c9b48e',
-  SMOG = '#968c76';
+  SMOG = '#584b34';
 
 /** How high smog hangs over the land, at its lowest and highest, in world units (a figure's about 0.15 tall). */
 export const SMOG_LIFT = [0.07, 0.16] as const;
@@ -380,9 +380,9 @@ class Layer {
 
   /**
    * A haze `radius` across hanging over the land round `centre`, `lift` over it, following it: as solid as `alpha` at
-   *  its middle, thinning to nothing at its edge, in wisps (`seed`), see-through, so the land shows through it. It
-   *  thins to nothing at the shore, too, riding the water's surface rather than the sea's floor, as the sea's drawn
-   *  after it. Its spokes no further apart at its edge than its rings, so it follows a slope rather than cutting into it.
+   *  its middle, thinning to nothing at its edge, in wisps (`seed`), see-through, so the land shows through it. Past
+   *  the shore it rides the water's surface rather than the sea's floor. Its spokes no further apart at its edge than
+   *  its rings, so it follows a slope rather than cutting into it.
    */
   haze(
     centre: readonly [number, number],
@@ -412,11 +412,10 @@ class Layer {
         return alpha * falls * wisp;
       },
       point = (ring: number, side: number): void => {
-        const [pu, pv] = ring === 0 ? [u, v] : at(ring, side),
-          atSea = this.ground(pu, pv) < 0;
+        const [pu, pv] = ring === 0 ? [u, v] : at(ring, side);
 
         this.soup.haze.positions.push(pu, this.ground(pu, pv, true) + lift, pv);
-        this.soup.haze.colours.push(r, g, b, atSea ? 0 : solid(ring, side));
+        this.soup.haze.colours.push(r, g, b, solid(ring, side));
       };
 
     for (let ring = 0; ring < rings; ring++) {
@@ -1079,7 +1078,7 @@ const pollution = (layer: Layer): void => {
     layer.place.centre,
     radius * SMOG_REACH,
     SMOG,
-    0.75,
+    0.85,
     SMOG_LIFT[0],
     seed
   );

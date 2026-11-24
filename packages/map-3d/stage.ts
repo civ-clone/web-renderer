@@ -484,8 +484,10 @@ export const createStage: StageFactory = (
       transparent: true,
       depthWrite: false,
       fog: true,
-      // Seen from below, as on a slope facing away steeper than the camera looks down.
+      // Seen from below, as on a slope facing away steeper than the camera looks down; both sides in one pass, as it's
+      //  one colour, so the order its faces are drawn in doesn't show.
       side: DoubleSide,
+      forceSinglePass: true,
     }),
     // What's laid on the land stops where the land does past a pole the view's stopped at: the last row's fields and
     //  roads on a staggered or hex world reach a little past it, where the land, the sea and the cloud stop (and are
@@ -1097,7 +1099,15 @@ export const createStage: StageFactory = (
             drawn.receiveShadow = true;
 
             if (haze !== null) {
-              drawn.add(new Mesh(haze, hazeMaterial));
+              const smog = new Mesh(haze, hazeMaterial);
+
+              // After the sea and before the cloud (`water.ts`). The sea is one plane across the world, see-through
+              //  too, drawn after the land by its order alone: three.js orders what's see-through by its order, then
+              //  by how far each thing's middle is, which says nothing for a plane that size. Drawn before it, smog
+              //  over the land where the sea's behind it is painted over, cut along the shore. It's never under the
+              //  sea's surface, so after it is always right.
+              smog.renderOrder = 1.5;
+              drawn.add(smog);
             }
 
             return drawn;
