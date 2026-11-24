@@ -1480,8 +1480,8 @@ has a clip to play is paced as before.
 
 - **The attacker** plays `fight` from the start. Where its clip has shots, it stands where it is to shoot rather than
   lunging (`lunge` 0), and the blow falls as its first figure's first shot lands, the shot's time in the clip and its
-  flight after (`SHOT_FLIGHT`, 350 ms). Where it has none, it lunges, and the blow falls a fifth of a second in, as
-  before. It's drawn till its last figure's clip is over, or the battle is.
+  flight after (a bottle's 350 ms; each kind's since the sixth part). Where it has none, it lunges, and the blow falls
+  a fifth of a second in, as before. It's drawn till its last figure's clip is over, or the battle is.
 - **The loser** plays `die` from the blow: the defender where it stood, or the attacker where it is, lost. It stays
   solid till its last figure has fallen (`falls`), then fades in its puff of smoke as before.
 - **A squad's figures** are 0.13 s apart in a clip that loops, as walking, and each 0.13 s behind the one before in a
@@ -1493,7 +1493,8 @@ has a clip to play is paced as before.
   than two seconds behind, or two of the longest battle, the new one or one its units are in, where that's longer, so
   an attacker attacking again waits rather than cutting a long battle short.
 - **Shots** (`shots.ts`): each figure's leaves the node its clip names (found as three.js names it, and checked as the
-  clip's tracks are), as that figure's clip comes to it, from where the node is as the figure's posed then
+  clip's tracks are), as that figure's clip comes to it (by the battle's clock since the sixth part), from where the
+  node is as the figure's posed then
   (`Stage#jointAt`, `jointOf`). It flies the short way to the square attacked, over the world's seam or not, in an arc
   (`SHOT_ARC`), landing by the loser's feet, a squad's a little apart (`SHOT_SPREAD`). Where it lands, it bursts in a
   puff of smoke of its own (`HIT_PUFF`, half a second). The Partisans' is a bottle, alight at its neck, tumbling end
@@ -1545,6 +1546,9 @@ each kind goes as it would (`SHOT_LOOKS` in `shots.ts`):
 - **Pacing** (`clipPace`): the blow falls as the first shot to land lands, each as long after it leaves as its kind
   flies, so a bullet that leaves after a bottle can land first. The battle's drawn till the last shot's puff is over
   (`shotOver`); the smoke where each left, 400 ms (`MUZZLE_PUFF`), is over before it.
+- **A squad that loses** falls at the blow, which a bullet can bring before its last figures have fired. Shots leave
+  by the battle's clock (`Fighter.fought`), not the clip a figure plays, so each figure fires what its clip has before
+  the blow, as it falls behind the one before; none fires what its clip has after (`shotsFired`).
 - **Drawn** (`#placeShots`, `Stage#shot`, `Stage#puff`): each points the way it's going (`shotHeading`), the arc's
   tangent, but for a bottle, which tumbles, and a shell, a ball. The smoke where it leaves a muzzle is timed from when
   it left, so a bullet that leaves and lands between one frame and the next still shows it. Its flash is solid and
