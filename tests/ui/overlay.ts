@@ -31,6 +31,7 @@ import overlayMesh, {
   ROOFS,
   layOverlay,
   roadHalf,
+  SMOG_LIFT,
   rowAround,
   soup,
 } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
@@ -337,6 +338,63 @@ expect(
   ],
   [true, 18]
 );
+
+// Pollution as smog (#1335): no solid shapes, only a haze hanging over the land, following it, between its lowest and
+//  highest, as solid as a little under half at its middle and nothing at its edges, reaching past the square's so
+//  polluted neighbours' join; laid relative to the chunk's corner, as what's solid is; and facing up.
+{
+  const smoggy = overlayMesh(16, 0, [
+      { overlay: overlayFor(square(['Pollution']), [])!, place: place(17, 3) },
+    ]),
+    { positions, colours } = smoggy.haze,
+    points = Array.from({ length: positions.length / 3 }, (_, n) => ({
+      u: positions[n * 3]! + 16,
+      y: positions[n * 3 + 1]!,
+      v: positions[n * 3 + 2]!,
+      alpha: colours[n * 4 + 3]!,
+    })),
+    lifts = points.map(({ u, y }) => y - heightAt(u)),
+    alphas = points.map(({ alpha }) => alpha),
+    reach = Math.max(
+      ...points.map(({ u, v }) =>
+        Math.max(Math.abs(u - 17.5), Math.abs(v - 3.5))
+      )
+    ),
+    // Each triangle facing up, so it's drawn from above.
+    up = Array.from({ length: positions.length / 9 }, (_, n) => {
+      const at = n * 9,
+        ax = positions[at + 3]! - positions[at]!,
+        az = positions[at + 5]! - positions[at + 2]!,
+        bx = positions[at + 6]! - positions[at]!,
+        bz = positions[at + 8]! - positions[at + 2]!;
+
+      return az * bx - ax * bz > 0;
+    });
+
+  expect(
+    'pollution is smog: no solid shapes, a haze over the land following it, as solid as a little under half at its middle and nothing at its edges, past the square’s edges, facing up',
+    [
+      smoggy.positions.length,
+      points.length > 0 && colours.length === points.length * 4,
+      lifts.every(
+        (lift) => lift > SMOG_LIFT[0] - 1e-6 && lift < SMOG_LIFT[1] + 1e-6
+      ),
+      Math.max(...alphas) > 0.2 && Math.max(...alphas) <= 0.45,
+      Math.min(...alphas),
+      reach > 0.5,
+      up.every(Boolean),
+    ],
+    [0, true, true, true, 0, true, true]
+  );
+
+  expect(
+    'a square with no pollution has no haze',
+    overlayMesh(16, 0, [
+      { overlay: overlayFor(square(['Road']), [])!, place: place(17, 3) },
+    ]).haze.positions.length,
+    0
+  );
+}
 
 const across = overlayMesh(16, 0, [
   {

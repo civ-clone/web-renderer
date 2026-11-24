@@ -70,32 +70,41 @@ export type OverlayPlace = {
   period: { u: number; v: number | null };
 };
 
-/** A chunk's overlay as three.js takes it: triangles, each point's normal and colour, relative to its corner. */
+/**
+ * A chunk's overlay as three.js takes it: triangles, each point's normal and colour, relative to its corner; and its
+ *  haze, see-through, as smog over pollution: triangles, each point's colour and how solid it is (four numbers a point).
+ */
 export type OverlayMesh = {
   u: number;
   v: number;
   positions: Float32Array;
   normals: Float32Array;
   colours: Float32Array;
+  haze: { positions: Float32Array; colours: Float32Array };
 };
 
-// Triangles as they're made: three numbers a point for each.
+// Triangles as they're made: three numbers a point for each; and the haze's, its colours four a point.
 export type Soup = {
   positions: number[];
   normals: number[];
   colours: number[];
+  haze: { positions: number[]; colours: number[] };
 };
 
 /** An empty soup of triangles, for squares to be laid into one at a time. */
-export const soup = (): Soup => ({ positions: [], normals: [], colours: [] });
+export const soup = (): Soup => ({
+  positions: [],
+  normals: [],
+  colours: [],
+  haze: { positions: [], colours: [] },
+});
 
-// How far over the land each kind is laid, so the later is over the earlier: fields, then roads, railroads, pollution.
+// How far over the land each kind is laid, so the later is over the earlier: fields, then roads, railroads.
 const LIFT = {
     field: 0.01,
     road: 0.014,
     ballast: 0.016,
     rail: 0.02,
-    smear: 0.024,
   },
   // How finely a draped strip follows the land: finer than the land's points are apart (0.125).
   STEP = 0.06,
@@ -112,7 +121,10 @@ const LIFT = {
   SPOIL = '#7a6a58',
   THATCH = '#b89a5a',
   WALL = '#c9b48e',
-  SMOG = '#34322a';
+  SMOG = '#6a6353';
+
+/** How high smog hangs over the land, at its lowest and highest, in world units (a figure's about 0.15 tall). */
+export const SMOG_LIFT = [0.04, 0.12] as const;
 
 // The shapes solids are made from: each a unit across, cut to size.
 const box = new BoxGeometry(1, 1, 1),
@@ -356,6 +368,61 @@ class Layer {
           this.#point(u1, v1, lift, colour);
           this.#point(u3, v3, lift, colour);
           this.#point(u2, v2, lift, colour);
+        }
+      }
+    }
+  }
+
+  /**
+   * A haze `radius` across hanging over the land round `centre`, `lift` over it, following it: as solid as `alpha` at
+   *  its middle, thinning to nothing at its edge, in wisps (`seed`), see-through, so the land shows through it.
+   */
+  haze(
+    centre: readonly [number, number],
+    radius: number,
+    css: string,
+    alpha: number,
+    lift: number,
+    seed: number,
+    sides = 14
+  ): void {
+    const [r, g, b] = colourOf(css),
+      [u, v] = centre,
+      rings = Math.max(2, Math.ceil(radius / STEP)),
+      at = (ring: number, side: number): [number, number] => {
+        const angle = (side / sides) * Math.PI * 2,
+          out = (ring / rings) * radius;
+
+        return [u + Math.cos(angle) * out, v + Math.sin(angle) * out];
+      },
+      // Thick in the middle, thinning smoothly to nothing at the edge, each point a little thicker or thinner.
+      solid = (ring: number, side: number): number => {
+        const out = ring / rings,
+          falls = (1 - out * out) ** 2,
+          wisp = 0.65 + 0.35 * fraction(seed, ring * 97 + (side % sides));
+
+        return ring === rings ? 0 : alpha * falls * wisp;
+      },
+      point = (ring: number, side: number): void => {
+        const [pu, pv] = ring === 0 ? [u, v] : at(ring, side);
+
+        this.soup.haze.positions.push(pu, this.ground(pu, pv) + lift, pv);
+        this.soup.haze.colours.push(r, g, b, solid(ring, side));
+      };
+
+    for (let ring = 0; ring < rings; ring++) {
+      for (let side = 0; side < sides; side++) {
+        if (ring === 0) {
+          point(0, 0);
+          point(1, side + 1);
+          point(1, side);
+        } else {
+          point(ring, side);
+          point(ring, side + 1);
+          point(ring + 1, side);
+          point(ring, side + 1);
+          point(ring + 1, side + 1);
+          point(ring + 1, side);
         }
       }
     }
@@ -994,11 +1061,23 @@ const airbase = (layer: Layer): void => {
   );
 };
 
+// Smog: a low haze over the square, reaching a little over its edges so polluted neighbours' join, and wisps over it,
+//  higher and thinner, each its own way round.
 const pollution = (layer: Layer): void => {
-  const radius = layer.place.radius;
+  const { radius, seed } = layer.place;
 
-  layer.disc(layer.place.centre, radius * 0.55, SMOG, LIFT.smear, 14);
-  layer.disc(layer.spot(7, 0.5), radius * 0.25, SMOG, LIFT.smear + 0.001);
+  layer.haze(layer.place.centre, radius * 1.15, SMOG, 0.45, SMOG_LIFT[0], seed);
+
+  for (let n = 0; n < 3; n++) {
+    layer.haze(
+      layer.spot(11 + n, 0.45),
+      radius * (0.4 + 0.15 * fraction(seed, 50 + n)),
+      SMOG,
+      0.3,
+      SMOG_LIFT[0] + (SMOG_LIFT[1] - SMOG_LIFT[0]) * ((n + 1) / 3),
+      seed + n + 1
+    );
+  }
 };
 
 // One special, standing round `at`.
@@ -1768,12 +1847,20 @@ export const meshOf = (u: number, v: number, laid: Soup): OverlayMesh => {
     positions[point + 2] = positions[point + 2]! - v;
   }
 
+  const haze = new Float32Array(laid.haze.positions);
+
+  for (let point = 0; point < haze.length; point += 3) {
+    haze[point] = haze[point]! - u;
+    haze[point + 2] = haze[point + 2]! - v;
+  }
+
   return {
     u,
     v,
     positions,
     normals: new Float32Array(laid.normals),
     colours: new Float32Array(laid.colours),
+    haze: { positions: haze, colours: new Float32Array(laid.haze.colours) },
   };
 };
 
