@@ -1481,7 +1481,7 @@ has a clip to play is paced as before.
   solid till its last figure has fallen (`falls`), then fades in its puff of smoke as before.
 - **A squad's figures** are 0.13 s apart in a clip that loops, as walking, and each 0.13 s behind the one before in a
   clip played once (`poseFigures`), so none is ahead of the blow, and the battle waits for the last.
-- **The Partisans' battle,** a throw half a second in and a fall of 1.6 s, takes 3.3 s won, against 0.8 s for a battle
+- **The Partisans' battle,** a throw half a second in and a fall of 1.5 s, takes 3.2 s won, against 0.8 s for a battle
   without clips; twice as quick, as the player can choose, its clips play twice as quick and it takes half as long.
   An attacker's drawn till its last shot has landed and burst, won or lost: lost with no `die` clip, it fades as it
   would, then is drawn as nothing till then. A unit's battles too far behind (§8.2) are over at once when they're more
