@@ -3999,7 +3999,8 @@ expect(
   runFrames();
   repatched([1, 1, []]);
 
-  // A step after the blow ends the battle at once: its puff of smoke goes with it.
+  // A step after the blow, won: the attacker walks on at once, and the loser falls as it would, its puff of smoke going
+  //  on till it's over (#1334).
   repatched([1, 1, [walker]], [2, 1, [rival]]);
   fought(walker, [1, 1], rival, [2, 1], 'attacker');
   patch([1, 1, [walker]], [2, 1, []]);
@@ -4008,8 +4009,9 @@ expect(
   stepped(walker, [1, 1], [1, 2]);
   patch([1, 1, []], [1, 2, [walker]]);
   runFrames(1);
-  offMidBattle.push(puffs.size);
+  offMidBattle.push(puffs.size, [...walkers.keys()].map(kind).sort());
   runFrames();
+  offMidBattle.push(puffs.size);
   repatched([1, 2, []]);
 
   // With units hidden (`t`), nothing's drawn falling, and no puff of smoke either, won or lost.
@@ -4083,10 +4085,10 @@ expect(
   walkersPlaced.clear();
 
   expect(
-    'moving at once chosen mid-battle ends it on the next frame, its puff with it; with units hidden, no puff, won or lost; a step after the blow takes its puff with it; walking as it attacks, it walks there, then lunges from its square, the square attacked as it was; a step mid-battle ends the battle, and it walks from its square',
+    'moving at once chosen mid-battle ends it on the next frame, its puff with it; with units hidden, no puff, won or lost; a step after the blow walks on, the loser falling and its puff going on till it’s over; walking as it attacks, it walks there, then lunges from its square, the square attacked as it was; a step mid-battle ends the battle, and it walks from its square',
     [offMidBattle, walkedThenFought, steppedMidBattle],
     [
-      [0, ['Unit-A', 1], null, 1, 0, 1, 0, 0],
+      [0, ['Unit-A', 1], null, 1, 0, 1, 1, ['battle-fallen', 'walk'], 0, 0],
       [
         ['walk'],
         null,
@@ -4724,14 +4726,16 @@ expect(
   runFrames();
   keyedBattle.push(focusOn(3, 3));
 
-  // A key after the blow: the battle's over at once, and its puff of smoke goes with it.
+  // A key after the blow: the ring and the camera go to the next at once, the attacker back on its square, and the
+  //  loser falls as it would, its puff of smoke going on till it's over (#1334).
   attackedLast();
   runFrames(12);
   keyedBattle.push(puffs.size);
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'w' }));
   runFrames(1);
-  keyedBattle.push(puffs.size);
+  keyedBattle.push(puffs.size, ringOn(3, 3), unitOn(1, 1));
   runFrames();
+  keyedBattle.push(puffs.size);
 
   // Lost with its last move: the ring and the camera wait till it's faded away, then go to the next.
   repatched([1, 1, [walker]], [2, 1, [rival]], [3, 3, [nextUnit]]);
@@ -4748,17 +4752,33 @@ expect(
 
   runFrames();
   diedRinged.push(unitOn(1, 1), ringOn(3, 3), focusOn(3, 3));
+
+  // Lost, a key while it falls: the ring goes to the next at once, and it falls on as it would (#1334).
+  repatched([1, 1, [walker]], [2, 1, [rival]], [3, 3, [nextUnit]]);
+  glider.setActiveUnit(placed(walker, 1, 1));
+  glider.portal.setCenter(1, 1);
+  runFrames();
+  fought(walker, [1, 1], rival, [2, 1], 'defender');
+  patch([1, 1, []], [2, 1, [rival]]);
+  glider.setActiveUnit(placed(nextUnit, 3, 3));
+  glider.portal.setCenter(3, 3);
+  runFrames(20);
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'w' }));
+  runFrames(1);
+  diedRinged.push(ringOn(3, 3), [...walkers.keys()].map(kind));
+  runFrames();
+  diedRinged.push(walkers.size);
   glider.setActiveUnit(null);
   repatched([1, 1, []], [2, 1, []], [3, 3, []]);
 
   expect(
-    'the active unit attacking with its last move holds the ring and the camera till the battle’s over, then they go to the next; a key meanwhile ends it at once, after the blow its puff with it; lost, they wait till it’s gone',
+    'the active unit attacking with its last move holds the ring and the camera till the battle’s over, then they go to the next; a key meanwhile ends it at once; after the blow, they go to the next, the loser falling on, its puff till it’s over; lost, they wait till it’s gone, or, a key, go at once, it falling on',
     [heldForBattle, afterBattle, keyedBattle, diedRinged],
     [
       [true, false, true, ['Unit-T', 1], true, false, true],
       [['Unit-A', 1], false, true, true],
-      [['Unit-A', 1], null, 0, true, true, 1, 0],
-      [true, false, true, null, true, true],
+      [['Unit-A', 1], null, 0, true, true, 1, 1, true, ['Unit-A', 1], 0],
+      [true, false, true, null, true, true, true, ['battle'], 0],
     ]
   );
 

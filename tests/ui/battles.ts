@@ -720,6 +720,83 @@ expect(
   );
 }
 
+// Moving on from a battle (#1334): once the blow's fallen, an attacker that won moves on, drawn no more there, nothing
+//  waiting for it, and the loser falls as it would; hurried on, one that lost frees the ring, falling still; one that
+//  won defending goes on as it is. Before the blow, the battle's over at once.
+{
+  const fighting = new Battles(),
+    // What's drawn of the battles at a time: who.
+    drawn = (at: number) =>
+      fighting
+        .at(at)
+        .going.map(({ unit, fallen }) => `${unit}${fallen ? ' fallen' : ''}`),
+    won = fighting.add(battleOf('a', 'd', true), 0, pace),
+    early = fighting.add(battleOf('b', 'e', true, [3, 3], [4, 3]), 0, pace),
+    lost = fighting.add(battleOf('c', 'f', false, [6, 6], [7, 6]), 0, pace),
+    defended = fighting.add(battleOf('g', 'h', false, [9, 9], [9, 8]), 0, pace),
+    names = (battles: { id: string }[]) => battles.map(({ id }) => id),
+    // Before the blow, 200 ms in.
+    beforeBlow = fighting.moveOn('b', 100);
+
+  fighting.at(250);
+
+  const movedOn = fighting.moveOn('a', 250),
+    afterMovedOn = [
+      fighting.attacking('a'),
+      fighting.holds('a'),
+      fighting.released(won.id),
+      fighting.busyUntil(['a']),
+    ],
+    hurried = fighting.moveOn('c', 250, true),
+    afterHurried = [fighting.attacking('c'), fighting.holds('c')],
+    stepped = fighting.moveOn('h', 250),
+    // Attacking again at once: it doesn't wait for the loser's fall.
+    again = fighting.add(battleOf('a', 'x', true, [0, 0], [0, 1]), 260, pace);
+
+  expect(
+    'won, the attacker moves on, drawn no more there, nothing waiting for it, the loser falling on; before the blow, over at once; lost and hurried, the ring free, it falling still; won defending, it goes on',
+    [
+      [names(movedOn.released), names(movedOn.ended)],
+      [
+        names(beforeBlow.released),
+        names(beforeBlow.ended),
+        names(beforeBlow.struck),
+      ],
+      afterMovedOn,
+      [names(hurried.released), names(hurried.ended)],
+      afterHurried,
+      [
+        names(stepped.released),
+        names(stepped.ended),
+        fighting.released(defended.id),
+      ],
+      again.start,
+      drawn(300),
+      fighting
+        .at(battleEnds(won))
+        .ended.map(({ id }) => id)
+        .includes(won.id),
+    ],
+    [
+      [[won.id], []],
+      [[], [early.id], [early.id]],
+      [false, false, true, null],
+      [[lost.id], []],
+      [true, false],
+      [[], [], false],
+      260,
+      ['d fallen', 'c', 'g', 'a'],
+      true,
+    ]
+  );
+
+  expect(
+    'once a battle it moved on from is over, nothing’s kept of it',
+    fighting.released(won.id),
+    false
+  );
+}
+
 if (failures.length > 0) {
   process.stderr.write(
     `FAIL battles: ${
