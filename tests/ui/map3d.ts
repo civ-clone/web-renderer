@@ -253,6 +253,10 @@ const staged: string[] = [],
   //  they are, by walker, figure and node, the stage saying a fifth of a square over where the walker was last put.
   shotsDrawn = new Map<string, (readonly number[] | null)[]>(),
   jointsAsked: [string, number, string][] = [],
+  // Each time the stage was asked which units idle: the squares, in order, and how far in, by the clock; and whether it
+  //  says some do, as a stage whose models have idle clips would.
+  idleAsked: [string[], number][] = [],
+  idleSays = { idling: false },
   fakeStage = (): Stage => ({
     render: () => void staged.push('render'),
     unitAt: () => unitUnderPointer.key,
@@ -301,6 +305,11 @@ const staged: string[] = [],
         [role, seconds],
       ]),
     rigFacts: (marker) => rigFactsFor.get(marker.unit?.id ?? '') ?? null,
+    idle: (keys, seconds) => {
+      idleAsked.push([[...keys].sort(), seconds]);
+
+      return idleSays.idling && keys.size > 0;
+    },
     jointAt: (id, figure, joint) => {
       const placed = walkersPlaced.get(id)?.at(-1);
 
@@ -2104,7 +2113,7 @@ expect(
 
   // In a browser, drawing waits for a frame, and many asks in one are drawn once; taken down, a frame still to come is
   //  given up.
-  const frames = new Map<number, () => void>();
+  const frames = new Map<number, (time?: number) => void>();
   let nextFrame = 1;
 
   Object.assign(globalThis, {
@@ -2160,7 +2169,8 @@ expect(
 
         frames.clear();
         now += 16;
-        waiting.forEach((callback) => callback());
+        // Each given when its frame began, as a browser gives it.
+        waiting.forEach((callback) => callback(now));
         count++;
       }
 
@@ -5980,6 +5990,217 @@ expect(
       firstTaken,
     ],
     [[1, [], 1, 0, 0, 1], true, [1.57], [1, []]]
+  );
+
+  // Units idle (plan 2.2) near the camera, close in: each whole frame asks the stage to pose those on the squares near
+  //  its focus and on the screen, by the clock. While it says some idle, frames go on for them, about 30 a second, each
+  //  only posing and drawing them, the camera not looked through again; one asked for meanwhile is drawn whole, at
+  //  once. Once none idle, the frames stop.
+  repatched([1, 1, [walker]], [2, 1, [guard]]);
+  glider.setOrbit({
+    ...glider.orbit(),
+    focus: middleOf(tiles[1 * 4 + 1] as Tile),
+    distance: 5,
+  });
+  runFrames();
+  idleAsked.length = 0;
+  idleSays.idling = true;
+  glider.portal.render();
+  runFrames(1);
+
+  const idleStarted = now,
+    firstIdle = idleAsked.splice(0),
+    // Each whole frame looks through the camera.
+    wholeBefore = seenDown.length,
+    // Each 60th of a second, ten of them: whether a frame was drawn, and whether the stage was asked to pose them.
+    idleFrames: [boolean, boolean][] = [],
+    idleTimes: number[] = [];
+
+  staged.length = 0;
+
+  for (let frame = 0; frame < 10; frame++) {
+    runFrames(1);
+
+    const asked = idleAsked.splice(0);
+
+    idleFrames.push([staged.splice(0).includes('render'), asked.length > 0]);
+    asked.forEach(([, seconds]) =>
+      idleTimes.push(Math.round((seconds * 1000 - idleStarted) / 16))
+    );
+  }
+
+  const wholeWhileIdling = seenDown.length - wholeBefore;
+
+  // A 60th of a second after one drawn for them, none's drawn; asked for, one's drawn whole.
+  runFrames(1);
+
+  const between = staged.splice(0).includes('render');
+
+  runFrames(1);
+  staged.length = 0;
+  glider.portal.render();
+  runFrames(1);
+
+  const askedWhole = [
+    staged.splice(0).includes('render'),
+    seenDown.length - wholeBefore,
+  ];
+
+  idleSays.idling = false;
+
+  const framesAfter = runFrames();
+
+  expect(
+    'units near the camera idle: the stage’s asked to pose them by the clock; while some idle, frames go on for them alone, about 30 a second, the camera not looked through again; one asked for meanwhile is drawn whole at once; once none idle, the frames stop',
+    [
+      firstIdle,
+      idleFrames,
+      idleTimes,
+      wholeWhileIdling,
+      between,
+      askedWhole,
+      framesAfter <= 2,
+      frames.size,
+    ],
+    [
+      [[['1,1', '2,1'], idleStarted / 1000]],
+      [
+        [false, false],
+        [true, true],
+        [false, false],
+        [true, true],
+        [false, false],
+        [true, true],
+        [false, false],
+        [true, true],
+        [false, false],
+        [true, true],
+      ],
+      [2, 4, 6, 8, 10],
+      0,
+      false,
+      [true, 1],
+      true,
+      0,
+    ]
+  );
+
+  // None idle where the player has asked for less motion, nor with units' moves not shown: the stage's asked to pose
+  //  none, and the frames stop, whether that's so from the start or comes once they're going. Drawn back, none start,
+  //  and those idling stop once it's drawn back further.
+  const idleUnder = (
+    change: () => void,
+    undo: () => void,
+    going: boolean
+  ): [string[], boolean] => {
+    idleSays.idling = true;
+
+    if (!going) {
+      change();
+    }
+
+    idleAsked.length = 0;
+    glider.portal.render();
+    runFrames(3);
+
+    if (going) {
+      change();
+      idleAsked.length = 0;
+    }
+
+    const stopped = runFrames(10) <= 2,
+      asked = idleAsked.splice(0).at(-1)?.[0] ?? ['none asked'];
+
+    undo();
+    idleSays.idling = false;
+    runFrames();
+    idleAsked.length = 0;
+
+    return [asked, stopped];
+  };
+
+  const reduceMotion = (): void =>
+      void Object.assign(window, {
+        matchMedia: (query: string) => ({ matches: query.includes('reduce') }),
+      }),
+    allowMotion = (): void =>
+      void delete (window as { matchMedia?: unknown }).matchMedia,
+    movesOff = (): void => optionsRegistry.set(MAP3D_WALKS_OPTION, 'off'),
+    movesOn = (): void => optionsRegistry.set(MAP3D_WALKS_OPTION, 'normal'),
+    zoomTo = (distance: number) => (): void =>
+      glider.setOrbit({ ...glider.orbit(), distance });
+
+  expect(
+    'none idle with motion reduced, nor with units’ moves not shown, and the frames stop; drawn back, none start, and those idling stop once it’s drawn back further',
+    [
+      idleUnder(reduceMotion, allowMotion, false),
+      idleUnder(reduceMotion, allowMotion, true),
+      idleUnder(movesOff, movesOn, false),
+      idleUnder(movesOff, movesOn, true),
+      idleUnder(zoomTo(13), zoomTo(5), false),
+      idleUnder(zoomTo(13), zoomTo(5), true),
+      idleUnder(zoomTo(15), zoomTo(5), true),
+    ],
+    [
+      [[], true],
+      [[], true],
+      [[], true],
+      [[], true],
+      [[], true],
+      [['1,1', '2,1'], false],
+      [[], true],
+    ]
+  );
+
+  // Asked, but none idling (their models have no idle clip, say), none go on further: drawn back to 13, none are asked.
+  // A unit leaving its square isn't asked again. Taken down with a frame for them to come, the frame's given up.
+  idleSays.idling = false;
+  glider.portal.render();
+  runFrames();
+  zoomTo(13)();
+  runFrames();
+
+  const noneGoOn = idleAsked.splice(0).at(-1)?.[0];
+
+  zoomTo(5)();
+  idleSays.idling = true;
+  repatched([2, 1, []]);
+
+  const leftSquare = idleAsked.splice(0).at(-1)?.[0];
+
+  idleSays.idling = false;
+  runFrames();
+  repatched([2, 1, [guard]]);
+
+  const idleTakenDown = makeMapView(deps2D) as MapView3D;
+
+  idleSays.idling = true;
+  idleTakenDown.setOrbit({
+    ...idleTakenDown.orbit(),
+    focus: middleOf(tiles[1 * 4 + 1] as Tile),
+    distance: 5,
+  });
+  runFrames(4);
+
+  const pendingBefore = frames.size;
+
+  idleTakenDown.dispose();
+  staged.length = 0;
+
+  const framesAfterDown = runFrames();
+
+  idleSays.idling = false;
+
+  expect(
+    'asked but none idling, none go on further; a unit that’s left its square isn’t asked; taken down with a frame for its units to come, it’s given up',
+    [
+      noneGoOn,
+      leftSquare,
+      pendingBefore,
+      framesAfterDown,
+      staged.includes('render'),
+    ],
+    [[], ['1,1'], 1, 0, false]
   );
 
   // Turns, frame by frame: how far the camera turns in all, the way it turns, each frame's step taken the short way.

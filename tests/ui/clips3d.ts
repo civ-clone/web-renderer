@@ -17,6 +17,8 @@ import {
   Color,
   Float32BufferAttribute,
   Group,
+  Matrix3,
+  Matrix4,
   Mesh,
   MeshStandardMaterial,
   Object3D,
@@ -42,12 +44,22 @@ import {
 } from '@civ-clone/ui-map-3d/models/loadModels';
 import {
   FIGURE_STAGGER,
+  IDLE_SPREAD,
   LOOPED_ROLES,
   Playing,
   clipTime,
+  idlePhase,
   poseFigures,
   rigFacts,
 } from '@civ-clone/ui-map-3d/markers/clips';
+import boundClips, { stretchOf } from '@civ-clone/ui-map-3d/markers/rigBounds';
+import {
+  IDLE_DISTANCE,
+  IDLE_DISTANCE_OUT,
+  IDLE_SWAPS,
+  idleChanges,
+  idleSquares,
+} from '@civ-clone/ui-map-3d/idling';
 import TintedMaterial, { ownerTint } from '@civ-clone/ui-map-3d/markers/tinted';
 import { copyOf, jointOf, letGoOfSkeletons } from '@civ-clone/ui-map-3d/stage';
 import { UnitMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
@@ -193,7 +205,7 @@ const round = (value: number) => Math.round(value * 10000) / 10000,
 //  to one skeleton of two bones (the arm's the top half of a post), one part in its owner's colour; its walk turns the
 //  arm a quarter and back over a second, and its fall tips the whole over a second and a half: not a whole number of
 //  the walk's, so a walk left playing under it would show.
-const rigged = (): LoadedRig => {
+const rigged = (armature: Group | null = null): LoadedRig => {
   const scene = new Group(),
     hips = new Bone(),
     arm = new Bone(),
@@ -224,7 +236,14 @@ const rigged = (): LoadedRig => {
   arm.name = 'arm';
   arm.position.set(0, 1, 0);
   hips.add(arm);
-  scene.add(hips, plain, owner);
+  // Under an armature of its own, as some files have, scaled and moved: the skeleton and the parts with it.
+  if (armature === null) {
+    scene.add(hips, plain, owner);
+  } else {
+    armature.add(hips, plain, owner);
+    scene.add(armature);
+  }
+
   scene.updateMatrixWorld(true);
 
   const skeleton = new Skeleton([hips, arm]);
@@ -452,7 +471,7 @@ kit.addRig('partisan', rig);
   );
 
   expect(
-    'its parts are in its owner’s colour where they say, the same materials for every figure, drawn however far a clip takes them',
+    'its parts are in its owner’s colour where they say, the same materials for every figure, drawn only where they’re seen, each with bounds of its own, the same as the others’',
     [
       materials.every(
         ([plain, owner]) =>
@@ -468,11 +487,95 @@ kit.addRig('partisan', rig);
         ([plain, owner]) =>
           plain === materials[0]![0] && owner === materials[0]![1]
       ),
-      figures.every((figure) =>
-        meshesOf(figure).every(({ frustumCulled }) => !frustumCulled)
+      figures.every((figure, index) =>
+        meshesOf(figure).every((mesh, part) => {
+          const { boundingSphere, boundingBox } = mesh as SkinnedMesh,
+            other = meshesOf(figures[(index + 1) % figures.length]!)[
+              part
+            ] as SkinnedMesh;
+
+          return (
+            mesh.frustumCulled &&
+            boundingSphere !== null &&
+            boundingBox !== null &&
+            boundingSphere !== other.boundingSphere &&
+            boundingSphere.equals(other.boundingSphere!) &&
+            boundingBox !== other.boundingBox
+          );
+        })
       ),
     ],
     [true, true, true]
+  );
+
+  // Each part posed at every twentieth of a second of each clip, and as the model stands: where it reaches, in its own
+  //  space, within its bounds, sphere and box. The fall lays the post flat, a post's length from where it stood, which
+  //  its bounds as the model stands wouldn't cover.
+  const posed = figures[1]!,
+    parts = meshesOf(posed) as SkinnedMesh[],
+    // How far past its sphere its furthest point lies, or 1 if one's outside its box, which a ray's tested against.
+    reach = (each: SkinnedMesh): number => {
+      const sphere = each.boundingSphere!,
+        geometry = each.geometry,
+        point = new Vector3();
+      let furthest = 0;
+
+      for (let i = 0; i < geometry.getAttribute('position').count; i++) {
+        each.getVertexPosition(i, point);
+        furthest = Math.max(
+          furthest,
+          point.distanceTo(sphere.center) - sphere.radius,
+          each.boundingBox!.containsPoint(point) ? 0 : 1
+        );
+      }
+
+      return furthest;
+    },
+    playing = new WeakMap<Object3D, Playing>(),
+    outside: string[] = [];
+
+  rig.clips.forEach((clip, role) => {
+    for (let at = 0; at <= clip.duration; at += 0.05) {
+      poseFigures(posed, rig, role, at, playing);
+      posed.updateMatrixWorld(true);
+      parts.forEach((each, index) => {
+        if (reach(each) > 1e-6) {
+          outside.push(`${role} ${round(at)} part ${index}`);
+        }
+      });
+    }
+  });
+
+  poseFigures(posed, rig, 'die', 1.5, playing);
+  posed.updateMatrixWorld(true);
+
+  const lying = parts[0]!;
+
+  // Its bounds as the model stands, as three.js would work them out.
+  lying.geometry.computeBoundingSphere();
+
+  const standingBounds = lying.geometry.boundingSphere!,
+    pastStanding = (() => {
+      const point = new Vector3();
+      let furthest = 0;
+
+      for (let i = 0; i < lying.geometry.getAttribute('position').count; i++) {
+        lying.getVertexPosition(i, point);
+        furthest = Math.max(
+          furthest,
+          point.distanceTo(standingBounds.center) - standingBounds.radius
+        );
+      }
+
+      return furthest;
+    })();
+
+  poseFigures(posed, rig, null, 0, playing);
+
+  expect(
+    'its bounds cover every pose each of its clips takes it to, the fall laying it flat, past its bounds as it stands',
+    [outside, round(pastStanding) > 0.5],
+    [[], true]
   );
 
   // The model's own parts, made after the rig's: their own materials, not the rig's of the same part.
@@ -761,6 +864,216 @@ expect(
   ],
   [null, null, true, true]
 );
+
+// A rig under an armature scaled and moved, as some files have it: its bounds are in each part's own space, so cover
+//  every pose its clips take it to there too.
+{
+  const armature = new Group();
+
+  armature.scale.setScalar(3);
+  armature.position.set(2, 1, -4);
+
+  const moved = rigged(armature);
+
+  boundClips(moved);
+
+  const parts = meshesOf(moved.scene) as SkinnedMesh[],
+    playing = new WeakMap<Object3D, Playing>(),
+    point = new Vector3(),
+    outside: string[] = [];
+
+  moved.clips.forEach((clip, role) => {
+    for (let at = 0; at <= clip.duration; at += 0.05) {
+      poseFigures(moved.scene, moved, role, at, playing);
+      moved.scene.updateMatrixWorld(true);
+      parts.forEach((each, index) => {
+        const sphere = each.boundingSphere!;
+
+        for (let i = 0; i < each.geometry.getAttribute('position').count; i++) {
+          each.getVertexPosition(i, point);
+
+          if (
+            point.distanceTo(sphere.center) > sphere.radius + 1e-6 ||
+            !each.boundingBox!.containsPoint(point)
+          ) {
+            outside.push(`${role} ${round(at)} part ${index}`);
+
+            break;
+          }
+        }
+      });
+    }
+  });
+
+  expect(
+    'under an armature scaled and moved, its bounds cover every pose its clips take it to',
+    [[...new Set(outside)], parts.length],
+    [[], 2]
+  );
+}
+
+// How far a bone's move stretches anything, at most: exactly as far as its longest axis, turned and grown; sheared, as a
+//  stretched bone's turned child is, no less than the most it stretches anything, which its longest axis can be.
+{
+  const turned = new Quaternion().setFromAxisAngle(
+      new Vector3(1, 2, 3).normalize(),
+      0.7
+    ),
+    grown = new Matrix4().compose(
+      new Vector3(1, 2, 3),
+      turned,
+      new Vector3(2, 2, 2)
+    ),
+    stretched = new Matrix4().compose(
+      new Vector3(),
+      turned,
+      new Vector3(1, 4, 1)
+    ),
+    sheared = new Matrix4()
+      .makeScale(1, 4, 1)
+      .multiply(new Matrix4().makeRotationZ(Math.PI / 4)),
+    // The most it stretches any of many ways, a fine sweep round.
+    most = (matrix: Matrix4): number => {
+      let found = 0;
+
+      for (let a = 0; a < 64; a++) {
+        for (let b = 0; b < 32; b++) {
+          const way = new Vector3().setFromSphericalCoords(
+            1,
+            (b / 31) * Math.PI,
+            (a / 64) * Math.PI * 2
+          );
+
+          found = Math.max(
+            found,
+            way.applyMatrix3(new Matrix3().setFromMatrix4(matrix)).length()
+          );
+        }
+      }
+
+      return found;
+    };
+
+  expect(
+    'a bone turned and grown stretches as far as its longest axis; sheared, never less than it does',
+    [
+      round(stretchOf(grown)),
+      round(stretchOf(stretched)),
+      stretchOf(sheared) >= most(sheared) - 1e-6,
+      sheared.getMaxScaleOnAxis() < most(sheared) - 0.1,
+    ],
+    [2, 4, true, true]
+  );
+}
+
+// Which stacks idle: those near the camera, with it close in, on the screen or nearly, those idling going on a little
+//  further; a few start at a time, one fading left as it is; each its own way into its clip.
+{
+  // A world 40 squares across that repeats, its squares a unit apart, and every square on the screen but those whose
+  //  `x` is past the margin asked about, as a screen 10 squares wide round the focus would have them.
+  const centre = (x: number, y: number): [number, number] => [x + 0.5, y + 0.5],
+    period = { u: 40, v: null },
+    seenFrom =
+      (focusX: number) =>
+      (x: number, _y: number, margin: number): boolean => {
+        const apart = Math.abs(((x - focusX + 60) % 40) - 20);
+
+        return apart <= 5 - margin;
+      },
+    near = (
+      squares: string[],
+      distance: number,
+      was: string[] = [],
+      focusX = 10
+    ): string[] =>
+      [
+        ...idleSquares(
+          squares,
+          { distance, focus: [focusX + 0.5, 10.5] },
+          centre,
+          period,
+          new Set(was),
+          seenFrom(focusX)
+        ),
+      ].sort();
+
+  expect(
+    'with the camera close in, those within its reach of its focus idle, the short way round the world: not those further, nor off the screen',
+    [
+      near(['10,10', '15,10', '10,18', '10,19', '17,10', '1,10'], 5),
+      near(['38,10', '2,10'], 5, [], 0),
+    ],
+    [
+      ['10,10', '10,18', '15,10'],
+      ['2,10', '38,10'],
+    ]
+  );
+
+  expect(
+    'those idling go on further, and further off the screen',
+    [
+      near(['10,20', '17,10'], 5, ['10,20', '17,10']),
+      near(['10,21', '18,10'], 5, ['10,21', '18,10']),
+    ],
+    [['10,20', '17,10'], []]
+  );
+
+  expect(
+    'with the camera drawn back, none start idling; those idling stop once it’s drawn back further',
+    [
+      near(['10,10'], IDLE_DISTANCE),
+      near(['10,10'], IDLE_DISTANCE + 0.5),
+      near(['10,10'], IDLE_DISTANCE_OUT, ['10,10']),
+      near(['10,10'], IDLE_DISTANCE_OUT + 0.5, ['10,10']),
+    ],
+    [['10,10'], [], ['10,10'], []]
+  );
+
+  const changes = (
+      keys: string[],
+      idling: string[],
+      cannot: string[] = [],
+      fading: string[] = []
+    ) =>
+      idleChanges(
+        new Set(keys),
+        new Set(idling),
+        (key) => !cannot.includes(key),
+        (key) => fading.includes(key)
+      ),
+    many = ['1,1', '2,1', '3,1', '4,1', '5,1', '6,1'];
+
+  expect(
+    'those asked start, those no longer asked stand, those idling go on; one that can’t idle, or fading, is left as it is; a few start at a time, the rest waiting',
+    [
+      changes(
+        ['1,1', '2,1', '3,1', '6,1'],
+        ['2,1', '4,1', '5,1'],
+        ['3,1'],
+        ['5,1', '6,1']
+      ),
+      changes(many, []),
+      changes(many, many.slice(0, IDLE_SWAPS)),
+    ],
+    [
+      { stand: ['4,1'], start: ['1,1'], waiting: false },
+      { stand: [], start: many.slice(0, IDLE_SWAPS), waiting: true },
+      { stand: [], start: many.slice(IDLE_SWAPS), waiting: false },
+    ]
+  );
+
+  const phases = ['0,0', '1,0', '0,1', '12,34', '99,99'].map(idlePhase);
+
+  expect(
+    'each stack is its own way into its clip, the same each time',
+    [
+      phases.every((phase) => phase >= 0 && phase < IDLE_SPREAD),
+      new Set(phases.map(round)).size,
+      idlePhase('12,34') === phases[3],
+    ],
+    [true, phases.length, true]
+  );
+}
 
 if (failures.length > 0) {
   process.stderr.write(

@@ -1454,10 +1454,12 @@ in its set (plan 2.2). It's in the model's entry:
 - **Loaded** (`loadModels.ts`) once its model's drawing, with every check the model has. One that can't be had, names
   a clip its file hasn't, or has a clip moving a node it can't find by name (as each figure's copy finds it), is said,
   and the model's drawn as before.
-- **Drawn:** a unit at rest is drawn with its model's parts, merged, as before. A walker, or a unit fighting or
+- **Drawn:** a unit at rest is drawn with its model's parts, merged, as before, but for one idling near the camera
+  (the fifth part, below). A walker, or a unit fighting or
   fading out, which the stage draws as one, is drawn with the rigged copy (`MarkerKit#rigFigures`): each figure a copy
-  of its own, its skeleton its own, in its owner's colour as the model's are, and never culled, as a clip can take it
-  past the bounds it had. Each copy of the world's has a copy of its own (`copyOf`, with `SkeletonUtils.clone`), and
+  of its own, its skeleton its own, in its owner's colour as the model's are. Each part's bounds cover every pose its
+  clips take it to (`boundClips`, since the fifth part), so it's drawn, and casts a shadow, only where it's seen. Each
+  copy of the world's has a copy of its own (`copyOf`, with `SkeletonUtils.clone`), and
   its skeletons' textures are let go of as it's taken away (`letGoOfSkeletons`). Copies made afresh, as the copies of
   the world in sight change, are posed as the others were.
 - **Walking:** as it goes, its figures play `move`, their legs keeping up with how far it's gone: a second of the clip
@@ -1465,8 +1467,8 @@ in its set (plan 2.2). It's in the model's entry:
   for a rival's or a quick walk, slower as it gets going and stops. Each walk starts the clip from its start, and a
   squad's figures are 0.13 s apart. Waiting where it's come, or fighting, it stands as its model does, till `fight` and
   `die` are played. The Partisans' is the first.
-- **Still to come:** `fight` with its shots, and `die`, on the battles' own frames (the fourth part, below); then
-  `idle`, which needs frames all the time, so its cost is measured first.
+- **Since:** `fight` with its shots, and `die`, on the battles' own frames (the fourth part, below); and `idle`,
+  with frames drawn for it (the fifth).
 
 **As built, fourth part (clips, 2026-11-23): fighting and falling.** A battle whose fighters are drawn with rigged
 copies is paced for their clips (`clipPace` in `battles.ts`), as the stage says what each plays (`Stage#rigFacts`): how
@@ -1494,6 +1496,38 @@ has a clip to play is paced as before.
   puff of smoke of its own (`HIT_PUFF`, half a second). The Partisans' is a bottle, alight at its neck, tumbling end
   over end (`Stage#shot`). A battle ended at once takes its shots and their puffs with it. An attacker not drawn, as
   with units hidden (`t`) but for the one ringed, throws nothing that's drawn.
+
+**As built, fifth part (clips, 2026-11-24): idling.** Units near the camera, with it close in, play `idle` where they
+stand. The map used to draw a frame only when something changed; while units idle, it draws frames for them.
+
+- **Which** (`idling.ts`): those on squares within 1.6 of the camera's distances of its focus, the short way round the
+  world, on the screen or within half a square of it, with the camera 12 or closer. Those idling go on to twice its
+  distance, a square and a half off the screen, and 14, so one at an edge doesn't swap back and forth; with none
+  idling, none go on further. Further off, the
+  motion's too small to see, and they stand as their models do.
+- **None idle** with motion reduced, with units' moves not shown (Options), or without frames to play them in.
+- **Drawn** (`Stage#idle`): a stack starts idling drawn afresh with its model's rigged copy, as a walker is, four at
+  most a frame (`idleChanges`), the rest the next. Each is posed by the clock, each stack its own way into its clip
+  (`idlePhase`), a squad's figures 0.13 s apart. One no longer near stands again, drawn with its model's parts, merged.
+  One fading is left as it is till it's solid. Marked again while idling (its unit hurt, say, or the ring moving), it
+  idles on, as far into its clip as it was. A rigged copy that arrives once its model's drawing tells the view again
+  (`Stage#loadModels`), so units near the camera start idling then.
+- **Frames:** while any idles, frames are drawn for them about 30 a second (`IDLE_FRAME`, timed by when the
+  browser's frames begin), the screen's others passed over. Such a frame only poses them and draws the scene: the camera, the land, the banners, the minimap and the rest
+  are as they were. One asked for meanwhile, by anything that's changed, is drawn whole at once. Once none idle, the
+  frames stop.
+- **Bounds** (`markers/rigBounds.ts`): a skinned mesh's own are its bind pose's, worked out once, so rigged copies
+  weren't culled at all: each was drawn wherever it was. A rig's are now worked out as it's loaded, from the model's
+  stance and every tenth of a second of each clip, and a tenth more, and taken by its copies, so one off the screen
+  isn't drawn, nor its shadow unless that falls on the screen, and a click tests a box before its points. They're worked out by its bones,
+  not its points: each point a bone moves lies within a reach of it, as far as the furthest it moves lay from it as
+  the model stands. That takes a few milliseconds a rig, where every point at every pose took a twentieth of a
+  second.
+- **What it costs** (an M2 Pro, a late-game save with every land unit drawn as the Partisans, 1,440 × 900): before
+  bounds, every land stack drawn with its rigged copy took 20 ms of the main thread a frame, in sight or not. Now an
+  idle frame takes 1.5 to 2.3 ms, with the camera at its closest and at 12, round the busiest stretch of units: about
+  7% of the main thread at 30 a second, nearly all of it drawing the scene again. A whole frame there, the camera
+  moving, takes 2 to 5.6 ms.
 
 ---
 

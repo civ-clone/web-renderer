@@ -68,6 +68,23 @@ export const clipTime = (
     : Math.min(since, duration - 1e-4);
 };
 
+/** How far apart in their idle clips stacks idling are, at most, in seconds (`idlePhase`). */
+export const IDLE_SPREAD = 10;
+
+/**
+ * How far ahead of the clock in its idle clip the stack on the square `key` is, in seconds, the same each time: each its
+ *  own way into it, so stacks idling side by side don't move as one.
+ */
+export const idlePhase = (key: string): number => {
+  let hash = 2166136261;
+
+  for (let i = 0; i < key.length; i++) {
+    hash = Math.imul(hash ^ key.charCodeAt(i), 16777619);
+  }
+
+  return ((hash >>> 0) / 2 ** 32) * IDLE_SPREAD;
+};
+
 /** A figure's mixer, and the role it plays. */
 export type Playing = { mixer: AnimationMixer; role: ClipRole | null };
 
