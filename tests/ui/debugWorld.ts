@@ -346,6 +346,8 @@ const field = Array.from({ length: 600 }, (_, index) => {
       units: [{ _: 'Warrior' }],
     } as unknown as Tile;
   }),
+  // What each square was before the specials were laid, which lay their own terrain.
+  before = new Map(field.map((tile) => [tile, tile.terrain._])),
   shownAt = (): [string, Tile][] => {
     specialsGallery(field, 15, 10);
 
@@ -365,7 +367,7 @@ expect(
     shownSpecials
       .filter(([key, tile]) =>
         key.startsWith('Ocean:')
-          ? tile.isLand || tile.terrain._ === 'Unknown'
+          ? tile.isLand || before.get(tile) !== 'Ocean'
           : !tile.isLand
       )
       .map(([key]) => key),
@@ -387,6 +389,31 @@ expect(
     specialsShown()[0]![1],
     0,
   ]
+);
+
+// On the staggered grid, where squares two rows apart touch at a corner, its specials are every fourth row.
+const staggered = field.map(
+    (tile) =>
+      ({
+        ...tile,
+        terrain: { _: before.get(tile)!, features: [] },
+      } as unknown as Tile)
+  ),
+  staggeredRows = (() => {
+    specialsGallery(staggered, 15, 10, 4);
+
+    return staggered
+      .filter((tile) => (tile.terrain.features ?? []).length > 0)
+      .map(({ y }) => y);
+  })();
+
+expect(
+  'on the staggered grid, its specials are every fourth row, every one shown',
+  [
+    staggeredRows.every((y) => Math.abs(y - 10) % 4 === 0),
+    staggeredRows.length,
+  ],
+  [true, specialsShown().length]
 );
 
 // Its seeded cities, units and ships: none on squares never seen, on a world mostly unseen.

@@ -2,8 +2,9 @@
 //  made of plain shapes, as the built-in set's units are (`markers/figures.ts`), until a hosted set brings models (D3).
 //  A little larger than life beside a unit's figures, which are drawn twice life size, so they're seen at play's zoom.
 //
-// Each is a list of parts about its feet, facing +z (forward), +y up and +x to its right, each part turned about its
-//  own middle, first `roll` about its length's axis (z), then `pitch` about its side's (x): a positive pitch tips its
+// Each is a list of parts about its feet, facing +z (forward), +y up and +x to its left, each part turned about its
+//  own middle, first `roll` about its length's axis (z), then `pitch` about its side's (x): a positive roll tips a part
+//  along y toward -x (its right), and `pair` mirrors it, so both of a pair lean out alike; a positive pitch tips its
 //  front (+z) down, or a part along y forward. The square's layer turns each beast about the vertical as it lays it.
 
 /** What a special's beasts are. */
@@ -18,7 +19,8 @@ export type BeastKind =
 
 /** A part of a beast: its shape, which of its look's colours it takes, where its middle is, and its size and turn. */
 export type BeastPart = {
-  shape: 'box' | 'sphere' | 'cylinder' | 'cone';
+  // A ball is a rounded part with fewer sides than a sphere, for small ones.
+  shape: 'box' | 'sphere' | 'ball' | 'cylinder' | 'cone';
   // Its coat, its detail (a mane, hooves, flippers, a bird's head) or the pale of its horns, tusks or tail's tip.
   colour: 'coat' | 'detail' | 'pale';
   at: readonly [number, number, number];
@@ -115,7 +117,7 @@ export const beastParts: {
       -0.6,
       0.2
     ),
-    part('sphere', 'pale', [0, 0.1, -0.058], [0.018, 0.018, 0.014]),
+    part('ball', 'pale', [0, 0.1, -0.058], [0.018, 0.018, 0.014]),
   ],
   // Big and grey, its legs thick, its ears out, its trunk hanging and its tusks pale.
   elephant: [
@@ -138,7 +140,7 @@ export const beastParts: {
   fox: [
     part('sphere', 'coat', [0, 0.05, 0], [0.03, 0.032, 0.08]),
     ...legs('box', 0.009, 0.027, 0.037, 0.008, 0.008),
-    part('sphere', 'coat', [0, 0.068, 0.048], [0.032, 0.03, 0.036]),
+    part('ball', 'coat', [0, 0.068, 0.048], [0.032, 0.03, 0.036]),
     part(
       'cone',
       'detail',
@@ -148,13 +150,13 @@ export const beastParts: {
     ),
     ...pair('cone', 'coat', [0.009, 0.088, 0.046], [0.011, 0.02, 0.011]),
     part('sphere', 'coat', [0, 0.046, -0.064], [0.024, 0.024, 0.075], -0.4),
-    part('sphere', 'pale', [0, 0.031, -0.1], [0.017, 0.017, 0.026], -0.4),
+    part('ball', 'pale', [0, 0.031, -0.1], [0.017, 0.017, 0.026], -0.4),
   ],
   // Lying, its front raised, its head up, its flippers out at its sides and back.
   seal: [
     part('sphere', 'coat', [0, 0.026, 0], [0.065, 0.05, 0.16], -0.15),
     part('sphere', 'coat', [0, 0.058, 0.078], [0.042, 0.04, 0.048]),
-    part('sphere', 'pale', [0, 0.052, 0.1], [0.022, 0.02, 0.026]),
+    part('ball', 'pale', [0, 0.052, 0.1], [0.022, 0.02, 0.026]),
     ...pair(
       'box',
       'detail',
@@ -174,23 +176,38 @@ export const beastParts: {
   ],
   // Round, its head and neck its detail, its tail long and up a little behind it.
   bird: [
-    part('sphere', 'coat', [0, 0.036, 0], [0.038, 0.036, 0.058]),
-    part('sphere', 'detail', [0, 0.058, 0.03], [0.022, 0.026, 0.024]),
+    part('ball', 'coat', [0, 0.036, 0], [0.038, 0.036, 0.058]),
+    part('ball', 'detail', [0, 0.058, 0.03], [0.022, 0.026, 0.024]),
     part('cone', 'pale', [0, 0.057, 0.046], [0.007, 0.014, 0.007], Math.PI / 2),
     part('box', 'coat', [0, 0.046, -0.062], [0.01, 0.005, 0.085], 0.35),
     ...pair('box', 'detail', [0.008, 0.009, 0.004], [0.004, 0.018, 0.004]),
   ],
 };
 
-/** How far a beast reaches from its middle, across (to either side) and along (forward or back), about its parts. */
+/**
+ * How far a beast reaches from its middle, across (to either side) and along (forward or back): each part's box, as
+ *  it's turned, about its middle.
+ */
 export const beastReach = (
   kind: BeastKind
 ): { across: number; along: number } =>
   beastParts[kind].reduce(
-    (reach, { at, size }) => ({
-      across: Math.max(reach.across, Math.abs(at[0]) + size[0] / 2),
-      along: Math.max(reach.along, Math.abs(at[2]) + size[2] / 2),
-    }),
+    (reach, { at, size: [x, y, z], pitch = 0, roll = 0 }) => {
+      // Its half-sizes, turned by its roll, then its pitch, read across (x) and along (z).
+      const cp = Math.cos(pitch),
+        sp = Math.sin(pitch),
+        cr = Math.cos(roll),
+        sr = Math.sin(roll),
+        across = (Math.abs(cr) * x + Math.abs(sr) * y) / 2,
+        along =
+          (Math.abs(sp * sr) * x + Math.abs(sp * cr) * y + Math.abs(cp) * z) /
+          2;
+
+      return {
+        across: Math.max(reach.across, Math.abs(at[0]) + across),
+        along: Math.max(reach.along, Math.abs(at[2]) + along),
+      };
+    },
     { across: 0, along: 0 }
   );
 

@@ -458,9 +458,9 @@ expect(
 );
 
 // Specials are big enough to be seen at play's zoom (#1335): on flat land with nothing else on the square, a herd of
-//  horses, a stack of logs (Civ1's shield on grassland) and seals each reach across over a quarter of the square, and
-//  stand up off it; every beast stands on the land, not in it or over it; a herd of horses isn't all one coat; and
-//  where roads every way leave less room, a special takes less, so it's drawn smaller.
+//  horses and seals each reach across over a quarter of the square, a stack of logs (Civ1's shield on grassland) over a
+//  fifth, and each stands up off it; every beast stands on the land, not in it or over it; a herd of horses isn't all
+//  one coat; and where roads every way leave less room, a special takes less, so it's drawn smaller.
 {
   const FLAT = 0.1,
     laidOn = (feature: string) =>
@@ -538,7 +538,7 @@ expect(
     );
 
   expect(
-    'horses, logs and seals each reach across over a quarter of the square and stand up off it',
+    'horses and seals each reach across over a quarter of the square, logs over a fifth, and each stands up off it',
     [
       horses.across > 0.25 && horses.tall > 0.15,
       logs.across > 0.2 && logs.tall > 0.12,
@@ -565,6 +565,145 @@ expect(
     'where roads every way leave less room, a special takes less: drawn smaller, never under the old size',
     [open, crowded < open, crowded >= 0.1],
     [0.2, true, true]
+  );
+}
+
+// Each special stays in the room it claims, and on its square but for a little (a little more inside a fortress's
+//  walls, where nothing has room), wherever it stands: on a square with nothing else, with roads every way, and inside a
+//  fortress, on 40 squares each, as where it stands is seeded.
+//  What's drawn of it is what's laid on the square with it less what's laid without it. Inside a fortress, where it has
+//  least room, what isn't a beast keeps its height, as it's only drawn narrower to fit. A log's cut ends face out.
+{
+  const FLAT = 0.1,
+    everyWay = [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+      [1, 1],
+      [1, -1],
+      [-1, 1],
+      [-1, -1],
+    ].map((offset) => neighbour(offset as [number, number], ['Road'])),
+    settings: [string, string[], OverlayNeighbour[]][] = [
+      ['open', [], []],
+      ['roads', ['Road'], everyWay],
+      ['fortress', ['Fortress'], []],
+    ],
+    keys = [...Object.keys(specialTable), 'Unobtainium'],
+    // Its points, and the room it claimed and where, on the square at (`x`, 3).
+    drawn = (
+      key: string,
+      improvements: string[],
+      around: OverlayNeighbour[],
+      x: number
+    ) => {
+      const [terrain, feature] = key.includes(':')
+          ? (key.split(':') as [string, string])
+          : ['River', key],
+        where = place(x, 3, { height: () => FLAT }),
+        // What's laid on the square: nothing, where there's nothing to lay.
+        // What's laid on the square, with nothing growing (its terrain a river's, its special's look its own), as plants
+        //  keep clear of the special: nothing, where there's nothing to lay.
+        laid = (features: string[]) => {
+          const overlay = overlayFor(
+            square(improvements, { terrain, features }),
+            around
+          );
+
+          return overlay === null
+            ? []
+            : pointsOf(
+                overlayMesh(x - 1, 0, [
+                  { overlay: { ...overlay, terrain: 'River' }, place: where },
+                ])
+              );
+        },
+        without = new Map<string, number>(),
+        mark = ([u, y, v]: [number, number, number]) =>
+          `${u.toFixed(5)},${y.toFixed(5)},${v.toFixed(5)}`;
+
+      laid([]).forEach((point) =>
+        without.set(mark(point), (without.get(mark(point)) ?? 0) + 1)
+      );
+
+      const points = laid([feature]).filter((point) => {
+          const left = without.get(mark(point)) ?? 0;
+
+          without.set(mark(point), left - 1);
+
+          return left <= 0;
+        }),
+        claim = layOverlay(
+          overlayFor(
+            square(improvements, { terrain, features: [feature] }),
+            around
+          )!,
+          where,
+          soup()
+        ).taken.find(([, , room]) => room >= 0.1)!;
+
+      return { points, claim, x };
+    },
+    strays: string[] = [];
+
+  keys.forEach((key) =>
+    settings.forEach(([name, improvements, around]) => {
+      for (let x = 1; x <= 40; x++) {
+        const {
+          points,
+          claim: [cu, cv, room],
+        } = drawn(key, improvements, around, x);
+
+        // How far it reaches past its room, the most, and past the square's edge.
+        const over = Math.max(
+            0,
+            ...points.map(([u, , v]) => Math.hypot(u - cu, v - cv) - room)
+          ),
+          past = Math.max(
+            0,
+            ...points.map(([u, , v]) =>
+              Math.max(x - u, u - (x + 1), 3 - v, v - 4)
+            )
+          );
+
+        // Inside a fortress's walls, where nothing has room, it takes where it has the most, a little further past.
+        if (over > 1e-3 || past > (name === 'fortress' ? 0.05 : 0.03) + 1e-3) {
+          strays.push(
+            `${key} ${name} ${x}: ${over.toFixed(3)} ${past.toFixed(3)}`
+          );
+        }
+      }
+    })
+  );
+
+  const tallest = (key: string, improvements: string[]) =>
+      Math.max(
+        ...drawn(key, improvements, [], 7).points.map(([, y]) => y - FLAT)
+      ),
+    lowered = [
+      'Oil',
+      'Oasis',
+      'Wheat',
+      'Wine',
+      'Coal',
+      'Peat',
+      'Unobtainium',
+    ].filter(
+      (key) => Math.abs(tallest(key, ['Fortress']) - tallest(key, [])) > 1e-6
+    ),
+    // A stack's cut ends: the triangles in their pale, each facing away from the stack's middle along its logs.
+    stack = laidLogs();
+
+  expect(
+    'each special stays in the room it claims and on its square, but for a little, open, by roads and in a fortress',
+    strays,
+    []
+  );
+  expect(
+    'inside a fortress, what isn’t a beast is as tall as on open land; a log’s cut ends face out',
+    [lowered, stack.ends > 0, stack.inward],
+    [[], true, 0]
   );
 }
 
@@ -1679,7 +1818,7 @@ const landOf = (
     expect(
       `${topologyId}: a road's halves bend on their own squares, short of the edge, meet their neighbours' there going the same way, and bow no further than they may, some a good part of it, each way out of a square its own`,
       [
-        strays.slice(0, 5),
+        strays,
         unmet.slice(0, 5),
         alike.slice(0, 5),
         Math.max(...bows) <= ROAD_BOW + 1e-9,
@@ -3643,3 +3782,57 @@ if (failures.length > 0) {
 }
 
 process.stdout.write(`PASS overlay (${checks} checks)\n`);
+
+// The cut ends of a stack of logs on flat land: how many triangles there are in their pale, and how many face in
+//  toward the stack's middle rather than out along its logs.
+function laidLogs(): { ends: number; inward: number } {
+  const mesh = overlayMesh(16, 0, [
+      {
+        overlay: overlayFor(
+          square([], { terrain: 'River', features: ['Shield'] }),
+          []
+        )!,
+        place: place(17, 3, { height: () => 0.1 }),
+      },
+    ]),
+    pale = new Color(specialTable['Shield']!.detail!),
+    points = pointsOf(mesh),
+    middle = points
+      .reduce((sum, [u, , v]) => [sum[0] + u, sum[1] + v] as [number, number], [
+        0, 0,
+      ] as [number, number])
+      .map((sum) => sum / points.length);
+  let ends = 0,
+    inward = 0;
+
+  for (let at = 0; at < points.length; at += 3) {
+    const c = mesh.colours,
+      isPale =
+        Math.abs(c[at * 3]! - pale.r) +
+          Math.abs(c[at * 3 + 1]! - pale.g) +
+          Math.abs(c[at * 3 + 2]! - pale.b) <
+        1e-5;
+
+    if (!isPale) {
+      continue;
+    }
+
+    ends++;
+
+    const [au, , av] = points[at]!,
+      [bu, , bv] = points[at + 1]!,
+      [cu, , cv] = points[at + 2]!,
+      centroid = [(au + bu + cu) / 3, (av + bv + cv) / 3],
+      normal = [mesh.normals[at * 3]!, mesh.normals[at * 3 + 2]!];
+
+    if (
+      normal[0]! * (centroid[0]! - middle[0]!) +
+        normal[1]! * (centroid[1]! - middle[1]!) <
+      0
+    ) {
+      inward++;
+    }
+  }
+
+  return { ends, inward };
+}

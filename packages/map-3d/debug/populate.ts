@@ -433,13 +433,19 @@ export const specialsShown = (): [string, string][] => [
 ];
 
 /**
- * The page's specials (`?specials=1`): each of `specialsShown`, one to a square, every other square either way from
- *  (`x`, `y`) so each is seen on its own, the nearest first, on its terrain, at sea on the sea and on land on land,
- *  never on squares unseen. No cities or units.
+ * The page's specials (`?specials=1`): each of `specialsShown`, one to a square, every other square across and every
+ *  `rows`th row from (`x`, `y`), so each is seen on its own, the nearest first, on its terrain, at sea on the sea and on
+ *  land on land, never on squares unseen. No cities or units. On the staggered grid, squares two rows apart touch at a
+ *  corner, so `rows` is 4 there.
  */
-export const specialsGallery = (tiles: Tile[], x: number, y: number): void => {
+export const specialsGallery = (
+  tiles: Tile[],
+  x: number,
+  y: number,
+  rows = 2
+): void => {
   const spaced = (tile: Tile): boolean =>
-      Math.abs(tile.x - x) % 2 === 0 && Math.abs(tile.y - y) % 2 === 0,
+      Math.abs(tile.x - x) % 2 === 0 && Math.abs(tile.y - y) % rows === 0,
     nearest = (water: boolean): Tile[] =>
       tiles
         .filter(

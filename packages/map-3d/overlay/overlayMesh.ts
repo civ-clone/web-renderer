@@ -158,10 +158,11 @@ const SPOTS = {
 } as const;
 
 // How much room a special takes round where it stands: a herd, a stack or a pile big enough to be seen at play's zoom,
-//  as far from the square's middle as clears the unit's stand (`SPOTS.special`), reaching a little past the square's
-//  edge, but for its corners. Where roads or walls leave less, it takes less, and is drawn smaller, down to the last.
+//  as far from the square's middle as clears the unit's stand (`SPOTS.special`), and inside the square but for a little
+//  (`EDGE_REACH`), so in one of its corners where there's room. Where there's less (roads, walls, a smaller square), it
+//  takes the most there is, and is drawn smaller, down to the last.
 const SPECIAL_ROOMS = [0.2, 0.16, 0.13, 0.1] as const,
-  SPECIAL_ROOM = SPECIAL_ROOMS[0];
+  EDGE_REACH = 0.03;
 
 // What stands on a square keeps this far, and its room, from the middle of its lines (half a road's width, and a
 //  little), and from the middle of the square (the unit's stand, and a little); and how many angles round a claim tries.
@@ -560,10 +561,12 @@ class Layer {
 
   /**
    * How much more than it needs something taking `room` at (`u`, `v`) has clear: of the square's lines, of what stands
-   *  there already, and of the unit's stand at its middle, the least of them. Less than none where it hasn't enough.
+   *  there already, and of the unit's stand at its middle, the least of them; and, if it's to stay `inside`, of the
+   *  square's edge, but for `EDGE_REACH`. Less than none where it hasn't enough.
    */
-  clearance(u: number, v: number, room: number): number {
-    const [cu, cv] = this.place.centre;
+  clearance(u: number, v: number, room: number, inside = false): number {
+    const [cu, cv] = this.place.centre,
+      { outline } = this.place;
     let least = Math.hypot(u - cu, v - cv) - STAND_CLEAR - room;
 
     this.lines.forEach(([a, b]) => {
@@ -572,6 +575,18 @@ class Layer {
     this.taken.forEach(([tu, tv, other]) => {
       least = Math.min(least, Math.hypot(u - tu, v - tv) - other - room);
     });
+
+    if (inside) {
+      // How far inside the edge, or past it, less than none.
+      const edge =
+        Math.min(
+          ...outline.map((corner, index) =>
+            distanceTo(u, v, corner, outline[(index + 1) % outline.length]!)
+          )
+        ) * (this.place.owns(u, v) ? 1 : -1);
+
+      least = Math.min(least, edge + EDGE_REACH - room);
+    }
 
     return least;
   }
@@ -595,26 +610,37 @@ class Layer {
   }
 
   /**
-   * A place for something taking the most of `rooms` (largest first) it has room for, taken for it, with the room it
-   *  takes: as `claim`, with the last where none has room for any.
+   * A place for something taking the most of `rooms` (largest first) it has room for inside the square, but for
+   *  `EDGE_REACH`, taken for it, with the room it takes: as `claim`, with the last where none has room for any.
    */
   claimMost(
     n: number,
     distance: number,
     rooms: readonly number[]
   ): [number, number, number] {
-    const room =
-      rooms.find((each) => this.#search(n, distance, each).clear >= 0) ??
-      rooms[rooms.length - 1]!;
+    let found = this.#search(n, distance, rooms[0]!, true),
+      room = rooms[0]!;
 
-    return [...this.claim(n, distance, room), room];
+    for (const each of rooms.slice(1)) {
+      if (found.clear >= 0) {
+        break;
+      }
+
+      found = this.#search(n, distance, each, true);
+      room = each;
+    }
+
+    this.taken.push([found.at[0], found.at[1], room]);
+
+    return [found.at[0], found.at[1], room];
   }
 
   // The first place with room, as `claim` tries them, or the one with the most, and how much it has to spare.
   #search(
     n: number,
     distance: number,
-    room: number
+    room: number,
+    inside = false
   ): { at: [number, number]; clear: number } {
     const first = fraction(this.place.seed, n) * Math.PI * 2,
       [u, v] = this.place.centre;
@@ -628,7 +654,7 @@ class Layer {
             u + Math.cos(angle) * out * this.place.radius,
             v + Math.sin(angle) * out * this.place.radius,
           ],
-          clear = this.clearance(at[0], at[1], room);
+          clear = this.clearance(at[0], at[1], room, inside);
 
         if (clear >= 0) {
           return { at, clear };
@@ -1144,7 +1170,7 @@ const pollution = (layer: Layer): void => {
 };
 
 // The shapes a beast's parts are made from.
-const BEAST_SHAPES = { box, sphere, cylinder, cone } as const;
+const BEAST_SHAPES = { box, sphere, ball: crown, cylinder, cone } as const;
 
 // A beast of `kind` standing on the land at (`u`, `v`), `scale` times its size, facing `facing`, in `colours`.
 const beast = (
@@ -1209,14 +1235,21 @@ const herd = (
     cos = Math.cos(heading),
     sin = Math.sin(heading);
 
-  members.forEach(({ side, ahead }, k) =>
+  members.forEach(({ side, ahead }, k) => {
+    const where: [number, number] = [
+      at[0] + (side * cos + ahead * sin) * scale,
+      at[1] + (ahead * cos - side * sin) * scale,
+    ];
+
+    // None stands in the sea, where its room reaches past the shore.
+    if (layer.ground(...where) < 0) {
+      return;
+    }
+
     beast(
       layer,
       kind,
-      [
-        at[0] + (side * cos + ahead * sin) * scale,
-        at[1] + (ahead * cos - side * sin) * scale,
-      ],
+      where,
       scale,
       heading + (fraction(seed, n * 31 + k + 70) - 0.5) * 0.4,
       {
@@ -1224,8 +1257,8 @@ const herd = (
         detail: look.detail ?? look.colour,
         pale: look.pale ?? look.detail ?? look.colour,
       }
-    )
-  );
+    );
+  });
 };
 
 // `count` points round `at`, `out` from it, evenly from the `n`th seeded angle, each with its angle; just `at` for one.
@@ -1300,7 +1333,31 @@ const logStack = (
   }
 };
 
-// One special, standing round `at`, as big as `room` has space for: `SPECIAL_ROOM`'s size, or smaller.
+// How far each special laid round a point reaches from it at its own size, so it's drawn to fit its room: the ring it's
+//  laid round, and the most its shapes reach past it, from their sizes below.
+const SPECIAL_REACH: { readonly [shape in SpecialLook['shape']]?: number } = {
+  // A ring of lumps 0.07 out, each 0.078 across at most; the one in the middle is 1.3 times that.
+  rocks: 0.07 + 0.039,
+  crop: 0.075 + 0.0375,
+  fish: 0.08 + 0.0325,
+  // Its flukes, behind its back.
+  whale: Math.hypot(0.13 + 0.0175, 0.0475),
+  // Its base's corner.
+  derrick: Math.SQRT1_2 * 0.11,
+  // The palms round its pool and their crowns (their lean's `SPECIAL_LEAN`).
+  oasis: 0.09 + 0.055,
+  peat: 0.075 + Math.hypot(0.0375, 0.025),
+  // Logs three across and 0.17 long.
+  logs: Math.hypot(0.05 + 0.025, 0.085),
+  cairn: 0.0375,
+};
+
+// How far an oasis's palms lean out at their tops, whatever its size, as they're as tall.
+const SPECIAL_LEAN = 0.16 * Math.sin(0.15) * 0.5;
+
+// One special, standing round `at`, as big as `room` has space for, and no bigger than its own size: logs a little
+//  bigger, as they're small for their room. The rest, but beasts, keep their height where they've less room, so they're
+//  never lower than they were.
 const special = (
   layer: Layer,
   look: SpecialLook,
@@ -1311,8 +1368,12 @@ const special = (
   const { seed } = layer.place,
     detail = look.detail ?? look.colour,
     facing = fraction(seed, n * 31 + 17) * Math.PI * 2,
-    // How much of its full size it's drawn: each size and how far apart below is times this.
-    f = room / SPECIAL_ROOM;
+    // How much of its own size it's drawn across: each size and how far apart below is times this, but heights.
+    f = Math.min(
+      look.shape === 'logs' ? 1.2 : 1,
+      (room - (look.shape === 'oasis' ? SPECIAL_LEAN : 0)) /
+        (SPECIAL_REACH[look.shape] ?? room)
+    );
 
   switch (look.shape) {
     case 'horse':
@@ -1329,6 +1390,27 @@ const special = (
       logStack(layer, look, at, facing, f);
 
       return;
+    case 'rocks': {
+      // A lump in the middle, bigger, and the rest round it.
+      const lumps: [number, number, number][] = [
+        [at[0], at[1], 1.3],
+        ...ring(layer, look.count - 1, at, 0.07 * f, n).map(
+          ([u, v]): [number, number, number] => [u, v, 1]
+        ),
+      ];
+
+      lumps.forEach(([u, v, big], index) =>
+        layer.solid(
+          sphere,
+          [u, layer.ground(u, v) + 0.016 * big, v],
+          [0.078 * big * f, 0.055 * big, 0.068 * big * f],
+          index % 2 === 1 ? detail : look.colour,
+          [0, fraction(seed, n * 31 + index + 17) * Math.PI * 2, 0]
+        )
+      );
+
+      return;
+    }
     default:
   }
 
@@ -1336,7 +1418,7 @@ const special = (
     layer,
     look.count,
     at,
-    (look.shape === 'rocks' ? 0.07 : look.shape === 'fish' ? 0.08 : 0.075) * f,
+    (look.shape === 'fish' ? 0.08 : 0.075) * f,
     n
   ).forEach(([u, v, angle], index) => {
     const afloat = look.shape === 'fish' || look.shape === 'whale',
@@ -1344,31 +1426,17 @@ const special = (
       turn = fraction(seed, n * 31 + index + 17) * Math.PI * 2;
 
     switch (look.shape) {
-      case 'rocks': {
-        // A lump in the middle, bigger, and the rest round it.
-        const [lu, lv] = index === 0 ? at : [u, v],
-          big = (index === 0 ? 1.3 : 1) * f;
-
-        layer.solid(
-          sphere,
-          [lu, layer.ground(lu, lv) + 0.016 * big, lv],
-          [0.078 * big, 0.055 * big, 0.068 * big],
-          index % 2 === 1 ? detail : look.colour,
-          [0, turn, 0]
-        );
-        break;
-      }
       case 'crop':
         layer.solid(
           cylinder,
-          [u, y + 0.03 * f, v],
-          [0.014 * f, 0.06 * f, 0.014 * f],
+          [u, y + 0.03, v],
+          [0.014 * f, 0.06, 0.014 * f],
           detail
         );
         layer.solid(
           sphere,
-          [u, y + 0.08 * f, v],
-          [0.075 * f, 0.065 * f, 0.075 * f],
+          [u, y + 0.08, v],
+          [0.075 * f, 0.065, 0.075 * f],
           look.colour
         );
         break;
@@ -1378,8 +1446,8 @@ const special = (
 
         layer.solid(
           sphere,
-          [u, y + (leaps ? 0.035 : 0.01) * f, v],
-          [0.024 * f, 0.018 * f, 0.065 * f],
+          [u, y + (leaps ? 0.035 : 0.01), v],
+          [0.024 * f, 0.018, 0.065 * f],
           look.colour,
           [leaps ? -0.6 : 0, -angle, 0],
           'YXZ'
@@ -1396,42 +1464,37 @@ const special = (
         layer.solid(
           sphere,
           [u, y, v],
-          [0.085 * f, 0.06 * f, 0.24 * f],
+          [0.085 * f, 0.06, 0.24 * f],
           look.colour,
           [0, turn, 0]
         );
         layer.solid(
           box,
-          [ahead(-0.13)[0], y + 0.02 * f, ahead(-0.13)[1]],
-          [0.095 * f, 0.007 * f, 0.035 * f],
+          [ahead(-0.13)[0], y + 0.02, ahead(-0.13)[1]],
+          [0.095 * f, 0.007, 0.035 * f],
           look.colour,
           [0, turn, 0]
         );
         layer.solid(
           cone,
-          [ahead(0.06)[0], y + 0.07 * f, ahead(0.06)[1]],
-          [0.035 * f, 0.09 * f, 0.035 * f],
+          [ahead(0.06)[0], y + 0.07, ahead(0.06)[1]],
+          [0.035 * f, 0.09, 0.035 * f],
           SPOUT
         );
         layer.solid(
           sphere,
-          [ahead(0.06)[0], y + 0.12 * f, ahead(0.06)[1]],
-          [0.06 * f, 0.03 * f, 0.06 * f],
+          [ahead(0.06)[0], y + 0.12, ahead(0.06)[1]],
+          [0.06 * f, 0.03, 0.06 * f],
           SPOUT
         );
         break;
       }
       case 'derrick':
-        layer.solid(
-          box,
-          [u, y + 0.01 * f, v],
-          [0.11 * f, 0.02 * f, 0.11 * f],
-          detail
-        );
+        layer.solid(box, [u, y + 0.01, v], [0.11 * f, 0.02, 0.11 * f], detail);
         layer.solid(
           pyramid,
-          [u, y + 0.13 * f, v],
-          [0.075 * f, 0.24 * f, 0.075 * f],
+          [u, y + 0.13, v],
+          [0.075 * f, 0.24, 0.075 * f],
           look.colour,
           [0, Math.PI / 4, 0]
         );
@@ -1450,8 +1513,8 @@ const special = (
 
         layer.solid(
           cylinder,
-          [pu, py + 0.08 * f, pv],
-          [0.014 * f, 0.16 * f, 0.014 * f],
+          [pu, py + 0.08, pv],
+          [0.014, 0.16, 0.014],
           WOOD,
           [0.15, Math.PI / 2 - angle, 0],
           'YXZ'
@@ -1459,11 +1522,11 @@ const special = (
         layer.solid(
           cone,
           [
-            pu + Math.cos(angle) * 0.012 * f,
-            py + 0.165 * f,
-            pv + Math.sin(angle) * 0.012 * f,
+            pu + Math.cos(angle) * SPECIAL_LEAN,
+            py + 0.165,
+            pv + Math.sin(angle) * SPECIAL_LEAN,
           ],
-          [0.11 * f, 0.035 * f, 0.11 * f],
+          [0.11 * f, 0.035, 0.11 * f],
           look.colour
         );
         break;
@@ -1471,8 +1534,8 @@ const special = (
       case 'peat':
         layer.solid(
           box,
-          [u, y + 0.015 * f, v],
-          [0.075 * f, 0.03 * f, 0.05 * f],
+          [u, y + 0.015, v],
+          [0.075 * f, 0.03, 0.05 * f],
           look.colour,
           [0, turn, 0]
         );
@@ -1481,12 +1544,8 @@ const special = (
         // A cairn: stones piled, smaller as they go up.
         layer.solid(
           sphere,
-          [
-            at[0],
-            layer.ground(at[0], at[1]) + (0.018 + index * 0.027) * f,
-            at[1],
-          ],
-          [(0.075 - index * 0.01) * f, 0.037 * f, (0.075 - index * 0.01) * f],
+          [at[0], layer.ground(at[0], at[1]) + 0.018 + index * 0.027, at[1]],
+          [(0.075 - index * 0.01) * f, 0.037, (0.075 - index * 0.01) * f],
           look.colour
         );
     }
@@ -2032,11 +2091,6 @@ export const layOverlay = (
     pollution(layer);
   }
 
-  if (overlay.hut) {
-    hut(layer, layer.claim(...SPOTS.hut, 0.13));
-  }
-
-  // After the hut, which is small, so they take what room it leaves them: the more, the bigger they're drawn.
   overlay.specials.forEach(([terrain, feature], index) => {
     const [u, v, room] = layer.claimMost(
       ...SPOTS.special(index),
@@ -2045,6 +2099,10 @@ export const layOverlay = (
 
     special(layer, specialLook(terrain, feature), [u, v], room, index + 1);
   });
+
+  if (overlay.hut) {
+    hut(layer, layer.claim(...SPOTS.hut, 0.13));
+  }
 
   // The roads past its corners, then the houses of the cities beside it clear of them and of what's claimed its place,
   //  so a city reaching it moves nothing that was there; then fields round the houses, and plants clear of them.

@@ -23,12 +23,13 @@ const populated = (
     seed,
     gallery: laidOut,
     specials: allSpecials,
+    topologyId,
     x,
     y,
   }: ReturnType<typeof pageOptions>
 ): PlayerTile[] => {
   if (allSpecials) {
-    specialsGallery(tiles, x, y);
+    specialsGallery(tiles, x, y, topologyId === 'staggered-iso' ? 4 : 2);
   } else if (laidOut) {
     gallery(tiles, x, y);
   } else {

@@ -495,7 +495,7 @@ Plants are scattered by seed, each where it has room. They stay clear of a unit'
 - it's draped over the land as drawn (the chunks' flat triangles), so it never sinks into a hill, and read from the chunks' points, which also makes it cheap: about 15 ms a chunk on a populated world;
 - a unit's stand is thick enough to stand over all of it, and fields fit inside their square, whether a square, a diamond or a hex;
 - a city's lot has nothing laid on it, as the 2D map's city covers its square;
-- a square's mine, specials and hut each claim a spot clear of its roads, a fortress's walls, an airbase's runway and each other, and plants keep clear of all of them. Where there isn't room for that (roads all eight ways, or inside a fortress's walls), each takes the spot with the most;
+- a square's mine, specials and hut each claim a spot clear of its roads, a fortress's walls, an airbase's runway and each other, and plants keep clear of all of them. Specials, since #1335, take the most room there is inside their square, from 0.2 down to 0.1, and are drawn to fit. Where there isn't room for that (roads all eight ways, or inside a fortress's walls), each takes the spot with the most;
 - a chunk's overlay is made a few squares a frame within the frame's budget, so no frame waits on a busy chunk. A square changed before its chunk's make reaches it is read when it gets there, without beginning again;
 - with the view stopped at the poles of a world that wraps over them, a first or last row's overlay that reaches past a pole is drawn a period round too, clipped there, where the land between the far row's squares is its own.
 
