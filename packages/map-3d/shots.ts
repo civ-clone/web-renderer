@@ -6,7 +6,10 @@
 
 import { ClipShot, ShotKind } from './models/modelSet';
 
-/** A figure's shot in a clip: the figure, which of the clip's shots, the node it leaves, when, in seconds in, and what. */
+/**
+ * A figure's shot in a clip: the figure, which of the clip's shots, the node it leaves, when, in seconds in, and what
+ *  it is.
+ */
 export type ShotTime = {
   figure: number;
   shot: number;
@@ -20,8 +23,8 @@ export const SHOT_ARC = 0.25;
 
 /**
  * How each kind of shot goes: how long it flies, in ms; how high its arc rises at its middle, for each square it goes;
- *  how big the puff where it lands is, a bottle's 1; and how big the smoke where it leaves is, with a flash, a muzzle's,
- *  or 0 for none. A shell's burst flashes too.
+ *  how big the puff where it lands is, a bottle's 1; and how big the smoke where it leaves is, with a flash, a
+ *  muzzle's, or 0 for none. A shell's burst flashes too.
  */
 export type ShotLook = {
   flight: number;
@@ -52,8 +55,8 @@ export const SHOT_TARGET = 0.05;
 export const HIT_PUFF = 500;
 
 /**
- * How long the smoke where a shot leaves a muzzle lasts, in ms: no longer than the puff where it lands, so that's always
- *  over last.
+ * How long the smoke where a shot leaves a muzzle lasts, in ms: no longer than the puff where it lands, so that's
+ *  always over last.
  */
 export const MUZZLE_PUFF = 400;
 

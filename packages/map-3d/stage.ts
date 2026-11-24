@@ -150,8 +150,8 @@ export interface Stage {
   ): [number, number, number] | null;
   /**
    * A shot (`id`, `shots.ts`) in flight at `at` (`u`, height, `v`, on the world's own copy), `through` its flight from 0
-   *  to 1, drawn at every copy of the world in sight as its `kind` is: a bottle alight, tumbling; an arrow, or a bullet's
-   *  streak, pointing the way it's `heading` (one long); a shell, a ball. `null` takes it away.
+   *  to 1, drawn at every copy of the world in sight as its `kind` is: a bottle alight, tumbling; an arrow, or a
+   *  bullet's streak, pointing the way it's `heading` (one long); a shell, a ball. `null` takes it away.
    */
   shot?(
     id: string,
@@ -167,9 +167,9 @@ export interface Stage {
   fadeMarker(key: string, opacity: number): void;
   /**
    * A puff of smoke (`id`, `markers/puff.ts`) where a unit fell in battle, or a shot left a muzzle or landed, bursting
-   *  from `at` (`u`, height, `v`, on the world's own copy), `through` its time from 0 to 1, `size` times a fallen unit's,
-   *  and with a `flash` at its start, a muzzle's or a shell's burst; drawn at every copy of the world in sight. `null`
-   *  takes it away.
+   *  from `at` (`u`, height, `v`, on the world's own copy), `through` its time from 0 to 1, `size` times a fallen
+   *  unit's, and with a `flash` at its start, a muzzle's or a shell's burst; drawn at every copy of the world in sight.
+   *  `null` takes it away.
    */
   puff(
     id: string,
@@ -253,6 +253,17 @@ type Marked = Placed & {
   opacity?: number;
   faded?: Faded;
   idling?: { rig: LoadedRig; original: Object3D; phase: number };
+};
+
+/** A seed for what's laid by an id, the same each time: a whole number from 0, unlike for ids a letter apart. */
+export const seedOf = (id: string): number => {
+  let hash = 2166136261;
+
+  for (let i = 0; i < id.length; i++) {
+    hash = Math.imul(hash ^ id.charCodeAt(i), 16777619);
+  }
+
+  return (hash >>> 0) % 100000;
 };
 
 /** The name of a puff's flash (`Stage#puff`), a muzzle's or a shell's burst. */
@@ -630,7 +641,7 @@ export const createStage: StageFactory = (
     });
 
   // A shot's copies turned: a bottle's as far as it's tumbled `through` its flight, end over end, a turn and a half; an
-  //  arrow's and a bullet's streak's pointing the way it's going.
+  //  arrow's and a bullet's streak's pointing the way it's going, the streak no longer than it's gone.
   const up = new Vector3(0, 1, 0),
     pointing = new Vector3();
   const tumble = (shot: {
@@ -647,6 +658,12 @@ export const createStage: StageFactory = (
           up,
           pointing.set(...shot.heading).normalize()
         );
+      }
+
+      // A bullet's streak grows from the muzzle over the first tenth of its flight, rather than reaching back into
+      //  whoever fired it.
+      if (shot.kind === 'bullet') {
+        drawn.scale.set(1, Math.min(1, Math.max(0.01, shot.through * 10)), 1);
       }
     });
 
@@ -1314,7 +1331,8 @@ export const createStage: StageFactory = (
         return;
       }
 
-      const seed = Number(id.replace(/\D/g, '')) || 0,
+      // By its whole id, so a shot's smoke where it left and its puff where it landed don't look the same.
+      const seed = seedOf(id),
         puff = old ?? {
           at,
           through,

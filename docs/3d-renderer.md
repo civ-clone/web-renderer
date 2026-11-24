@@ -1448,8 +1448,9 @@ in its set (plan 2.2). It's in the model's entry:
   from that joint to its target, as its kind flies. A shot may be given only in a role that has a clip. The set says
   what flies, as its model knows what it holds, not the unit's type.
 - **Checked as it's read** (`modelSet.ts`): its file as a model's is, a name for each clip, and each shot's time,
-  joint and kind, of those the map draws, in a role with a clip. A clip for a role the map doesn't play, as a later one may, is left out. One the map
-  can't play is dropped, and its model's drawn as it stands, the rest of the set as it is.
+  joint and kind, of those the map draws, in a role with a clip. A clip for a role the map doesn't play, as a later
+  one may, is left out. One the map can't play is dropped, and its model's drawn as it stands, the rest of the set as
+  it is.
 - **Built** (`tools/lib/hostedSets.js`): copied beside the page with its model, as `<id>.<hash>.<name>.rigged.glb`,
   as its SHA-256 says it is, the manifest naming it so. The deploy keeps it for one more deploy, as it keeps the
   model (`setsAskedFor`).
@@ -1531,7 +1532,6 @@ stand. The map used to draw a frame only when something changed; while units idl
   7% of the main thread at 30 a second, nearly all of it drawing the scene again. A whole frame there, the camera
   moving, takes 2 to 5.6 ms.
 
----
 **As built, sixth part (clips, 2026-11-24): what flies.** A shot says what it is (`kind` in the manifest, above), and
 each kind goes as it would (`SHOT_LOOKS` in `shots.ts`):
 
@@ -1540,7 +1540,7 @@ each kind goes as it would (`SHOT_LOOKS` in `shots.ts`):
 | `bottle` | 350 ms | 0.25 | a bottle, alight at its neck, tumbling | | a puff, as a fallen unit's |
 | `arrow` | 450 ms | 0.2 | a shaft and its head, pointing the way it goes | | a puff a third as big |
 | `bullet` | 80 ms | none, straight | a bright streak trailing it, pointing the way it goes | a flash, and smoke a third as big | a puff a third as big |
-| `shell` | 700 ms | 0.35 | a dark ball | a flash, and smoke most as big | a burst: a flash, and a puff half as big again |
+| `shell` | 700 ms | 0.35 | a dark ball | a flash, and smoke most as big | a burst: a flash, and a puff 1.6 times as big |
 
 - **Pacing** (`clipPace`): the blow falls as the first shot to land lands, each as long after it leaves as its kind
   flies, so a bullet that leaves after a bottle can land first. The battle's drawn till the last shot's puff is over
@@ -1552,6 +1552,8 @@ each kind goes as it would (`SHOT_LOOKS` in `shots.ts`):
   size, and a flash.
 - **The Partisans' bottle** goes as it did: none of its numbers changed. Rifles and cannons fire once their models
   have rigged copies whose `fight` clips say so; for now none do.
+
+---
 
 ## 11. Everything the 2D map shows today (parity)
 

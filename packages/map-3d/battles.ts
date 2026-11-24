@@ -191,6 +191,9 @@ export type Fighter = {
   opacity: number;
   // The clip its figures play, and how far in, in seconds, where its battle's paced for clips (`clipPace`).
   clip?: { role: ClipRole; seconds: number };
+  // The attacker, paced for its `fight` clip: how far into that it is, in seconds, by the battle's clock, though it's
+  //  falling, lost, so its figures' shots still leave as that clip has them, each as it comes to it.
+  fought?: number;
 };
 
 /** When the blow falls in `battle`. */
@@ -478,6 +481,9 @@ export class Battles {
         facing: battle.facing,
         opacity: attacker,
         ...attackerPlays,
+        ...(clips?.fight
+          ? { fought: ((now - battle.start) / 1000) * clips.rate }
+          : {}),
       });
     }
 

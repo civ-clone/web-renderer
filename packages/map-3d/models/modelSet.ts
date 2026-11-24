@@ -39,8 +39,8 @@ export const SHOT_KINDS = ['bottle', 'arrow', 'bullet', 'shell'] as const;
 export type ShotKind = (typeof SHOT_KINDS)[number];
 
 /**
- * A shot leaving a figure as a clip plays: when, in seconds into it, from which of its joints, and what it is (a bottle,
- *  where it doesn't say, as the Partisans' first was).
+ * A shot leaving a figure as a clip plays: when, in seconds into it, from which of its joints, and what it is (a
+ *  bottle, where it doesn't say, as the Partisans' first was).
  */
 export type ClipShot = { at: number; joint: string; kind?: ShotKind };
 
@@ -116,8 +116,9 @@ const isShot = (value: unknown): value is ClipShot =>
 
 // A rigged copy as a manifest gives it, as far as the map can play it: its file, as a model's is; the clip it names for
 //  each role the map plays (any for another role, which a later map may play, left out); and their shots, each when,
-//  from which joint and what it is, of the kinds the map draws, in a role it names a clip for. Nothing, for one with no clip the map can play, or anything
-//  else wrong with it: its model's drawn as it stands, and the rest of the set as it is.
+//  from which joint and what it is, of the kinds the map draws, in a role it names a clip for. Nothing, for one with no
+//  clip the map can play, or anything else wrong with it: its model's drawn as it stands, and the rest of the set as it
+//  is.
 const riggedOf = (value: unknown): RiggedModel | undefined => {
   if (!isObject(value) || !isFile(value.file) || !isObject(value.clips)) {
     return undefined;

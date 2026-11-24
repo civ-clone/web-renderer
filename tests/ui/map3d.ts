@@ -4473,18 +4473,22 @@ expect(
   //  where it leaves, from the node its clip names, as big as a muzzle's; landing as quick as a bullet flies, the blow
   //  then, its puff as small as a bullet's; the battle drawn till its smoke and its puff are over. A frame drawn after
   //  it's both left and landed still shows its smoke where it left. A shell's burst flashes, and it flies slower.
-  const shooter = (kind: 'bullet' | 'shell') =>
+  const shooter = (kind: 'bullet' | 'shell', figures = 1) =>
       rigFactsFor.set('Unit-A', {
-        figures: 1,
+        figures,
         stagger: 0.13,
         clips: {
           fight: {
             duration: 1.2,
             shots: [{ at: 0.4, joint: 'muzzle', kind }],
           },
+          die: { duration: 1.5, shots: [] },
         },
       }),
-    looksAfter = (between?: () => void) => {
+    looksAfter = (
+      between?: () => void,
+      winner: 'attacker' | 'defender' = 'attacker'
+    ) => {
       repatched([1, 1, [walker]], [2, 1, [rival]]);
       shotsDrawn.clear();
       shotLooks.clear();
@@ -4494,8 +4498,18 @@ expect(
 
       const firedAt = now;
 
-      fought(walker, [1, 1], rival, [2, 1], 'attacker');
-      patch([1, 1, [walker]], [2, 1, []]);
+      fought(walker, [1, 1], rival, [2, 1], winner);
+      patch(
+        ...((winner === 'attacker'
+          ? [
+              [1, 1, [walker]],
+              [2, 1, []],
+            ]
+          : [
+              [1, 1, []],
+              [2, 1, [rival]],
+            ]) as [number, number, Tile['units'][number][]][])
+      );
 
       if (between !== undefined) {
         while (now - firedAt < 380 && runFrames(1) > 0);
@@ -4561,6 +4575,9 @@ expect(
           .filter(([key]) => key.endsWith('-hit'))
           .map(([, puff]) => puff),
         joints: [...new Set(jointsAsked.map(([, , joint]) => joint))],
+        // How many landed, each with its puff.
+        landed: [...puffLooks.keys()].filter((key) => key.endsWith('-hit'))
+          .length,
         ended,
         puffsLeft: puffs.size,
       };
@@ -4580,11 +4597,24 @@ expect(
 
   const shell = looksAfter();
 
+  // A squad of three that loses falls at the blow, its first bullet landing before the others have left: they still
+  //  leave, as its clip has them. Twice as quick, a bullet flies half as long.
+  shooter('bullet', 3);
+
+  const lostSquad = looksAfter(undefined, 'defender');
+
+  shooter('bullet');
+  optionsRegistry.set(MAP3D_WALKS_OPTION, 'fast');
+
+  const quickBullet = looksAfter();
+
+  optionsRegistry.set(MAP3D_WALKS_OPTION, 'normal');
+
   rigFactsFor.clear();
   repatched([1, 1, []], [2, 1, []]);
 
   expect(
-    'a bullet’s drawn as one, straight, from the node its clip names, its smoke and flash a muzzle’s, landing as quick as a bullet flies, its puff a bullet’s, the battle over once they are; leaving and landing between frames, its smoke’s still drawn; a shell flies slower, its burst flashing',
+    'a bullet’s drawn as one, straight, from the node its clip names, its smoke and flash a muzzle’s, landing as quick as a bullet flies, its puff a bullet’s, the battle over once they are; leaving and landing between frames, its smoke’s still drawn; a shell flies slower, its burst flashing; a squad that loses fires every bullet; twice as quick, a bullet flies half as long',
     [
       bullet.kind,
       [bullet.straight, bullet.level],
@@ -4601,6 +4631,10 @@ expect(
       shell.inFlight !== null &&
         shell.inFlight[1]! - shell.inFlight[0]! >=
           SHOT_LOOKS.shell.flight - 2 * 16,
+      [lostSquad.landed, lostSquad.puffsLeft],
+      quickBullet.inFlight !== null &&
+        quickBullet.inFlight[1]! - quickBullet.inFlight[0]! <
+          SHOT_LOOKS.bullet.flight / 2,
     ],
     [
       'bullet',
@@ -4616,6 +4650,8 @@ expect(
         [{ size: SHOT_LOOKS.bullet.hit, flash: false }],
       ],
       ['shell', [{ size: SHOT_LOOKS.shell.hit, flash: true }], false, false],
+      true,
+      [3, 0],
       true,
     ]
   );

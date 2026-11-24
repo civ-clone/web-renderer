@@ -23,7 +23,7 @@ import type { MapHeading } from '@civ-clone/ui-client/lib/unitActionKeys';
 import groundDirections from './layouts/directions';
 import World from '@civ-clone/ui-map/components/World';
 import { Stage, StageFactory, createStage } from './stage';
-import { ClipRole } from './models/modelSet';
+import { ClipRole, ShotKind } from './models/modelSet';
 import { RigFacts, STRIDE } from './markers/clips';
 import {
   HIT_PUFF,
@@ -36,7 +36,6 @@ import {
   shotHeading,
   shotTimes,
 } from './shots';
-import { ShotKind } from './models/modelSet';
 import Land from './Land';
 import {
   Orbit,
@@ -1480,15 +1479,17 @@ export class MapView3D implements MapRenderer {
   //  puff's as quick as the battle's clips, added to `puffed`, then gone. Its attacker not drawn, as with units hidden
   //  (`t`) but for the one ringed, none is.
   #placeShots(now: number, going: Fighter[], puffed: Set<string>): void {
-    going.forEach(({ id, battle, at, lift, fallen, clip }) => {
+    // By the battle's clock (`fought`), not the clip its figures play: an attacker that's lost falls at the blow, its
+    //  last figures' shots, quick ones landing before they've all left, still to leave.
+    going.forEach(({ id, battle, at, lift, fallen, fought }) => {
       const plan = this.#shotsOf.get(battle);
 
-      if (plan === undefined || fallen || clip?.role !== 'fight') {
+      if (plan === undefined || fallen || fought === undefined) {
         return;
       }
 
       plan.times.forEach((time, index) => {
-        if (plan.left.has(index) || clip.seconds < time.leaves) {
+        if (plan.left.has(index) || fought < time.leaves) {
           return;
         }
 
@@ -1507,7 +1508,7 @@ export class MapView3D implements MapRenderer {
             near(plan.target[2], from[2], periodV),
           ],
           // As its clip came to it, though the frame's later.
-          leaves = now - ((clip.seconds - time.leaves) * 1000) / plan.rate;
+          leaves = now - ((fought - time.leaves) * 1000) / plan.rate;
 
         plan.left.add(index);
         this.#flying.set(`${battle}-shot-${index}`, {
