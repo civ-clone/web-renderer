@@ -1167,7 +1167,6 @@ expect(
           centre: at.centre,
           frame,
           way,
-          // Its mouth's face in front of all of its rock, and the rock over the mouth.
           // Its mouth's face in front of all of its rock, the rock over the mouth, and the rock's highest at its front,
           //  its face upright behind the mouth, sloping back from there.
           faced:
@@ -1308,6 +1307,23 @@ expect(
             spoil: boxesOf(mine.filter(isColour(MINE_COLOURS.spoil)), 16).every(
               grounded((u) => height(u))
             ),
+            // The headframe's legs, the four lowest of its timbers, leaning in: each's foot, all of it within 0.01 of
+            //  its lowest, down into the ground.
+            legs: boxesOf(mine.filter(isColour(MINE_COLOURS.timber)))
+              .sort(
+                (a, b) =>
+                  Math.min(...pointsIn(a).map(([, y]) => y)) -
+                  Math.min(...pointsIn(b).map(([, y]) => y))
+              )
+              .slice(0, 4)
+              .every((leg) => {
+                const points = pointsIn(leg),
+                  low = Math.min(...points.map(([, y]) => y));
+
+                return points
+                  .filter(([, y]) => y < low + 0.01)
+                  .every(([u, y]) => height(u) >= y - 1e-6);
+              }),
             // Two haystacks on the irrigated square, a silo on farmland, two heaps of spoil by the headframe.
             counted:
               triangles.filter(isColour(straw)).length === 2 * 48 &&
@@ -1404,8 +1420,13 @@ expect(
         ).length,
         drowned.length > 0,
         drowned.filter(farmsteads).length,
+        layOverlay(
+          overlayFor(square(['Irrigation']), [])!,
+          place(17, 3, { height: () => -0.01 }),
+          soup()
+        ).farm.length,
       ],
-      [true, 0, true, 0]
+      [true, 0, true, 0, 0]
     );
   }
 
@@ -1461,11 +1482,13 @@ expect(
       ) =>
         Math.max(
           ...squares.map((x) => {
-            const { u, v } = boundsOf(
-              trianglesOn(overlay, place(x, 3)).filter(keep)
-            );
+            const kept = trianglesOn(overlay, place(x, 3)).filter(keep),
+              { u, v } = boundsOf(kept);
 
-            return Math.max(x - u[0]!, u[1]! - (x + 1), 3 - v[0]!, v[1]! - 4);
+            // Nothing kept is as far out as can be, so it fails.
+            return kept.length === 0
+              ? Infinity
+              : Math.max(x - u[0]!, u[1]! - (x + 1), 3 - v[0]!, v[1]! - 4);
           })
         ),
       // Whether (u, v) is inside a footprint, its corners in order round it, or on its edge.
@@ -1528,6 +1551,14 @@ expect(
       [
         suburb.some(isColour(...ROOFS)),
         suburb.filter(farmsteads).length,
+        layOverlay(
+          overlayFor(
+            square(['Irrigation'], { terrain: 'Grassland' }),
+            bigCity
+          )!,
+          place(17, 3),
+          soup()
+        ).farm.length,
         underRows.reduce((sum, each) => sum + each, 0),
         past(overlayFor(square(['Mine']), [])!) <= 0.03,
         past(
@@ -1537,7 +1568,7 @@ expect(
         past(overlayFor(square(['Irrigation']), [])!) <= 0.03,
         [...new Set(footprints.map((each) => JSON.stringify(each)))],
       ],
-      [true, 0, 0, true, true, true, [JSON.stringify([3, true, 0])]]
+      [true, 0, 0, 0, true, true, true, [JSON.stringify([3, true, 0])]]
     );
   }
 }
