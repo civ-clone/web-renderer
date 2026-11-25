@@ -492,6 +492,17 @@ Plants are scattered by seed, each where it has room. They stay clear of a unit'
 
 **Woods: done.** Forest, jungle and swamp grow as one canopy across their squares, as Civ1's forests run together (spec §5.1): trees stand at the points of a lattice over the whole ground, whole across the edge to the same woods and thinning to a fringe at the edge to other ground, so a forest is a wood rather than a clump on each square. Since #1363, woods are dense: trees about 0.17 apart, about 25 to a whole square, with undergrowth under them and low cover in the clearing a unit stands in, trees growing smaller towards it; and far chunks draw fewer of a set's trees. Trees grow in stands, patches of a kind or two by latitude: firs and pines towards the poles, oaks, beeches and birches towards the equator, tall tropical trees, palms and bananas in jungles. Each kind is drawn by 0 A.D.'s own tree since civ-clone/models-0ad#9: a fir, a large oak, a holm oak, a beech as birch, a tropical tree and a banana, beside the pine, teak, date palm and dead tree.
 
+**3.3, first part: done.** Rivers' courses and their channels (#1364, spec §5.3):
+- a river runs from each river square, Civ1's River terrain or Civ2's River feature on any land, to each neighbour
+  across an edge with a river, as the 2D map joins them, and on into the sea where it meets it. One with neither is a
+  pool;
+- each course bends a little, its own way, and its channel is cut into the land, with wet, darker banks;
+- its level, which its channel's cut under, is under the land round it, and its bed is over the sea's level unless its
+  level comes down to it, so the sea only shows in a river where it meets the sea.
+
+Still to do in 3.3: the water in the channels (next), specials, fields and the rest keeping clear of rivers, bridges,
+rapids and falls, and flow (with #1365).
+
 **3.4, first part: done.** What's laid on the land is made by code (`packages/map-3d/overlay/`), one vertex-coloured mesh a chunk, so it costs a draw call a chunk (and one more for its smog, where it has any, since #1335):
 - roads and railroads are draped over the land, joined to their neighbours as the 2D map joins them, along the topology's directions, and at the nearest copy across the world's seams. Roads wind like country lanes, each half bowing its own way and meeting its neighbour's at the edge; railroads are straight;
 - irrigation and farmland are rows of crops with ditches; pollution is a dark smear (smog since #1335: a low,

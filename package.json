@@ -153,6 +153,7 @@
     "test:woods": "node tools/run-suite.js ui woods",
     "test:ground-layouts": "node tools/run-suite.js ui groundLayouts",
     "test:relief": "node tools/run-suite.js ui relief",
+    "test:rivers": "node tools/run-suite.js ui rivers",
     "test:surfaces": "node tools/run-suite.js ui surfaces",
     "test:chunks": "node tools/run-suite.js ui chunks",
     "test:cover": "node tools/run-suite.js ui cover",

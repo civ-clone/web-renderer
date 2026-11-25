@@ -15,12 +15,31 @@
 // - **A square never seen** is flat, at sea level, whatever is round it: the client is never told its terrain, and its
 //   neighbours' relief doesn't spill into it. The step at its edge is mostly under cloud (§4.5): a hill or a mountain
 //   beside it stands through.
+// - **Rivers** (§5.3, `rivers.ts`) cut their channels into the land, each from a river square seen to its neighbours
+//   seen across an edge, with a river or water: their banks wet, darker.
 //
 // Deterministic: the same squares always give the same land.
 
 import { GroundLayout } from '../layouts/GroundLayout';
 import { REACH, weight } from './kernel';
 import { Noise, fractalNoise, periodicNoise } from './noise';
+import {
+  BANK,
+  Course,
+  DEPTH,
+  FLOOR,
+  MEANDER,
+  MOUTH,
+  POOL_WIDTH,
+  RIVER_WIDTH,
+  STEPS,
+  alongOf,
+  courseFrom,
+  cutBy,
+  nearestOn,
+  pointAlong,
+  underLand,
+} from './rivers';
 import {
   Relief,
   ReliefShape,
@@ -43,6 +62,11 @@ export type ReliefSource = {
   waterAt(x: number, y: number): boolean;
   // The squares next to (`x`, `y`), on the world, as the topology has them.
   neighbours(x: number, y: number): [number, number][];
+  // Whether there's a river on the square at (`x`, `y`): Civ1's `River` terrain, or Civ2's `River` feature. None where
+  //  it's not given.
+  riverAt?(x: number, y: number): boolean;
+  // The squares next to (`x`, `y`) across an edge, as the topology has them (`edgeDirections`), which a river joins.
+  edgeNeighbours?(x: number, y: number): [number, number][];
 };
 
 /** A point's height, in world units, and its colour, as linear red, green and blue from 0 to 1. */
@@ -71,6 +95,8 @@ export interface ReliefMap {
   refresh(
     released?: readonly (readonly [number, number])[]
   ): [number, number][];
+  /** Every river's course, once each, with the middle of the square that makes it, on the world's first copy. */
+  courses(): readonly { course: Course; u: number; v: number }[];
 }
 
 // How much of a peak's height is its own, weighted by the square of its weight: the rest is in the blend with its
@@ -86,6 +112,24 @@ const linear = (hex: string): [number, number, number] => {
   };
 
   return [channel(1), channel(3), channel(5)];
+};
+
+// A river's banks, wet: darker, muddy, and how much of it they take at the water's edge; and over how far they fade out
+//  as the land comes down to the sea's level, where the sea's drawn.
+const WET_BANK = linear('#3e4630'),
+  WET_SHARE = 0.55,
+  WET_FADE = 0.0002;
+
+// A river's course, kept by its ends: how it's drawn and the squares it reaches into, to tell which have changed; and
+//  the middle of the square that makes it, on the world's first copy.
+type Kept = {
+  drawn: string;
+  into: number[];
+  course: Course;
+  u: number;
+  v: number;
+  // The lowest of the land round each of its points (`rivers`), kept till land it reaches into changes.
+  lows: number[];
 };
 
 // What's kept for each square, read once per refresh: and for a peak, where it stands off the square's middle and how
@@ -233,7 +277,13 @@ export const createRelief = ({
     ridgesIn: Ridge[][] = [],
     madeFrom: number[][] = [],
     // Which squares a range joins: peaks seen, on land.
-    ranged: boolean[] = [];
+    ranged: boolean[] = [],
+    // The rivers' courses that reach into each square, and where the middle of the square each was made by is from its
+    //  own, as with ranges; and each course, by its ends, as it's drawn and the squares it reaches into, to tell which
+    //  have changed.
+    riversIn: Course[][] = [],
+    riversFrom: number[][] = [],
+    coursesBy = new Map<string, Kept>();
 
   const index = (x: number, y: number): number | null => {
     const wrappedX = ((x % width) + width) % width;
@@ -280,13 +330,15 @@ export const createRelief = ({
     return distance;
   };
 
-  // What the square at index `at` is read as: its terrain's name, and whether it's water.
+  // What the square at (`x`, `y`) is read as: its terrain's name, whether it's water, and whether it has a river.
   const readAs = (x: number, y: number): string => {
     const name = source.terrainAt(x, y);
 
-    return `${name}${
-      name !== 'Unknown' && source.waterAt(x, y) ? ' water' : ''
-    }`;
+    return name === 'Unknown'
+      ? name
+      : `${name}${source.waterAt(x, y) ? ' water' : ''}${
+          source.riverAt?.(x, y) === true ? ' river' : ''
+        }`;
   };
 
   const refresh = (
@@ -307,7 +359,8 @@ export const createRelief = ({
 
     const names: string[] = [],
       water: boolean[] = [],
-      entries: TerrainEntry[] = [];
+      entries: TerrainEntry[] = [],
+      now: string[] = [];
 
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
@@ -316,13 +369,13 @@ export const createRelief = ({
         names.push(name);
         water.push(name !== 'Unknown' && source.waterAt(x, y));
         entries.push(terrainEntry(name));
+        now.push(readAs(x, y));
       }
     }
 
     const distance = distancesFromLand(
         names.map((name, at) => name !== 'Unknown' && !water[at])
       ),
-      now = names.map((name, at) => `${name}${water[at] ? ' water' : ''}`),
       changed: [number, number][] = [];
 
     now.forEach((was, at) => {
@@ -406,6 +459,56 @@ export const createRelief = ({
         }
       });
     });
+
+    // The rivers made again, now the land's as it is, and every square a river that's changed reaches into, or did.
+    //  The land round a course is looked at again only where it may have changed: within a few steps of a square
+    //  whose land has, as far as the sea's floor's walk, as land that comes or goes deepens or shallows the sea that
+    //  far out, which the land at the shore is blended from.
+    if (changed.length > 0) {
+      const old = coursesBy,
+        stale = new Set<number>(),
+        walked: [number, number, number][] = [...reshaped.values()].map(
+          ([x, y]) => [x, y, 0]
+        );
+
+      for (const [x, y, out] of walked) {
+        const at = index(x, y);
+
+        if (at === null || stale.has(at)) {
+          continue;
+        }
+
+        stale.add(at);
+
+        if (out <= seaFloor.reach) {
+          source
+            .neighbours(x, y)
+            .forEach(([nx, ny]) => walked.push([nx, ny, out + 1]));
+        }
+      }
+
+      [riversIn, riversFrom, coursesBy] = rivers(water, old, stale);
+
+      new Set([...old.keys(), ...coursesBy.keys()]).forEach((key) => {
+        const before = old.get(key),
+          after = coursesBy.get(key);
+
+        if (
+          before !== undefined &&
+          after !== undefined &&
+          before.drawn === after.drawn
+        ) {
+          return;
+        }
+
+        [...(before?.into ?? []), ...(after?.into ?? [])].forEach((at) =>
+          reshaped.set(`${at % width},${Math.floor(at / width)}`, [
+            at % width,
+            Math.floor(at / width),
+          ])
+        );
+      });
+    }
 
     return [...reshaped.values()];
   };
@@ -671,6 +774,273 @@ export const createRelief = ({
     return [listed, offsetsOf];
   };
 
+  // The squares a river's course can reach into, from the square that makes it, by its row's parity: as far as the
+  //  furthest neighbour's middle, and its bend, and its mouth's width, its bed and its bank, and a square's furthest
+  //  corner past that. Each with where its middle is from the square's.
+  const widest = Math.max(RIVER_WIDTH * MOUTH, POOL_WIDTH),
+    reachOfRivers = [0, 1].map((parity) => {
+      const [cu, cv] = layout.centre(0, parity);
+
+      return offsetsWithin(
+        parity,
+        furthest +
+          MEANDER +
+          widest +
+          FLOOR +
+          BANK +
+          Math.max(cornerOf(0), cornerOf(1))
+      ).flatMap(([dx, dy]) => {
+        const [u, v] = layout.centre(dx, parity + dy);
+
+        return [dx, dy, u - cu, v - cv];
+      });
+    });
+
+  // Every river's course (`rivers.ts`): from each river square seen, on land, to each neighbour seen across an edge
+  //  with a river, made once, by the end that comes first down the world (or along it, on the same row), as a range's
+  //  ridge is; to each such neighbour that's water, a mouth; or, with neither, a pool. Each with its level: at each end,
+  //  under the lowest of the land seen and dry round every course from that end (of a mouth, only up to the coast), as
+  //  it would be with no rivers; between them, from one to the other, but never over the land round each point; and a
+  //  mouth's down to the sea's at the coast. Listed under every square it reaches into, as ridges
+  //  are; and by its ends, with how it's drawn and the squares it reaches into, to tell which change. The land round
+  //  a course is looked at again only where one of the squares it reaches into is `stale`: otherwise it's as `kept`.
+  const rivers = (
+    water: boolean[],
+    kept: ReadonlyMap<string, Kept>,
+    stale: ReadonlySet<number>
+  ): [Course[][], number[][], Map<string, Kept>] => {
+    const listed: Course[][] = squares.map(() => []),
+      offsetsOf: number[][] = squares.map(() => []),
+      byKey = new Map<string, Kept>(),
+      period = layout.period(),
+      edgeNeighbours = source.edgeNeighbours,
+      rivered = squares.map(
+        ({ unknown }, at) =>
+          !unknown &&
+          water[at] !== true &&
+          source.riverAt?.(at % width, Math.floor(at / width)) === true
+      );
+
+    if (edgeNeighbours === undefined || !rivered.includes(true)) {
+      return [listed, offsetsOf, byKey];
+    }
+
+    const made: {
+      course: Course;
+      x: number;
+      y: number;
+      key: string;
+      from: number;
+      to: number | null;
+    }[] = [];
+
+    rivered.forEach((isRiver, at) => {
+      if (!isRiver) {
+        return;
+      }
+
+      const x = at % width,
+        y = Math.floor(at / width),
+        [cu, cv] = layout.centre(x, y),
+        // The way to each neighbour it joins, once each, with its index on the world.
+        steps = new Map<string, [number, number, number]>();
+
+      edgeNeighbours(x, y).forEach(([nx, ny]) => {
+        const there = index(nx, ny);
+
+        // Neither a river nor water: or never seen, which is neither.
+        if (
+          there === null ||
+          (rivered[there] !== true && water[there] !== true)
+        ) {
+          return;
+        }
+
+        stepsTo(x, y, nx, ny).forEach(([dx, dy]) =>
+          steps.set(`${dx},${dy}`, [dx, dy, there])
+        );
+      });
+
+      if (steps.size === 0) {
+        made.push({
+          course: courseFrom(x, y, 0, 0, { seed }),
+          x,
+          y,
+          key: `${at}`,
+          from: at,
+          to: null,
+        });
+
+        return;
+      }
+
+      steps.forEach(([dx, dy, there]) => {
+        const mouth = water[there] === true;
+
+        // Between two rivers, made by the other end.
+        if (!mouth && (dy < 0 || (dy === 0 && dx < 0))) {
+          return;
+        }
+
+        const [tu, tv] = layout.centre(x + dx, y + dy);
+
+        made.push({
+          course: courseFrom(x, y, tu - cu, tv - cv, {
+            mouth,
+            salt: (dy + 2) * 5 + (dx + 2),
+            seed,
+          }),
+          x,
+          y,
+          key: `${at}${mouth ? '~' : '>'}${dx},${dy}`,
+          from: at,
+          to: mouth ? null : there,
+        });
+      });
+    });
+
+    // The lowest of the land seen and dry round each of each course's points: at it, and either side at its bed's edge
+    //  and at its bank's top, there and halfway to the points either side of it, so a dip between two is counted.
+    const lows = made.map(({ course, x, y, key }) => {
+      const before = kept.get(key);
+
+      // As it was, where none of the land it reaches into has changed.
+      if (before !== undefined && !before.into.some((at) => stale.has(at))) {
+        return before.lows;
+      }
+
+      const [cu, cv] = layout.centre(x, y),
+        pool = course.points.every((n) => n === 0);
+
+      const lowAt = (along: number): number => {
+        const [pu, pv, du, dv] = pointAlong(course, along),
+          bed = alongOf(course.widths, along) + FLOOR,
+          length = Math.hypot(du, dv),
+          // At its bed's edge, and its bank's top.
+          ways: [number, number][] = [bed, bed + BANK].flatMap((out) =>
+            pool
+              ? Array.from({ length: 8 }, (_, way): [number, number] => [
+                  Math.cos((way * Math.PI) / 4) * out,
+                  Math.sin((way * Math.PI) / 4) * out,
+                ])
+              : [
+                  [(-dv / length) * out, (du / length) * out],
+                  [(dv / length) * out, (-du / length) * out],
+                ]
+          );
+        let low = Infinity;
+
+        [[0, 0] as [number, number], ...ways].forEach(([ou, ov]) => {
+          const u = cu + pu + ou,
+            v = cv + pv + ov,
+            [sx, sy] = layout.tileAt(u, v),
+            there = index(sx, sy),
+            square = there === null ? undefined : squares[there];
+
+          if (square !== undefined && !square.unknown && !square.water) {
+            low = Math.min(low, landAt(u, v).height);
+          }
+        });
+
+        return low;
+      };
+
+      const halves = Array.from({ length: STEPS * 2 + 1 }, (_, half) =>
+        lowAt(half / 2)
+      );
+
+      return course.widths.map((_, step) =>
+        Math.min(
+          halves[step * 2] ?? Infinity,
+          halves[step * 2 - 1] ?? Infinity,
+          halves[step * 2 + 1] ?? Infinity
+        )
+      );
+    });
+
+    // Each end's level, the same for every course from it, so they meet at one: under the lowest round each's end there.
+    const ends = new Map<number, number>();
+
+    made.forEach(({ from, to }, which) => {
+      const low = lows[which] ?? [];
+
+      ends.set(from, Math.min(ends.get(from) ?? Infinity, low[0] ?? Infinity));
+
+      if (to !== null) {
+        ends.set(
+          to,
+          Math.min(ends.get(to) ?? Infinity, low[STEPS] ?? Infinity)
+        );
+      }
+    });
+
+    const levelAt = (end: number): number => {
+        const low = ends.get(end) ?? Infinity;
+
+        return Number.isFinite(low) ? underLand(low) : 0;
+      },
+      corner = Math.max(cornerOf(0), cornerOf(1));
+
+    // Between its ends, from one's level to the other's, but never over the land round each point: a mouth's from its
+    //  end's down to the sea's at the coast, and on down under it, so its bed's under the sea past the coast.
+    made.forEach(({ course, x, y, key, from, to }, which) => {
+      const a = levelAt(from),
+        b = to === null ? (course.mouth ? Math.min(0, a) : a) : levelAt(to),
+        low = lows[which] ?? [];
+
+      course.levels = course.widths.map((_, step) => {
+        // Each end exactly its end's level.
+        const t = step / STEPS,
+          between = !course.mouth
+            ? a * (1 - t) + b * t
+            : t <= 0.5
+            ? a * (1 - t * 2) + b * t * 2
+            : b - (t - 0.5) * 2 * DEPTH;
+
+        return step === 0 || (step === STEPS && !course.mouth)
+          ? between
+          : Math.min(between, underLand(low[step] ?? Infinity));
+      });
+
+      const candidates = reachOfRivers[y & 1] ?? [],
+        near = (Math.sqrt(course.reach) + corner) ** 2,
+        into: number[] = [];
+
+      for (let at = 0; at < candidates.length; at += 4) {
+        const ou = candidates[at + 2]!,
+          ov = candidates[at + 3]!;
+
+        if (
+          (ou - course.cu) ** 2 + (ov - course.cv) ** 2 >= near ||
+          nearestOn(course, ou, ov)[0] >= widest + FLOOR + BANK + corner
+        ) {
+          continue;
+        }
+
+        const there = index(x + candidates[at]!, y + candidates[at + 1]!);
+
+        if (there !== null) {
+          listed[there]?.push(course);
+          offsetsOf[there]?.push(ou, ov);
+          into.push(there);
+        }
+      }
+
+      const [mu, mv] = layout.centre(x, y);
+
+      byKey.set(key, {
+        drawn: JSON.stringify([course.points, course.widths, course.levels]),
+        into,
+        lows: lows[which] ?? [],
+        course,
+        u: ((mu % period.u) + period.u) % period.u,
+        v: period.v === null ? mv : ((mv % period.v) + period.v) % period.v,
+      });
+    });
+
+    return [listed, offsetsOf, byKey];
+  };
+
   // The offsets from a square, by its row's parity, of every square whose middle can be within `REACH` of a point in
   //  it: as far as `REACH` past the square's furthest corner.
   const offsetsFor = (parity: number): [number, number][] => {
@@ -699,7 +1069,8 @@ export const createRelief = ({
 
   const offsets = [offsetsFor(0), offsetsFor(1)];
 
-  const sample = (u: number, v: number): GroundSample => {
+  // The land at (`u`, `v`) as it would be with no rivers: what their levels are taken from.
+  const landAt = (u: number, v: number): GroundSample => {
     const [x0, y0] = layout.tileAt(u, v),
       own = index(x0, y0),
       ownSquare = own === null ? null : squares[own] ?? null;
@@ -862,12 +1233,69 @@ export const createRelief = ({
     };
   };
 
+  // The land as the rivers through its square cut it, the lowest any does, and its banks wet as the wettest makes them.
+  const sample = (u: number, v: number): GroundSample => {
+    const land = landAt(u, v);
+
+    if (land.unseen) {
+      return land;
+    }
+
+    const [x0, y0] = layout.tileAt(u, v),
+      own = index(x0, y0),
+      through = own === null ? [] : riversIn[own] ?? [],
+      makers = own === null ? [] : riversFrom[own] ?? [];
+
+    if (through.length === 0) {
+      return land;
+    }
+
+    const [ou, ov] = layout.centre(x0, y0);
+    let cut = land.height,
+      wet = 0;
+
+    through.forEach((course, which) => {
+      const [height, wetness] = cutBy(
+        course,
+        u - ou + (makers[which * 2] ?? 0),
+        v - ov + (makers[which * 2 + 1] ?? 0),
+        land.height
+      );
+
+      cut = Math.min(cut, height);
+      wet = Math.max(wet, wetness);
+    });
+
+    if (wet === 0 && cut === land.height) {
+      return land;
+    }
+
+    // Not where the sea's drawn, in a mouth or on the sea's floor under it: banks are land, so they fade out as the land
+    //  comes down the last `WET_FADE` to the sea's level, which a river's bed only comes down to within a thousandth or
+    //  so of the sea's.
+    const dry = Math.max(0, Math.min(1, cut / WET_FADE)),
+      share = wet * WET_SHARE * dry * dry * (3 - 2 * dry),
+      [red, green, blue] = land.colour;
+
+    return {
+      ...land,
+      height: cut,
+      colour: [
+        red + (WET_BANK[0] - red) * share,
+        green + (WET_BANK[1] - green) * share,
+        blue + (WET_BANK[2] - blue) * share,
+      ],
+    };
+  };
+
   refresh();
 
   return {
     sample,
     height: (u: number, v: number): number => sample(u, v).height,
     refresh,
+    courses: () =>
+      [...coursesBy.values()].map(({ course, u, v }) => ({ course, u, v })),
   };
 };
 
