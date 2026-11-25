@@ -126,6 +126,8 @@ type Kept = {
   course: Course;
   u: number;
   v: number;
+  // The lowest of the land round each of its points (`rivers`), kept till land it reaches into changes.
+  lows: number[];
 };
 
 // What's kept for each square, read once per refresh: and for a peak, where it stands off the square's middle and how
@@ -457,10 +459,33 @@ export const createRelief = ({
     });
 
     // The rivers made again, now the land's as it is, and every square a river that's changed reaches into, or did.
+    //  The land round a course is looked at again only where it may have changed: within a few steps of a square
+    //  whose land has, as far as the sea's floor's walk, as land that comes or goes deepens or shallows the sea that
+    //  far out, which the land at the shore is blended from.
     if (changed.length > 0) {
-      const old = coursesBy;
+      const old = coursesBy,
+        stale = new Set<number>(),
+        walked: [number, number, number][] = [...reshaped.values()].map(
+          ([x, y]) => [x, y, 0]
+        );
 
-      [riversIn, riversFrom, coursesBy] = rivers(water);
+      for (const [x, y, out] of walked) {
+        const at = index(x, y);
+
+        if (at === null || stale.has(at)) {
+          continue;
+        }
+
+        stale.add(at);
+
+        if (out <= seaFloor.reach) {
+          source
+            .neighbours(x, y)
+            .forEach(([nx, ny]) => walked.push([nx, ny, out + 1]));
+        }
+      }
+
+      [riversIn, riversFrom, coursesBy] = rivers(water, old, stale);
 
       new Set([...old.keys(), ...coursesBy.keys()]).forEach((key) => {
         const before = old.get(key),
@@ -775,9 +800,12 @@ export const createRelief = ({
   //  under the lowest of the land seen and dry round every course from that end, along its water and past it to its
   //  bed's edge (of a mouth, only up to the coast), so it's never left standing over the land; between them, from one
   //  to the other; and a mouth's down to the sea's at the coast. Listed under every square it reaches into, as ridges
-  //  are; and by its ends, with how it's drawn and the squares it reaches into, to tell which change.
+  //  are; and by its ends, with how it's drawn and the squares it reaches into, to tell which change. The land round
+  //  a course is looked at again only where one of the squares it reaches into is `stale`: otherwise it's as `kept`.
   const rivers = (
-    water: boolean[]
+    water: boolean[],
+    kept: ReadonlyMap<string, Kept>,
+    stale: ReadonlySet<number>
   ): [Course[][], number[][], Map<string, Kept>] => {
     const listed: Course[][] = squares.map(() => []),
       offsetsOf: number[][] = squares.map(() => []),
@@ -862,7 +890,7 @@ export const createRelief = ({
           }),
           x,
           y,
-          key: `${at}>${dx},${dy}`,
+          key: `${at}${mouth ? '~' : '>'}${dx},${dy}`,
           from: at,
           to: mouth ? null : there,
         });
@@ -871,7 +899,14 @@ export const createRelief = ({
 
     // The lowest of the land seen and dry round each of each course's points: at it, and either side at its bed's edge
     //  and at its bank's top, there and halfway to the points either side of it, so a dip between two is counted.
-    const lows = made.map(({ course, x, y }) => {
+    const lows = made.map(({ course, x, y, key }) => {
+      const before = kept.get(key);
+
+      // As it was, where none of the land it reaches into has changed.
+      if (before !== undefined && !before.into.some((at) => stale.has(at))) {
+        return before.lows;
+      }
+
       const [cu, cv] = layout.centre(x, y),
         pool = course.points.every((n) => n === 0);
 
@@ -994,6 +1029,7 @@ export const createRelief = ({
       byKey.set(key, {
         drawn: JSON.stringify([course.points, course.widths, course.levels]),
         into,
+        lows: lows[which] ?? [],
         course,
         u: ((mu % period.u) + period.u) % period.u,
         v: period.v === null ? mv : ((mv % period.v) + period.v) % period.v,

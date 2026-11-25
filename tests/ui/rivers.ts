@@ -571,7 +571,29 @@ ids.forEach((topologyId) => {
         (square): square is [number, number] =>
           square !== null && !named.has(key(square)) && key(square) !== key(sea)
       )!,
+    // And the sea at a corner of its first square, away from it, across no edge from any of it: no course reaches into
+    //  it, but the land each looks at round its first square is blended from it. None on the hex grid, whose
+    //  neighbours are all across an edge.
+    edgeOf = (square: [number, number]) =>
+      edges
+        .map((direction) => topology.neighbour(square[0], square[1], direction))
+        .filter((n): n is [number, number] => n !== null)
+        .map(key),
+    offCorner = topology
+      .directions()
+      .map((direction) =>
+        topology.neighbour(chain[0]![0], chain[0]![1], direction)
+      )
+      .find(
+        (square): square is [number, number] =>
+          square !== null &&
+          !named.has(key(square)) &&
+          !chain.some((link) => edgeOf(link).includes(key(square)))
+      ),
     changes: [[number, number], string][] = [
+      ...(offCorner === undefined
+        ? []
+        : [[offCorner, 'Ocean'] as [[number, number], string]]),
       [cornered, 'Ocean'],
       [beside, 'Hills'],
       [chain[1]!, 'Grassland'],
