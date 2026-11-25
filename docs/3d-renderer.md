@@ -779,7 +779,19 @@ How plants are placed:
   - **Changes:** every course is made again when any terrain's changed, and each that's changed, or come or gone, says
     the squares it reaches into, so their chunks are built again (`ReliefMap#refresh`). A river feature that comes or
     goes counts as a change.
-  - **Water:** the next part.
+  - **Water** (second part, `terrain/ribbons.ts`): a strip along each course, as wide as its water, with a disc at each
+    end where it joins others (12 triangles), so bends and junctions are round; a pool's a disc. It's laid on the land
+    as the chunk's mesh draws it (`ChunkMesh`'s triangles, two a cell), `RIVER_LIFT` (0.004) over it, at three points
+    across (its edges and middle) every half a point along, so it follows the channel's bed, which is flat across it.
+    So it's never under the land, nor left standing over land another course has cut lower where they meet (the
+    level's only what the channel's cut under): it stands at most about 0.006 over it, as the mesh folds a little
+    between its points. Never under the sea's level, where the sea's surface is. Only where its level's over the sea's,
+    and on to where it meets it: a mouth's water stops at the coast, where the sea's surface takes over. Each course's
+    is carried by the chunk its first end's in (`ChunkMesh#river`), relative to its corner as the land's points are,
+    laid on that chunk's points and, past its edge, on the next chunk's as they'll be, and drawn with the land at each
+    copy of the world: one more draw call a chunk with a river. It's one colour for now (`RIVER_WATER`, darker and
+    greener than the sea at its shore), a little in front of the land under it (`polygonOffset`). It doesn't move yet:
+    that's with #1365.
 
 ### 5.4 Tile improvements
 
