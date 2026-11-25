@@ -139,6 +139,16 @@ const LIFT = {
   // A whale's spout.
   SPOUT = '#eef3f5',
   SPOIL = '#7a6a58',
+  // A barn's walls and roof, a haystack, a silo, a mine's iron and its engine house's chimney, and a tunnel's mouth.
+  BARN = '#8a3a2a',
+  BARN_ROOF = '#4a3a32',
+  // A farmhouse's roof, its own, so a city's houses are told from it.
+  FARM_ROOF = '#7a5a3a',
+  STRAW = '#d4bc6a',
+  SILO = '#b4b8bc',
+  IRON = '#3a3a3a',
+  BRICK = '#8a5a44',
+  MOUTH = '#141210',
   THATCH = '#b89a5a',
   WALL = '#c9b48e',
   SMOG = '#584b34';
@@ -165,10 +175,16 @@ const box = new BoxGeometry(1, 1, 1),
 
 // Where on a square its mine, hut and specials stand, by seeded angle and how far out: plants keep clear of them.
 const SPOTS = {
-  mine: [3, 0.72],
+  mine: [3, 0.8],
   hut: [11, 0.64],
   special: (index: number): [number, number] => [index + 1, 0.85],
+  farm: [7, 0.78],
 } as const;
+
+// How much room a mine and a farm's buildings take, as a special does (`SPECIAL_ROOMS`): big enough to be seen at
+//  play's zoom, inside the square, the most there's room for, down to the last, drawn to fit.
+const MINE_ROOMS = [0.15, 0.12, 0.1] as const,
+  FARM_ROOMS = [0.13, 0.1, 0.08] as const;
 
 // How much room a special takes round where it stands: a herd, a stack or a pile big enough to be seen at play's zoom,
 //  as far from the square's middle as clears the unit's stand (`SPOTS.special`), and inside the square but for a little
@@ -949,7 +965,11 @@ const city = (layer: Layer, plan: CityPlan): void => {
 };
 
 // A house on its lot, facing its way, its roof's eaves out to the lot's edges, standing on the land where it is.
-const house = (layer: Layer, lot: Lot): void => {
+const house = (
+  layer: Layer,
+  lot: Lot,
+  roof: string = ROOFS[Math.floor(lot.roof * ROOFS.length)]!
+): void => {
   const {
       at: [bu, bv],
       width,
@@ -977,7 +997,7 @@ const house = (layer: Layer, lot: Lot): void => {
     pyramid,
     [bu, top + width * 0.2, bv],
     [width * Math.SQRT2, width * 0.4, width * Math.SQRT2],
-    ROOFS[Math.floor(lot.roof * ROOFS.length)]!,
+    roof,
     [0, facing + Math.PI / 4, 0]
   );
 };
@@ -1045,44 +1065,300 @@ const suburbs = (
   });
 };
 
-const mine = (layer: Layer, [u, v]: readonly [number, number]): void => {
-  const y = layer.ground(u, v);
+// Where `local` is, `x` across and `z` along from (`u`, `v`), turned `facing` about the vertical.
+const turned =
+  (u: number, v: number, facing: number) =>
+  (x: number, z: number): [number, number] =>
+    [
+      u + x * Math.cos(facing) + z * Math.sin(facing),
+      v + z * Math.cos(facing) - x * Math.sin(facing),
+    ];
 
-  // A headframe: two legs leaning together, and its wheel.
+// A gabled roof along `facing`, its ridge `length` long, over walls `width` across whose tops are at `top`: a box turned
+//  an eighth about its length, half of it showing.
+const gable = (
+  layer: Layer,
+  [u, v]: readonly [number, number],
+  top: number,
+  width: number,
+  length: number,
+  facing: number,
+  css: string
+): void =>
   layer.solid(
     box,
-    [u - 0.02, y + 0.05, v],
-    [0.01, 0.11, 0.01],
-    WOOD,
-    [0, 0, -0.3]
+    [u, top, v],
+    [width * Math.SQRT1_2, width * Math.SQRT1_2, length],
+    css,
+    [0, facing, Math.PI / 4],
+    'YXZ'
   );
-  layer.solid(
-    box,
-    [u + 0.02, y + 0.05, v],
-    [0.01, 0.11, 0.01],
-    WOOD,
-    [0, 0, 0.3]
-  );
-  layer.solid(cylinder, [u, y + 0.1, v], [0.05, 0.008, 0.05], '#3a3a3a', [
-    Math.PI / 2,
-    0,
-    0,
-  ]);
-  // Spoil heaps beside it.
-  [
-    [0.07, 0.03],
-    [-0.05, 0.06],
-  ].forEach(([du, dv]) => {
-    const hu = u + du!,
-      hv = v + dv!;
+
+// A mine at (`u`, `v`), as big as `room` has space for: on a mountain, a tunnel's timbered mouth in the slope, a fan of
+//  spoil below it and a cart on its track; elsewhere, a headframe over its shaft, braced, its wheel at the top, an engine
+//  house with its chimney beside it, a cart, and spoil heaps.
+const mine = (
+  layer: Layer,
+  [u, v]: readonly [number, number],
+  room: number,
+  terrain: string
+): void => {
+  const { seed, centre } = layer.place,
+    f = room / MINE_ROOMS[0],
+    // On a mountain, facing out from its middle, down the slope; elsewhere, its own way.
+    facing =
+      terrain === 'Mountains'
+        ? Math.atan2(u - centre[0], v - centre[1])
+        : fraction(seed, 41) * Math.PI * 2,
+    at = turned(u, v, facing),
+    ground = (x: number, z: number) => layer.ground(...at(x, z)),
+    heap = (x: number, z: number, size: number) => {
+      const [hu, hv] = at(x * f, z * f);
+
+      layer.solid(
+        cone,
+        [hu, layer.ground(hu, hv) + 0.022 * size * f, hv],
+        [0.08 * size * f, 0.045 * size * f, 0.08 * size * f],
+        SPOIL
+      );
+    },
+    cart = (x: number, z: number) => {
+      const [cu, cv] = at(x * f, z * f),
+        y = layer.ground(cu, cv);
+
+      layer.solid(
+        box,
+        [cu, y + 0.016 * f, cv],
+        [0.024 * f, 0.016 * f, 0.034 * f],
+        IRON,
+        [0, facing, 0]
+      );
+      layer.solid(
+        box,
+        [cu, y + 0.026 * f, cv],
+        [0.02 * f, 0.006 * f, 0.03 * f],
+        '#4a4440',
+        [0, facing, 0]
+      );
+    };
+
+  if (terrain === 'Mountains') {
+    // Its mouth, set into the slope behind it, its posts and lintel, and the fan of spoil tipped down in front.
+    const back = ground(0, -0.03 * f),
+      [mu, mv] = at(0, -0.02 * f);
 
     layer.solid(
-      cone,
-      [hu, layer.ground(hu, hv) + 0.02, hv],
-      [0.07, 0.04, 0.07],
-      SPOIL
+      box,
+      [mu, back + 0.03 * f, mv],
+      [0.05 * f, 0.06 * f, 0.03 * f],
+      MOUTH,
+      [0, facing, 0]
+    );
+    [-1, 1].forEach((side) => {
+      const [pu, pv] = at(side * 0.03 * f, 0);
+
+      layer.solid(
+        box,
+        [pu, back + 0.035 * f, pv],
+        [0.01 * f, 0.07 * f, 0.01 * f],
+        WOOD,
+        [0, facing, 0]
+      );
+    });
+
+    const [lu, lv] = at(0, 0);
+
+    layer.solid(
+      box,
+      [lu, back + 0.072 * f, lv],
+      [0.075 * f, 0.012 * f, 0.012 * f],
+      WOOD,
+      [0, facing, 0]
+    );
+    heap(0.0, 0.075, 1.3);
+    heap(0.06, 0.06, 0.8);
+    cart(-0.05, 0.05);
+
+    return;
+  }
+
+  // The headframe: four legs leaning in, a brace round them halfway up, and the wheel on top, square with the way it
+  //  faces.
+  const y = Math.min(ground(-0.03 * f, -0.03 * f), ground(0.03 * f, 0.03 * f)),
+    height = 0.15 * f;
+
+  [
+    [-1, -1],
+    [1, -1],
+    [-1, 1],
+    [1, 1],
+  ].forEach(([sx, sz]) => {
+    const [lu, lv] = at(sx! * 0.022 * f, sz! * 0.022 * f);
+
+    layer.solid(
+      box,
+      [lu, y + height / 2, lv],
+      [0.008 * f, height, 0.008 * f],
+      WOOD,
+      [-sz! * 0.12, facing, sx! * 0.12],
+      'YXZ'
     );
   });
+  layer.solid(
+    box,
+    [u, y + height * 0.5, v],
+    [0.04 * f, 0.006 * f, 0.04 * f],
+    WOOD,
+    [0, facing, 0]
+  );
+  layer.solid(
+    cylinder,
+    [u, y + height + 0.01 * f, v],
+    [0.05 * f, 0.008 * f, 0.05 * f],
+    IRON,
+    [Math.PI / 2, facing, 0],
+    'YXZ'
+  );
+
+  // The engine house, behind it, with its chimney.
+  const [eu, ev] = at(0, -0.075 * f),
+    engine =
+      Math.min(
+        ...[
+          [-0.03, -0.1],
+          [0.03, -0.05],
+        ].map(([x, z]) => ground(x! * f, z! * f))
+      ) - 0.004;
+
+  layer.solid(
+    box,
+    [eu, engine + 0.025 * f, ev],
+    [0.06 * f, 0.05 * f, 0.05 * f],
+    WALL,
+    [0, facing, 0]
+  );
+  gable(
+    layer,
+    [eu, ev],
+    engine + 0.05 * f,
+    0.06 * f,
+    0.054 * f,
+    facing + Math.PI / 2,
+    BARN_ROOF
+  );
+
+  const [cu, cv] = at(0.025 * f, -0.095 * f);
+
+  layer.solid(
+    cylinder,
+    [cu, engine + 0.05 * f, cv],
+    [0.012 * f, 0.1 * f, 0.012 * f],
+    BRICK
+  );
+  heap(0.075, 0.035, 1);
+  heap(-0.06, 0.06, 0.8);
+  cart(0.05, -0.02);
+};
+
+/** The colour of a mine's tunnel's mouth, on a mountain. */
+export const TUNNEL_MOUTH = MOUTH;
+
+/** The colours a farm's buildings are drawn in, among its fields: its walls, roofs, haystacks and silo. */
+export const FARMSTEAD_COLOURS: readonly string[] = [
+  HOUSE,
+  FARM_ROOF,
+  BARN,
+  BARN_ROOF,
+  STRAW,
+  SILO,
+];
+
+// A farm's buildings at (`u`, `v`), as big as `room` has space for, square with the fields' rows: a farmhouse, its barn
+//  beside it, and haystacks, or on farmland a silo. Their footprints, for the rows to keep clear of.
+const farmstead = (
+  layer: Layer,
+  kind: 'irrigation' | 'farmland',
+  [u, v]: readonly [number, number],
+  room: number
+): (readonly (readonly [number, number])[])[] => {
+  const { seed } = layer.place,
+    f = room / FARM_ROOMS[0],
+    // Along the rows or across them.
+    facing = fraction(seed, 43) < 0.5 ? 0 : Math.PI / 2,
+    at = turned(u, v, facing),
+    farmhouse: Lot = {
+      at: at(-0.04 * f, 0.03 * f),
+      width: 0.06 * f,
+      facing,
+      storeys: 1,
+      roof: fraction(seed, 44),
+    },
+    barnAt = at(0.035 * f, -0.02 * f),
+    barn = { at: barnAt, width: 0.075 * f, facing },
+    // The barn's walls, from the lowest of the ground under it.
+    low =
+      Math.min(
+        ...[barnAt, ...footprintOf(barn)].map(([bu, bv]) =>
+          layer.ground(bu, bv)
+        )
+      ) - 0.004,
+    walls = 0.045 * f;
+
+  house(layer, farmhouse, FARM_ROOF);
+  layer.solid(
+    box,
+    [barnAt[0], low + walls / 2, barnAt[1]],
+    [0.06 * f, walls, 0.08 * f],
+    BARN,
+    [0, facing, 0]
+  );
+  gable(layer, barnAt, low + walls, 0.064 * f, 0.084 * f, facing, BARN_ROOF);
+
+  // Haystacks, or a silo, beside them.
+  const yard = at(-0.045 * f, -0.045 * f),
+    yardGround = layer.ground(...yard);
+
+  if (kind === 'farmland') {
+    layer.solid(
+      cylinder,
+      [yard[0], yardGround + 0.05 * f, yard[1]],
+      [0.03 * f, 0.1 * f, 0.03 * f],
+      SILO
+    );
+    layer.solid(
+      sphere,
+      [yard[0], yardGround + 0.1 * f, yard[1]],
+      [0.03 * f, 0.02 * f, 0.03 * f],
+      SILO
+    );
+  } else {
+    [
+      [0, 0],
+      [0.03, 0.012],
+    ].forEach(([x, z]) => {
+      const [hu, hv] = at(-0.045 * f + x! * f, -0.045 * f + z! * f),
+        hy = layer.ground(hu, hv);
+
+      layer.solid(
+        cylinder,
+        [hu, hy + 0.01 * f, hv],
+        [0.026 * f, 0.02 * f, 0.026 * f],
+        STRAW
+      );
+      layer.solid(
+        cone,
+        [hu, hy + 0.03 * f, hv],
+        [0.03 * f, 0.022 * f, 0.03 * f],
+        STRAW
+      );
+    });
+  }
+
+  return [
+    footprintOf(farmhouse),
+    footprintOf(barn),
+    footprintOf({ at: yard, width: 0.06 * f, facing }),
+  ];
 };
 
 const fortress = (layer: Layer): void => {
@@ -2152,7 +2428,9 @@ export const layOverlay = (
   }
 
   if (overlay.mine) {
-    mine(layer, layer.claim(...SPOTS.mine, 0.1));
+    const [u, v, room] = layer.claimMost(...SPOTS.mine, MINE_ROOMS);
+
+    mine(layer, [u, v], room, overlay.terrain);
   }
 
   if (overlay.fortress) {
@@ -2186,8 +2464,18 @@ export const layOverlay = (
 
   const houses = suburbs(layer, overlay);
 
+  // A farm's buildings among its fields, where no city's houses have spread onto it: clear of what's there, the fields
+  //  round them.
   if (overlay.irrigation !== null) {
-    fields(layer, overlay.irrigation, houses);
+    const farm: (readonly (readonly [number, number])[])[] = [];
+
+    if (houses.length === 0) {
+      const [fu, fv, room] = layer.claimMost(...SPOTS.farm, FARM_ROOMS);
+
+      farm.push(...farmstead(layer, overlay.irrigation, [fu, fv], room));
+    }
+
+    fields(layer, overlay.irrigation, [...houses, ...farm]);
   }
 
   // What grows there, but not on cleared ground: fields, a fortress, an airbase. Woods as one canopy across their

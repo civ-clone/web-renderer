@@ -25,6 +25,8 @@ import overlayFor, {
   SquareOverlay,
 } from '@civ-clone/ui-map-3d/overlay/overlayFor';
 import overlayMesh, {
+  FARMSTEAD_COLOURS,
+  TUNNEL_MOUTH,
   OverlayMesh,
   OverlayPlace,
   PLANT_HEIGHT,
@@ -294,6 +296,45 @@ expect(
   ],
   [true, 0, true, true, true, true, true]
 );
+// A mesh without its farms' buildings, which stand on the land rather than lie on it: by their colours.
+const withoutFarmsteads = (
+  mesh: ReturnType<typeof overlayMesh>
+): ReturnType<typeof overlayMesh> => {
+  const farm = FARMSTEAD_COLOURS.map((css) => new Color(css)),
+    kept: number[] = [],
+    keptColours: number[] = [],
+    keptNormals: number[] = [];
+
+  for (let at = 0; at < mesh.positions.length; at += 9) {
+    const [r, g, b] = [
+      mesh.colours[at]!,
+      mesh.colours[at + 1]!,
+      mesh.colours[at + 2]!,
+    ];
+
+    if (
+      farm.every(
+        (colour) =>
+          Math.abs(colour.r - r) +
+            Math.abs(colour.g - g) +
+            Math.abs(colour.b - b) >
+          1e-5
+      )
+    ) {
+      kept.push(...mesh.positions.subarray(at, at + 9));
+      keptColours.push(...mesh.colours.subarray(at, at + 9));
+      keptNormals.push(...mesh.normals.subarray(at, at + 9));
+    }
+  }
+
+  return {
+    ...mesh,
+    positions: new Float32Array(kept),
+    colours: new Float32Array(keptColours),
+    normals: new Float32Array(keptNormals),
+  };
+};
+
 // Each triangle's face, from its corners' order: three.js draws only the side they go round anticlockwise.
 const facesUp = (mesh: ReturnType<typeof overlayMesh>): boolean => {
   const p = mesh.positions;
@@ -318,15 +359,17 @@ expect(
   [
     facesUp(roadMesh),
     facesUp(
-      overlayMesh(16, 0, [
-        {
-          overlay: overlayFor(
-            square(['Road', 'Railroad', 'Farmland', 'Pollution']),
-            [neighbour([1, 0], ['Road', 'Railroad'])]
-          )!,
-          place: place(17, 3),
-        },
-      ])
+      withoutFarmsteads(
+        overlayMesh(16, 0, [
+          {
+            overlay: overlayFor(
+              square(['Road', 'Railroad', 'Farmland', 'Pollution']),
+              [neighbour([1, 0], ['Road', 'Railroad'])]
+            )!,
+            place: place(17, 3),
+          },
+        ])
+      )
     ),
   ],
   [true, true]
@@ -861,6 +904,57 @@ expect(
     'on every grid, an open square’s special takes the same room, whatever its seed',
     (['square', 'staggered-iso', 'hex-odd-r'] as TopologyId[]).map(roomsOn),
     [[0.2], [0.2], [0.16]]
+  );
+}
+
+// Farms and mines (#1335): an irrigated square, or farmland, has a farm's buildings among its fields, and farmland a silo
+//  among them; a mine on a mountain is a tunnel's mouth, and elsewhere a headframe over a shaft, with no mouth.
+{
+  const coloured = (mesh: ReturnType<typeof overlayMesh>, css: string) => {
+      const colour = new Color(css);
+      let found = 0;
+
+      for (let at = 0; at < mesh.colours.length; at += 3) {
+        found +=
+          Math.abs(mesh.colours[at]! - colour.r) +
+            Math.abs(mesh.colours[at + 1]! - colour.g) +
+            Math.abs(mesh.colours[at + 2]! - colour.b) <
+          1e-5
+            ? 1
+            : 0;
+      }
+
+      return found > 0;
+    },
+    laid = (improvements: string[], terrain = 'Grassland') =>
+      overlayMesh(16, 0, [
+        {
+          overlay: overlayFor(square(improvements, { terrain }), [])!,
+          place: place(17, 3),
+        },
+      ]),
+    irrigated = laid(['Irrigation']),
+    farmland = laid(['Irrigation', 'Farmland']),
+    [, , barn, , straw, silo] = FARMSTEAD_COLOURS as [
+      string,
+      string,
+      string,
+      string,
+      string,
+      string
+    ];
+
+  expect(
+    'an irrigated square has a farm’s barn and haystacks, farmland its silo; a mine on a mountain is a tunnel’s mouth, on hills not',
+    [
+      coloured(irrigated, barn),
+      coloured(irrigated, straw),
+      coloured(irrigated, silo),
+      coloured(farmland, silo),
+      coloured(laid(['Mine'], 'Mountains'), TUNNEL_MOUTH),
+      coloured(laid(['Mine'], 'Hills'), TUNNEL_MOUTH),
+    ],
+    [true, true, false, true, true, false]
   );
 }
 
@@ -1420,7 +1514,8 @@ const landOf = (
       return [];
     }
 
-    const corners = pointsOf(mesh),
+    // But farms' buildings, which stand on the land.
+    const corners = pointsOf(withoutFarmsteads(mesh)),
       samples: [number, number, number][] = [];
 
     for (let at = 0; at + 2 < corners.length; at += 3) {
