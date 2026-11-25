@@ -652,7 +652,8 @@ How plants are placed:
     - **A forest's:** pine; spruce and fir with pines, the boreal forest, weighted towards the poles; birch among pines;
       a mix of beech, oak, birch and pine; beech; and oak among beeches, weighted towards the equator. At the poles a
       forest is about four fifths firs and pines among birches; at the equator about five sixths broadleaf, oaks and
-      birches.
+      birches. The names are the kinds': with 0 A.D.'s trees, a forest's broadleaf is its large oak, its oak the holm
+      oak, and its birch its beech.
     - **A jungle's:** rainforest, broadleaf under tall trees over the canopy and a palm or two; and palms with bananas
       between them.
     - **The kinds** they bring (`PLANT_KINDS`): a fir's narrow spire, an oak's spreading crown, a birch's white trunk,
