@@ -20,8 +20,11 @@ import {
   CANOPY,
   OverlayMesh,
   OverlayPlace,
+  PLANT_HEIGHT,
   PLANT_NUMBERS,
+  PLANT_ROOM,
   layOverlay,
+  plantShape,
   soup,
   undergrowthPlants,
   woodsPlants,
@@ -40,7 +43,8 @@ import {
 } from '@civ-clone/ui-map-3d/camera/orbit';
 import { Matrix4, Vector3 } from 'three';
 import { growthOf } from '@civ-clone/ui-models-builtin/vegetation';
-import Land from '@civ-clone/ui-map-3d/Land';
+import { STAND_SPACING, standAt } from '@civ-clone/ui-map-3d/overlay/stands';
+import Land, { plantModelOf } from '@civ-clone/ui-map-3d/Land';
 import World from '@civ-clone/ui-map/components/World';
 import { Stage } from '@civ-clone/ui-map-3d/stage';
 import { TopologyId } from '@civ-clone/ui-protocol/topology';
@@ -62,7 +66,17 @@ const expect = (description: string, actual: unknown, expected: unknown) => {
 };
 
 // The kinds of plant that are woods' trees, not what grows under them.
-const TREES: readonly string[] = ['conifer', 'broadleaf', 'palm', 'deadTree'];
+const TREES: readonly string[] = [
+  'conifer',
+  'broadleaf',
+  'palm',
+  'deadTree',
+  'fir',
+  'oak',
+  'birch',
+  'tropical',
+  'banana',
+];
 
 const ids: TopologyId[] = ['square', 'staggered-iso', 'hex-odd-r'],
   forest = growthOf('Forest')!;
@@ -962,6 +976,184 @@ ids.forEach((topologyId) => {
     'on sloping land, on every grid, nothing in woods stands over a unit’s stand within 0.17 of the middle',
     over.slice(0, 3),
     []
+  );
+}
+
+// Stands (#1363), on a world 80 by 50, at 4,000 points: a stand the same one period round the world each way; each as
+//  common as its weight says (1 to 4, so a tenth to two fifths); points 0.17 apart across mostly in one stand, but
+//  stands' edges mingling, not ruled; and each stand chosen at its centre's latitude: with the first stand weighted only
+//  at the equator and the last only at the poles, and the latitude at a centre 0 above row 25 and 1 below it, neither
+//  is found well away from where it's weighted.
+{
+  const period = { u: 80, v: 50 },
+    points = Array.from({ length: 4000 }, (_, at) => ({
+      u: (at % 80) + 0.37,
+      v: Math.floor(at / 80) + 0.61,
+      own: (at * 0.618) % 1,
+    })),
+    at = (
+      { u, v, own }: { u: number; v: number; own: number },
+      latitudeAt: (v: number) => number = () => 0.5,
+      weights: (latitude: number) => readonly number[] = () => [1, 2, 3, 4]
+    ) => standAt({ u, v, own, period, latitudeAt, weights }),
+    stands = points.map((point) => at(point)),
+    shares = [0, 1, 2, 3].map(
+      (stand) => stands.filter((each) => each === stand).length / 4000
+    ),
+    again = points.filter(
+      (point, n) =>
+        at({ ...point, u: point.u + period.u, v: point.v - period.v }) !==
+        stands[n]
+    ).length,
+    near =
+      points.filter(
+        (point, n) =>
+          at({ ...point, u: point.u + 0.17, own: (point.own + 0.5) % 1 }) ===
+          stands[n]
+      ).length / 4000,
+    // Points whose stand isn't the same for every tree that might stand there: near stands' edges, where they mingle.
+    mingled =
+      points.filter(
+        (point) => at({ ...point, own: 0.05 }) !== at({ ...point, own: 0.95 })
+      ).length / 4000,
+    misplaced = points.filter((point) => {
+      const stand = at(
+        point,
+        (v) => (v < 25 ? 0 : 1),
+        (latitude) => [1 - latitude, 0.5, 0.5, latitude]
+      );
+
+      return (
+        (point.v < 25 - STAND_SPACING * 1.5 && stand === 3) ||
+        (point.v > 25 + STAND_SPACING * 1.5 && stand === 0)
+      );
+    }).length;
+
+  expect(
+    'stands: the same a period round; each as common as its weight; points 0.17 apart mostly in one stand, their edges mingling; each by its centre’s latitude',
+    [
+      shares.map((share, stand) => Math.abs(share - (stand + 1) / 10) < 0.06),
+      again,
+      near > 0.8 && near < 0.99,
+      mingled > 0.02 && mingled < 0.3,
+      misplaced,
+    ],
+    [[true, true, true, true], 0, true, true, 0]
+  );
+}
+
+// A forest's and a jungle's stands (#1363), on 60 squares each of a forest whole, at the equator and at the poles, and
+//  a jungle: at the poles, the forest's trees are mostly firs and pines, among birches, and hardly an oak; at the equator,
+//  mostly broadleaf, oaks and birches;
+//  at the middle latitudes, at least four kinds; a jungle's trees broadleaf, tropical trees, palms and bananas. Each of
+//  the built-in set's tree shapes as tall as its kind's usual height (`PLANT_HEIGHT`), so a set draws it as tall, and
+//  reaching round no further than its room. A set's model for each kind: its own on the terrain, its own, then its
+//  base's (`PLANT_BASE`) on the terrain, then its base's.
+{
+  const width = 24,
+    height = 16,
+    topologyId: TopologyId = 'square',
+    topology = topologyFor({ width, height, topologyId }),
+    layout = groundLayoutFor({
+      width,
+      height,
+      topologyId,
+      wrapsY: topology.wrapsY(),
+    }),
+    kindsAt = (terrain: string, latitude: number) => {
+      const counts: { [kind: string]: number } = {};
+
+      Array.from({ length: 60 }, (_, at) => [
+        2 + (at % 20),
+        2 + Math.floor(at / 20) * 4,
+      ]).forEach(([x, y]) =>
+        woodsPlants(
+          overlayOf(topology, x!, y!, terrain, () => terrain),
+          {
+            ...placeOf(layout, topology, x!, y!),
+            latitude,
+            latitudeAt: () => latitude,
+          },
+          growthOf(terrain)!
+        ).forEach(({ kind }) => {
+          counts[kind] = (counts[kind] ?? 0) + 1;
+        })
+      );
+
+      return counts;
+    },
+    share = (counts: { [kind: string]: number }, kinds: string[]) =>
+      kinds.reduce((sum, kind) => sum + (counts[kind] ?? 0), 0) /
+      Object.values(counts).reduce((sum, count) => sum + count, 0),
+    poles = kindsAt('Forest', 1),
+    equator = kindsAt('Forest', 0),
+    middle = kindsAt('Forest', 0.5),
+    jungle = kindsAt('Jungle', 0.5),
+    // Each tree's shape laid alone on flat ground, at its usual size: how tall it stands against its kind's height, and
+    //  how far it reaches round against its room.
+    tallness = (
+      [
+        'conifer',
+        'broadleaf',
+        'palm',
+        'fir',
+        'oak',
+        'birch',
+        'tropical',
+        'banana',
+      ] as const
+    )
+      .map((kind) => {
+        const { positions } = plantShape(kind, 1, 0.7);
+        let top = 0,
+          reach = 0;
+
+        for (let n = 0; n < positions.length; n += 3) {
+          top = Math.max(top, positions[n + 1]!);
+          reach = Math.max(reach, Math.hypot(positions[n]!, positions[n + 2]!));
+        }
+
+        return [
+          kind,
+          Math.round((top / PLANT_HEIGHT[kind]) * 100) / 100,
+          reach <= PLANT_ROOM[kind] * 1.02,
+        ] as const;
+      })
+      .filter(([, ratio, within]) => ratio < 0.9 || ratio > 1.1 || !within),
+    models = new Map([
+      ['conifer', 'pine'],
+      ['Jungle:broadleaf', 'teak'],
+      ['broadleaf', 'beech'],
+      ['fir', 'fir'],
+    ]);
+
+  expect(
+    'a forest’s stands by latitude: mostly firs and pines at the poles, hardly an oak, broadleaf, oaks and birches at the equator, four kinds or more between; a jungle’s broadleaf, tropical trees, palms and bananas; each built-in tree as tall as its kind; a set’s model by the kind, then its base',
+    [
+      share(poles, ['fir', 'conifer']) > 0.65 && share(poles, ['oak']) < 0.02,
+      share(equator, ['broadleaf', 'oak', 'birch']) > 0.75,
+      Object.keys(middle).length >= 4,
+      ['broadleaf', 'tropical', 'palm', 'banana'].every(
+        (kind) => (jungle[kind] ?? 0) > 0
+      ),
+      tallness,
+      [
+        plantModelOf(models, 'Forest', 'fir'),
+        plantModelOf(models, 'Forest', 'oak'),
+        plantModelOf(models, 'Jungle', 'tropical'),
+        plantModelOf(models, 'Forest', 'tropical'),
+        plantModelOf(models, 'Jungle', 'banana'),
+        plantModelOf(models, 'Forest', 'conifer'),
+      ],
+    ],
+    [
+      true,
+      true,
+      true,
+      true,
+      [],
+      ['fir', 'beech', 'teak', 'beech', null, 'pine'],
+    ]
   );
 }
 

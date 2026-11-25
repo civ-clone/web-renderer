@@ -24,6 +24,7 @@ import { Ground } from './water';
 import World from '@civ-clone/ui-map/components/World';
 import { Tile } from '@civ-clone/ui-protocol/types';
 import { seaFloor } from '@civ-clone/ui-models-builtin/terrain';
+import { PLANT_BASE, PlantKind } from '@civ-clone/ui-models-builtin/vegetation';
 import overlayFor, {
   OverlayNeighbour,
   SquareOverlay,
@@ -63,7 +64,29 @@ type Made = {
 const squareSeed = (x: number, y: number): number =>
   Math.imul(x, 73856093) ^ Math.imul(y, 19349663);
 
-export class Land {
+export /**
+ * The model a set draws `kind` with on `terrain`, of `models` (by the plant as a set names it, as `conifer` or
+ *  `Jungle:broadleaf`): the kind on the terrain, then the kind, then, where a set has neither, its base kind on the
+ *  terrain and its base kind (`PLANT_BASE`), so a set with pines and no firs draws its pines for both; or none.
+ */
+const plantModelOf = (
+  models: ReadonlyMap<string, string>,
+  terrain: string,
+  kind: PlantKind
+): string | null => {
+  const base = PLANT_BASE[kind];
+
+  return (
+    models.get(`${terrain}:${kind}`) ??
+    models.get(kind) ??
+    (base === undefined
+      ? undefined
+      : models.get(`${terrain}:${base}`) ?? models.get(base)) ??
+    null
+  );
+};
+
+class Land {
   readonly layout: GroundLayout;
   #relief: ReliefMap;
   #grid: ChunkGrid;
@@ -781,6 +804,8 @@ export class Land {
         heightAt: (pu, pv) => this.surfaceAt(pu, pv, heights),
         seed: squareSeed(x, y),
         latitude: Math.min(1, Math.abs((2 * v) / this.extentV() - 1)),
+        latitudeAt: (pv) =>
+          Math.min(1, Math.abs((2 * pv) / this.extentV() - 1)),
         outline: this.layout.outline(x, y),
         owns: (pu, pv) => {
           const [tx, ty] = this.layout.tileAt(pu, pv);
@@ -788,9 +813,7 @@ export class Land {
           return tx === x && ty === y;
         },
         plantModel: (kind) =>
-          this.#plantModels.get(`${overlay.terrain}:${kind}`) ??
-          this.#plantModels.get(kind) ??
-          null,
+          plantModelOf(this.#plantModels, overlay.terrain, kind),
         around: topology
           .directions()
           .filter((direction) => topology.neighbour(x, y, direction) !== null)

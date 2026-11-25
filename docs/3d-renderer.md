@@ -585,7 +585,7 @@ blended across squares.
 
 The model set's scatter table says what grows on each terrain:
 
-- **forest:** a canopy of trees, conifer or broadleaf by latitude;
+- **forest:** a canopy of trees in stands, conifers towards the poles and broadleaf towards the equator;
 - **jungle:** a dense canopy, with undergrowth;
 - **swamp:** pools, reeds and dead trees;
 - **grassland:** tufts and the odd bush;
@@ -639,6 +639,28 @@ How plants are placed:
     middle, however the land under it lies) grows in the clearing too, as near the middle as 0.04 and its room
     (`COVER_CLEAR`), under the stand where a unit stands; the rest keeps clear of the stand as trees do. It's built in
     whatever set draws the trees, in the overlay's own mesh.
+  - **Stands** (#1363, `Growth#stands`, `standAt` in `overlay/stands.ts`): a forest's and a jungle's trees grow in
+    patches of a kind or two, as woods do, rather than every kind mixed tree by tree.
+    - **Where:** each stand is round a centre on a lattice about 1.4 apart over the whole ground
+      (`STAND_SPACING`), each centre jittered about its cell, repeating with the world's period. A tree is in the stand
+      of its nearest centre, a little nearer or further by a number of its own (`STAND_MINGLE`), so stands' edges
+      mingle rather than meeting in a line.
+    - **Which:** a centre's stand is chosen by a number of its own, as often as each stand's weight at the centre's
+      latitude says (`latitudeAt` on the square's place, the land's own rule), so a stand reaching over two squares is
+      one stand, and stands change with latitude as woods do.
+    - **A forest's:** pine; spruce and fir with pines, the boreal forest, weighted towards the poles; birch among pines;
+      a mix of beech, oak, birch and pine; beech; and oak among beeches, weighted towards the equator. At the poles a
+      forest is about four fifths firs and pines among birches; at the equator about five sixths broadleaf, oaks and
+      birches.
+    - **A jungle's:** rainforest, broadleaf under tall trees over the canopy and a palm or two; and palms with bananas
+      between them.
+    - **The kinds** they bring (`PLANT_KINDS`): a fir's narrow spire, an oak's spreading crown, a birch's white trunk,
+      a tropical tree's high, flat crown, and a banana's broad leaves. Each has a built-in shape as tall as its kind
+      (`PLANT_HEIGHT`) and reaching no further round than its room, and a base kind (`PLANT_BASE`): a set with no
+      model for a kind draws its base's (`plantModelOf` on the land), so a set with pines and no firs draws pines for
+      both rather than the built-in set's shapes among its own.
+    - **Stability:** a stand comes from where things are on the world, so a neighbour turning to woods still only adds
+      trees.
   - **The shore:** trees stand on dry land; a swamp's reeds stand in the shallows too.
   - **Cost** (#1363): a whole square of forest is about 880 triangles with the built-in shapes and 2,060 with 0 A.D.'s
     trees, against 210 and 630 before; of jungle, about 1,210 and 4,190, against 220 and 1,280. Laying one takes

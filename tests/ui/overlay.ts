@@ -2471,26 +2471,25 @@ const landOf = (
         }))
       )
     ),
-    // Each model's kind and where it grows, and so how big it grows against its usual: the table's sizes, from the
-    //  woods' fringe's (0.9 of them) to where they're whole (1.3).
-    kinds: { [model: string]: [keyof typeof PLANT_HEIGHT, string] } = {
-      pine: ['conifer', 'Forest'],
-      beech: ['broadleaf', 'Forest'],
-      teak: ['broadleaf', 'Jungle'],
-      palm: ['palm', 'Jungle'],
+    // Each model's kinds and where they grow, its own and those it draws as their base (`PLANT_BASE`), and so how big
+    //  each grows against its usual: its stands' sizes, from the woods' fringe's (0.9 of them) to where they're whole
+    //  (1.3).
+    kinds: { [model: string]: [string, string[]] } = {
+      pine: ['Forest', ['conifer', 'fir']],
+      beech: ['Forest', ['broadleaf', 'oak', 'birch']],
+      teak: ['Jungle', ['broadleaf', 'tropical']],
+      palm: ['Jungle', ['palm', 'banana']],
     },
     tall = plants.filter(({ model, height }) => {
-      const [kind, terrain] = kinds[model]!,
-        [least, most] = vegetationTable[terrain]!.plants.find(
-          (plant) =>
-            plant.kind === kind ||
-            (kind === 'broadleaf' && plant.kind === 'conifer')
-        )!.size,
-        usual = PLANT_HEIGHT[kind];
+      const [terrain, drawn] = kinds[model]!;
 
-      return (
-        height < usual * least * 0.9 - 1e-9 ||
-        height > usual * most * 1.3 + 1e-9
+      return !vegetationTable[terrain]!.stands!.some(({ plants: grown }) =>
+        grown.some(
+          ({ kind, size: [least, most] }) =>
+            drawn.includes(kind) &&
+            height >= PLANT_HEIGHT[kind] * least * 0.9 - 1e-9 &&
+            height <= PLANT_HEIGHT[kind] * most * 1.3 + 1e-9
+        )
       );
     });
 

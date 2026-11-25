@@ -37,6 +37,7 @@ import { seaFloor } from '@civ-clone/ui-models-builtin/terrain';
 import {
   Growth,
   Plant,
+  Stand,
   PlantKind,
   growthOf,
 } from '@civ-clone/ui-models-builtin/vegetation';
@@ -54,6 +55,7 @@ import {
 } from './sprawl';
 import { IN_FRONT_OF_CITY } from '../markers/drawMarker';
 import { ditherRank } from './thinning';
+import { standAt } from './stands';
 
 /** Where a square is, and what it needs to know of the land round it, to lay its overlay. */
 export type OverlayPlace = {
@@ -69,6 +71,9 @@ export type OverlayPlace = {
   seed: number;
   // How far it is from the equator, from 0 there to 1 at the poles.
   latitude: number;
+  // How far a point `v` down the ground is from the equator, as `latitude` is for the square's middle: for woods'
+  //  stands, whose centres may be on another square. Where it's not given, the square's own.
+  latitudeAt?(v: number): number;
   // Its corners, as the layout has them.
   outline: readonly (readonly [number, number])[];
   // Whether a point is on this square, as the layout says (`GroundLayout#tileAt`): each point is on one square, and on
@@ -2532,8 +2537,14 @@ const hut = (layer: Layer, at: readonly [number, number]): void => {
 const ROOM: { [kind in PlantKind]: number } = {
   conifer: 0.06,
   broadleaf: 0.07,
-  palm: 0.06,
+  // Its fronds, and their lean off its trunk.
+  palm: 0.085,
   deadTree: 0.05,
+  fir: 0.045,
+  oak: 0.085,
+  birch: 0.045,
+  tropical: 0.09,
+  banana: 0.06,
   bush: 0.035,
   shrub: 0.03,
   scrub: 0.03,
@@ -2551,6 +2562,11 @@ export const PLANT_HEIGHT: { readonly [kind in PlantKind]: number } = {
   broadleaf: 0.175,
   palm: 0.18,
   deadTree: 0.12,
+  fir: 0.24,
+  oak: 0.17,
+  birch: 0.2,
+  tropical: 0.25,
+  banana: 0.095,
   bush: 0.0425,
   shrub: 0.05,
   scrub: 0.018,
@@ -2652,6 +2668,110 @@ const grow = (
         [0, facing, -0.7]
       );
       break;
+    case 'fir':
+      // A narrow spire of three tiers.
+      layer.solid(
+        stem,
+        [u, y + 0.03 * s, v],
+        [0.014 * s, 0.06 * s, 0.014 * s],
+        detail
+      );
+      [
+        [0.08, 0.09, 0.1],
+        [0.14, 0.07, 0.09],
+        [0.2, 0.05, 0.08],
+      ].forEach(([at, wide, tall]) =>
+        layer.solid(
+          tier,
+          [u, y + at! * s, v],
+          [wide! * s, tall! * s, wide! * s],
+          colour,
+          [0, facing, 0]
+        )
+      );
+      break;
+    case 'oak':
+      // A thick trunk under a wide crown, and a lobe of it to one side.
+      layer.solid(
+        stem,
+        [u, y + 0.035 * s, v],
+        [0.024 * s, 0.07 * s, 0.024 * s],
+        detail
+      );
+      layer.solid(
+        crown,
+        [u, y + 0.11 * s, v],
+        [0.17 * s, 0.12 * s, 0.17 * s],
+        colour,
+        [0, facing, 0]
+      );
+      layer.solid(
+        crown,
+        [
+          u + Math.cos(facing) * 0.04 * s,
+          y + 0.13 * s,
+          v - Math.sin(facing) * 0.04 * s,
+        ],
+        [0.1 * s, 0.08 * s, 0.1 * s],
+        colour,
+        [0, facing, 0]
+      );
+      break;
+    case 'birch':
+      // A slender white trunk, its small crown high on it.
+      layer.solid(
+        stem,
+        [u, y + 0.06 * s, v],
+        [0.011 * s, 0.12 * s, 0.011 * s],
+        detail
+      );
+      layer.solid(
+        crown,
+        [u, y + 0.15 * s, v],
+        [0.08 * s, 0.1 * s, 0.08 * s],
+        colour,
+        [0, facing, 0]
+      );
+      break;
+    case 'tropical':
+      // A tall trunk, its crown flat and wide over the canopy.
+      layer.solid(
+        stem,
+        [u, y + 0.1 * s, v],
+        [0.016 * s, 0.2 * s, 0.016 * s],
+        detail
+      );
+      layer.solid(
+        crown,
+        [u, y + 0.22 * s, v],
+        [0.18 * s, 0.06 * s, 0.18 * s],
+        colour,
+        [0, facing, 0]
+      );
+      break;
+    case 'banana':
+      // A short stem under two sprays of broad leaves.
+      layer.solid(
+        stem,
+        [u, y + 0.03 * s, v],
+        [0.014 * s, 0.06 * s, 0.014 * s],
+        detail
+      );
+      layer.solid(
+        tier,
+        [u, y + 0.07 * s, v],
+        [0.12 * s, 0.04 * s, 0.12 * s],
+        colour,
+        [0, facing, 0]
+      );
+      layer.solid(
+        tier,
+        [u, y + 0.08 * s, v],
+        [0.09 * s, 0.03 * s, 0.09 * s],
+        colour,
+        [0, facing + 0.6, 0]
+      );
+      break;
     case 'bush':
       layer.solid(
         crown,
@@ -2725,6 +2845,48 @@ const grow = (
   }
 };
 
+/** How far each kind of plant's shape reaches round it at its usual size, which it keeps clear of what's near it. */
+export { ROOM as PLANT_ROOM };
+
+/**
+ * One plant of `kind`, `s` times its usual size, laid alone on flat ground at (0, 0), turned `facing`: the built-in
+ *  set's shape for it.
+ */
+export const plantShape = (kind: PlantKind, s = 1, facing = 0): Soup => {
+  const into = soup(),
+    layer = new Layer(into, {
+      centre: [0, 0],
+      toward: () => [0, 0],
+      radius: 0.5,
+      inner: 0.35,
+      heightAt: () => 0,
+      seed: 0,
+      latitude: 0,
+      outline: [
+        [-0.5, -0.5],
+        [0.5, -0.5],
+        [0.5, 0.5],
+        [-0.5, 0.5],
+      ],
+      owns: () => true,
+      around: [],
+      period: { u: 100, v: 100 },
+    });
+
+  grow(
+    layer,
+    { kind, count: 1, size: [s, s], colour: '#4a7a3a', detail: '#5a4630' },
+    kind,
+    0,
+    0,
+    s,
+    facing,
+    0
+  );
+
+  return into;
+};
+
 // How far the point (`u`, `v`) is from the line from `a` to `b`.
 const distanceTo = (
   u: number,
@@ -2747,7 +2909,7 @@ const distanceTo = (
 };
 
 // What grows on the square, each where it has room: clear of the unit's stand at its middle, its roads, its mine, hut
-//  and specials, and the plants already there. A forest's trees are conifers towards the poles, broadleaf otherwise.
+//  and specials, and the plants already there.
 const plants = (layer: Layer, overlay: SquareOverlay): void => {
   const growth = growthOf(overlay.terrain);
 
@@ -2755,21 +2917,14 @@ const plants = (layer: Layer, overlay: SquareOverlay): void => {
     return;
   }
 
-  const { centre, radius, seed, latitude } = layer.place;
+  const { centre, radius, seed } = layer.place;
 
   growth.plants.forEach((plant, which) => {
     for (let index = 0; index < plant.count; index++) {
       const n = 1000 + which * 97 + index * 7,
         size =
           plant.size[0] + (plant.size[1] - plant.size[0]) * fraction(seed, n),
-        conifers = growth.conifers,
-        // A forest's tree: a conifer as often as its latitude says.
-        kind: PlantKind =
-          conifers !== undefined &&
-          fraction(seed, n + 1) >=
-            conifers[0] + (conifers[1] - conifers[0]) * latitude
-            ? 'broadleaf'
-            : plant.kind,
+        kind = plant.kind,
         room = ROOM[kind] * size;
 
       // A few tries for a place with room.
@@ -2850,9 +3005,9 @@ export type LatticePlant = {
 };
 
 // The plants of a lattice about `spacing` apart over the whole ground that are on `place`: on as many of its points as
-//  `share` says where the woods are whole, fewer at their fringe, each of `plants` as often as its count says, a
-//  forest's trees conifers as often as its latitude says (`conifers`). Each point's numbers are its own, from the
-//  `first`th, so two lattices' points don't share theirs.
+//  `share` says where the woods are whole, fewer at their fringe, each of `plants` as often as its count says, or where
+//  there are `stands`, each of its stand's plants (`standAt`). Each point's numbers are its own, from the `first`th, so
+//  two lattices' points don't share theirs.
 const latticePlants = (
   overlay: SquareOverlay,
   place: OverlayPlace,
@@ -2860,9 +3015,14 @@ const latticePlants = (
   share: number,
   plants: readonly Plant[],
   first: number,
-  conifers?: readonly [number, number]
+  stands?: readonly Stand[]
 ): LatticePlant[] => {
   const { centre, outline, owns, around, period, toward, latitude } = place,
+    latitudeAt = place.latitudeAt ?? (() => latitude),
+    weights = (at: number) =>
+      (stands ?? []).map(
+        ({ weight: [equator, poles] }) => equator + (poles - equator) * at
+      ),
     cellsU = Math.max(1, Math.round(period.u / spacing)),
     stepU = period.u / cellsU,
     cellsV =
@@ -2889,7 +3049,8 @@ const latticePlants = (
 
         return { mu, mv, length };
       }),
-    total = plants.reduce((sum, { count }) => sum + count, 0),
+    totalOf = (each: readonly Plant[]) =>
+      each.reduce((sum, { count }) => sum + count, 0),
     found: LatticePlant[] = [];
 
   for (let j = firstJ; j <= lastJ; j++) {
@@ -2927,11 +3088,24 @@ const latticePlants = (
         continue;
       }
 
-      // Which of its plants, as often as each's count says.
-      let pick = pointFraction(ci, cj, first + 3) * total,
-        plant = plants[0]!;
+      // Which of its plants, or its stand's, as often as each's count says.
+      const here =
+        stands === undefined || stands.length === 0
+          ? plants
+          : stands[
+              standAt({
+                u,
+                v,
+                own: pointFraction(ci, cj, first + 4),
+                period,
+                latitudeAt,
+                weights,
+              })
+            ]!.plants;
+      let pick = pointFraction(ci, cj, first + 3) * totalOf(here),
+        plant = here[0]!;
 
-      for (const each of plants) {
+      for (const each of here) {
         plant = each;
         pick -= each.count;
 
@@ -2940,12 +3114,7 @@ const latticePlants = (
         }
       }
 
-      const kind: PlantKind =
-        conifers !== undefined &&
-        pointFraction(ci, cj, first + 4) >=
-          conifers[0] + (conifers[1] - conifers[0]) * latitude
-          ? 'broadleaf'
-          : plant.kind;
+      const kind: PlantKind = plant.kind;
 
       const usual =
         plant.size[0] +
@@ -2981,7 +3150,7 @@ export const woodsPlants = (
     1,
     growth.plants,
     0,
-    growth.conifers
+    growth.stands
   );
 
 /** What grows under woods' trees on `place`, and where each stands: as `woods` lays it, without laying it. */
