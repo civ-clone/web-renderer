@@ -64,12 +64,28 @@ type Made = {
 const squareSeed = (x: number, y: number): number =>
   Math.imul(x, 73856093) ^ Math.imul(y, 19349663);
 
-export /**
+/**
+ * How far the model a set draws `kind` with on `terrain` reaches round its origin, for each of its height (`reaches`,
+ *  by the model's id): the model `plantModelOf` gives, a base kind's where the set has none of the kind's own, so a fir
+ *  drawn with a pine keeps the pine's room; or nothing, where none draws it or its reach isn't known.
+ */
+export const plantReachFor = (
+  models: ReadonlyMap<string, string>,
+  reaches: ReadonlyMap<string, number>,
+  terrain: string,
+  kind: PlantKind
+): number | null => {
+  const model = plantModelOf(models, terrain, kind);
+
+  return model === null ? null : reaches.get(model) ?? null;
+};
+
+/**
  * The model a set draws `kind` with on `terrain`, of `models` (by the plant as a set names it, as `conifer` or
  *  `Jungle:broadleaf`): the kind on the terrain, then the kind, then, where a set has neither, its base kind on the
  *  terrain and its base kind (`PLANT_BASE`), so a set with pines and no firs draws its pines for both; or none.
  */
-const plantModelOf = (
+export const plantModelOf = (
   models: ReadonlyMap<string, string>,
   terrain: string,
   kind: PlantKind
@@ -823,11 +839,13 @@ class Land {
         },
         plantModel: (kind) =>
           plantModelOf(this.#plantModels, overlay.terrain, kind),
-        plantReach: (kind) => {
-          const model = plantModelOf(this.#plantModels, overlay.terrain, kind);
-
-          return model === null ? null : this.#plantReaches.get(model) ?? null;
-        },
+        plantReach: (kind) =>
+          plantReachFor(
+            this.#plantModels,
+            this.#plantReaches,
+            overlay.terrain,
+            kind
+          ),
         around: topology
           .directions()
           .filter((direction) => topology.neighbour(x, y, direction) !== null)

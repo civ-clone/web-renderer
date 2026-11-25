@@ -41,12 +41,17 @@ import {
   FIELD_OF_VIEW,
   defaultOrbit,
 } from '@civ-clone/ui-map-3d/camera/orbit';
-import { Matrix4, Vector3 } from 'three';
+import {
+  BufferGeometry,
+  Float32BufferAttribute,
+  Matrix4,
+  Vector3,
+} from 'three';
 import { growthOf } from '@civ-clone/ui-models-builtin/vegetation';
 import { STAND_SPACING, standAt } from '@civ-clone/ui-map-3d/overlay/stands';
-import Land, { plantModelOf } from '@civ-clone/ui-map-3d/Land';
+import Land, { plantModelOf, plantReachFor } from '@civ-clone/ui-map-3d/Land';
 import World from '@civ-clone/ui-map/components/World';
-import { Stage } from '@civ-clone/ui-map-3d/stage';
+import { Stage, plantReachOf } from '@civ-clone/ui-map-3d/stage';
 import { TopologyId } from '@civ-clone/ui-protocol/topology';
 import { Tile } from '@civ-clone/ui-protocol/types';
 
@@ -1058,7 +1063,9 @@ ids.forEach((topologyId) => {
 //  at the middle latitudes, at least four kinds; a jungle's trees broadleaf, tropical trees, palms and bananas. Each of
 //  the built-in set's tree shapes as tall as its kind's usual height (`PLANT_HEIGHT`), so a set draws it as tall, and
 //  reaching round no further than its room. A set's model for each kind: its own on the terrain, its own, then its
-//  base's (`PLANT_BASE`) on the terrain, then its base's.
+//  base's (`PLANT_BASE`) on the terrain, then its base's; and the room it keeps, that model's reach, or none where it's
+//  not known. A model's reach the furthest of its points from its upright, as it may be turned any way, over its
+//  height: a branch on the diagonal reaching further than along either axis.
 {
   const width = 24,
     height = 16,
@@ -1135,7 +1142,25 @@ ids.forEach((topologyId) => {
       ['Jungle:broadleaf', 'teak'],
       ['broadleaf', 'beech'],
       ['fir', 'fir'],
-    ]);
+    ]),
+    // How far each of those reaches, but the fir's own, which isn't known.
+    reaches = new Map([
+      ['pine', 0.4],
+      ['teak', 0.5],
+      ['beech', 0.3],
+    ]),
+    // A model of two parts: a trunk up its middle, 2 tall, and a branch out on the diagonal, 0.6 across and 0.8 along,
+    //  so 1 out, though no further than 0.8 along either axis.
+    branched = [
+      [0, 0, 0, 0, 2, 0, 0.05, 1, 0],
+      [0, 1, 0, 0.6, 1.2, 0.8, 0.1, 1.1, 0],
+    ].map((points) => {
+      const geometry = new BufferGeometry();
+
+      geometry.setAttribute('position', new Float32BufferAttribute(points, 3));
+
+      return geometry;
+    });
 
   expect(
     'a forest’s stands by latitude: mostly firs and pines at the poles, hardly an oak, broadleaf, oaks and birches at the equator, four kinds or more between; a jungle’s broadleaf, tropical trees, palms and bananas; each built-in tree as tall as its kind; a set’s model by the kind, then its base',
@@ -1155,6 +1180,15 @@ ids.forEach((topologyId) => {
         plantModelOf(models, 'Jungle', 'banana'),
         plantModelOf(models, 'Forest', 'conifer'),
       ],
+      [
+        plantReachFor(models, reaches, 'Forest', 'oak'),
+        plantReachFor(models, reaches, 'Forest', 'birch'),
+        plantReachFor(models, reaches, 'Jungle', 'tropical'),
+        plantReachFor(models, reaches, 'Forest', 'fir'),
+        plantReachFor(models, reaches, 'Jungle', 'banana'),
+        plantReachFor(new Map([['conifer', 'pine']]), reaches, 'Forest', 'fir'),
+      ],
+      Math.round(plantReachOf(branched) * 1000) / 1000,
     ],
     [
       true,
@@ -1163,14 +1197,16 @@ ids.forEach((topologyId) => {
       true,
       [],
       ['fir', 'beech', 'teak', 'beech', null, 'pine'],
+      [0.3, 0.3, 0.5, null, null, 0.4],
+      0.5,
     ]
   );
 }
 
 // A set's trees keep the room their model takes (#1363), on every grid: forest and jungle whole, with a road to one
 //  neighbour, at the poles and the equator, drawn with models reaching round 0.45 of their height. No crown, as far as
-//  its model reaches at the height it's drawn, comes within 0.17 of the middle, where a unit's figures stand, or
-//  reaches over the road's middle line by more than half a road's width.
+//  its model reaches at the height it's drawn, comes within 0.17 of the middle, where a unit's figures stand, or onto
+//  the road, half a road's width (0.035) from its middle line.
 {
   const width = 12,
     height = 10,
@@ -1267,7 +1303,7 @@ ids.forEach((topologyId) => {
     });
 
   expect(
-    'a set’s trees keep the room their model takes, on every grid: no crown within 0.17 of the middle, or over a road by more than half its width',
+    'a set’s trees keep the room their model takes, on every grid: no crown within 0.17 of the middle, or onto a road',
     overreach.slice(0, 3),
     []
   );

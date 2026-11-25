@@ -241,7 +241,8 @@ export interface Stage {
 type PlantModel = {
   parts: { geometry: BufferGeometry; material: MeshStandardMaterial }[];
   height: number;
-  // How far it reaches round its origin, across the ground, for each of its height: the room it takes.
+  // How far it reaches round its origin, across the ground, for each of its height, turned any way: the room it takes
+  //  (`plantReachOf`).
   reach: number;
 };
 
@@ -457,6 +458,26 @@ export const overlayCopies = (
       : []),
   ]);
 
+/**
+ * How far a plant's model reaches round its origin, across the ground, for each of its height: the furthest of its
+ *  parts' points from the upright through its origin, as it may be turned any way about it, over how tall it stands.
+ */
+export const plantReachOf = (geometries: readonly BufferGeometry[]): number => {
+  let reach = 0,
+    height = 0;
+
+  geometries.forEach((geometry) => {
+    const position = geometry.getAttribute('position');
+
+    for (let n = 0; n < position.count; n++) {
+      reach = Math.max(reach, Math.hypot(position.getX(n), position.getZ(n)));
+      height = Math.max(height, position.getY(n));
+    }
+  });
+
+  return reach / Math.max(height, 1e-6);
+};
+
 // Where a drawn copy's plants of a model keep how many they are, all of them, as fewer may be drawn.
 const ALL_PLANTS = 'allPlants';
 
@@ -535,13 +556,7 @@ export const createStage: StageFactory = (
           return { geometry, material };
         }),
         height: Math.max(box.max.y, 1e-6),
-        reach:
-          Math.max(
-            Math.abs(box.min.x),
-            Math.abs(box.max.x),
-            Math.abs(box.min.z),
-            Math.abs(box.max.z)
-          ) / Math.max(box.max.y, 1e-6),
+        reach: plantReachOf(model.parts.map(({ geometry }) => geometry)),
       };
     },
     overlayMaterial = new MeshStandardMaterial({
