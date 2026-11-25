@@ -873,7 +873,8 @@ Each is looked up by its type name in the model set.
     white), whether it's standing or walking.
   - **Blink, or both:** its figures are hidden and shown in turn every half a second, as the 2D map's blink, while its
     flag and the pointer over it stay, and its stand where it's drawn with a model (the built-in set's figures are one
-    mesh with their stand). Marked afresh, it's shown, and blinks from there. Walking, it doesn't blink.
+    mesh with their stand). Marked afresh, it's shown, and blinks from there. Walking, it doesn't blink. Hidden, its
+    figures are still picked (§9.2, `BLINKED_OUT`), as the 2D map's blink doesn't change what's clicked either.
   - **The pointer** over it, in the theme's colour, is drawn however it's marked, so it's found at any distance.
 - **Hidden units:** `t` hides units and cities, as it does on the 2D map, so the land shows as it is. A city's walls and
   name go, and its town: its buildings, on its square and round it, are laid with the land (§7.2), so every square with
@@ -1426,7 +1427,7 @@ mapEvent:
     stand and ring, at every copy of the world drawn), and the nearest it meets picks that unit's square, before the
     ground. Units are drawn twice life size, and aircraft fly over their stands, so their figures stand over the ground
     of the square behind: a click, a GoTo's square or a tooltip there goes to the square whose unit it's on, as it's
-    seen. A unit walking or fighting isn't picked.
+    seen, even while the blink hides its figures (§6.3). A unit walking or fighting isn't picked.
 - **A city:** a banner, or a city's lots, picks the city.
 - **Uses:** clicks, long presses, hover tooltips and target picking (Paradrop, Airlift) all go through these, with the
   tooltip content the 2D map gives [verified: `HoverSubject` in `GamePortal.ts`].

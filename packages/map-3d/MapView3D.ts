@@ -202,7 +202,7 @@ type Picking = {
 };
 
 // The blink's tick where the page gives none: every half a second, as the 2D map's (`IntervalHandler`), returning what
-//  stops it. None where there's no window's clock (a test's page).
+//  stops it. None where there's no `setInterval`.
 const everyHalfSecond = (tick: () => void): (() => void) => {
   if (typeof setInterval !== 'function') {
     return (): void => {};
@@ -608,6 +608,12 @@ export class MapView3D implements MapRenderer {
 
     this.#bannersPaintedFor = this.#bannersFor();
     this.#land.queueAll(...this.#focus());
+    // How the unit awaiting orders is marked, and in what colour, as the page says now, before anything's marked.
+    this.#markerMode = deps.unitMarker ?? ((): UnitMarkerMode => 'ring');
+    this.#mode = this.#markerMode();
+    this.#ringColourOf = (): string | undefined =>
+      deps.unitRing?.() || undefined;
+    this.#ringColour = this.#ringColourOf();
     this.#markAll();
 
     this.portal.on('activate-unit', (unit) => deps.activateUnit(unit));
@@ -660,13 +666,8 @@ export class MapView3D implements MapRenderer {
           this.#draw();
         }
       }) ?? ((): void => {});
-    // The unit awaiting orders marked as the player chose, and blinking where it does, every half a second as the 2D
-    //  map's blinks: a choice in Options takes at the next tick.
-    this.#markerMode = deps.unitMarker ?? ((): UnitMarkerMode => 'ring');
-    this.#mode = this.#markerMode();
-    this.#ringColourOf = (): string | undefined =>
-      deps.unitRing?.() || undefined;
-    this.#ringColour = this.#ringColourOf();
+    // The unit awaiting orders blinking where it does, every half a second as the 2D map's blinks, and marked again as
+    //  the player chooses: a choice in Options takes at the next tick.
     this.#stopBlink = (deps.blinkEvery ?? everyHalfSecond)(() => this.#blink());
     // And the yields' icons drawn again from the page's art when it changes, and the banners painted again with it.
     this.#stopArtChanged =
@@ -872,7 +873,14 @@ export class MapView3D implements MapRenderer {
 
     this.#blinkShown = !this.#blinkShown;
     this.#stage.showFigures?.(this.#ringedKey, this.#blinkShown);
-    this.#draw();
+
+    // Only drawn again, as nothing else has changed: the next frame that draws only what idles, or at once where there
+    //  are no frames.
+    if (typeof requestAnimationFrame === 'function') {
+      this.#ask();
+    } else {
+      this.#draw();
+    }
   }
 
   dispose(): void {

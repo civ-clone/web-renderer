@@ -58,7 +58,7 @@ import {
 } from './markers/drawMarker';
 import { TileMarker } from './markers/markerFor';
 import { idleChanges } from './idling';
-import unitUnder from './markers/pickUnit';
+import unitUnder, { BLINKED_OUT } from './markers/pickUnit';
 import { OverlayMesh, PLANT_NUMBERS } from './overlay/overlayMesh';
 import { plantMatrices, plantsKept } from './overlay/thinning';
 import { FIELD_OF_VIEW, Orbit, eye, sightFor } from './camera/orbit';
@@ -927,7 +927,15 @@ export const createStage: StageFactory = (
       return;
     }
 
-    const original = markerOf(placed.marker, false, true);
+    const original = markerOf(placed.marker, false, true),
+      // Its figures shown or hidden as the standing ones are, mid-blink (`showFigures`).
+      blinking = standing.getObjectByName(FIGURES_PART),
+      figures = original.getObjectByName(FIGURES_PART);
+
+    if (blinking !== undefined && figures !== undefined) {
+      figures.visible = blinking.visible;
+      figures.userData[BLINKED_OUT] = blinking.userData[BLINKED_OUT] === true;
+    }
 
     placed.idling = { rig, original, phase };
     placed.make = copyOf(original, true);
@@ -1380,6 +1388,8 @@ export const createStage: StageFactory = (
 
           if (figures !== undefined) {
             figures.visible = shown;
+            // Still picked while hidden (`unitUnder`).
+            figures.userData[BLINKED_OUT] = !shown;
           }
         }
       );

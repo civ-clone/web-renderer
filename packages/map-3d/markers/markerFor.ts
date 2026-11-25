@@ -2,7 +2,7 @@
 //  what the unit's flag shows (spec §6.3). Pure: the stage draws what this says.
 //
 // The unit on top is the one the 2D map draws there: the active unit if it's in the stack, or else the one with the best
-//  defence, as the engine sends it. Hidden (`t`), only the active unit is marked, as on the 2D map.
+//  defence, as the engine sends it. Hidden (`t`), only the active unit is marked (the 2D map hides it too: #1375).
 
 import { City, Player, Tile, Unit } from '@civ-clone/ui-protocol/types';
 

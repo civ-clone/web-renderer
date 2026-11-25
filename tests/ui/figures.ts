@@ -29,7 +29,7 @@ import {
   SpriteMaterial,
   Vector3,
 } from 'three';
-import unitUnder from '@civ-clone/ui-map-3d/markers/pickUnit';
+import unitUnder, { BLINKED_OUT } from '@civ-clone/ui-map-3d/markers/pickUnit';
 import { UNIT_SCALE } from '@civ-clone/ui-map-3d/markers/drawMarker';
 import {
   UnitLook,
@@ -1294,6 +1294,28 @@ expect(
       unitUnder([], camera, on(0, through, -0.04)),
     ],
     [true, '3,4', '3,3', null, null]
+  );
+
+  // Its figures hidden by the blink (`Stage#showFigures`), still its square, as they're seen there every other half a
+  //  second; hidden otherwise, not.
+  const figures = front.getObjectByName(FIGURES_PART)!;
+
+  figures.visible = false;
+  figures.userData[BLINKED_OUT] = true;
+
+  const blinkedOut = unitUnder(marked, camera, on(0, through, -0.04));
+
+  figures.userData[BLINKED_OUT] = false;
+
+  const hidden = unitUnder(marked, camera, on(0, through, -0.04));
+
+  figures.visible = true;
+  delete figures.userData[BLINKED_OUT];
+
+  expect(
+    'a unit’s figures hidden by the blink are still its square’s; hidden otherwise, they aren’t',
+    [blinkedOut, hidden === '3,4'],
+    ['3,4', false]
   );
 
   // A squad close behind, where the same ray meets its figures too: the nearer's square, whichever's listed first.
