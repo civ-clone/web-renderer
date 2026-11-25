@@ -33,7 +33,7 @@
     "./tilesets/TilesetDescriptor": "./tilesets/TilesetDescriptor.ts"
   },
   "peerDependencies": {
-    "@civ-clone/core-world": "^0.1.24",
+    "@civ-clone/core-world": "^0.1.25",
     "@dom111/element": "^0.2.0"
   }
 }

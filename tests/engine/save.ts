@@ -853,6 +853,74 @@ const report = (): void => {
     ['square', 'square', true, 'square']
   );
 
+  // Which generator made the world is saved (#175), so a rule can tell a loaded Earth game is on the Earth: this world's
+  //  generator says nothing, an Earth one comes back as the Earth, and a world saved before it was recorded as none.
+  const worldAfter = (edit: (state: { [field: string]: unknown }) => void) => {
+    const edited = JSON.parse(json) as typeof first;
+
+    edited.entities
+      .filter(({ type }) => type === 'World')
+      .forEach(({ state }) => edit(state));
+
+    const editedTarget = loadTarget();
+
+    hydrate(edited, editedTarget);
+
+    return (
+      editedTarget.playerWorlds.entries()[0] as unknown as {
+        _world: { generatorId(): string | null };
+      }
+    )._world.generatorId();
+  };
+
+  push(
+    'a save records which generator made the world',
+    () => {
+      const worlds = (JSON.parse(json) as typeof first).entities.filter(
+          ({ type }) => type === 'World'
+        ),
+        // An Earth one, saved: the world as the Earth made it, as `Generator#id()` says it.
+        earthWorld = target.playerWorlds.entries()[0] as unknown as {
+          _world: { _generatorId: string | null };
+        },
+        before = earthWorld._world._generatorId;
+
+      earthWorld._world._generatorId = 'earth';
+
+      try {
+        return [
+          // Saved as a field, not left out: `JSON.stringify` writes a missing one as `null` too.
+          worlds.map(({ state }) => [
+            Object.prototype.hasOwnProperty.call(state, '_generatorId'),
+            state._generatorId,
+          ]),
+          save(target, { name: 'earth', createdAt: 0 })
+            .entities.filter(({ type }) => type === 'World')
+            .map(({ state }) => state._generatorId),
+        ];
+      } finally {
+        earthWorld._world._generatorId = before;
+      }
+    },
+    [[[true, null]], ['earth']]
+  );
+  push(
+    'an Earth world loads as the Earth',
+    () =>
+      worldAfter((state) => {
+        state._generatorId = 'earth';
+      }),
+    'earth'
+  );
+  push(
+    'a world saved before #175 loads as made by no generator in particular',
+    () =>
+      worldAfter((state) => {
+        delete state._generatorId;
+      }),
+    null
+  );
+
   // --- round-trip identity ------------------------------------------------
   // Save, load, save again: the two must be identical. This is the check that
   // catches a dropped field, because a field missing from `stateKeys()` is

@@ -614,3 +614,15 @@ change the same way, with as many messages as before.
 
 The checksums (`99a58e61 / e7ec61bb / 781cb858`), state counts, rule totals and
 random-call counts are unchanged: nothing in the engine changes.
+
+## Accepted change: the world records which generator made it (#175)
+
+core-world 0.1.25 saves which generator made the world (`World._generatorId`,
+from core-world-generator 0.1.9's `Generator#id()`: `'earth'` for the Earth,
+`null` here). Nothing else changed. `state.fields` rises by one at every
+checkpoint (9,738 → 9,739, 9,826 → 9,827, 10,041 → 10,042), so `state.hash`
+moves, and the three checksums move with it (`99a58e61 / e7ec61bb / 781cb858`
+→ `3fa76a42 / 5c342a72 / e8cd02b7`). The DTO, rule totals, registries and
+random-call counts are unchanged: the field isn't sent to the client. Run again
+with `_generatorId` made transient, the result is byte-identical to the
+previous `baseline.json`.
