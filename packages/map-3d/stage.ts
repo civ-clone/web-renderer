@@ -20,7 +20,6 @@ import {
   DoubleSide,
   Fog,
   Group,
-  HemisphereLight,
   FrontSide,
   IcosahedronGeometry,
   InstancedBufferAttribute,
@@ -30,6 +29,7 @@ import {
   MeshBasicMaterial,
   MeshStandardMaterial,
   Object3D,
+  PMREMGenerator,
   PerspectiveCamera,
   Plane,
   Quaternion,
@@ -63,6 +63,7 @@ import { OverlayMesh, PLANT_NUMBERS } from './overlay/overlayMesh';
 import { plantMatrices, plantsKept } from './overlay/thinning';
 import { FIELD_OF_VIEW, Orbit, eye, sightFor } from './camera/orbit';
 import Water, { Clouds, Ground, SMOG_ORDER } from './water';
+import { SKY_INTENSITY, skyTexture } from './sky';
 import YieldIcons from './yieldIcons';
 import { YieldMesh } from './yields';
 import {
@@ -316,9 +317,9 @@ export type StageFactory = (
 
 // A muted palette (D2): an overcast sky, and a sun low enough to model the relief.
 const SKY = 0x9fb3c4,
-  SKY_LIGHT = 0xd6e2ec,
-  GROUND_LIGHT = 0x5b5140,
-  SUN = 0xfff0d8;
+  SUN = 0xfff0d8,
+  // Where the sun is from the camera's focus: from the south-east and well up.
+  SUN_WAY = [30, 40, 20] as const;
 
 /**
  * The copies of the world within `sight` of `focus`, as offsets on the ground: every multiple of the period across, and
@@ -698,11 +699,22 @@ export const createStage: StageFactory = (
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = PCFSoftShadowMap;
 
+  // The sky (`sky.ts`), blurred for each roughness once, as it doesn't change.
+  const sunWay = new Vector3(...SUN_WAY).normalize(),
+    skyPicture = skyTexture([sunWay.x, sunWay.y, sunWay.z]),
+    skies = new PMREMGenerator(renderer),
+    environment = skies.fromEquirectangular(skyPicture);
+
+  skyPicture.dispose();
+  skies.dispose();
+
   scene.background = new Color(SKY);
   // Haze into the distance (§9.3), so the land fades into the sky rather than ending at an edge: how far follows the
   //  camera's distance.
   scene.fog = fog;
-  scene.add(new HemisphereLight(SKY_LIGHT, GROUND_LIGHT, 0.9));
+  // The sky's light from round about, and what's smooth or metal reflects (`sky.ts`).
+  scene.environment = environment.texture;
+  scene.environmentIntensity = SKY_INTENSITY;
   scene.add(land);
   scene.add(markersGroup);
   scene.add(yieldsGroup);
@@ -710,7 +722,7 @@ export const createStage: StageFactory = (
   scene.add(clouds.mesh);
 
   // From the south-east and well up, so slopes facing it are lit and the far sides of ridges fall into shade.
-  sun.position.set(30, 40, 20);
+  sun.position.set(...SUN_WAY);
   // One shadow map, over what the camera sees round its focus (`view`).
   sun.castShadow = true;
   sun.shadow.mapSize.set(SHADOW_MAP, SHADOW_MAP);
@@ -972,7 +984,7 @@ export const createStage: StageFactory = (
     const reach = orbit.distance * 2.2,
       shadow = sun.shadow.camera;
 
-    sun.position.set(u + 30, height + 40, v + 20);
+    sun.position.set(u + SUN_WAY[0], height + SUN_WAY[1], v + SUN_WAY[2]);
     sun.target.position.set(u, height, v);
     shadow.left = -reach;
     shadow.right = reach;
@@ -1831,6 +1843,7 @@ export const createStage: StageFactory = (
       yields.dispose();
       water.dispose();
       clouds.dispose();
+      environment.dispose();
       material.dispose();
       detail.dispose();
       renderer.dispose();
