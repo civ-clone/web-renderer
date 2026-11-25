@@ -329,7 +329,9 @@ export type StageFactory = (
 const SKY = 0x9fb3c4,
   SKY_LIGHT = 0xd6e2ec,
   GROUND_LIGHT = 0x5b5140,
-  SUN = 0xfff0d8;
+  SUN = 0xfff0d8,
+  // A river's water: darker and greener than the sea at its shore, as a river's carries silt.
+  RIVER_WATER = 0x2f5f66;
 
 /**
  * The copies of the world within `sight` of `focus`, as offsets on the ground: every multiple of the period across, and
@@ -519,10 +521,22 @@ export const createStage: StageFactory = (
     land = new Group(),
     // The land's colour at each point, and its surfaces' detail over it (`landMaterial.ts`).
     { material, detail } = landMaterial(period, ground.rows * ground.spacingV),
+    // The rivers' water (`terrain/ribbons.ts`): a little in front of the land it lies on, which is close under it.
+    riverMaterial = new MeshStandardMaterial({
+      color: RIVER_WATER,
+      roughness: 0.3,
+      metalness: 0,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    }),
     sun = new DirectionalLight(SUN, 2.6),
     // What's drawn at every copy of the world in sight: the land's chunks by `i,j`, and the squares' markers by `x,y`.
     //  Each has where it lies, how to make one copy of it, and the copies drawn now.
-    chunks = new Map<string, Placed & { geometry: BufferGeometry }>(),
+    chunks = new Map<
+      string,
+      Placed & { geometry: BufferGeometry; river: BufferGeometry | null }
+    >(),
     // What's laid on the land, by chunk: its colours in its vertices, a little in front of the land so it doesn't
     //  flicker with it where it lies close.
     overlays = new Map<
@@ -1011,6 +1025,8 @@ export const createStage: StageFactory = (
     clouds.pastThePoles(seen.v !== null);
     overlayMaterial.clippingPlanes = seen.v === null ? poles : null;
     hazeMaterial.clippingPlanes = overlayMaterial.clippingPlanes;
+    // Rivers' water too, so a course across the poles' water stops at them.
+    riverMaterial.clippingPlanes = overlayMaterial.clippingPlanes;
     plantModels.forEach(({ parts }) =>
       parts.forEach(({ material }) => {
         material.clippingPlanes = overlayMaterial.clippingPlanes;
@@ -1196,16 +1212,42 @@ export const createStage: StageFactory = (
       if (old !== undefined) {
         old.drawn.forEach((drawn) => land.remove(drawn));
         old.geometry.dispose();
+        old.river?.dispose();
       }
 
-      const chunk: Placed & { geometry: BufferGeometry } = {
+      // Its rivers' water, with the land.
+      let river: BufferGeometry | null = null;
+
+      if (mesh.river !== null) {
+        river = new BufferGeometry();
+        river.setAttribute(
+          'position',
+          new BufferAttribute(mesh.river.positions, 3)
+        );
+        river.setIndex(new BufferAttribute(mesh.river.indices, 1));
+        river.computeVertexNormals();
+        river.computeBoundingSphere();
+      }
+
+      const chunk: Placed & {
+        geometry: BufferGeometry;
+        river: BufferGeometry | null;
+      } = {
         geometry,
+        river,
         at: [mesh.u, 0, mesh.v],
         make: () => {
           const drawn = new Mesh(geometry, material);
 
           drawn.castShadow = true;
           drawn.receiveShadow = true;
+
+          if (river !== null) {
+            const water = new Mesh(river, riverMaterial);
+
+            water.receiveShadow = true;
+            drawn.add(water);
+          }
 
           return drawn;
         },
@@ -1798,7 +1840,10 @@ export const createStage: StageFactory = (
     }),
     dispose: (): void => {
       disposed = true;
-      chunks.forEach(({ geometry }) => geometry.dispose());
+      chunks.forEach(({ geometry, river }) => {
+        geometry.dispose();
+        river?.dispose();
+      });
       chunks.clear();
       overlays.forEach(({ geometry, haze, drawn }) => {
         drawn.forEach(letGoOfPlants);
@@ -1859,6 +1904,7 @@ export const createStage: StageFactory = (
       water.dispose();
       clouds.dispose();
       material.dispose();
+      riverMaterial.dispose();
       detail.dispose();
       renderer.dispose();
     },

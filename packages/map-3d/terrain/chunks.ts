@@ -9,6 +9,7 @@
 
 import { GroundLayout } from '../layouts/GroundLayout';
 import { ReliefMap } from './relief';
+import { RibbonMesh, ribbonOf } from './ribbons';
 
 /** How the ground is cut into chunks, and how finely each is sampled. */
 export type ChunkGrid = {
@@ -37,6 +38,8 @@ export type ChunkMesh = {
   // 1 at each point on a square never seen, and 0 elsewhere, for the cloud over them.
   unseen: Float32Array;
   indices: Uint32Array;
+  // The water of the rivers whose courses start in the chunk, relative to its corner, as the land's points are; or none.
+  river: { positions: Float32Array; indices: Uint32Array } | null;
 };
 
 /**
@@ -70,6 +73,26 @@ export const chunkGrid = (
     spacingV: extentV / chunksV / stepsV,
   };
 };
+
+/**
+ * The chunk, `i` across and `j` down, that carries what starts at (`u`, `v`) on the world's first copy, such as a river's
+ *  course: the one it's in, worked out the same way for every chunk, so each thing is carried by one, even on a chunk's
+ *  border, where its origin and the last one's far edge, each worked out its own way, can differ by a hair.
+ */
+export const carriedBy = (
+  grid: ChunkGrid,
+  u: number,
+  v: number
+): [i: number, j: number] => [
+  Math.max(
+    0,
+    Math.min(grid.chunksU - 1, Math.floor(u / (grid.stepsU * grid.spacingU)))
+  ),
+  Math.max(
+    0,
+    Math.min(grid.chunksV - 1, Math.floor(v / (grid.stepsV * grid.spacingV)))
+  ),
+];
 
 /** The mesh of the chunk `i` across and `j` down. */
 export const buildChunk = (
@@ -160,6 +183,54 @@ export const buildChunk = (
     }
   }
 
+  // The land as its mesh draws it at (`lu`, `lv`) from the chunk's corner: between the points of the triangle it's in,
+  //  two to a cell, as above. Each point as high as the chunk has it, or, past its edge, as the next chunk will.
+  const past = new Map<string, number>(),
+    pointHeight = (a: number, b: number): number => {
+      if (a >= -1 && a <= stepsU + 1 && b >= -1 && b <= stepsV + 1) {
+        return height(a, b);
+      }
+
+      const key = `${a},${b}`;
+      let sampled = past.get(key);
+
+      if (sampled === undefined) {
+        sampled = relief.sample(...at(firstU + a, firstV + b)).height;
+        past.set(key, sampled);
+      }
+
+      return sampled;
+    },
+    groundAt = (lu: number, lv: number): number => {
+      const a = Math.floor(lu / spacingU),
+        b = Math.floor(lv / spacingV),
+        fu = lu / spacingU - a,
+        fv = lv / spacingV - b;
+
+      return fu + fv <= 1
+        ? pointHeight(a, b) +
+            (pointHeight(a + 1, b) - pointHeight(a, b)) * fu +
+            (pointHeight(a, b + 1) - pointHeight(a, b)) * fv
+        : pointHeight(a + 1, b + 1) +
+            (pointHeight(a, b + 1) - pointHeight(a + 1, b + 1)) * (1 - fu) +
+            (pointHeight(a + 1, b) - pointHeight(a + 1, b + 1)) * (1 - fv);
+    };
+
+  // The rivers' water: each course drawn by the chunk that carries its start, once, laid on the land as it's drawn.
+  const ribbon: RibbonMesh = { positions: [], indices: [] };
+
+  relief.courses().forEach(({ course, u, v }) => {
+    const [ci, cj] = carriedBy(grid, u, v);
+
+    if (ci === i && cj === j) {
+      ribbonOf(course, u - originU, v - originV, ribbon, {
+        at: groundAt,
+        spacingU,
+        spacingV,
+      });
+    }
+  });
+
   return {
     u: originU,
     v: originV,
@@ -171,6 +242,13 @@ export const buildChunk = (
     shore,
     unseen,
     indices,
+    river:
+      ribbon.indices.length === 0
+        ? null
+        : {
+            positions: new Float32Array(ribbon.positions),
+            indices: new Uint32Array(ribbon.indices),
+          },
   };
 };
 
