@@ -47,6 +47,7 @@ import Land from '@civ-clone/ui-map-3d/Land';
 import { ChunkMesh } from '@civ-clone/ui-map-3d/terrain/chunks';
 import * as Civ1Terrains from '@civ-clone/civ1-world/Terrains';
 import { vegetationTable } from '@civ-clone/ui-models-builtin/vegetation';
+import { seaFloor } from '@civ-clone/ui-models-builtin/terrain';
 import World from '@civ-clone/ui-map/components/World';
 
 const failures: string[] = [];
@@ -740,10 +741,13 @@ expect(
 
       return { key, wet, shown };
     }),
-    // On land just under the water's level, as a low swamp's can be at the shore: still drawn, on 10 squares each.
+    // On land just under the water's level, as a low swamp's can be at the shore, as low as the sea's floor begins
+    //  beside it: still drawn, on 10 squares each.
     shallow = landKeys.filter((key) =>
       Array.from({ length: 10 }, (_, at) => at + 1).some(
-        (x) => drawn(key, [], [], x, () => -0.012).points.length === 0
+        (x) =>
+          drawn(key, [], [], x, () => seaFloor.shore + 0.002).points.length ===
+          0
       )
     ),
     // Where its special stands, with a hut on the square and without.

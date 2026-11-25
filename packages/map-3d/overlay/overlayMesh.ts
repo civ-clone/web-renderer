@@ -1357,8 +1357,9 @@ const SPECIAL_REACH: { readonly [shape in SpecialLook['shape']]?: number } = {
   cairn: 0.0375,
 };
 
-// Whether a special's piece at a height of the land `y` would stand in the sea, where its room reaches past a shore: on
-//  the sea's floor, not on land just under the water's level at the shore, as a low swamp's can be.
+// Whether a special's piece at a height of the land `y` would stand deeper than the sea's floor begins beside land: a
+//  guard for ground deeper than any a claim reaches, as `EDGE_REACH` keeps claims to their square. Land just under the
+//  water's level at a shore, as a low swamp's can be, isn't.
 const inTheSea = (y: number): boolean => y < seaFloor.shore;
 
 // How far an oasis's palms lean out at their tops, whatever its size, as they're as tall.

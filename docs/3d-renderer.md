@@ -642,9 +642,10 @@ How plants are placed:
     most room. Where there's less (roads, walls, a hex's shallower corners), it takes the most there is, down to 0.1,
     and is drawn smaller to fit, by its own reach (`SPECIAL_REACH`), never bigger than its own size (logs a little
     bigger). What isn't a beast or logs keeps its height as it's drawn narrower, so it's never lower than it was.
-    Nothing on land stands in the sea, on its floor, where its room reaches past a shore (`inTheSea`), though it may
-    stand on land just under the water's level, as a low swamp's is at the shore. Inside a fortress's walls, where
-    nothing has room, it takes the spot with the most, as before.
+    Keeping to its square keeps it off the sea's floor past a shore; and as a guard, nothing on land stands deeper than
+    the sea's floor begins beside land (`inTheSea`), though it may stand on land just under the water's level, as a
+    low swamp's is at the shore. Inside a fortress's walls, where nothing has room, it takes the spot with the most, as
+    before.
   - **Beasts** (`overlay/beasts.ts`) are made of plain shapes as units are, each a little larger than life, beside
     units drawn twice life: horses with manes, tails and hooves, oxen (buffalo) with a hump and horns, deer (game, and
     caribou on the tundra) with antlers, foxes (furs) with a bushy tail, an elephant (ivory) with its trunk and tusks,
