@@ -4,15 +4,64 @@
 //  the ground the figures hide.
 
 import { Camera, Mesh, Object3D, Raycaster, Vector2 } from 'three';
-import { UNIT_PART } from './drawMarker';
+import { FIGURES_PART, UNIT_PART } from './drawMarker';
 
 const raycaster = new Raycaster();
 
 /**
+ * Set in the `userData` of a unit's figures the blink has hidden (`Stage#showFigures`, §6.3): they're still picked, as
+ *  they're seen there every other half a second, and the 2D map's blink doesn't change what's clicked either.
+ */
+export const BLINKED_OUT = 'blinkedOut';
+
+/** `marker`'s figures, where it has them, shown or hidden by the blink: hidden, they're flagged to be picked still. */
+export const blinkFigures = (
+  marker: Object3D | undefined,
+  shown: boolean
+): void => {
+  const figures = marker?.getObjectByName(FIGURES_PART);
+
+  if (figures !== undefined) {
+    figures.visible = shown;
+    figures.userData[BLINKED_OUT] = !shown;
+  }
+};
+
+/** `to`'s figures shown or hidden as `from`'s are, mid-blink, so a copy made afresh blinks with them. */
+export const blinkAs = (from: Object3D, to: Object3D): void => {
+  const blinking = from.getObjectByName(FIGURES_PART),
+    figures = to.getObjectByName(FIGURES_PART);
+
+  if (blinking !== undefined && figures !== undefined) {
+    figures.visible = blinking.visible;
+    figures.userData[BLINKED_OUT] = blinking.userData[BLINKED_OUT] === true;
+  }
+};
+
+// `part` and what's in it shown, or hidden by the blink, gathered with its square's `key`.
+const gather = (
+  part: Object3D,
+  key: string,
+  meshes: Mesh[],
+  keys: Map<Object3D, string>
+): void => {
+  if (!part.visible && part.userData[BLINKED_OUT] !== true) {
+    return;
+  }
+
+  if (part instanceof Mesh) {
+    meshes.push(part);
+    keys.set(part, key);
+  }
+
+  part.children.forEach((child) => gather(child, key, meshes, keys));
+};
+
+/**
  * The square whose unit is drawn under the point `ndc` on the screen (from -1 to 1 across, and up), as `camera` sees
  *  it, the nearest to the camera where several are: its key, or nothing. `marked` is each square's key with the copies
- *  of its marker drawn, their matrices up to date. A unit's figures, its stand and the ring at its feet count; its
- *  flag and labels, and a city's buildings, don't.
+ *  of its marker drawn, their matrices up to date. A unit's figures, its stand and the ring at its feet count, the
+ *  figures even while the blink hides them; its flag and labels, and a city's buildings, don't.
  */
 export const unitUnder = (
   marked: Iterable<readonly [string, readonly Object3D[]]>,
@@ -23,14 +72,13 @@ export const unitUnder = (
     keys = new Map<Object3D, string>();
 
   for (const [key, drawn] of marked) {
-    drawn.forEach((copy) =>
-      copy.getObjectByName(UNIT_PART)?.traverseVisible((part) => {
-        if (part instanceof Mesh) {
-          meshes.push(part);
-          keys.set(part, key);
-        }
-      })
-    );
+    drawn.forEach((copy) => {
+      const unit = copy.getObjectByName(UNIT_PART);
+
+      if (unit !== undefined) {
+        gather(unit, key, meshes, keys);
+      }
+    });
   }
 
   if (meshes.length === 0) {

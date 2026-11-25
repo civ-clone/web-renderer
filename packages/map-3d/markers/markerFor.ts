@@ -2,7 +2,7 @@
 //  what the unit's flag shows (spec §6.3). Pure: the stage draws what this says.
 //
 // The unit on top is the one the 2D map draws there: the active unit if it's in the stack, or else the one with the best
-//  defence, as the engine sends it. Hidden (`t`), only the active unit is marked, as on the 2D map.
+//  defence, as the engine sends it. Hidden (`t`), only the active unit is marked (the 2D map hides it too: #1375).
 
 import { City, Player, Tile, Unit } from '@civ-clone/ui-protocol/types';
 
@@ -30,6 +30,11 @@ export type UnitMarker = {
   // How many units are in the stack.
   count: number;
   active: boolean;
+  // For the unit awaiting orders, whether a ring's at its feet, as the player chose how it's marked (a ring, or both a
+  //  ring and a blink): where it's not said, it is.
+  ring?: boolean;
+  // And the colour it's marked in, its ring and the pointer over it, as the theme gives it: pale gold where not said.
+  ringColour?: string;
   // Fortified, sleeping or at work: the engine's own word for what it's doing.
   busy: boolean;
   // What the engine says of it: `Fortified` and `Veteran` among its improvements.

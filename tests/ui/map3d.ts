@@ -83,6 +83,7 @@ import {
   spriteKey,
 } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import markerFor, { TileMarker } from '@civ-clone/ui-map-3d/markers/markerFor';
+import { UnitMarkerMode } from '@civ-clone/ui-map/components/Map/UnitMarker';
 import { OverlayMesh, ROOFS } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
 import {
   IN_FRONT_OF_CITY,
@@ -1074,6 +1075,186 @@ expect(
       [romaName, 'Phalanx', false],
     ]
   );
+
+  // How the unit awaiting orders is marked (§6.3), as the player chose it in Options, and in the theme's colour, each
+  //  read at each blink: a ring at its feet but for a blink alone; its figures hidden and shown in turn each tick where
+  //  it blinks, and never where it's a ring alone; a choice taking at the next tick, marked again with its ring and
+  //  shown; a colour chosen likewise; walking, ringed as chosen too; and no blink once it's gone.
+  {
+    let mode: UnitMarkerMode = 'blink',
+      colour = '#e0b85a',
+      tick = (): void => {},
+      stopped = false;
+    const ringed = new Map<string, TileMarker | null>(),
+      shown: [string, boolean][] = [],
+      walking: (TileMarker | null)[] = [],
+      blinking = new MapView3D(
+        {
+          ...given!,
+          unitMarker: () => mode,
+          unitRing: () => colour,
+          blinkEvery: (each) => {
+            tick = each;
+
+            return () => {
+              stopped = true;
+            };
+          },
+        },
+        () => ({
+          ...fakeStage(),
+          setMarker: (key, _at, marked) => void ringed.set(key, marked),
+          setWalker: (_id, marked) => void walking.push(marked),
+          showFigures: (key, on) => void shown.push([key, on]),
+        })
+      ),
+      ring = () => ringed.get(townKey)?.unit?.ring ?? null,
+      ringColour = () => ringed.get(townKey)?.unit?.ringColour ?? null,
+      ticks = (count: number) => {
+        shown.length = 0;
+        Array.from({ length: count }, () => tick());
+
+        return [...shown];
+      };
+
+    blinking.queueTile(town);
+    blinking.releaseTiles();
+    blinking.setActiveUnit(warriors as unknown as Unit);
+
+    const blinkAlone = [ring(), ticks(3)];
+
+    // Marked afresh while it's hidden (another unit on its square made active), it's shown, so the next tick hides it.
+    blinking.setActiveUnit(phalanx as unknown as Unit);
+
+    const afresh = ticks(1);
+
+    blinking.setActiveUnit(warriors as unknown as Unit);
+    mode = 'ring';
+
+    const toRing = [ticks(1), ring()],
+      ringAlone = ticks(3);
+
+    mode = 'both';
+
+    const toBoth = [ticks(1), ring()],
+      both = ticks(2),
+      themed = ringColour();
+
+    colour = '#ffffff';
+
+    const recoloured = [ticks(1), ringColour()];
+
+    // With no unit awaiting orders, nothing blinks.
+    blinking.setActiveUnit(null);
+
+    const noneActive = ticks(2);
+
+    blinking.setActiveUnit(warriors as unknown as Unit);
+
+    // With frames, a tick asks for one, which only draws the scene again: no chunk laid, the camera not moved.
+    const blinkFrames: ((time: number) => void)[] = [];
+
+    Object.assign(globalThis, {
+      requestAnimationFrame: (callback: (time: number) => void): number =>
+        blinkFrames.push(callback),
+      cancelAnimationFrame: (): void => {},
+    });
+    staged.splice(0);
+
+    const chunksBefore = chunkBuilds.length,
+      viewsBefore = seenDown.length,
+      framed: unknown[] = [ticks(1), blinkFrames.length];
+
+    blinkFrames
+      .splice(0)
+      .forEach((callback) => callback(performance.now() + 1000));
+    framed.push(
+      staged.splice(0),
+      chunkBuilds.length - chunksBefore,
+      seenDown.length - viewsBefore,
+      blinkFrames.length
+    );
+    delete (globalThis as any).requestAnimationFrame;
+    delete (globalThis as any).cancelAnimationFrame;
+
+    // Walking needs frames: those asked for given once it's set off.
+    const asked: ((time: number) => void)[] = [];
+
+    mode = 'blink';
+    ticks(1);
+
+    Object.assign(globalThis, {
+      requestAnimationFrame: (callback: (time: number) => void): number =>
+        asked.push(callback),
+      cancelAnimationFrame: (): void => {},
+    });
+    blinking.mapEvent({
+      kind: 'moved',
+      unit: {
+        id: warriors.id,
+        type: 'Warriors',
+        player: owner.id,
+        tile: { x: town.x, y: town.y },
+      },
+      from: { x: town.x, y: town.y },
+      to: { x: town.x + 1, y: town.y },
+    });
+
+    asked.splice(0).forEach((callback) => callback(performance.now() + 16));
+    delete (globalThis as any).requestAnimationFrame;
+    delete (globalThis as any).cancelAnimationFrame;
+
+    const walked = walking
+      .filter((marked) => marked?.unit?.id === warriors.id)
+      .map((marked) => [marked!.unit!.active, marked!.unit!.ring]);
+
+    blinking.dispose();
+
+    expect(
+      'the unit awaiting orders marked as chosen: a ring but for a blink alone, its figures hidden and shown in turn where it blinks, shown when marked afresh, a change taking at the next tick, in the theme’s colour, a colour chosen taking at the next tick too, none blinking with no unit awaiting orders, a tick with frames only drawing the scene again, walking without a ring where it blinks, and the blink stopped once the map’s gone',
+      [
+        blinkAlone,
+        afresh,
+        toRing,
+        ringAlone,
+        toBoth,
+        both,
+        themed,
+        recoloured,
+        noneActive,
+        framed,
+        walked.length > 0 &&
+          walked.every(([active, ring]) => active && ring === false),
+        stopped,
+        ticks(2),
+      ],
+      [
+        [
+          false,
+          [
+            [townKey, false],
+            [townKey, true],
+            [townKey, false],
+          ],
+        ],
+        [[townKey, false]],
+        [[[townKey, true]], true],
+        [],
+        [[[townKey, true]], true],
+        [
+          [townKey, false],
+          [townKey, true],
+        ],
+        '#e0b85a',
+        [[[townKey, true]], '#ffffff'],
+        [],
+        [[[townKey, false]], 1, ['render'], 0, 0, 0],
+        true,
+        true,
+        [],
+      ]
+    );
+  }
 
   // How big units are drawn, changed in Options as the game goes on: every square's unit drawn again at once, at the
   //  nearest size a player could choose, and as the map draws them again after; all `UNIT_SCALE` times life size, as

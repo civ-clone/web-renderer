@@ -29,7 +29,11 @@ import {
   SpriteMaterial,
   Vector3,
 } from 'three';
-import unitUnder from '@civ-clone/ui-map-3d/markers/pickUnit';
+import unitUnder, {
+  BLINKED_OUT,
+  blinkAs,
+  blinkFigures,
+} from '@civ-clone/ui-map-3d/markers/pickUnit';
 import { UNIT_SCALE } from '@civ-clone/ui-map-3d/markers/drawMarker';
 import {
   UnitLook,
@@ -592,6 +596,37 @@ expect(
     (pointer?.renderOrder ?? 0) > (activeLabel?.renderOrder ?? 0),
   ],
   [true, false, true, true]
+);
+
+const blinkingActive = drawn(
+  unit('Spearman', { active: true, count: 2, ring: false })
+);
+
+expect(
+  'marked by a blink alone, the unit awaiting orders has no ring at its feet, but its pointer still',
+  [
+    meshOf(blinkingActive, ring) === undefined,
+    spriteOf(blinkingActive, kit.pointer()) !== undefined,
+  ],
+  [true, true]
+);
+
+// In the theme's colour, its ring and its pointer; the pale gold's where it gives none.
+const themedActive = drawn(
+    unit('Spearman', { active: true, count: 2, ringColour: '#ffffff' })
+  ),
+  themedRing = meshOf(themedActive, ring);
+
+expect(
+  'in the theme’s colour, the unit awaiting orders’ ring and pointer are that colour, each made once, and the pale gold’s are left as they were',
+  [
+    themedRing?.material === kit.material('#ffffff', true),
+    spriteOf(themedActive, kit.pointer('#ffffff')) !== undefined,
+    kit.pointer('#ffffff') === kit.pointer('#ffffff'),
+    kit.pointer('#ffffff') !== kit.pointer(),
+    meshOf(active, ring)?.material === kit.material('#fff4b0', true),
+  ],
+  [true, true, true, true, true]
 );
 
 // A city: its buildings and walls one mesh, its name a label, and walls more of the mesh.
@@ -1263,6 +1298,66 @@ expect(
       unitUnder([], camera, on(0, through, -0.04)),
     ],
     [true, '3,4', '3,3', null, null]
+  );
+
+  // Its figures hidden by the blink (`Stage#showFigures`), still its square, as they're seen there every other half a
+  //  second; hidden otherwise, not; shown again, as they were. A copy made afresh mid-blink (`Stage#drawIdling`) is
+  //  hidden too, and still picked; one made once it's shown again is shown, and no longer flagged. The copy's made
+  //  before the blink, as `drawIdling`'s is made afresh, with none of its flag.
+  const figures = front.getObjectByName(FIGURES_PART)!,
+    pointed = () => unitUnder(marked, camera, on(0, through, -0.04)),
+    copied = front.clone(),
+    copiedFlag = () =>
+      copied.getObjectByName(FIGURES_PART)!.userData[BLINKED_OUT] ?? null;
+
+  blinkFigures(front, false);
+
+  const blinkedOut = [figures.visible, pointed()],
+    unflagged = copiedFlag();
+
+  blinkAs(front, copied);
+
+  const copiedOut = [
+    copied.getObjectByName(FIGURES_PART)!.visible,
+    unitUnder([['3,4', [copied]]], camera, on(0, through, -0.04)),
+  ];
+
+  figures.visible = false;
+  delete figures.userData[BLINKED_OUT];
+
+  const hidden = pointed();
+
+  blinkFigures(front, true);
+
+  const shownAgain = [figures.visible, pointed()];
+
+  blinkAs(front, copied);
+
+  const copiedShown = [
+    copied.getObjectByName(FIGURES_PART)!.visible,
+    copiedFlag(),
+  ];
+
+  expect(
+    'a unit’s figures hidden by the blink are still its square’s, and a copy made mid-blink’s; hidden otherwise, they aren’t; shown again, as before',
+    [
+      blinkedOut,
+      copiedOut,
+      hidden === '3,4',
+      shownAgain,
+      unflagged,
+      copiedShown,
+      blinkFigures(undefined, false),
+    ],
+    [
+      [false, '3,4'],
+      [false, '3,4'],
+      false,
+      [true, '3,4'],
+      null,
+      [true, false],
+      undefined,
+    ]
   );
 
   // A squad close behind, where the same ray meets its figures too: the nearer's square, whichever's listed first.

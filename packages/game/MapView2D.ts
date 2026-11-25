@@ -72,7 +72,7 @@ export type MapView2DDeps = {
 
 // The ring's colours as the theme gives them (`--ui-unit-ring`, `--ui-unit-ring-halo`), for the ring drawn on the map
 //  (#97): white over a dark halo where the page can't say.
-const ringColours = (): RingColours => {
+export const ringColours = (): RingColours => {
   const style =
       typeof getComputedStyle === 'function'
         ? getComputedStyle(document.documentElement)

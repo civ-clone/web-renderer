@@ -865,6 +865,19 @@ Each is looked up by its type name in the model set.
 - **Working (Settlers):** the `work` clip.
 - **The active unit:** a ring laid on the land under it. It follows the unit marker option (ring, blink or both) and the
   theme's colours [verified: `UnitMarker` and the `--ui-unit-ring` tokens, `packages/game/MapView2D.ts`].
+  - As built (`MapView3D#blink`, `markers/drawMarker.ts`): the page passes the option as the 2D map reads it
+    (`unitMarkerMode`: the theme's choice where the player hasn't made one, or a ring under reduced motion) and the
+    theme's `--ui-unit-ring`. Both are read again every half a second, at the blink's tick, so a choice in Options or a
+    new theme takes at the next tick.
+  - **Ring, or both:** a ring at the unit's feet, in the theme's colour (the modern theme's gold, the classic theme's
+    white), whether it's standing or walking.
+  - **Blink, or both:** its figures are hidden and shown in turn every half a second, as the 2D map's blink, while its
+    flag and the pointer over it stay, and its stand where it's drawn with a model (the built-in set's figures are one
+    mesh with their stand). A tick that only hides or shows them draws the scene again and nothing more, in a frame
+    like those for units idling (§10, its fifth part). Marked afresh, it's shown, and blinks from there. Walking, it
+    doesn't blink. Hidden, its figures are still picked (§9.2, `BLINKED_OUT`), as the 2D map's blink doesn't change
+    what's clicked either.
+  - **The pointer** over it, in the theme's colour, is drawn however it's marked, so it's found at any distance.
 - **Hidden units:** `t` hides units and cities, as it does on the 2D map, so the land shows as it is. A city's walls and
   name go, and its town: its buildings, on its square and round it, are laid with the land (§7.2), so every square with
   a city on it or beside it is laid again as though none stood there, its woods and fields whole (but for one spot,
@@ -1416,7 +1429,7 @@ mapEvent:
     stand and ring, at every copy of the world drawn), and the nearest it meets picks that unit's square, before the
     ground. Units are drawn twice life size, and aircraft fly over their stands, so their figures stand over the ground
     of the square behind: a click, a GoTo's square or a tooltip there goes to the square whose unit it's on, as it's
-    seen. A unit walking or fighting isn't picked.
+    seen, even while the blink hides its figures (§6.3). A unit walking or fighting isn't picked.
 - **A city:** a banner, or a city's lots, picks the city.
 - **Uses:** clicks, long presses, hover tooltips and target picking (Paradrop, Airlift) all go through these, with the
   tooltip content the 2D map gives [verified: `HoverSubject` in `GamePortal.ts`].
@@ -1680,7 +1693,7 @@ stand. The map used to draw a frame only when something changed; while units idl
 - **Frames:** while any idles, frames are drawn for them about 30 a second (`IDLE_FRAME`, timed by when the
   browser's frames begin), the screen's others passed over. Such a frame only poses them and draws the scene: the camera, the land, the banners, the minimap and the rest
   are as they were. One asked for meanwhile, by anything that's changed, is drawn whole at once. Once none idle, the
-  frames stop.
+  frames stop. The blink's tick (§6.3) asks for one such frame too, as only its unit's figures have changed.
 - **Bounds** (`markers/rigBounds.ts`): a skinned mesh's own are its bind pose's, worked out once, so rigged copies
   weren't culled at all: each was drawn wherever it was. A rig's are now worked out as it's loaded, from the model's
   stance and every tenth of a second of each clip, and a tenth more, and taken by its copies, so one off the screen
@@ -1745,7 +1758,7 @@ The 3D view must show all of this before it stops being experimental:
 | The unit menu on right-click (modern interface, #808) | the same menu, for the unit or square picked (§9.2) |
 | Zoom, and its option | the camera's distance, kept per view |
 | Changing the art mid-game | changing the model set hands the game over to a new page with it, as an art change that can't be made in place does (#1118) |
-| Waiting for the next turn (`setWaiting`) | the same cursor and dimming |
+| Waiting for the next turn (`setWaiting`) | tooltips stay shut, as on the 2D map, which has no cursor or dimming of its own for it; the page's banner shows over either map |
 
 ---
 

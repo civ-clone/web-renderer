@@ -114,7 +114,8 @@ export class MarkerKit {
   #bounded = new WeakSet<LoadedRig>();
   #walls: BufferGeometry | null = null;
   #flats = new Map<string, SpriteMaterial>();
-  #pointer: SpriteMaterial | null = null;
+  // The pointer over the unit awaiting orders, in each colour it's drawn in.
+  #pointers = new Map<string, SpriteMaterial>();
   // Labels are made for each name and size, so over a game they'd grow without end: how many were kept at the last
   //  sweep.
   #kept = 0;
@@ -458,9 +459,14 @@ export class MarkerKit {
     return material;
   }
 
-  /** The pointer over the unit awaiting orders: a chevron, the same size on the screen however far away, over all. */
-  pointer(): SpriteMaterial {
-    if (this.#pointer === null) {
+  /**
+   * The pointer over the unit awaiting orders: a chevron in `colour`, the same size on the screen however far away, over
+   *  all. Made once for each colour.
+   */
+  pointer(colour: string = ACTIVE): SpriteMaterial {
+    let material = this.#pointers.get(colour);
+
+    if (material === undefined) {
       const canvas = document.createElement('canvas'),
         context = canvas.getContext('2d');
 
@@ -468,7 +474,7 @@ export class MarkerKit {
       canvas.height = 32;
 
       if (context !== null) {
-        context.fillStyle = ACTIVE;
+        context.fillStyle = colour;
         context.strokeStyle = '#3a3420';
         context.lineWidth = 3;
         context.beginPath();
@@ -483,15 +489,16 @@ export class MarkerKit {
       const texture = new CanvasTexture(canvas);
 
       texture.colorSpace = SRGBColorSpace;
-      this.#pointer = new SpriteMaterial({
+      material = new SpriteMaterial({
         map: texture,
         sizeAttenuation: false,
         depthTest: false,
         transparent: true,
       });
+      this.#pointers.set(colour, material);
     }
 
-    return this.#pointer;
+    return material;
   }
 
   /** A label's sprite material: `text` on a pill of `background`, made once for each. */
@@ -579,10 +586,12 @@ export class MarkerKit {
     [...this.#models].forEach(([id, model]) => this.#letGoOfModel(id, model));
     this.figureMaterial.dispose();
     this.#flats.forEach((material) => material.dispose());
-    this.#pointer?.map?.dispose();
-    this.#pointer?.dispose();
+    this.#pointers.forEach((material) => {
+      material.map?.dispose();
+      material.dispose();
+    });
     this.#flats.clear();
-    this.#pointer = null;
+    this.#pointers.clear();
     this.#materials.forEach((material) => material.dispose());
     this.#labels.forEach((material) => {
       material.map?.dispose();
@@ -829,15 +838,24 @@ const drawUnit = (
     );
   }
 
-  // The unit awaiting orders: a ring at its feet, and a pointer over all the rest, so it's found at any distance.
+  // The unit awaiting orders: a ring at its feet, where the player marks it with one, and a pointer over all the rest,
+  //  so it's found at any distance, however it's marked; both in the theme's colour for it, where it gives one.
   if (unit.active) {
-    const halo = new Mesh(ring, kit.material(ACTIVE, true));
+    const colour = unit.ringColour ?? ACTIVE;
 
-    halo.rotation.x = Math.PI / 2;
-    halo.position.y = 0.01;
-    group.add(halo);
+    if (unit.ring !== false) {
+      const halo = new Mesh(ring, kit.material(colour, true));
+
+      halo.rotation.x = Math.PI / 2;
+      halo.position.y = 0.01;
+      group.add(halo);
+    }
+
     aloft.add(
-      place(badge(kit.pointer(), POINTER, POINTER, pointerOver, POINTED), ...at)
+      place(
+        badge(kit.pointer(colour), POINTER, POINTER, pointerOver, POINTED),
+        ...at
+      )
     );
   }
 
