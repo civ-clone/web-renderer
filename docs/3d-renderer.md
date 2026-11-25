@@ -652,7 +652,8 @@ How plants are placed:
     - **A forest's:** pine; spruce and fir with pines, the boreal forest, weighted towards the poles; birch among pines;
       a mix of beech, oak, birch and pine; beech; and oak among beeches, weighted towards the equator. At the poles a
       forest is about four fifths firs and pines among birches; at the equator about five sixths broadleaf, oaks and
-      birches.
+      birches. The names are the kinds': with 0 A.D.'s trees, a forest's broadleaf is its large oak, its oak the holm
+      oak, and its birch its beech.
     - **A jungle's:** rainforest, broadleaf under tall trees over the canopy and a palm or two; and palms with bananas
       between them.
     - **The kinds** they bring (`PLANT_KINDS`): a fir's narrow spire, an oak's spreading crown, a birch's white trunk,
@@ -664,7 +665,7 @@ How plants are placed:
       trees.
   - **The shore:** trees stand on dry land; a swamp's reeds stand in the shallows too.
   - **Cost** (#1363): a whole square of forest at the middle latitudes is about 975 triangles with the built-in shapes
-    and 2,470 with 0 A.D.'s trees, against 210 and 630 before; of jungle, about 1,180 and 5,070, against 220 and
+    and 3,060 with 0 A.D.'s trees, against 210 and 630 before; of jungle, about 1,180 and 5,040, against 220 and
     1,280. Laying one takes 0.1–0.3 ms. A set's trees are thinned far off (below); the undergrowth, in the overlay's
     mesh, isn't.
 - **A set's trees** (#1335): where a set of models draws a kind of plant (`names.plant`, §10), each of that kind is laid
@@ -698,10 +699,12 @@ How plants are placed:
     again or the copies drawn change, as they share the buffer. Leaves are cut out where their texture's under half
     solid, drawn from both sides, and cast shadows cut out as they are (three.js makes the shadow's material from the
     leaves'). They're clipped past a pole the view's stopped at, as the rest of the overlay is.
-  - **The shipped trees:** civ-clone/models-0ad's, from 0 A.D.: a pine (`conifer`, 58 triangles), a beech
-    (`broadleaf`, 82), a teak (`Jungle:broadleaf`, 124), a date palm (`palm`, 208) and a dead tree (`deadTree`, 199).
-    A forest of them costs more than the built-in set's shapes: about 2,470 triangles a whole square, against 975
-    (the cost, above).
+  - **The shipped trees:** civ-clone/models-0ad's, from 0 A.D.: a pine (`conifer`, 58 triangles), a fir (`fir`, 64,
+    0 A.D.'s fir sapling), a large oak (`broadleaf`, 129), a holm oak (`oak`, 236), a beech drawn as the map's birch
+    (`birch`, 82), a teak (`Jungle:broadleaf`, 124), a tropical tree (`tropical`, 144), a date palm (`palm`, 208), a
+    banana (`banana`, 242) and a dead tree (`deadTree`, 199), since civ-clone/models-0ad#9 (#1363). A forest of them
+    costs more than the built-in set's shapes: about 3,060 triangles a whole square at the middle latitudes, against
+    975 (the cost, above), and a jungle about 5,040.
 
 ### 5.2 Specials and huts
 

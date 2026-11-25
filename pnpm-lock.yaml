@@ -411,7 +411,7 @@ importers:
         version: 0.1.15
       '@civ-clone/models-0ad':
         specifier: github:civ-clone/models-0ad
-        version: https://codeload.github.com/civ-clone/models-0ad/tar.gz/78681bd541243ccab531bbb7d55ea26c9042bcca
+        version: https://codeload.github.com/civ-clone/models-0ad/tar.gz/3e5ec38c05e497756b6ce50573be2ac37982a7ff
       '@civ-clone/models-realistic-by':
         specifier: github:civ-clone/models-realistic-by
         version: https://codeload.github.com/civ-clone/models-realistic-by/tar.gz/6bcea6829414c257bb40e0f1b2a6b0a1a562efcf
@@ -2932,8 +2932,8 @@ packages:
   '@civ-clone/library-world@0.1.0':
     resolution: {integrity: sha512-OSd1jsJiN+/MQtA56spokVxsTDt5bQN34utkK+ZZ6jUhKE06sYtyjXf5D8qP9BVxEwc8qv+J3weM3GCUvaQVbw==}
 
-  '@civ-clone/models-0ad@https://codeload.github.com/civ-clone/models-0ad/tar.gz/78681bd541243ccab531bbb7d55ea26c9042bcca':
-    resolution: {gitHosted: true, integrity: sha512-36TxwqzyGxxOj42lNtV3yrK9u0ApryVGszX5rl8BGXRBMpYXUh1LRHqRGW0A3ePlobiJerAdVFRHTCS89ZCBWQ==, tarball: https://codeload.github.com/civ-clone/models-0ad/tar.gz/78681bd541243ccab531bbb7d55ea26c9042bcca}
+  '@civ-clone/models-0ad@https://codeload.github.com/civ-clone/models-0ad/tar.gz/3e5ec38c05e497756b6ce50573be2ac37982a7ff':
+    resolution: {gitHosted: true, integrity: sha512-YCn6APzgPjfws9I+aSkVAQp0fFJO7eq4pNKqPI6dcHXqjPeqXoz+GEk/GFfK12Xqh9OhqLyh6Tqo/UQhIeAzhQ==, tarball: https://codeload.github.com/civ-clone/models-0ad/tar.gz/3e5ec38c05e497756b6ce50573be2ac37982a7ff}
     version: 0.1.0
 
   '@civ-clone/models-realistic-by@https://codeload.github.com/civ-clone/models-realistic-by/tar.gz/6bcea6829414c257bb40e0f1b2a6b0a1a562efcf':
@@ -9393,7 +9393,7 @@ snapshots:
       '@civ-clone/base-tile-improvement-railroad': 0.1.0
       '@civ-clone/base-tile-improvement-road': 0.1.0
 
-  '@civ-clone/models-0ad@https://codeload.github.com/civ-clone/models-0ad/tar.gz/78681bd541243ccab531bbb7d55ea26c9042bcca': {}
+  '@civ-clone/models-0ad@https://codeload.github.com/civ-clone/models-0ad/tar.gz/3e5ec38c05e497756b6ce50573be2ac37982a7ff': {}
 
   '@civ-clone/models-realistic-by@https://codeload.github.com/civ-clone/models-realistic-by/tar.gz/6bcea6829414c257bb40e0f1b2a6b0a1a562efcf': {}
 
