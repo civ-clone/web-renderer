@@ -1063,11 +1063,12 @@ export const createStage: StageFactory = (
     }
   };
 
-  // A set's plants, each chunk's drawn fewer the further they are from the camera (`plantsKept`), from the nearest of
-  //  them, at each copy.
   // A set's plants, each model's at each copy of each chunk drawn fewer when they're small on the screen (`plantsKept`),
-  //  by the nearest of them, the same share for each of the model's parts, as they share its matrices.
+  //  by how deep into the view the nearest of them is, the same share for each of the model's parts, as they share its
+  //  matrices.
   const reach = new Sphere(),
+    offset = new Vector3(),
+    forward = new Vector3(),
     shares = new Map<InstancedBufferAttribute, number>(),
     thinCopy = (copy: Object3D, focal: number): void => {
       shares.clear();
@@ -1083,10 +1084,12 @@ export const createStage: StageFactory = (
 
         if (share === undefined) {
           reach.copy(mesh.boundingSphere).applyMatrix4(mesh.matrixWorld);
+          // How deep into the view the nearest of them is, along the way the camera looks.
           share = plantsKept(
             Math.max(
               0,
-              camera.position.distanceTo(reach.center) - reach.radius
+              offset.subVectors(reach.center, camera.position).dot(forward) -
+                reach.radius
             ),
             focal
           );
@@ -1097,7 +1100,9 @@ export const createStage: StageFactory = (
       });
     },
     thinPlants = (): void => {
-      // The page's pixels a thing one unit tall stands, one unit from the camera.
+      camera.getWorldDirection(forward);
+
+      // The page's pixels a thing one unit tall stands, one unit deep into the view.
       const focal =
         viewHeight / (2 * Math.tan((camera.fov * Math.PI) / 180 / 2));
 
@@ -1226,10 +1231,7 @@ export const createStage: StageFactory = (
         }
 
         // By their rank, so the first few drawn of them, small on the screen, are an even scatter (`plantsKept`).
-        const matrices = plantMatrices(laid, PLANT_NUMBERS, model.height, [
-          mesh.u,
-          mesh.v,
-        ]);
+        const matrices = plantMatrices(laid, PLANT_NUMBERS, model.height);
 
         for (let n = 0; n < laid.length / PLANT_NUMBERS; n++) {
           plantsBox.expandByPoint(
@@ -1302,7 +1304,7 @@ export const createStage: StageFactory = (
               grown.instanceMatrix = matrices;
               grown.count = matrices.count;
               grown.boundingSphere = spheres[index]!;
-              // Thinned as it's drawn, by how far it is (`thinPlants`).
+              // Thinned as it's drawn, by how small it is on the screen (`thinPlants`).
               grown.userData[ALL_PLANTS] = matrices.count;
               grown.castShadow = true;
               grown.receiveShadow = true;

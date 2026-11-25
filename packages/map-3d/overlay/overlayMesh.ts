@@ -53,6 +53,7 @@ import {
   suburb,
 } from './sprawl';
 import { IN_FRONT_OF_CITY } from '../markers/drawMarker';
+import { ditherRank } from './thinning';
 
 /** Where a square is, and what it needs to know of the land round it, to lay its overlay. */
 export type OverlayPlace = {
@@ -85,8 +86,8 @@ export type OverlayPlace = {
 /**
  * A chunk's overlay as three.js takes it: triangles, each point's normal and colour, relative to its corner; its haze,
  *  see-through, as smog over pollution: triangles, each point's colour and how solid it is (four numbers a point); and
- *  the plants a set of models draws, by the model: where each stands, relative to the corner, how tall it's drawn and
- *  which way it's turned (`PLANT_NUMBERS` numbers each).
+ *  the plants a set of models draws, by the model: where each stands, relative to the corner, how tall it's drawn,
+ *  which way it's turned, and its rank for thinning them (`PLANT_NUMBERS` numbers each).
  */
 export type OverlayMesh = {
   u: number;
@@ -98,8 +99,11 @@ export type OverlayMesh = {
   plants: { [model: string]: Float32Array };
 };
 
-/** How many numbers each plant a set draws has in an overlay: where it stands (u, y, v), how tall, and its turn. */
-export const PLANT_NUMBERS = 5;
+/**
+ * How many numbers each plant a set draws has in an overlay: where it stands (u, y, v), how tall, its turn, and its rank
+ *  among its chunk's for thinning (`ditherRank` in `thinning.ts`).
+ */
+export const PLANT_NUMBERS = 6;
 
 // Triangles as they're made: three numbers a point for each; the haze's, its colours four a point; and the plants a
 //  set draws, `PLANT_NUMBERS` numbers each, by the model.
@@ -2554,7 +2558,8 @@ export const PLANT_HEIGHT: { readonly [kind in PlantKind]: number } = {
   cactus: 0.1,
 };
 
-// One plant, standing at (`u`, `v`), `s` times its usual size, turned `facing` about the vertical.
+// One plant, standing at (`u`, `v`), `s` times its usual size, turned `facing` about the vertical, with its `rank` for
+//  thinning a set's (`ditherRank`).
 const grow = (
   layer: Layer,
   plant: Plant,
@@ -2562,7 +2567,8 @@ const grow = (
   u: number,
   v: number,
   s: number,
-  facing: number
+  facing: number,
+  rank: number
 ): void => {
   const y = layer.ground(u, v),
     { colour, detail } = plant,
@@ -2572,7 +2578,7 @@ const grow = (
   if (model !== null) {
     const laid = layer.soup.plants.get(model) ?? [];
 
-    laid.push(u, y, v, PLANT_HEIGHT[kind] * s, facing);
+    laid.push(u, y, v, PLANT_HEIGHT[kind] * s, facing, rank);
     layer.soup.plants.set(model, laid);
 
     return;
@@ -2773,7 +2779,8 @@ const plants = (layer: Layer, overlay: SquareOverlay): void => {
           v = centre[1] + Math.sin(angle) * out;
 
         if (layer.hasRoom(u, v, room)) {
-          grow(layer, plant, kind, u, v, size, angle);
+          // Not on a lattice: ranked by a number of its own.
+          grow(layer, plant, kind, u, v, size, angle, fraction(seed, n + 50));
           layer.taken.push([u, v, room]);
           layer.grown.push([u, v, kind]);
           break;
@@ -2837,6 +2844,8 @@ export type LatticePlant = {
   //  here, so a neighbour turning to woods doesn't crowd it out.
   room: number;
   facing: number;
+  // Its rank for thinning a set's: the dither's for its cell (`ditherRank`).
+  rank: number;
 };
 
 // The plants of a lattice about `spacing` apart over the whole ground that are on `place`: on as many of its points as
@@ -2950,6 +2959,7 @@ const latticePlants = (
         // Bigger where the woods are whole, so their crowns meet.
         size: usual * (GROWN[0] + (GROWN[1] - GROWN[0]) * whole),
         facing: pointFraction(ci, cj, first + 6) * Math.PI * 2,
+        rank: ditherRank(ci, cj, pointFraction(ci, cj, first + 7)),
       });
     }
   }
@@ -3019,7 +3029,7 @@ const woods = (layer: Layer, overlay: SquareOverlay, growth: Growth): void => {
   const { heightAt, centre } = layer.place;
 
   woodsPlants(overlay, layer.place, growth).forEach(
-    ({ u, v, kind, plant, size, room, facing }) => {
+    ({ u, v, kind, plant, size, room, facing, rank }) => {
       // Not in the water at the shore, but for reeds.
       if (kind !== 'reeds' && heightAt(u, v) < 0) {
         return;
@@ -3042,7 +3052,8 @@ const woods = (layer: Layer, overlay: SquareOverlay, growth: Growth): void => {
           v,
           size *
             (GLADE_SIZE + (1 - GLADE_SIZE) * Math.min(1, Math.max(0, out))),
-          facing
+          facing,
+          rank
         );
         layer.grown.push([u, v, kind]);
       }
@@ -3054,7 +3065,7 @@ const woods = (layer: Layer, overlay: SquareOverlay, growth: Growth): void => {
   const middle = layer.ground(centre[0], centre[1]);
 
   undergrowthPlants(overlay, layer.place, growth).forEach(
-    ({ u, v, kind, plant, size, room, facing }) => {
+    ({ u, v, kind, plant, size, room, facing, rank }) => {
       if (heightAt(u, v) < 0) {
         return;
       }
@@ -3063,7 +3074,7 @@ const woods = (layer: Layer, overlay: SquareOverlay, growth: Growth): void => {
         layer.ground(u, v) + PLANT_HEIGHT[kind] * size < middle + GROUND_COVER;
 
       if (layer.hasRoom(u, v, room, low ? COVER_CLEAR : STAND_CLEAR)) {
-        grow(layer, plant, kind, u, v, size, facing);
+        grow(layer, plant, kind, u, v, size, facing, rank);
         layer.grown.push([u, v, kind]);
       }
     }

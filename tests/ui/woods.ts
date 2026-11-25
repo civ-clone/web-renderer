@@ -29,7 +29,6 @@ import {
 import {
   PLANTS_THIN_LEAST,
   plantMatrices,
-  plantRank,
   plantsKept,
   rankedOrder,
 } from '@civ-clone/ui-map-3d/overlay/thinning';
@@ -738,7 +737,8 @@ ids.forEach((topologyId) => {
 // Dense woods (#1363), on the square grid, on 24 squares each whole forest and whole jungle (their neighbours the
 //  same): trees close together, smaller towards the clearing round the middle where a unit stands; undergrowth under
 //  them, more of it in a jungle; in the clearing only what's lower than a unit's stand (0.03), most squares' clearing
-//  growing some; a swamp as sparse as woods were (a point every 0.26, about 15 a square, against 35).
+//  growing some; a swamp as sparse as woods were (a point every 0.26, about 15 a square, against 35); and each tree a
+//  set draws laid with its lattice point's rank.
 {
   const width = 12,
     height = 10,
@@ -831,6 +831,35 @@ ids.forEach((topologyId) => {
       },
       [[], []]
     ),
+    // Each tree a set draws, laid with its rank: the one its lattice point has (`woodsPlants`), where it stands.
+    misranked = squares.flatMap(([x, y]) => {
+      const into = soup(),
+        place = {
+          ...placeOf(layout, topology, x!, y!),
+          plantModel: (kind: string) => (TREE_KINDS.has(kind) ? 'tree' : null),
+        },
+        overlay = overlayOf(topology, x!, y!, 'Forest', () => 'Forest'),
+        ranks = new Map(
+          woodsPlants(overlay, place, forest).map(({ u, v, rank }) => [
+            `${u.toFixed(5)},${v.toFixed(5)}`,
+            rank,
+          ])
+        ),
+        laid =
+          (layOverlay(overlay, place, into), into.plants.get('tree') ?? []);
+
+      return Array.from(
+        { length: laid.length / PLANT_NUMBERS },
+        (_, n) => n
+      ).filter(
+        (n) =>
+          ranks.get(
+            `${laid[n * PLANT_NUMBERS]!.toFixed(5)},${laid[
+              n * PLANT_NUMBERS + 2
+            ]!.toFixed(5)}`
+          ) !== laid[n * PLANT_NUMBERS + 5]
+      );
+    }).length,
     swamp = average(
       squares.map(
         ([x, y]) =>
@@ -868,8 +897,9 @@ ids.forEach((topologyId) => {
       heights[0].length > 0 && average(heights[0]) < average(heights[1]) * 0.92,
       swamp < 18,
       misplaced,
+      misranked,
     ],
-    [true, true, true, true, 0, 0, true, true, true, true, 0]
+    [true, true, true, true, 0, 0, true, true, true, true, 0, 0]
   );
 }
 
@@ -935,15 +965,15 @@ ids.forEach((topologyId) => {
   );
 }
 
-// Far woods thinned (#1363), on a view 900 of the page's pixels tall: all of a chunk's plants drawn at play's distances,
-//  from the nearest the camera comes to the furthest ground the default view shows (about 34 away, at 1.5 times its
-//  distance, as its top edge looks down 35 degrees); fewer zoomed right out, but never fewer than the least share. Each plant's rank its own, from 0 to 1, the same for the same tree laid again;
-//  the first quarter of a forest's trees by rank, as a far chunk draws them, about a quarter of each square's; each
-//  matrix stands its own tree, in that order, as tall as it's laid; and a chunk's ranked by where they are on the world,
-//  not from its corner.
+// Far woods thinned (#1363): all of a chunk's plants drawn at play's depths, on a view 640 of the page's pixels tall or
+//  more, as deep as the furthest ground the default view shows (its top edge looks down 35 degrees); fewer zoomed right
+//  out, never fewer than the least share. Each plant's rank laid with it, from 0 to 1, the same laid again; on a world 80
+//  across, the first quarter of a forest's trees by rank, as a chunk thinned draws them, about a quarter of each
+//  square's, at its west and at its east, where the lattice's step has drifted furthest from 0.17; and each matrix stands
+//  its own tree, in that order, as tall as it's laid.
 {
-  const width = 12,
-    height = 10,
+  const width = 80,
+    height = 50,
     topologyId: TopologyId = 'square',
     topology = topologyFor({ width, height, topologyId }),
     layout = groundLayoutFor({
@@ -952,10 +982,9 @@ ids.forEach((topologyId) => {
       topologyId,
       wrapsY: topology.wrapsY(),
     }),
-    squares = Array.from({ length: 16 }, (_, at) => [
-      2 + (at % 4),
-      2 + Math.floor(at / 4),
-    ]),
+    squares = [2, 3, 4, 5, 70, 71, 72, 73, 74, 75, 76, 77].flatMap((x) =>
+      [10, 11].map((y) => [x, y])
+    ),
     lay = () =>
       squares.map(([x, y]) =>
         woodsPlants(
@@ -967,39 +996,26 @@ ids.forEach((topologyId) => {
     bySquare = lay(),
     again = lay().flat(),
     planted = bySquare.flat(),
-    laid = planted.flatMap(({ u, v }, n) => [
+    laid = planted.flatMap(({ u, v, rank }, n) => [
       u,
       n * 0.001,
       v,
       0.2 + n * 1e-4,
       n,
+      rank,
     ]),
     order = rankedOrder(laid, PLANT_NUMBERS),
-    // As a chunk lays them, from its corner (here at 1.5, 2.25 on the world): ranked by where they are on the world.
-    fromCorner = rankedOrder(
-      laid.map((number, at) =>
-        at % PLANT_NUMBERS === 0
-          ? number - 1.5
-          : at % PLANT_NUMBERS === 2
-          ? number - 2.25
-          : number
-      ),
-      PLANT_NUMBERS,
-      [1.5, 2.25]
-    ),
-    // How many of the first quarter by rank are on each square.
+    // How many of the first quarter by rank are on each square, as a share of its own.
     first = new Set(order.slice(0, Math.ceil(order.length / 4))),
-    perSquare = bySquare.map(
-      (trees, square) =>
-        trees.filter((_, n) => {
-          const index =
-            bySquare
-              .slice(0, square)
-              .reduce((sum, each) => sum + each.length, 0) + n;
+    perSquare = bySquare.map((trees, square) => {
+      const before = bySquare
+        .slice(0, square)
+        .reduce((sum, each) => sum + each.length, 0);
 
-          return first.has(index);
-        }).length / trees.length
-    ),
+      return (
+        trees.filter((_, n) => first.has(before + n)).length / trees.length
+      );
+    }),
     matrices = plantMatrices(laid, PLANT_NUMBERS, 2),
     // Each matrix's place and height, as it stands a model 2 tall, against the tree it should be.
     misplaced = order.filter((n, index) => {
@@ -1017,35 +1033,32 @@ ids.forEach((topologyId) => {
         Math.abs(scale.y * 2 - laid[n * PLANT_NUMBERS + 3]!) > 1e-5
       );
     }).length,
-    focal = 900 / (2 * Math.tan(FIELD_OF_VIEW / 2)),
-    distances = [
-      DISTANCE_MIN,
-      defaultOrbit([0, 0]).distance,
-      defaultOrbit([0, 0]).distance * 1.5,
-      DISTANCE_MAX,
-      DISTANCE_MAX * 2,
-      1000,
-    ],
-    kept = distances.map((distance) => plantsKept(distance, focal));
+    focal = 640 / (2 * Math.tan(FIELD_OF_VIEW / 2)),
+    { distance, pitch } = defaultOrbit([0, 0]),
+    // How deep the furthest ground the default view shows is: along its top edge's ray, which looks down its pitch less
+    //  half the field of view, to the ground, and how far that is along the way the camera looks.
+    deepest =
+      ((distance * Math.sin(pitch)) / Math.sin(pitch - FIELD_OF_VIEW / 2)) *
+      Math.cos(FIELD_OF_VIEW / 2),
+    depths = [DISTANCE_MIN, distance, deepest, DISTANCE_MAX, 1000],
+    kept = depths.map((depth) => plantsKept(depth, focal));
 
   expect(
-    'far woods thinned: all drawn at play’s distances, fewer zoomed right out, never under the least; a plant’s rank its own, the same laid again; the first quarter by rank about a quarter of each square’s; each matrix its own tree, as tall as it’s laid',
+    'far woods thinned: all drawn at play’s depths, fewer zoomed right out, never under the least; a plant’s rank laid with it, the same laid again; the first quarter by rank about a quarter of each square’s, west and east on a world 80 across; each matrix its own tree, as tall as it’s laid',
     [
       kept.slice(0, 3),
       kept[3]! < 1,
       kept.every((share, n) => n === 0 || share <= kept[n - 1]!),
-      kept[5],
+      kept[4],
       planted.every(
-        ({ u, v }, n) =>
-          plantRank(u, v) === plantRank(again[n]!.u, again[n]!.v) &&
-          plantRank(u, v) >= 0 &&
-          plantRank(u, v) < 1
+        ({ rank }, n) => rank === again[n]!.rank && rank >= 0 && rank < 1
       ),
-      perSquare.filter((share) => share < 0.15 || share > 0.35),
+      perSquare
+        .map((share, square) => [squares[square]!.join(','), share] as const)
+        .filter(([, share]) => share < 0.15 || share > 0.35),
       [misplaced, matrices.length / 16 === planted.length],
-      fromCorner.every((n, at) => n === order[at]),
     ],
-    [[1, 1, 1], true, true, PLANTS_THIN_LEAST, true, [], [0, true], true]
+    [[1, 1, 1], true, true, PLANTS_THIN_LEAST, true, [], [0, true]]
   );
 }
 

@@ -654,12 +654,13 @@ How plants are placed:
     units'.
   - **Drawing:** a chunk's plants of each model are one instanced draw call for each of its parts at each copy of the
     world, their matrices one buffer every copy shares, and how far they reach worked out once. Since #1363, they're
-    ordered by a rank of their own (`plantRank`, `rankedOrder` in `overlay/thinning.ts`): a 4 by 4 dither over the
-    woods' lattice, by where they stand on the world. As the view draws, a chunk's copy whose nearest tree would stand
-    under 8 of the page's pixels tall on the screen (`PLANTS_FULL_PIXELS`, a tree 0.3 tall) draws fewer of them, the
-    first few by rank, an even scatter: as many to the screen's area as at 8 pixels, never under a fifth
-    (`plantsKept`), the same share for each of a model's parts. On a view 900 pixels tall that's from about 46 away,
-    past the furthest ground the default view shows (about 34), so only a camera drawn well out, or looking low to the
+    ordered by a rank laid with each (`ditherRank` in `overlay/thinning.ts`, the overlay's sixth number for a plant):
+    a 4 by 4 dither over the cells of the lattice it stands on, and within that a fraction of its own. As the view
+    draws, a chunk's copy whose nearest tree is deep enough into the view (along the way the camera looks) that a tree
+    0.3 tall there would stand under 8 of the page's pixels (`PLANTS_FULL_PIXELS`) draws fewer of them, the first few
+    by rank, an even scatter: as many to the screen's area as at 8 pixels, never under a fifth (`plantsKept`), the
+    same share for each of a model's parts. At the default view, the furthest ground it shows is about 32 deep, so on
+    a view 640 pixels tall or more all of its woods are drawn; only a camera drawn well out, or looking low to the
     horizon, thins them. Every copy's let go of together, when the chunk's laid again or the copies drawn change, as
     they share the buffer. Leaves are cut out where their texture's under half solid, drawn from both sides, and cast
     shadows cut out as they are (three.js makes the shadow's material from the leaves'). They're clipped past a pole
