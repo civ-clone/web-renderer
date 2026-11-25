@@ -1011,10 +1011,17 @@ expect(
           );
         }),
     // Each solid among `triangles`, a box's twelve in a row, or as many as `each` says (a cone's 16, a cylinder's 32).
-    boxesOf = (triangles: Triangle[], each = 12): Triangle[][] =>
-      Array.from({ length: triangles.length / each }, (_, b) =>
+    boxesOf = (triangles: Triangle[], each = 12): Triangle[][] => {
+      if (triangles.length % each !== 0) {
+        failures.push(
+          `${triangles.length} triangles aren't solids of ${each} each`
+        );
+      }
+
+      return Array.from({ length: triangles.length / each }, (_, b) =>
         triangles.slice(b * each, b * each + each)
-      ),
+      );
+    },
     // Whether a solid's lowest points are each under the ground, or on it, as `height` has it.
     grounded =
       (height: (u: number, v: number) => number) =>
@@ -1161,11 +1168,31 @@ expect(
           frame,
           way,
           // Its mouth's face in front of all of its rock, and the rock over the mouth.
+          // Its mouth's face in front of all of its rock, the rock over the mouth, and the rock's highest at its front,
+          //  its face upright behind the mouth, sloping back from there.
           faced:
             Math.max(...pointsIn(mouth!).map(forward)) >
               Math.max(...pointsIn(rock).map(forward)) &&
             Math.max(...pointsIn(rock).map(([, y]) => y)) >
-              Math.max(...pointsIn(mouth!).map(([, y]) => y)),
+              Math.max(...pointsIn(mouth!).map(([, y]) => y)) &&
+            (() => {
+              const points = pointsIn(rock),
+                high = Math.max(...points.map(([, y]) => y)),
+                front = Math.max(...points.map(forward));
+
+              return points
+                .filter(([, y]) => y > high - 1e-6)
+                .every((point) => forward(point) > front - 1e-6);
+            })(),
+          // How many of each part it has: its mouth, its posts and lintel, its rock's triangles, its heaps of spoil,
+          //  its cart.
+          parts: [
+            coloured(MINE_COLOURS.mouth).length / 12,
+            coloured(MINE_COLOURS.timber).length / 12,
+            rock.length,
+            coloured(MINE_COLOURS.spoil).length / 16,
+            coloured(MINE_COLOURS.iron).length / 12,
+          ],
           grounded: [
             mouth!,
             ...posts,
@@ -1198,8 +1225,13 @@ expect(
         ).length,
         [...ridged, ...flats].filter(({ faced }) => !faced).length,
         ridged.filter(({ grounded }) => !grounded).length,
+        [
+          ...new Set(
+            [...ridged, ...flats].map(({ parts }) => JSON.stringify(parts))
+          ),
+        ],
       ],
-      [0, 0, 0, 0]
+      [0, 0, 0, 0, [JSON.stringify([1, 3, 8, 2, 1])]]
     );
   }
 
@@ -1276,6 +1308,11 @@ expect(
             spoil: boxesOf(mine.filter(isColour(MINE_COLOURS.spoil)), 16).every(
               grounded((u) => height(u))
             ),
+            // Two haystacks on the irrigated square, a silo on farmland, two heaps of spoil by the headframe.
+            counted:
+              triangles.filter(isColour(straw)).length === 2 * 48 &&
+              triangles.filter(isColour(silo)).length === 72 &&
+              mine.filter(isColour(MINE_COLOURS.spoil)).length === 2 * 16,
           },
         ];
       }),
@@ -1418,14 +1455,73 @@ expect(
         })
       ),
       // How far past its square's edges what's laid on a square reaches, at the most.
-      past = (overlay: SquareOverlay) =>
+      past = (
+        overlay: SquareOverlay,
+        keep: (triangle: Triangle) => boolean = () => true
+      ) =>
         Math.max(
           ...squares.map((x) => {
-            const { u, v } = boundsOf(trianglesOn(overlay, place(x, 3)));
+            const { u, v } = boundsOf(
+              trianglesOn(overlay, place(x, 3)).filter(keep)
+            );
 
             return Math.max(x - u[0]!, u[1]! - (x + 1), 3 - v[0]!, v[1]! - 4);
           })
+        ),
+      // Whether (u, v) is inside a footprint, its corners in order round it, or on its edge.
+      inside = (
+        corners: readonly (readonly [number, number])[],
+        [u, v]: readonly [number, number]
+      ) => {
+        const sides = corners.map(([au, av], index) => {
+          const [bu, bv] = corners[(index + 1) % corners.length]!;
+
+          return (bu - au) * (v - av) - (bv - av) * (u - au);
+        });
+
+        return (
+          sides.every((side) => side > -1e-9) ||
+          sides.every((side) => side < 1e-9)
         );
+      },
+      // A farm's three footprints, its farmhouse's, its barn's and its yard's, which its fields keep clear of: of each
+      //  square's farm, irrigated and farmland, how many there are, and how many points of its buildings are outside
+      //  all of them.
+      footprints = squares.flatMap((x) =>
+        [['Irrigation'], ['Irrigation', 'Farmland']].map((improvements) => {
+          const laid = soup(),
+            { farm } = layOverlay(
+              overlayFor(square(improvements), [])!,
+              place(x, 3),
+              laid
+            ),
+            points: [number, number][] = [];
+
+          for (let at = 0; at < laid.positions.length; at += 3) {
+            if (
+              farmsteads({
+                points: [],
+                normals: [],
+                colour: [
+                  laid.colours[at]!,
+                  laid.colours[at + 1]!,
+                  laid.colours[at + 2]!,
+                ],
+              })
+            ) {
+              points.push([laid.positions[at]!, laid.positions[at + 2]!]);
+            }
+          }
+
+          return [
+            farm.length,
+            points.length > 0,
+            points.filter(
+              (point) => !farm.some((corners) => inside(corners, point))
+            ).length,
+          ];
+        })
+      );
 
     expect(
       'no farm among a city’s houses; rows stop short of a farm; farms and mines inside their square, but for a little',
@@ -1434,9 +1530,14 @@ expect(
         suburb.filter(farmsteads).length,
         underRows.reduce((sum, each) => sum + each, 0),
         past(overlayFor(square(['Mine']), [])!) <= 0.03,
+        past(
+          overlayFor(square(['Mine'], { terrain: 'Mountains' }), [])!,
+          isColour(...Object.values(MINE_COLOURS))
+        ) <= 0.03,
         past(overlayFor(square(['Irrigation']), [])!) <= 0.03,
+        [...new Set(footprints.map((each) => JSON.stringify(each)))],
       ],
-      [true, 0, 0, true, true]
+      [true, 0, 0, true, true, true, [JSON.stringify([3, true, 0])]]
     );
   }
 }

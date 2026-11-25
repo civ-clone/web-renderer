@@ -1295,7 +1295,9 @@ const mine = (
       [mu, mv] = at(0, -0.007 * f),
       mouth = lowest(across(0.025, [-0.004, -0.01])) - 0.004,
       [ru, rv] = at(0, -0.071 * f),
-      rock = lowest(across(0.0425, [-0.011, -0.071, -0.131])) - 0.004;
+      rock =
+        lowest(across(0.0425, [-0.011, -0.041, -0.071, -0.101, -0.131])) -
+        0.004;
 
     layer.solid(
       box,
@@ -1329,12 +1331,13 @@ const mine = (
       );
     });
 
-    const [lu, lv] = at(0, 0);
+    // Its lintel, from the frame's front back to the rock's face, over the mouth's top.
+    const [lu, lv] = at(0, -0.0025 * f);
 
     layer.solid(
       box,
       [lu, top + 0.002 * f, lv],
-      [0.075 * f, 0.012 * f, 0.012 * f],
+      [0.075 * f, 0.012 * f, 0.017 * f],
       WOOD,
       [0, facing, 0]
     );
@@ -1347,15 +1350,16 @@ const mine = (
   }
 
   // The headframe: four legs leaning in, a brace round them halfway up, and the wheel on top, square with the way it
-  //  faces, from the lowest of the ground at their feet.
-  const y = Math.min(
-      ...[
-        [-1, -1],
-        [1, -1],
-        [-1, 1],
-        [1, 1],
-      ].map(([sx, sz]) => ground(sx! * 0.03 * f, sz! * 0.03 * f))
-    ),
+  //  faces, from the lowest of the ground at their feet, which lean out to 0.035 of its size, and a little below.
+  const y =
+      Math.min(
+        ...[
+          [-1, -1],
+          [1, -1],
+          [-1, 1],
+          [1, 1],
+        ].map(([sx, sz]) => ground(sx! * 0.035 * f, sz! * 0.035 * f))
+      ) - 0.004,
     height = 0.15 * f;
 
   [
@@ -1553,14 +1557,16 @@ const farmstead = (
   }
 
   // The yard's, round its haystacks or its silo, in order round it.
+  const [right, near] = kind === 'farmland' ? [-0.03, -0.03] : [0, -0.018];
+
   return [
     footprintOf(farmhouse),
     barn,
     [
       [-0.06, -0.06],
-      [0, -0.06],
-      [0, -0.018],
-      [-0.06, -0.018],
+      [right, -0.06],
+      [right, near],
+      [-0.06, near],
     ].map(([x, z]) => at(x! * f, z! * f)),
   ];
 };
@@ -2541,7 +2547,8 @@ const woods = (layer: Layer, overlay: SquareOverlay, growth: Growth): void => {
 
 /**
  * Lays `overlay` for the square at `place` into `soup`. What stands on it (its mine, specials, hut, plants), where and
- *  with how much room, and the lines across it they keep clear of.
+ *  with how much room, the lines across it they keep clear of, and its farm's buildings' footprints, which its fields
+ *  keep clear of.
  */
 export const layOverlay = (
   overlay: SquareOverlay,
@@ -2554,6 +2561,7 @@ export const layOverlay = (
     readonly [number, number]
   ])[];
   grown: readonly (readonly [number, number, PlantKind])[];
+  farm: readonly (readonly (readonly [number, number])[])[];
 } => {
   const layer = new Layer(soup, place),
     { centre, radius } = place;
@@ -2562,7 +2570,12 @@ export const layOverlay = (
   if (overlay.city !== null) {
     city(layer, overlay.city);
 
-    return { taken: layer.taken, lines: layer.lines, grown: layer.grown };
+    return {
+      taken: layer.taken,
+      lines: layer.lines,
+      grown: layer.grown,
+      farm: [],
+    };
   }
 
   // The lines across it, which what stands on it keeps clear of: a road's along its bend, a railroad's straight.
@@ -2671,16 +2684,17 @@ export const layOverlay = (
   // A farm's buildings among its fields, where no city's houses have spread onto it: clear of what's there, out of the
   //  water, as a city's houses are, where a river or the shore dips the land below it, and none where it's all wet; the
   //  fields round them.
+  const farm: (readonly (readonly [number, number])[])[] = [];
+
   if (overlay.irrigation !== null) {
-    const farm: (readonly (readonly [number, number])[])[] = [],
-      claimed =
-        houses.length === 0
-          ? layer.claimMost(...SPOTS.farm, FARM_ROOMS, (u, v, room) =>
-              ROUND.every(
-                ([du, dv]) => layer.ground(u + du * room, v + dv * room) >= 0
-              )
+    const claimed =
+      houses.length === 0
+        ? layer.claimMost(...SPOTS.farm, FARM_ROOMS, (u, v, room) =>
+            ROUND.every(
+              ([du, dv]) => layer.ground(u + du * room, v + dv * room) >= 0
             )
-          : null;
+          )
+        : null;
 
     if (claimed !== null) {
       const [fu, fv, room] = claimed;
@@ -2708,7 +2722,7 @@ export const layOverlay = (
     }
   }
 
-  return { taken: layer.taken, lines: layer.lines, grown: layer.grown };
+  return { taken: layer.taken, lines: layer.lines, grown: layer.grown, farm };
 };
 
 /** The overlay of a chunk whose corner is at (`u`, `v`): each of its squares' laid together, relative to the corner. */
