@@ -689,10 +689,16 @@ class Layer {
    *  there already, and of the unit's stand at its middle, the least of them; and, if it's to stay `inside`, of the
    *  square's edge, but for `EDGE_REACH`. Less than none where it hasn't enough.
    */
-  clearance(u: number, v: number, room: number, inside = false): number {
+  clearance(
+    u: number,
+    v: number,
+    room: number,
+    inside = false,
+    stand = STAND_CLEAR
+  ): number {
     const [cu, cv] = this.place.centre,
       { outline } = this.place;
-    let least = Math.hypot(u - cu, v - cv) - STAND_CLEAR - room;
+    let least = Math.hypot(u - cu, v - cv) - stand - room;
 
     this.lines.forEach(([a, b]) => {
       least = Math.min(least, distanceTo(u, v, a, b) - LINE_CLEAR - room);
@@ -716,9 +722,12 @@ class Layer {
     return least;
   }
 
-  /** Whether (`u`, `v`) has `room` clear of the square's lines, of what stands there already, and of the stand. */
-  hasRoom(u: number, v: number, room: number): boolean {
-    return this.clearance(u, v, room) >= 0;
+  /**
+   * Whether (`u`, `v`) has `room` clear of the square's lines, of what stands there already, and of the stand, by
+   *  `stand` from the middle.
+   */
+  hasRoom(u: number, v: number, room: number, stand = STAND_CLEAR): boolean {
+    return this.clearance(u, v, room, false, stand) >= 0;
   }
 
   /**
@@ -2662,10 +2671,11 @@ const grow = (
       );
       break;
     case 'scrub':
+      // A low mound, its five sides open beneath: woods' undergrowth is mostly scrub, so it's cheap.
       layer.solid(
-        crown,
-        [u, y + 0.008 * s, v],
-        [0.05 * s, 0.02 * s, 0.05 * s],
+        tier,
+        [u, y + 0.009 * s, v],
+        [0.05 * s, 0.018 * s, 0.05 * s],
         colour,
         [0, facing, 0]
       );
@@ -2781,13 +2791,14 @@ const plants = (layer: Layer, overlay: SquareOverlay): void => {
 //  a lone square of forest is a whole wood too. Each point has numbers of its own, for whether it's planted, what grows
 //  there and how big, so a neighbour turning to woods only adds trees, away from the shore (where the land under a
 //  tree can fall below the sea with it): each keeps the room it would whole, and the same lines clear (its own roads,
-//  and its neighbours' that cross its corners).
+//  and its neighbours' that cross its corners). Their undergrowth (`Growth#undergrowth`) grows the same way, on a
+//  lattice of its own.
 /**
- * How far apart woods' lattice points are, about: as many as fit the world's period exactly. Not a whole share of a
- *  square, so the points don't line up with squares' edges, and the fringe at an edge to other ground has points at
- *  every distance from it.
+ * How far apart woods' trees' lattice points are, about, where their growth doesn't say (`Growth#spacing`): as many
+ *  as fit the world's period exactly. Not a whole share of a square, so the points don't line up with squares' edges,
+ *  and the fringe at an edge to other ground has points at every distance from it.
  */
-export const CANOPY = 0.26;
+export const CANOPY = 0.17;
 
 // How far a point's jittered from its cell's middle, either way, as a share of the cell: it keeps trees apart.
 const JITTER = 0.3,
@@ -2797,16 +2808,26 @@ const JITTER = 0.3,
   // How big woods' plants grow against their usual, from the fringe to where they're whole.
   GROWN = [0.9, 1.3] as const;
 
+/**
+ * Round the clearing a unit stands in: how far out from where its trees may first stand they grow smaller (`GLADE`), and
+ *  how small they are there (`GLADE_SIZE`), so the tallest don't wall a unit in. What grows lower than a unit's stand
+ *  is thick (`STAND_HEIGHT` on the markers, 0.03) grows in the clearing too (`GROUND_COVER`), as near the middle as
+ *  `COVER_CLEAR` and its room, under the stand where a unit stands on it.
+ */
+export const GLADE = 0.12,
+  GLADE_SIZE = 0.7,
+  // How much of a tree's room its crown may reach over the clearing by: over the stand's rim (0.2 from the middle), not
+  //  as far in as its figures.
+  CROWN_OVER = 0.35,
+  GROUND_COVER = 0.03,
+  COVER_CLEAR = 0.04;
+
 // A lattice point's own fraction, the `n`th, from where it is on the world.
 const pointFraction = (i: number, j: number, n: number): number =>
   fraction(Math.imul(i, 73856093) ^ Math.imul(j, 19349663) ^ 0x5bd1e995, n);
 
-/** The trees of woods on `place`, and where each stands: as `woods` lays them, without laying them. */
-export const woodsPlants = (
-  overlay: SquareOverlay,
-  place: OverlayPlace,
-  growth: Growth
-): {
+/** A plant of woods, and where it stands: as `woods` lays it, without laying it. */
+export type LatticePlant = {
   u: number;
   v: number;
   kind: PlantKind;
@@ -2816,13 +2837,27 @@ export const woodsPlants = (
   //  here, so a neighbour turning to woods doesn't crowd it out.
   room: number;
   facing: number;
-}[] => {
+};
+
+// The plants of a lattice about `spacing` apart over the whole ground that are on `place`: on as many of its points as
+//  `share` says where the woods are whole, fewer at their fringe, each of `plants` as often as its count says, a
+//  forest's trees conifers as often as its latitude says (`conifers`). Each point's numbers are its own, from the
+//  `first`th, so two lattices' points don't share theirs.
+const latticePlants = (
+  overlay: SquareOverlay,
+  place: OverlayPlace,
+  spacing: number,
+  share: number,
+  plants: readonly Plant[],
+  first: number,
+  conifers?: readonly [number, number]
+): LatticePlant[] => {
   const { centre, outline, owns, around, period, toward, latitude } = place,
-    cellsU = Math.max(1, Math.round(period.u / CANOPY)),
+    cellsU = Math.max(1, Math.round(period.u / spacing)),
     stepU = period.u / cellsU,
     cellsV =
-      period.v === null ? null : Math.max(1, Math.round(period.v / CANOPY)),
-    stepV = period.v === null || cellsV === null ? CANOPY : period.v / cellsV,
+      period.v === null ? null : Math.max(1, Math.round(period.v / spacing)),
+    stepV = period.v === null || cellsV === null ? spacing : period.v / cellsV,
     us = outline.map(([u]) => u),
     vs = outline.map(([, v]) => v),
     [firstI, lastI] = [
@@ -2844,16 +2879,20 @@ export const woodsPlants = (
 
         return { mu, mv, length };
       }),
-    total = growth.plants.reduce((sum, { count }) => sum + count, 0),
-    found: ReturnType<typeof woodsPlants> = [];
+    total = plants.reduce((sum, { count }) => sum + count, 0),
+    found: LatticePlant[] = [];
 
   for (let j = firstJ; j <= lastJ; j++) {
     for (let i = firstI; i <= lastI; i++) {
       // The same point at every copy of the world.
       const ci = ((i % cellsU) + cellsU) % cellsU,
         cj = cellsV === null ? j : ((j % cellsV) + cellsV) % cellsV,
-        u = (i + 0.5 + (pointFraction(ci, cj, 0) * 2 - 1) * JITTER) * stepU,
-        v = (j + 0.5 + (pointFraction(ci, cj, 1) * 2 - 1) * JITTER) * stepV;
+        u =
+          (i + 0.5 + (pointFraction(ci, cj, first + 0) * 2 - 1) * JITTER) *
+          stepU,
+        v =
+          (j + 0.5 + (pointFraction(ci, cj, first + 1) * 2 - 1) * JITTER) *
+          stepV;
 
       if (!owns(u, v)) {
         continue;
@@ -2871,15 +2910,18 @@ export const woodsPlants = (
         return Math.min(least, Math.max(0, inward) / MARGIN);
       }, 1);
 
-      if (pointFraction(ci, cj, 2) >= FRINGE + (1 - FRINGE) * whole) {
+      if (
+        pointFraction(ci, cj, first + 2) >=
+        (FRINGE + (1 - FRINGE) * whole) * share
+      ) {
         continue;
       }
 
       // Which of its plants, as often as each's count says.
-      let pick = pointFraction(ci, cj, 3) * total,
-        plant = growth.plants[0]!;
+      let pick = pointFraction(ci, cj, first + 3) * total,
+        plant = plants[0]!;
 
-      for (const each of growth.plants) {
+      for (const each of plants) {
         plant = each;
         pick -= each.count;
 
@@ -2888,17 +2930,16 @@ export const woodsPlants = (
         }
       }
 
-      const conifers = growth.conifers,
-        kind: PlantKind =
-          conifers !== undefined &&
-          pointFraction(ci, cj, 4) >=
-            conifers[0] + (conifers[1] - conifers[0]) * latitude
-            ? 'broadleaf'
-            : plant.kind;
+      const kind: PlantKind =
+        conifers !== undefined &&
+        pointFraction(ci, cj, first + 4) >=
+          conifers[0] + (conifers[1] - conifers[0]) * latitude
+          ? 'broadleaf'
+          : plant.kind;
 
       const usual =
         plant.size[0] +
-        (plant.size[1] - plant.size[0]) * pointFraction(ci, cj, 5);
+        (plant.size[1] - plant.size[0]) * pointFraction(ci, cj, first + 5);
 
       found.push({
         u,
@@ -2908,13 +2949,46 @@ export const woodsPlants = (
         room: ROOM[kind] * usual * GROWN[1],
         // Bigger where the woods are whole, so their crowns meet.
         size: usual * (GROWN[0] + (GROWN[1] - GROWN[0]) * whole),
-        facing: pointFraction(ci, cj, 6) * Math.PI * 2,
+        facing: pointFraction(ci, cj, first + 6) * Math.PI * 2,
       });
     }
   }
 
   return found;
 };
+
+/** The trees of woods on `place`, and where each stands: as `woods` lays them, without laying them. */
+export const woodsPlants = (
+  overlay: SquareOverlay,
+  place: OverlayPlace,
+  growth: Growth
+): LatticePlant[] =>
+  latticePlants(
+    overlay,
+    place,
+    growth.spacing ?? CANOPY,
+    1,
+    growth.plants,
+    0,
+    growth.conifers
+  );
+
+/** What grows under woods' trees on `place`, and where each stands: as `woods` lays it, without laying it. */
+export const undergrowthPlants = (
+  overlay: SquareOverlay,
+  place: OverlayPlace,
+  growth: Growth
+): LatticePlant[] =>
+  growth.undergrowth === undefined
+    ? []
+    : latticePlants(
+        overlay,
+        place,
+        growth.undergrowth.spacing,
+        growth.undergrowth.share,
+        growth.undergrowth.plants,
+        10
+      );
 
 // The roads between the square's neighbours that cross its corners (a diagonal road beside it), as its own lines.
 const pathsPast = (layer: Layer, overlay: SquareOverlay): void => {
@@ -2942,7 +3016,7 @@ const pathsPast = (layer: Layer, overlay: SquareOverlay): void => {
 // Woods' trees, each where it has room clear of the unit's stand, the square's lines and what stands on it: not of
 //  each other, as the lattice keeps them apart, and a tree can't see its neighbour's square.
 const woods = (layer: Layer, overlay: SquareOverlay, growth: Growth): void => {
-  const { heightAt } = layer.place;
+  const { heightAt, centre } = layer.place;
 
   woodsPlants(overlay, layer.place, growth).forEach(
     ({ u, v, kind, plant, size, room, facing }) => {
@@ -2951,7 +3025,40 @@ const woods = (layer: Layer, overlay: SquareOverlay, growth: Growth): void => {
         return;
       }
 
-      if (layer.hasRoom(u, v, room)) {
+      // Its crown may reach over the clearing's edge by some of its room (`CROWN_OVER`), as it spreads over the unit.
+      if (layer.hasRoom(u, v, room, STAND_CLEAR - room * CROWN_OVER)) {
+        // Smaller near the clearing about the middle, from as near as it could stand.
+        const out =
+          (Math.hypot(u - centre[0], v - centre[1]) -
+            STAND_CLEAR -
+            room * (1 - CROWN_OVER)) /
+          GLADE;
+
+        grow(
+          layer,
+          plant,
+          kind,
+          u,
+          v,
+          size *
+            (GLADE_SIZE + (1 - GLADE_SIZE) * Math.min(1, Math.max(0, out))),
+          facing
+        );
+        layer.grown.push([u, v, kind]);
+      }
+    }
+  );
+
+  // Under the trees, and in the clearing what's lower than a unit's stand.
+  undergrowthPlants(overlay, layer.place, growth).forEach(
+    ({ u, v, kind, plant, size, room, facing }) => {
+      if (heightAt(u, v) < 0) {
+        return;
+      }
+
+      const low = PLANT_HEIGHT[kind] * size < GROUND_COVER;
+
+      if (layer.hasRoom(u, v, room, low ? COVER_CLEAR : STAND_CLEAR)) {
         grow(layer, plant, kind, u, v, size, facing);
         layer.grown.push([u, v, kind]);
       }

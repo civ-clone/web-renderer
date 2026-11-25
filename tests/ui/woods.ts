@@ -20,10 +20,19 @@ import {
   CANOPY,
   OverlayMesh,
   OverlayPlace,
+  PLANT_NUMBERS,
   layOverlay,
   soup,
+  undergrowthPlants,
   woodsPlants,
 } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
+import {
+  PLANTS_THIN_FROM,
+  PLANTS_THIN_LEAST,
+  plantRank,
+  plantsKept,
+  rankedOrder,
+} from '@civ-clone/ui-map-3d/overlay/thinning';
 import { growthOf } from '@civ-clone/ui-models-builtin/vegetation';
 import Land from '@civ-clone/ui-map-3d/Land';
 import World from '@civ-clone/ui-map/components/World';
@@ -45,6 +54,9 @@ const expect = (description: string, actual: unknown, expected: unknown) => {
     );
   }
 };
+
+// The kinds of plant that are woods' trees, not what grows under them.
+const TREES: readonly string[] = ['conifer', 'broadleaf', 'palm', 'deadTree'];
 
 const ids: TopologyId[] = ['square', 'staggered-iso', 'hex-odd-r'],
   forest = growthOf('Forest')!;
@@ -396,7 +408,7 @@ ids.forEach((topologyId) => {
           return;
         }
 
-        grown.forEach(([u, v]) => {
+        grown.forEach(([u, v, kind]) => {
           const du = b[0] - a[0],
             dv = b[1] - a[1],
             t = Math.max(
@@ -407,8 +419,12 @@ ids.forEach((topologyId) => {
               )
             );
 
-          // Half a road's width (0.035), and a crown's (0.065).
-          if (Math.hypot(u - a[0] - du * t, v - a[1] - dv * t) < 0.1) {
+          // Half a road's width (0.035), and a crown's (0.065); or for what grows under the trees, as near as anything
+          //  stands to a road (0.05).
+          if (
+            Math.hypot(u - a[0] - du * t, v - a[1] - dv * t) <
+            (TREES.includes(kind) ? 0.1 : 0.05)
+          ) {
             onRoad.push(`${x},${y} ${direction}: ${bx},${by} at ${u},${v}`);
           }
         });
@@ -679,6 +695,206 @@ ids.forEach((topologyId) => {
     [0, [true, [], true], 0, [true, [], true]]
   );
 });
+
+// Dense woods (#1363), on the square grid, on 24 squares each whole forest and whole jungle (their neighbours the
+//  same): trees close together, smaller towards the clearing round the middle where a unit stands; undergrowth under
+//  them, more of it in a jungle; in the clearing only what's lower than a unit's stand (0.03), most squares' clearing
+//  growing some; a swamp as sparse as woods were (a point every 0.26, about 15 a square, against 35).
+{
+  const width = 12,
+    height = 10,
+    topologyId: TopologyId = 'square',
+    topology = topologyFor({ width, height, topologyId }),
+    layout = groundLayoutFor({
+      width,
+      height,
+      topologyId,
+      wrapsY: topology.wrapsY(),
+    }),
+    squares = Array.from({ length: 24 }, (_, at) => [
+      2 + (at % 8),
+      2 + Math.floor(at / 8),
+    ]),
+    TREE_KINDS = new Set(TREES),
+    laidOn = (terrain: string, models: boolean) =>
+      squares.map(([x, y]) => {
+        const into = soup(),
+          place = placeOf(layout, topology, x!, y!),
+          { grown } = layOverlay(
+            overlayOf(topology, x!, y!, terrain, () => terrain),
+            models
+              ? {
+                  ...place,
+                  plantModel: (kind) => (TREE_KINDS.has(kind) ? 'tree' : null),
+                }
+              : place,
+            into
+          );
+
+        return { centre: place.centre, grown, into };
+      }),
+    average = (counts: number[]) =>
+      counts.reduce((sum, count) => sum + count, 0) / counts.length,
+    under = (terrain: string) =>
+      average(
+        laidOn(terrain, false).map(
+          ({ grown }) =>
+            grown.filter(([, , kind]) => !TREE_KINDS.has(kind)).length
+        )
+      ),
+    trees = (terrain: string) =>
+      average(
+        laidOn(terrain, false).map(
+          ({ grown }) =>
+            grown.filter(([, , kind]) => TREE_KINDS.has(kind)).length
+        )
+      ),
+    // Points of what's built in that stand higher than a unit's stand within 0.17 of the middle, on squares of
+    //  `terrain`; and how many squares grow something within 0.2 of it.
+    inClearing = (terrain: string) => {
+      const laid = laidOn(terrain, false);
+
+      return [
+        laid.flatMap(({ centre, into }) =>
+          Array.from(
+            { length: into.positions.length / 3 },
+            (_, n) =>
+              [
+                into.positions[n * 3]!,
+                into.positions[n * 3 + 1]!,
+                into.positions[n * 3 + 2]!,
+              ] as const
+          ).filter(
+            ([u, y, v]) =>
+              Math.hypot(u - centre[0], v - centre[1]) < 0.17 && y > 0.031
+          )
+        ).length,
+        laid.filter(({ centre, grown }) =>
+          grown.some(([u, v]) => Math.hypot(u - centre[0], v - centre[1]) < 0.2)
+        ).length,
+      ];
+    },
+    // The heights of a set's trees on whole forest, near the clearing (within 0.36 of the middle) and further out.
+    heights = laidOn('Forest', true).reduce<[number[], number[]]>(
+      ([near, far], { centre, into }) => {
+        const laid = into.plants.get('tree') ?? [];
+
+        for (let n = 0; n < laid.length / PLANT_NUMBERS; n++) {
+          const out = Math.hypot(
+            laid[n * PLANT_NUMBERS]! - centre[0],
+            laid[n * PLANT_NUMBERS + 2]! - centre[1]
+          );
+
+          (out < 0.36 ? near : far).push(laid[n * PLANT_NUMBERS + 3]!);
+        }
+
+        return [near, far];
+      },
+      [[], []]
+    ),
+    swamp = average(
+      squares.map(
+        ([x, y]) =>
+          woodsPlants(
+            overlayOf(topology, x!, y!, 'Swamp', () => 'Swamp'),
+            placeOf(layout, topology, x!, y!),
+            growthOf('Swamp')!
+          ).length
+      )
+    ),
+    // Each of the undergrowth's points on the square the layout says, as the trees' are.
+    misplaced = squares.flatMap(([x, y]) =>
+      undergrowthPlants(
+        overlayOf(topology, x!, y!, 'Jungle', () => 'Jungle'),
+        placeOf(layout, topology, x!, y!),
+        growthOf('Jungle')!
+      ).filter(({ u, v }) => {
+        const [tx, ty] = layout.tileAt(u, v);
+
+        return tx !== x || ty !== y;
+      })
+    ).length;
+
+  expect(
+    'whole forest and jungle: at least 20 trees a square; undergrowth under them, more in a jungle; in the clearing nothing taller than a unit’s stand, but something growing on most squares; a set’s trees smaller near the clearing; a swamp sparse; undergrowth on the square it’s on',
+    [
+      trees('Forest') >= 20,
+      trees('Jungle') >= 20,
+      under('Forest') >= 10,
+      under('Jungle') > under('Forest') * 1.5,
+      inClearing('Forest')[0],
+      inClearing('Jungle')[0],
+      inClearing('Forest')[1]! > 18,
+      inClearing('Jungle')[1]! > 18,
+      heights[0].length > 0 && average(heights[0]) < average(heights[1]) * 0.92,
+      swamp < 18,
+      misplaced,
+    ],
+    [true, true, true, true, 0, 0, true, true, true, true, 0]
+  );
+}
+
+// Far woods thinned (#1363): all of a chunk's plants drawn near the camera, fewer further off but never fewer than the
+//  least share; each plant's rank the same wherever it's laid, from 0 to 1; and the first quarter of a forest's trees by
+//  rank, as a far chunk draws them, spread over every quarter of its squares.
+{
+  const width = 12,
+    height = 10,
+    topologyId: TopologyId = 'square',
+    topology = topologyFor({ width, height, topologyId }),
+    layout = groundLayoutFor({
+      width,
+      height,
+      topologyId,
+      wrapsY: topology.wrapsY(),
+    }),
+    planted = Array.from({ length: 16 }, (_, at) => [
+      2 + (at % 4),
+      2 + Math.floor(at / 4),
+    ]).flatMap(([x, y]) =>
+      woodsPlants(
+        overlayOf(topology, x!, y!, 'Forest', () => 'Forest'),
+        placeOf(layout, topology, x!, y!),
+        forest
+      )
+    ),
+    // As the stage orders them to draw: by the overlay's numbers, where each stands first.
+    ranked = rankedOrder(
+      planted.flatMap(({ u, v }) => [u, 0, v, 1, 0]),
+      PLANT_NUMBERS
+    ).map((n) => planted[n]!),
+    first = ranked.slice(0, Math.ceil(ranked.length / 4)),
+    // How many of the first quarter are in each quarter of the 4 by 4 squares, from (2, 2).
+    quarters = [0, 1, 2, 3].map(
+      (quarter) =>
+        first.filter(
+          ({ u, v }) => (u >= 4 ? 1 : 0) + (v >= 4 ? 2 : 0) === quarter
+        ).length
+    ),
+    distances = [0, PLANTS_THIN_FROM, PLANTS_THIN_FROM * 1.5, 20, 40, 400],
+    kept = distances.map(plantsKept);
+
+  expect(
+    'far woods thinned: all drawn near, fewer further, never under the least; a plant’s rank its own, from 0 to 1; the first quarter by rank spread over every quarter of the woods',
+    [
+      kept.slice(0, 2),
+      kept.every((share, n) => n === 0 || share <= kept[n - 1]!),
+      Math.min(...kept) >= PLANTS_THIN_LEAST,
+      kept[5],
+      planted.every(
+        ({ u, v }) =>
+          plantRank(u, v) === plantRank(u, v) &&
+          plantRank(u, v) >= 0 &&
+          plantRank(u, v) < 1
+      ),
+      quarters.every(
+        (count) =>
+          count > (first.length / 4) * 0.6 && count < (first.length / 4) * 1.4
+      ),
+    ],
+    [[1, 1], true, true, PLANTS_THIN_LEAST, true, true]
+  );
+}
 
 if (failures.length > 0) {
   process.stderr.write(

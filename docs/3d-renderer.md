@@ -608,9 +608,10 @@ How plants are placed:
 
 - **Woods, as built:** forest, jungle and swamp grow as one canopy across their squares, as Civ1's forests run together
   (`woodsPlants` in `packages/map-3d/overlay/overlayMesh.ts`).
-  - **The lattice:** trees stand at the points of a lattice laid over the whole ground, about 0.26 apart, each jittered
-    about its cell. The lattice repeats exactly with the world's period, so it has no seam, and its spacing isn't a
-    whole share of a square, so its points don't line up with squares' edges.
+  - **The lattice:** trees stand at the points of a lattice laid over the whole ground, about 0.17 apart (`CANOPY`;
+    0.26 for a swamp, `Growth#spacing`), each jittered about its cell. The lattice repeats exactly with the world's
+    period, so it has no seam, and its spacing isn't a whole share of a square, so its points don't line up with
+    squares' edges. A whole square of forest or jungle grows about 25 trees (9 before #1363).
   - **Ownership:** each point is on the square the layout says (`GroundLayout#tileAt`). So no point is planted twice,
     none is past the edge of a world that doesn't wrap, and the canopy runs right across the edge between two squares.
   - **Which woods join:** the vegetation table's `canopy` says. Forest and jungle are one woods; swamp is its own. A
@@ -627,9 +628,20 @@ How plants are placed:
     roads that cross its corners (a diagonal road beside it), but not of each other: the lattice keeps them apart. A
     crown at a square's edge can reach over a neighbour's hut or mine by a few hundredths, as a tree can't see what
     stands on its neighbour's square.
+  - **The clearing** (#1363): a unit stands in a clearing in the middle of its square, as everywhere. A tree's crown
+    may reach a third of its room over the clearing's edge (`CROWN_OVER`), over the stand's rim (0.2 from the middle)
+    but no further in than 0.17, short of its figures. Trees within 0.12 of the clearing's edge grow smaller, down to
+    0.7 of their size at it (`GLADE`, `GLADE_SIZE`), so the tallest don't wall a unit in.
+  - **Undergrowth** (#1363, `Growth#undergrowth`, `undergrowthPlants`): bushes, scrub and shrubs under the trees, on
+    a lattice of their own (0.13 apart in a forest, 0.11 in a jungle), with the same fringe and stability, on 0.6 of
+    its points in a forest and 0.7 in a jungle: about 34 a whole square of forest and 51 of jungle. Its scrub is a low
+    five-sided mound. What's lower than a unit's stand is thick (`GROUND_COVER`, 0.03) grows in the clearing too, as
+    near the middle as 0.04 and its room (`COVER_CLEAR`), under the stand where a unit stands; the rest keeps clear of
+    the stand as trees do. It's built in whatever set draws the trees, in the overlay's own mesh.
   - **The shore:** trees stand on dry land; a swamp's reeds stand in the shallows too.
-  - **Cost:** an all-forest chunk has 48,000–58,000 triangles, 11–40% more than when each square scattered its own,
-    and takes 35–50 ms to lay rather than 24–43, a few squares a frame as before.
+  - **Cost** (#1363): a whole square of forest is about 880 triangles with the built-in shapes and 2,060 with 0 A.D.'s
+    trees, against 210 and 630 before; of jungle, about 1,210 and 4,190, against 220 and 1,280. Laying one takes
+    0.1–0.3 ms. A set's trees are thinned far off (below); the undergrowth, in the overlay's mesh, isn't.
 - **A set's trees** (#1335): where a set of models draws a kind of plant (`names.plant`, §10), each of that kind is laid
   as where it stands, how tall and its turn (the overlay's `plants`, by the model), not as the built-in set's shapes,
   and drawn as the set's model.
@@ -641,14 +653,17 @@ How plants are placed:
     height over its origin, where it meets the ground; its roots may reach below. Not at the set's scale, which is its
     units'.
   - **Drawing:** a chunk's plants of each model are one instanced draw call for each of its parts at each copy of the
-    world, their matrices one buffer every copy shares, and how far they reach worked out once. Every copy's let go of
-    together, when the chunk's laid again or the copies drawn change, as they share the buffer. Leaves are cut out
-    where their texture's under half solid, drawn from both sides, and cast shadows cut out as they are (three.js
-    makes the shadow's material from the leaves'). They're clipped past a pole the view's stopped at, as the rest of
-    the overlay is.
+    world, their matrices one buffer every copy shares, and how far they reach worked out once. Since #1363, they're
+    ordered by a rank of their own (`plantRank`, `rankedOrder` in `overlay/thinning.ts`), and as the view draws, a
+    chunk's copy more than 8 from the camera draws fewer of them, the first few by rank, an even scatter: a share of
+    (8 over its distance) squared, never under a fifth (`plantsKept`). Every copy's let go of together, when the
+    chunk's laid again or the copies drawn change, as they share the buffer. Leaves are cut out where their texture's
+    under half solid, drawn from both sides, and cast shadows cut out as they are (three.js makes the shadow's material
+    from the leaves'). They're clipped past a pole the view's stopped at, as the rest of the overlay is.
   - **The shipped trees:** civ-clone/models-0ad's, from 0 A.D.: a pine (`conifer`, 58 triangles), a beech
     (`broadleaf`, 82), a teak (`Jungle:broadleaf`, 124), a date palm (`palm`, 208) and a dead tree (`deadTree`, 199).
-    A forest of pines and beeches costs about what the built-in set's trees do.
+    A forest of pines and beeches costs more than the built-in set's shapes: about 2,060 triangles a whole square,
+    against 880 (the cost, above).
 
 ### 5.2 Specials and huts
 

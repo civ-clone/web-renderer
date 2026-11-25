@@ -60,6 +60,7 @@ import { TileMarker } from './markers/markerFor';
 import { idleChanges } from './idling';
 import unitUnder from './markers/pickUnit';
 import { OverlayMesh, PLANT_NUMBERS } from './overlay/overlayMesh';
+import { plantsKept, rankedOrder } from './overlay/thinning';
 import { FIELD_OF_VIEW, Orbit, eye, sightFor } from './camera/orbit';
 import Water, { Clouds, Ground, SMOG_ORDER } from './water';
 import YieldIcons from './yieldIcons';
@@ -455,6 +456,9 @@ export const overlayCopies = (
   ]);
 
 // The sun's shadow map's size, in texels a side, and how far the sun is from what it lights (its offset below).
+// Where a drawn copy's plants of a model keep how many they are, all of them, as fewer may be drawn.
+const ALL_PLANTS = 'allPlants';
+
 const SHADOW_MAP = 2048,
   SUN_DISTANCE = Math.hypot(30, 40, 20);
 
@@ -1056,8 +1060,39 @@ export const createStage: StageFactory = (
     }
   };
 
+  // A set's plants, each chunk's drawn fewer the further they are from the camera (`plantsKept`), from the nearest of
+  //  them, at each copy.
+  const reach = new Sphere(),
+    thinPlants = (): void =>
+      overlays.forEach(({ drawn }) =>
+        drawn.forEach((copy) =>
+          copy.children.forEach((child) => {
+            const all = child.userData[ALL_PLANTS] as number | undefined,
+              mesh = child as InstancedMesh;
+
+            if (all === undefined || mesh.boundingSphere === null) {
+              return;
+            }
+
+            reach.copy(mesh.boundingSphere).applyMatrix4(mesh.matrixWorld);
+            mesh.count = Math.ceil(
+              all *
+                plantsKept(
+                  Math.max(
+                    0,
+                    camera.position.distanceTo(reach.center) - reach.radius
+                  )
+                )
+            );
+          })
+        )
+      );
+
   return {
-    render: (): void => renderer.render(scene, camera),
+    render: (): void => {
+      thinPlants();
+      renderer.render(scene, camera);
+    },
     resize: (width, height, pixelRatio): void => {
       renderer.setPixelRatio(pixelRatio);
       // The canvas's own size only: the page's stylesheet sizes its box.
@@ -1174,9 +1209,11 @@ export const createStage: StageFactory = (
         }
 
         const count = laid.length / PLANT_NUMBERS,
-          matrices = new Float32Array(count * 16);
+          matrices = new Float32Array(count * 16),
+          // By their rank, so the first few drawn of them, far off, are an even scatter (`plantsKept`).
+          ranked = rankedOrder(laid, PLANT_NUMBERS);
 
-        for (let n = 0; n < count; n++) {
+        ranked.forEach((n, index) => {
           const [u, y, v, height, facing] = laid.subarray(
               n * PLANT_NUMBERS,
               (n + 1) * PLANT_NUMBERS
@@ -1189,9 +1226,9 @@ export const createStage: StageFactory = (
               turn.setFromAxisAngle(up, facing!),
               size.set(scale, scale, scale)
             )
-            .toArray(matrices, n * 16);
+            .toArray(matrices, index * 16);
           plantsBox.expandByPoint(at.set(u!, y!, v!));
-        }
+        });
 
         const shared = new InstancedBufferAttribute(matrices, 16);
 
@@ -1254,6 +1291,8 @@ export const createStage: StageFactory = (
               grown.instanceMatrix = matrices;
               grown.count = matrices.count;
               grown.boundingSphere = spheres[index]!;
+              // Thinned as it's drawn, by how far it is (`thinPlants`).
+              grown.userData[ALL_PLANTS] = matrices.count;
               grown.castShadow = true;
               grown.receiveShadow = true;
               drawn.add(grown);
