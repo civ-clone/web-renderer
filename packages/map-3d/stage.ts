@@ -469,6 +469,11 @@ export const plantReachOf = (geometries: readonly BufferGeometry[]): number => {
   geometries.forEach((geometry) => {
     const position = geometry.getAttribute('position');
 
+    // A part with no points reaches nowhere.
+    if (position === undefined) {
+      return;
+    }
+
     for (let n = 0; n < position.count; n++) {
       reach = Math.max(reach, Math.hypot(position.getX(n), position.getZ(n)));
       height = Math.max(height, position.getY(n));
