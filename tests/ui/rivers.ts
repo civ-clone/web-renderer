@@ -292,11 +292,11 @@ const flatArea = (mesh: {
   rising.levels = rising.widths.map((_, step) => -0.0125 + step * 0.005);
   high.levels = high.widths.map(() => 0.01);
 
-  // A row at each of its points, its left edge and its right, after the two discs' 13 points each.
+  // A row at each of its points, its left edge and its right, after the two discs' 12 points each.
   const rows = STEPS + 1,
     strip = drawn(course, 3, 4),
     across = Array.from({ length: rows }, (_, row) => {
-      const at = 26 + row * 2,
+      const at = 24 + row * 2,
         [lu, lv, ru, rv] = [
           strip.positions[at * 3]!,
           strip.positions[at * 3 + 2]!,
@@ -322,8 +322,8 @@ const flatArea = (mesh: {
       heights(drawn(course, 3, 4, { ...flat, at: () => -0.01 })),
     ],
     [
-      13 * 2 + rows * 2,
-      12 * 2 + (rows - 1) * 2,
+      12 * 2 + rows * 2,
+      10 * 2 + (rows - 1) * 2,
       [0.01 + RIVER_LIFT],
       true,
       true,
@@ -344,14 +344,14 @@ const flatArea = (mesh: {
     ],
     [
       // Its start's disc, and its points to the coast, halfway.
-      13 + 5 * 2,
+      12 + 5 * 2,
       true,
       0,
-      13,
+      12,
       true,
       // Its points over the sea's level, from 3 along, and the one before; its end's disc.
-      13 + 7 * 2,
-      13 + rows * 2,
+      12 + 7 * 2,
+      12 + rows * 2,
     ]
   );
 
@@ -1050,23 +1050,63 @@ ids.forEach((topologyId) => {
 
           return sum + flatArea(into);
         }, 0),
-        // The land as its mesh draws it at (`u`, `v`): between the points of the triangle it's in, two a cell (top
-        //  left, bottom left, top right; and top right, bottom left, bottom right).
+        // The land as its mesh draws it at (`u`, `v`), read from the built chunks' own triangles: the chunk it's in,
+        //  the world's copies taken round, and of the two triangles of the cell it's in, as the chunk lists them, the
+        //  one it's inside. Not worked out again here, so the water's checked against the land as it's drawn, however
+        //  its cells are split.
+        period = layout.period(),
+        chunkU = grid.stepsU * grid.spacingU,
+        chunkV = grid.stepsV * grid.spacingV,
         drawnAt = (u: number, v: number): number => {
-          const a = Math.floor(u / grid.spacingU),
-            b = Math.floor(v / grid.spacingV),
-            fu = u / grid.spacingU - a,
-            fv = v / grid.spacingV - b,
-            at = (i: number, j: number) =>
-              land.height(i * grid.spacingU, j * grid.spacingV);
+          const wu = ((u % period.u) + period.u) % period.u,
+            wv = period.v === null ? v : ((v % period.v) + period.v) % period.v,
+            i = Math.min(grid.chunksU - 1, Math.floor(wu / chunkU)),
+            j = Math.min(
+              grid.chunksV - 1,
+              Math.max(0, Math.floor(wv / chunkV))
+            ),
+            chunk = built[j * grid.chunksU + i]!,
+            lu = wu - chunk.u,
+            lv = wv - chunk.v,
+            a = Math.max(
+              0,
+              Math.min(grid.stepsU - 1, Math.floor(lu / grid.spacingU))
+            ),
+            b = Math.max(
+              0,
+              Math.min(grid.stepsV - 1, Math.floor(lv / grid.spacingV))
+            ),
+            cell = (b * grid.stepsU + a) * 6,
+            point = (n: number) => [
+              chunk.positions[n * 3]!,
+              chunk.positions[n * 3 + 1]!,
+              chunk.positions[n * 3 + 2]!,
+            ];
 
-          return fu + fv <= 1
-            ? at(a, b) +
-                (at(a + 1, b) - at(a, b)) * fu +
-                (at(a, b + 1) - at(a, b)) * fv
-            : at(a + 1, b + 1) +
-                (at(a, b + 1) - at(a + 1, b + 1)) * (1 - fu) +
-                (at(a + 1, b) - at(a + 1, b + 1)) * (1 - fv);
+          for (const first of [cell, cell + 3]) {
+            const [p, q, r] = [0, 1, 2].map((k) =>
+                point(chunk.indices[first + k]!)
+              ),
+              area =
+                (q![0]! - p![0]!) * (r![2]! - p![2]!) -
+                (q![2]! - p![2]!) * (r![0]! - p![0]!),
+              wq =
+                ((lu - p![0]!) * (r![2]! - p![2]!) -
+                  (lv - p![2]!) * (r![0]! - p![0]!)) /
+                area,
+              wr =
+                ((q![0]! - p![0]!) * (lv - p![2]!) -
+                  (q![2]! - p![2]!) * (lu - p![0]!)) /
+                area,
+              wp = 1 - wq - wr;
+
+            // On an edge, to the rounding of the chunk's points, 32 bits each.
+            if (wp >= -1e-5 && wq >= -1e-5 && wr >= -1e-5) {
+              return wp * p![1]! + wq * q![1]! + wr * r![1]!;
+            }
+          }
+
+          throw new Error(`no triangle of the land at ${u},${v}`);
         },
         // Where in each triangle to look: its corners, along its sides and inside it.
         inside = [

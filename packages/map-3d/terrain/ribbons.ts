@@ -1,6 +1,6 @@
 // Rivers' water on the 3D map (docs/3d-renderer.md §5.3, plan 3.3): a strip along each course, laid on its channel's
 //  bed (`rivers.ts`) as the land's mesh draws it, a little over it, so it's never under the land nor left standing over
-//  it, wherever another course's channel has cut it lower. Its triangles are split along the land's cells and their
+//  it, wherever another course's channel has cut it lower. Its shapes are cut along the land's cells and their
 //  diagonals, so each piece lies over one of the land's triangles, and both are flat there: the water's exactly its
 //  lift over the land everywhere. Pure: the land's chunks carry it (`chunks.ts`), and the stage draws it.
 
@@ -22,7 +22,7 @@ export type Ground = {
 /** How far over the land, as its mesh draws it, a river's water lies. */
 export const RIVER_LIFT = 0.004;
 
-// How many triangles round a pool, and round each end of a course where it joins others.
+// How many sides a pool has, and the disc at each end of a course where it joins others.
 const ROUND = 12;
 
 type Point = readonly [u: number, v: number];
@@ -108,13 +108,13 @@ const cutAll = (
 };
 
 /**
- * Lays `triangles`, flat, on `ground`: each cut along the land's cells (across and down) and their diagonals, so each
- *  piece is over one of the land's triangles, then each point of each piece `RIVER_LIFT` over the land there, but
- *  never under the sea's level, where the sea's surface is. Points in the same place are one point.
+ * Lays `shapes`, flat and each convex, on `ground`: each cut along the land's cells (across and down) and their
+ *  diagonals, so each piece is over one of the land's triangles, then each point of each piece `RIVER_LIFT` over the
+ *  land there, but never under the sea's level, where the sea's surface is. Points in the same place are one point.
  */
 export const lay = (
   into: RibbonMesh,
-  triangles: readonly (readonly [Point, Point, Point])[],
+  shapes: readonly (readonly Point[])[],
   ground: Ground
 ): void => {
   const { spacingU, spacingV } = ground,
@@ -136,7 +136,7 @@ export const lay = (
       return index;
     };
 
-  triangles.forEach((flat) =>
+  shapes.forEach((flat) =>
     cutAll(flat, across)
       .flatMap((part) => cutAll(part, down))
       .flatMap((part) => cutAll(part, diagonal))
@@ -154,19 +154,24 @@ export const lay = (
   );
 };
 
-// A disc's flat triangles: `radius` across at (`u`, `v`).
-const disc = (
-  u: number,
-  v: number,
-  radius: number
-): [Point, Point, Point][] => {
-  const rim = Array.from({ length: ROUND }, (_, way): Point => {
+// A disc, flat: `radius` across at (`u`, `v`), as one shape of `ROUND` sides.
+const disc = (u: number, v: number, radius: number): Point[] =>
+  Array.from({ length: ROUND }, (_, way): Point => {
     const angle = (way / ROUND) * Math.PI * 2;
 
     return [u + Math.cos(angle) * radius, v + Math.sin(angle) * radius];
   });
 
-  return rim.map((point, way) => [[u, v], point, rim[(way + 1) % ROUND]!]);
+// Whether the shape `points` is convex, each turn the same way, none straight on.
+const convex = (points: readonly Point[]): boolean => {
+  const turns = points.map(([u, v], at) => {
+    const [bu, bv] = points[(at + 1) % points.length]!,
+      [cu, cv] = points[(at + 2) % points.length]!;
+
+    return (bu - u) * (cv - bv) - (bv - v) * (cu - bu);
+  });
+
+  return turns.every((turn) => turn > 0) || turns.every((turn) => turn < 0);
 };
 
 /**
@@ -188,15 +193,16 @@ export const ribbonOf = (
       above(along) ||
       (along > 0 && above(along - 1)) ||
       (along < STEPS && above(along + 1)),
-    triangles: [Point, Point, Point][] = [];
+    // As few shapes as there can be, as each is cut along the land's cells: the fewer shapes, the fewer triangles.
+    shapes: Point[][] = [];
 
   // A pool's all one disc.
   if ((points[STEPS * 2] ?? 0) === 0 && (points[STEPS * 2 + 1] ?? 0) === 0) {
     if (above(0)) {
-      triangles.push(...disc(u, v, widths[0] ?? 0));
+      shapes.push(disc(u, v, widths[0] ?? 0));
     }
 
-    lay(into, triangles, ground);
+    lay(into, shapes, ground);
 
     return;
   }
@@ -206,7 +212,7 @@ export const ribbonOf = (
     if (above(end) && (end === 0 || !course.mouth)) {
       const [pu, pv] = pointAlong(course, end);
 
-      triangles.push(...disc(u + pu, v + pv, widths[end] ?? 0));
+      shapes.push(disc(u + pu, v + pv, widths[end] ?? 0));
     }
   });
 
@@ -237,11 +243,18 @@ export const ribbonOf = (
       const [l0, r0] = previous,
         [l1, r1] = row;
 
-      triangles.push([l0, r0, l1], [r0, r1, l1]);
+      // One shape a section, or two triangles where a sharp bend leaves it not convex.
+      const section = [l0, r0, r1, l1];
+
+      if (convex(section)) {
+        shapes.push(section);
+      } else {
+        shapes.push([l0, r0, l1], [r0, r1, l1]);
+      }
     }
 
     previous = row;
   }
 
-  lay(into, triangles, ground);
+  lay(into, shapes, ground);
 };
