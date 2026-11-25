@@ -35,6 +35,7 @@ import {
 } from '@civ-clone/ui-map-3d/terrain/rivers';
 import { TopologyId } from '@civ-clone/ui-protocol/topology';
 import {
+  Ground,
   RIVER_LIFT,
   RibbonMesh,
   ribbonOf,
@@ -259,7 +260,7 @@ const flatArea = (mesh: {
     pool = courseFrom(0, 0, 0, 0),
     sunk = courseFrom(0, 0, 1, 0, { seed: 5 }),
     // Land too coarse to cut the water at all, unless asked: its lines a million apart, the water well clear of them.
-    flat = { at: () => 0.01, spacingU: 1e6, spacingV: 1e6 },
+    flat: Ground = { at: () => 0.01, spacingU: 1e6, spacingV: 1e6 },
     drawn = (each: typeof course, u = 3, v = 4, ground = flat): RibbonMesh => {
       const into: RibbonMesh = { positions: [], indices: [] };
 
