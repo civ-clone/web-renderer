@@ -97,6 +97,11 @@ export interface Stage {
   /** The land's chunk `i` across and `j` down, drawn at every copy of the world: one drawn before is replaced. */
   setChunk(i: number, j: number, mesh: ChunkMesh): void;
   /**
+   * The cloud over squares seen since their chunks were laid cleared as far as it has `now`, in seconds, over `seconds`
+   *  (§4.5, `Water#clear`): says whether any is still clearing, so another frame is to be drawn.
+   */
+  clearCloud?(now: number, seconds: number): boolean;
+  /**
    * What's laid on the land of chunk `i` across and `j` down (roads, fields, specials, huts), drawn at every copy of
    *  the world as the land is: one laid before is replaced, and nothing takes it away.
    */
@@ -1156,6 +1161,7 @@ export const createStage: StageFactory = (
       thinPlants();
       renderer.render(scene, camera);
     },
+    clearCloud: (now, seconds): boolean => water.clear(now, seconds),
     resize: (width, height, pixelRatio): void => {
       viewHeight = height;
       renderer.setPixelRatio(pixelRatio);

@@ -264,8 +264,23 @@ const staged: string[] = [],
   //  says some do, as a stage whose models have idle clips would.
   idleAsked: [string[], number][] = [],
   idleSays = { idling: false },
+  // Each time the stage was asked to clear the cloud over squares seen: when, in seconds, and over how long; and for
+  //  how many more frames it says some is still clearing.
+  cloudCleared: [number, number][] = [],
+  cloudSays = { clearing: 0 },
   fakeStage = (): Stage => ({
     render: () => void staged.push('render'),
+    clearCloud: (now, seconds) => {
+      cloudCleared.push([now, seconds]);
+
+      if (cloudSays.clearing > 0) {
+        cloudSays.clearing--;
+
+        return true;
+      }
+
+      return false;
+    },
     unitAt: () => unitUnderPointer.key,
     resize: (stageWidth, stageHeight, ratio) =>
       void staged.push(`resize ${stageWidth}×${stageHeight}@${ratio}`),
@@ -1106,6 +1121,8 @@ expect(
           setMarker: (key, _at, marked) => void ringed.set(key, marked),
           setWalker: (_id, marked) => void walking.push(marked),
           showFigures: (key, on) => void shown.push([key, on]),
+          // Its frames clear no cloud the cloud's own checks count.
+          clearCloud: () => false,
         })
       ),
       ring = () => ringed.get(townKey)?.unit?.ring ?? null,
@@ -2309,6 +2326,11 @@ expect(
 
   expect('and stops following the window', staged.splice(0), []);
 
+  // Without frames, the cloud over squares seen clears at once each time the map's drawn.
+  const clearedWithoutFrames = cloudCleared
+    .splice(0)
+    .map(([, seconds]) => seconds);
+
   // In a browser, drawing waits for a frame, and many asks in one are drawn once; taken down, a frame still to come is
   //  given up.
   const frames = new Map<number, (time?: number) => void>();
@@ -2446,6 +2468,43 @@ expect(
     'mid-glide, what’s on the screen is what will be once the camera’s there; it’s moving until it is',
     [...midGlide, glider.moving()],
     [middleOf(tiles[1 * 4 + 1] as Tile), true, false, true, false]
+  );
+
+  // The cloud over squares seen cleared each frame (§4.5), over half a second, by the page's clock in seconds, with
+  //  frames drawn as long as any is still clearing; at once where the player has asked for less motion.
+  runFrames();
+  cloudCleared.length = 0;
+  cloudSays.clearing = 3;
+  glider.portal.render();
+
+  const clearingFrames = runFrames(),
+    clearedOver = cloudCleared.splice(0);
+
+  Object.assign(window, {
+    matchMedia: (query: string) => ({ matches: query.includes('reduce') }),
+  });
+  glider.portal.render();
+  runFrames();
+
+  const clearedAtOnce = cloudCleared.splice(0).map(([, seconds]) => seconds);
+
+  delete (window as { matchMedia?: unknown }).matchMedia;
+
+  expect(
+    'the cloud over squares seen clears over half a second, by the page’s clock, frames drawn while it does; at once with less motion, or without frames',
+    [
+      clearingFrames,
+      clearedOver.map(([, seconds]) => seconds),
+      // In seconds: each frame 16 ms after the last.
+      clearedOver.every(
+        ([at], each) =>
+          each === 0 || Math.abs(at - clearedOver[each - 1]![0] - 0.016) < 1e-9
+      ),
+      clearedAtOnce,
+      clearedWithoutFrames.length > 0 &&
+        clearedWithoutFrames.every((seconds) => seconds === 0),
+    ],
+    [4, [0.5, 0.5, 0.5, 0.5], true, [0], true]
   );
 
   // A unit stepping onto a square walks there (`walks.ts`), drawn on its own, from where it stood: off the square it set

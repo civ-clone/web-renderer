@@ -8,7 +8,8 @@
 //
 // The same texture says which points are on squares never seen: no water is drawn there, and cloud covers them (§4.5),
 //  a soft layer just over the low land round them (a hill or mountain beside them may stand through it), thinning over
-//  a short edge, broken up by noise that repeats as the world does.
+//  a short edge, broken up by noise that repeats as the world does. A square seen once its chunk's been laid clears its
+//  cloud over half a second (`Water#clear`), as the cloud has a channel of its own; the water's there at once.
 
 import {
   ClampToEdgeWrapping,
@@ -19,7 +20,7 @@ import {
   LinearFilter,
   Mesh,
   PlaneGeometry,
-  RGFormat,
+  RGBAFormat,
   RepeatWrapping,
   ShaderMaterial,
   UniformsLib,
@@ -128,31 +129,61 @@ void main() {
 }
 `;
 
+/** How long a square's cloud takes to clear once it's seen, in seconds (§4.5): at once under reduced motion. */
+export const CLOUD_CLEARING = 0.5;
+
+/**
+ * How many points clearing at once are sent each on its own (`Water#clear`), at most: more, as when much of the world is
+ *  seen at once, and the whole texture's sent instead. About 64 squares' worth.
+ */
+export const WHOLE_FROM = 4096;
+
+// What the texture holds of each point, in turn.
+const HEIGHT = 0,
+  NEVER_SEEN = 1,
+  CLOUD = 2,
+  LAID = 3,
+  CHANNELS = 4;
+
 /** The sea's surface, and the land's heights it reads. */
 export class Water {
   readonly mesh: Mesh<PlaneGeometry, ShaderMaterial>;
   #ground: Ground;
   #heights: Uint16Array;
   #texture: DataTexture;
+  // The points whose cloud is clearing, by their place in the texture: how much there was when it began, and when it
+  //  began, in seconds, once it has (the first `clear` after they're seen).
+  #clearing = new Map<number, { from: number; start: number | null }>();
+  // Whether the whole texture's to be sent again, as a chunk's changed it: till it has been, the points clearing
+  //  needn't be sent on their own.
+  #whole = true;
 
   constructor(ground: Ground, sky: Color) {
     this.#ground = ground;
-    // Half floats, which every WebGL2 can filter: at sea level, -0.2 to 1, they're good to a thousandth. Two a point:
-    //  its height, and whether it's never been seen, which nothing has been yet.
-    this.#heights = new Uint16Array(ground.columns * ground.rows * 2);
+    // Half floats, which every WebGL2 can filter: at sea level, -0.2 to 1, they're good to a thousandth. Four a point:
+    //  its height; whether it's never been seen, which nothing has been yet, where no water's drawn; how much cloud is
+    //  over it, the same but as it clears; and whether a chunk has been laid over it yet, as only then does a square
+    //  seen clear its cloud rather than have none.
+    this.#heights = new Uint16Array(ground.columns * ground.rows * CHANNELS);
 
-    for (let at = 0; at < this.#heights.length; at += 2) {
-      this.#heights[at] = DataUtils.toHalfFloat(0);
-      this.#heights[at + 1] = DataUtils.toHalfFloat(1);
+    for (let at = 0; at < this.#heights.length; at += CHANNELS) {
+      this.#heights[at + HEIGHT] = DataUtils.toHalfFloat(0);
+      this.#heights[at + NEVER_SEEN] = DataUtils.toHalfFloat(1);
+      this.#heights[at + CLOUD] = DataUtils.toHalfFloat(1);
+      this.#heights[at + LAID] = DataUtils.toHalfFloat(0);
     }
 
     this.#texture = new DataTexture(
       this.#heights,
       ground.columns,
       ground.rows,
-      RGFormat,
+      RGBAFormat,
       HalfFloatType
     );
+    // Sent: what changes next can be sent on its own.
+    this.#texture.onUpdate = (): void => {
+      this.#whole = false;
+    };
     this.#texture.wrapS = RepeatWrapping;
     this.#texture.wrapT = ground.wrapsV ? RepeatWrapping : ClampToEdgeWrapping;
     this.#texture.magFilter = LinearFilter;
@@ -195,7 +226,10 @@ export class Water {
     this.mesh.renderOrder = SEA_ORDER;
   }
 
-  /** The chunk at its corner (`u`, `v`): its points' heights written into the ground the surface reads. */
+  /**
+   * The chunk at its corner (`u`, `v`): its points' heights written into the ground the surface reads, and which are
+   *  never seen. A point seen since its chunk was last laid has its water at once, and its cloud clears (`clear`).
+   */
   setChunk(mesh: ChunkMesh): void {
     const { columns, rows, spacingU, spacingV } = this.#ground,
       firstColumn = Math.round(mesh.u / spacingU),
@@ -210,35 +244,110 @@ export class Water {
           Math.round((mesh.positions[point * 3 + 2] ?? 0) / spacingV);
 
       if (column >= 0 && column < columns && row >= 0 && row < rows) {
-        const at = (row * columns + column) * 2;
+        const place = row * columns + column,
+          at = place * CHANNELS,
+          unseen = mesh.unseen[point] ?? 0,
+          cloud = this.#channel(at + CLOUD);
 
-        this.#heights[at] = DataUtils.toHalfFloat(
+        this.#heights[at + HEIGHT] = DataUtils.toHalfFloat(
           mesh.positions[point * 3 + 1] ?? 0
         );
-        this.#heights[at + 1] = DataUtils.toHalfFloat(mesh.unseen[point] ?? 0);
+        this.#heights[at + NEVER_SEEN] = DataUtils.toHalfFloat(unseen);
+
+        // Seen, where its cloud's been drawn: it clears from there, if it isn't already. Otherwise, as it is.
+        if (unseen === 0 && cloud > 0 && this.#channel(at + LAID) > 0.5) {
+          if (!this.#clearing.has(place)) {
+            this.#clearing.set(place, { from: cloud, start: null });
+          }
+        } else {
+          this.#clearing.delete(place);
+          this.#heights[at + CLOUD] = DataUtils.toHalfFloat(unseen);
+        }
+
+        this.#heights[at + LAID] = DataUtils.toHalfFloat(1);
       }
     }
 
+    // The whole texture sent again, rather than the points that have changed.
+    this.#texture.clearUpdateRanges();
     this.#texture.needsUpdate = true;
+    this.#whole = true;
+  }
+
+  /**
+   * The cloud over the points seen since their chunks were laid cleared as far as it has `now`, in seconds, over
+   *  `seconds` from the first time it's asked after they're seen (at once for none). Says whether any still clears.
+   */
+  clear(now: number, seconds: number): boolean {
+    if (this.#clearing.size === 0) {
+      return false;
+    }
+
+    // The whole texture sent rather than each point: where what was asked last time was never sent (the context lost
+    //  meanwhile, and made again empty), or where so much clears at once that one upload is cheaper.
+    if (
+      this.#texture.updateRanges.length > 0 ||
+      this.#clearing.size > WHOLE_FROM
+    ) {
+      this.#texture.clearUpdateRanges();
+      this.#whole = true;
+    }
+
+    this.#clearing.forEach((clearing, place) => {
+      if (clearing.start === null) {
+        clearing.start = now;
+      }
+
+      const gone = seconds > 0 ? (now - clearing.start) / seconds : 1,
+        at = place * CHANNELS + CLOUD;
+
+      this.#heights[at] = DataUtils.toHalfFloat(
+        gone >= 1 ? 0 : clearing.from * (1 - gone)
+      );
+
+      // Only the point that's changed sent, where the whole texture isn't to be (each point is its 4 channels).
+      if (!this.#whole) {
+        this.#texture.addUpdateRange(place * CHANNELS, CHANNELS);
+      }
+
+      if (gone >= 1) {
+        this.#clearing.delete(place);
+      }
+    });
+
+    this.#texture.needsUpdate = true;
+
+    return this.#clearing.size > 0;
+  }
+
+  #channel(at: number): number {
+    return DataUtils.fromHalfFloat(this.#heights[at] ?? 0);
   }
 
   /** The land's height the surface reads at the ground's point `column` across and `row` down. */
   height(column: number, row: number): number {
-    return DataUtils.fromHalfFloat(
-      this.#heights[(row * this.#ground.columns + column) * 2] ?? 0
+    return this.#channel(
+      (row * this.#ground.columns + column) * CHANNELS + HEIGHT
     );
   }
 
-  /** Whether the ground's point `column` across and `row` down is on a square never seen, as the cloud reads it. */
+  /** Whether the ground's point `column` across and `row` down is on a square never seen, where no water's drawn. */
   unseen(column: number, row: number): boolean {
     return (
-      DataUtils.fromHalfFloat(
-        this.#heights[(row * this.#ground.columns + column) * 2 + 1] ?? 0
+      this.#channel(
+        (row * this.#ground.columns + column) * CHANNELS + NEVER_SEEN
       ) > 0.5
     );
   }
 
-  /** The texture the land's heights and unseen points are in, for the cloud. */
+  /** How much cloud is over the ground's point `column` across and `row` down, as the cloud reads it: 1 to none. */
+  cloud(column: number, row: number): number {
+    return this.#channel(
+      (row * this.#ground.columns + column) * CHANNELS + CLOUD
+    );
+  }
+
+  /** The texture the land's heights, unseen points and cloud are in, for the cloud. */
   texture(): DataTexture {
     return this.#texture;
   }
@@ -301,8 +410,9 @@ float noise(vec2 point, vec2 cells) {
   );
 }
 
+// How much cloud's over the ground at a point, as it clears.
 float unseenAt(vec2 point) {
-  return texture2D(ground, (point / cell + 0.5) / size).g;
+  return texture2D(ground, (point / cell + 0.5) / size).b;
 }
 
 void main() {
