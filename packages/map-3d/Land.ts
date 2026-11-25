@@ -170,6 +170,20 @@ class Land {
             .directions()
             .map((direction) => topology.neighbour(x, y, direction))
             .filter((square): square is [number, number] => square !== null),
+        // Civ1's River terrain, or Civ2's River feature on any land, as the 2D map tells them (`Landscape#isTerrain`).
+        riverAt: (x, y) => {
+          const { terrain } = world.get(x, y);
+
+          return (
+            terrain._ === 'River' ||
+            (terrain.features ?? []).some(({ _ }) => _ === 'River')
+          );
+        },
+        edgeNeighbours: (x, y) =>
+          topology
+            .edgeDirections()
+            .map((direction) => topology.neighbour(x, y, direction))
+            .filter((square): square is [number, number] => square !== null),
       },
     });
     this.#grid = chunkGrid(this.layout, height);
