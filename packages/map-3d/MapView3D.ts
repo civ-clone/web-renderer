@@ -5,8 +5,7 @@
 //  map glides it there (at once the first time), the keys turn it and zoom it, the mouse, the wheel and touch move it,
 //  and its distance is kept as the 2D map's zoom is. Cities and units are marked on the land (1.3), a click, a press
 //  held and a right-click do what they do on the 2D map, and the minimap shows its own overview (1.5). Units walk from
-//  square to square as the map's events say they've moved (2.3, `walks.ts`). Still to come: waiting's cursor, and
-//  units fighting (2.4).
+//  square to square as the map's events say they've moved (2.3, `walks.ts`), and fight (2.4, `battles.ts`).
 //
 // Reaches beyond its canvas where the 2D map does: the `window` `resize` handler and an observer of the canvas's
 //  parent, which size the canvas to it, and the minimap's canvas, which it draws its overview on.
@@ -52,6 +51,7 @@ import {
   zoomed,
 } from './camera/orbit';
 import prefersReducedMotion from '@civ-clone/ui-map/lib/reducedMotion';
+import { UnitMarkerMode } from '@civ-clone/ui-map/components/Map/UnitMarker';
 import CameraInput from './camera/CameraInput';
 import markerFor, { MarkerWords, TileMarker } from './markers/markerFor';
 import { IN_FRONT_OF_CITY, UNIT_SCALE } from './markers/drawMarker';
@@ -199,6 +199,18 @@ type Picking = {
   accept: (tile: Tile) => boolean;
   onPick: (tile: Tile) => void;
   window: { close(): void } | null;
+};
+
+// The blink's tick where the page gives none: every half a second, as the 2D map's (`IntervalHandler`), returning what
+//  stops it. None where there's no window's clock (a test's page).
+const everyHalfSecond = (tick: () => void): (() => void) => {
+  if (typeof setInterval !== 'function') {
+    return (): void => {};
+  }
+
+  const interval = setInterval(tick, 500);
+
+  return (): void => clearInterval(interval);
 };
 
 export class MapView3D implements MapRenderer {
@@ -462,6 +474,16 @@ export class MapView3D implements MapRenderer {
   //  however many arrived.
   #modelsArrived = false;
   #stopUnitSize: () => void = (): void => {};
+  // How the unit awaiting orders is marked, as the player chose it (`unitMarkerMode`), and in what colour, as the theme
+  //  gives it, each read at each blink, and as they were last read; whether its figures are shown in the blink now; the
+  //  square it's marked on; and what stops the blink.
+  #markerMode: () => UnitMarkerMode = () => 'ring';
+  #mode: UnitMarkerMode = 'ring';
+  #ringColourOf: () => string | undefined = () => undefined;
+  #ringColour: string | undefined = undefined;
+  #blinkShown = true;
+  #ringedKey: string | null = null;
+  #stopBlink: () => void = (): void => {};
   #yieldsShown = false;
   // Whether the yields drawn are out of date (`#showYields`), and whether any are drawn.
   #yieldsStale = true;
@@ -638,6 +660,14 @@ export class MapView3D implements MapRenderer {
           this.#draw();
         }
       }) ?? ((): void => {});
+    // The unit awaiting orders marked as the player chose, and blinking where it does, every half a second as the 2D
+    //  map's blinks: a choice in Options takes at the next tick.
+    this.#markerMode = deps.unitMarker ?? ((): UnitMarkerMode => 'ring');
+    this.#mode = this.#markerMode();
+    this.#ringColourOf = (): string | undefined =>
+      deps.unitRing?.() || undefined;
+    this.#ringColour = this.#ringColourOf();
+    this.#stopBlink = (deps.blinkEvery ?? everyHalfSecond)(() => this.#blink());
     // And the yields' icons drawn again from the page's art when it changes, and the banners painted again with it.
     this.#stopArtChanged =
       deps.artChanged?.((): void => {
@@ -810,9 +840,45 @@ export class MapView3D implements MapRenderer {
     return [];
   }
 
+  // The blink's tick: the way the unit awaiting orders is marked read again, and its colour, and all marked again where
+  //  either's changed (a ring comes or goes, or takes the colour, and it's shown); otherwise, where it blinks, its
+  //  figures shown or hidden in turn.
+  #blink(): void {
+    if (this.#disposed) {
+      return;
+    }
+
+    const mode = this.#markerMode(),
+      colour = this.#ringColourOf();
+
+    if (mode !== this.#mode || colour !== this.#ringColour) {
+      this.#mode = mode;
+      this.#ringColour = colour;
+      this.#blinkShown = true;
+
+      if (this.#ringedKey !== null) {
+        this.#stage.showFigures?.(this.#ringedKey, true);
+      }
+
+      this.#markAll();
+      this.#draw();
+
+      return;
+    }
+
+    if (mode === 'ring' || this.#ringedKey === null) {
+      return;
+    }
+
+    this.#blinkShown = !this.#blinkShown;
+    this.#stage.showFigures?.(this.#ringedKey, this.#blinkShown);
+    this.#draw();
+  }
+
   dispose(): void {
     this.#keepDistance(true);
     this.#disposed = true;
+    this.#stopBlink();
     this.#walks.endAll(0);
     this.#battles.endAll(0);
     this.#fades.endAll();
@@ -1416,15 +1482,36 @@ export class MapView3D implements MapRenderer {
     units: Unit[],
     ringed: string | null = this.#ringed
   ): TileMarker | null {
-    return markerFor(
-      { city: null, units },
-      ringed,
-      this.#unitsShown,
-      this.#words,
-      () => 0,
-      this.#unitSize,
-      this.#modelOf
+    return this.#ringedAsChosen(
+      markerFor(
+        { city: null, units },
+        ringed,
+        this.#unitsShown,
+        this.#words,
+        () => 0,
+        this.#unitSize,
+        this.#modelOf
+      )
     );
+  }
+
+  // `marker`, with the unit awaiting orders on it ringed where the player marks it with a ring, and in the theme's
+  //  colour: walking, fighting or on its square.
+  #ringedAsChosen(marker: TileMarker | null): TileMarker | null {
+    if (marker?.unit?.active !== true) {
+      return marker;
+    }
+
+    return {
+      ...marker,
+      unit: {
+        ...marker.unit,
+        ring: this.#mode !== 'blink',
+        ...(this.#ringColour === undefined
+          ? {}
+          : { ringColour: this.#ringColour }),
+      },
+    };
   }
 
   // Whether any of a walker's units is waiting for the patch for its last step, as when meeting a leader holds it.
@@ -3025,22 +3112,30 @@ export class MapView3D implements MapRenderer {
 
     const drawn = units.filter(({ id }) => !this.#leftOff(id)),
       city = shownBefore === undefined ? tile.city : shownBefore.city,
-      marked = markerFor(
-        shownBefore === undefined && drawn.length === tile.units.length
-          ? tile
-          : { city, units: drawn },
-        this.#ringed,
-        this.#unitsShown,
-        this.#words,
-        (unit) => this.#facings.get(unit.id) ?? 0,
-        this.#unitSize,
-        this.#modelOf
+      marked = this.#ringedAsChosen(
+        markerFor(
+          shownBefore === undefined && drawn.length === tile.units.length
+            ? tile
+            : { city, units: drawn },
+          this.#ringed,
+          this.#unitsShown,
+          this.#words,
+          (unit) => this.#facings.get(unit.id) ?? 0,
+          this.#unitSize,
+          this.#modelOf
+        )
       ),
       // With its banner hung below its square, a city's name isn't over it too.
       marker =
         marked?.city && this.#bannerOf(key, tile, city) !== null
           ? { ...marked, city: { ...marked.city, unnamed: true as const } }
           : marked;
+
+    if (marker?.unit?.active === true) {
+      this.#ringedKey = key;
+    } else if (this.#ringedKey === key) {
+      this.#ringedKey = null;
+    }
 
     if (!city) {
       this.#banners.delete(key);
@@ -3067,6 +3162,11 @@ export class MapView3D implements MapRenderer {
     if (changed) {
       this.#stage.setMarker(key, at, marker);
       this.#remember(key, signature);
+
+      // Marked afresh, the unit awaiting orders is shown, and blinks from there.
+      if (key === this.#ringedKey) {
+        this.#blinkShown = true;
+      }
 
       if (marker?.unit) {
         this.#unitsMarked.add(key);

@@ -229,7 +229,8 @@ Building another world from the form starts it in the middle again.
   the page's own; a key, a press, the camera moving or the other players' turns close it.
 - **Banners:** a city's banner takes clicks and hovers of its own, as it hangs past its square on the 2D map (spec
   §7.5, "As built, second part").
-- **Still to do:** waiting's cursor (the page's, not the map's).
+- **Waiting for the next turn** (`setWaiting`): no tooltip opens, and an open one goes, as on the 2D map. The 2D map
+  has no cursor or dimming of its own for it: the page's banner saying who it's waiting for shows over either map.
 
 - **What:**
   - a ray to what's shown, then to a square: the land, or the water's surface where the land is below it (spec §9.2);
@@ -332,7 +333,7 @@ Epic's UE4 skeleton or only match its bone names.
   - the owner's colours;
   - formations (D6), and stacks shown by their defender (D5);
   - flags, with the veteran mark, the count, hit points, sentry and orders;
-  - the active unit's ring, following the marker option.
+  - the active unit's ring, following the marker option (done: spec §6.3, "As built").
 - **Tests:** a test checks that every unit type Civ1 and Civ2 name has a model.
 - **First part, the built-in units:**
   - `packages/models-builtin/units.ts` says what each of Civ1's and Civ2's unit types looks like: its shape (on foot,
@@ -349,7 +350,9 @@ Epic's UE4 skeleton or only match its bone names.
     airbases, mines and farms with `?improvements=1` (#1335).
 - **Facing:** a unit faces the way it last moved, or attacked, from the map's events (P2), and a defender faces its
   attacker.
-- **Still to do in 2.1:** the `models` manifest kind and its validator; the ring following the marker option.
+- **The active unit's marker:** a ring, a blink or both, as the player chooses in Options, or the theme does, and in the
+  theme's colour, as on the 2D map (spec §6.3, "As built").
+- **Still to do in 2.1:** the `models` manifest kind and its validator.
 
 ### 2.2 glTF and skeletal animation
 

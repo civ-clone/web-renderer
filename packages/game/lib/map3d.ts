@@ -53,9 +53,10 @@ import {
   TilesetDescriptor,
   expandName,
 } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
-import MapView2D, { MapView2DDeps } from '../MapView2D';
+import MapView2D, { MapView2DDeps, ringColours } from '../MapView2D';
 import mapSquares from './mapSquares';
 import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
+import { unitMarkerMode } from '@civ-clone/ui-map/components/Map/UnitMarker';
 
 /** The option the 3D camera's distance is kept in, as each set's zoom is kept in its own (`zoomOption`). */
 export const MAP3D_DISTANCE_OPTION = 'map3dDistance';
@@ -387,6 +388,10 @@ export const makeMapView = (
           }),
       },
       unitStatus,
+      // How the unit awaiting orders is marked, as on the 2D map: the player's choice in Options, or the theme's.
+      unitMarker: () => unitMarkerMode(options.get('unitMarker', 'theme')),
+      // And in the theme's colour, as the 2D map's ring is.
+      unitRing: () => ringColours().colour,
       // Options of their own (docs/3d-renderer.md §8.2), read at each move.
       walks: {
         speed: () => walkSpeedFor(options.get(MAP3D_WALKS_OPTION, 'normal')),

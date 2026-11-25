@@ -12,6 +12,7 @@ import MapRenderer from './MapRenderer';
 import { Size } from './lib/projection';
 import Transport from '@civ-clone/ui-client/Transport';
 import World from './components/World';
+import { UnitMarkerMode } from './components/Map/UnitMarker';
 
 /** Where the 3D script puts what it makes: `window.civMap3D`. */
 export const MAP3D_GLOBAL = 'civMap3D';
@@ -126,6 +127,15 @@ export type MapView3DDeps = {
   };
   // The letter for what a busy unit is doing, as the 2D map writes it over the unit (the locale's), or nothing.
   unitStatus?: (unit: Unit) => string | null;
+  // How the unit awaiting orders is marked, as the player chose it in Options or the theme says (`unitMarkerMode`): a
+  //  blink, a ring, or both. Read at each blink, so a choice takes at the next; a ring where there's none.
+  unitMarker?: () => UnitMarkerMode;
+  // The colour the theme marks it in (`--ui-unit-ring`), its ring and the pointer over it, read at each blink too, so a
+  //  theme chosen takes at the next: pale gold where there's none.
+  unitRing?: () => string;
+  // What ticks the blink, every half a second as the 2D map's does, returning what stops it: the window's interval
+  //  where there's none.
+  blinkEvery?: (tick: () => void) => () => void;
   // The player's world, made by the page, which tile patches are written to.
   world: World;
   // The icon for a yield (`Food`, `Production`, `Trade`), as the 2D map draws it over a square with `y`: the map's

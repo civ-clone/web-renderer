@@ -30,6 +30,11 @@ export type UnitMarker = {
   // How many units are in the stack.
   count: number;
   active: boolean;
+  // For the unit awaiting orders, whether a ring's at its feet, as the player chose how it's marked (a ring, or both a
+  //  ring and a blink): where it's not said, it is.
+  ring?: boolean;
+  // And the colour it's marked in, its ring and the pointer over it, as the theme gives it: pale gold where not said.
+  ringColour?: string;
   // Fortified, sleeping or at work: the engine's own word for what it's doing.
   busy: boolean;
   // What the engine says of it: `Fortified` and `Veteran` among its improvements.

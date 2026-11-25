@@ -111,6 +111,12 @@ export interface Stage {
     marker: TileMarker | null
   ): void;
   /**
+   * Whether the figures of the unit marked on the square `key` are shown, as the unit awaiting orders blinks (§6.3): its
+   *  flag and the pointer over it stay, and its stand where it's drawn with a model. Marked again, it's shown till told
+   *  otherwise.
+   */
+  showFigures?(key: string, shown: boolean): void;
+  /**
    * The square (`x,y`) whose unit's drawn under the point `ndc` on the screen (from -1 to 1 across, and up), as the
    *  camera last drew it, the nearest to it where several are; or nothing (`markers/pickUnit.ts`). A stage that can't
    *  say leaves the view to pick the ground.
@@ -1358,6 +1364,24 @@ export const createStage: StageFactory = (
         [...markers].map(([key, { drawn }]) => [key, drawn] as const),
         camera,
         ndc
+      );
+    },
+    showFigures: (key, shown): void => {
+      const marked = markers.get(key);
+
+      if (marked === undefined) {
+        return;
+      }
+
+      // Its copies, and what they're copied from, so a copy made afresh blinks with them.
+      [marked.original, marked.idling?.original, ...marked.drawn].forEach(
+        (each) => {
+          const figures = each?.getObjectByName(FIGURES_PART);
+
+          if (figures !== undefined) {
+            figures.visible = shown;
+          }
+        }
       );
     },
     setMarker: (key, at, marker): void => {

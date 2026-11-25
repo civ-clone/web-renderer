@@ -594,6 +594,37 @@ expect(
   [true, false, true, true]
 );
 
+const blinkingActive = drawn(
+  unit('Spearman', { active: true, count: 2, ring: false })
+);
+
+expect(
+  'marked by a blink alone, the unit awaiting orders has no ring at its feet, but its pointer still',
+  [
+    meshOf(blinkingActive, ring) === undefined,
+    spriteOf(blinkingActive, kit.pointer()) !== undefined,
+  ],
+  [true, true]
+);
+
+// In the theme's colour, its ring and its pointer; the pale gold's where it gives none.
+const themedActive = drawn(
+    unit('Spearman', { active: true, count: 2, ringColour: '#ffffff' })
+  ),
+  themedRing = meshOf(themedActive, ring);
+
+expect(
+  'in the theme’s colour, the unit awaiting orders’ ring and pointer are that colour, each made once, and the pale gold’s are left as they were',
+  [
+    themedRing?.material === kit.material('#ffffff', true),
+    spriteOf(themedActive, kit.pointer('#ffffff')) !== undefined,
+    kit.pointer('#ffffff') === kit.pointer('#ffffff'),
+    kit.pointer('#ffffff') !== kit.pointer(),
+    meshOf(active, ring)?.material === kit.material('#fff4b0', true),
+  ],
+  [true, true, true, true, true]
+);
+
 // A city: its buildings and walls one mesh, its name a label, and walls more of the mesh.
 const cityParts = (walled: boolean, unnamed?: true): Object3D[] => {
   const found: Object3D[] = [];
