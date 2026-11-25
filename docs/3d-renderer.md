@@ -635,9 +635,9 @@ How plants are placed:
   - **Undergrowth** (#1363, `Growth#undergrowth`, `undergrowthPlants`): bushes, scrub and shrubs under the trees, on
     a lattice of their own (0.13 apart in a forest, 0.11 in a jungle), with the same fringe and stability, on 0.6 of
     its points in a forest and 0.7 in a jungle: about 34 a whole square of forest and 51 of jungle. Its scrub is a low
-    five-sided mound. What's lower than a unit's stand is thick (`GROUND_COVER`, 0.03) grows in the clearing too, as
-    near the middle as 0.04 and its room (`COVER_CLEAR`), under the stand where a unit stands; the rest keeps clear of
-    the stand as trees do. It's built in whatever set draws the trees, in the overlay's own mesh.
+    five-sided mound. What stands no higher than a unit's stand's top (`GROUND_COVER`, 0.03 over the ground at the
+    middle, however the land under it lies) grows in the clearing too, as near the middle as 0.04 and its room
+    (`COVER_CLEAR`), under the stand where a unit stands; the rest keeps clear of the stand as trees do. It's built in whatever set draws the trees, in the overlay's own mesh.
   - **The shore:** trees stand on dry land; a swamp's reeds stand in the shallows too.
   - **Cost** (#1363): a whole square of forest is about 880 triangles with the built-in shapes and 2,060 with 0 A.D.'s
     trees, against 210 and 630 before; of jungle, about 1,210 and 4,190, against 220 and 1,280. Laying one takes
@@ -654,12 +654,16 @@ How plants are placed:
     units'.
   - **Drawing:** a chunk's plants of each model are one instanced draw call for each of its parts at each copy of the
     world, their matrices one buffer every copy shares, and how far they reach worked out once. Since #1363, they're
-    ordered by a rank of their own (`plantRank`, `rankedOrder` in `overlay/thinning.ts`), and as the view draws, a
-    chunk's copy more than 8 from the camera draws fewer of them, the first few by rank, an even scatter: a share of
-    (8 over its distance) squared, never under a fifth (`plantsKept`). Every copy's let go of together, when the
-    chunk's laid again or the copies drawn change, as they share the buffer. Leaves are cut out where their texture's
-    under half solid, drawn from both sides, and cast shadows cut out as they are (three.js makes the shadow's material
-    from the leaves'). They're clipped past a pole the view's stopped at, as the rest of the overlay is.
+    ordered by a rank of their own (`plantRank`, `rankedOrder` in `overlay/thinning.ts`): a 4 by 4 dither over the
+    woods' lattice, by where they stand on the world. As the view draws, a chunk's copy whose nearest tree would stand
+    under 8 of the page's pixels tall on the screen (`PLANTS_FULL_PIXELS`, a tree 0.3 tall) draws fewer of them, the
+    first few by rank, an even scatter: as many to the screen's area as at 8 pixels, never under a fifth
+    (`plantsKept`), the same share for each of a model's parts. On a view 900 pixels tall that's from about 46 away,
+    past the furthest ground the default view shows (about 34), so only a camera drawn well out, or looking low to the
+    horizon, thins them. Every copy's let go of together, when the chunk's laid again or the copies drawn change, as
+    they share the buffer. Leaves are cut out where their texture's under half solid, drawn from both sides, and cast
+    shadows cut out as they are (three.js makes the shadow's material from the leaves'). They're clipped past a pole
+    the view's stopped at, as the rest of the overlay is.
   - **The shipped trees:** civ-clone/models-0ad's, from 0 A.D.: a pine (`conifer`, 58 triangles), a beech
     (`broadleaf`, 82), a teak (`Jungle:broadleaf`, 124), a date palm (`palm`, 208) and a dead tree (`deadTree`, 199).
     A forest of pines and beeches costs more than the built-in set's shapes: about 2,060 triangles a whole square,

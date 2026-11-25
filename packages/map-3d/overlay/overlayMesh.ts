@@ -3049,14 +3049,18 @@ const woods = (layer: Layer, overlay: SquareOverlay, growth: Growth): void => {
     }
   );
 
-  // Under the trees, and in the clearing what's lower than a unit's stand.
+  // Under the trees, and in the clearing what's lower than a unit's stand's top, which is `GROUND_COVER` over the ground
+  //  at the middle, where the land may lie lower than under the plant.
+  const middle = layer.ground(centre[0], centre[1]);
+
   undergrowthPlants(overlay, layer.place, growth).forEach(
     ({ u, v, kind, plant, size, room, facing }) => {
       if (heightAt(u, v) < 0) {
         return;
       }
 
-      const low = PLANT_HEIGHT[kind] * size < GROUND_COVER;
+      const low =
+        layer.ground(u, v) + PLANT_HEIGHT[kind] * size < middle + GROUND_COVER;
 
       if (layer.hasRoom(u, v, room, low ? COVER_CLEAR : STAND_CLEAR)) {
         grow(layer, plant, kind, u, v, size, facing);

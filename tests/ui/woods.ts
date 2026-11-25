@@ -27,12 +27,19 @@ import {
   woodsPlants,
 } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
 import {
-  PLANTS_THIN_FROM,
   PLANTS_THIN_LEAST,
+  plantMatrices,
   plantRank,
   plantsKept,
   rankedOrder,
 } from '@civ-clone/ui-map-3d/overlay/thinning';
+import {
+  DISTANCE_MAX,
+  DISTANCE_MIN,
+  FIELD_OF_VIEW,
+  defaultOrbit,
+} from '@civ-clone/ui-map-3d/camera/orbit';
+import { Matrix4, Vector3 } from 'three';
 import { growthOf } from '@civ-clone/ui-models-builtin/vegetation';
 import Land from '@civ-clone/ui-map-3d/Land';
 import World from '@civ-clone/ui-map/components/World';
@@ -137,104 +144,136 @@ ids.forEach((topologyId) => {
       groundLayoutFor({ width, height, topologyId, wrapsY })
     );
 
-  // An all-forest world: every point of the lattice, on the world, planted once, by the square it's on.
-  layouts.forEach((layout) => {
-    const period = layout.period(),
-      cellsU = Math.round(period.u / CANOPY),
-      cellsV = period.v === null ? null : Math.round(period.v / CANOPY),
-      stepU = period.u / cellsU,
-      stepV = period.v === null || cellsV === null ? CANOPY : period.v / cellsV,
-      planted = new Map<string, string[]>(),
-      misplaced: string[] = [];
+  // An all-forest world: every point of the lattice, on the world, planted once, by the square it's on. And the same
+  //  of a swamp's lattice, at its own spacing, and of a jungle's undergrowth, but for the points it leaves unplanted.
+  const lattices = [
+    {
+      name: "forest's trees",
+      terrain: 'Forest',
+      spacing: CANOPY,
+      every: true,
+      plantsOf: (overlay: SquareOverlay, place: OverlayPlace) =>
+        woodsPlants(overlay, place, forest),
+    },
+    {
+      name: "swamp's plants",
+      terrain: 'Swamp',
+      spacing: growthOf('Swamp')!.spacing!,
+      every: true,
+      plantsOf: (overlay: SquareOverlay, place: OverlayPlace) =>
+        woodsPlants(overlay, place, growthOf('Swamp')!),
+    },
+    {
+      name: "jungle's undergrowth",
+      terrain: 'Jungle',
+      spacing: growthOf('Jungle')!.undergrowth!.spacing,
+      every: false,
+      plantsOf: (overlay: SquareOverlay, place: OverlayPlace) =>
+        undergrowthPlants(overlay, place, growthOf('Jungle')!),
+    },
+  ];
 
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        woodsPlants(
-          overlayOf(topology, x, y, 'Forest', () => 'Forest'),
-          placeOf(layout, topology, x, y),
-          forest
-        ).forEach(({ u, v }) => {
-          // Its cell, round the world's period.
-          const i = Math.floor(u / stepU),
-            j = Math.floor(v / stepV),
-            key = `${((i % cellsU) + cellsU) % cellsU},${
-              cellsV === null ? j : ((j % cellsV) + cellsV) % cellsV
-            }`,
-            [tx, ty] = layout.tileAt(u, v);
+  layouts.forEach((layout) =>
+    lattices.forEach(({ name, terrain, spacing, every, plantsOf }) => {
+      const period = layout.period(),
+        cellsU = Math.round(period.u / spacing),
+        cellsV = period.v === null ? null : Math.round(period.v / spacing),
+        stepU = period.u / cellsU,
+        stepV =
+          period.v === null || cellsV === null ? spacing : period.v / cellsV,
+        planted = new Map<string, string[]>(),
+        misplaced: string[] = [];
 
-          planted.set(key, [...(planted.get(key) ?? []), `${x},${y}`]);
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          plantsOf(
+            overlayOf(topology, x, y, terrain, () => terrain),
+            placeOf(layout, topology, x, y)
+          ).forEach(({ u, v }) => {
+            // Its cell, round the world's period.
+            const i = Math.floor(u / stepU),
+              j = Math.floor(v / stepV),
+              key = `${((i % cellsU) + cellsU) % cellsU},${
+                cellsV === null ? j : ((j % cellsV) + cellsV) % cellsV
+              }`,
+              [tx, ty] = layout.tileAt(u, v);
 
-          if (tx !== x || ty !== y) {
-            misplaced.push(`${x},${y} at ${u},${v}`);
-          }
-        });
+            planted.set(key, [...(planted.get(key) ?? []), `${x},${y}`]);
+
+            if (tx !== x || ty !== y) {
+              misplaced.push(`${x},${y} at ${u},${v}`);
+            }
+          });
+        }
       }
-    }
 
-    // Every cell whose point is on the world, by the layout's own say: once round the period across, and down where it
-    //  wraps over the poles, or as far down as the world's squares reach where it doesn't.
-    const vs = Array.from({ length: height }, (_, y) =>
-        layout.outline(0, y).map(([, v]) => v)
-      ).flat(),
-      rows =
-        cellsV === null
-          ? Array.from(
-              {
-                length:
-                  Math.ceil(Math.max(...vs) / stepV) -
-                  Math.floor(Math.min(...vs) / stepV),
-              },
-              (_, at) => Math.floor(Math.min(...vs) / stepV) + at
-            )
-          : Array.from({ length: cellsV }, (_, at) => at),
-      // Each cell's point is where `woodsPlants` puts it: the cell is told by where that point lies.
-      onWorld = new Set<string>();
+      // Every cell whose point is on the world, by the layout's own say: once round the period across, and down where it
+      //  wraps over the poles, or as far down as the world's squares reach where it doesn't.
+      const vs = Array.from({ length: height }, (_, y) =>
+          layout.outline(0, y).map(([, v]) => v)
+        ).flat(),
+        rows =
+          cellsV === null
+            ? Array.from(
+                {
+                  length:
+                    Math.ceil(Math.max(...vs) / stepV) -
+                    Math.floor(Math.min(...vs) / stepV),
+                },
+                (_, at) => Math.floor(Math.min(...vs) / stepV) + at
+              )
+            : Array.from({ length: cellsV }, (_, at) => at),
+        // Each cell's point is where `woodsPlants` puts it: the cell is told by where that point lies.
+        onWorld = new Set<string>();
 
-    rows.forEach((j) => {
-      for (let i = 0; i < cellsU; i++) {
-        // Some point of the cell is on the world if any square planted it; one that wasn't must be off the world.
-        onWorld.add(`${i},${j}`);
-      }
-    });
+      rows.forEach((j) => {
+        for (let i = 0; i < cellsU; i++) {
+          // Some point of the cell is on the world if any square planted it; one that wasn't must be off the world.
+          onWorld.add(`${i},${j}`);
+        }
+      });
 
-    const twice = [...planted.entries()].filter(
-        ([, squares]) => squares.length > 1
-      ),
-      offWorld = [...planted.keys()].filter((key) => !onWorld.has(key)),
-      // A cell not planted must be one whose point may be off the world: past the edge of a world that doesn't wrap
-      //  over the poles, a cell not wholly on its squares. One wholly on them is planted.
-      // The cell's point is jittered within the middle 0.6 of it, either way: sampled finely there, all on the world.
-      wholly = (key: string): boolean => {
-        const [i, j] = key.split(',').map(Number) as [number, number];
+      const twice = [...planted.entries()].filter(
+          ([, squares]) => squares.length > 1
+        ),
+        offWorld = [...planted.keys()].filter((key) => !onWorld.has(key)),
+        // A cell not planted must be one whose point may be off the world: past the edge of a world that doesn't wrap
+        //  over the poles, a cell not wholly on its squares. One wholly on them is planted.
+        // The cell's point is jittered within the middle 0.6 of it, either way: sampled finely there, all on the world.
+        wholly = (key: string): boolean => {
+          const [i, j] = key.split(',').map(Number) as [number, number];
 
-        return Array.from({ length: 81 }, (_, at) => [
-          0.2 + ((at % 9) / 8) * 0.6,
-          0.2 + (Math.floor(at / 9) / 8) * 0.6,
-        ]).every(([a, b]) => {
-          const [, y] = layout.tileAt((i + a!) * stepU, (j + b!) * stepV);
+          return Array.from({ length: 81 }, (_, at) => [
+            0.2 + ((at % 9) / 8) * 0.6,
+            0.2 + (Math.floor(at / 9) / 8) * 0.6,
+          ]).every(([a, b]) => {
+            const [, y] = layout.tileAt((i + a!) * stepU, (j + b!) * stepV);
 
-          return y >= 0 && y < height;
-        });
-      },
-      unplanted = [...onWorld].filter((key) => !planted.has(key));
+            return y >= 0 && y < height;
+          });
+        },
+        unplanted = [...onWorld].filter((key) => !planted.has(key));
 
-    expect(
-      `${topologyId}, ${
-        period.v === null ? 'not wrapping' : 'wrapping'
-      } over the poles: in an all-forest world, every point of the woods' lattice is planted by exactly one square, the one the layout says it's on, round the world's period, and none past its edge`,
-      [
-        planted.size > 0,
-        twice.slice(0, 3),
-        misplaced.slice(0, 3),
-        offWorld.slice(0, 3),
-        // On a world that wraps over the poles, every cell; on one that doesn't, every cell wholly on its squares.
-        cellsV === null
-          ? unplanted.filter(wholly).slice(0, 3)
-          : unplanted.slice(0, 3),
-      ],
-      [true, [], [], [], []]
-    );
-  });
+      expect(
+        `${topologyId}, ${
+          period.v === null ? 'not wrapping' : 'wrapping'
+        } over the poles: in a world all of its terrain, every point of the ${name}' lattice is planted by exactly one square (or none, for undergrowth left out), the one the layout says it's on, round the world's period, and none past its edge`,
+        [
+          planted.size > 0,
+          twice.slice(0, 3),
+          misplaced.slice(0, 3),
+          offWorld.slice(0, 3),
+          // On a world that wraps over the poles, every cell; on one that doesn't, every cell wholly on its squares.
+          !every
+            ? []
+            : cellsV === null
+            ? unplanted.filter(wholly).slice(0, 3)
+            : unplanted.slice(0, 3),
+        ],
+        [true, [], [], [], []]
+      );
+    })
+  );
 
   // A forest square, and its neighbour each way the grid has, forest or plain, from rows of each parity: the band
   //  along the edge between them has more trees where the neighbour's forest, as the canopy runs across to it, and
@@ -834,9 +873,74 @@ ids.forEach((topologyId) => {
   );
 }
 
-// Far woods thinned (#1363): all of a chunk's plants drawn near the camera, fewer further off but never fewer than the
-//  least share; each plant's rank the same wherever it's laid, from 0 to 1; and the first quarter of a forest's trees by
-//  rank, as a far chunk draws them, spread over every quarter of its squares.
+// The clearing on sloping land (#1363), on every grid: whole forest, jungle and swamp on land rising 0.1 a unit across
+//  and 0.06 down, on 12 squares each, a unit's stand's top 0.03 over the ground at the middle. Nothing laid within 0.17
+//  of the middle stands over the stand's top, however the land under it lies.
+{
+  const width = 12,
+    height = 10,
+    risen = (u: number, v: number) => 1 + 0.1 * u + 0.06 * v,
+    over = ids.flatMap((topologyId) => {
+      const topology = topologyFor({ width, height, topologyId }),
+        layout = groundLayoutFor({
+          width,
+          height,
+          topologyId,
+          wrapsY: topology.wrapsY(),
+        });
+
+      return ['Forest', 'Jungle', 'Swamp'].flatMap((terrain) =>
+        Array.from({ length: 12 }, (_, at) => [
+          2 + (at % 6),
+          2 + Math.floor(at / 6) * 2 + (at % 2),
+        ]).flatMap(([x, y]) => {
+          const into = soup(),
+            place = {
+              ...placeOf(layout, topology, x!, y!),
+              heightAt: risen,
+            },
+            [cu, cv] = place.centre,
+            top = risen(cu, cv) + 0.03;
+
+          layOverlay(
+            overlayOf(topology, x!, y!, terrain, () => terrain),
+            place,
+            into
+          );
+
+          return Array.from(
+            { length: into.positions.length / 3 },
+            (_, n) =>
+              [
+                into.positions[n * 3]!,
+                into.positions[n * 3 + 1]!,
+                into.positions[n * 3 + 2]!,
+              ] as const
+          )
+            .filter(
+              ([u, y, v]) => Math.hypot(u - cu, v - cv) < 0.17 && y > top + 1e-3
+            )
+            .map(
+              ([u, y, v]) =>
+                `${topologyId} ${terrain} ${x},${y} at ${u},${v}: ${y - top}`
+            );
+        })
+      );
+    });
+
+  expect(
+    'on sloping land, on every grid, nothing in woods stands over a unit’s stand within 0.17 of the middle',
+    over.slice(0, 3),
+    []
+  );
+}
+
+// Far woods thinned (#1363), on a view 900 of the page's pixels tall: all of a chunk's plants drawn at play's distances,
+//  from the nearest the camera comes to the furthest ground the default view shows (about 34 away, at 1.5 times its
+//  distance, as its top edge looks down 35 degrees); fewer zoomed right out, but never fewer than the least share. Each plant's rank its own, from 0 to 1, the same for the same tree laid again;
+//  the first quarter of a forest's trees by rank, as a far chunk draws them, about a quarter of each square's; each
+//  matrix stands its own tree, in that order, as tall as it's laid; and a chunk's ranked by where they are on the world,
+//  not from its corner.
 {
   const width = 12,
     height = 10,
@@ -848,51 +952,100 @@ ids.forEach((topologyId) => {
       topologyId,
       wrapsY: topology.wrapsY(),
     }),
-    planted = Array.from({ length: 16 }, (_, at) => [
+    squares = Array.from({ length: 16 }, (_, at) => [
       2 + (at % 4),
       2 + Math.floor(at / 4),
-    ]).flatMap(([x, y]) =>
-      woodsPlants(
-        overlayOf(topology, x!, y!, 'Forest', () => 'Forest'),
-        placeOf(layout, topology, x!, y!),
-        forest
-      )
+    ]),
+    lay = () =>
+      squares.map(([x, y]) =>
+        woodsPlants(
+          overlayOf(topology, x!, y!, 'Forest', () => 'Forest'),
+          placeOf(layout, topology, x!, y!),
+          forest
+        )
+      ),
+    bySquare = lay(),
+    again = lay().flat(),
+    planted = bySquare.flat(),
+    laid = planted.flatMap(({ u, v }, n) => [
+      u,
+      n * 0.001,
+      v,
+      0.2 + n * 1e-4,
+      n,
+    ]),
+    order = rankedOrder(laid, PLANT_NUMBERS),
+    // As a chunk lays them, from its corner (here at 1.5, 2.25 on the world): ranked by where they are on the world.
+    fromCorner = rankedOrder(
+      laid.map((number, at) =>
+        at % PLANT_NUMBERS === 0
+          ? number - 1.5
+          : at % PLANT_NUMBERS === 2
+          ? number - 2.25
+          : number
+      ),
+      PLANT_NUMBERS,
+      [1.5, 2.25]
     ),
-    // As the stage orders them to draw: by the overlay's numbers, where each stands first.
-    ranked = rankedOrder(
-      planted.flatMap(({ u, v }) => [u, 0, v, 1, 0]),
-      PLANT_NUMBERS
-    ).map((n) => planted[n]!),
-    first = ranked.slice(0, Math.ceil(ranked.length / 4)),
-    // How many of the first quarter are in each quarter of the 4 by 4 squares, from (2, 2).
-    quarters = [0, 1, 2, 3].map(
-      (quarter) =>
-        first.filter(
-          ({ u, v }) => (u >= 4 ? 1 : 0) + (v >= 4 ? 2 : 0) === quarter
-        ).length
+    // How many of the first quarter by rank are on each square.
+    first = new Set(order.slice(0, Math.ceil(order.length / 4))),
+    perSquare = bySquare.map(
+      (trees, square) =>
+        trees.filter((_, n) => {
+          const index =
+            bySquare
+              .slice(0, square)
+              .reduce((sum, each) => sum + each.length, 0) + n;
+
+          return first.has(index);
+        }).length / trees.length
     ),
-    distances = [0, PLANTS_THIN_FROM, PLANTS_THIN_FROM * 1.5, 20, 40, 400],
-    kept = distances.map(plantsKept);
+    matrices = plantMatrices(laid, PLANT_NUMBERS, 2),
+    // Each matrix's place and height, as it stands a model 2 tall, against the tree it should be.
+    misplaced = order.filter((n, index) => {
+      const placed = new Vector3().setFromMatrixPosition(
+          new Matrix4().fromArray(matrices, index * 16)
+        ),
+        scale = new Vector3().setFromMatrixScale(
+          new Matrix4().fromArray(matrices, index * 16)
+        );
+
+      return (
+        Math.abs(placed.x - laid[n * PLANT_NUMBERS]!) > 1e-5 ||
+        Math.abs(placed.y - laid[n * PLANT_NUMBERS + 1]!) > 1e-5 ||
+        Math.abs(placed.z - laid[n * PLANT_NUMBERS + 2]!) > 1e-5 ||
+        Math.abs(scale.y * 2 - laid[n * PLANT_NUMBERS + 3]!) > 1e-5
+      );
+    }).length,
+    focal = 900 / (2 * Math.tan(FIELD_OF_VIEW / 2)),
+    distances = [
+      DISTANCE_MIN,
+      defaultOrbit([0, 0]).distance,
+      defaultOrbit([0, 0]).distance * 1.5,
+      DISTANCE_MAX,
+      DISTANCE_MAX * 2,
+      1000,
+    ],
+    kept = distances.map((distance) => plantsKept(distance, focal));
 
   expect(
-    'far woods thinned: all drawn near, fewer further, never under the least; a plant’s rank its own, from 0 to 1; the first quarter by rank spread over every quarter of the woods',
+    'far woods thinned: all drawn at play’s distances, fewer zoomed right out, never under the least; a plant’s rank its own, the same laid again; the first quarter by rank about a quarter of each square’s; each matrix its own tree, as tall as it’s laid',
     [
-      kept.slice(0, 2),
+      kept.slice(0, 3),
+      kept[3]! < 1,
       kept.every((share, n) => n === 0 || share <= kept[n - 1]!),
-      Math.min(...kept) >= PLANTS_THIN_LEAST,
       kept[5],
       planted.every(
-        ({ u, v }) =>
-          plantRank(u, v) === plantRank(u, v) &&
+        ({ u, v }, n) =>
+          plantRank(u, v) === plantRank(again[n]!.u, again[n]!.v) &&
           plantRank(u, v) >= 0 &&
           plantRank(u, v) < 1
       ),
-      quarters.every(
-        (count) =>
-          count > (first.length / 4) * 0.6 && count < (first.length / 4) * 1.4
-      ),
+      perSquare.filter((share) => share < 0.15 || share > 0.35),
+      [misplaced, matrices.length / 16 === planted.length],
+      fromCorner.every((n, at) => n === order[at]),
     ],
-    [[1, 1], true, true, PLANTS_THIN_LEAST, true, true]
+    [[1, 1, 1], true, true, PLANTS_THIN_LEAST, true, [], [0, true], true]
   );
 }
 
