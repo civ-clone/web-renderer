@@ -568,6 +568,31 @@ const check = async (): Promise<void> => {
     ]
   );
   expect(
+    'a Fortress needs Construction, takes 5, 6 or 7 turns by terrain, doubles a land unit’s defence and spares a beaten defender’s stack (#388)',
+    [
+      entry('Fortress')?.requires,
+      entry('Construction')?.leadsTo.includes(
+        'civ1-world:tile-improvement/available/Fortress'
+      ),
+      improving('Fortress', 'improvement_turns'),
+      entry('Fortress')
+        ?.effects.filter(({ type }) => type !== 'improvement_turns')
+        .map(({ type, value, unit }) =>
+          [type, value ?? '', keysOf(unit).join()].join(' ')
+        ),
+    ],
+    [
+      ['civ1-world:tile-improvement/available/Fortress'],
+      true,
+      [
+        [5, [], ['Desert', 'Grassland', 'Plains', 'River', 'Tundra'], []],
+        [6, [], ['Arctic', 'Forest', 'Hills', 'Jungle', 'Swamp'], []],
+        [7, [], ['Mountains'], []],
+      ],
+      ['spares_stack  ', 'square_defence_multiplier 2 Land'],
+    ]
+  );
+  expect(
     'Future Technology says it needs every other advance, and Anarchy what leads to it and for how long (#621)',
     [
       entry('FutureTechnology')?.effects.map(({ type }) => type),

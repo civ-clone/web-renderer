@@ -29,7 +29,11 @@ import StrategyNote from '@civ-clone/core-strategy/StrategyNote';
 import Tile from '@civ-clone/core-world/Tile';
 import Unit from '@civ-clone/core-unit/Unit';
 import BusyGoTo from '@civ-clone/base-unit-action-goto/Busy/GoTo';
-import { Carrier, Fighter } from '@civ-clone/civ1-unit/Units';
+import { Carrier, Fighter, Settlers } from '@civ-clone/civ1-unit/Units';
+import { BuildFortress } from '@civ-clone/civ1-unit/Actions';
+import { Fortress } from '@civ-clone/civ1-world/TileImprovements';
+import BuildingFortress from '@civ-clone/base-unit-action-build-fortress/Rules/BuildingFortress';
+import { Construction } from '@civ-clone/library-science/Advances';
 import { LandAircraft } from '@civ-clone/civ1-unit/Actions';
 import Stowed from '@civ-clone/base-unit-action-embark/Busy/Stowed';
 import { generateKey, goToBusy } from '@civ-clone/base-unit-action-goto/GoTo';
@@ -208,6 +212,64 @@ const report = (): void => {
   })();
 
   push('an aircraft can land on a Carrier', () => landed, 'ok');
+
+  // A Fortress (#388): one built on a square, and Settlers part-way through building another, so the save carries the
+  //  tile improvement and the job, rebuilt by its registered delayed action.
+  let fortressTile: Tile | undefined;
+  let fortifying: Unit | undefined;
+
+  const fortressBuilt = ((): string => {
+    try {
+      const player = (journeying as Unit).player();
+      const [first, second] = (journeying as Unit)
+        .tile()
+        .map()
+        .entries()
+        .filter(
+          (tile) =>
+            tile.isLand() &&
+            defaultGame.cities.getByTile(tile) === null &&
+            unitRegistryInstance.getByTile(tile).length === 0
+        );
+
+      if (!first || !second) {
+        return 'no free land';
+      }
+
+      fortressTile = first;
+      new Fortress(first, ruleRegistryInstance);
+
+      defaultGame.playerResearch.getByPlayer(player).addAdvance(Construction);
+
+      fortifying = new Settlers(null, player, second, ruleRegistryInstance);
+      unitRegistryInstance.register(fortifying);
+
+      const build = fortifying
+        .actions(second)
+        .find((action): boolean => action instanceof BuildFortress);
+
+      if (!build) {
+        return `no BuildFortress, only ${fortifying
+          .actions(second)
+          .map((action) => action.constructor.name)
+          .join(', ')}`;
+      }
+
+      fortifying.action(build);
+
+      return fortifying.busy() instanceof BuildingFortress
+        ? 'ok'
+        : 'the Settlers are not building it';
+    } catch (error) {
+      return (error as Error).message;
+    }
+  })();
+
+  push(
+    'Settlers can build a Fortress, beside one already built',
+    () => fortressBuilt,
+    'ok'
+  );
 
   // Specialists (#84). A citizen taken off a tile becomes an Entertainer, and
   // clicking one changes its kind, which is its class, so the save has to
@@ -640,6 +702,31 @@ const report = (): void => {
           return [restored.holder().id(), restored.host().id()];
         }),
     embassy ? [[embassy.holder().id(), embassy.host().id()]] : null
+  );
+
+  // The Fortress and the one being built, after the round trip.
+  const restoredFortifying = fortifying
+    ? target.units.entries().find((unit) => unit.id() === fortifying?.id())
+    : undefined;
+
+  push(
+    'the Fortress comes back on its square',
+    () =>
+      fortressTile
+        ? target.tileImprovements
+            .entries()
+            .filter((improvement) => improvement instanceof Fortress)
+            .map((improvement) => [
+              improvement.tile().x(),
+              improvement.tile().y(),
+            ])
+        : null,
+    fortressTile ? [[fortressTile.x(), fortressTile.y()]] : null
+  );
+  push(
+    'and the Settlers still building another',
+    () => restoredFortifying?.busy() instanceof BuildingFortress,
+    true
   );
 
   // The aircraft on the Carrier, after the round trip.

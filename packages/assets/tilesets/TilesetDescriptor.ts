@@ -110,7 +110,10 @@ export interface SpriteFamily {
    *  square with a special or a hut, which are what a player looks for there.
    */
   flavour?: TerrainPictures & { chance: number };
-  /** Where sprites smaller than a tile go in it, by engine name. */
+  /**
+   * Where a sprite goes in the tile, by engine name: one smaller than the tile within it, and one taller than it (Civ2's
+   *  Fortress and Airbase) above it, as far as `geometry.overhang` leaves room for.
+   */
   anchors?: { [name: string]: Point };
   /** Drawn over the terrain instead of under it: irrigation, for a tileset whose terrain covers the land. */
   overTerrain?: boolean;
@@ -182,6 +185,14 @@ export interface TilesetFamilies {
   fog?: SpriteFamily;
   special: SpriteFamily;
   hut: SpriteFamily;
+  /**
+   * The tile improvements only some rules have (#1243): drawn when a square has one, each one sprite, at its `anchors`
+   *  entry by engine name (`Farmland`, `Fortress`, `Airbase`). Left out, a square with one is drawn as if it had none.
+   *  Farmland is drawn in place of the square's irrigation, as Civ2 draws it.
+   */
+  farmland?: SpriteFamily;
+  fortress?: SpriteFamily;
+  airbase?: SpriteFamily;
 }
 
 /**
@@ -441,6 +452,9 @@ const familyValues: { [key in keyof TilesetFamilies]?: string[] } = {
   pollution: [],
   special: ['special'],
   hut: [],
+  farmland: [],
+  fortress: [],
+  airbase: [],
 };
 
 /** The placeholders in a sprite name: `terrain/{terrain}_{dirs}` has `terrain` and `dirs`. */
@@ -578,6 +592,27 @@ export const readDescriptor = (json: unknown): TilesetDescriptor => {
       );
     }
   });
+
+  // So does a tile improvement's sprite lifted above its tile (Civ2's Fortress and Airbase, #1243).
+  (['farmland', 'fortress', 'airbase'] as const).forEach((key) =>
+    Object.entries(descriptor.families[key]?.anchors ?? {}).forEach(
+      ([name, { x, y }]) => {
+        const { top, left } = geometry.overhang;
+
+        if (-y > top || -x > left) {
+          refuse(
+            `families.${key}.anchors.${name} reaches ${Math.max(
+              -y,
+              0
+            )} px above the tile and ${Math.max(
+              -x,
+              0
+            )} px left of it, but geometry.overhang leaves room for ${top} above and ${left} left.`
+          );
+        }
+      }
+    )
+  );
 
   // The map fills only the placeholders it has for a name, so a name with any other is refused here rather than
   //  failing on every tile.
@@ -733,7 +768,7 @@ export const readDescriptor = (json: unknown): TilesetDescriptor => {
     ([key, values]) => {
       const family = families[key] as SpriteFamily | undefined;
 
-      // Only fog may be left out: the schema requires the others.
+      // Only fog and the tile improvements only some rules have may be left out: the schema requires the others.
       if (family === undefined) {
         return;
       }

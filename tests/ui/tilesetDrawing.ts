@@ -624,6 +624,106 @@ expect(
   ]
 );
 
+// The tile improvements only some rules have (#388, #1243): Civ1's art has a Fortress; a pack with Civ2's three draws
+//  Farmland in place of the irrigation and lifts a taller Fortress or Airbase by its anchor; a pack without them (the
+//  stub, as the pixel art) draws the square as if they weren't there.
+const withStructures: TilesetDescriptor = {
+  ...stub,
+  families: {
+    ...stub.families,
+    farmland: { sprite: 'imp/fields' },
+    fortress: {
+      sprite: 'imp/fort',
+      anchors: { Fortress: { x: 0, y: -4 } },
+    },
+    airbase: { sprite: 'imp/runway', anchors: { Airbase: { x: 0, y: -4 } } },
+  },
+};
+
+expect(
+  'a Fortress with the tileset’s sprite, at its anchor, Farmland in place of irrigation, and nothing for a pack without them',
+  [
+    drawn(
+      Landscape,
+      civ1,
+      makeWorld(5, 5, {
+        '2,2': { terrain: 'Hills', improvements: ['Fortress'] },
+      }),
+      2,
+      2
+    ),
+    drawn(
+      Landscape,
+      withStructures,
+      makeWorld(5, 5, {
+        '2,2': {
+          terrain: 'Grassland',
+          improvements: ['Irrigation', 'Farmland', 'Fortress'],
+        },
+      }),
+      2,
+      2
+    ),
+    drawn(
+      Landscape,
+      withStructures,
+      makeWorld(5, 5, { '2,2': { improvements: ['Airbase'] } }),
+      2,
+      2
+    ),
+    drawn(
+      Landscape,
+      stub,
+      makeWorld(5, 5, {
+        '2,2': {
+          terrain: 'Grassland',
+          improvements: ['Irrigation', 'Farmland', 'Fortress', 'Airbase'],
+        },
+      }),
+      2,
+      2
+    ),
+  ],
+  [
+    ['terrain/land@0,0', 'terrain/hills@0,0', 'map/fort@0,0'],
+    [
+      'ground/land@0,0',
+      'imp/fields@0,0',
+      'land/grassland/n-e-s-w@0,0',
+      'imp/fort@0,-8',
+    ],
+    ['ground/land@0,0', 'land/grassland/n-e-s-w@0,0', 'imp/runway@0,-8'],
+    ['ground/land@0,0', 'imp/water@0,0', 'land/grassland/n-e-s-w@0,0'],
+  ]
+);
+
+expect(
+  'and a descriptor whose Fortress is lifted further than the overhang leaves room for is refused',
+  (() => {
+    try {
+      require('@civ-clone/ui-assets/tilesets/TilesetDescriptor').validateDescriptor(
+        {
+          ...withStructures,
+          families: {
+            ...withStructures.families,
+            fortress: {
+              sprite: 'imp/fort',
+              anchors: { Fortress: { x: 0, y: -40 } },
+            },
+          },
+        }
+      );
+
+      return null;
+    } catch (error) {
+      return (error as Error).message.includes(
+        'families.fortress.anchors.Fortress reaches 40 px above the tile'
+      );
+    }
+  })(),
+  true
+);
+
 // A tileset whose terrain covers the land (rather than leaving most of it showing, as Civ1's does) draws irrigation
 //  over its terrain, or the terrain would hide it.
 expect(

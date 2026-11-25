@@ -32,6 +32,7 @@ i18next.addResources(
 
     // Improvements
     'Improvement.Irrigation.name': 'Irrigation',
+    'Improvement.Fortress.name': 'Fortress',
     'Improvement.Mine.name': 'Mine',
     'Improvement.Pollution.name': 'Pollution',
     'Improvement.Road.name': 'Road',

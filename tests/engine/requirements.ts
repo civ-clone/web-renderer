@@ -72,9 +72,9 @@ const check = async (): Promise<void> => {
     derivedIds = derived.map((rule: Rule): string | null => rule.id());
 
   expect(
-    'how many rules are made from entries: units 26 + 13, advances 60, Wonders 21 + 1 + 11, improvements 20 + 3 + 5, governments 5, spaceship parts 6 + 1, tile improvements 5',
+    'how many rules are made from entries: units 26 + 13, advances 60, Wonders 21 + 1 + 11, improvements 20 + 3 + 5, governments 5, spaceship parts 6 + 1, tile improvements 6 (the Fortress, #388)',
     derived.length,
-    26 + 13 + 60 + 21 + 1 + 11 + 20 + 3 + 5 + 5 + 6 + 1 + 5
+    26 + 13 + 60 + 21 + 1 + 11 + 20 + 3 + 5 + 5 + 6 + 1 + 6
   );
   expect(
     'each of those rules has an entry, and is the rule made from it',
