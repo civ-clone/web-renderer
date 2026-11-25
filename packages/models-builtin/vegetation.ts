@@ -6,21 +6,25 @@
 //  conifers towards the poles and broadleaf towards the equator (`conifers`, the share at the equator, then at the
 //  poles). Woods (`canopy`) grow as one across their squares, each kind as often as its count says.
 
-/** What grows. */
-export type PlantKind =
+/** Every kind of plant that grows, as the built-in set draws them, and a set of models may. */
+export const PLANT_KINDS = [
   // Trees: a conifer's tiers, a broadleaf's crown, a palm's fronds, a dead trunk.
-  | 'conifer'
-  | 'broadleaf'
-  | 'palm'
-  | 'deadTree'
+  'conifer',
+  'broadleaf',
+  'palm',
+  'deadTree',
   // Low growth: a round bush, a spray of shrub, low scrub, reeds.
-  | 'bush'
-  | 'shrub'
-  | 'scrub'
-  | 'reeds'
+  'bush',
+  'shrub',
+  'scrub',
+  'reeds',
   // Not plants, but scattered as they are: rocks, and a cactus.
-  | 'rock'
-  | 'cactus';
+  'rock',
+  'cactus',
+] as const;
+
+/** What grows: one of `PLANT_KINDS`. */
+export type PlantKind = (typeof PLANT_KINDS)[number];
 
 export type Plant = {
   kind: PlantKind;

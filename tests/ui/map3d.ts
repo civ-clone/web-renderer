@@ -8175,6 +8175,70 @@ expect(
     );
     layered.dispose();
 
+    // Plants (#1335): each set's laid again once, as all its models have been tried, not as each arrives; a later set's
+    //  plant drawn till an earlier set's of it arrives; and a kind on a terrain of its own drawn with its own model only
+    //  where no earlier set draws the kind.
+    const growers = new Map<
+        string,
+        {
+          grown: (id: string, plants: readonly string[]) => void;
+          done: () => void;
+        }
+      >(),
+      growing = new MapView3D(
+        {
+          ...given!,
+          models: [{ url: '/sets/first.json' }, { url: '/sets/second.json' }],
+        },
+        () => ({
+          ...fakeStage(),
+          loadModels: (url, _loaded, grown) =>
+            new Promise<void>((done) =>
+              growers.set(url, { grown: grown!, done })
+            ),
+        })
+      ),
+      laidWith: [string, string][][] = [],
+      settled = () => new Promise((resolve) => setTimeout(resolve, 0)),
+      landGrowing = growing.land(),
+      growWith = landGrowing.growWith.bind(landGrowing);
+
+    landGrowing.growWith = (models, u, v) => {
+      laidWith.push([...models].sort());
+      growWith(models, u, v);
+    };
+
+    growers.get('/sets/second.json')!.grown('teak', ['Jungle:broadleaf']);
+    growers.get('/sets/second.json')!.grown('pine', ['conifer', 'broadleaf']);
+
+    const beforeDone = laidWith.length;
+
+    growers.get('/sets/second.json')!.done();
+    await settled();
+    growers.get('/sets/first.json')!.grown('beech', ['broadleaf']);
+    growers.get('/sets/first.json')!.done();
+    await settled();
+    growing.dispose();
+
+    expect(
+      'a set’s plants laid once it’s loaded; an earlier set’s plant drawn over a later’s, and over a later’s on a terrain of its own',
+      [beforeDone, laidWith],
+      [
+        0,
+        [
+          [
+            ['Jungle:broadleaf', 'teak'],
+            ['broadleaf', 'pine'],
+            ['conifer', 'pine'],
+          ],
+          [
+            ['broadleaf', 'beech'],
+            ['conifer', 'pine'],
+          ],
+        ],
+      ]
+    );
+
     // A set the page asks to try out: drawn with instead of the ones that ship, not beside them.
     fresh();
     await prepareMap3D({

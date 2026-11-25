@@ -482,7 +482,7 @@ a block of them a massif, not a grid of cones. Hills already run into one anothe
 - jungle has broadleaf and palms, swamps reeds and dead trees, and grassland, plains, tundra and hills bushes, shrubs and scrub;
 - deserts and mountains get rocks, and deserts a cactus or two.
 
-Plants are scattered by seed, each where it has room. They stay clear of a unit's stand, roads, mines, huts and specials, and off a city's lot and cleared ground (fields, a fortress, an airbase). A tree is a handful of low-sided shapes. Still to do in 3.2: instancing, impostors at a distance, and wind.
+Plants are scattered by seed, each where it has room. They stay clear of a unit's stand, roads, mines, huts and specials, and off a city's lot and cleared ground (fields, a fortress, an airbase). A tree is a handful of low-sided shapes. Since #1335, a set of models may draw them instead (`names.plant`, spec §5.1, §10): 0 A.D.'s pine, beech, teak, date palm and dead tree ship with civ-clone/models-0ad, a chunk's of each model instanced in one draw call a part at each copy of the world. Still to do in 3.2: impostors at a distance, and wind.
 
 **Woods: done.** Forest, jungle and swamp grow as one canopy across their squares, as Civ1's forests run together (spec §5.1): trees stand at the points of a lattice over the whole ground, whole across the edge to the same woods and thinning to a fringe at the edge to other ground, so a forest is a wood rather than a clump on each square. An all-forest chunk is 48,000–58,000 triangles and 35–50 ms to lay, a few squares a frame.
 

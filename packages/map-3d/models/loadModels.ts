@@ -22,6 +22,7 @@ import {
   ClipShot,
   ModelManifest,
   RiggedModel,
+  plantsOf,
   readModelManifest,
   scaleOf,
   unitTypesOf,
@@ -285,8 +286,9 @@ export const modelKey = (url: string, id: string): string => `${url}#${id}`;
 /**
  * Loads the set whose manifest is at `url`: its manifest, then each model that draws a unit type, each given to
  *  `loaded` as it arrives, with the unit types it draws; and then its rigged copy, where it has one, given to `rigged`.
- *  Resolves with the manifest once all have been tried, or rejects saying why there's none (it can't be fetched, or
- *  isn't a set of models). A model that can't be had is said in `failed`, and the rest go on.
+ *  Each model that draws a plant (a tree) is given to `grown`, with the plants it draws. Resolves with the manifest
+ *  once all have been tried, or rejects saying why there's none (it can't be fetched, or isn't a set of models). A
+ *  model that can't be had is said in `failed`, and the rest go on.
  */
 export const loadModels = async (
   url: string,
@@ -296,6 +298,11 @@ export const loadModels = async (
     id: string,
     rig: LoadedRig,
     types: readonly string[]
+  ) => void = () => {},
+  grown: (
+    id: string,
+    model: LoadedModel,
+    plants: readonly string[]
   ) => void = () => {}
 ): Promise<ModelManifest> => {
   // Only this site's, the manifest and its models: whatever asked for it, nothing's fetched from another.
@@ -320,6 +327,7 @@ export const loadModels = async (
 
   const loader = new GLTFLoader(modelManager(location.origin)),
     types = unitTypesOf(manifest),
+    plants = plantsOf(manifest),
     // Where the manifest is: each model's beside it.
     beside = new URL('.', at).href;
 
@@ -352,17 +360,20 @@ export const loadModels = async (
   };
 
   await Promise.all(
-    [...types.keys()].map(async (id) => {
+    [...new Set([...types.keys(), ...plants.keys()])].map(async (id) => {
       const entry = manifest.models[id]!;
 
       try {
-        const gltf = await parsed(entry.file);
+        const gltf = await parsed(entry.file),
+          model = { parts: partsOf(gltf.scene), scale: scaleOf(manifest, id) };
 
-        loaded(
-          id,
-          { parts: partsOf(gltf.scene), scale: scaleOf(manifest, id) },
-          types.get(id) ?? []
-        );
+        if (types.has(id)) {
+          loaded(id, model, types.get(id)!);
+        }
+
+        if (plants.has(id)) {
+          grown(id, model, plants.get(id)!);
+        }
       } catch (error) {
         failed(id, error);
 
@@ -370,7 +381,7 @@ export const loadModels = async (
       }
 
       // Its rigged copy, once the model's drawing, where it has one: one that can't be had leaves the model as it is.
-      if (entry.rigged === undefined) {
+      if (entry.rigged === undefined || !types.has(id)) {
         return;
       }
 

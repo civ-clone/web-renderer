@@ -27,6 +27,8 @@ import overlayFor, {
 import overlayMesh, {
   OverlayMesh,
   OverlayPlace,
+  PLANT_HEIGHT,
+  PLANT_NUMBERS,
   ROAD_BOW,
   ROOFS,
   layOverlay,
@@ -1230,6 +1232,113 @@ const landOf = (
 
   return { tiles, land, chunks, laid, order, stage };
 };
+
+// Plants a set of models draws (#1335): laid as where each stands, how tall it's drawn and which way it's turned, by
+//  the model, rather than as the built-in set's shapes, as tall as those would be; a kind on a terrain of its own drawn
+//  with its own model before the kind's; every chunk laid again when the models change; and a chunk with nothing but
+//  plants a set draws kept.
+{
+  const { land, laid, stage } = landOf('square', 32, 16, (x) => ({
+      terrain: x < 16 ? 'Forest' : 'Jungle',
+    })),
+    solids = () =>
+      [...laid.values()].reduce(
+        (sum, mesh) => sum + (mesh?.positions.length ?? 0),
+        0
+      );
+
+  land.queueAll(0, 0);
+  land.build(stage, null);
+
+  const builtIn = solids(),
+    chunks = laid.size;
+
+  land.growWith(
+    new Map([
+      ['conifer', 'pine'],
+      ['broadleaf', 'beech'],
+      ['Jungle:broadleaf', 'teak'],
+      ['palm', 'palm'],
+    ]),
+    0,
+    0
+  );
+
+  const due = land.overlaysPending();
+
+  land.build(stage, null);
+
+  // Every plant a set draws, with the kind it is, where its chunk is, and how tall.
+  const plants = [...laid.values()].flatMap((mesh) =>
+      Object.entries(mesh?.plants ?? {}).flatMap(([model, numbers]) =>
+        Array.from({ length: numbers.length / PLANT_NUMBERS }, (_, n) => ({
+          model,
+          forest: mesh!.u + numbers[n * PLANT_NUMBERS]! < 16,
+          height: numbers[n * PLANT_NUMBERS + 3]!,
+          whole: numbers.length % PLANT_NUMBERS === 0,
+          // Where it stands within its chunk, as its corner's taken off: a chunk here is 16 across and down.
+          within:
+            numbers[n * PLANT_NUMBERS]! >= 0 &&
+            numbers[n * PLANT_NUMBERS]! <= 16 &&
+            numbers[n * PLANT_NUMBERS + 2]! >= 0 &&
+            numbers[n * PLANT_NUMBERS + 2]! <= 16,
+        }))
+      )
+    ),
+    // Each model's kind and where it grows, and so how big it grows against its usual: the table's sizes, from the
+    //  woods' fringe's (0.9 of them) to where they're whole (1.3).
+    kinds: { [model: string]: [keyof typeof PLANT_HEIGHT, string] } = {
+      pine: ['conifer', 'Forest'],
+      beech: ['broadleaf', 'Forest'],
+      teak: ['broadleaf', 'Jungle'],
+      palm: ['palm', 'Jungle'],
+    },
+    tall = plants.filter(({ model, height }) => {
+      const [kind, terrain] = kinds[model]!,
+        [least, most] = vegetationTable[terrain]!.plants.find(
+          (plant) =>
+            plant.kind === kind ||
+            (kind === 'broadleaf' && plant.kind === 'conifer')
+        )!.size,
+        usual = PLANT_HEIGHT[kind];
+
+      return (
+        height < usual * least * 0.9 - 1e-9 ||
+        height > usual * most * 1.3 + 1e-9
+      );
+    });
+
+  expect(
+    'plants a set draws are laid by the model, as tall as the built-in set’s, a jungle’s broadleaf its own; every chunk laid again for them, the built-in shapes gone',
+    [
+      builtIn > 0,
+      due,
+      [
+        ...new Set(
+          plants.filter(({ forest }) => forest).map(({ model }) => model)
+        ),
+      ].sort(),
+      [
+        ...new Set(
+          plants.filter(({ forest }) => !forest).map(({ model }) => model)
+        ),
+      ].sort(),
+      plants.every(({ whole, within }) => whole && within),
+      tall.length,
+      // Each model's trees as varied in height as the built-in set's sizes are.
+      Object.keys(kinds).filter((model) => {
+        const heights = plants
+          .filter((plant) => plant.model === model)
+          .map(({ height }) => height);
+
+        return Math.max(...heights) / Math.min(...heights) < 1.25;
+      }),
+      solids(),
+      [...laid.values()].every((mesh) => mesh !== null),
+    ],
+    [true, chunks, ['beech', 'pine'], ['palm', 'teak'], true, 0, [], 0, true]
+  );
+}
 
 // Draped over the land as it's drawn, its flat triangles, not the true relief: on hills, every point of every road and
 //  field above the triangle it lies over, by the chunk's own points and indices.

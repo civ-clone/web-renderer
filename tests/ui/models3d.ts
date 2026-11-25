@@ -38,6 +38,7 @@ import {
 } from '@civ-clone/ui-map-3d/markers/drawMarker';
 import {
   ModelManifest,
+  plantsOf,
   readModelManifest,
   scaleOf,
   unitTypesOf,
@@ -211,6 +212,64 @@ const manifest = (): Record<string, unknown> => ({
       'no unit names',
       'unit Archer: drawn by a model the set hasn’t',
       'unit Archer: drawn by a model the set hasn’t',
+    ].map((reason) => reason.replace('’', "'"))
+  );
+
+  // The plants a set's models draw (#1335): by kind, or a kind on a terrain of its own, read by the model; none for a
+  //  set that names none. A plant drawn by a model the set hasn't, or named as no kind is, is refused.
+  const withPlants = (plants: unknown) => {
+    const json = manifest();
+
+    (json.names as Record<string, unknown>).plant = plants;
+
+    return readModelManifest(json);
+  };
+
+  expect(
+    'a set may say which plants its models draw, by kind or by kind on a terrain, read by the model',
+    [
+      [
+        ...plantsOf(
+          withPlants({
+            conifer: 'spare',
+            'Jungle:broadleaf': 'spare',
+            palm: 'trireme',
+          }) as ModelManifest
+        ),
+      ],
+      [...plantsOf(read0)],
+    ],
+    [
+      [
+        ['spare', ['conifer', 'Jungle:broadleaf']],
+        ['trireme', ['palm']],
+      ],
+      [],
+    ]
+  );
+  expect(
+    'a plant drawn by a model the set hasn’t, or named as no plant is, or plants not named one by one, is refused',
+    [
+      withPlants({ conifer: 'pine' }),
+      withPlants({ conifer: '' }),
+      withPlants({ 'conifer tree': 'spare' }),
+      withPlants({ 'Jungle:': 'spare' }),
+      withPlants({ ':broadleaf': 'spare' }),
+      withPlants({ tree: 'spare' }),
+      withPlants({ 'Jungle:Broadleaf': 'spare' }),
+      withPlants(['spare']),
+      withPlants('spare'),
+    ],
+    [
+      'plant conifer: not a kind of plant, or drawn by a model the set hasn’t',
+      'plant conifer: not a kind of plant, or drawn by a model the set hasn’t',
+      'plant conifer tree: not a kind of plant, or drawn by a model the set hasn’t',
+      'plant Jungle:: not a kind of plant, or drawn by a model the set hasn’t',
+      'plant :broadleaf: not a kind of plant, or drawn by a model the set hasn’t',
+      'plant tree: not a kind of plant, or drawn by a model the set hasn’t',
+      'plant Jungle:Broadleaf: not a kind of plant, or drawn by a model the set hasn’t',
+      'plant names not a list of plants',
+      'plant names not a list of plants',
     ].map((reason) => reason.replace('’', "'"))
   );
 

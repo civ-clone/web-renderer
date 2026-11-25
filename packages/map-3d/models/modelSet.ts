@@ -1,6 +1,8 @@
 // A set of models for the 3D map (docs/3d-renderer.md §10): its manifest, as a hosted set's repository writes it, read
 //  and checked here, and which model draws each unit type. Pure: loading the models is `loadModels.ts`'s.
 
+import { PLANT_KINDS } from '@civ-clone/ui-models-builtin/vegetation';
+
 /**
  * A licence, or a credit's, by name and link; and, where it asks for one (CC BY, CC BY-SA), the credit shown wherever
  *  the set's used (docs/asset-library.md, "The manifest").
@@ -70,8 +72,12 @@ export type ModelManifest = {
   // The 3D map's squares to each of the models' units.
   scale: number;
   models: { [id: string]: ModelEntry };
-  // Which model draws each unit type, by the engine's name for it.
-  names: { unit: { [type: string]: string } };
+  // Which model draws each unit type, by the engine's name for it; and each plant, where it draws any, by the 3D map's
+  //  kind of plant (`conifer`), or that kind on a terrain of its own (`Jungle:broadleaf`), by the engine's name for it.
+  names: {
+    unit: { [type: string]: string };
+    plant?: { [plant: string]: string };
+  };
 };
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
@@ -101,6 +107,16 @@ const isFile = (value: unknown): value is string =>
   value
     .split('/')
     .every((part) => part !== '' && part !== '.' && part !== '..');
+
+// A plant as a set names it: a kind of plant the map grows (`conifer`), or that kind on a terrain of its own
+//  (`Jungle:broadleaf`), its name letters only, as a rule set may name a terrain.
+const isPlant = (value: string): boolean => {
+  const match = /^(?:[A-Za-z]+:)?([A-Za-z]+)$/.exec(value);
+
+  return (
+    match !== null && (PLANT_KINDS as readonly string[]).includes(match[1]!)
+  );
+};
 
 const isRole = (value: string): value is ClipRole =>
   (CLIP_ROLES as readonly string[]).includes(value);
@@ -241,6 +257,21 @@ export const readModelManifest = (json: unknown): ModelManifest | string => {
     return `unit ${unknown[0]}: drawn by a model the set hasn't`;
   }
 
+  if (names.plant !== undefined && !isObject(names.plant)) {
+    return 'plant names not a list of plants';
+  }
+
+  const unplanted = Object.entries(names.plant ?? {}).find(
+    ([plant, id]) =>
+      !isPlant(plant) ||
+      !isText(id) ||
+      !Object.prototype.hasOwnProperty.call(models, id)
+  );
+
+  if (unplanted !== undefined) {
+    return `plant ${unplanted[0]}: not a kind of plant, or drawn by a model the set hasn't`;
+  }
+
   // Each model with its rigged copy as far as the map can play it, or none.
   return {
     ...json,
@@ -267,6 +298,17 @@ export const unitTypesOf = (manifest: ModelManifest): Map<string, string[]> => {
   );
 
   return types;
+};
+
+/** The plants each of `manifest`'s models draws, by the model: none, for a set that names none. */
+export const plantsOf = (manifest: ModelManifest): Map<string, string[]> => {
+  const plants = new Map<string, string[]>();
+
+  Object.entries(manifest.names.plant ?? {}).forEach(([plant, id]) =>
+    plants.set(id, [...(plants.get(id) ?? []), plant])
+  );
+
+  return plants;
 };
 
 /** How big `id` is drawn: the 3D map's squares to each of its units. */

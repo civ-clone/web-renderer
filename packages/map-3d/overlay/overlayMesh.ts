@@ -74,11 +74,16 @@ export type OverlayPlace = {
   around: readonly (readonly [number, number])[];
   // How far apart the world's copies are, across, and down where it wraps over the poles.
   period: { u: number; v: number | null };
+  // The model a set of models draws a kind of plant on this square with, by its id among every set's, or nothing,
+  //  where it's drawn as the built-in set's: a tree as a set's, set where it's drawn.
+  plantModel?(kind: PlantKind): string | null;
 };
 
 /**
- * A chunk's overlay as three.js takes it: triangles, each point's normal and colour, relative to its corner; and its
- *  haze, see-through, as smog over pollution: triangles, each point's colour and how solid it is (four numbers a point).
+ * A chunk's overlay as three.js takes it: triangles, each point's normal and colour, relative to its corner; its haze,
+ *  see-through, as smog over pollution: triangles, each point's colour and how solid it is (four numbers a point); and
+ *  the plants a set of models draws, by the model: where each stands, relative to the corner, how tall it's drawn and
+ *  which way it's turned (`PLANT_NUMBERS` numbers each).
  */
 export type OverlayMesh = {
   u: number;
@@ -87,14 +92,20 @@ export type OverlayMesh = {
   normals: Float32Array;
   colours: Float32Array;
   haze: { positions: Float32Array; colours: Float32Array };
+  plants: { [model: string]: Float32Array };
 };
 
-// Triangles as they're made: three numbers a point for each; and the haze's, its colours four a point.
+/** How many numbers each plant a set draws has in an overlay: where it stands (u, y, v), how tall, and its turn. */
+export const PLANT_NUMBERS = 5;
+
+// Triangles as they're made: three numbers a point for each; the haze's, its colours four a point; and the plants a
+//  set draws, `PLANT_NUMBERS` numbers each, by the model.
 export type Soup = {
   positions: number[];
   normals: number[];
   colours: number[];
   haze: { positions: number[]; colours: number[] };
+  plants: Map<string, number[]>;
 };
 
 /** An empty soup of triangles, for squares to be laid into one at a time. */
@@ -103,6 +114,7 @@ export const soup = (): Soup => ({
   normals: [],
   colours: [],
   haze: { positions: [], colours: [] },
+  plants: new Map(),
 });
 
 // How far over the land each kind is laid, so the later is over the earlier: fields, then roads, railroads.
@@ -1616,6 +1628,23 @@ const ROOM: { [kind in PlantKind]: number } = {
   cactus: 0.03,
 };
 
+/**
+ * How tall each kind of plant stands at its usual size, as the built-in set's shapes below make it: a set of models
+ *  draws its plants as tall.
+ */
+export const PLANT_HEIGHT: { readonly [kind in PlantKind]: number } = {
+  conifer: 0.21,
+  broadleaf: 0.175,
+  palm: 0.18,
+  deadTree: 0.12,
+  bush: 0.0425,
+  shrub: 0.05,
+  scrub: 0.018,
+  reeds: 0.07,
+  rock: 0.032,
+  cactus: 0.1,
+};
+
 // One plant, standing at (`u`, `v`), `s` times its usual size, turned `facing` about the vertical.
 const grow = (
   layer: Layer,
@@ -1627,7 +1656,18 @@ const grow = (
   facing: number
 ): void => {
   const y = layer.ground(u, v),
-    { colour, detail } = plant;
+    { colour, detail } = plant,
+    model = layer.place.plantModel?.(kind) ?? null;
+
+  // As a set of models draws it: where it stands, as tall as the built-in set's would be, and its turn.
+  if (model !== null) {
+    const laid = layer.soup.plants.get(model) ?? [];
+
+    laid.push(u, y, v, PLANT_HEIGHT[kind] * s, facing);
+    layer.soup.plants.set(model, laid);
+
+    return;
+  }
 
   switch (kind) {
     case 'conifer':
@@ -2206,6 +2246,18 @@ export const meshOf = (u: number, v: number, laid: Soup): OverlayMesh => {
     normals: new Float32Array(laid.normals),
     colours: new Float32Array(laid.colours),
     haze: { positions: haze, colours: new Float32Array(laid.haze.colours) },
+    plants: Object.fromEntries(
+      [...laid.plants].map(([model, numbers]) => {
+        const at = new Float32Array(numbers);
+
+        for (let n = 0; n < at.length; n += PLANT_NUMBERS) {
+          at[n] = at[n]! - u;
+          at[n + 2] = at[n + 2]! - v;
+        }
+
+        return [model, at];
+      })
+    ),
   };
 };
 
