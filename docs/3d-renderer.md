@@ -769,7 +769,8 @@ How plants are placed:
   - **Channel:** across its water (`RIVER_WIDTH`, 0.08 either side) and `FLOOR` (0.18, about the land's mesh's
     diagonal) past it, the land is cut flat to its bed, so no triangle under its water rises over it, wherever the
     mesh's points fall. Its bank rises back to the land over `BANK` (0.14), and is wet, darker, from the water to
-    halfway up, but not on the sea's floor under a mouth.
+    halfway up, fading out as the land comes down the last 0.0002 to the sea's level, so it's not where the sea's drawn,
+    in a mouth or on the sea's floor under it.
   - **Bed and the sea:** where its level's over the sea's, its bed is `DEPTH` (0.004) under it, or nearer, but over the
     sea's, so the sea's surface never shows inland. At the sea's level its bed is too, and under it, further under,
     so where a river comes down to the sea, the sea is its water. The bed's continuous through all of these, and its

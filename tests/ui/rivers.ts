@@ -108,7 +108,7 @@ const near = (a: number, b: number, within = 1e-9): boolean =>
 }
 
 // How a course cuts the land: down to its bed across its water and `FLOOR` past, rising back over `BANK`; never above
-//  what it was; wet at the water, dry past the bank. Its bed under its water, but over the sea's where its water is.
+//  what it was; wet at the water, dry past the bank. Its bed under its level, but over the sea's where its level is.
 {
   const course = courseFrom(0, 0, 1, 0, { seed: 1 });
 
@@ -136,7 +136,7 @@ const near = (a: number, b: number, within = 1e-9): boolean =>
   );
 
   expect(
-    'its bed is under its water, but over the sea where its water is; at the sea’s level, at it; under the sea’s, under its water by as far again, to the depth, smoothly',
+    'its bed is under its level, but over the sea where its level is; at the sea’s level, at it; under the sea’s, under its level by as far again, to the depth, smoothly',
     [
       bedOf(0.02) < 0.02 && bedOf(0.02) > 0,
       bedOf(0.001) > 0 && bedOf(0.001) < 0.001,
@@ -161,7 +161,7 @@ const near = (a: number, b: number, within = 1e-9): boolean =>
   );
 
   expect(
-    'a river’s level is the margin under the land round it, but nearer the sea’s level than twice that, half as far again from it: over the sea where the land is, under it where it isn’t, smoothly',
+    'a river’s level is the margin under the land round it, but nearer the sea’s level than twice that, under it by half as far as it is from the sea’s level: over the sea where the land is, under it where it isn’t, smoothly',
     [
       near(underLand(0.02), 0.02 - MARGIN),
       near(underLand(0.002), 0.001),
@@ -169,7 +169,14 @@ const near = (a: number, b: number, within = 1e-9): boolean =>
       near(underLand(-0.002), -0.003),
       near(underLand(-0.02), -0.02 - MARGIN),
       underLand(0),
-      [1e-9, -1e-9, MARGIN * 2 + 1e-9, MARGIN * 2 - 1e-9].every(
+      [
+        1e-9,
+        -1e-9,
+        MARGIN * 2 + 1e-9,
+        MARGIN * 2 - 1e-9,
+        -MARGIN * 2 + 1e-9,
+        -MARGIN * 2 - 1e-9,
+      ].every(
         (low, at, all) =>
           at % 2 === 1 ||
           Math.abs(underLand(low) - underLand(all[at + 1]!)) < 1e-8
@@ -340,7 +347,7 @@ ids.forEach((topologyId) => {
             v = pv + (du / length) * out * side;
 
           // Where its own water's drawn: at the sea's level or under, the sea's its water. At each point and halfway
-          //  between, under it by the margin; between those, the land may dip.
+          //  between, under it as `underLand` puts it; between those, the land may dip.
           if (
             onLand(u, v) &&
             level > 0 &&
@@ -428,13 +435,11 @@ ids.forEach((topologyId) => {
       mouth !== undefined && (mouth.course.levels[STEPS / 2] ?? 1) <= 0,
       relief.height(coast[0]!, coast[1]!) <= 1e-12,
       relief.height(pastCoast[0]!, pastCoast[1]!) < 0,
-      // The sea's floor under it as it was, not wet: banks are land.
+      // The sea's floor under it not wet: banks are land.
       JSON.stringify(relief.sample(seaFloor[0]!, seaFloor[1]!).colour) ===
         JSON.stringify(dry.sample(seaFloor[0]!, seaFloor[1]!).colour),
-      relief.height(seaFloor[0]!, seaFloor[1]!) <
-        dry.height(seaFloor[0]!, seaFloor[1]!) + 1e-12,
     ],
-    [true, true, true, true, true, true]
+    [true, true, true, true, true]
   );
 
   // Its banks wet: darker than the land without it, by the water, and as it was past its bank.
@@ -451,6 +456,63 @@ ids.forEach((topologyId) => {
     `${topologyId}: a river’s banks are wet, darker than the land without it`,
     [middle !== undefined, wetShade < dryShade * 0.9],
     [true, true]
+  );
+
+  // A Civ1 mouth, from low River terrain, whose channel comes down to the sea's level short of the coast: wherever the
+  //  sea's drawn round it (the land under the sea's level), in its channel or on the sea's floor, the land's colour's
+  //  as it was, not wet; inland, its banks are wet still.
+  const lowland = (x: number, y: number) =>
+      key([x, y]) === key(end) ? 'River' : terrainAt(x, y),
+    low = createRelief({
+      layout,
+      source: sourceFor(topology, lowland, riverAt),
+    }),
+    lowDry = createRelief({
+      layout,
+      source: sourceFor(topology, lowland, () => false),
+    }),
+    lowMouth = low.courses().find(({ course }) => course.mouth),
+    lowMiddle = low
+      .courses()
+      .find(
+        ({ course }) => !course.mouth && course.points.some((n) => n !== 0)
+      );
+  let underSea = 0,
+    stained = 0;
+
+  if (lowMouth !== undefined) {
+    for (let along = 0; along <= STEPS; along += 0.25) {
+      const [pu, pv] = pointOf(lowMouth, along);
+
+      for (let du = -0.5; du <= 0.5; du += 0.1) {
+        for (let dv = -0.5; dv <= 0.5; dv += 0.1) {
+          if (low.height(pu + du, pv + dv) < 0) {
+            underSea++;
+
+            if (
+              JSON.stringify(low.sample(pu + du, pv + dv).colour) !==
+              JSON.stringify(lowDry.sample(pu + du, pv + dv).colour)
+            ) {
+              stained++;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  const [lmu, lmv] =
+    lowMiddle === undefined ? [0, 0] : pointOf(lowMiddle, STEPS / 2);
+
+  expect(
+    `${topologyId}: a Civ1 river’s mouth isn’t wet wherever the sea’s drawn round it; inland, its banks are`,
+    [
+      lowMouth !== undefined && (lowMouth.course.levels[0] ?? 0) > 0,
+      underSea > 100,
+      stained,
+      shade(low.sample(lmu, lmv)) < shade(lowDry.sample(lmu, lmv)) * 0.9,
+    ],
+    [true, true, 0, true]
   );
 
   // No step anywhere near a river: a hair either side of every edge of every square near one, the land's the same.

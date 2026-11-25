@@ -497,8 +497,8 @@ Plants are scattered by seed, each where it has room. They stay clear of a unit'
   across an edge with a river, as the 2D map joins them, and on into the sea where it meets it. One with neither is a
   pool;
 - each course bends a little, its own way, and its channel is cut into the land, with wet, darker banks;
-- its level is under the land round it, so its water will never stand over the ground, and its bed is over the sea's
-  level unless its water comes down to it, so the sea only shows in a river where it meets the sea.
+- its level, which its channel's cut under, is under the land round it, and its bed is over the sea's level unless its
+  level comes down to it, so the sea only shows in a river where it meets the sea.
 
 Still to do in 3.3: the water in the channels (next), specials, fields and the rest keeping clear of rivers, bridges,
 rapids and falls, and flow (with #1365).

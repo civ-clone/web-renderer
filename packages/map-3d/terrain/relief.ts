@@ -114,9 +114,11 @@ const linear = (hex: string): [number, number, number] => {
   return [channel(1), channel(3), channel(5)];
 };
 
-// A river's banks, wet: darker, muddy, and how much of it they take at the water's edge.
+// A river's banks, wet: darker, muddy, and how much of it they take at the water's edge; and over how far they fade out
+//  as the land comes down to the sea's level, where the sea's drawn.
 const WET_BANK = linear('#3e4630'),
-  WET_SHARE = 0.55;
+  WET_SHARE = 0.55,
+  WET_FADE = 0.0002;
 
 // A river's course, kept by its ends: how it's drawn and the squares it reaches into, to tell which have changed; and
 //  the middle of the square that makes it, on the world's first copy.
@@ -1268,9 +1270,11 @@ export const createRelief = ({
       return land;
     }
 
-    // Not on the sea's floor, under a mouth: banks are land, so they're gone by the coastline, where the land's blended
-    //  half from the sea's floor.
-    const share = wet * WET_SHARE * Math.max(0, 1 - land.shore * 2),
+    // Not where the sea's drawn, in a mouth or on the sea's floor under it: banks are land, so they fade out as the land
+    //  comes down the last `WET_FADE` to the sea's level, which a river's bed only comes down to within a thousandth or
+    //  so of the sea's.
+    const dry = Math.max(0, Math.min(1, cut / WET_FADE)),
+      share = wet * WET_SHARE * dry * dry * (3 - 2 * dry),
       [red, green, blue] = land.colour;
 
     return {
