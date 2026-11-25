@@ -41,11 +41,20 @@ import overlayMesh, {
   layOverlay,
   roadHalf,
   SMOG_LIFT,
+  channelAcross,
+  roomOf,
   rowAround,
   soup,
 } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
+import {
+  FLOOR,
+  MEANDER,
+  RIVER_WIDTH,
+} from '@civ-clone/ui-map-3d/terrain/rivers';
+import { RiverPath } from '@civ-clone/ui-map-3d/terrain/relief';
 import { Stage, overlayCopies, polesAt } from '@civ-clone/ui-map-3d/stage';
 import sprawl, {
+  GAP,
   Lot,
   ROADSIDE,
   citySeed,
@@ -5301,6 +5310,327 @@ const differing = (
     'the towns hidden, a city’s lot with a mine, specials and a hut: each claimed clear of where its unit stands in front',
     crowding.slice(0, 5),
     []
+  );
+}
+
+// Rivers' channels (§5.3): what's laid on a square keeps clear of the channels of the rivers through it, out to their
+//  flat beds' edges (their water's width and `FLOOR`), as it does of its lines. A row of a field across one stops short
+//  of it either side, exactly where the channel's round ends and the band between them meet it.
+{
+  const reach = RIVER_WIDTH + FLOOR,
+    // How far a point is from the line from `a` to `b`.
+    off = (
+      u: number,
+      v: number,
+      [au, av]: readonly [number, number],
+      [bu, bv]: readonly [number, number]
+    ): number => {
+      const du = bu - au,
+        dv = bv - av,
+        length = du * du + dv * dv,
+        t =
+          length === 0
+            ? 0
+            : Math.max(
+                0,
+                Math.min(1, ((u - au) * du + (v - av) * dv) / length)
+              );
+
+      return Math.hypot(u - au - du * t, v - av - dv * t);
+    },
+    // Where a channel crosses a row, found the long way: every hundredth of a unit along each of five lines down it.
+    longWay = (
+      a: readonly [number, number],
+      b: readonly [number, number],
+      v: number,
+      width: number
+    ): [number, number] | null => {
+      let low = Infinity,
+        high = -Infinity;
+
+      [-0.5, -0.25, 0, 0.25, 0.5].forEach((share) => {
+        for (let u = 15; u <= 20; u += 0.001) {
+          if (off(u, v + width * share, a, b) <= reach) {
+            low = Math.min(low, u);
+            high = Math.max(high, u);
+          }
+        }
+      });
+
+      return low === Infinity ? null : [low, high];
+    },
+    channels: [readonly [number, number], readonly [number, number]][] = [
+      [
+        [17, 3.5],
+        [18, 3.5],
+      ],
+      [
+        [17.5, 3],
+        [17.5, 4],
+      ],
+      [
+        [17, 3],
+        [18, 4],
+      ],
+      [
+        [17.2, 3.1],
+        [17.9, 3.6],
+      ],
+      [
+        [17.5, 3.5],
+        [17.5, 3.5],
+      ],
+    ],
+    rows = [3.0, 3.3, 3.5, 3.62, 3.8, 4.1],
+    mismatched = channels.flatMap(([a, b]) =>
+      rows.flatMap((v) => {
+        const exact = channelAcross(a, b, reach, v, 0.1),
+          found = longWay(a, b, v, 0.1);
+
+        return (exact === null) === (found === null) &&
+          (exact === null ||
+            (Math.abs(exact[0] + GAP - found![0]) < 0.002 &&
+              Math.abs(exact[1] - GAP - found![1]) < 0.002))
+          ? []
+          : [`${a}–${b} at ${v}: ${exact} against ${found}`];
+      })
+    );
+
+  expect(
+    'a channel crosses a row where its round ends and the band between them meet it, as the long way finds, and nowhere it doesn’t reach',
+    mismatched.slice(0, 3),
+    []
+  );
+
+  // A square of irrigated hills, with coal and a hut, a river through it one way and another; its overlay laid with
+  //  the river and without, as it was. With it, nothing laid's within its channel: rows stop short of it, and what
+  //  grows and stands there stands clear. Without it, some was.
+  const hills = overlayFor(
+      square(['Irrigation'], {
+        terrain: 'Hills',
+        features: ['Coal'],
+        hut: true,
+      }),
+      []
+    )!,
+    courses: [string, RiverPath][] = [
+      [
+        'across',
+        {
+          points: [
+            [16.5, 3.5],
+            [17.5, 3.5],
+            [18.5, 3.5],
+          ],
+          widths: [RIVER_WIDTH, RIVER_WIDTH, RIVER_WIDTH],
+        },
+      ],
+      [
+        'corner to corner',
+        {
+          points: [
+            [17, 3],
+            [17.5, 3.5],
+            [18, 4],
+          ],
+          widths: [RIVER_WIDTH, RIVER_WIDTH, RIVER_WIDTH],
+        },
+      ],
+    ],
+    // How many of a soup's triangles have their middle within `inside` of the course.
+    within = (
+      laid: ReturnType<typeof soup>,
+      path: RiverPath,
+      inside: number
+    ) => {
+      let found = 0;
+
+      for (let at = 0; at < laid.positions.length; at += 9) {
+        const u =
+            (laid.positions[at]! +
+              laid.positions[at + 3]! +
+              laid.positions[at + 6]!) /
+            3,
+          v =
+            (laid.positions[at + 2]! +
+              laid.positions[at + 5]! +
+              laid.positions[at + 8]!) /
+            3,
+          near = Math.min(
+            ...path.points
+              .slice(1)
+              .map((to, index) => off(u, v, path.points[index]!, to))
+          );
+
+        if (near < inside) {
+          found++;
+        }
+      }
+
+      return found;
+    },
+    nearest = (u: number, v: number, path: RiverPath) =>
+      Math.min(
+        ...path.points
+          .slice(1)
+          .map((to, index) => off(u, v, path.points[index]!, to))
+      );
+
+  // And a forest, where trees grow: each clear of the channel by its room.
+  const wild = overlayFor(square([], { terrain: 'Forest' }), [])!,
+    laidOn = courses.map(([name, path]) => {
+      const wet = soup(),
+        dry = soup(),
+        withRiver = layOverlay(hills, { ...place(17, 3), rivers: [path] }, wet),
+        without = layOverlay(hills, place(17, 3), dry),
+        grown = layOverlay(wild, { ...place(17, 3), rivers: [path] }, soup());
+
+      return [
+        name,
+        within(wet, path, reach - 0.01),
+        within(dry, path, reach - 0.01) > 0,
+        // Where there's room nowhere, each where there's the most: clear of the channel all the same.
+        withRiver.taken.every(([u, v]) => nearest(u, v, path) >= reach - 1e-9),
+        without.taken.length === withRiver.taken.length,
+        grown.grown.length > 0 &&
+          grown.grown.every(
+            ([u, v, kind]) =>
+              nearest(u, v, path) >= reach + roomOf(place(17, 3), kind) - 1e-9
+          ),
+      ];
+    });
+
+  expect(
+    'a river through irrigated hills with coal and a hut: nothing laid within its channel, but for where it was; its hut and coal clear of it, and as many as without it; in a forest, its trees clear of it by their room',
+    laidOn,
+    courses.map(([name]) => [name, 0, true, true, true, true])
+  );
+
+  // Roads every way, and a mine: where there's room nowhere, a mine stands where there's most, which isn't in the river.
+  const mined = overlayFor(square(['Mine', 'Road'], { terrain: 'Hills' }), [
+      neighbour([0, -1], ['Road']),
+      neighbour([1, -1], ['Road']),
+      neighbour([1, 0], ['Road']),
+      neighbour([1, 1], ['Road']),
+      neighbour([0, 1], ['Road']),
+      neighbour([-1, 1], ['Road']),
+      neighbour([-1, 0], ['Road']),
+      neighbour([-1, -1], ['Road']),
+    ])!,
+    [, across] = courses[0]!,
+    { taken } = layOverlay(
+      mined,
+      { ...place(17, 3), rivers: [across] },
+      soup()
+    );
+
+  expect(
+    'with roads every way, and a river through it, a mine stands clear of the river',
+    taken.every(([u, v]) => nearest(u, v, across) >= reach - 1e-9),
+    true
+  );
+}
+
+// Through the land: an irrigated world with a river of Civ1's River squares in a row. What's laid on each square keeps
+//  clear of its channel, so nothing's laid near the line through the river squares' middles, as far from it as a bend
+//  can't take the channel; on the same world with no river, its fields are. A square more of the river, and what's
+//  laid round it is laid again, clear of it too.
+{
+  const width = 12,
+    height = 10,
+    reach = RIVER_WIDTH + FLOOR,
+    // Within the channel wherever the course bends: its reach, less how far a bend can take it off the line.
+    band = reach - MEANDER - 0.01,
+    laidNear = (river: Set<string>, extra?: [number, number]) => {
+      const tiles = Array.from({ length: width * height }, (_, at) => {
+          const x = at % width,
+            y = Math.floor(at / width),
+            name = river.has(`${x},${y}`) ? 'River' : 'Grassland';
+
+          return {
+            x,
+            y,
+            isWater: false,
+            isLand: true,
+            goodyHut: null,
+            city: null,
+            units: [],
+            improvements: [{ _: 'Irrigation' }],
+            terrain: { _: name, __: [name], features: [] },
+          };
+        }),
+        world = new World({
+          _: 'World',
+          __: ['World', 'DataObject'],
+          id: 'world',
+          width,
+          height,
+          topologyId: 'square',
+          tiles: tiles as never,
+        }),
+        land = new Land(world),
+        laid = new Map<string, OverlayMesh | null>(),
+        stage = {
+          setChunk: () => {},
+          setOverlay: (i: number, j: number, mesh: OverlayMesh | null) =>
+            void laid.set(`${i},${j}`, mesh),
+        } as unknown as Stage,
+        // How many triangles of what's laid have their middle within the band round the line from `from` to `to`.
+        near = (from: [number, number], to: [number, number]) => {
+          const [au, av] = land.layout.centre(...from),
+            [bu, bv] = land.layout.centre(...to);
+          let found = 0;
+
+          laid.forEach((mesh) => {
+            for (let at = 0; at < (mesh?.positions.length ?? 0); at += 9) {
+              const p = mesh!.positions,
+                u = mesh!.u + (p[at]! + p[at + 3]! + p[at + 6]!) / 3,
+                v = mesh!.v + (p[at + 2]! + p[at + 5]! + p[at + 8]!) / 3,
+                du = bu - au,
+                dv = bv - av,
+                t = Math.max(
+                  0,
+                  Math.min(
+                    1,
+                    ((u - au) * du + (v - av) * dv) / (du * du + dv * dv)
+                  )
+                );
+
+              if (Math.hypot(u - au - du * t, v - av - dv * t) < band) {
+                found++;
+              }
+            }
+          });
+
+          return found;
+        };
+
+      land.queueAll(0, 0);
+      land.build(stage, null);
+
+      const first = near([3, 4], [6, 4]);
+
+      if (extra === undefined) {
+        return [first];
+      }
+
+      // A square more of the river.
+      const tile = tiles[extra[1] * width + extra[0]]!;
+
+      tile.terrain = { _: 'River', __: ['River'], features: [] };
+      land.changed([extra], 0, 0);
+      land.build(stage, null);
+
+      return [first, near([3, 4], extra)];
+    };
+
+  expect(
+    'an irrigated world with a river: nothing’s laid near the line through its squares’ middles, where its fields are with none; a square more, and none’s laid near that either',
+    [
+      laidNear(new Set(['3,4', '4,4', '5,4', '6,4']), [7, 4]),
+      laidNear(new Set())[0]! > 0,
+    ],
+    [[0, 0], true]
   );
 }
 
