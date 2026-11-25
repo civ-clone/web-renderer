@@ -215,8 +215,8 @@ const manifest = (): Record<string, unknown> => ({
     ].map((reason) => reason.replace('’', "'"))
   );
 
-  // The plants a set's models draw (#1335): by kind, or a kind on a terrain of its own, read by the model; none for a set
-  //  that names none. A plant drawn by a model the set hasn't, or named as no kind is, is refused.
+  // The plants a set's models draw (#1335): by kind, or a kind on a terrain of its own, read by the model; none for a
+  //  set that names none. A plant drawn by a model the set hasn't, or named as no kind is, is refused.
   const withPlants = (plants: unknown) => {
     const json = manifest();
 
