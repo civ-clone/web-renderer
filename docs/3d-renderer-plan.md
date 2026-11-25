@@ -400,7 +400,8 @@ band along a hull, the wingtips). Still to do:
   them to, so one off the screen isn't drawn.
 - **Clips, fourth part: done** (spec §10, "As built, sixth part"). A shot says what it is, a bottle, an arrow, a
   bullet or a shell, and each flies as it would: a bullet straight and quick from a muzzle's flash and smoke, a shell
-  high and slow, bursting where it lands. They wait on rigged copies that fire them.
+  high and slow, bursting where it lands. The Riflemen, Musketmen and Marines fire bullets, their rigged copies made in
+  their set; shells wait on rigged copies that fire them.
 - **Clips, as planned:** rigged copies are to sit beside the static models, which their manifests go on naming. The
   clips are idle, moving and dying for every unit, fighting for combat units (shots in flight for ranged ones), Settlers
   working and settling, ships sinking and vehicles exploding. The map's side is to play them (`AnimationMixer`, skinned

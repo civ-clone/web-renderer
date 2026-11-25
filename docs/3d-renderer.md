@@ -1574,7 +1574,7 @@ in its set (plan 2.2). It's in the model's entry:
   for every two squares (`STRIDE`), so twice as quick as it's made at a player's quarter of a second a square, quicker
   for a rival's or a quick walk, slower as it gets going and stops. Each walk starts the clip from its start, and a
   squad's figures are 0.13 s apart. Waiting where it's come, or fighting, it stands as its model does, till `fight` and
-  `die` are played. The Partisans' is the first.
+  `die` are played. The Partisans' was the first; the Riflemen's, Musketmen's and Marines' followed.
 - **Since:** `fight` with its shots, and `die`, on the battles' own frames (the fourth part, below); and `idle`,
   with frames drawn for it (the fifth).
 
@@ -1661,8 +1661,12 @@ each kind goes as it would (`SHOT_LOOKS` in `shots.ts`):
   it left, so a bullet that leaves and lands between one frame and the next still shows it. Its flash is solid and
   unlit, as the bottle's flame is: no see-through shapes, so nothing needs drawing in another order. A puff takes a
   size, and a flash.
-- **The Partisans' bottle** goes as it did: none of its numbers changed. Rifles and cannons fire once their models
-  have rigged copies whose `fight` clips say so; for now none do.
+- **The Partisans' bottle** goes as it did: none of its numbers changed.
+- **Rifles:** the Riflemen, Musketmen and Marines have rigged copies since models-realistic-cc0 d1851f9d, which needed
+  nothing here. Each fires a bullet from its rifle's muzzle (`muzzle`, a node under its weapon) half a second into its
+  `fight`, the Marines three a sixth of a second apart, though Marines that attack and lose fire only the first, as
+  the blow comes as it lands (`shotsFired`). Cannons fire once their models have rigged copies whose `fight` clips say
+  so.
 
 ---
 
