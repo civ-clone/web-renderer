@@ -74,6 +74,26 @@ export const chunkGrid = (
   };
 };
 
+/**
+ * The chunk, `i` across and `j` down, that carries what starts at (`u`, `v`) on the world's first copy, such as a river's
+ *  course: the one it's in, worked out the same way for every chunk, so each thing is carried by one, even on a chunk's
+ *  border, where its origin and the last one's far edge, each worked out its own way, can differ by a hair.
+ */
+export const carriedBy = (
+  grid: ChunkGrid,
+  u: number,
+  v: number
+): [i: number, j: number] => [
+  Math.max(
+    0,
+    Math.min(grid.chunksU - 1, Math.floor(u / (grid.stepsU * grid.spacingU)))
+  ),
+  Math.max(
+    0,
+    Math.min(grid.chunksV - 1, Math.floor(v / (grid.stepsV * grid.spacingV)))
+  ),
+];
+
 /** The mesh of the chunk `i` across and `j` down. */
 export const buildChunk = (
   grid: ChunkGrid,
@@ -196,19 +216,18 @@ export const buildChunk = (
             (pointHeight(a + 1, b) - pointHeight(a + 1, b + 1)) * (1 - fv);
     };
 
-  // The rivers' water: each course drawn by the chunk its start's in, once, laid on the land as it's drawn.
-  const chunkU = stepsU * spacingU,
-    chunkV = stepsV * spacingV,
-    ribbon: RibbonMesh = { positions: [], indices: [] };
+  // The rivers' water: each course drawn by the chunk that carries its start, once, laid on the land as it's drawn.
+  const ribbon: RibbonMesh = { positions: [], indices: [] };
 
   relief.courses().forEach(({ course, u, v }) => {
-    if (
-      u >= originU &&
-      u < originU + chunkU &&
-      v >= originV &&
-      v < originV + chunkV
-    ) {
-      ribbonOf(course, u - originU, v - originV, ribbon, groundAt);
+    const [ci, cj] = carriedBy(grid, u, v);
+
+    if (ci === i && cj === j) {
+      ribbonOf(course, u - originU, v - originV, ribbon, {
+        at: groundAt,
+        spacingU,
+        spacingV,
+      });
     }
   });
 

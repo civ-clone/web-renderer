@@ -781,17 +781,19 @@ How plants are placed:
     goes counts as a change.
   - **Water** (second part, `terrain/ribbons.ts`): a strip along each course, as wide as its water, with a disc at each
     end where it joins others (12 triangles), so bends and junctions are round; a pool's a disc. It's laid on the land
-    as the chunk's mesh draws it (`ChunkMesh`'s triangles, two a cell), `RIVER_LIFT` (0.004) over it, at three points
-    across (its edges and middle) every half a point along, so it follows the channel's bed, which is flat across it.
-    So it's never under the land, nor left standing over land another course has cut lower where they meet (the
-    level's only what the channel's cut under): it stands at most about 0.006 over it, as the mesh folds a little
-    between its points. Never under the sea's level, where the sea's surface is. Only where its level's over the sea's,
-    and on to where it meets it: a mouth's water stops at the coast, where the sea's surface takes over. Each course's
-    is carried by the chunk its first end's in (`ChunkMesh#river`), relative to its corner as the land's points are,
-    laid on that chunk's points and, past its edge, on the next chunk's as they'll be, and drawn with the land at each
-    copy of the world: one more draw call a chunk with a river. It's one colour for now (`RIVER_WATER`, darker and
-    greener than the sea at its shore), a little in front of the land under it (`polygonOffset`). It doesn't move yet:
-    that's with #1365.
+    as the chunk's mesh draws it, `RIVER_LIFT` (0.004) over it: its triangles are cut along the land's cells and their
+    diagonals (`lay`), so each piece lies over one of the land's triangles, and both are flat there, so the water's
+    exactly its lift over the land everywhere, however creased the land is, as it is where courses cut each other's
+    banks over hills and mountains. So it's never under the land, nor left standing over it. Never under the sea's
+    level, where the sea's surface is. Only where its level's over the sea's, and on to where it meets it: a mouth's
+    water stops at the coast, where the sea's surface takes over. Each course's is carried by the chunk its first
+    end's in (`carriedBy`, worked out the same way for every chunk, so one carries it even on a chunk's border),
+    relative to its corner as the land's points are, laid on that chunk's points and, past its edge, on the next
+    chunk's as they'll be, and drawn with the land at each copy of the world: one more draw call a chunk with a river.
+    With the view stopped at the poles, it's clipped at them as the overlays are (a course across the poles has water
+    only on the far edge's side for now: #1379). It's one colour for now (`RIVER_WATER`, darker and greener than the
+    sea at its shore), a little in front of the land under it (`polygonOffset`). It doesn't move yet: that's with
+    #1365.
 
 ### 5.4 Tile improvements
 

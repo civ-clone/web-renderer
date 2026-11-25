@@ -5,7 +5,8 @@
 //  - its level: under the land round it, and its bed over the sea's but where its level's at the sea's;
 //  - the same across the world's seam;
 //  - a square changed reshapes only the squares refresh says, and refreshed, the land's as if made afresh;
-//  - their water: at their level, facing up, each drawn once, and over the land as its mesh draws it, everywhere.
+//  - their water: facing up, each drawn once, by one chunk even on a chunk's border, and its lift over the land as its
+//    mesh draws it, exactly, everywhere, over hills and mountains too.
 
 import topologyFor, { Topology } from '@civ-clone/ui-client/lib/topologyFor';
 import groundLayoutFor, { GroundLayout } from '@civ-clone/ui-map-3d/layouts';
@@ -38,7 +39,11 @@ import {
   RibbonMesh,
   ribbonOf,
 } from '@civ-clone/ui-map-3d/terrain/ribbons';
-import { buildChunk, chunkGrid } from '@civ-clone/ui-map-3d/terrain/chunks';
+import {
+  buildChunk,
+  carriedBy,
+  chunkGrid,
+} from '@civ-clone/ui-map-3d/terrain/chunks';
 
 const failures: string[] = [];
 let checks = 0;
@@ -218,24 +223,47 @@ const facingUp = (mesh: {
   return true;
 };
 
+// The area of `mesh`'s triangles, seen from above.
+const flatArea = (mesh: {
+  positions: ArrayLike<number>;
+  indices: ArrayLike<number>;
+}) => {
+  let sum = 0;
+
+  for (let at = 0; at < mesh.indices.length; at += 3) {
+    const [a, b, c] = [
+      mesh.indices[at]!,
+      mesh.indices[at + 1]!,
+      mesh.indices[at + 2]!,
+    ];
+
+    sum +=
+      Math.abs(
+        (mesh.positions[b * 3]! - mesh.positions[a * 3]!) *
+          (mesh.positions[c * 3 + 2]! - mesh.positions[a * 3 + 2]!) -
+          (mesh.positions[b * 3 + 2]! - mesh.positions[a * 3 + 2]!) *
+            (mesh.positions[c * 3]! - mesh.positions[a * 3]!)
+      ) / 2;
+  }
+
+  return sum;
+};
+
 // The water (`ribbons.ts`): a strip along a course as wide as its water, with a disc at each end where it joins others,
 //  laid on the land as it's drawn, `RIVER_LIFT` over it, but never under the sea's level; a mouth's as far as the sea,
-//  with none at its end in the sea; none where it's all under the sea's level; a pool a disc.
+//  with none at its end in the sea; none where it's all under the sea's level; a pool a disc. On land whose mesh is
+//  creased, cut along its cells and their diagonals, so it's exactly its lift over it everywhere.
 {
   const course = courseFrom(0, 0, 1, 0, { seed: 5 }),
     mouth = courseFrom(0, 0, 0, 1, { mouth: true }),
     pool = courseFrom(0, 0, 0, 0),
     sunk = courseFrom(0, 0, 1, 0, { seed: 5 }),
-    flat = () => 0.01,
-    drawn = (
-      each: typeof course,
-      u = 0,
-      v = 0,
-      groundAt: (u: number, v: number) => number = flat
-    ): RibbonMesh => {
+    // Land too coarse to cut the water at all, unless asked: its lines a million apart, the water well clear of them.
+    flat = { at: () => 0.01, spacingU: 1e6, spacingV: 1e6 },
+    drawn = (each: typeof course, u = 3, v = 4, ground = flat): RibbonMesh => {
       const into: RibbonMesh = { positions: [], indices: [] };
 
-      ribbonOf(each, u, v, into, groundAt);
+      ribbonOf(each, u, v, into, ground);
 
       return into;
     },
@@ -254,7 +282,7 @@ const facingUp = (mesh: {
   pool.levels = pool.widths.map(() => 0.01);
   sunk.levels = sunk.widths.map(() => -0.001);
 
-  // Up from under the sea's level, as a course from a square by the coast does: from the section before it's over it,
+  // Up from under the sea's level, as a course from a square by the coast does: from the point before it's over it,
   //  with no disc at the end under it.
   const rising = courseFrom(0, 0, 1, 0, { seed: 5 }),
     // A mouth all over the sea's level, as none is: still no disc at its end in the sea.
@@ -263,60 +291,39 @@ const facingUp = (mesh: {
   rising.levels = rising.widths.map((_, step) => -0.0125 + step * 0.005);
   high.levels = high.widths.map(() => 0.01);
 
-  // Two sections to each of its points, each with its left edge, its middle and its right, after the two discs' 13
-  //  points each.
-  const rows = STEPS * 2 + 1,
+  // A row at each of its points, its left edge and its right, after the two discs' 13 points each.
+  const rows = STEPS + 1,
     strip = drawn(course, 3, 4),
     across = Array.from({ length: rows }, (_, row) => {
-      const at = 26 + row * 3,
-        [lu, lv, mu, mv, ru, rv] = [
+      const at = 26 + row * 2,
+        [lu, lv, ru, rv] = [
           strip.positions[at * 3]!,
           strip.positions[at * 3 + 2]!,
           strip.positions[(at + 1) * 3]!,
           strip.positions[(at + 1) * 3 + 2]!,
-          strip.positions[(at + 2) * 3]!,
-          strip.positions[(at + 2) * 3 + 2]!,
         ],
-        [pu, pv] = pointAlong(course, row / 2);
+        [pu, pv] = pointAlong(course, row);
 
       return [
         Math.hypot(lu - ru, lv - rv) / 2,
-        near(mu, 3 + pu) && near(mv, 4 + pv),
+        near((lu + ru) / 2, 3 + pu) && near((lv + rv) / 2, 4 + pv),
       ];
-    }),
-    sloping = (u: number, v: number) => 0.01 + u * 0.02 - v * 0.01,
-    sloped = drawn(course, 3, 4, sloping),
-    // Its points' heights against the land's where they are.
-    onLand = (mesh: RibbonMesh, groundAt: (u: number, v: number) => number) =>
-      Array.from({ length: mesh.positions.length / 3 }, (_, at) =>
-        near(
-          mesh.positions[at * 3 + 1]!,
-          Math.max(
-            0,
-            groundAt(mesh.positions[at * 3]!, mesh.positions[at * 3 + 2]!) +
-              RIVER_LIFT
-          )
-        )
-      ).every(Boolean);
+    });
 
   expect(
-    'the water along a course: a strip as wide as its water, its middle on the course, a disc at each end, facing up, and laid on the land wherever it is, a little over it, but never under the sea’s level',
+    'the water along a course: a strip as wide as its water, its middle on the course, a disc at each end, facing up, its lift over the land, but never under the sea’s level',
     [
       strip.positions.length / 3,
       strip.indices.length / 3,
       heights(strip),
       across.every(([half, on]) => near(half as number, RIVER_WIDTH) && on),
       facingUp(strip),
-      onLand(sloped, sloping),
-      facingUp(sloped),
-      heights(drawn(course, 3, 4, () => -0.01)),
+      heights(drawn(course, 3, 4, { ...flat, at: () => -0.01 })),
     ],
     [
-      13 * 2 + rows * 3,
-      12 * 2 + (rows - 1) * 4,
+      13 * 2 + rows * 2,
+      12 * 2 + (rows - 1) * 2,
       [0.01 + RIVER_LIFT],
-      true,
-      true,
       true,
       true,
       [0],
@@ -324,7 +331,7 @@ const facingUp = (mesh: {
   );
 
   expect(
-    'a mouth’s water runs to the coast, where its level comes to the sea’s, with no disc in the sea; none where it’s all under the sea’s level; a pool’s a disc; one coming up from under the sea’s level runs from the section before it does, with no disc at its end under it; a mouth all over the sea’s level has no disc in the sea',
+    'a mouth’s water runs to the coast, where its level comes to the sea’s, with no disc in the sea; none where it’s all under the sea’s level; a pool’s a disc; one coming up from under the sea’s level runs from the point before it does, with no disc at its end under it; a mouth all over the sea’s level has no disc in the sea',
     [
       drawn(mouth).positions.length / 3,
       facingUp(drawn(mouth)),
@@ -335,16 +342,229 @@ const facingUp = (mesh: {
       drawn(high).positions.length / 3,
     ],
     [
-      // Its start's disc, and its sections to the coast, halfway.
-      13 + (STEPS + 1) * 3,
+      // Its start's disc, and its points to the coast, halfway.
+      13 + 5 * 2,
       true,
       0,
       13,
       true,
-      // Its sections over the sea's level, from 3 points along, and the one before; its end's disc.
-      13 + 12 * 3,
-      13 + rows * 3,
+      // Its points over the sea's level, from 3 along, and the one before; its end's disc.
+      13 + 7 * 2,
+      13 + rows * 2,
     ]
+  );
+
+  // Land whose mesh is creased: each point of it, an eighth apart, its own height, each cell split from its bottom left
+  //  to its top right. The water's cut along its cells and diagonals, so at any point in it, it's exactly its lift over
+  //  the land there.
+  const spacing = 0.125,
+    heightOf = (a: number, b: number) =>
+      0.02 + 0.015 * Math.sin(a * 2.1 + b * 1.3) * Math.cos(a * 0.7 - b * 1.9),
+    creased = {
+      at: (u: number, v: number) => {
+        const a = Math.floor(u / spacing),
+          b = Math.floor(v / spacing),
+          fu = u / spacing - a,
+          fv = v / spacing - b;
+
+        return fu + fv <= 1
+          ? heightOf(a, b) +
+              (heightOf(a + 1, b) - heightOf(a, b)) * fu +
+              (heightOf(a, b + 1) - heightOf(a, b)) * fv
+          : heightOf(a + 1, b + 1) +
+              (heightOf(a, b + 1) - heightOf(a + 1, b + 1)) * (1 - fu) +
+              (heightOf(a + 1, b) - heightOf(a + 1, b + 1)) * (1 - fv);
+      },
+      spacingU: spacing,
+      spacingV: spacing,
+    },
+    cut = drawn(course, 3.03, 4.07, creased),
+    uncut = drawn(course, 3.03, 4.07, {
+      ...creased,
+      spacingU: 1e6,
+      spacingV: 1e6,
+    }),
+    // How far each mesh's water is from its lift over the land, at the worst of a few points inside each triangle.
+    worstOf = (mesh: RibbonMesh) => {
+      let worst = 0;
+
+      for (let at = 0; at < mesh.indices.length; at += 3) {
+        const corners = [0, 1, 2].map((corner) => {
+          const n = mesh.indices[at + corner]!;
+
+          return [
+            mesh.positions[n * 3]!,
+            mesh.positions[n * 3 + 1]!,
+            mesh.positions[n * 3 + 2]!,
+          ];
+        });
+
+        [
+          [1 / 3, 1 / 3, 1 / 3],
+          [0.7, 0.15, 0.15],
+          [0.15, 0.7, 0.15],
+          [0.15, 0.15, 0.7],
+        ].forEach((weights) => {
+          const [u, level, v] = [0, 1, 2].map((axis) =>
+            weights.reduce(
+              (sum, weight, corner) => sum + weight * corners[corner]![axis]!,
+              0
+            )
+          );
+
+          worst = Math.max(
+            worst,
+            Math.abs(level! - creased.at(u!, v!) - RIVER_LIFT)
+          );
+        });
+      }
+
+      return worst;
+    };
+
+  expect(
+    'on land whose mesh is creased, the water’s cut along its cells and diagonals, so it’s exactly its lift over it everywhere, as it isn’t uncut; as much of it, facing up',
+    [
+      worstOf(cut) < 1e-9,
+      worstOf(uncut) > 1e-4,
+      cut.indices.length > uncut.indices.length,
+      facingUp(cut),
+      near(flatArea(cut), flatArea(uncut), 1e-9),
+    ],
+    [true, true, true, true, true]
+  );
+}
+
+// Each course's water is carried by one chunk, even where its first end's on a chunk's border: on New Game's Large
+//  worlds, 97 across, the border's where some squares' middles are, and where a chunk ends and the next begins, each
+//  worked out its own way, can differ by a hair, so a course on it was carried by neither, or by both.
+{
+  const counts = (['square', 'staggered-iso', 'hex-odd-r'] as TopologyId[]).map(
+    (topologyId) => {
+      const topology = topologyFor({ width: 97, height: 70, topologyId }),
+        layout = groundLayoutFor({
+          width: 97,
+          height: 70,
+          topologyId,
+          wrapsY: topology.wrapsY(),
+        }),
+        period = layout.period(),
+        grid = chunkGrid(layout, 70),
+        chunkU = grid.stepsU * grid.spacingU,
+        chunkV = grid.stepsV * grid.spacingV;
+      let wrong = 0,
+        before = 0;
+
+      for (let y = 0; y < 70; y++) {
+        for (let x = 0; x < 97; x++) {
+          const [cu, cv] = layout.centre(x, y),
+            u = ((cu % period.u) + period.u) % period.u,
+            v =
+              period.v === null ? cv : ((cv % period.v) + period.v) % period.v,
+            [i, j] = carriedBy(grid, u, v),
+            // As it was: by each chunk whose origin's at or before it, and whose origin and width are past it.
+            carriers = Array.from(
+              { length: grid.chunksU },
+              (_, ci) => ci
+            ).filter((ci) => {
+              const origin = ci * grid.stepsU * grid.spacingU;
+
+              return u >= origin && u < origin + chunkU;
+            }).length;
+
+          // Within the chunk that carries it, to a hair.
+          if (
+            u < i * chunkU - 1e-9 ||
+            u > (i + 1) * chunkU + 1e-9 ||
+            v < j * chunkV - 1e-9 ||
+            v > (j + 1) * chunkV + 1e-9
+          ) {
+            wrong++;
+          }
+
+          if (carriers !== 1) {
+            before++;
+          }
+        }
+      }
+
+      return [wrong, before] as const;
+    }
+  );
+
+  // Small worlds whose squares' middles fall on chunks' borders the same way, a river on every square: every course's
+  //  water is drawn, once.
+  const once = (
+    [
+      ['square', 23, 2],
+      ['staggered-iso', 16, 3],
+      ['hex-odd-r', 23, 2],
+    ] as [TopologyId, number, number][]
+  ).map(([topologyId, across, size]) => {
+    const topology = topologyFor({ width: across, height: 8, topologyId }),
+      layout = groundLayoutFor({
+        width: across,
+        height: 8,
+        topologyId,
+        wrapsY: topology.wrapsY(),
+      }),
+      list = (directions: readonly string[], x: number, y: number) =>
+        directions
+          .map((direction) => topology.neighbour(x, y, direction as never))
+          .filter((square): square is [number, number] => square !== null),
+      everywhere = createRelief({
+        layout,
+        source: {
+          width: across,
+          height: 8,
+          wrapsY: topology.wrapsY(),
+          terrainAt: () => 'Grassland',
+          waterAt: () => false,
+          neighbours: (x, y) => list(topology.directions(), x, y),
+          riverAt: () => true,
+          edgeNeighbours: (x, y) => list(topology.edgeDirections(), x, y),
+        },
+      }),
+      grid = chunkGrid(layout, 8, { size }),
+      drawnArea = Array.from({ length: grid.chunksU * grid.chunksV }, (_, at) =>
+        buildChunk(
+          grid,
+          everywhere,
+          at % grid.chunksU,
+          Math.floor(at / grid.chunksU)
+        )
+      ).reduce(
+        (sum, { river }) => sum + (river === null ? 0 : flatArea(river)),
+        0
+      ),
+      expectedArea = everywhere.courses().reduce((sum, { course }) => {
+        const into: RibbonMesh = { positions: [], indices: [] };
+
+        ribbonOf(course, 3, 4, into, {
+          at: () => 0.01,
+          spacingU: 1e6,
+          spacingV: 1e6,
+        });
+
+        return sum + flatArea(into);
+      }, 0);
+
+    return Math.abs(drawnArea - expectedArea) < 1e-4;
+  });
+
+  expect(
+    'on small worlds whose squares’ middles fall on chunks’ borders, a river on every square, every course’s water is drawn once',
+    once,
+    [true, true, true]
+  );
+
+  expect(
+    'on worlds 97 across, every square’s middle is carried by the chunk it’s in, to a hair, where it was carried by none or by two before',
+    [
+      counts.every(([wrong]) => wrong === 0),
+      counts.some(([, before]) => before > 0),
+    ],
+    [true, true]
   );
 }
 
@@ -803,104 +1023,153 @@ ids.forEach((topologyId) => {
     [true, 1, 0, true]
   );
 
-  // The water, as the chunks carry it: each course's drawn once, by the chunk its first end's in; and everywhere under
-  //  it, at its points, halfway along its triangles' sides and in their middles, the land as its mesh draws it is under
-  //  it, wherever the mesh's points fall.
-  // Chunks four across, so the world's several.
-  const grid = chunkGrid(layout, height, { size: 4 }),
-    built = Array.from({ length: grid.chunksU * grid.chunksV }, (_, at) =>
-      buildChunk(grid, relief, at % grid.chunksU, Math.floor(at / grid.chunksU))
-    ),
-    expectedPoints = courses.reduce((sum, { course }) => {
-      const into: RibbonMesh = { positions: [], indices: [] };
+  // The water, as the chunks carry it, chunks four across, so the world's several: each course's drawn once, by the
+  //  chunk that carries its start (as much of it as there is, by its area); facing up; and wherever it's over the sea's
+  //  level, exactly its lift over the land as its mesh draws it, at its points, along its triangles' sides and inside
+  //  them, wherever the mesh's points fall; never under it.
+  const waterOn = (label: string, land: ReliefMap) => {
+      const grid = chunkGrid(layout, height, { size: 4 }),
+        built = Array.from({ length: grid.chunksU * grid.chunksV }, (_, at) =>
+          buildChunk(
+            grid,
+            land,
+            at % grid.chunksU,
+            Math.floor(at / grid.chunksU)
+          )
+        ),
+        // Each course's water, flat and uncut.
+        expectedArea = land.courses().reduce((sum, { course }) => {
+          const into: RibbonMesh = { positions: [], indices: [] };
 
-      ribbonOf(course, 0, 0, into, () => 0.01);
+          ribbonOf(course, 0, 0, into, {
+            at: () => 0.01,
+            spacingU: 1e6,
+            spacingV: 1e6,
+          });
 
-      return sum + into.positions.length / 3;
-    }, 0),
-    // The land as its mesh draws it at (`u`, `v`): between the points of the triangle it's in, two a cell (top left,
-    //  bottom left, top right; and top right, bottom left, bottom right).
-    drawnAt = (u: number, v: number): number => {
-      const a = Math.floor(u / grid.spacingU),
-        b = Math.floor(v / grid.spacingV),
-        fu = u / grid.spacingU - a,
-        fv = v / grid.spacingV - b,
-        at = (i: number, j: number) =>
-          relief.height(i * grid.spacingU, j * grid.spacingV);
+          return sum + flatArea(into);
+        }, 0),
+        // The land as its mesh draws it at (`u`, `v`): between the points of the triangle it's in, two a cell (top
+        //  left, bottom left, top right; and top right, bottom left, bottom right).
+        drawnAt = (u: number, v: number): number => {
+          const a = Math.floor(u / grid.spacingU),
+            b = Math.floor(v / grid.spacingV),
+            fu = u / grid.spacingU - a,
+            fv = v / grid.spacingV - b,
+            at = (i: number, j: number) =>
+              land.height(i * grid.spacingU, j * grid.spacingV);
 
-      return fu + fv <= 1
-        ? at(a, b) +
-            (at(a + 1, b) - at(a, b)) * fu +
-            (at(a, b + 1) - at(a, b)) * fv
-        : at(a + 1, b + 1) +
-            (at(a, b + 1) - at(a + 1, b + 1)) * (1 - fu) +
-            (at(a + 1, b) - at(a + 1, b + 1)) * (1 - fv);
-    };
-  let buried = 0,
-    looked = 0,
-    upward = true,
-    standing = 0;
+          return fu + fv <= 1
+            ? at(a, b) +
+                (at(a + 1, b) - at(a, b)) * fu +
+                (at(a, b + 1) - at(a, b)) * fv
+            : at(a + 1, b + 1) +
+                (at(a, b + 1) - at(a + 1, b + 1)) * (1 - fu) +
+                (at(a + 1, b) - at(a + 1, b + 1)) * (1 - fv);
+        },
+        // Where in each triangle to look: its corners, along its sides and inside it.
+        inside = [
+          [1, 0, 0],
+          [0, 1, 0],
+          [0, 0, 1],
+          [0.5, 0.5, 0],
+          [0, 0.5, 0.5],
+          [0.5, 0, 0.5],
+          [1 / 3, 1 / 3, 1 / 3],
+          [0.6, 0.2, 0.2],
+          [0.2, 0.6, 0.2],
+          [0.2, 0.2, 0.6],
+        ];
+      let off = 0,
+        under = 0,
+        looked = 0,
+        upward = true,
+        area = 0;
 
-  built.forEach(({ u: cu, v: cv, river }) => {
-    if (river === null) {
-      return;
-    }
-
-    const { positions, indices } = river,
-      point = (n: number): [number, number, number] => [
-        cu + positions[n * 3]!,
-        positions[n * 3 + 1]!,
-        cv + positions[n * 3 + 2]!,
-      ];
-
-    upward &&= facingUp(river);
-
-    for (let at = 0; at < indices.length; at += 3) {
-      const [a, b, c] = [
-        point(indices[at]!),
-        point(indices[at + 1]!),
-        point(indices[at + 2]!),
-      ];
-
-      [
-        a,
-        b,
-        c,
-        a.map((n, i) => (n + b[i]!) / 2),
-        b.map((n, i) => (n + c[i]!) / 2),
-        a.map((n, i) => (n + c[i]!) / 2),
-        a.map((n, i) => (n + b[i]! + c[i]!) / 3),
-      ].forEach(([u, level, v]) => {
-        looked++;
-
-        // At the sea's level, where its water meets the sea's, the land's at it or under.
-        if (drawnAt(u!, v!) > (level! > 0 ? level! - 1e-6 : 1e-9)) {
-          buried++;
+      built.forEach(({ u: cu, v: cv, river }) => {
+        if (river === null) {
+          return;
         }
 
-        // Over the sea's level, how far over the land it stands.
-        if (level! > 0) {
-          standing = Math.max(standing, level! - drawnAt(u!, v!));
+        const { positions, indices } = river,
+          point = (n: number): [number, number, number] => [
+            cu + positions[n * 3]!,
+            positions[n * 3 + 1]!,
+            cv + positions[n * 3 + 2]!,
+          ];
+
+        upward &&= facingUp(river);
+        area += flatArea(river);
+
+        for (let at = 0; at < indices.length; at += 3) {
+          const corners = [
+              point(indices[at]!),
+              point(indices[at + 1]!),
+              point(indices[at + 2]!),
+            ],
+            // Over the sea's level at every corner: none's been kept from going under it.
+            over = corners.every(([, level]) => level > 0);
+
+          inside.forEach((weights) => {
+            const [u, level, v] = [0, 1, 2].map((axis) =>
+                weights.reduce(
+                  (sum, weight, corner) =>
+                    sum + weight * corners[corner]![axis]!,
+                  0
+                )
+              ) as [number, number, number],
+              ground = drawnAt(u, v);
+
+            looked++;
+
+            if (over) {
+              off = Math.max(off, Math.abs(level - ground - RIVER_LIFT));
+            } else if (level < ground - 1e-9) {
+              under++;
+            }
+          });
         }
       });
-    }
-  });
 
-  expect(
-    `${topologyId}: each course’s water is drawn once, facing up, and the land as its mesh draws it is under it everywhere, and never far under it`,
-    [
-      built.reduce(
-        (sum, { river }) =>
-          sum + (river === null ? 0 : river.positions.length / 3),
-        0
+      expect(
+        `${topologyId}, ${label}: each course’s water is drawn once, facing up, and wherever it’s over the sea’s level, exactly its lift over the land as its mesh draws it, everywhere; never under it`,
+        [
+          Math.abs(area - expectedArea) < 1e-6,
+          upward,
+          looked > 1000,
+          // To the rounding of the chunk's points, 32 bits each, as the land's are.
+          off < 1e-6,
+          under,
+        ],
+        [true, true, true, true, 0]
+      );
+
+      return built;
+    },
+    built = waterOn('grassland and a river from hills', relief),
+    // Civ2's River on hills and mountains, branching where they meet: where courses cut each other's banks, and the
+    //  land's mesh is creased under the water.
+    rugged = (x: number, y: number): string =>
+      key([x, y]) === key(sea)
+        ? 'Ocean'
+        : ['Mountains', 'Hills', 'Grassland', 'Hills'][(x * 5 + y * 3) % 4]!,
+    branch = topology.neighbour(chain[2]![0], chain[2]![1], edges[0]!)!,
+    ruggedRivers = new Set(
+      [
+        ...chain,
+        branch,
+        topology.neighbour(branch[0], branch[1], edges[0]!)!,
+      ].map(key)
+    );
+
+  waterOn(
+    'Civ2’s rivers on hills and mountains, branching',
+    createRelief({
+      layout,
+      source: sourceFor(topology, rugged, (x, y) =>
+        ruggedRivers.has(`${x},${y}`)
       ),
-      upward,
-      looked > 1000,
-      buried,
-      // Its lift, and the land's mesh folding a little under it between its points.
-      standing < RIVER_LIFT + 0.002,
-    ],
-    [expectedPoints, true, true, 0, true]
+    })
   );
 
   expect(

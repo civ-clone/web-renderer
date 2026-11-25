@@ -521,7 +521,7 @@ export const createStage: StageFactory = (
     land = new Group(),
     // The land's colour at each point, and its surfaces' detail over it (`landMaterial.ts`).
     { material, detail } = landMaterial(period, ground.rows * ground.spacingV),
-    // The rivers' water (`terrain/rivers.ts`): a little in front of the bed it lies over, which can be close under it.
+    // The rivers' water (`terrain/ribbons.ts`): a little in front of the land it lies on, which is close under it.
     riverMaterial = new MeshStandardMaterial({
       color: RIVER_WATER,
       roughness: 0.3,
@@ -1025,6 +1025,8 @@ export const createStage: StageFactory = (
     clouds.pastThePoles(seen.v !== null);
     overlayMaterial.clippingPlanes = seen.v === null ? poles : null;
     hazeMaterial.clippingPlanes = overlayMaterial.clippingPlanes;
+    // Rivers' water too, so a course across the poles' water stops at them.
+    riverMaterial.clippingPlanes = overlayMaterial.clippingPlanes;
     plantModels.forEach(({ parts }) =>
       parts.forEach(({ material }) => {
         material.clippingPlanes = overlayMaterial.clippingPlanes;

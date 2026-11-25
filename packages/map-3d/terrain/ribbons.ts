@@ -1,20 +1,31 @@
 // Rivers' water on the 3D map (docs/3d-renderer.md §5.3, plan 3.3): a strip along each course, laid on its channel's
 //  bed (`rivers.ts`) as the land's mesh draws it, a little over it, so it's never under the land nor left standing over
-//  it, wherever another course's channel has cut it lower. The bed's flat across the water, so the water is too. Pure:
-//  the land's chunks carry it (`chunks.ts`), and the stage draws it.
+//  it, wherever another course's channel has cut it lower. Its triangles are split along the land's cells and their
+//  diagonals, so each piece lies over one of the land's triangles, and both are flat there: the water's exactly its
+//  lift over the land everywhere. Pure: the land's chunks carry it (`chunks.ts`), and the stage draws it.
 
 import { Course, STEPS, alongOf, pointAlong } from './rivers';
 
 /** A river's water, as three.js takes it: its points, three numbers each, and its triangles, three points each. */
 export type RibbonMesh = { positions: number[]; indices: number[] };
 
+/**
+ * The land the water's laid on: how high its mesh draws it at (`u`, `v`), and how far apart its points are, across and
+ *  down, each cell split from its bottom left to its top right (`chunks.ts`), a point of it at (0, 0).
+ */
+export type Ground = {
+  at(u: number, v: number): number;
+  spacingU: number;
+  spacingV: number;
+};
+
 /** How far over the land, as its mesh draws it, a river's water lies. */
 export const RIVER_LIFT = 0.004;
 
-// How many triangles round a pool, and round each end of a course where it joins others; and how many of its strip's
-//  sections to each of its points, so the water follows the land's mesh closely, its points 8 a unit.
-const ROUND = 12,
-  SECTIONS = 2;
+// How many triangles round a pool, and round each end of a course where it joins others.
+const ROUND = 12;
+
+type Point = readonly [u: number, v: number];
 
 // The triangle between points `a`, `b` and `c`, wound to face up: anticlockwise seen from above, with `v` south as
 //  three.js's `z`, as the land's are.
@@ -29,71 +40,163 @@ const triangle = (into: RibbonMesh, a: number, b: number, c: number): void => {
   into.indices.push(...(cross < 0 ? [a, b, c] : [a, c, b]));
 };
 
-// A point of the water at (`u`, `v`), `RIVER_LIFT` over the land there (`groundAt`), but never under the sea's level,
-//  where the sea's surface is: its index.
-const pointAt = (
-  into: RibbonMesh,
-  u: number,
-  v: number,
-  groundAt: (u: number, v: number) => number
-): number => {
-  into.positions.push(u, Math.max(0, groundAt(u, v) + RIVER_LIFT), v);
+// Twice the area of the polygon `points`, either way round.
+const area = (points: readonly Point[]): number =>
+  Math.abs(
+    points.reduce((sum, [u, v], at) => {
+      const [nu, nv] = points[(at + 1) % points.length]!;
 
-  return into.positions.length / 3 - 1;
+      return sum + u * nv - nu * v;
+    }, 0)
+  );
+
+// The convex polygon `points` cut by the line where `f` is `k`, into the part on each side, where it crosses it.
+const cut = (
+  points: readonly Point[],
+  f: (point: Point) => number,
+  k: number
+): Point[][] => {
+  const under: Point[] = [],
+    over: Point[] = [];
+
+  points.forEach((point, at) => {
+    const next = points[(at + 1) % points.length]!,
+      here = f(point) - k,
+      there = f(next) - k;
+
+    if (here <= 0) {
+      under.push(point);
+    }
+
+    if (here >= 0) {
+      over.push(point);
+    }
+
+    if ((here < 0 && there > 0) || (here > 0 && there < 0)) {
+      const t = here / (here - there),
+        crossing: Point = [
+          point[0] + (next[0] - point[0]) * t,
+          point[1] + (next[1] - point[1]) * t,
+        ];
+
+      under.push(crossing);
+      over.push(crossing);
+    }
+  });
+
+  return [under, over].filter((part) => part.length >= 3 && area(part) > 1e-12);
 };
 
-// A disc of water `radius` across at (`u`, `v`), laid on the land, facing up.
-const disc = (
-  into: RibbonMesh,
-  u: number,
-  v: number,
-  radius: number,
-  groundAt: (u: number, v: number) => number
-): void => {
-  const middle = pointAt(into, u, v, groundAt),
-    rim = Array.from({ length: ROUND }, (_, way) => {
-      const angle = (way / ROUND) * Math.PI * 2;
+// The convex polygon `points` cut along every line of the land's that crosses it, as `f` gives the lines (where it's a
+//  whole number).
+const cutAll = (
+  points: readonly Point[],
+  f: (point: Point) => number
+): Point[][] => {
+  const values = points.map(f);
+  let parts: Point[][] = [[...points]];
 
-      return pointAt(
-        into,
-        u + Math.cos(angle) * radius,
-        v + Math.sin(angle) * radius,
-        groundAt
-      );
-    });
+  for (
+    let k = Math.floor(Math.min(...values)) + 1;
+    k < Math.max(...values);
+    k++
+  ) {
+    parts = parts.flatMap((part) => cut(part, f, k));
+  }
 
-  rim.forEach((point, way) =>
-    triangle(into, middle, point, rim[(way + 1) % ROUND]!)
-  );
+  return parts;
 };
 
 /**
- * `course`'s water, its square's middle at (`u`, `v`), laid on the land as `groundAt` says the land's mesh draws it, at
- *  (`u`, `v`) as given: a strip along it, as wide as its water, and a disc at each end, so where courses meet, or bend,
- *  they join. Only where its level's over the sea's, and on to where it meets it: where it's at the sea's or under,
- *  the sea's its water.
+ * Lays `triangles`, flat, on `ground`: each cut along the land's cells (across and down) and their diagonals, so each
+ *  piece is over one of the land's triangles, then each point of each piece `RIVER_LIFT` over the land there, but
+ *  never under the sea's level, where the sea's surface is. Points in the same place are one point.
+ */
+export const lay = (
+  into: RibbonMesh,
+  triangles: readonly (readonly [Point, Point, Point])[],
+  ground: Ground
+): void => {
+  const { spacingU, spacingV } = ground,
+    across = ([u]: Point) => u / spacingU,
+    down = ([, v]: Point) => v / spacingV,
+    diagonal = ([u, v]: Point) => u / spacingU + v / spacingV,
+    // Each point by where it is, to a millionth, so pieces either side of a line share their points there.
+    points = new Map<string, number>(),
+    pointAt = ([u, v]: Point): number => {
+      const key = `${Math.round(u * 1e6)},${Math.round(v * 1e6)}`;
+      let index = points.get(key);
+
+      if (index === undefined) {
+        index = into.positions.length / 3;
+        into.positions.push(u, Math.max(0, ground.at(u, v) + RIVER_LIFT), v);
+        points.set(key, index);
+      }
+
+      return index;
+    };
+
+  triangles.forEach((flat) =>
+    cutAll(flat, across)
+      .flatMap((part) => cutAll(part, down))
+      .flatMap((part) => cutAll(part, diagonal))
+      .forEach((piece) => {
+        const indices = piece.map(pointAt);
+
+        for (let at = 1; at < indices.length - 1; at++) {
+          const [a, b, c] = [indices[0]!, indices[at]!, indices[at + 1]!];
+
+          if (a !== b && b !== c && a !== c) {
+            triangle(into, a, b, c);
+          }
+        }
+      })
+  );
+};
+
+// A disc's flat triangles: `radius` across at (`u`, `v`).
+const disc = (
+  u: number,
+  v: number,
+  radius: number
+): [Point, Point, Point][] => {
+  const rim = Array.from({ length: ROUND }, (_, way): Point => {
+    const angle = (way / ROUND) * Math.PI * 2;
+
+    return [u + Math.cos(angle) * radius, v + Math.sin(angle) * radius];
+  });
+
+  return rim.map((point, way) => [[u, v], point, rim[(way + 1) % ROUND]!]);
+};
+
+/**
+ * `course`'s water, its square's middle at (`u`, `v`), laid on `ground` (`lay`): a strip along it, as wide as its
+ *  water, and a disc at each end, so where courses meet, or bend, they join. Only where its level's over the sea's, and
+ *  on to where it meets it: where it's at the sea's or under, the sea's its water.
  */
 export const ribbonOf = (
   course: Course,
   u: number,
   v: number,
   into: RibbonMesh,
-  groundAt: (u: number, v: number) => number
+  ground: Ground
 ): void => {
   const { points, widths, levels } = course,
     above = (along: number): boolean => alongOf(levels, along) > 0,
-    // A section's end drawn where it's over the sea, or one next to it is: the strip runs on to the sea either way.
-    step = 1 / SECTIONS,
+    // A point's drawn where it's over the sea, or one next to it is: the strip runs on to the sea either way.
     drawn = (along: number): boolean =>
       above(along) ||
-      (along > 0 && above(along - step)) ||
-      (along < STEPS && above(along + step));
+      (along > 0 && above(along - 1)) ||
+      (along < STEPS && above(along + 1)),
+    triangles: [Point, Point, Point][] = [];
 
   // A pool's all one disc.
   if ((points[STEPS * 2] ?? 0) === 0 && (points[STEPS * 2 + 1] ?? 0) === 0) {
     if (above(0)) {
-      disc(into, u, v, widths[0] ?? 0, groundAt);
+      triangles.push(...disc(u, v, widths[0] ?? 0));
     }
+
+    lay(into, triangles, ground);
 
     return;
   }
@@ -103,15 +206,13 @@ export const ribbonOf = (
     if (above(end) && (end === 0 || !course.mouth)) {
       const [pu, pv] = pointAlong(course, end);
 
-      disc(into, u + pu, v + pv, widths[end] ?? 0, groundAt);
+      triangles.push(...disc(u + pu, v + pv, widths[end] ?? 0));
     }
   });
 
-  let previous: number[] | null = null;
+  let previous: [Point, Point] | null = null;
 
-  for (let section = 0; section <= STEPS * SECTIONS; section++) {
-    const along = section * step;
-
+  for (let along = 0; along <= STEPS; along++) {
     if (!drawn(along)) {
       previous = null;
 
@@ -125,22 +226,22 @@ export const ribbonOf = (
       length = Math.hypot(au - bu, av - bv) || 1,
       width = alongOf(widths, along),
       // Across, to its left as it runs.
-      [lu, lv] = [((av - bv) / length) * width, (-(au - bu) / length) * width],
-      // Its left edge, its middle and its right.
-      row = [1, 0, -1].map((side) =>
-        pointAt(into, u + pu + lu * side, v + pv + lv * side, groundAt)
-      );
+      lu = ((av - bv) / length) * width,
+      lv = (-(au - bu) / length) * width,
+      row: [Point, Point] = [
+        [u + pu + lu, v + pv + lv],
+        [u + pu - lu, v + pv - lv],
+      ];
 
     if (previous !== null) {
-      const [l0, c0, r0] = previous as [number, number, number],
-        [l1, c1, r1] = row as [number, number, number];
+      const [l0, r0] = previous,
+        [l1, r1] = row;
 
-      triangle(into, l0, l1, c0);
-      triangle(into, c0, l1, c1);
-      triangle(into, c0, c1, r0);
-      triangle(into, r0, c1, r1);
+      triangles.push([l0, r0, l1], [r0, r1, l1]);
     }
 
     previous = row;
   }
+
+  lay(into, triangles, ground);
 };
