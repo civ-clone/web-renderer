@@ -2408,8 +2408,14 @@ const landOf = (
         0
       ),
     // The points of what's laid that are a forest's or a jungle's trees' colours: their leaves and trunks.
+    // Each stand's trees' too, as the woods grow from them, the kinds a set draws with a base kind's model among them.
     treeColours = ['Forest', 'Jungle']
-      .flatMap((terrain) => vegetationTable[terrain]!.plants)
+      .flatMap((terrain) => [
+        ...vegetationTable[terrain]!.plants,
+        ...(vegetationTable[terrain]!.stands ?? []).flatMap(
+          ({ plants: grown }) => grown
+        ),
+      ])
       .flatMap(({ colour, detail }) => [new Color(colour), new Color(detail)]),
     treeColoured = () =>
       [...laid.values()].reduce((sum, mesh) => {
@@ -2471,26 +2477,25 @@ const landOf = (
         }))
       )
     ),
-    // Each model's kind and where it grows, and so how big it grows against its usual: the table's sizes, from the
-    //  woods' fringe's (0.9 of them) to where they're whole (1.3).
-    kinds: { [model: string]: [keyof typeof PLANT_HEIGHT, string] } = {
-      pine: ['conifer', 'Forest'],
-      beech: ['broadleaf', 'Forest'],
-      teak: ['broadleaf', 'Jungle'],
-      palm: ['palm', 'Jungle'],
+    // Each model's kinds and where they grow, its own and those it draws as their base (`PLANT_BASE`), and so how big
+    //  each grows against its usual: its stands' sizes, from the woods' fringe's (0.9 of them) to where they're whole
+    //  (1.3).
+    kinds: { [model: string]: [string, string[]] } = {
+      pine: ['Forest', ['conifer', 'fir']],
+      beech: ['Forest', ['broadleaf', 'oak', 'birch']],
+      teak: ['Jungle', ['broadleaf', 'tropical']],
+      palm: ['Jungle', ['palm', 'banana']],
     },
     tall = plants.filter(({ model, height }) => {
-      const [kind, terrain] = kinds[model]!,
-        [least, most] = vegetationTable[terrain]!.plants.find(
-          (plant) =>
-            plant.kind === kind ||
-            (kind === 'broadleaf' && plant.kind === 'conifer')
-        )!.size,
-        usual = PLANT_HEIGHT[kind];
+      const [terrain, drawn] = kinds[model]!;
 
-      return (
-        height < usual * least * 0.9 - 1e-9 ||
-        height > usual * most * 1.3 + 1e-9
+      return !vegetationTable[terrain]!.stands!.some(({ plants: grown }) =>
+        grown.some(
+          ({ kind, size: [least, most] }) =>
+            drawn.includes(kind) &&
+            height >= PLANT_HEIGHT[kind] * least * 0.9 - 1e-9 &&
+            height <= PLANT_HEIGHT[kind] * most * 1.3 + 1e-9
+        )
       );
     });
 
@@ -2536,6 +2541,54 @@ const landOf = (
       [true, 0],
       true,
     ]
+  );
+}
+
+// A set's trees each keep the room their model takes (#1363), as the land says: a forest laid with its models reaching
+//  round as far as they're tall grows far fewer trees than one whose models' reach isn't known, as each keeps further
+//  from its square's clearing; and one given the reach of a model that draws none of its trees grows as many.
+{
+  const treesWith = (reaches: ReadonlyMap<string, number>): number => {
+      const { land, laid, stage } = landOf('square', 32, 16, () => ({
+        terrain: 'Forest',
+      }));
+
+      land.queueAll(0, 0);
+      land.build(stage, null);
+      land.growWith(
+        new Map([
+          ['conifer', 'pine'],
+          ['broadleaf', 'beech'],
+        ]),
+        0,
+        0,
+        reaches
+      );
+      land.build(stage, null);
+
+      return [...laid.values()].reduce(
+        (sum, mesh) =>
+          sum +
+          Object.values(mesh?.plants ?? {}).reduce(
+            (each, numbers) => each + numbers.length / PLANT_NUMBERS,
+            0
+          ),
+        0
+      );
+    },
+    unknown = treesWith(new Map()),
+    wide = treesWith(
+      new Map([
+        ['pine', 1],
+        ['beech', 1],
+      ])
+    ),
+    another = treesWith(new Map([['teak', 1]]));
+
+  expect(
+    'a set’s trees keep the room their models take, as the land gives it, and no other model’s',
+    [unknown > 0, wide < unknown * 0.8, another === unknown],
+    [true, true, true]
   );
 }
 
@@ -3730,22 +3783,28 @@ expect(
   ],
   [true, true]
 );
-// Over 40 squares, the share of a forest's trees that are conifers, at `latitude`.
+// Over 40 squares, the share of a forest's trees that are pines and firs, at `latitude`, against broadleaf, oaks and
+//  birches.
 const conifersAt = (latitude: number): number => {
   const trees = Array.from({ length: 40 }, (_, at) =>
     layOverlay(
       forest()!,
       { ...place(at % 20, Math.floor(at / 20)), latitude },
       soup()
-    ).grown.filter(([, , kind]) => kind === 'conifer' || kind === 'broadleaf')
+    ).grown.filter(([, , kind]) =>
+      ['conifer', 'fir', 'broadleaf', 'oak', 'birch'].includes(kind)
+    )
   ).flat();
 
-  return trees.filter(([, , kind]) => kind === 'conifer').length / trees.length;
+  return (
+    trees.filter(([, , kind]) => kind === 'conifer' || kind === 'fir').length /
+    trees.length
+  );
 };
 
 expect(
-  'a forest’s trees are mostly broadleaf at the equator and conifers at the poles',
-  [conifersAt(0) < 0.3, conifersAt(1) > 0.85],
+  'a forest’s trees are mostly broadleaf, oaks and birches at the equator, and pines and firs at the poles',
+  [conifersAt(0) < 0.3, conifersAt(1) > 0.65],
   [true, true]
 );
 expect(

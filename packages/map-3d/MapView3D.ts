@@ -456,6 +456,8 @@ export class MapView3D implements MapRenderer {
   // The model each plant's drawn with, by the plant as a set names it (`conifer`, `Jungle:broadleaf`), from the sets of
   //  models as each model's loaded, with the rank of the set it's from: the built-in set's shapes for the rest.
   #plants = new Map<string, { id: string; rank: number }>();
+  // How far each model drawing plants reaches round its origin, for each of its height, by its id: the room it takes.
+  #plantReaches = new Map<string, number>();
   // Whether models have arrived since the squares were last marked: they're all marked again at the next frame, once
   //  however many arrived.
   #modelsArrived = false;
@@ -683,11 +685,12 @@ export class MapView3D implements MapRenderer {
           this.#modelsArrived = true;
           this.#draw();
         },
-        (id, plants) => {
+        (id, plants, reach) => {
           if (this.#disposed) {
             return;
           }
 
+          this.#plantReaches.set(id, reach);
           plants
             .filter(
               (plant) => (this.#plants.get(plant)?.rank ?? Infinity) >= rank
@@ -723,7 +726,7 @@ export class MapView3D implements MapRenderer {
       }
     });
 
-    this.#land.growWith(plants, ...this.#focus());
+    this.#land.growWith(plants, ...this.#focus(), this.#plantReaches);
     this.#draw();
   }
 

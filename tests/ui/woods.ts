@@ -20,8 +20,11 @@ import {
   CANOPY,
   OverlayMesh,
   OverlayPlace,
+  PLANT_HEIGHT,
   PLANT_NUMBERS,
+  PLANT_ROOM,
   layOverlay,
+  plantShape,
   soup,
   undergrowthPlants,
   woodsPlants,
@@ -38,11 +41,17 @@ import {
   FIELD_OF_VIEW,
   defaultOrbit,
 } from '@civ-clone/ui-map-3d/camera/orbit';
-import { Matrix4, Vector3 } from 'three';
+import {
+  BufferGeometry,
+  Float32BufferAttribute,
+  Matrix4,
+  Vector3,
+} from 'three';
 import { growthOf } from '@civ-clone/ui-models-builtin/vegetation';
-import Land from '@civ-clone/ui-map-3d/Land';
+import { STAND_SPACING, standAt } from '@civ-clone/ui-map-3d/overlay/stands';
+import Land, { plantModelOf, plantReachFor } from '@civ-clone/ui-map-3d/Land';
 import World from '@civ-clone/ui-map/components/World';
-import { Stage } from '@civ-clone/ui-map-3d/stage';
+import { Stage, plantReachOf } from '@civ-clone/ui-map-3d/stage';
 import { TopologyId } from '@civ-clone/ui-protocol/topology';
 import { Tile } from '@civ-clone/ui-protocol/types';
 
@@ -62,7 +71,17 @@ const expect = (description: string, actual: unknown, expected: unknown) => {
 };
 
 // The kinds of plant that are woods' trees, not what grows under them.
-const TREES: readonly string[] = ['conifer', 'broadleaf', 'palm', 'deadTree'];
+const TREES: readonly string[] = [
+  'conifer',
+  'broadleaf',
+  'palm',
+  'deadTree',
+  'fir',
+  'oak',
+  'birch',
+  'tropical',
+  'banana',
+];
 
 const ids: TopologyId[] = ['square', 'staggered-iso', 'hex-odd-r'],
   forest = growthOf('Forest')!;
@@ -961,6 +980,331 @@ ids.forEach((topologyId) => {
   expect(
     'on sloping land, on every grid, nothing in woods stands over a unit’s stand within 0.17 of the middle',
     over.slice(0, 3),
+    []
+  );
+}
+
+// Stands (#1363), on a world 80 by 50, at 4,000 points: a stand the same one period round the world each way; each as
+//  common as its weight says (1 to 4, so a tenth to two fifths); points 0.17 apart across mostly in one stand, but
+//  stands' edges mingling, not ruled; and each stand chosen at its centre's latitude, where the centre is on the world:
+//  with the first stand weighted only at the equator and the last only at the poles, and the latitude 0 in a band
+//  round the middle and 1 beyond it, neither is found well away from where it's weighted; and with the latitude 0 in
+//  the top half and 1 in the bottom, a point a period round, over the seam, in the same stand.
+{
+  const period = { u: 80, v: 50 },
+    points = Array.from({ length: 4000 }, (_, at) => ({
+      u: (at % 80) + 0.37,
+      v: Math.floor(at / 80) + 0.61,
+      own: (at * 0.618) % 1,
+    })),
+    at = (
+      { u, v, own }: { u: number; v: number; own: number },
+      latitudeAt: (v: number) => number = () => 0.5,
+      weights: (latitude: number) => readonly number[] = () => [1, 2, 3, 4]
+    ) => standAt({ u, v, own, period, latitudeAt, weights }),
+    stands = points.map((point) => at(point)),
+    shares = [0, 1, 2, 3].map(
+      (stand) => stands.filter((each) => each === stand).length / 4000
+    ),
+    // A period round, with a latitude that's 0 in the world's top half and 1 in its bottom half, so a stand whose centre
+    //  is taken a period round takes the wrong half's unless its latitude is taken where the centre is on the world.
+    halves = (v: number) => (v < 25 ? 0 : 1),
+    byHalves = (latitude: number) => [1 - latitude, 0.5, 0.5, latitude],
+    again = points.filter(
+      (point) =>
+        at(
+          { ...point, u: point.u + period.u, v: point.v - period.v },
+          halves,
+          byHalves
+        ) !== at(point, halves, byHalves)
+    ).length,
+    near =
+      points.filter(
+        (point, n) =>
+          at({ ...point, u: point.u + 0.17, own: (point.own + 0.5) % 1 }) ===
+          stands[n]
+      ).length / 4000,
+    // Points whose stand isn't the same for every tree that might stand there: near stands' edges, where they mingle.
+    mingled =
+      points.filter(
+        (point) => at({ ...point, own: 0.05 }) !== at({ ...point, own: 0.95 })
+      ).length / 4000,
+    // A latitude 0 in a band round the middle and 1 outside it, as a world's runs to its poles at both ends.
+    misplaced = points.filter((point) => {
+      const stand = at(
+          point,
+          (v) => (Math.abs(v - 25) < 12.5 ? 0 : 1),
+          byHalves
+        ),
+        out = Math.abs(point.v - 25);
+
+      return (
+        (out < 12.5 - STAND_SPACING * 1.5 && stand === 3) ||
+        (out > 12.5 + STAND_SPACING * 1.5 && stand === 0)
+      );
+    }).length;
+
+  expect(
+    'stands: the same a period round; each as common as its weight; points 0.17 apart mostly in one stand, their edges mingling; each by its centre’s latitude',
+    [
+      shares.map((share, stand) => Math.abs(share - (stand + 1) / 10) < 0.06),
+      again,
+      near > 0.8 && near < 0.99,
+      mingled > 0.02 && mingled < 0.3,
+      misplaced,
+    ],
+    [[true, true, true, true], 0, true, true, 0]
+  );
+}
+
+// A forest's and a jungle's stands (#1363), on 60 squares each of a forest whole, at the equator and at the poles, and
+//  a jungle: at the poles, the forest's trees are mostly firs and pines, among birches, and hardly an oak; at the equator,
+//  mostly broadleaf, oaks and birches;
+//  at the middle latitudes, at least four kinds; a jungle's trees broadleaf, tropical trees, palms and bananas. Each of
+//  the built-in set's tree shapes as tall as its kind's usual height (`PLANT_HEIGHT`), so a set draws it as tall, and
+//  reaching round no further than its room. A set's model for each kind: its own on the terrain, its own, then its
+//  base's (`PLANT_BASE`) on the terrain, then its base's; and the room it keeps, that model's reach, or none where it's
+//  not known. A model's reach the furthest of its points from its upright, as it may be turned any way, over its
+//  height: a branch on the diagonal reaching further than along either axis.
+{
+  const width = 24,
+    height = 16,
+    topologyId: TopologyId = 'square',
+    topology = topologyFor({ width, height, topologyId }),
+    layout = groundLayoutFor({
+      width,
+      height,
+      topologyId,
+      wrapsY: topology.wrapsY(),
+    }),
+    kindsAt = (terrain: string, latitude: number) => {
+      const counts: { [kind: string]: number } = {};
+
+      Array.from({ length: 60 }, (_, at) => [
+        2 + (at % 20),
+        2 + Math.floor(at / 20) * 4,
+      ]).forEach(([x, y]) =>
+        woodsPlants(
+          overlayOf(topology, x!, y!, terrain, () => terrain),
+          {
+            ...placeOf(layout, topology, x!, y!),
+            latitude,
+            latitudeAt: () => latitude,
+          },
+          growthOf(terrain)!
+        ).forEach(({ kind }) => {
+          counts[kind] = (counts[kind] ?? 0) + 1;
+        })
+      );
+
+      return counts;
+    },
+    share = (counts: { [kind: string]: number }, kinds: string[]) =>
+      kinds.reduce((sum, kind) => sum + (counts[kind] ?? 0), 0) /
+      Object.values(counts).reduce((sum, count) => sum + count, 0),
+    poles = kindsAt('Forest', 1),
+    equator = kindsAt('Forest', 0),
+    middle = kindsAt('Forest', 0.5),
+    jungle = kindsAt('Jungle', 0.5),
+    // Each tree's shape laid alone on flat ground, at its usual size: how tall it stands against its kind's height, and
+    //  how far it reaches round against its room.
+    tallness = (
+      [
+        'conifer',
+        'broadleaf',
+        'palm',
+        'fir',
+        'oak',
+        'birch',
+        'tropical',
+        'banana',
+      ] as const
+    )
+      .map((kind) => {
+        const { positions } = plantShape(kind, 1, 0.7);
+        let top = 0,
+          reach = 0;
+
+        for (let n = 0; n < positions.length; n += 3) {
+          top = Math.max(top, positions[n + 1]!);
+          reach = Math.max(reach, Math.hypot(positions[n]!, positions[n + 2]!));
+        }
+
+        return [
+          kind,
+          Math.round((top / PLANT_HEIGHT[kind]) * 100) / 100,
+          reach <= PLANT_ROOM[kind] * 1.02,
+        ] as const;
+      })
+      .filter(([, ratio, within]) => ratio < 0.9 || ratio > 1.1 || !within),
+    models = new Map([
+      ['conifer', 'pine'],
+      ['Jungle:broadleaf', 'teak'],
+      ['broadleaf', 'beech'],
+      ['fir', 'fir'],
+    ]),
+    // How far each of those reaches, but the fir's own, which isn't known.
+    reaches = new Map([
+      ['pine', 0.4],
+      ['teak', 0.5],
+      ['beech', 0.3],
+    ]),
+    // A model of two parts: a trunk up its middle, 2 tall, and a branch out on the diagonal, 0.6 across and 0.8 along,
+    //  so 1 out, though no further than 0.8 along either axis.
+    branched = [
+      [0, 0, 0, 0, 2, 0, 0.05, 1, 0],
+      [0, 1, 0, 0.6, 1.2, 0.8, 0.1, 1.1, 0],
+    ].map((points) => {
+      const geometry = new BufferGeometry();
+
+      geometry.setAttribute('position', new Float32BufferAttribute(points, 3));
+
+      return geometry;
+    });
+
+  expect(
+    'a forest’s stands by latitude: mostly firs and pines at the poles, hardly an oak, broadleaf, oaks and birches at the equator, four kinds or more between; a jungle’s broadleaf, tropical trees, palms and bananas; each built-in tree as tall as its kind; a set’s model by the kind, then its base',
+    [
+      share(poles, ['fir', 'conifer']) > 0.65 && share(poles, ['oak']) < 0.02,
+      share(equator, ['broadleaf', 'oak', 'birch']) > 0.75,
+      Object.keys(middle).length >= 4,
+      ['broadleaf', 'tropical', 'palm', 'banana'].every(
+        (kind) => (jungle[kind] ?? 0) > 0
+      ),
+      tallness,
+      [
+        plantModelOf(models, 'Forest', 'fir'),
+        plantModelOf(models, 'Forest', 'oak'),
+        plantModelOf(models, 'Jungle', 'tropical'),
+        plantModelOf(models, 'Forest', 'tropical'),
+        plantModelOf(models, 'Jungle', 'banana'),
+        plantModelOf(models, 'Forest', 'conifer'),
+      ],
+      [
+        plantReachFor(models, reaches, 'Forest', 'oak'),
+        plantReachFor(models, reaches, 'Forest', 'birch'),
+        plantReachFor(models, reaches, 'Jungle', 'tropical'),
+        plantReachFor(models, reaches, 'Forest', 'fir'),
+        plantReachFor(models, reaches, 'Jungle', 'banana'),
+        plantReachFor(new Map([['conifer', 'pine']]), reaches, 'Forest', 'fir'),
+      ],
+      Math.round(plantReachOf(branched) * 1000) / 1000,
+    ],
+    [
+      true,
+      true,
+      true,
+      true,
+      [],
+      ['fir', 'beech', 'teak', 'beech', null, 'pine'],
+      [0.3, 0.3, 0.5, null, null, 0.4],
+      0.5,
+    ]
+  );
+}
+
+// A set's trees keep the room their model takes (#1363), on every grid: forest and jungle whole, with a road to one
+//  neighbour, at the poles and the equator, drawn with models reaching round 0.45 of their height. No crown, as far as
+//  its model reaches at the height it's drawn, comes within 0.17 of the middle, where a unit's figures stand, or onto
+//  the road, half a road's width (0.035) from its middle line.
+{
+  const width = 12,
+    height = 10,
+    REACH = 0.45,
+    TREE_KINDS = new Set(TREES),
+    overreach = ids.flatMap((topologyId) => {
+      const topology = topologyFor({ width, height, topologyId }),
+        layout = groundLayoutFor({
+          width,
+          height,
+          topologyId,
+          wrapsY: topology.wrapsY(),
+        });
+
+      return ['Forest', 'Jungle'].flatMap((terrain) =>
+        [0, 1].flatMap((latitude) =>
+          Array.from({ length: 12 }, (_, at) => [
+            2 + (at % 6),
+            2 + Math.floor(at / 6) * 2 + (at % 2),
+          ]).flatMap(([x, y]) => {
+            const direction = topology.directions()[0]!,
+              offset = topology.offset(direction, x!, y!),
+              into = soup(),
+              place = {
+                ...placeOf(layout, topology, x!, y!),
+                latitude,
+                latitudeAt: () => latitude,
+                plantModel: (kind: string) =>
+                  TREE_KINDS.has(kind) ? 'tree' : null,
+                plantReach: (kind: string) =>
+                  TREE_KINDS.has(kind) ? REACH : null,
+              },
+              [cu, cv] = place.centre,
+              [eu, ev] = place.toward(offset),
+              // The road's middle line, from the middle to the edge halfway to the neighbour.
+              end = [(cu + eu) / 2, (cv + ev) / 2] as const,
+              fromRoad = (u: number, v: number) => {
+                const du = end[0] - cu,
+                  dv = end[1] - cv,
+                  along = Math.max(
+                    0,
+                    Math.min(
+                      1,
+                      ((u - cu) * du + (v - cv) * dv) / (du * du + dv * dv)
+                    )
+                  );
+
+                return Math.hypot(u - cu - du * along, v - cv - dv * along);
+              };
+
+            layOverlay(
+              overlayOf(
+                topology,
+                x!,
+                y!,
+                terrain,
+                () => terrain,
+                ['Road'],
+                (other) =>
+                  other[0] === offset[0] && other[1] === offset[1]
+                    ? ['Road']
+                    : []
+              ),
+              place as OverlayPlace,
+              into
+            );
+
+            const laid = into.plants.get('tree') ?? [];
+
+            return Array.from(
+              { length: laid.length / PLANT_NUMBERS },
+              (_, n) => n
+            )
+              .map((n) => {
+                const u = laid[n * PLANT_NUMBERS]!,
+                  v = laid[n * PLANT_NUMBERS + 2]!,
+                  crown = REACH * laid[n * PLANT_NUMBERS + 3]!;
+
+                return [
+                  Math.hypot(u - cu, v - cv) - crown,
+                  fromRoad(u, v) - crown,
+                ] as const;
+              })
+              .filter(
+                ([middle, road]) => middle < 0.17 - 1e-6 || road < 0.035 - 1e-6
+              )
+              .map(
+                ([middle, road]) =>
+                  `${topologyId} ${terrain} ${latitude} ${x},${y}: ${middle}, ${road}`
+              );
+          })
+        )
+      );
+    });
+
+  expect(
+    'a set’s trees keep the room their model takes, on every grid: no crown within 0.17 of the middle, or onto a road',
+    overreach.slice(0, 3),
     []
   );
 }

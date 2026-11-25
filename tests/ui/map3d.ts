@@ -8181,7 +8181,7 @@ expect(
     const growers = new Map<
         string,
         {
-          grown: (id: string, plants: readonly string[]) => void;
+          grown: (id: string, plants: readonly string[], reach: number) => void;
           done: () => void;
         }
       >(),
@@ -8199,30 +8199,34 @@ expect(
         })
       ),
       laidWith: [string, string][][] = [],
+      reachedWith: [string, number][][] = [],
       settled = () => new Promise((resolve) => setTimeout(resolve, 0)),
       landGrowing = growing.land(),
       growWith = landGrowing.growWith.bind(landGrowing);
 
-    landGrowing.growWith = (models, u, v) => {
+    landGrowing.growWith = (models, u, v, reaches) => {
       laidWith.push([...models].sort());
-      growWith(models, u, v);
+      reachedWith.push([...(reaches ?? new Map())].sort());
+      growWith(models, u, v, reaches);
     };
 
-    growers.get('/sets/second.json')!.grown('teak', ['Jungle:broadleaf']);
-    growers.get('/sets/second.json')!.grown('pine', ['conifer', 'broadleaf']);
+    growers.get('/sets/second.json')!.grown('teak', ['Jungle:broadleaf'], 0.4);
+    growers
+      .get('/sets/second.json')!
+      .grown('pine', ['conifer', 'broadleaf'], 0.45);
 
     const beforeDone = laidWith.length;
 
     growers.get('/sets/second.json')!.done();
     await settled();
-    growers.get('/sets/first.json')!.grown('beech', ['broadleaf']);
+    growers.get('/sets/first.json')!.grown('beech', ['broadleaf'], 0.3);
     growers.get('/sets/first.json')!.done();
     await settled();
     growing.dispose();
 
     expect(
-      'a set’s plants laid once it’s loaded; an earlier set’s plant drawn over a later’s, and over a later’s on a terrain of its own',
-      [beforeDone, laidWith],
+      'a set’s plants laid once it’s loaded; an earlier set’s plant drawn over a later’s, and over a later’s on a terrain of its own; how far each model reaches given with them',
+      [beforeDone, laidWith, reachedWith],
       [
         0,
         [
@@ -8234,6 +8238,17 @@ expect(
           [
             ['broadleaf', 'beech'],
             ['conifer', 'pine'],
+          ],
+        ],
+        [
+          [
+            ['pine', 0.45],
+            ['teak', 0.4],
+          ],
+          [
+            ['beech', 0.3],
+            ['pine', 0.45],
+            ['teak', 0.4],
           ],
         ],
       ]

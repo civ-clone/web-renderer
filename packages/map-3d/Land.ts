@@ -24,6 +24,7 @@ import { Ground } from './water';
 import World from '@civ-clone/ui-map/components/World';
 import { Tile } from '@civ-clone/ui-protocol/types';
 import { seaFloor } from '@civ-clone/ui-models-builtin/terrain';
+import { PLANT_BASE, PlantKind } from '@civ-clone/ui-models-builtin/vegetation';
 import overlayFor, {
   OverlayNeighbour,
   SquareOverlay,
@@ -63,7 +64,45 @@ type Made = {
 const squareSeed = (x: number, y: number): number =>
   Math.imul(x, 73856093) ^ Math.imul(y, 19349663);
 
-export class Land {
+/**
+ * How far the model a set draws `kind` with on `terrain` reaches round its origin, for each of its height (`reaches`,
+ *  by the model's id): the model `plantModelOf` gives, a base kind's where the set has none of the kind's own, so a fir
+ *  drawn with a pine keeps the pine's room; or nothing, where none draws it or its reach isn't known.
+ */
+export const plantReachFor = (
+  models: ReadonlyMap<string, string>,
+  reaches: ReadonlyMap<string, number>,
+  terrain: string,
+  kind: PlantKind
+): number | null => {
+  const model = plantModelOf(models, terrain, kind);
+
+  return model === null ? null : reaches.get(model) ?? null;
+};
+
+/**
+ * The model a set draws `kind` with on `terrain`, of `models` (by the plant as a set names it, as `conifer` or
+ *  `Jungle:broadleaf`): the kind on the terrain, then the kind, then, where a set has neither, its base kind on the
+ *  terrain and its base kind (`PLANT_BASE`), so a set with pines and no firs draws its pines for both; or none.
+ */
+export const plantModelOf = (
+  models: ReadonlyMap<string, string>,
+  terrain: string,
+  kind: PlantKind
+): string | null => {
+  const base = PLANT_BASE[kind];
+
+  return (
+    models.get(`${terrain}:${kind}`) ??
+    models.get(kind) ??
+    (base === undefined
+      ? undefined
+      : models.get(`${terrain}:${base}`) ?? models.get(base)) ??
+    null
+  );
+};
+
+class Land {
   readonly layout: GroundLayout;
   #relief: ReliefMap;
   #grid: ChunkGrid;
@@ -97,6 +136,8 @@ export class Land {
   // The models sets draw plants with, by the plant as a set names it (`conifer`, or `Jungle:broadleaf` for a kind on a
   //  terrain of its own), each the model's id among every set's.
   #plantModels: ReadonlyMap<string, string> = new Map();
+  // How far each of those models reaches round its origin, for each of its height, by its id: the room it takes.
+  #plantReaches: ReadonlyMap<string, number> = new Map();
   // How far a square reaches from its middle every way, its outline's nearest edge; and half the biggest square, with
   //  sides along the ground's axes, that fits inside it.
   #radius: number;
@@ -353,10 +394,17 @@ export class Land {
   /**
    * The plants sets of models draw, and with which models (`models`, by the plant as a set names it, as `conifer` or
    *  `Jungle:broadleaf`): every chunk's overlay laid again with them, the nearest to (`u`, `v`) first. A kind on a
-   *  terrain of its own is drawn with its own model before the kind's.
+   *  terrain of its own is drawn with its own model before the kind's. Each keeps the room its model takes, by how far
+   *  the model reaches round its origin for each of its height (`reaches`, by the model's id), where that's known.
    */
-  growWith(models: ReadonlyMap<string, string>, u: number, v: number): void {
+  growWith(
+    models: ReadonlyMap<string, string>,
+    u: number,
+    v: number,
+    reaches: ReadonlyMap<string, number> = new Map()
+  ): void {
     this.#plantModels = new Map(models);
+    this.#plantReaches = new Map(reaches);
     this.#focus = [u, v];
     // What was laid before, with the plants as they were drawn then, is let go.
     this.#landChanged();
@@ -781,6 +829,8 @@ export class Land {
         heightAt: (pu, pv) => this.surfaceAt(pu, pv, heights),
         seed: squareSeed(x, y),
         latitude: Math.min(1, Math.abs((2 * v) / this.extentV() - 1)),
+        latitudeAt: (pv) =>
+          Math.min(1, Math.abs((2 * pv) / this.extentV() - 1)),
         outline: this.layout.outline(x, y),
         owns: (pu, pv) => {
           const [tx, ty] = this.layout.tileAt(pu, pv);
@@ -788,9 +838,14 @@ export class Land {
           return tx === x && ty === y;
         },
         plantModel: (kind) =>
-          this.#plantModels.get(`${overlay.terrain}:${kind}`) ??
-          this.#plantModels.get(kind) ??
-          null,
+          plantModelOf(this.#plantModels, overlay.terrain, kind),
+        plantReach: (kind) =>
+          plantReachFor(
+            this.#plantModels,
+            this.#plantReaches,
+            overlay.terrain,
+            kind
+          ),
         around: topology
           .directions()
           .filter((direction) => topology.neighbour(x, y, direction) !== null)
