@@ -718,6 +718,18 @@ Each is looked up by its type name in the model set.
     part reaches down into the ground at its lowest, so none hangs over a slope. It takes the room left inside the
     square, as a special does (`MINE_ROOMS`, 0.15 down to 0.1), and is drawn to fit.
 - **Fortress and Airbase:** a model on the square.
+  - **As built, a fortress** (#1335): stone walls round the square's middle, 0.62 of its radius out (the lines what
+    else stands there keeps clear of), clear of the unit's stand. Each wall is laid in lengths that step with the
+    ground, from the lowest under each to 0.05 over the highest, with merlons along its outer edge. A round tower under
+    a slate roof stands at each corner. Wherever a road or railroad leaves through a wall there's a gate, flanked by two
+    square towers, or one in the south wall, towards the camera, where none does; where a road leaves through a corner,
+    both walls are open there, with no tower.
+  - **As built, an airbase** (#1335): a runway across the square south of its middle, marked with a dashed line down
+    its middle, its edges, and bars across each end; a hangar under a vaulted roof, its doors facing the runway, an
+    apron of tarmac between; and a control tower, a shaft with its glass cab. The hangar and the tower each claim the
+    most room there is for them inside the square, as a special does, off the runway (what stands there keeps its room
+    clear of the line down its middle). Their walls stand on the ground.
+  - **The debug page** lays out fortresses, airbases, mines and farms, some with roads, with `improvements=1`.
 - **Pollution and fallout:** smog, a low, sooty brown haze over the square (#1335), darker than open land and rock,
   so it shows over mountains (forest, jungle and swamp are about as dark, and it's told from them by its hue):
   see-through, so the land and what's on it show through, thickest at its

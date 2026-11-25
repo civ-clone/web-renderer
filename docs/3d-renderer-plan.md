@@ -345,7 +345,8 @@ Epic's UE4 skeleton or only match its bone names.
   - A unit stands on a stand in its owner's second colour (a ship rides the water without one), behind a low wall when
     fortified. Its flag flies over it, with the stack's size, the 2D map's letter for what it's busy with, a veteran's
     star, and a bar for its hit points when it's hurt.
-  - The debug page lays out every unit type with `?gallery=1`, and every special with `?specials=1` (#1335).
+  - The debug page lays out every unit type with `?gallery=1`, every special with `?specials=1`, and fortresses,
+    airbases, mines and farms with `?improvements=1` (#1335).
 - **Facing:** a unit faces the way it last moved, or attacked, from the map's events (P2), and a defender faces its
   attacker.
 - **Still to do in 2.1:** the `models` manifest kind and its validator; the ring following the marker option.
@@ -499,7 +500,7 @@ Plants are scattered by seed, each where it has room. They stay clear of a unit'
 - a chunk's overlay is made a few squares a frame within the frame's budget, so no frame waits on a busy chunk. A square changed before its chunk's make reaches it is read when it gets there, without beginning again;
 - with the view stopped at the poles of a world that wraps over them, a first or last row's overlay that reaches past a pole is drawn a period round too, clipped there, where the land between the far row's squares is its own.
 
-Still to do in 3.4: improvements as models from a hosted set, and Fortress and Airbase models that read better from afar.
+Since #1335, farms have their buildings, mines their headframes and tunnels, fortresses walls with merlons, towers and gates where their roads leave, and airbases a marked runway, a hangar and a control tower (spec §5.4). Still to do in 3.4: improvements as models from a hosted set.
 
 ---
 

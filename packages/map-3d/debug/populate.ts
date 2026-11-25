@@ -494,4 +494,94 @@ export const specialsGallery = (
   });
 };
 
+/** What the page's improvements show (`?improvements=1`): on each terrain, what's built there, and the ways its road
+ *  leaves it, by offset, each to a neighbour given a road too. */
+export const improvementsShown = (): {
+  terrain: string;
+  improvements: string[];
+  roads: [number, number][];
+}[] => [
+  { terrain: 'Grassland', improvements: ['Fortress'], roads: [] },
+  { terrain: 'Hills', improvements: ['Fortress'], roads: [] },
+  {
+    terrain: 'Plains',
+    improvements: ['Fortress', 'Road'],
+    roads: [
+      [1, 0],
+      [-1, 0],
+    ],
+  },
+  { terrain: 'Grassland', improvements: ['Fortress', 'Road'], roads: [[1, 1]] },
+  { terrain: 'Plains', improvements: ['Airbase'], roads: [] },
+  { terrain: 'Grassland', improvements: ['Airbase', 'Road'], roads: [[0, -1]] },
+  { terrain: 'Hills', improvements: ['Mine'], roads: [] },
+  { terrain: 'Mountains', improvements: ['Mine'], roads: [] },
+  { terrain: 'Grassland', improvements: ['Irrigation'], roads: [] },
+  { terrain: 'Plains', improvements: ['Irrigation', 'Farmland'], roads: [] },
+];
+
+/**
+ * The page's improvements (`?improvements=1`): each of `improvementsShown` on a square of its own on land, three
+ *  across and three rows apart from (`x`, `y`), so each is seen on its own with room for its roads' neighbours, the
+ *  nearest first, never on squares unseen. No cities or units.
+ */
+export const improvementsGallery = (
+  tiles: Tile[],
+  x: number,
+  y: number
+): void => {
+  const at = (tx: number, ty: number) =>
+      tiles.find((tile) => tile.x === tx && tile.y === ty),
+    built = (tile: Tile, terrain: string, names: string[]) => {
+      tile.terrain = {
+        ...tile.terrain,
+        _: terrain,
+        __: [terrain, 'Terrain', 'DataObject'],
+        features: [],
+      } as Tile['terrain'];
+      tile.improvements = names.map((name) => ({
+        _: name,
+        __: [],
+        id: `${name}-${tile.x}-${tile.y}`,
+      })) as Tile['improvements'];
+    },
+    squares = tiles
+      .filter(
+        (tile) =>
+          tile.isLand &&
+          Math.abs(tile.x - x) % 3 === 0 &&
+          Math.abs(tile.y - y) % 3 === 0
+      )
+      .sort(
+        (a, b) =>
+          Math.abs(a.x - x) +
+            Math.abs(a.y - y) -
+            (Math.abs(b.x - x) + Math.abs(b.y - y)) ||
+          a.y - b.y ||
+          a.x - b.x
+      );
+
+  tiles.forEach((tile) => {
+    tile.city = null;
+    tile.units = [];
+  });
+
+  improvementsShown().forEach(({ terrain, improvements, roads }, index) => {
+    const tile = squares[index];
+
+    if (tile === undefined) {
+      return;
+    }
+
+    built(tile, terrain, improvements);
+    roads.forEach(([dx, dy]) => {
+      const neighbour = at(tile.x + dx, tile.y + dy);
+
+      if (neighbour?.isLand) {
+        built(neighbour, terrain, ['Road']);
+      }
+    });
+  });
+};
+
 export default populate;

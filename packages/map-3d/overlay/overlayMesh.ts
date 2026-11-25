@@ -157,6 +157,14 @@ const LIFT = {
   HILLSIDE = '#77726a',
   THATCH = '#b89a5a',
   WALL = '#c9b48e',
+  // A fortress's towers' roofs; an airbase's markings, its hangar's walls, roof and doors, and its control tower's
+  //  glass.
+  SLATE = '#5a5e68',
+  MARKING = '#e8e8e8',
+  HANGAR = '#8a9096',
+  HANGAR_ROOF = '#a9afb5',
+  DOOR = '#3a3e44',
+  GLASS = '#2e3d48',
   SMOG = '#584b34';
 
 /** How high smog hangs over the land, at its lowest and highest, in world units (a figure's about 0.15 tall). */
@@ -179,6 +187,23 @@ const box = new BoxGeometry(1, 1, 1),
     return made;
   })(),
   sphere = new SphereGeometry(0.5, 8, 6),
+  // Half a cylinder lying along z, its flat side down, from 0 up to a half: a hangar's vaulted roof.
+  vault = (() => {
+    const made = new CylinderGeometry(
+      0.5,
+      0.5,
+      1,
+      8,
+      1,
+      false,
+      -Math.PI / 2,
+      Math.PI
+    );
+
+    made.rotateX(-Math.PI / 2);
+
+    return made;
+  })(),
   // The top half of a sphere, from its middle up: a silo's roof.
   dome = new SphereGeometry(0.5, 8, 3, 0, Math.PI * 2, 0, Math.PI / 2),
   // A wedge, its front face upright (towards +z), sloping from that face's top back to its bottom: the rock a tunnel's
@@ -219,6 +244,19 @@ const SPOTS = {
 //  play's zoom, inside the square, the most there's room for, down to the last, drawn to fit.
 const MINE_ROOMS = [0.15, 0.12, 0.1] as const,
   FARM_ROOMS = [0.13, 0.1, 0.08] as const;
+
+// A fortress's walls, how far out from the square's middle, in its radius, how thick and how tall over the highest of
+//  the ground under them, and how wide a gate in them is; its towers' radius and height; and how far apart the
+//  merlons along the top of its walls are.
+export const FORTRESS = {
+  half: 0.62,
+  thick: 0.03,
+  tall: 0.05,
+  gate: 0.08,
+  tower: 0.035,
+  towerTall: 0.09,
+  merlons: 0.045,
+} as const;
 
 // A room's middle, and eight ways round its edge, a unit out: where it's asked whether all of it is out of the water.
 const ROUND: readonly (readonly [number, number])[] = [
@@ -1434,6 +1472,22 @@ const mine = (
   cart(0.05, -0.02);
 };
 
+/** The colours a fortress is drawn in: its stone, and its towers' slate roofs. */
+export const FORTRESS_COLOURS = { stone: STONE, slate: SLATE } as const;
+
+/**
+ * The colours an airbase is drawn in: its runway's tarmac and markings, its hangar's walls, roof and doors, and its
+ *  control tower's glass.
+ */
+export const AIRBASE_COLOURS = {
+  tarmac: TARMAC,
+  marking: MARKING,
+  hangar: HANGAR,
+  roof: HANGAR_ROOF,
+  door: DOOR,
+  glass: GLASS,
+} as const;
+
 /**
  * The colours a mine's parts are drawn in: on a mountain, its tunnel's mouth, its timbers (posts and lintel, and a
  *  headframe's legs elsewhere) and the rock it's dug into; elsewhere, its engine house's walls and roof; and its spoil
@@ -1571,70 +1625,386 @@ const farmstead = (
   ];
 };
 
+// Where segment `a`-`b` crosses side `from`-`to`, how far along the side, 0 to 1; or none.
+const crossing = (
+  [au, av]: readonly [number, number],
+  [bu, bv]: readonly [number, number],
+  [fu, fv]: readonly [number, number],
+  [tu, tv]: readonly [number, number]
+): number | null => {
+  const ru = bu - au,
+    rv = bv - av,
+    su = tu - fu,
+    sv = tv - fv,
+    across = ru * sv - rv * su;
+
+  if (Math.abs(across) < 1e-12) {
+    return null;
+  }
+
+  const along = ((fu - au) * sv - (fv - av) * su) / across,
+    side = ((fu - au) * rv - (fv - av) * ru) / across;
+
+  // A hair either way, so a road through a corner crosses both sides there.
+  return along >= -1e-9 &&
+    along <= 1 + 1e-9 &&
+    side >= -1e-9 &&
+    side <= 1 + 1e-9
+    ? side
+    : null;
+};
+
+// The lowest and highest of the ground under a box at (`u`, `v`), `across` by `along` turned `facing`, at its middle,
+//  its corners and the middles of its sides.
+const groundUnder = (
+  layer: Layer,
+  [u, v]: readonly [number, number],
+  across: number,
+  along: number,
+  facing: number
+): [number, number] => {
+  const at = turned(u, v, facing),
+    heights = [-1, 0, 1].flatMap((sx) =>
+      [-1, 0, 1].map((sz) =>
+        layer.ground(...at((sx * across) / 2, (sz * along) / 2))
+      )
+    );
+
+  return [Math.min(...heights), Math.max(...heights)];
+};
+
+/**
+ * A fortress round the square's middle, its walls along `fortressLines`: each wall in lengths that step with the
+ *  ground, from the lowest under each to its height over the highest, with merlons along its outer edge; a round tower
+ *  at each corner under a slate roof; and a gate, flanked by two square towers, wherever a road or railroad leaves
+ *  through its walls, or in its south wall, towards the camera, where none does. Where a road leaves through a corner,
+ *  that corner is open, with no tower.
+ */
 const fortress = (layer: Layer): void => {
-  const [u, v] = layer.place.centre,
-    half = layer.place.radius * 0.62,
-    y = layer.ground(u, v);
+  const corners = fortressCorners(layer.place),
+    length = Math.hypot(
+      corners[1]![0] - corners[0]![0],
+      corners[1]![1] - corners[0]![1]
+    ),
+    // Where each road or railroad leaves through a side: which side, and how far along it.
+    gates: [number, number][] = [];
 
-  // Four walls round the middle, and a tower at each corner.
-  [
-    [0, -half, half * 2, 0.025],
-    [0, half, half * 2, 0.025],
-    [-half, 0, 0.025, half * 2],
-    [half, 0, 0.025, half * 2],
-  ].forEach(([du, dv, su, sv]) => {
-    const wu = u + du!,
-      wv = v + dv!;
+  layer.runs.forEach(({ points }) =>
+    points.slice(1).forEach((point, index) =>
+      corners.forEach((corner, side) => {
+        const along = crossing(
+          points[index]!,
+          point,
+          corner,
+          corners[(side + 1) % 4]!
+        );
 
-    layer.solid(
-      box,
-      [wu, Math.max(y, layer.ground(wu, wv)) + 0.02, wv],
-      [su!, 0.05, sv!],
-      STONE
+        if (along !== null) {
+          gates.push([side, along * length]);
+        }
+      })
+    )
+  );
+
+  if (gates.length === 0) {
+    gates.push([2, length / 2]);
+  }
+
+  const { gate, tower, thick, tall } = FORTRESS,
+    // Each side's gaps, from and to, along it.
+    gaps = [0, 1, 2, 3].map((side) =>
+      gates
+        .filter(([each]) => each === side)
+        .map(([, at]): [number, number] => [at - gate / 2, at + gate / 2])
+        .sort((a, b) => a[0] - b[0])
+    ),
+    // A corner is open where a gap on either side reaches into its tower: then both its walls are, there.
+    open = corners.map(
+      (_, corner) =>
+        gaps[corner]!.some(([from]) => from < tower) ||
+        gaps[(corner + 3) % 4]!.some(([, to]) => to > length - tower)
+    );
+
+  open.forEach((isOpen, corner) => {
+    if (isOpen) {
+      gaps[corner]!.push([-gate / 2, gate / 2]);
+      gaps[(corner + 3) % 4]!.push([length - gate / 2, length + gate / 2]);
+    }
+  });
+
+  // Each side's gaps in order along it, those that overlap as one.
+  gaps.forEach((side, index) => {
+    const merged: [number, number][] = [];
+
+    side
+      .sort((a, b) => a[0] - b[0])
+      .forEach(([from, to]) => {
+        const last = merged[merged.length - 1];
+
+        if (last !== undefined && from <= last[1]) {
+          last[1] = Math.max(last[1], to);
+        } else {
+          merged.push([from, to]);
+        }
+      });
+    gaps[index] = merged;
+  });
+
+  corners.forEach((corner, side) => {
+    const next = corners[(side + 1) % 4]!,
+      way = [(next[0] - corner[0]) / length, (next[1] - corner[1]) / length],
+      // Its length turned to lie along the side; outward is to its left as it goes round.
+      facing = Math.atan2(-way[1]!, way[0]!),
+      out = [way[1]!, -way[0]!],
+      point = (along: number, outward = 0): [number, number] => [
+        corner[0] + way[0]! * along + out[0]! * outward,
+        corner[1] + way[1]! * along + out[1]! * outward,
+      ],
+      // The lengths of wall between its gaps.
+      walls: [number, number][] = [];
+    let from = 0;
+
+    gaps[side]!.forEach(([a, b]) => {
+      if (a > from) {
+        walls.push([from, a]);
+      }
+
+      from = Math.max(from, b);
+    });
+
+    if (from < length) {
+      walls.push([from, length]);
+    }
+
+    walls.forEach(([a, b]) => {
+      const steps = Math.max(1, Math.ceil((b - a) / 0.08)),
+        step = (b - a) / steps;
+
+      for (let k = 0; k < steps; k++) {
+        const middle = point(a + step * (k + 0.5)),
+          [low, high] = groundUnder(layer, middle, step, thick, facing),
+          bottom = low - 0.004,
+          top = high + tall;
+
+        layer.solid(
+          box,
+          [middle[0], (bottom + top) / 2, middle[1]],
+          [step, top - bottom, thick],
+          STONE,
+          [0, facing, 0]
+        );
+
+        // Merlons along its outer edge, as many as fit.
+        const count = Math.max(1, Math.round(step / FORTRESS.merlons));
+
+        for (let m = 0; m < count; m++) {
+          const [mu, mv] = point(
+            a + step * k + (step * (m + 0.5)) / count,
+            thick / 2 - 0.005
+          );
+
+          layer.solid(
+            box,
+            [mu, top + 0.007, mv],
+            [Math.min(0.018, step / count - 0.008), 0.018, 0.01],
+            STONE,
+            [0, facing, 0]
+          );
+        }
+      }
+    });
+
+    // A square tower each side of each gap, but where the gap opens a corner.
+    gaps[side]!.forEach(([a, b]) =>
+      [a, b].forEach((end, index) => {
+        if (end <= tower || end >= length - tower) {
+          return;
+        }
+
+        const at = point(end + (index === 0 ? -0.018 : 0.018)),
+          [low, high] = groundUnder(layer, at, 0.036, 0.036, facing),
+          top = high + tall + 0.022;
+
+        layer.solid(
+          box,
+          [at[0], (low - 0.004 + top) / 2, at[1]],
+          [0.036, top - low + 0.004, 0.036],
+          STONE,
+          [0, facing, 0]
+        );
+        layer.solid(
+          pyramid,
+          [at[0], top + 0.016, at[1]],
+          [0.05 * Math.SQRT2, 0.032, 0.05 * Math.SQRT2],
+          SLATE,
+          [0, facing + Math.PI / 4, 0]
+        );
+      })
     );
   });
-  [
-    [-half, -half],
-    [half, -half],
-    [-half, half],
-    [half, half],
-  ].forEach(([du, dv]) => {
-    const tu = u + du!,
-      tv = v + dv!;
+
+  // A round tower at each corner that isn't open, under a slate roof.
+  corners.forEach(([u, v], corner) => {
+    if (open[corner]) {
+      return;
+    }
+
+    const heights = ROUND.map(([du, dv]) =>
+        layer.ground(u + du * tower, v + dv * tower)
+      ),
+      bottom = Math.min(...heights) - 0.004,
+      top = Math.max(...heights) + FORTRESS.towerTall;
 
     layer.solid(
       cylinder,
-      [tu, layer.ground(tu, tv) + 0.035, tv],
-      [0.045, 0.07, 0.045],
+      [u, (bottom + top) / 2, v],
+      [tower * 2, top - bottom, tower * 2],
       STONE
+    );
+    layer.solid(
+      cone,
+      [u, top + 0.025, v],
+      [tower * 2.4, 0.055, tower * 2.4],
+      SLATE
     );
   });
 };
 
+// A fortress's corners, round its square's middle, in order round it, from the north-west: its walls are the lines
+//  between them.
+const fortressCorners = (
+  place: Pick<OverlayPlace, 'centre' | 'radius'>
+): [number, number][] => {
+  const half = place.radius * FORTRESS.half,
+    [u, v] = place.centre;
+
+  return [
+    [u - half, v - half],
+    [u + half, v - half],
+    [u + half, v + half],
+    [u - half, v + half],
+  ];
+};
+
+// Where an airbase's runway is: how far south of the square's middle, how wide, and how far it reaches either side, in
+//  the square's radius.
+export const RUNWAY = { south: 0.12, wide: 0.12, reach: 0.75 } as const;
+
+/**
+ * An airbase: a runway across the square south of its middle, marked with a dashed line down its middle, its edges and
+ *  bars at each end; a hangar under a vaulted roof, its doors facing the runway, and an apron of tarmac between; and a
+ *  control tower. The hangar and the tower each claim the most room there is for them, as a special does.
+ */
 const airbase = (layer: Layer): void => {
   const [u, v] = layer.place.centre,
-    reach = layer.place.radius * 0.75,
-    [hu, hv] = layer.claim(5, 0.6, 0.08);
+    reach = layer.place.radius * RUNWAY.reach,
+    rv = v + RUNWAY.south,
+    marking = (
+      from: readonly [number, number],
+      to: readonly [number, number],
+      wide: number
+    ) => layer.strip(from, to, wide, MARKING, LIFT.road + 0.004);
 
   layer.strip(
-    [u - reach, v + 0.12],
-    [u + reach, v + 0.12],
-    0.12,
+    [u - reach, rv],
+    [u + reach, rv],
+    RUNWAY.wide,
     TARMAC,
     LIFT.road + 0.002
   );
+
+  // Its edges, and a bar across each end, then dashes down its middle between them.
+  [-1, 1].forEach((side) =>
+    marking(
+      [u - reach * 0.96, rv + side * (RUNWAY.wide / 2 - 0.008)],
+      [u + reach * 0.96, rv + side * (RUNWAY.wide / 2 - 0.008)],
+      0.005
+    )
+  );
+  [-1, 1].forEach((end) =>
+    [-0.036, -0.012, 0.012, 0.036].forEach((across) =>
+      marking(
+        [u + end * reach * 0.92, rv + across],
+        [u + end * (reach * 0.92 - 0.04), rv + across],
+        0.012
+      )
+    )
+  );
+
+  for (let dash = -reach * 0.7; dash < reach * 0.7; dash += 0.07) {
+    marking([dash + u, rv], [dash + u + 0.035, rv], 0.006);
+  }
+
+  // The hangar, square to the runway, its doors towards it, and the apron out to it.
+  const [hu, hv, room] = layer.claimMost(5, 0.6, [0.1, 0.08, 0.06]),
+    toward = hv < rv ? 1 : -1,
+    facing = toward > 0 ? 0 : Math.PI,
+    wide = room * 0.95,
+    long = room * 1.2,
+    at = turned(hu, hv, facing),
+    [low, high] = groundUnder(layer, [hu, hv], wide, long, facing),
+    eaves = high + room * 0.12,
+    door = at(0, long / 2);
+
   layer.strip(
-    [u - reach * 0.9, v + 0.12],
-    [u + reach * 0.9, v + 0.12],
-    0.008,
-    '#e8e8e8',
-    LIFT.road + 0.004
+    door,
+    [door[0], rv - toward * (RUNWAY.wide / 2 - 0.004)],
+    wide * 0.6,
+    TARMAC,
+    LIFT.road
   );
   layer.solid(
     box,
-    [hu, layer.ground(hu, hv) + 0.03, hv],
-    [0.12, 0.06, 0.08],
-    '#8a9096'
+    [hu, (low - 0.004 + eaves) / 2, hv],
+    [wide, eaves - low + 0.004, long],
+    HANGAR,
+    [0, facing, 0]
+  );
+  layer.solid(vault, [hu, eaves, hv], [wide, wide, long], HANGAR_ROOF, [
+    0,
+    facing,
+    0,
+  ]);
+
+  const [du, dv] = at(0, long / 2 + 0.002);
+
+  layer.solid(
+    box,
+    [du, (low + eaves + wide * 0.3) / 2, dv],
+    [wide * 0.7, eaves + wide * 0.3 - low, 0.004],
+    DOOR,
+    [0, facing, 0]
+  );
+
+  // The control tower: a shaft, its glass cab, and its roof.
+  const [tu, tv, towerRoom] = layer.claimMost(9, 0.6, [0.06, 0.05, 0.04]),
+    f = towerRoom / 0.06,
+    [shaftLow, shaftHigh] = groundUnder(
+      layer,
+      [tu, tv],
+      0.024 * f,
+      0.024 * f,
+      0
+    ),
+    cab = shaftHigh + 0.09 * f;
+
+  layer.solid(
+    box,
+    [tu, (shaftLow - 0.004 + cab) / 2, tv],
+    [0.024 * f, cab - shaftLow + 0.004, 0.024 * f],
+    HANGAR
+  );
+  layer.solid(
+    box,
+    [tu, cab + 0.011 * f, tv],
+    [0.044 * f, 0.022 * f, 0.044 * f],
+    GLASS
+  );
+  layer.solid(
+    box,
+    [tu, cab + 0.025 * f, tv],
+    [0.052 * f, 0.006 * f, 0.052 * f],
+    HANGAR
   );
 };
 
@@ -2608,25 +2978,20 @@ export const layOverlay = (
   });
 
   if (overlay.fortress) {
-    const half = radius * 0.62,
-      corners: [number, number][] = [
-        [-half, -half],
-        [half, -half],
-        [half, half],
-        [-half, half],
-      ].map(([du, dv]) => [centre[0] + du!, centre[1] + dv!]);
+    const corners = fortressCorners(place);
 
     corners.forEach((corner, index) =>
       layer.lines.push([corner, corners[(index + 1) % 4]!])
     );
   }
 
+  // An airbase's runway: what else stands there keeps its room clear of the line down its middle, and so of the runway.
   if (overlay.airbase) {
-    const reach = radius * 0.75;
+    const reach = radius * RUNWAY.reach;
 
     layer.lines.push([
-      [centre[0] - reach, centre[1] + 0.12],
-      [centre[0] + reach, centre[1] + 0.12],
+      [centre[0] - reach, centre[1] + RUNWAY.south],
+      [centre[0] + reach, centre[1] + RUNWAY.south],
     ]);
   }
 
