@@ -101,7 +101,8 @@ export type OverlayMesh = {
 
 /**
  * How many numbers each plant a set draws has in an overlay: where it stands (u, y, v), how tall, its turn, and its rank
- *  among its chunk's for thinning (`ditherRank` in `thinning.ts`).
+ *  among its chunk's for thinning: its lattice's dither (`ditherRank` in `thinning.ts`), or, for a plant scattered
+ *  about its square, a fraction from the square's seed.
  */
 export const PLANT_NUMBERS = 6;
 

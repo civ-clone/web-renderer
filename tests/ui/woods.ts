@@ -967,10 +967,10 @@ ids.forEach((topologyId) => {
 
 // Far woods thinned (#1363): all of a chunk's plants drawn at play's depths, on a view 640 of the page's pixels tall or
 //  more, as deep as the furthest ground the default view shows (its top edge looks down 35 degrees); fewer zoomed right
-//  out, never fewer than the least share. Each plant's rank laid with it, from 0 to 1, the same laid again; on a world 80
-//  across, the first quarter of a forest's trees by rank, as a chunk thinned draws them, about a quarter of each
-//  square's, at its west and at its east, where the lattice's step has drifted furthest from 0.17; and each matrix stands
-//  its own tree, in that order, as tall as it's laid.
+//  out, never fewer than the least share. Each plant's rank laid with it, from 0 to 1, the same laid again; on a world
+//  80 across, the first quarter of a forest's trees by rank (its squares from two chunks ranked as one, as a chunk
+//  ranks its own), about a quarter of each square's, at its west and at its east, where the lattice's step has drifted
+//  furthest from 0.17; and each matrix stands its own tree, in that order, as tall as it's laid.
 {
   const width = 80,
     height = 50,
