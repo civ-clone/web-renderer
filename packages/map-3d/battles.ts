@@ -13,7 +13,8 @@
 // - An attacker's drawn once, in the first battle it's in: one attacking again stands in the next battle only once the
 //   last's over.
 // - Where its fighters are drawn with their models' rigged copies (plan 2.2), it's paced for their clips (`clipPace`):
-//   the attacker plays `fight` from the start, the blow falling as its first shot lands, standing where it is to shoot;
+//   the attacker plays `fight` from the start, the blow falling as its first shot lands, standing where it is to shoot,
+//   or, hand to hand, as its clip says its blow lands (`ClipFacts#strike`), lunging;
 //   the loser plays `die` from the blow, solid till it's fallen, then fades.
 //
 // Where a fighter is is on the ground (`u`, `v`), with a `lift`, as a walker's is.
@@ -72,8 +73,9 @@ export const quickerBattle = (pace: BattlePace): BattlePace => ({
  * `pace`, for a battle whose attacker's drawn with a rigged copy as `attacker` says (`RigFacts`), and its loser as
  *  `loser` says, or as it is where neither has a clip to play:
  * - the attacker plays `fight` from the start; where it shoots, it stands, the blow falling as its first figure's first
- *   shot to land lands, as long after it leaves as its kind flies (`SHOT_LOOKS`), and where it doesn't, the blow falls
- *   as it would; it's drawn till its last figure's clip is over, and the last of its shots' own is (`shotOver`): the
+ *   shot to land lands, as long after it leaves as its kind flies (`SHOT_LOOKS`); where it doesn't, it lunges, and the
+ *   blow falls as its clip says it lands (`ClipFacts#strike`), or else as it would; it's drawn till its last figure's
+ *   clip is over, and the last of its shots' own is (`shotOver`): the
  *   puff where each landed, the smoke where each left over before it;
  * - the loser plays `die` from the blow, solid till its last figure's fallen, then fades.
  */
@@ -112,7 +114,8 @@ export const clipPace = (
                 (shot.at + tail(attacker)) * 1000 + shotOver(kindOf(shot))
             )
           ),
-    reach = first === undefined ? pace.reach : first;
+    reach =
+      first ?? (fight?.strike === undefined ? pace.reach : fight.strike * 1000);
 
   return {
     ...pace,

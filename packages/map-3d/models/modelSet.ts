@@ -48,12 +48,14 @@ export type ClipShot = { at: number; joint: string; kind?: ShotKind };
 
 /**
  * A model's rigged copy (plan 2.2): its file, beside the manifest, whose bind pose is the model's own, and the name in
- *  it of the clip each role plays; and the shots each role's clip lets fly, which the map draws.
+ *  it of the clip each role plays; the shots each role's clip lets fly, which the map draws; and when, in seconds into
+ *  its clip, a role's blow lands where it lets nothing fly, hand to hand (`strikes`).
  */
 export type RiggedModel = {
   file: string;
   clips: { [role in ClipRole]?: string };
   shots?: { [role in ClipRole]?: ClipShot[] };
+  strikes?: { [role in ClipRole]?: number };
 };
 
 /**
@@ -131,10 +133,10 @@ const isShot = (value: unknown): value is ClipShot =>
     (SHOT_KINDS as readonly unknown[]).includes(value.kind));
 
 // A rigged copy as a manifest gives it, as far as the map can play it: its file, as a model's is; the clip it names for
-//  each role the map plays (any for another role, which a later map may play, left out); and their shots, each when,
-//  from which joint and what it is, of the kinds the map draws, in a role it names a clip for. Nothing, for one with no
-//  clip the map can play, or anything else wrong with it: its model's drawn as it stands, and the rest of the set as it
-//  is.
+//  each role the map plays (any for another role, which a later map may play, left out); their shots, each when, from
+//  which joint and what it is, of the kinds the map draws, in a role it names a clip for; and their strikes, each when,
+//  in a role it names a clip for. Nothing, for one with no clip the map can play, or anything else wrong with it: its
+//  model's drawn as it stands, and the rest of the set as it is.
 const riggedOf = (value: unknown): RiggedModel | undefined => {
   if (!isObject(value) || !isFile(value.file) || !isObject(value.clips)) {
     return undefined;
@@ -157,33 +159,59 @@ const riggedOf = (value: unknown): RiggedModel | undefined => {
     return undefined;
   }
 
-  if (value.shots === undefined) {
-    return { file: value.file, clips };
-  }
+  const shots = byRole(
+      value.shots,
+      clips,
+      (each): each is ClipShot[] => Array.isArray(each) && each.every(isShot)
+    ),
+    strikes = byRole(
+      value.strikes,
+      clips,
+      (each): each is number =>
+        typeof each === 'number' && Number.isFinite(each) && each >= 0
+    );
 
-  if (!isObject(value.shots)) {
+  if (shots === null || strikes === null) {
     return undefined;
   }
 
-  const shots: NonNullable<RiggedModel['shots']> = {},
-    played = Object.entries(value.shots).filter(([role]) => isRole(role));
+  return {
+    file: value.file,
+    clips,
+    ...(shots === undefined ? {} : { shots }),
+    ...(strikes === undefined ? {} : { strikes }),
+  };
+};
+
+// What a rigged copy gives for each role (`value`), each as `valid` says, in a role it names a clip for (any for a
+//  role the map doesn't play left out): none where it gives nothing; or `null`, where anything's wrong with it.
+const byRole = <T>(
+  value: unknown,
+  clips: RiggedModel['clips'],
+  valid: (each: unknown) => each is T
+): { [role in ClipRole]?: T } | undefined | null => {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!isObject(value)) {
+    return null;
+  }
+
+  const given: { [role in ClipRole]?: T } = {},
+    played = Object.entries(value).filter(([role]) => isRole(role));
 
   if (
     !played.every(
-      ([role, each]) =>
-        clips[role as ClipRole] !== undefined &&
-        Array.isArray(each) &&
-        each.every(isShot)
+      ([role, each]) => clips[role as ClipRole] !== undefined && valid(each)
     )
   ) {
-    return undefined;
+    return null;
   }
 
-  played.forEach(
-    ([role, each]) => (shots[role as ClipRole] = each as ClipShot[])
-  );
+  played.forEach(([role, each]) => (given[role as ClipRole] = each as T));
 
-  return { file: value.file, clips, shots };
+  return given;
 };
 
 /**
