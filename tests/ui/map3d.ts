@@ -1121,6 +1121,8 @@ expect(
           setMarker: (key, _at, marked) => void ringed.set(key, marked),
           setWalker: (_id, marked) => void walking.push(marked),
           showFigures: (key, on) => void shown.push([key, on]),
+          // Its frames clear no cloud the cloud's own checks count.
+          clearCloud: () => false,
         })
       ),
       ring = () => ringed.get(townKey)?.unit?.ring ?? null,
