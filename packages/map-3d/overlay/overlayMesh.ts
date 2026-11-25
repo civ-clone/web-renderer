@@ -120,15 +120,25 @@ export const soup = (): Soup => ({
   plants: new Map(),
 });
 
-// How far over the land each kind is laid, so the later is over the earlier: fields, then roads, railroads.
-const LIFT = {
-    field: 0.01,
-    road: 0.014,
-    ballast: 0.016,
-    rail: 0.02,
-  },
-  // How finely a draped strip follows the land: finer than the land's points are apart (0.125).
-  STEP = 0.06,
+// How far over the land each kind is laid, so the later is over the earlier: fields, then roads, railroads, an
+//  airbase's runway; each its own, so no two lie in one plane where they cross.
+export const LIFT = {
+  field: 0.01,
+  ditch: 0.011,
+  detail: 0.012,
+  road: 0.014,
+  // An airbase's apron, over a road it crosses, under a railroad's ballast.
+  apron: 0.015,
+  ballast: 0.016,
+  sleeper: 0.018,
+  rail: 0.02,
+  // An airbase's runway and its markings, over a railroad that crosses it.
+  runway: 0.022,
+  marking: 0.024,
+} as const;
+
+// How finely a draped strip follows the land: finer than the land's points are apart (0.125).
+const STEP = 0.06,
   ROAD = '#8c7a58',
   BALLAST = '#5f5953',
   RAIL = '#a9abae',
@@ -957,7 +967,7 @@ const railroad = (layer: Layer, route: Route): void => {
         [at[0] - side[0] * 1.8, at[1] - side[1] * 1.8],
         0.014,
         SLEEPER,
-        LIFT.ballast + 0.002
+        LIFT.sleeper
       );
     }
 
@@ -1044,7 +1054,7 @@ const fields = (
     );
 
     if (row > 0) {
-      across(centre[1] - reach + width * row, 0.016, DITCH, LIFT.field + 0.001);
+      across(centre[1] - reach + width * row, 0.016, DITCH, LIFT.ditch);
     }
   }
 };
@@ -1722,7 +1732,8 @@ const fortress = (layer: Layer): void => {
         gates.push([
           side,
           along * length,
-          half / square + 0.018 * slant + 0.008,
+          // No more than half a side, however slant.
+          Math.min(half / square + 0.018 * slant + 0.008, length / 2 - 0.01),
         ]);
       })
     )
@@ -1934,14 +1945,14 @@ const airbase = (layer: Layer): void => {
       from: readonly [number, number],
       to: readonly [number, number],
       wide: number
-    ) => layer.strip(from, to, wide, MARKING, LIFT.road + 0.004);
+    ) => layer.strip(from, to, wide, MARKING, LIFT.marking);
 
   layer.strip(
     [u - reach, rv],
     [u + reach, rv],
     RUNWAY.wide,
     TARMAC,
-    LIFT.road + 0.002
+    LIFT.runway
   );
 
   // Its edges, and a bar across each end, then dashes down its middle between them.
@@ -1982,7 +1993,7 @@ const airbase = (layer: Layer): void => {
     [door[0], rv - toward * (RUNWAY.wide / 2 - 0.004)],
     wide * 0.6,
     TARMAC,
-    LIFT.road + 0.001
+    LIFT.apron
   );
   // What's claimed after keeps clear of it.
   layer.lines.push([door, [door[0], rv - toward * (RUNWAY.wide / 2 - 0.004)]]);
@@ -2430,7 +2441,7 @@ const special = (
         break;
       case 'oasis': {
         if (index === 0 && !inTheSea(layer.ground(...at))) {
-          layer.disc(at, 0.1 * f, detail, LIFT.field + 0.002);
+          layer.disc(at, 0.1 * f, detail, LIFT.detail);
         }
 
         // Its palms round the pool's edge, leaning out a little.

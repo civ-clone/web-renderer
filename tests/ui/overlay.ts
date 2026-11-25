@@ -35,6 +35,7 @@ import overlayMesh, {
   OverlayPlace,
   PLANT_HEIGHT,
   PLANT_NUMBERS,
+  LIFT,
   ROAD_BOW,
   ROOFS,
   layOverlay,
@@ -1730,6 +1731,27 @@ expect(
             ),
             facing: mean(coloured(door)) < mean(coloured(roof)),
             vaulted: coloured(roof).length === 32 * 3,
+            // Its control tower's cab off its apron, the tarmac laid at the apron's lift.
+            clear: (() => {
+              const apron = triangles.filter(
+                  (triangle) =>
+                    isColour(AIRBASE_COLOURS.tarmac)(triangle) &&
+                    triangle.points.every(
+                      ([u, y, v]) =>
+                        Math.abs(y - slope(u, v) - LIFT.apron) < 1e-6
+                    )
+                ),
+                a = boundsOf(apron),
+                c = boundsOf(triangles.filter(isColour(glass)));
+
+              return (
+                apron.length > 0 &&
+                (a.u[1]! <= c.u[0]! ||
+                  c.u[1]! <= a.u[0]! ||
+                  a.v[1]! <= c.v[0]! ||
+                  c.v[1]! <= a.v[0]!)
+              );
+            })(),
             // The hangar's walls and the tower's shaft, on the ground; the tower's roof, the thinnest, isn't.
             grounded:
               boxes.length === 3 &&
@@ -1822,6 +1844,163 @@ expect(
       inTheWay.map(() => 0)
     );
 
+    // On the hex grid, on an even row and an odd, a road or a railroad leaving each of its six ways: none of a
+    //  fortress's walls or towers in its way, and no gate's tower in a corner's.
+    {
+      const width = 12,
+        height = 10,
+        { layout } = new Land(
+          new World({
+            _: 'World',
+            __: ['World', 'DataObject'],
+            id: 'world',
+            width,
+            height,
+            topologyId: 'hex-odd-r',
+            tiles: Array.from({ length: width * height }, (_, index) => ({
+              x: index % width,
+              y: Math.floor(index / width),
+              terrain: { _: 'Plains', __: ['Plains'], features: [] },
+              improvements: [],
+              units: [],
+              city: null,
+            })) as never,
+          })
+        ),
+        hexAt = (x: number, y: number): OverlayPlace => {
+          const outline = layout.outline(x, y);
+
+          return {
+            ...place(x, y, { height: () => 0.1 }),
+            centre: layout.centre(x, y),
+            toward: ([dx, dy]) => layout.centre(x + dx, y + dy),
+            outline,
+            owns: (u, v) => {
+              const [tx, ty] = layout.tileAt(u, v);
+
+              return tx === x && ty === y;
+            },
+          };
+        },
+        // Each row's six neighbours, by offset: odd rows shifted right.
+        ways = (y: number): [number, number][] =>
+          y % 2 === 0
+            ? [
+                [-1, -1],
+                [0, -1],
+                [1, 0],
+                [0, 1],
+                [-1, 1],
+                [-1, 0],
+              ]
+            : [
+                [0, -1],
+                [1, -1],
+                [1, 0],
+                [1, 1],
+                [0, 1],
+                [-1, 0],
+              ],
+        faults = [4, 5].flatMap((y) =>
+          ways(y).flatMap((offset) =>
+            (['road', 'railroad'] as const).map((kind) => {
+              const at = hexAt(5, y),
+                [cu, cv] = at.centre,
+                [nu, nv] = at.toward(offset),
+                middle: (readonly [number, number])[] =
+                  kind === 'road'
+                    ? roadHalf(at, offset).points
+                    : [
+                        [cu, cv],
+                        [(cu + nu) / 2, (cv + nv) / 2],
+                      ],
+                half = kind === 'road' ? 0.035 : 0.05,
+                improvements =
+                  kind === 'road'
+                    ? ['Fortress', 'Road']
+                    : ['Fortress', 'Road', 'Railroad'],
+                triangles = trianglesOn(
+                  overlayFor(square(improvements, { terrain: 'Plains' }), [
+                    neighbour(offset, improvements.slice(1)),
+                  ])!,
+                  at
+                ),
+                inWay = pointsIn(
+                  triangles.filter(
+                    isColour(FORTRESS_COLOURS.stone, FORTRESS_COLOURS.slate)
+                  )
+                ).filter(([u, , v]) =>
+                  middle
+                    .slice(1)
+                    .some(
+                      (point, index) =>
+                        distanceToSegment([u, v], middle[index]!, point) <
+                        half - 1e-6
+                    )
+                ).length,
+                stones = runsOf(triangles, FORTRESS_COLOURS.stone).flatMap(
+                  (run) => {
+                    const boxes =
+                      run.length % 12 === 0 ? run.length : run.length - 32;
+
+                    return [
+                      ...boxesOf(run.slice(0, boxes)),
+                      ...(boxes < run.length ? [run.slice(boxes)] : []),
+                    ];
+                  }
+                ),
+                corners = stones
+                  .filter((solid) => solid.length === 32)
+                  .map(boundsOf),
+                // Gates' towers: boxes taller than the walls, on flat ground.
+                gateTowers = stones
+                  .filter((solid) => {
+                    const ys = pointsIn(solid).map(([, y]) => y);
+
+                    return (
+                      solid.length === 12 &&
+                      Math.max(...ys) - Math.min(...ys) > FORTRESS.tall + 0.015
+                    );
+                  })
+                  .map(boundsOf),
+                crowded = gateTowers.filter((g) =>
+                  corners.some(
+                    (c) =>
+                      g.u[0]! < c.u[1]! - 1e-6 &&
+                      c.u[0]! < g.u[1]! - 1e-6 &&
+                      g.v[0]! < c.v[1]! - 1e-6 &&
+                      c.v[0]! < g.v[1]! - 1e-6
+                  )
+                ).length;
+
+              return inWay + crowded;
+            })
+          )
+        );
+
+      expect(
+        'on the hex grid, a road or railroad any way through a fortress has nothing in its way, no tower in another',
+        faults,
+        faults.map(() => 0)
+      );
+    }
+
+    // Each kind laid over the land at a lift of its own, so none lies in another's plane where they cross: the
+    //  apron over roads and under ballast, the runway and its markings over the rails.
+    {
+      const lifts = Object.values(LIFT);
+
+      expect(
+        'each kind laid at a lift of its own; the apron between road and ballast, the runway over the rails',
+        [
+          new Set(lifts).size === lifts.length,
+          LIFT.road < LIFT.apron && LIFT.apron < LIFT.ballast,
+          LIFT.rail < LIFT.runway && LIFT.runway < LIFT.marking,
+        ],
+        [true, true, true]
+      );
+    }
+
     expect(
       'a fortress grounded, clear of the stand, gated where roads leave or to the south; an airbase’s hangar off it',
       [
@@ -1830,9 +2009,9 @@ expect(
             (key) => each.filter((one) => !one[key]).length
           )
         ),
-        (['marked', 'off', 'facing', 'vaulted', 'grounded'] as const).map(
-          (key) => airbases.filter((one) => !one[key]).length
-        ),
+        (
+          ['marked', 'off', 'facing', 'vaulted', 'clear', 'grounded'] as const
+        ).map((key) => airbases.filter((one) => !one[key]).length),
       ],
       [
         [
@@ -1840,7 +2019,7 @@ expect(
           [0, 0, 0, 0, 0],
           [0, 0, 0, 0, 0],
         ],
-        [0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
       ]
     );
   }

@@ -728,10 +728,11 @@ Each is looked up by its type name in the model set.
     it reaches, with no tower; a gate's tower that would stand in a corner's tower isn't drawn.
   - **As built, an airbase** (#1335): a runway across the square south of its middle, marked with a dashed line down
     its middle, its edges, and bars across each end; a hangar under a vaulted roof, its doors facing the runway, an
-    apron of tarmac between, a hair over any road it crosses; and a control tower, a shaft with its glass cab. The
-    hangar and the tower each claim the most room there is for them inside the square, as a special does, off the
-    runway (what stands there keeps its room clear of the line down its middle); the tower, and what's claimed after,
-    off the apron too. Their walls stand on the ground.
+    apron of tarmac between, over any road it crosses and under a railroad; and a control tower, a shaft with its glass
+    cab. The runway and its markings lie over a railroad that crosses them: each kind laid over the land has a lift of
+    its own (`LIFT`), so none lies in another's plane. The hangar and the tower each claim the most room there is for
+    them inside the square, as a special does, off the runway (what stands there keeps its room clear of the line down
+    its middle); the tower, and what's claimed after, off the apron too. Their walls stand on the ground.
   - **The debug page** lays out fortresses, airbases, mines and farms, some with roads, with `improvements=1`.
 - **Pollution and fallout:** smog, a low, sooty brown haze over the square (#1335), darker than open land and rock,
   so it shows over mountains (forest, jungle and swamp are about as dark, and it's told from them by its hue):
