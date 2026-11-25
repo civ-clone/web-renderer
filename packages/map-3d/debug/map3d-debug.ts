@@ -14,7 +14,7 @@ import Transport from '@civ-clone/ui-client/Transport';
 import World from '@civ-clone/ui-map/components/World';
 import generateWorld from './generateWorld';
 import pageOptions from './pageOptions';
-import populate, { gallery, specialsGallery } from './populate';
+import populate, { gallery, specialsGallery, specialsRows } from './populate';
 
 // The tiles, with the made-up cities and units on them, or every unit type or every special laid out about (`x`, `y`).
 const populated = (
@@ -29,7 +29,7 @@ const populated = (
   }: ReturnType<typeof pageOptions>
 ): PlayerTile[] => {
   if (allSpecials) {
-    specialsGallery(tiles, x, y, topologyId === 'staggered-iso' ? 4 : 2);
+    specialsGallery(tiles, x, y, specialsRows(topologyId));
   } else if (laidOut) {
     gallery(tiles, x, y);
   } else {

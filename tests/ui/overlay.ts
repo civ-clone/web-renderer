@@ -569,10 +569,11 @@ expect(
 }
 
 // Each special stays in the room it claims, and on its square but for a little (a little more inside a fortress's
-//  walls, where nothing has room), wherever it stands: on a square with nothing else, with roads every way, and inside a
-//  fortress, on 40 squares each, as where it stands is seeded.
-//  What's drawn of it is what's laid on the square with it less what's laid without it. Inside a fortress, where it has
-//  least room, what isn't a beast keeps its height, as it's only drawn narrower to fit. A log's cut ends face out.
+//  walls, where nothing has room), wherever it stands: on a square with nothing else, with roads every way, and
+//  inside a fortress, on 40 squares each, as where it stands is seeded. What's drawn of it is what's laid on the
+//  square with it less what's laid without it. Inside a fortress, where it has least room, what isn't a beast or logs
+//  keeps its height, as it's only drawn narrower to fit. On a shore, nothing of one on land stands in the sea. Entering
+//  a hut moves no special, as specials are claimed first. A log's cut ends face out.
 {
   const FLAT = 0.1,
     everyWay = [
@@ -596,52 +597,61 @@ expect(
       key: string,
       improvements: string[],
       around: OverlayNeighbour[],
-      x: number
+      x: number,
+      height: (u: number, v: number) => number = () => FLAT
     ) => {
       const [terrain, feature] = key.includes(':')
           ? (key.split(':') as [string, string])
           : ['River', key],
-        where = place(x, 3, { height: () => FLAT }),
-        // What's laid on the square: nothing, where there's nothing to lay.
-        // What's laid on the square, with nothing growing (its terrain a river's, its special's look its own), as plants
-        //  keep clear of the special: nothing, where there's nothing to lay.
+        where = place(x, 3, { height }),
+        // What's laid on the square, with nothing growing (its terrain a river's, its special's look its own), as
+        //  plants keep clear of the special, and what it claims: nothing, where there's nothing to lay.
         laid = (features: string[]) => {
           const overlay = overlayFor(
-            square(improvements, { terrain, features }),
-            around
+              square(improvements, { terrain, features }),
+              around
+            ),
+            into = soup();
+
+          if (overlay === null) {
+            return { points: [], taken: [] };
+          }
+
+          const { taken } = layOverlay(
+            { ...overlay, terrain: 'River' },
+            where,
+            into
           );
 
-          return overlay === null
-            ? []
-            : pointsOf(
-                overlayMesh(x - 1, 0, [
-                  { overlay: { ...overlay, terrain: 'River' }, place: where },
-                ])
-              );
+          return {
+            points: Array.from(
+              { length: into.positions.length / 3 },
+              (_, n): [number, number, number] => [
+                into.positions[n * 3]!,
+                into.positions[n * 3 + 1]!,
+                into.positions[n * 3 + 2]!,
+              ]
+            ),
+            taken,
+          };
         },
         without = new Map<string, number>(),
         mark = ([u, y, v]: [number, number, number]) =>
           `${u.toFixed(5)},${y.toFixed(5)},${v.toFixed(5)}`;
 
-      laid([]).forEach((point) =>
+      laid([]).points.forEach((point) =>
         without.set(mark(point), (without.get(mark(point)) ?? 0) + 1)
       );
 
-      const points = laid([feature]).filter((point) => {
+      const withIt = laid([feature]),
+        points = withIt.points.filter((point) => {
           const left = without.get(mark(point)) ?? 0;
 
           without.set(mark(point), left - 1);
 
           return left <= 0;
         }),
-        claim = layOverlay(
-          overlayFor(
-            square(improvements, { terrain, features: [feature] }),
-            around
-          )!,
-          where,
-          soup()
-        ).taken.find(([, , room]) => room >= 0.1)!;
+        claim = withIt.taken.find(([, , room]) => room >= 0.1)!;
 
       return { points, claim, x };
     },
@@ -692,18 +702,120 @@ expect(
     ].filter(
       (key) => Math.abs(tallest(key, ['Fortress']) - tallest(key, [])) > 1e-6
     ),
+    // On a square half land and half sea, east of its middle: what's under the sea's level, by more than a lump sinks
+    //  into the land.
+    wet = ['Horse', 'Seal', 'Ivory', 'Peat', 'Wheat', 'Coal', 'Shield', 'Oasis']
+      .flatMap((key) =>
+        Array.from({ length: 40 }, (_, at) => {
+          const x = at + 1,
+            { points } = drawn(key, [], [], x, (u) =>
+              u < x + 0.5 ? FLAT : -0.2
+            );
+
+          return points.some(([, y]) => y < -0.02) ? [`${key} ${x}`] : [];
+        })
+      )
+      .flat(),
+    // Where its special stands, with a hut on the square and without.
+    hutMoves = Array.from({ length: 40 }, (_, at) => at + 1).filter((x) => {
+      const claimed = (hut: boolean) =>
+        layOverlay(
+          overlayFor(
+            square([], { terrain: 'River', features: ['Horse'], hut }),
+            []
+          )!,
+          place(x, 3),
+          soup()
+        ).taken[0]!;
+
+      return claimed(true).join() !== claimed(false).join();
+    }),
     // A stack's cut ends: the triangles in their pale, each facing away from the stack's middle along its logs.
     stack = laidLogs();
 
   expect(
     'each special stays in the room it claims and on its square, but for a little, open, by roads and in a fortress',
-    strays,
+    strays.slice(0, 5),
     []
   );
   expect(
-    'inside a fortress, what isn’t a beast is as tall as on open land; a log’s cut ends face out',
-    [lowered, stack.ends > 0, stack.inward],
-    [[], true, 0]
+    'inside a fortress, what isn’t a beast or logs is as tall as on open land; on a shore, nothing of one on land is in the sea; a hut moves no special; a log’s cut ends face out',
+    [lowered, wet.slice(0, 5), hutMoves, stack.ends > 0, stack.inward],
+    [[], [], [], true, 0]
+  );
+}
+
+// On every grid, an open square's special takes the same room whatever its seed: the most a square of the grid has room
+//  for, in one of its corners, which a hex's are shallower, so it's sought a little nearer in too.
+{
+  const roomsOn = (topologyId: TopologyId): number[] => {
+    const width = 16,
+      height = 12,
+      world = new World({
+        _: 'World',
+        __: ['World', 'DataObject'],
+        id: 'world',
+        width,
+        height,
+        topologyId,
+        tiles: Array.from({ length: width * height }, (_, index) => ({
+          x: index % width,
+          y: Math.floor(index / width),
+          terrain: { _: 'Grassland', __: ['Grassland'], features: [] },
+          improvements: [],
+          units: [],
+          city: null,
+        })) as never,
+      }),
+      { layout } = new Land(world),
+      rooms = new Set<number>();
+
+    for (let y = 2; y < height - 2; y++) {
+      for (let x = 2; x < width - 2; x++) {
+        const centre = layout.centre(x, y),
+          outline = layout.outline(x, y),
+          radius = Math.min(
+            ...outline.map(([au, av], index) => {
+              const [bu, bv] = outline[(index + 1) % outline.length]!;
+
+              return (
+                Math.abs(
+                  (bu - au) * (av - centre[1]) - (au - centre[0]) * (bv - av)
+                ) / Math.hypot(bu - au, bv - av)
+              );
+            })
+          ),
+          { taken } = layOverlay(
+            overlayFor(
+              square([], { terrain: 'River', features: ['Horse'] }),
+              []
+            )!,
+            {
+              ...place(x, y, { height: () => 0.1 }),
+              centre,
+              toward: ([dx, dy]) => layout.centre(x + dx, y + dy),
+              radius,
+              outline,
+              owns: (u, v) => {
+                const [tx, ty] = layout.tileAt(u, v);
+
+                return tx === x && ty === y;
+              },
+            },
+            soup()
+          );
+
+        rooms.add(taken[0]![2]);
+      }
+    }
+
+    return [...rooms];
+  };
+
+  expect(
+    'on every grid, an open square’s special takes the same room, whatever its seed',
+    (['square', 'staggered-iso', 'hex-odd-r'] as TopologyId[]).map(roomsOn),
+    [[0.2], [0.2], [0.16]]
   );
 }
 
@@ -1818,7 +1930,7 @@ const landOf = (
     expect(
       `${topologyId}: a road's halves bend on their own squares, short of the edge, meet their neighbours' there going the same way, and bow no further than they may, some a good part of it, each way out of a square its own`,
       [
-        strays,
+        strays.slice(0, 5),
         unmet.slice(0, 5),
         alike.slice(0, 5),
         Math.max(...bows) <= ROAD_BOW + 1e-9,

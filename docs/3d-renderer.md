@@ -638,10 +638,12 @@ How plants are placed:
   - **As built** (#1335, made by code until a hosted set brings models): big enough to be seen at play's zoom, each
     takes up to 0.2 of room (`SPECIAL_ROOMS`) 0.85 of the way from the square's middle to its edge, clear of the unit's
     stand and inside the square but for 0.03 (`EDGE_REACH`), so in one of its corners where there's room: nothing on a
-    neighbouring square keeps clear of it. Where there's less (roads, walls, a hex's shallower corners), it takes the
-    most there is, down to 0.1, and is drawn smaller to fit, by its own reach (`SPECIAL_REACH`), never bigger than its
-    own size (logs a little bigger). What isn't a beast keeps its height as it's drawn narrower, so it's never lower than
-    it was. Inside a fortress's walls, where nothing has room, it takes the spot with the most, as before.
+    neighbouring square keeps clear of it. Its place is sought a little nearer in too, where a hex's corners have the
+    most room. Where there's less (roads, walls, a hex's shallower corners), it takes the most there is, down to 0.1,
+    and is drawn smaller to fit, by its own reach (`SPECIAL_REACH`), never bigger than its own size (logs a little
+    bigger). What isn't a beast or logs keeps its height as it's drawn narrower, so it's never lower than it was.
+    Nothing on land stands in the sea, where its room reaches past a shore. Inside a fortress's walls, where nothing has
+    room, it takes the spot with the most, as before.
   - **Beasts** (`overlay/beasts.ts`) are made of plain shapes as units are, each a little larger than life, beside
     units drawn twice life: horses with manes, tails and hooves, oxen (buffalo) with a hump and horns, deer (game, and
     caribou on the tundra) with antlers, foxes (furs) with a bushy tail, an elephant (ivory) with its trunk and tusks,

@@ -434,10 +434,14 @@ export const specialsShown = (): [string, string][] => [
 
 /**
  * The page's specials (`?specials=1`): each of `specialsShown`, one to a square, every other square across and every
- *  `rows`th row from (`x`, `y`), so each is seen on its own, the nearest first, on its terrain, at sea on the sea and on
- *  land on land, never on squares unseen. No cities or units. On the staggered grid, squares two rows apart touch at a
- *  corner, so `rows` is 4 there.
+ *  `rows`th row from (`x`, `y`), so each is seen on its own, the nearest first, on its terrain, at sea on the sea and
+ *  on land on land, never on squares unseen. No cities or units. On the staggered grid, squares two rows apart touch
+ *  at a corner, so `rows` is 4 there (`specialsRows`).
  */
+/** How many rows apart the page's specials are on the grid `topologyId`: 4 on the staggered grid, 2 on the rest. */
+export const specialsRows = (topologyId: string): number =>
+  topologyId === 'staggered-iso' ? 4 : 2;
+
 export const specialsGallery = (
   tiles: Tile[],
   x: number,

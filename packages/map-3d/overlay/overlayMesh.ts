@@ -647,7 +647,10 @@ class Layer {
     let best: [number, number] = [u, v],
       most = -Infinity;
 
-    for (const out of [distance, distance * 0.88, distance * 1.1]) {
+    // Inside a square, a ring a little nearer than the first too, where a hex's corners have the most room.
+    for (const out of inside
+      ? [distance, distance * 0.94, distance * 0.88, distance * 1.1]
+      : [distance, distance * 0.88, distance * 1.1]) {
       for (let k = 0; k < CLAIM_ANGLES; k++) {
         const angle = first + (k / CLAIM_ANGLES) * Math.PI * 2,
           at: [number, number] = [
@@ -1347,8 +1350,8 @@ const SPECIAL_REACH: { readonly [shape in SpecialLook['shape']]?: number } = {
   // The palms round its pool and their crowns (their lean's `SPECIAL_LEAN`).
   oasis: 0.09 + 0.055,
   peat: 0.075 + Math.hypot(0.0375, 0.025),
-  // Logs three across and 0.17 long.
-  logs: Math.hypot(0.05 + 0.025, 0.085),
+  // Logs three across, 2.05 of their radius (0.025) apart, and 0.17 long.
+  logs: Math.hypot(0.025 * 2.05 + 0.025, 0.085),
   cairn: 0.0375,
 };
 
@@ -1356,8 +1359,9 @@ const SPECIAL_REACH: { readonly [shape in SpecialLook['shape']]?: number } = {
 const SPECIAL_LEAN = 0.16 * Math.sin(0.15) * 0.5;
 
 // One special, standing round `at`, as big as `room` has space for, and no bigger than its own size: logs a little
-//  bigger, as they're small for their room. The rest, but beasts, keep their height where they've less room, so they're
-//  never lower than they were.
+//  bigger, as they're small for their room. The rest, but beasts and logs, keep their height where they've less room,
+//  so they're never lower than they were. On land, none of its pieces stands in the sea, where its room reaches past a
+//  shore, as no beast of a herd does.
 const special = (
   layer: Layer,
   look: SpecialLook,
@@ -1387,7 +1391,10 @@ const special = (
 
       return;
     case 'logs':
-      logStack(layer, look, at, facing, f);
+      // Not in the sea.
+      if (layer.ground(...at) >= 0) {
+        logStack(layer, look, at, facing, f);
+      }
 
       return;
     case 'rocks': {
@@ -1399,15 +1406,19 @@ const special = (
         ),
       ];
 
-      lumps.forEach(([u, v, big], index) =>
-        layer.solid(
-          sphere,
-          [u, layer.ground(u, v) + 0.016 * big, v],
-          [0.078 * big * f, 0.055 * big, 0.068 * big * f],
-          index % 2 === 1 ? detail : look.colour,
-          [0, fraction(seed, n * 31 + index + 17) * Math.PI * 2, 0]
-        )
-      );
+      lumps.forEach(([u, v, big], index) => {
+        const y = layer.ground(u, v);
+
+        if (y >= 0) {
+          layer.solid(
+            sphere,
+            [u, y + 0.016 * big, v],
+            [0.078 * big * f, 0.055 * big, 0.068 * big * f],
+            index % 2 === 1 ? detail : look.colour,
+            [0, fraction(seed, n * 31 + index + 17) * Math.PI * 2, 0]
+          );
+        }
+      });
 
       return;
     }
@@ -1424,6 +1435,11 @@ const special = (
     const afloat = look.shape === 'fish' || look.shape === 'whale',
       y = layer.ground(u, v, afloat),
       turn = fraction(seed, n * 31 + index + 17) * Math.PI * 2;
+
+    // An oasis's pool and palms, and a cairn, see to it themselves.
+    if (!afloat && look.shape !== 'oasis' && look.shape !== 'cairn' && y < 0) {
+      return;
+    }
 
     switch (look.shape) {
       case 'crop':
@@ -1500,7 +1516,7 @@ const special = (
         );
         break;
       case 'oasis': {
-        if (index === 0) {
+        if (index === 0 && layer.ground(...at) >= 0) {
           layer.disc(at, 0.1 * f, detail, LIFT.field + 0.002);
         }
 
@@ -1510,6 +1526,10 @@ const special = (
             at[1] + Math.sin(angle) * 0.09 * f,
           ],
           py = layer.ground(pu, pv);
+
+        if (py < 0) {
+          break;
+        }
 
         layer.solid(
           cylinder,
@@ -1541,7 +1561,11 @@ const special = (
         );
         break;
       default:
-        // A cairn: stones piled, smaller as they go up.
+        // A cairn: stones piled, smaller as they go up, not in the sea.
+        if (layer.ground(...at) < 0) {
+          break;
+        }
+
         layer.solid(
           sphere,
           [at[0], layer.ground(at[0], at[1]) + 0.018 + index * 0.027, at[1]],

@@ -18,6 +18,7 @@ import pageOptions from '@civ-clone/ui-map-3d/debug/pageOptions';
 import populate, {
   gallery,
   specialsGallery,
+  specialsRows,
   specialsShown,
 } from '@civ-clone/ui-map-3d/debug/populate';
 import { unitTable } from '@civ-clone/ui-models-builtin/units';
@@ -400,7 +401,7 @@ const staggered = field.map(
       } as unknown as Tile)
   ),
   staggeredRows = (() => {
-    specialsGallery(staggered, 15, 10, 4);
+    specialsGallery(staggered, 15, 10, specialsRows('staggered-iso'));
 
     return staggered
       .filter((tile) => (tile.terrain.features ?? []).length > 0)
@@ -408,12 +409,14 @@ const staggered = field.map(
   })();
 
 expect(
-  'on the staggered grid, its specials are every fourth row, every one shown',
+  'on the staggered grid, its specials are every fourth row, every one shown; every other row on the others',
   [
     staggeredRows.every((y) => Math.abs(y - 10) % 4 === 0),
     staggeredRows.length,
+    specialsRows('square'),
+    specialsRows('hex-odd-r'),
   ],
-  [true, specialsShown().length]
+  [true, specialsShown().length, 2, 2]
 );
 
 // Its seeded cities, units and ships: none on squares never seen, on a world mostly unseen.
