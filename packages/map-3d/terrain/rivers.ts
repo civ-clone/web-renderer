@@ -7,13 +7,16 @@
 //   several meet they join. It's a curve, sampled at `STEPS` points.
 // - **Into the sea:** to a neighbour across an edge that's water, it runs on into the sea, widening (`MOUTH`).
 // - **Alone:** a river square with neither is a pool.
-// - **Level:** where its water lies, at each point along it: never above the land round it, so it's never left
-//   standing over the ground; and its channel cut down to under it, so it's never buried.
-// - **Channel:** across its water and `FLOOR` past it, the land is cut flat to the channel's bed, under the level.
-//   That's wider than the water by about the land's mesh's diagonal (`chunks.ts`, 8 points a unit), so every triangle
-//   under the water is under it, wherever the mesh's points fall. Past that, the bank rises back to the land over
-//   `BANK`. Its level and width are taken by where a point falls along the course's line (`chordAlong`), so the land
-//   has no step anywhere.
+// - **Level:** what its channel's cut under, at each point along it: under the land round it as it would be with no
+//   rivers (`underLand`), so the channel's always a channel. Where courses meet, they're at one level at the square's
+//   middle; away from it, each at its own. So near where they meet, one falling faster than another (a mouth to the
+//   sea, say) can cut the land beside the other's channel lower than the other's level: the water (the next part)
+//   lies on the land as it's drawn, not at the level, so that's never water standing over the ground.
+// - **Channel:** across its water and `FLOOR` past it, the land is cut flat to the channel's bed, under the level,
+//   so the water lies flat across it. That's wider than the water by about the land's mesh's diagonal (`chunks.ts`, 8
+//   points a unit), so the mesh under the water is the bed, wherever its points fall. Past that, the bank rises back to
+//   the land over `BANK`. Its level and width are taken by where a point falls along the course's line
+//   (`chordAlong`), so the land has no step anywhere.
 // - **The sea:** where a river's level is at the sea's or under, its bed's under the sea's surface, which shows in its
 //   channel: there, the sea is its water. Elsewhere its bed stays above the sea's, so the sea never shows inland.
 
@@ -41,7 +44,7 @@ export const FLOOR = 0.18;
 /** How far past the bed the bank rises back to the land. */
 export const BANK = 0.14;
 
-/** How far the water lies under the lowest of the land round it. */
+/** How far a river's level lies under the lowest of the land round it, at most (`underLand`). */
 export const MARGIN = 0.003;
 
 /** How far the bed lies under the water, where there's room above the sea. */
@@ -188,6 +191,14 @@ export const alongOf = (values: readonly number[], along: number): number => {
 
   return (values[step] ?? 0) * (1 - t) + (values[step + 1] ?? 0) * t;
 };
+
+/**
+ * A river's level under land as low as `low`: `MARGIN` under it, or, nearer the sea's level than twice that, half as
+ *  far from the sea's level again, so land over the sea's level keeps its river over it, and land under it its river
+ *  under it. Smoothly either side of the sea's level.
+ */
+export const underLand = (low: number): number =>
+  low - Math.min(MARGIN, Math.abs(low) / 2);
 
 /**
  * The bed of a river whose water's at `level`: `DEPTH` under it where there's room over the sea, and over the sea

@@ -28,7 +28,6 @@ import {
   Course,
   DEPTH,
   FLOOR,
-  MARGIN,
   MEANDER,
   MOUTH,
   POOL_WIDTH,
@@ -39,6 +38,7 @@ import {
   cutBy,
   nearestOn,
   pointAlong,
+  underLand,
 } from './rivers';
 import {
   Relief,
@@ -797,9 +797,9 @@ export const createRelief = ({
   // Every river's course (`rivers.ts`): from each river square seen, on land, to each neighbour seen across an edge
   //  with a river, made once, by the end that comes first down the world (or along it, on the same row), as a range's
   //  ridge is; to each such neighbour that's water, a mouth; or, with neither, a pool. Each with its level: at each end,
-  //  under the lowest of the land seen and dry round every course from that end, along its water and past it to its
-  //  bed's edge (of a mouth, only up to the coast), so it's never left standing over the land; between them, from one
-  //  to the other; and a mouth's down to the sea's at the coast. Listed under every square it reaches into, as ridges
+  //  under the lowest of the land seen and dry round every course from that end (of a mouth, only up to the coast), as
+  //  it would be with no rivers; between them, from one to the other, but never over the land round each point; and a
+  //  mouth's down to the sea's at the coast. Listed under every square it reaches into, as ridges
   //  are; and by its ends, with how it's drawn and the squares it reaches into, to tell which change. The land round
   //  a course is looked at again only where one of the squares it reaches into is `stale`: otherwise it's as `kept`.
   const rivers = (
@@ -975,7 +975,7 @@ export const createRelief = ({
     const levelAt = (end: number): number => {
         const low = ends.get(end) ?? Infinity;
 
-        return Number.isFinite(low) ? low - MARGIN : 0;
+        return Number.isFinite(low) ? underLand(low) : 0;
       },
       corner = Math.max(cornerOf(0), cornerOf(1));
 
@@ -997,7 +997,7 @@ export const createRelief = ({
 
         return step === 0 || (step === STEPS && !course.mouth)
           ? between
-          : Math.min(between, (low[step] ?? Infinity) - MARGIN);
+          : Math.min(between, underLand(low[step] ?? Infinity));
       });
 
       const candidates = reachOfRivers[y & 1] ?? [],
@@ -1268,7 +1268,9 @@ export const createRelief = ({
       return land;
     }
 
-    const share = wet * WET_SHARE,
+    // Not on the sea's floor, under a mouth: banks are land, so they're gone by the coastline, where the land's blended
+    //  half from the sea's floor.
+    const share = wet * WET_SHARE * Math.max(0, 1 - land.shore * 2),
       [red, green, blue] = land.colour;
 
     return {

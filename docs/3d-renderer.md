@@ -759,13 +759,17 @@ How plants are placed:
     comes first down the world, and listed under every square it reaches into, at every copy of the world, as a
     range's ridges are. A mouth widens from a quarter of the way to the coast, halfway, to `MOUTH` (2.5) times a
     river's width, and runs on into the sea.
-  - **Level:** at each point along it, under the lowest of the land round it (seen and dry, at it, at its bed's edge and
-    at its bank's top, there and halfway to the next point) by `MARGIN`. At each end, the same for every course from
-    that square, so they meet at one level. A mouth's comes down to the sea's at the coast, and on under it.
+  - **Level:** what its channel's cut under. At each point along it, under the lowest of the land round it as it would
+    be with no rivers (seen and dry, at it, at its bed's edge and at its bank's top, there and halfway to the next
+    point), by `MARGIN`, or less near the sea's level, so land over the sea keeps its river over it (`underLand`). At
+    each end, the same for every course from that square, so they meet at one level at its middle. A mouth's comes
+    down to the sea's at the coast, and on under it. Away from a square's middle, each course is at its own level, so
+    one falling faster than another where they meet (a mouth to the sea, say) can cut the land beside the other's
+    channel lower than the other's level: the water lies on the land as it's drawn, not at the level.
   - **Channel:** across its water (`RIVER_WIDTH`, 0.08 either side) and `FLOOR` (0.18, about the land's mesh's
     diagonal) past it, the land is cut flat to its bed, so no triangle under its water rises over it, wherever the
     mesh's points fall. Its bank rises back to the land over `BANK` (0.14), and is wet, darker, from the water to
-    halfway up.
+    halfway up, but not on the sea's floor under a mouth.
   - **Bed and the sea:** where its level's over the sea's, its bed is `DEPTH` (0.004) under it, or nearer, but over the
     sea's, so the sea's surface never shows inland. At the sea's level its bed is too, and under it, further under,
     so where a river comes down to the sea, the sea is its water. The bed's continuous through all of these, and its

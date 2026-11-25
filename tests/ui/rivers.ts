@@ -24,9 +24,11 @@ import {
   STEPS,
   alongOf,
   bedOf,
+  chordAlong,
   courseFrom,
   cutBy,
   nearestOn,
+  underLand,
 } from '@civ-clone/ui-map-3d/terrain/rivers';
 import { TopologyId } from '@civ-clone/ui-protocol/topology';
 
@@ -156,6 +158,24 @@ const near = (a: number, b: number, within = 1e-9): boolean =>
       ),
     ],
     [true, true, true, 0, -0.002, true, true]
+  );
+
+  expect(
+    'a river’s level is the margin under the land round it, but nearer the sea’s level than twice that, half as far again from it: over the sea where the land is, under it where it isn’t, smoothly',
+    [
+      near(underLand(0.02), 0.02 - MARGIN),
+      near(underLand(0.002), 0.001),
+      underLand(0.0001) > 0,
+      near(underLand(-0.002), -0.003),
+      near(underLand(-0.02), -0.02 - MARGIN),
+      underLand(0),
+      [1e-9, -1e-9, MARGIN * 2 + 1e-9, MARGIN * 2 - 1e-9].every(
+        (low, at, all) =>
+          at % 2 === 1 ||
+          Math.abs(underLand(low) - underLand(all[at + 1]!)) < 1e-8
+      ),
+    ],
+    [true, true, true, true, true, 0, true]
   );
 }
 
@@ -327,11 +347,17 @@ ids.forEach((topologyId) => {
             out !== wide &&
             Number.isInteger(along * 2)
           ) {
-            over = Math.max(over, level - dry.height(u, v) + MARGIN);
+            over = Math.max(over, level - underLand(dry.height(u, v)));
           }
 
           if (onLand(u, v) && level > 0 && out < wide + FLOOR) {
-            unburied &&= relief.height(u, v) < level;
+            // By where it falls along the course's line, as the channel's cut.
+            unburied &&=
+              relief.height(u, v) <
+              alongOf(
+                course.levels,
+                chordAlong(course, u - placed.u, v - placed.v)
+              );
           }
         })
       );
@@ -392,17 +418,23 @@ ids.forEach((topologyId) => {
 
   const [mouth] = mouths,
     coast = mouth === undefined ? [0, 0] : pointOf(mouth, STEPS / 2),
-    pastCoast = mouth === undefined ? [0, 0] : pointOf(mouth, STEPS * 0.6);
+    pastCoast = mouth === undefined ? [0, 0] : pointOf(mouth, STEPS * 0.6),
+    seaFloor = mouth === undefined ? [0, 0] : pointOf(mouth, STEPS);
 
   expect(
-    `${topologyId}: a river’s mouth from hills is down from over the sea’s level to it at the coast, and its bed under the sea past it, so the sea’s in its channel there`,
+    `${topologyId}: a river’s mouth from hills is down from over the sea’s level to it at the coast, and its bed under the sea past it, so the sea’s in its channel there; the sea’s floor under it isn’t wet`,
     [
       mouth !== undefined && (mouth.course.levels[0] ?? 0) > 0.01,
       mouth !== undefined && (mouth.course.levels[STEPS / 2] ?? 1) <= 0,
       relief.height(coast[0]!, coast[1]!) <= 1e-12,
       relief.height(pastCoast[0]!, pastCoast[1]!) < 0,
+      // The sea's floor under it as it was, not wet: banks are land.
+      JSON.stringify(relief.sample(seaFloor[0]!, seaFloor[1]!).colour) ===
+        JSON.stringify(dry.sample(seaFloor[0]!, seaFloor[1]!).colour),
+      relief.height(seaFloor[0]!, seaFloor[1]!) <
+        dry.height(seaFloor[0]!, seaFloor[1]!) + 1e-12,
     ],
-    [true, true, true, true]
+    [true, true, true, true, true, true]
   );
 
   // Its banks wet: darker than the land without it, by the water, and as it was past its bank.
