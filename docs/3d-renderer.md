@@ -698,7 +698,25 @@ Each is looked up by its type name in the model set.
 - **Railroad:** the same, with sleepers and rails, but straight, as railways are laid. Where a square has both, the
   railroad replaces the road.
 - **Irrigation and Farmland:** fields laid over the square, with ditches running from water. Farmland is denser.
+  - **As built, its farm** (#1335): where no city's houses have spread onto the square, a farm's buildings stand among
+    its fields, square with their rows: a farmhouse (its walls and roof their own colours, so a city's houses are told
+    from it), a red barn with a gabled roof, and haystacks, or on farmland a silo. They take the room left inside the
+    square (`FARM_ROOMS`, 0.13 down to 0.08) and are drawn to fit, and the fields' rows keep clear of them, as of a
+    city's houses. Like a city's houses, they stand out of the water, all the room they take, where a river or the
+    shore dips the land below it. Where nowhere they might stand is dry (a one-square island, or a river or the shore
+    on every side), there's no farm, only fields. The farmhouse's and the barn's walls run from the lowest of the ground
+    under them to their height over the highest; the haystacks and the silo reach down to the lowest of the ground
+    round their rims.
 - **Mine:** a shaft head and spoil heaps on hills; a cut on mountains.
+  - **As built** (#1335): on a mountain, a tunnel's dark mouth in its frame, posts and a lintel, dug into the rock
+    behind it: a wedge in the mountain's colour, its face upright behind the mouth and over the lintel, sloping back
+    into the ground, so seen from behind it's a rise in the slope. A fan of spoil is tipped below it, with a cart. It
+    faces the way the land falls the most from behind its mouth to where its spoil's tipped, of 32 ways round, so a
+    ridge or a saddle nearby doesn't turn it up the slope (in a hollow, the way it rises least, and out from the
+    square's middle where it's about flat). Elsewhere, a headframe over the shaft, four legs leaning in, braced, its
+    wheel at the top, an engine house with its chimney behind it, its walls as a house's, spoil heaps and a cart. Each
+    part reaches down into the ground at its lowest, so none hangs over a slope. It takes the room left inside the
+    square, as a special does (`MINE_ROOMS`, 0.15 down to 0.1), and is drawn to fit.
 - **Fortress and Airbase:** a model on the square.
 - **Pollution and fallout:** smog, a low, sooty brown haze over the square (#1335), darker than open land and rock,
   so it shows over mountains (forest, jungle and swamp are about as dark, and it's told from them by its hue):

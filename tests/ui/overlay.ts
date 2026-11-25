@@ -25,6 +25,8 @@ import overlayFor, {
   SquareOverlay,
 } from '@civ-clone/ui-map-3d/overlay/overlayFor';
 import overlayMesh, {
+  FARMSTEAD_COLOURS,
+  MINE_COLOURS,
   OverlayMesh,
   OverlayPlace,
   PLANT_HEIGHT,
@@ -294,6 +296,45 @@ expect(
   ],
   [true, 0, true, true, true, true, true]
 );
+// A mesh without its farms' buildings, which stand on the land rather than lie on it: by their colours.
+const withoutFarmsteads = (
+  mesh: ReturnType<typeof overlayMesh>
+): ReturnType<typeof overlayMesh> => {
+  const farm = FARMSTEAD_COLOURS.map((css) => new Color(css)),
+    kept: number[] = [],
+    keptColours: number[] = [],
+    keptNormals: number[] = [];
+
+  for (let at = 0; at < mesh.positions.length; at += 9) {
+    const [r, g, b] = [
+      mesh.colours[at]!,
+      mesh.colours[at + 1]!,
+      mesh.colours[at + 2]!,
+    ];
+
+    if (
+      farm.every(
+        (colour) =>
+          Math.abs(colour.r - r) +
+            Math.abs(colour.g - g) +
+            Math.abs(colour.b - b) >
+          1e-5
+      )
+    ) {
+      kept.push(...mesh.positions.subarray(at, at + 9));
+      keptColours.push(...mesh.colours.subarray(at, at + 9));
+      keptNormals.push(...mesh.normals.subarray(at, at + 9));
+    }
+  }
+
+  return {
+    ...mesh,
+    positions: new Float32Array(kept),
+    colours: new Float32Array(keptColours),
+    normals: new Float32Array(keptNormals),
+  };
+};
+
 // Each triangle's face, from its corners' order: three.js draws only the side they go round anticlockwise.
 const facesUp = (mesh: ReturnType<typeof overlayMesh>): boolean => {
   const p = mesh.positions;
@@ -318,15 +359,17 @@ expect(
   [
     facesUp(roadMesh),
     facesUp(
-      overlayMesh(16, 0, [
-        {
-          overlay: overlayFor(
-            square(['Road', 'Railroad', 'Farmland', 'Pollution']),
-            [neighbour([1, 0], ['Road', 'Railroad'])]
-          )!,
-          place: place(17, 3),
-        },
-      ])
+      withoutFarmsteads(
+        overlayMesh(16, 0, [
+          {
+            overlay: overlayFor(
+              square(['Road', 'Railroad', 'Farmland', 'Pollution']),
+              [neighbour([1, 0], ['Road', 'Railroad'])]
+            )!,
+            place: place(17, 3),
+          },
+        ])
+      )
     ),
   ],
   [true, true]
@@ -862,6 +905,672 @@ expect(
     (['square', 'staggered-iso', 'hex-odd-r'] as TopologyId[]).map(roomsOn),
     [[0.2], [0.2], [0.16]]
   );
+}
+
+// Farms and mines (#1335): an irrigated square, or farmland, has a farm's buildings among its fields, and farmland a
+//  silo among them; a mine on a mountain is a tunnel's mouth, and elsewhere a headframe over a shaft, with no mouth.
+{
+  const coloured = (mesh: ReturnType<typeof overlayMesh>, css: string) => {
+      const colour = new Color(css);
+      let found = 0;
+
+      for (let at = 0; at < mesh.colours.length; at += 3) {
+        found +=
+          Math.abs(mesh.colours[at]! - colour.r) +
+            Math.abs(mesh.colours[at + 1]! - colour.g) +
+            Math.abs(mesh.colours[at + 2]! - colour.b) <
+          1e-5
+            ? 1
+            : 0;
+      }
+
+      return found > 0;
+    },
+    laid = (improvements: string[], terrain = 'Grassland') =>
+      overlayMesh(16, 0, [
+        {
+          overlay: overlayFor(square(improvements, { terrain }), [])!,
+          place: place(17, 3),
+        },
+      ]),
+    irrigated = laid(['Irrigation']),
+    farmland = laid(['Irrigation', 'Farmland']),
+    [farmhouse, , barn, barnRoof, straw, silo] = FARMSTEAD_COLOURS as [
+      string,
+      string,
+      string,
+      string,
+      string,
+      string
+    ];
+
+  expect(
+    'irrigated, a barn and haystacks; farmland, a silo; a mine, a tunnel’s mouth on a mountain, not on hills',
+    [
+      coloured(irrigated, barn),
+      coloured(irrigated, straw),
+      coloured(irrigated, silo),
+      coloured(farmland, silo),
+      coloured(laid(['Mine'], 'Mountains'), MINE_COLOURS.mouth),
+      coloured(laid(['Mine'], 'Hills'), MINE_COLOURS.mouth),
+    ],
+    [true, true, false, true, true, false]
+  );
+
+  type Triangle = {
+    points: (readonly [number, number, number])[];
+    normals: (readonly [number, number, number])[];
+    colour: readonly [number, number, number];
+  };
+
+  // What's laid on a square, by itself: its triangles, each its three points, where they are on the land, and its
+  //  colour.
+  const trianglesOn = (
+      overlay: SquareOverlay,
+      at: OverlayPlace
+    ): Triangle[] => {
+      const laid = soup();
+
+      layOverlay(overlay, at, laid);
+
+      return Array.from({ length: laid.positions.length / 9 }, (_, t) => ({
+        points: [0, 1, 2].map(
+          (k) =>
+            [
+              laid.positions[t * 9 + k * 3]!,
+              laid.positions[t * 9 + k * 3 + 1]!,
+              laid.positions[t * 9 + k * 3 + 2]!,
+            ] as const
+        ),
+        normals: [0, 1, 2].map(
+          (k) =>
+            [
+              laid.normals[t * 9 + k * 3]!,
+              laid.normals[t * 9 + k * 3 + 1]!,
+              laid.normals[t * 9 + k * 3 + 2]!,
+            ] as const
+        ),
+        colour: [
+          laid.colours[t * 9]!,
+          laid.colours[t * 9 + 1]!,
+          laid.colours[t * 9 + 2]!,
+        ] as const,
+      }));
+    },
+    isColour =
+      (...css: string[]) =>
+      ({ colour: [r, g, b] }: Triangle): boolean =>
+        css.some((each) => {
+          const colour = new Color(each);
+
+          return (
+            Math.abs(colour.r - r) +
+              Math.abs(colour.g - g) +
+              Math.abs(colour.b - b) <
+            1e-5
+          );
+        }),
+    // Each solid among `triangles`, a box's twelve in a row, or as many as `each` says (a cone's 16, a cylinder's 32).
+    boxesOf = (triangles: Triangle[], each = 12): Triangle[][] => {
+      if (triangles.length % each !== 0) {
+        failures.push(
+          `${triangles.length} triangles aren't solids of ${each} each`
+        );
+      }
+
+      return Array.from({ length: triangles.length / each }, (_, b) =>
+        triangles.slice(b * each, b * each + each)
+      );
+    },
+    // Whether a solid's lowest points are each under the ground, or on it, as `height` has it.
+    grounded =
+      (height: (u: number, v: number) => number) =>
+      (solid: Triangle[]): boolean => {
+        const points = pointsIn(solid),
+          low = Math.min(...points.map(([, y]) => y));
+
+        return points
+          .filter(([, y]) => y < low + 1e-6)
+          .every(([u, y, v]) => height(u, v) >= y - 1e-6);
+      },
+    // A roof: whether its base is at `eaves`, its peak half its width across over that, its faces flat and facing
+    //  out; and which way its ridge runs, as a unit (u, v).
+    roofOf = (roof: Triangle[], eaves: number) => {
+      const points = pointsIn(roof),
+        ys = points.map(([, y]) => y),
+        [low, high] = [Math.min(...ys), Math.max(...ys)],
+        ridge = points.filter(([, y]) => y > high - 1e-6),
+        [a, b] = [
+          ridge[0]!,
+          ridge.find(
+            ([u, , v]) => Math.hypot(u - ridge[0]![0], v - ridge[0]![2]) > 1e-4
+          )!,
+        ],
+        along = [b[0] - a[0], b[2] - a[2]],
+        length = Math.hypot(along[0]!, along[1]!),
+        way = [along[0]! / length, along[1]! / length] as const,
+        // How far it reaches across its ridge.
+        across =
+          Math.max(
+            ...points.map(([u, , v]) =>
+              Math.abs((u - a[0]) * way[1] - (v - a[2]) * way[0])
+            )
+          ) * 2,
+        middle = [0, 1, 2].map(
+          (k) =>
+            points.reduce((sum, point) => sum + point[k]!, 0) / points.length
+        );
+
+      return {
+        based: Math.abs(low - eaves) < 1e-5,
+        pitched: Math.abs(high - low - across / 2) < 1e-4,
+        flat: roof.every(({ normals: [n, ...rest] }) =>
+          rest.every((other) =>
+            other.every((x, k) => Math.abs(x - n![k]!) < 1e-4)
+          )
+        ),
+        out: roof.every(
+          ({ points: corners, normals: [n] }) =>
+            [0, 1, 2].reduce(
+              (sum, k) =>
+                sum +
+                n![k]! *
+                  ((corners[0]![k]! + corners[1]![k]! + corners[2]![k]!) / 3 -
+                    middle[k]!),
+              0
+            ) > 0
+        ),
+        way,
+      };
+    },
+    // How far `points` reach along a way (u, v), and across it.
+    reach = (
+      points: (readonly [number, number, number])[],
+      [wu, wv]: readonly [number, number]
+    ) => {
+      const along = points.map(([u, , v]) => u * wu + v * wv),
+        across = points.map(([u, , v]) => v * wu - u * wv);
+
+      return [
+        Math.max(...along) - Math.min(...along),
+        Math.max(...across) - Math.min(...across),
+      ];
+    },
+    pointsIn = (triangles: Triangle[]) =>
+      triangles.flatMap(({ points }) => points),
+    // How far (u, v) is round the triangles, across and along, least and most.
+    boundsOf = (triangles: Triangle[]) => {
+      const points = pointsIn(triangles);
+
+      return {
+        u: [
+          Math.min(...points.map(([u]) => u)),
+          Math.max(...points.map(([u]) => u)),
+        ],
+        v: [
+          Math.min(...points.map(([, , v]) => v)),
+          Math.max(...points.map(([, , v]) => v)),
+        ],
+      };
+    },
+    farmsteads = isColour(...FARMSTEAD_COLOURS),
+    // Forty squares, each seeded its own way.
+    squares = Array.from({ length: 40 }, (_, x) => x);
+
+  // On a mountain whose ridge runs across it north of its middle, so out from its middle isn't always down the
+  //  slope: every tunnel faces down it, square to the ridge, away from it; its mouth's face in front of the rock it's
+  //  dug into, which rises over it; its mouth, posts, rock, spoil and cart down into the ground at each of their feet,
+  //  none hanging over the slope below. On flat ground, each faces out from the square's middle.
+  {
+    const ridge = (_u: number, v: number) => 0.5 - 0.4 * Math.abs(v - 3.2),
+      flat = () => 0.3,
+      tunnelOn = (x: number, height: (u: number, v: number) => number) => {
+        const at = place(x, 3, { height }),
+          triangles = trianglesOn(
+            overlayFor(square(['Mine'], { terrain: 'Mountains' }), [])!,
+            at
+          ),
+          coloured = (css: string) => triangles.filter(isColour(css)),
+          [mouth] = boxesOf(coloured(MINE_COLOURS.mouth)),
+          // Its posts, lower than its lintel.
+          posts = boxesOf(coloured(MINE_COLOURS.timber))
+            .sort(
+              (a, b) =>
+                Math.min(...pointsIn(a).map(([, y]) => y)) -
+                Math.min(...pointsIn(b).map(([, y]) => y))
+            )
+            .slice(0, 2),
+          rock = coloured(MINE_COLOURS.rock),
+          middleOf = (solid: Triangle[]) => {
+            const { u, v } = boundsOf(solid);
+
+            return [(u[0]! + u[1]!) / 2, (v[0]! + v[1]!) / 2] as const;
+          },
+          [mu, mv] = middleOf(mouth!),
+          front = posts.map(middleOf),
+          // Its frame, between its posts.
+          frame = [
+            (front[0]![0] + front[1]![0]) / 2,
+            (front[0]![1] + front[1]![1]) / 2,
+          ] as const,
+          // Out from its mouth, through its frame.
+          out = [frame[0] - mu, frame[1] - mv],
+          way = [
+            out[0]! / Math.hypot(out[0]!, out[1]!),
+            out[1]! / Math.hypot(out[0]!, out[1]!),
+          ] as const,
+          // How far forward of its frame, along the way it faces.
+          forward = ([u, , v]: readonly [number, number, number]) =>
+            (u - frame[0]) * way[0] + (v - frame[1]) * way[1];
+
+        return {
+          centre: at.centre,
+          frame,
+          way,
+          // Its mouth's face in front of all of its rock, the rock over the mouth, and the rock's highest at its front,
+          //  its face upright behind the mouth, sloping back from there.
+          faced:
+            Math.max(...pointsIn(mouth!).map(forward)) >
+              Math.max(...pointsIn(rock).map(forward)) &&
+            Math.max(...pointsIn(rock).map(([, y]) => y)) >
+              Math.max(...pointsIn(mouth!).map(([, y]) => y)) &&
+            (() => {
+              const points = pointsIn(rock),
+                high = Math.max(...points.map(([, y]) => y)),
+                front = Math.max(...points.map(forward));
+
+              return points
+                .filter(([, y]) => y > high - 1e-6)
+                .every((point) => forward(point) > front - 1e-6);
+            })(),
+          // How many of each part it has: its mouth, its posts and lintel, its rock's triangles, its heaps of spoil,
+          //  its cart.
+          parts: [
+            coloured(MINE_COLOURS.mouth).length / 12,
+            coloured(MINE_COLOURS.timber).length / 12,
+            rock.length,
+            coloured(MINE_COLOURS.spoil).length / 16,
+            coloured(MINE_COLOURS.iron).length / 12,
+          ],
+          grounded: [
+            mouth!,
+            ...posts,
+            rock,
+            ...boxesOf(coloured(MINE_COLOURS.spoil), 16),
+            ...boxesOf(coloured(MINE_COLOURS.iron)),
+          ].every(grounded(height)),
+        };
+      },
+      ridged = squares.map((x) => tunnelOn(x, ridge)),
+      flats = squares.map((x) => tunnelOn(x, flat)),
+      // How far, in degrees, a tunnel faces from a way (u, v).
+      off = (
+        way: readonly [number, number],
+        [u, v]: readonly [number, number]
+      ) =>
+        (Math.acos(Math.min(1, (way[0] * u + way[1] * v) / Math.hypot(u, v))) *
+          180) /
+        Math.PI;
+
+    expect(
+      'tunnels face down a ridge, away from it, within 12°; on flat ground, out from the middle; dug in, on the ground',
+      [
+        ridged.filter(
+          ({ frame: [, fv], way }) => off(way, [0, Math.sign(fv - 3.2)]) > 12
+        ).length,
+        flats.filter(
+          ({ frame: [fu, fv], centre: [cu, cv], way }) =>
+            off(way, [fu - cu, fv - cv]) > 1
+        ).length,
+        [...ridged, ...flats].filter(({ faced }) => !faced).length,
+        ridged.filter(({ grounded }) => !grounded).length,
+        [
+          ...new Set(
+            [...ridged, ...flats].map(({ parts }) => JSON.stringify(parts))
+          ),
+        ],
+      ],
+      [0, 0, 0, 0, [JSON.stringify([1, 3, 8, 2, 1])]]
+    );
+  }
+
+  // On land sloping steeply, one in two: a farm's barn and a mine's engine house have their walls' full height over
+  //  the highest of the ground under them, under gabled roofs whose base is at their eaves, peaked at half their width,
+  //  their faces flat and facing out, their ridges along the longer side; the haystacks, silo and spoil down into the
+  //  ground at their feet. And wherever a farm stands, with room or with railroads every way, its farmhouse is as tall
+  //  for its width.
+  {
+    const slope = (u: number) => 0.1 + 0.5 * u,
+      height = (u: number) => slope(u),
+      buildings = squares.flatMap((x) => {
+        const at = place(x, 3, { height: (u) => height(u) }),
+          triangles = [
+            ...trianglesOn(overlayFor(square(['Irrigation']), [])!, at),
+            ...trianglesOn(
+              overlayFor(square(['Irrigation', 'Farmland']), [])!,
+              at
+            ),
+          ],
+          mine = trianglesOn(
+            overlayFor(square(['Mine'], { terrain: 'Hills' }), [])!,
+            at
+          ),
+          checked = (walls: Triangle[], roof: Triangle[], wall: number) => {
+            const points = pointsIn(walls),
+              eaves = Math.max(...points.map(([, y]) => y)),
+              low = Math.min(...points.map(([, y]) => y)),
+              floor = points.filter(([, y]) => y < low + 1e-6),
+              { way, ...shape } = roofOf(roof, eaves),
+              [along, across] = reach(points, way);
+
+            return {
+              ...shape,
+              tall:
+                eaves - Math.max(...floor.map(([u]) => height(u))) >=
+                wall - 1e-6,
+              ridged: along > across,
+            };
+          },
+          barns = boxesOf(triangles.filter(isColour(barn)));
+
+        return [
+          ...barns.map((walls, index) => {
+            // A barn's walls are 0.06 of its size across, 0.045 tall.
+            const roof = boxesOf(triangles.filter(isColour(barnRoof)))[index]!,
+              [du, dv] = reach(pointsIn(walls), [1, 0]);
+
+            return checked(walls, roof, (0.045 * Math.min(du!, dv!)) / 0.06);
+          }),
+          // An engine house's walls are 0.05 tall, at a mine's most room, on an open square.
+          checked(
+            mine.filter(isColour(MINE_COLOURS.engine)),
+            mine.filter(isColour(MINE_COLOURS.roof)),
+            0.05
+          ),
+          {
+            // A haystack's cylinder and cone, 48 triangles; a silo's cylinder and dome, 72: each's cylinder, its
+            //  first 32.
+            ...(
+              [
+                [straw, 48],
+                [silo, 72],
+              ] as const
+            ).reduce(
+              (all, [css, each]) => ({
+                ...all,
+                [css]: boxesOf(triangles.filter(isColour(css)), each)
+                  .map((stack) => stack.slice(0, 32))
+                  .every(grounded((u) => height(u))),
+              }),
+              {}
+            ),
+            spoil: boxesOf(mine.filter(isColour(MINE_COLOURS.spoil)), 16).every(
+              grounded((u) => height(u))
+            ),
+            // The headframe's legs, the four lowest of its timbers, leaning in: each's foot, all of it within 0.01 of
+            //  its lowest, down into the ground.
+            legs: boxesOf(mine.filter(isColour(MINE_COLOURS.timber)))
+              .sort(
+                (a, b) =>
+                  Math.min(...pointsIn(a).map(([, y]) => y)) -
+                  Math.min(...pointsIn(b).map(([, y]) => y))
+              )
+              .slice(0, 4)
+              .every((leg) => {
+                const points = pointsIn(leg),
+                  low = Math.min(...points.map(([, y]) => y));
+
+                return points
+                  .filter(([, y]) => y < low + 0.01)
+                  .every(([u, y]) => height(u) >= y - 1e-6);
+              }),
+            // Two haystacks on the irrigated square, a silo on farmland, two heaps of spoil by the headframe.
+            counted:
+              triangles.filter(isColour(straw)).length === 2 * 48 &&
+              triangles.filter(isColour(silo)).length === 72 &&
+              mine.filter(isColour(MINE_COLOURS.spoil)).length === 2 * 16,
+          },
+        ];
+      }),
+      // A farmhouse's walls, how much taller than its 0.005 sunk they are for their width, on flat ground, open or
+      //  with railroads every way, where it has less room.
+      railed = [
+        [0, -1],
+        [1, -1],
+        [1, 0],
+        [1, 1],
+        [0, 1],
+        [-1, 1],
+        [-1, 0],
+        [-1, -1],
+      ].map((offset) =>
+        neighbour(offset as [number, number], ['Road', 'Railroad'])
+      ),
+      farmhouses = squares.flatMap((x) =>
+        [
+          overlayFor(square(['Irrigation']), [])!,
+          overlayFor(square(['Irrigation', 'Road', 'Railroad']), railed)!,
+        ].map((overlay) => {
+          const walls = pointsIn(
+              trianglesOn(overlay, place(x, 3, { height: () => 0.1 })).filter(
+                isColour(farmhouse)
+              )
+            ),
+            ys = walls.map(([, y]) => y),
+            [du, dv] = reach(walls, [1, 0]);
+
+          return [
+            (Math.max(...ys) - Math.min(...ys) - 0.005) / Math.min(du!, dv!),
+            Math.min(du!, dv!),
+          ];
+        })
+      ),
+      walled = buildings.filter((each) => 'tall' in each) as {
+        tall: boolean;
+        ridged: boolean;
+        based: boolean;
+        pitched: boolean;
+        flat: boolean;
+        out: boolean;
+      }[],
+      stacked = buildings.filter((each) => !('tall' in each)) as Record<
+        string,
+        boolean
+      >[];
+
+    expect(
+      'on a steep slope, barns and engine houses full height, gabled; stacks, silos, spoil grounded; farmhouses alike',
+      [
+        walled.length,
+        (['tall', 'ridged', 'based', 'pitched', 'flat', 'out'] as const).map(
+          (key) => walled.filter((each) => !each[key]).length
+        ),
+        stacked.filter((each) => Object.values(each).some((ok) => !ok)).length,
+        new Set(farmhouses.map(([, width]) => width!.toFixed(4))).size > 1,
+        Math.max(...farmhouses.map(([ratio]) => ratio!)) -
+          Math.min(...farmhouses.map(([ratio]) => ratio!)) <
+          1e-4,
+      ],
+      [squares.length * 3, [0, 0, 0, 0, 0, 0], 0, true, true]
+    );
+  }
+
+  // At a river's bank or the shore, where the land dips under the water across half the square: a farm's buildings
+  //  stand out of the water, every point of them, and there are some; and none where it's all under the water, though
+  //  its fields are laid.
+  {
+    const bank = (_u: number, v: number) => (v - 3.5) * 0.4,
+      farms = squares.map((x) =>
+        trianglesOn(
+          overlayFor(square(['Irrigation']), [])!,
+          place(x, 3, { height: bank })
+        ).filter(farmsteads)
+      ),
+      drowned = trianglesOn(
+        overlayFor(square(['Irrigation']), [])!,
+        place(17, 3, { height: () => -0.01 })
+      );
+
+    expect(
+      'at the water’s edge, a farm’s buildings stand out of the water; none where it’s all under it, but its fields',
+      [
+        farms.filter((farm) => farm.length > 0).length > 30,
+        farms.filter((farm) =>
+          pointsIn(farm).some(([u, , v]) => bank(u, v) < 0)
+        ).length,
+        drowned.length > 0,
+        drowned.filter(farmsteads).length,
+        layOverlay(
+          overlayFor(square(['Irrigation']), [])!,
+          place(17, 3, { height: () => -0.01 }),
+          soup()
+        ).farm.length,
+      ],
+      [true, 0, true, 0, 0]
+    );
+  }
+
+  // Where a city's houses have spread onto the square, no farm's among them; and on every square, the fields' rows stop
+  //  short of a farm's farmhouse and barn, and its buildings, and a mine's, stand inside the square, but for a little.
+  {
+    const bigCity = [
+        {
+          offset: [-1, 0],
+          tile: {
+            improvements: [],
+            city: { id: 'City-Big', name: 'Big', growth: { size: 20 } },
+          },
+        } as unknown as OverlayNeighbour,
+      ],
+      suburb = trianglesOn(
+        overlayFor(square(['Irrigation'], { terrain: 'Grassland' }), bigCity)!,
+        place(17, 3)
+      ),
+      overlaps = (a: Triangle[], b: Triangle[]) => {
+        const p = boundsOf(a),
+          q = boundsOf(b);
+
+        return (
+          p.u[0]! < q.u[1]! &&
+          q.u[0]! < p.u[1]! &&
+          p.v[0]! < q.v[1]! &&
+          q.v[0]! < p.v[1]!
+        );
+      },
+      // A farm's walls, the farmhouse's and the barn's, square with the rows: those the rows run under, of each square,
+      //  and its yard, its haystacks or its silo, all together.
+      underRows = squares.flatMap((x) =>
+        [['Irrigation'], ['Irrigation', 'Farmland']].map((improvements) => {
+          const triangles = trianglesOn(
+              overlayFor(square(improvements), [])!,
+              place(x, 3)
+            ),
+            walls = [
+              ...boxesOf(triangles.filter(isColour(farmhouse, barn))),
+              triangles.filter(isColour(straw, silo)),
+            ],
+            rows = triangles.filter((triangle) => !farmsteads(triangle));
+
+          return walls.filter((box) => rows.some((row) => overlaps([row], box)))
+            .length;
+        })
+      ),
+      // How far past its square's edges what's laid on a square reaches, at the most.
+      past = (
+        overlay: SquareOverlay,
+        keep: (triangle: Triangle) => boolean = () => true
+      ) =>
+        Math.max(
+          ...squares.map((x) => {
+            const kept = trianglesOn(overlay, place(x, 3)).filter(keep),
+              { u, v } = boundsOf(kept);
+
+            // Nothing kept is as far out as can be, so it fails.
+            return kept.length === 0
+              ? Infinity
+              : Math.max(x - u[0]!, u[1]! - (x + 1), 3 - v[0]!, v[1]! - 4);
+          })
+        ),
+      // Whether (u, v) is inside a footprint, its corners in order round it, or on its edge.
+      inside = (
+        corners: readonly (readonly [number, number])[],
+        [u, v]: readonly [number, number]
+      ) => {
+        const sides = corners.map(([au, av], index) => {
+          const [bu, bv] = corners[(index + 1) % corners.length]!;
+
+          return (bu - au) * (v - av) - (bv - av) * (u - au);
+        });
+
+        return (
+          sides.every((side) => side > -1e-9) ||
+          sides.every((side) => side < 1e-9)
+        );
+      },
+      // A farm's three footprints, its farmhouse's, its barn's and its yard's, which its fields keep clear of: of each
+      //  square's farm, irrigated and farmland, how many there are, and how many points of its buildings are outside
+      //  all of them.
+      footprints = squares.flatMap((x) =>
+        [['Irrigation'], ['Irrigation', 'Farmland']].map((improvements) => {
+          const laid = soup(),
+            { farm } = layOverlay(
+              overlayFor(square(improvements), [])!,
+              place(x, 3),
+              laid
+            ),
+            points: [number, number][] = [];
+
+          for (let at = 0; at < laid.positions.length; at += 3) {
+            if (
+              farmsteads({
+                points: [],
+                normals: [],
+                colour: [
+                  laid.colours[at]!,
+                  laid.colours[at + 1]!,
+                  laid.colours[at + 2]!,
+                ],
+              })
+            ) {
+              points.push([laid.positions[at]!, laid.positions[at + 2]!]);
+            }
+          }
+
+          return [
+            farm.length,
+            points.length > 0,
+            points.filter(
+              (point) => !farm.some((corners) => inside(corners, point))
+            ).length,
+          ];
+        })
+      );
+
+    expect(
+      'no farm among a city’s houses; rows stop short of a farm; farms and mines inside their square, but for a little',
+      [
+        suburb.some(isColour(...ROOFS)),
+        suburb.filter(farmsteads).length,
+        layOverlay(
+          overlayFor(
+            square(['Irrigation'], { terrain: 'Grassland' }),
+            bigCity
+          )!,
+          place(17, 3),
+          soup()
+        ).farm.length,
+        underRows.reduce((sum, each) => sum + each, 0),
+        past(overlayFor(square(['Mine']), [])!) <= 0.03,
+        past(
+          overlayFor(square(['Mine'], { terrain: 'Mountains' }), [])!,
+          isColour(...Object.values(MINE_COLOURS))
+        ) <= 0.03,
+        past(overlayFor(square(['Irrigation']), [])!) <= 0.03,
+        [...new Set(footprints.map((each) => JSON.stringify(each)))],
+      ],
+      [true, 0, 0, 0, true, true, true, [JSON.stringify([3, true, 0])]]
+    );
+  }
 }
 
 // What stands on a square stands clear of the unit's stand at its middle, 0.2 across: every special, a mine and a hut,
@@ -1420,7 +2129,8 @@ const landOf = (
       return [];
     }
 
-    const corners = pointsOf(mesh),
+    // But farms' buildings, which stand on the land.
+    const corners = pointsOf(withoutFarmsteads(mesh)),
       samples: [number, number, number][] = [];
 
     for (let at = 0; at + 2 < corners.length; at += 3) {
