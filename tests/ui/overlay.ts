@@ -5519,23 +5519,43 @@ const differing = (
         } as unknown as OverlayNeighbour,
       ]
     )!,
+    // How many triangles of a soup are a roof's colour: some of its houses' roofs.
+    roofsIn = (laid: ReturnType<typeof soup>) => {
+      const roofs = ROOFS.map((hex) => new Color(hex));
+      let found = 0;
+
+      for (let at = 0; at < laid.colours.length; at += 9) {
+        if (
+          roofs.some(
+            ({ r, g, b }) =>
+              Math.abs(laid.colours[at]! - r) < 1e-4 &&
+              Math.abs(laid.colours[at + 1]! - g) < 1e-4 &&
+              Math.abs(laid.colours[at + 2]! - b) < 1e-4
+          )
+        ) {
+          found++;
+        }
+      }
+
+      return found;
+    },
     spread = courses.map(([name, path]) => {
       const wet = soup(),
-        dry = soup(),
-        laid = layOverlay(besideCity, { ...place(17, 3), rivers: [path] }, wet);
+        dry = soup();
 
+      layOverlay(besideCity, { ...place(17, 3), rivers: [path] }, wet);
       layOverlay(besideCity, place(17, 3), dry);
 
       return [
         name,
         within(wet, path, reach - 0.01),
         within(dry, path, reach - 0.01) > 0,
-        laid.taken.length > 0,
+        roofsIn(wet) > 0 && roofsIn(wet) <= roofsIn(dry),
       ];
     });
 
   expect(
-    'a city beside the square, its houses spread onto it: none of them, nor its fields, within the river’s channel, where without it they are; some houses still',
+    'a city beside the square, its houses spread onto it: none of them, nor its fields, within the river’s channel, where without it they are; some of its houses still, no more than without it',
     spread,
     courses.map(([name]) => [name, 0, true, true])
   );
