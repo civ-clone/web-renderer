@@ -414,10 +414,10 @@ importers:
         version: https://codeload.github.com/civ-clone/models-0ad/tar.gz/3e5ec38c05e497756b6ce50573be2ac37982a7ff
       '@civ-clone/models-realistic-by':
         specifier: github:civ-clone/models-realistic-by
-        version: https://codeload.github.com/civ-clone/models-realistic-by/tar.gz/6bcea6829414c257bb40e0f1b2a6b0a1a562efcf
+        version: https://codeload.github.com/civ-clone/models-realistic-by/tar.gz/bb0296226139c0a84ad27a8a68097afd4a3db5ce
       '@civ-clone/models-realistic-cc0':
         specifier: github:civ-clone/models-realistic-cc0
-        version: https://codeload.github.com/civ-clone/models-realistic-cc0/tar.gz/af29ab5647ceb9013e770569bdc5b9e1f4b2d721
+        version: https://codeload.github.com/civ-clone/models-realistic-cc0/tar.gz/5394ed648dacd4c213852a21caf003b2bd038161
       '@civ-clone/simple-ai-client':
         specifier: github:civ-clone/simple-ai-client
         version: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/e3891903e5bfdf663271d80c234d93eda7fa24a7
@@ -2936,12 +2936,12 @@ packages:
     resolution: {gitHosted: true, integrity: sha512-YCn6APzgPjfws9I+aSkVAQp0fFJO7eq4pNKqPI6dcHXqjPeqXoz+GEk/GFfK12Xqh9OhqLyh6Tqo/UQhIeAzhQ==, tarball: https://codeload.github.com/civ-clone/models-0ad/tar.gz/3e5ec38c05e497756b6ce50573be2ac37982a7ff}
     version: 0.1.0
 
-  '@civ-clone/models-realistic-by@https://codeload.github.com/civ-clone/models-realistic-by/tar.gz/6bcea6829414c257bb40e0f1b2a6b0a1a562efcf':
-    resolution: {gitHosted: true, integrity: sha512-Zj+f0z7QCJxrsFINZ60lUaGkIjTxvoTaL1FjWVj3Z0q1bzB7DLNswBiyHNmUD3S67sv74lrAfjl0GtRVKlUUHQ==, tarball: https://codeload.github.com/civ-clone/models-realistic-by/tar.gz/6bcea6829414c257bb40e0f1b2a6b0a1a562efcf}
+  '@civ-clone/models-realistic-by@https://codeload.github.com/civ-clone/models-realistic-by/tar.gz/bb0296226139c0a84ad27a8a68097afd4a3db5ce':
+    resolution: {gitHosted: true, integrity: sha512-048uVLHxF9dqlyUW3yypHDcCF9UUWmaF4w+0Qh/t1PftniG6QCCx1NdkbPI0cPVuvqKdWLfzX4GWAXXBTzbHcA==, tarball: https://codeload.github.com/civ-clone/models-realistic-by/tar.gz/bb0296226139c0a84ad27a8a68097afd4a3db5ce}
     version: 0.1.0
 
-  '@civ-clone/models-realistic-cc0@https://codeload.github.com/civ-clone/models-realistic-cc0/tar.gz/af29ab5647ceb9013e770569bdc5b9e1f4b2d721':
-    resolution: {gitHosted: true, integrity: sha512-UslEqMsCcLYis8z32XCoSjQJ797ieQj1XjWftneP/TYOtjo4FdtPdrJkt1eQ1eqrQ6ZJYUVA6nx4vRr+o0aTMQ==, tarball: https://codeload.github.com/civ-clone/models-realistic-cc0/tar.gz/af29ab5647ceb9013e770569bdc5b9e1f4b2d721}
+  '@civ-clone/models-realistic-cc0@https://codeload.github.com/civ-clone/models-realistic-cc0/tar.gz/5394ed648dacd4c213852a21caf003b2bd038161':
+    resolution: {gitHosted: true, integrity: sha512-e1xlzUrHTMLYxZKAeYjPhCbYuiPHJtrXgEr3e7NaNEJkh9DuNdEcjqHLMwGpqZXVqs9fIENjB2Zojx72FW8eiA==, tarball: https://codeload.github.com/civ-clone/models-realistic-cc0/tar.gz/5394ed648dacd4c213852a21caf003b2bd038161}
     version: 0.1.0
 
   '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/e3891903e5bfdf663271d80c234d93eda7fa24a7':
@@ -9395,9 +9395,9 @@ snapshots:
 
   '@civ-clone/models-0ad@https://codeload.github.com/civ-clone/models-0ad/tar.gz/3e5ec38c05e497756b6ce50573be2ac37982a7ff': {}
 
-  '@civ-clone/models-realistic-by@https://codeload.github.com/civ-clone/models-realistic-by/tar.gz/6bcea6829414c257bb40e0f1b2a6b0a1a562efcf': {}
+  '@civ-clone/models-realistic-by@https://codeload.github.com/civ-clone/models-realistic-by/tar.gz/bb0296226139c0a84ad27a8a68097afd4a3db5ce': {}
 
-  '@civ-clone/models-realistic-cc0@https://codeload.github.com/civ-clone/models-realistic-cc0/tar.gz/af29ab5647ceb9013e770569bdc5b9e1f4b2d721': {}
+  '@civ-clone/models-realistic-cc0@https://codeload.github.com/civ-clone/models-realistic-cc0/tar.gz/5394ed648dacd4c213852a21caf003b2bd038161': {}
 
   '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/e3891903e5bfdf663271d80c234d93eda7fa24a7':
     dependencies:
