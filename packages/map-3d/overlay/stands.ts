@@ -75,7 +75,8 @@ export const standAt = ({
 
       if (distance < nearest) {
         nearest = distance;
-        found = [ci, cj, cv];
+        // Its latitude where it is on the world, not a period round: the same from either side of a seam.
+        found = [ci, cj, cv - (j - cj) * stepV];
       }
     }
   }

@@ -231,7 +231,7 @@ export interface Stage {
   loadModels?(
     url: string,
     loaded: (id: string, types: readonly string[]) => void,
-    grown?: (id: string, plants: readonly string[]) => void
+    grown?: (id: string, plants: readonly string[], reach: number) => void
   ): Promise<void>;
   dispose(): void;
 }
@@ -241,6 +241,8 @@ export interface Stage {
 type PlantModel = {
   parts: { geometry: BufferGeometry; material: MeshStandardMaterial }[];
   height: number;
+  // How far it reaches round its origin, across the ground, for each of its height: the room it takes.
+  reach: number;
 };
 
 export type StageOptions = {
@@ -533,6 +535,13 @@ export const createStage: StageFactory = (
           return { geometry, material };
         }),
         height: Math.max(box.max.y, 1e-6),
+        reach:
+          Math.max(
+            Math.abs(box.min.x),
+            Math.abs(box.max.x),
+            Math.abs(box.min.z),
+            Math.abs(box.max.z)
+          ) / Math.max(box.max.y, 1e-6),
       };
     },
     overlayMaterial = new MeshStandardMaterial({
@@ -1727,10 +1736,11 @@ export const createStage: StageFactory = (
             return;
           }
 
-          const key = modelKey(url, id);
+          const key = modelKey(url, id),
+            made = plantModelOf(model);
 
-          plantModels.set(key, plantModelOf(model));
-          grown?.(key, plants);
+          plantModels.set(key, made);
+          grown?.(key, plants, made.reach);
         }
       );
     },

@@ -646,8 +646,9 @@ How plants are placed:
       of its nearest centre, a little nearer or further by a number of its own (`STAND_MINGLE`), so stands' edges
       mingle rather than meeting in a line.
     - **Which:** a centre's stand is chosen by a number of its own, as often as each stand's weight at the centre's
-      latitude says (`latitudeAt` on the square's place, the land's own rule), so a stand reaching over two squares is
-      one stand, and stands change with latitude as woods do.
+      latitude says (`latitudeAt` on the square's place, the land's own rule, where the centre is on the world rather
+      than a period round), so a stand reaching over two squares, or over the seam where the world wraps, is one
+      stand, and stands change with latitude as woods do.
     - **A forest's:** pine; spruce and fir with pines, the boreal forest, weighted towards the poles; birch among pines;
       a mix of beech, oak, birch and pine; beech; and oak among beeches, weighted towards the equator. At the poles a
       forest is about four fifths firs and pines among birches; at the equator about five sixths broadleaf, oaks and
@@ -662,9 +663,10 @@ How plants are placed:
     - **Stability:** a stand comes from where things are on the world, so a neighbour turning to woods still only adds
       trees.
   - **The shore:** trees stand on dry land; a swamp's reeds stand in the shallows too.
-  - **Cost** (#1363): a whole square of forest is about 880 triangles with the built-in shapes and 2,060 with 0 A.D.'s
-    trees, against 210 and 630 before; of jungle, about 1,210 and 4,190, against 220 and 1,280. Laying one takes
-    0.1–0.3 ms. A set's trees are thinned far off (below); the undergrowth, in the overlay's mesh, isn't.
+  - **Cost** (#1363): a whole square of forest at the middle latitudes is about 975 triangles with the built-in shapes
+    and 2,470 with 0 A.D.'s trees, against 210 and 630 before; of jungle, about 1,180 and 5,070, against 220 and
+    1,280. Laying one takes 0.1–0.3 ms. A set's trees are thinned far off (below); the undergrowth, in the overlay's
+    mesh, isn't.
 - **A set's trees** (#1335): where a set of models draws a kind of plant (`names.plant`, §10), each of that kind is laid
   as where it stands, how tall, its turn and (since #1363) its rank for thinning (the overlay's `plants`, by the
   model), not as the built-in set's shapes, and drawn as the set's model.
@@ -675,6 +677,10 @@ How plants are placed:
   - **Size:** as tall as the built-in set's shape of its kind would be (`PLANT_HEIGHT`, times its size), by the model's
     height over its origin, where it meets the ground; its roots may reach below. Not at the set's scale, which is its
     units'.
+  - **Room** (#1363): each keeps the room its model takes, as far as the model reaches round its origin for each of its
+    height (measured by the stage, given to the land with the models, `Land#growWith`), at the height it's drawn
+    (`roomOf`), rather than the built-in set's shape's: so a fir drawn with a set's pine keeps the pine's spread at a
+    fir's height, clear of the clearing and the roads as the built-in shapes are.
   - **Drawing:** a chunk's plants of each model are one instanced draw call for each of its parts at each copy of the
     world, their matrices one buffer every copy shares, and how far they reach worked out once. Since #1363, they're
     ordered by a rank laid with each (`ditherRank` in `overlay/thinning.ts`, the overlay's sixth number for a plant):
@@ -694,8 +700,8 @@ How plants are placed:
     leaves'). They're clipped past a pole the view's stopped at, as the rest of the overlay is.
   - **The shipped trees:** civ-clone/models-0ad's, from 0 A.D.: a pine (`conifer`, 58 triangles), a beech
     (`broadleaf`, 82), a teak (`Jungle:broadleaf`, 124), a date palm (`palm`, 208) and a dead tree (`deadTree`, 199).
-    A forest of pines and beeches costs more than the built-in set's shapes: about 2,060 triangles a whole square,
-    against 880 (the cost, above).
+    A forest of them costs more than the built-in set's shapes: about 2,470 triangles a whole square, against 975
+    (the cost, above).
 
 ### 5.2 Specials and huts
 

@@ -86,6 +86,19 @@ export type OverlayPlace = {
   // The model a set of models draws a kind of plant on this square with, by its id among every set's, or nothing,
   //  where it's drawn as the built-in set's: a tree as a set's, set where it's drawn.
   plantModel?(kind: PlantKind): string | null;
+  // How far the model a set draws a kind of plant with reaches round its origin, for each of its height, where it's
+  //  known: the room a plant of that kind takes, in place of the built-in set's shape's (`ROOM`).
+  plantReach?(kind: PlantKind): number | null;
+};
+
+/**
+ * The room a plant of `kind` takes at its usual size on `place`: as far as the model a set draws it with reaches, at
+ *  the height it's drawn (`PLANT_HEIGHT`), or the built-in set's shape's room.
+ */
+export const roomOf = (place: OverlayPlace, kind: PlantKind): number => {
+  const reach = place.plantReach?.(kind) ?? null;
+
+  return reach === null ? ROOM[kind] : reach * PLANT_HEIGHT[kind];
 };
 
 /**
@@ -2925,7 +2938,7 @@ const plants = (layer: Layer, overlay: SquareOverlay): void => {
         size =
           plant.size[0] + (plant.size[1] - plant.size[0]) * fraction(seed, n),
         kind = plant.kind,
-        room = ROOM[kind] * size;
+        room = roomOf(layer.place, kind) * size;
 
       // A few tries for a place with room.
       for (let attempt = 0; attempt < 6; attempt++) {
@@ -3125,7 +3138,7 @@ const latticePlants = (
         v,
         kind,
         plant,
-        room: ROOM[kind] * usual * GROWN[1],
+        room: roomOf(place, kind) * usual * GROWN[1],
         // Bigger where the woods are whole, so their crowns meet.
         size: usual * (GROWN[0] + (GROWN[1] - GROWN[0]) * whole),
         facing: pointFraction(ci, cj, first + 6) * Math.PI * 2,

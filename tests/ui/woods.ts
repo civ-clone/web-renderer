@@ -981,9 +981,10 @@ ids.forEach((topologyId) => {
 
 // Stands (#1363), on a world 80 by 50, at 4,000 points: a stand the same one period round the world each way; each as
 //  common as its weight says (1 to 4, so a tenth to two fifths); points 0.17 apart across mostly in one stand, but
-//  stands' edges mingling, not ruled; and each stand chosen at its centre's latitude: with the first stand weighted only
-//  at the equator and the last only at the poles, and the latitude at a centre 0 above row 25 and 1 below it, neither
-//  is found well away from where it's weighted.
+//  stands' edges mingling, not ruled; and each stand chosen at its centre's latitude, where the centre is on the world:
+//  with the first stand weighted only at the equator and the last only at the poles, and the latitude 0 in a band
+//  round the middle and 1 beyond it, neither is found well away from where it's weighted; and with the latitude 0 in
+//  the top half and 1 in the bottom, a point a period round, over the seam, in the same stand.
 {
   const period = { u: 80, v: 50 },
     points = Array.from({ length: 4000 }, (_, at) => ({
@@ -1000,10 +1001,17 @@ ids.forEach((topologyId) => {
     shares = [0, 1, 2, 3].map(
       (stand) => stands.filter((each) => each === stand).length / 4000
     ),
+    // A period round, with a latitude that's 0 in the world's top half and 1 in its bottom half, so a stand whose centre
+    //  is taken a period round takes the wrong half's unless its latitude is taken where the centre is on the world.
+    halves = (v: number) => (v < 25 ? 0 : 1),
+    byHalves = (latitude: number) => [1 - latitude, 0.5, 0.5, latitude],
     again = points.filter(
-      (point, n) =>
-        at({ ...point, u: point.u + period.u, v: point.v - period.v }) !==
-        stands[n]
+      (point) =>
+        at(
+          { ...point, u: point.u + period.u, v: point.v - period.v },
+          halves,
+          byHalves
+        ) !== at(point, halves, byHalves)
     ).length,
     near =
       points.filter(
@@ -1016,16 +1024,18 @@ ids.forEach((topologyId) => {
       points.filter(
         (point) => at({ ...point, own: 0.05 }) !== at({ ...point, own: 0.95 })
       ).length / 4000,
+    // A latitude 0 in a band round the middle and 1 outside it, as a world's runs to its poles at both ends.
     misplaced = points.filter((point) => {
       const stand = at(
-        point,
-        (v) => (v < 25 ? 0 : 1),
-        (latitude) => [1 - latitude, 0.5, 0.5, latitude]
-      );
+          point,
+          (v) => (Math.abs(v - 25) < 12.5 ? 0 : 1),
+          byHalves
+        ),
+        out = Math.abs(point.v - 25);
 
       return (
-        (point.v < 25 - STAND_SPACING * 1.5 && stand === 3) ||
-        (point.v > 25 + STAND_SPACING * 1.5 && stand === 0)
+        (out < 12.5 - STAND_SPACING * 1.5 && stand === 3) ||
+        (out > 12.5 + STAND_SPACING * 1.5 && stand === 0)
       );
     }).length;
 
@@ -1154,6 +1164,112 @@ ids.forEach((topologyId) => {
       [],
       ['fir', 'beech', 'teak', 'beech', null, 'pine'],
     ]
+  );
+}
+
+// A set's trees keep the room their model takes (#1363), on every grid: forest and jungle whole, with a road to one
+//  neighbour, at the poles and the equator, drawn with models reaching round 0.45 of their height. No crown, as far as
+//  its model reaches at the height it's drawn, comes within 0.17 of the middle, where a unit's figures stand, or
+//  reaches over the road's middle line by more than half a road's width.
+{
+  const width = 12,
+    height = 10,
+    REACH = 0.45,
+    TREE_KINDS = new Set(TREES),
+    overreach = ids.flatMap((topologyId) => {
+      const topology = topologyFor({ width, height, topologyId }),
+        layout = groundLayoutFor({
+          width,
+          height,
+          topologyId,
+          wrapsY: topology.wrapsY(),
+        });
+
+      return ['Forest', 'Jungle'].flatMap((terrain) =>
+        [0, 1].flatMap((latitude) =>
+          Array.from({ length: 12 }, (_, at) => [
+            2 + (at % 6),
+            2 + Math.floor(at / 6) * 2 + (at % 2),
+          ]).flatMap(([x, y]) => {
+            const direction = topology.directions()[0]!,
+              offset = topology.offset(direction, x!, y!),
+              into = soup(),
+              place = {
+                ...placeOf(layout, topology, x!, y!),
+                latitude,
+                latitudeAt: () => latitude,
+                plantModel: (kind: string) =>
+                  TREE_KINDS.has(kind) ? 'tree' : null,
+                plantReach: (kind: string) =>
+                  TREE_KINDS.has(kind) ? REACH : null,
+              },
+              [cu, cv] = place.centre,
+              [eu, ev] = place.toward(offset),
+              // The road's middle line, from the middle to the edge halfway to the neighbour.
+              end = [(cu + eu) / 2, (cv + ev) / 2] as const,
+              fromRoad = (u: number, v: number) => {
+                const du = end[0] - cu,
+                  dv = end[1] - cv,
+                  along = Math.max(
+                    0,
+                    Math.min(
+                      1,
+                      ((u - cu) * du + (v - cv) * dv) / (du * du + dv * dv)
+                    )
+                  );
+
+                return Math.hypot(u - cu - du * along, v - cv - dv * along);
+              };
+
+            layOverlay(
+              overlayOf(
+                topology,
+                x!,
+                y!,
+                terrain,
+                () => terrain,
+                ['Road'],
+                (other) =>
+                  other[0] === offset[0] && other[1] === offset[1]
+                    ? ['Road']
+                    : []
+              ),
+              place as OverlayPlace,
+              into
+            );
+
+            const laid = into.plants.get('tree') ?? [];
+
+            return Array.from(
+              { length: laid.length / PLANT_NUMBERS },
+              (_, n) => n
+            )
+              .map((n) => {
+                const u = laid[n * PLANT_NUMBERS]!,
+                  v = laid[n * PLANT_NUMBERS + 2]!,
+                  crown = REACH * laid[n * PLANT_NUMBERS + 3]!;
+
+                return [
+                  Math.hypot(u - cu, v - cv) - crown,
+                  fromRoad(u, v) - crown,
+                ] as const;
+              })
+              .filter(
+                ([middle, road]) => middle < 0.17 - 1e-6 || road < 0.035 - 1e-6
+              )
+              .map(
+                ([middle, road]) =>
+                  `${topologyId} ${terrain} ${latitude} ${x},${y}: ${middle}, ${road}`
+              );
+          })
+        )
+      );
+    });
+
+  expect(
+    'a set’s trees keep the room their model takes, on every grid: no crown within 0.17 of the middle, or over a road by more than half its width',
+    overreach.slice(0, 3),
+    []
   );
 }
 

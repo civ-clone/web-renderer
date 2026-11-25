@@ -120,6 +120,8 @@ class Land {
   // The models sets draw plants with, by the plant as a set names it (`conifer`, or `Jungle:broadleaf` for a kind on a
   //  terrain of its own), each the model's id among every set's.
   #plantModels: ReadonlyMap<string, string> = new Map();
+  // How far each of those models reaches round its origin, for each of its height, by its id: the room it takes.
+  #plantReaches: ReadonlyMap<string, number> = new Map();
   // How far a square reaches from its middle every way, its outline's nearest edge; and half the biggest square, with
   //  sides along the ground's axes, that fits inside it.
   #radius: number;
@@ -376,10 +378,17 @@ class Land {
   /**
    * The plants sets of models draw, and with which models (`models`, by the plant as a set names it, as `conifer` or
    *  `Jungle:broadleaf`): every chunk's overlay laid again with them, the nearest to (`u`, `v`) first. A kind on a
-   *  terrain of its own is drawn with its own model before the kind's.
+   *  terrain of its own is drawn with its own model before the kind's. Each keeps the room its model takes, by how far
+   *  the model reaches round its origin for each of its height (`reaches`, by the model's id), where that's known.
    */
-  growWith(models: ReadonlyMap<string, string>, u: number, v: number): void {
+  growWith(
+    models: ReadonlyMap<string, string>,
+    u: number,
+    v: number,
+    reaches: ReadonlyMap<string, number> = new Map()
+  ): void {
     this.#plantModels = new Map(models);
+    this.#plantReaches = new Map(reaches);
     this.#focus = [u, v];
     // What was laid before, with the plants as they were drawn then, is let go.
     this.#landChanged();
@@ -814,6 +823,11 @@ class Land {
         },
         plantModel: (kind) =>
           plantModelOf(this.#plantModels, overlay.terrain, kind),
+        plantReach: (kind) => {
+          const model = plantModelOf(this.#plantModels, overlay.terrain, kind);
+
+          return model === null ? null : this.#plantReaches.get(model) ?? null;
+        },
         around: topology
           .directions()
           .filter((direction) => topology.neighbour(x, y, direction) !== null)
