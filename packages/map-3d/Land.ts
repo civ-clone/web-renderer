@@ -94,6 +94,9 @@ export class Land {
   #townsShown = true;
   // Where the map was last centred, for what's laid to be made nearest it first.
   #focus: [number, number] = [0, 0];
+  // The models sets draw plants with, by the plant as a set names it (`conifer`, or `Jungle:broadleaf` for a kind on a
+  //  terrain of its own), each the model's id among every set's.
+  #plantModels: ReadonlyMap<string, string> = new Map();
   // How far a square reaches from its middle every way, its outline's nearest edge; and half the biggest square, with
   //  sides along the ground's axes, that fits inside it.
   #radius: number;
@@ -347,6 +350,21 @@ export class Land {
     this.#layAgain(this.#besides(towns));
   }
 
+  /**
+   * The plants sets of models draw, and with which models (`models`, by the plant as a set names it, as `conifer` or
+   *  `Jungle:broadleaf`): every chunk's overlay laid again with them, the nearest to (`u`, `v`) first. A kind on a
+   *  terrain of its own is drawn with its own model before the kind's.
+   */
+  growWith(models: ReadonlyMap<string, string>, u: number, v: number): void {
+    this.#plantModels = new Map(models);
+    this.#focus = [u, v];
+    // What was laid before, with the plants as they were drawn then, is let go.
+    this.#landChanged();
+    [...this.#chunksOfSquares().keys()].forEach((key) =>
+      this.#overlaysDue.add(key)
+    );
+  }
+
   // The chunks with any of `squares` on them whose overlays are to be made again: those where what's laid on one has
   //  changed.
   #layAgain(squares: [number, number][]): void {
@@ -513,7 +531,8 @@ export class Land {
         { stepsU, stepsV, spacingU, spacingV } = this.#grid,
         mesh =
           making.laid.positions.length === 0 &&
-          making.laid.haze.positions.length === 0
+          making.laid.haze.positions.length === 0 &&
+          making.laid.plants.size === 0
             ? null
             : meshOf(i * stepsU * spacingU, j * stepsV * spacingV, making.laid);
 
@@ -768,6 +787,10 @@ export class Land {
 
           return tx === x && ty === y;
         },
+        plantModel: (kind) =>
+          this.#plantModels.get(`${overlay.terrain}:${kind}`) ??
+          this.#plantModels.get(kind) ??
+          null,
         around: topology
           .directions()
           .filter((direction) => topology.neighbour(x, y, direction) !== null)

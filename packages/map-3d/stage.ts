@@ -10,6 +10,7 @@
 import {
   ACESFilmicToneMapping,
   PCFSoftShadowMap,
+  Box3,
   BufferAttribute,
   BufferGeometry,
   Color,
@@ -20,13 +21,20 @@ import {
   Fog,
   Group,
   HemisphereLight,
+  FrontSide,
   IcosahedronGeometry,
+  InstancedBufferAttribute,
+  InstancedMesh,
+  Matrix4,
   Mesh,
   MeshBasicMaterial,
+  MeshDepthMaterial,
   MeshStandardMaterial,
   Object3D,
   PerspectiveCamera,
   Plane,
+  Quaternion,
+  RGBADepthPacking,
   SRGBColorSpace,
   Scene,
   SkinnedMesh,
@@ -52,12 +60,17 @@ import {
 import { TileMarker } from './markers/markerFor';
 import { idleChanges } from './idling';
 import unitUnder from './markers/pickUnit';
-import { OverlayMesh } from './overlay/overlayMesh';
+import { OverlayMesh, PLANT_NUMBERS } from './overlay/overlayMesh';
 import { FIELD_OF_VIEW, Orbit, eye, sightFor } from './camera/orbit';
 import Water, { Clouds, Ground, SMOG_ORDER } from './water';
 import YieldIcons from './yieldIcons';
 import { YieldMesh } from './yields';
-import { LoadedRig, loadModels, modelKey } from './models/loadModels';
+import {
+  LoadedModel,
+  LoadedRig,
+  loadModels,
+  modelKey,
+} from './models/loadModels';
 import { ClipRole, ShotKind } from './models/modelSet';
 import {
   ClipBefore,
@@ -211,15 +224,28 @@ export interface Stage {
   /**
    * Loads the set of models whose manifest is at `url` (`models/loadModels.ts`), to draw units with: `loaded` is told
    *  of each model as it's ready, by an id of its own among every set's (`modelKey`), with the unit types it draws, and
-   *  again once its rigged copy is, where it has one.
+   *  again once its rigged copy is, where it has one. Each that draws plants (trees) is drawn wherever an overlay's
+   *  plants name it, and `grown` is told of it as it's ready, with the plants it draws.
    *  Resolves once all have been tried, or rejects saying why there's none. A stage that draws no models has none.
    */
   loadModels?(
     url: string,
-    loaded: (id: string, types: readonly string[]) => void
+    loaded: (id: string, types: readonly string[]) => void,
+    grown?: (id: string, plants: readonly string[]) => void
   ): Promise<void>;
   dispose(): void;
 }
+
+// A model a set draws plants with, as the stage draws it: each of its parts, with its material and its shadow's; and
+//  how tall it stands over its origin, where it meets the ground (its roots may reach below), in its own units.
+type PlantModel = {
+  parts: {
+    geometry: BufferGeometry;
+    material: MeshStandardMaterial;
+    depth: MeshDepthMaterial;
+  }[];
+  height: number;
+};
 
 export type StageOptions = {
   // How far along the world repeats, across and down (`null` down for a world that doesn't wrap over the poles).
@@ -466,6 +492,52 @@ export const createStage: StageFactory = (
         span: [number, number];
       }
     >(),
+    // Each drawn copy's plants, as a set's models draw them: let go of with it.
+    letGoOfPlants = (drawn: Object3D): void =>
+      drawn.children.forEach((child) => {
+        if ((child as InstancedMesh).isInstancedMesh) {
+          (child as InstancedMesh).dispose();
+        }
+      }),
+    // The models sets draw plants with, by their ids among every set's (`modelKey`): each of its parts, with its
+    //  material, as a tree's leaves are cut out and both sides drawn, and its shadow cut out as they are; and how tall
+    //  the model stands over its origin, in its own units.
+    plantModels = new Map<string, PlantModel>(),
+    // A model drawing plants made ready: its parts' materials, clipped as what's laid on the land is.
+    plantModelOf = (model: LoadedModel): PlantModel => {
+      const box = new Box3();
+
+      model.parts.forEach(({ geometry }) => {
+        geometry.computeBoundingBox();
+        box.union(geometry.boundingBox!);
+      });
+
+      return {
+        parts: model.parts.map(({ geometry, map, cutout, doubleSided }) => {
+          const side = cutout || doubleSided ? DoubleSide : FrontSide,
+            material = new MeshStandardMaterial({
+              map,
+              roughness: 0.85,
+              metalness: 0,
+              alphaTest: cutout ? 0.5 : 0,
+              side,
+              clipShadows: true,
+            }),
+            depth = new MeshDepthMaterial({
+              depthPacking: RGBADepthPacking,
+              map,
+              alphaTest: cutout ? 0.5 : 0,
+              side,
+            });
+
+          material.clippingPlanes = overlayMaterial.clippingPlanes;
+          depth.clippingPlanes = overlayMaterial.clippingPlanes;
+
+          return { geometry, material, depth };
+        }),
+        height: Math.max(box.max.y, 1e-6),
+      };
+    },
     overlayMaterial = new MeshStandardMaterial({
       vertexColors: true,
       roughness: 0.9,
@@ -899,6 +971,12 @@ export const createStage: StageFactory = (
     clouds.pastThePoles(seen.v !== null);
     overlayMaterial.clippingPlanes = seen.v === null ? poles : null;
     hazeMaterial.clippingPlanes = overlayMaterial.clippingPlanes;
+    plantModels.forEach(({ parts }) =>
+      parts.forEach(({ material, depth }) => {
+        material.clippingPlanes = overlayMaterial.clippingPlanes;
+        depth.clippingPlanes = overlayMaterial.clippingPlanes;
+      })
+    );
     stopped = seen.v === null;
 
     // The copies of the world the haze doesn't hide: when they change, every chunk is drawn at the new ones. And the
@@ -1045,7 +1123,10 @@ export const createStage: StageFactory = (
         old = overlays.get(key);
 
       if (old !== undefined) {
-        old.drawn.forEach((drawn) => land.remove(drawn));
+        old.drawn.forEach((drawn) => {
+          letGoOfPlants(drawn);
+          land.remove(drawn);
+        });
         old.geometry.dispose();
         old.haze?.dispose();
         overlays.delete(key);
@@ -1077,40 +1158,107 @@ export const createStage: StageFactory = (
         haze.computeBoundingBox();
       }
 
-      // What's laid and its haze together: one may be all there is, as pollution alone.
-      const box = geometry
-          .boundingBox!.clone()
-          .union(haze?.boundingBox ?? geometry.boundingBox!),
-        overlay: Placed & {
-          geometry: BufferGeometry;
-          haze: BufferGeometry | null;
-          span: [number, number];
-        } = {
-          geometry,
-          haze,
-          // How far down the ground it reaches, from its top to its bottom.
-          span: [mesh.v + (box?.min.z ?? 0), mesh.v + (box?.max.z ?? 0)],
-          at: [mesh.u, 0, mesh.v],
-          make: () => {
-            const drawn = new Mesh(geometry, overlayMaterial);
+      // Its plants, as a set's models draw them: each model's, where it's had, every plant's matrix in one buffer every
+      //  copy of the world shares, standing on the land as tall as it's laid and turned its way.
+      const plants: {
+          model: PlantModel;
+          matrices: InstancedBufferAttribute;
+        }[] = [],
+        plantsBox = new Box3(),
+        matrix = new Matrix4(),
+        turn = new Quaternion(),
+        up = new Vector3(0, 1, 0),
+        at = new Vector3(),
+        size = new Vector3();
 
-            // Its specials, huts and mines cast shadows; what's laid flat takes the land's.
-            drawn.castShadow = true;
-            drawn.receiveShadow = true;
+      Object.entries(mesh.plants).forEach(([id, laid]) => {
+        const model = plantModels.get(id);
 
-            if (haze !== null) {
-              const smog = new Mesh(haze, hazeMaterial);
+        if (model === undefined) {
+          return;
+        }
 
-              // After the sea and before the cloud (`SMOG_ORDER`): drawn before the sea, smog over the land where
-              //  the sea's behind it would be painted over, cut along the shore.
-              smog.renderOrder = SMOG_ORDER;
-              drawn.add(smog);
-            }
+        const count = laid.length / PLANT_NUMBERS,
+          matrices = new Float32Array(count * 16);
 
-            return drawn;
-          },
-          drawn: [],
-        };
+        for (let n = 0; n < count; n++) {
+          const [u, y, v, height, facing] = laid.subarray(
+              n * PLANT_NUMBERS,
+              (n + 1) * PLANT_NUMBERS
+            ),
+            scale = height! / model.height;
+
+          matrix
+            .compose(
+              at.set(u!, y!, v!),
+              turn.setFromAxisAngle(up, facing!),
+              size.set(scale, scale, scale)
+            )
+            .toArray(matrices, n * 16);
+          plantsBox.expandByPoint(at.set(u!, y!, v!));
+        }
+
+        plants.push({
+          model,
+          matrices: new InstancedBufferAttribute(matrices, 16),
+        });
+      });
+
+      // What's laid, its haze and its plants together: one may be all there is, as pollution alone.
+      const box = new Box3();
+
+      [geometry.boundingBox, haze?.boundingBox, plantsBox].forEach((each) => {
+        if (each !== undefined && each !== null && !each.isEmpty()) {
+          box.union(each);
+        }
+      });
+
+      const overlay: Placed & {
+        geometry: BufferGeometry;
+        haze: BufferGeometry | null;
+        span: [number, number];
+      } = {
+        geometry,
+        haze,
+        // How far down the ground it reaches, from its top to its bottom.
+        span: [mesh.v + box.min.z, mesh.v + box.max.z],
+        at: [mesh.u, 0, mesh.v],
+        make: () => {
+          const drawn = new Mesh(geometry, overlayMaterial);
+
+          // Its specials, huts and mines cast shadows; what's laid flat takes the land's.
+          drawn.castShadow = true;
+          drawn.receiveShadow = true;
+
+          if (haze !== null) {
+            const smog = new Mesh(haze, hazeMaterial);
+
+            // After the sea and before the cloud (`SMOG_ORDER`): drawn before the sea, smog over the land where
+            //  the sea's behind it would be painted over, cut along the shore.
+            smog.renderOrder = SMOG_ORDER;
+            drawn.add(smog);
+          }
+
+          // Its plants, each model's part drawn once for all of them, casting shadows cut out as its leaves are.
+          plants.forEach(({ model, matrices }) =>
+            model.parts.forEach(({ geometry: part, material, depth }) => {
+              // Made empty, to take the shared matrices rather than make its own.
+              const grown = new InstancedMesh(part, material, 0);
+
+              grown.instanceMatrix = matrices;
+              grown.count = matrices.count;
+              grown.customDepthMaterial = depth;
+              grown.castShadow = true;
+              grown.receiveShadow = true;
+              grown.computeBoundingSphere();
+              drawn.add(grown);
+            })
+          );
+
+          return drawn;
+        },
+        drawn: [],
+      };
 
       overlay.drawn = overlayCopiesOf(overlay);
       overlays.set(key, overlay);
@@ -1474,7 +1622,7 @@ export const createStage: StageFactory = (
       yieldsPlaced.drawn = copiesOf(yieldsPlaced, yieldsGroup);
     },
     view,
-    loadModels: async (url, loaded): Promise<void> => {
+    loadModels: async (url, loaded, grown): Promise<void> => {
       await loadModels(
         url,
         (id, model, types) => {
@@ -1510,6 +1658,22 @@ export const createStage: StageFactory = (
           if (kit.rigOf(key) === rig) {
             loaded(key, types);
           }
+        },
+        // A model drawing plants: drawn wherever an overlay's plants name it, once the view's told and they're laid.
+        (id, model, plants) => {
+          if (disposed) {
+            model.parts.forEach(({ geometry, map }) => {
+              geometry.dispose();
+              map?.dispose();
+            });
+
+            return;
+          }
+
+          const key = modelKey(url, id);
+
+          plantModels.set(key, plantModelOf(model));
+          grown?.(key, plants);
         }
       );
     },
@@ -1522,13 +1686,23 @@ export const createStage: StageFactory = (
       disposed = true;
       chunks.forEach(({ geometry }) => geometry.dispose());
       chunks.clear();
-      overlays.forEach(({ geometry, haze }) => {
+      overlays.forEach(({ geometry, haze, drawn }) => {
+        drawn.forEach(letGoOfPlants);
         geometry.dispose();
         haze?.dispose();
       });
       overlays.clear();
       overlayMaterial.dispose();
       hazeMaterial.dispose();
+      plantModels.forEach(({ parts }) =>
+        parts.forEach(({ geometry, material, depth }) => {
+          geometry.dispose();
+          material.map?.dispose();
+          material.dispose();
+          depth.dispose();
+        })
+      );
+      plantModels.clear();
       markers.forEach(({ faded, drawn, idling }) => {
         if (faded !== undefined) {
           unfade(faded);

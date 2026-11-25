@@ -630,6 +630,22 @@ How plants are placed:
   - **The shore:** trees stand on dry land; a swamp's reeds stand in the shallows too.
   - **Cost:** an all-forest chunk has 48,000–58,000 triangles, 11–40% more than when each square scattered its own,
     and takes 35–50 ms to lay rather than 24–43, a few squares a frame as before.
+- **A set's trees** (#1335): where a set of models draws a kind of plant (`names.plant`, §10), each of that kind is laid
+  as where it stands, how tall and its turn (the overlay's `plants`, by the model), not as the built-in set's shapes,
+  and drawn as the set's model.
+  - **Which:** a kind on a terrain of its own (`Jungle:broadleaf`) is drawn with its own model before the kind's; of
+    several sets, the earliest the page names draws it, as with units. When a set's plants arrive, every chunk's overlay
+    is laid again (`Land#growWith`), nearest the camera first.
+  - **Size:** as tall as the built-in set's shape of its kind would be (`PLANT_HEIGHT`, times its size), by the model's
+    height over its origin, where it meets the ground; its roots may reach below. Not at the set's scale, which is its
+    units'.
+  - **Drawing:** a chunk's plants of each model are one instanced draw call for each of its parts, their matrices one
+    buffer shared by every copy of the world. Leaves are cut out where their texture's under half solid, drawn from
+    both sides, and cast shadows cut out as they are. They're clipped past a pole the view's stopped at, as the rest of
+    the overlay is.
+  - **The shipped trees:** civ-clone/models-0ad's, from 0 A.D.: a pine (`conifer`, 58 triangles), a beech
+    (`broadleaf`, 82), a teak (`Jungle:broadleaf`, 124), a date palm (`palm`, 208) and a dead tree (`deadTree`, 199).
+    A forest of pines and beeches costs about what the built-in set's trees do.
 
 ### 5.2 Specials and huts
 
@@ -1383,10 +1399,13 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
   - its scale, the 3D map's squares to each of its models' units, which a model may set for itself;
   - each model's file, a glTF binary (`.glb`) beside the manifest: not the site's root, above the set, nor another
     site, nor with anything a URL reads as other than it says (`%`, `?`, `#`, a space or a control character);
-  - each unit type it draws, by the engine's name for it, drawn by one of its models.
+  - each unit type it draws, by the engine's name for it, drawn by one of its models;
+  - each plant it draws, where it draws any (`names.plant`, #1335): by the 3D map's kind (`conifer`, `broadleaf`,
+    `palm`, `deadTree` and the rest of the vegetation table's), or a kind on a terrain of its own (`Jungle:broadleaf`),
+    letters only, drawn by one of its models.
 
   A manifest that isn't one is refused, saying why, and the map draws the built-in set's figures.
-- **Loading** (`loadModels.ts`): the stage fetches the manifest, then each model that draws a unit type, glTF
+- **Loading** (`loadModels.ts`): the stage fetches the manifest, then each model that draws a unit type or a plant, glTF
   binaries read with three.js's `GLTFLoader`. Only from this site:
   - each address is checked before it's fetched (`onSite`), a redirect is refused, and each model must be beside the
     manifest;

@@ -453,6 +453,9 @@ export class MapView3D implements MapRenderer {
   #models = new Map<string, { id: string; rank: number }>();
   #modelOf = (type: string): string | null =>
     this.#models.get(type)?.id ?? null;
+  // The model each plant's drawn with, by the plant as a set names it (`conifer`, `Jungle:broadleaf`), from the sets of
+  //  models as each model's loaded, with the rank of the set it's from: the built-in set's shapes for the rest.
+  #plants = new Map<string, { id: string; rank: number }>();
   // Whether models have arrived since the squares were last marked: they're all marked again at the next frame, once
   //  however many arrived.
   #modelsArrived = false;
@@ -653,27 +656,53 @@ export class MapView3D implements MapRenderer {
   }
 
   // The set of models at `url`, `rank`th of the page's, loaded: each unit type its models draw marked again with its
-  //  model as each arrives, unless an earlier set's (a lower rank's) already has. One that can't be had leaves what
-  //  the type was drawn with, a later set's or the built-in set's figures, said once.
+  //  model as each arrives, unless an earlier set's (a lower rank's) already has, and each plant they draw laid again
+  //  with its model, likewise. One that can't be had leaves what the type was drawn with, a later set's or the built-in
+  //  set's figures, said once.
   #loadModels(url: string, rank: number): void {
     this.#stage
-      .loadModels?.(url, (id, types) => {
-        if (this.#disposed) {
-          return;
+      .loadModels?.(
+        url,
+        (id, types) => {
+          if (this.#disposed) {
+            return;
+          }
+
+          const taken = types.filter(
+            (type) => (this.#models.get(type)?.rank ?? Infinity) >= rank
+          );
+
+          if (taken.length === 0) {
+            return;
+          }
+
+          taken.forEach((type) => this.#models.set(type, { id, rank }));
+          this.#modelsArrived = true;
+          this.#draw();
+        },
+        (id, plants) => {
+          if (this.#disposed) {
+            return;
+          }
+
+          const taken = plants.filter(
+            (plant) => (this.#plants.get(plant)?.rank ?? Infinity) >= rank
+          );
+
+          if (taken.length === 0) {
+            return;
+          }
+
+          taken.forEach((plant) => this.#plants.set(plant, { id, rank }));
+          this.#land.growWith(
+            new Map(
+              [...this.#plants].map(([plant, { id: of }]) => [plant, of])
+            ),
+            ...this.#orbit.focus
+          );
+          this.#draw();
         }
-
-        const taken = types.filter(
-          (type) => (this.#models.get(type)?.rank ?? Infinity) >= rank
-        );
-
-        if (taken.length === 0) {
-          return;
-        }
-
-        taken.forEach((type) => this.#models.set(type, { id, rank }));
-        this.#modelsArrived = true;
-        this.#draw();
-      })
+      )
       .catch((error: unknown) =>
         console.warn("The 3D map's models couldn't be loaded:", error)
       );
