@@ -5338,7 +5338,7 @@ const differing = (
 
       return Math.hypot(u - au - du * t, v - av - dv * t);
     },
-    // Where a channel crosses a row, found the long way: every hundredth of a unit along each of five lines down it.
+    // Where a channel crosses a row, found the long way: every thousandth of a unit along each of five lines down it.
     longWay = (
       a: readonly [number, number],
       b: readonly [number, number],
@@ -5506,6 +5506,40 @@ const differing = (
     courses.map(([name]) => [name, 0, true, true, true, true])
   );
 
+  // A city beside it, its houses spread onto it: none of them in the river, where without it some are.
+  const besideCity = overlayFor(
+      square(['Irrigation'], { terrain: 'Grassland' }),
+      [
+        {
+          offset: [-1, 0],
+          tile: {
+            improvements: [],
+            city: { id: 'City-River', name: 'River', growth: { size: 12 } },
+          },
+        } as unknown as OverlayNeighbour,
+      ]
+    )!,
+    spread = courses.map(([name, path]) => {
+      const wet = soup(),
+        dry = soup(),
+        laid = layOverlay(besideCity, { ...place(17, 3), rivers: [path] }, wet);
+
+      layOverlay(besideCity, place(17, 3), dry);
+
+      return [
+        name,
+        within(wet, path, reach - 0.01),
+        within(dry, path, reach - 0.01) > 0,
+        laid.taken.length > 0,
+      ];
+    });
+
+  expect(
+    'a city beside the square, its houses spread onto it: none of them, nor its fields, within the river’s channel, where without it they are; some houses still',
+    spread,
+    courses.map(([name]) => [name, 0, true, true])
+  );
+
   // Roads every way, and a mine: where there's room nowhere, a mine stands where there's most, which isn't in the river.
   const mined = overlayFor(square(['Mine', 'Road'], { terrain: 'Hills' }), [
       neighbour([0, -1], ['Road']),
@@ -5541,11 +5575,20 @@ const differing = (
     reach = RIVER_WIDTH + FLOOR,
     // Within the channel wherever the course bends: its reach, less how far a bend can take it off the line.
     band = reach - MEANDER - 0.01,
-    laidNear = (river: Set<string>, extra?: [number, number]) => {
-      const tiles = Array.from({ length: width * height }, (_, at) => {
+    // Civ1's River terrain, or Civ2's River feature on grassland, whose overlay's the same as without it: only its
+    //  river says what's laid round it is to be laid again.
+    laidNear = (
+      river: Set<string>,
+      extra?: [number, number],
+      feature = false
+    ) => {
+      const riverOn = (name: string) =>
+          feature
+            ? { _: 'Grassland', __: ['Grassland'], features: [{ _: 'River' }] }
+            : { _: name, __: [name], features: [] },
+        tiles = Array.from({ length: width * height }, (_, at) => {
           const x = at % width,
-            y = Math.floor(at / width),
-            name = river.has(`${x},${y}`) ? 'River' : 'Grassland';
+            y = Math.floor(at / width);
 
           return {
             x,
@@ -5556,7 +5599,9 @@ const differing = (
             city: null,
             units: [],
             improvements: [{ _: 'Irrigation' }],
-            terrain: { _: name, __: [name], features: [] },
+            terrain: river.has(`${x},${y}`)
+              ? riverOn('River')
+              : { _: 'Grassland', __: ['Grassland'], features: [] },
           };
         }),
         world = new World({
@@ -5617,7 +5662,7 @@ const differing = (
       // A square more of the river.
       const tile = tiles[extra[1] * width + extra[0]]!;
 
-      tile.terrain = { _: 'River', __: ['River'], features: [] };
+      tile.terrain = riverOn('River') as never;
       land.changed([extra], 0, 0);
       land.build(stage, null);
 
@@ -5625,12 +5670,13 @@ const differing = (
     };
 
   expect(
-    'an irrigated world with a river: nothing’s laid near the line through its squares’ middles, where its fields are with none; a square more, and none’s laid near that either',
+    'an irrigated world with a river, Civ1’s or Civ2’s: nothing’s laid near the line through its squares’ middles, where its fields are with none; a square more, and none’s laid near that either',
     [
       laidNear(new Set(['3,4', '4,4', '5,4', '6,4']), [7, 4]),
+      laidNear(new Set(['3,4', '4,4', '5,4', '6,4']), [7, 4], true),
       laidNear(new Set())[0]! > 0,
     ],
-    [[0, 0], true]
+    [[0, 0], [0, 0], true]
   );
 }
 

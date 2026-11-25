@@ -774,8 +774,8 @@ class Layer {
   }
 
   /**
-   * Whether (`u`, `v`) has `room` clear of the square's lines, of what stands there already, and of the stand, by
-   *  `stand` from the middle.
+   * Whether (`u`, `v`) has `room` clear of the square's lines, of its rivers' channels, of what stands there already,
+   *  and of the stand, by `stand` from the middle.
    */
   hasRoom(u: number, v: number, room: number, stand = STAND_CLEAR): boolean {
     return this.clearance(u, v, room, false, stand) >= 0;
@@ -1331,6 +1331,8 @@ const suburbs = (
       taken: layer.taken,
       // Out of the sea, where the land dips below it at the shore.
       ground: (u: number, v: number) => place.heightAt(u, v),
+      // And out of the rivers' channels.
+      channels: layer.channels,
     },
     lots = overlay.suburbs.flatMap((plan) =>
       suburb(place, plan, {
