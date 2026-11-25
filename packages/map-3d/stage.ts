@@ -1190,9 +1190,7 @@ export const createStage: StageFactory = (
               size.set(scale, scale, scale)
             )
             .toArray(matrices, n * 16);
-          // Its foot and its top.
           plantsBox.expandByPoint(at.set(u!, y!, v!));
-          plantsBox.expandByPoint(at.set(u!, y! + height!, v!));
         }
 
         const shared = new InstancedBufferAttribute(matrices, 16);
