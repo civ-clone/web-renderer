@@ -77,6 +77,13 @@ engine.on('game:start', (): void => {
     map.terrain.replace(/\n/g, '')
   );
 
+  // What a save keeps of it (#175): the option that chose the map isn't saved.
+  expect(
+    'the world records that the Earth made it',
+    world.generatorId(),
+    'earth'
+  );
+
   const players = playerRegistryInstance.entries();
 
   expect('14 civilizations are playing', players.length, 14);
@@ -95,6 +102,16 @@ engine.on('game:start', (): void => {
       { x: startTile.x(), y: startTile.y() }
     );
   });
+
+  // An option set to `false` or `0` is that, not the default (#175).
+  engine.setOption('earth', false);
+  engine.setOption('landSize', 0);
+
+  expect(
+    'a stored false or 0 option is kept',
+    [engine.option('earth', true), engine.option('landSize', 0.2)],
+    [false, 0]
+  );
 
   if (failures.length > 0) {
     process.stderr.write(
