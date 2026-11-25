@@ -30,6 +30,7 @@ import {
   SpecialLook,
   specialLook,
 } from '@civ-clone/ui-models-builtin/specials';
+import { seaFloor } from '@civ-clone/ui-models-builtin/terrain';
 import {
   Growth,
   Plant,
@@ -611,7 +612,8 @@ class Layer {
 
   /**
    * A place for something taking the most of `rooms` (largest first) it has room for inside the square, but for
-   *  `EDGE_REACH`, taken for it, with the room it takes: as `claim`, with the last where none has room for any.
+   *  `EDGE_REACH`, taken for it, with the room it takes: as `claim`, but trying a ring a little nearer in too, and the
+   *  last of `rooms` where none has room for any.
    */
   claimMost(
     n: number,
@@ -1245,7 +1247,7 @@ const herd = (
     ];
 
     // None stands in the sea, where its room reaches past the shore.
-    if (layer.ground(...where) < 0) {
+    if (inTheSea(layer.ground(...where))) {
       return;
     }
 
@@ -1355,6 +1357,10 @@ const SPECIAL_REACH: { readonly [shape in SpecialLook['shape']]?: number } = {
   cairn: 0.0375,
 };
 
+// Whether a special's piece at a height of the land `y` would stand in the sea, where its room reaches past a shore: on
+//  the sea's floor, not on land just under the water's level at the shore, as a low swamp's can be.
+const inTheSea = (y: number): boolean => y < seaFloor.shore;
+
 // How far an oasis's palms lean out at their tops, whatever its size, as they're as tall.
 const SPECIAL_LEAN = 0.16 * Math.sin(0.15) * 0.5;
 
@@ -1392,7 +1398,7 @@ const special = (
       return;
     case 'logs':
       // Not in the sea.
-      if (layer.ground(...at) >= 0) {
+      if (!inTheSea(layer.ground(...at))) {
         logStack(layer, look, at, facing, f);
       }
 
@@ -1409,7 +1415,7 @@ const special = (
       lumps.forEach(([u, v, big], index) => {
         const y = layer.ground(u, v);
 
-        if (y >= 0) {
+        if (!inTheSea(y)) {
           layer.solid(
             sphere,
             [u, y + 0.016 * big, v],
@@ -1437,7 +1443,12 @@ const special = (
       turn = fraction(seed, n * 31 + index + 17) * Math.PI * 2;
 
     // An oasis's pool and palms, and a cairn, see to it themselves.
-    if (!afloat && look.shape !== 'oasis' && look.shape !== 'cairn' && y < 0) {
+    if (
+      !afloat &&
+      look.shape !== 'oasis' &&
+      look.shape !== 'cairn' &&
+      inTheSea(y)
+    ) {
       return;
     }
 
@@ -1516,7 +1527,7 @@ const special = (
         );
         break;
       case 'oasis': {
-        if (index === 0 && layer.ground(...at) >= 0) {
+        if (index === 0 && !inTheSea(layer.ground(...at))) {
           layer.disc(at, 0.1 * f, detail, LIFT.field + 0.002);
         }
 
@@ -1527,7 +1538,7 @@ const special = (
           ],
           py = layer.ground(pu, pv);
 
-        if (py < 0) {
+        if (inTheSea(py)) {
           break;
         }
 
@@ -1562,7 +1573,7 @@ const special = (
         break;
       default:
         // A cairn: stones piled, smaller as they go up, not in the sea.
-        if (layer.ground(...at) < 0) {
+        if (inTheSea(layer.ground(...at))) {
           break;
         }
 

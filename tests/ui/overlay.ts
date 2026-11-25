@@ -572,8 +572,9 @@ expect(
 //  walls, where nothing has room), wherever it stands: on a square with nothing else, with roads every way, and
 //  inside a fortress, on 40 squares each, as where it stands is seeded. What's drawn of it is what's laid on the
 //  square with it less what's laid without it. Inside a fortress, where it has least room, what isn't a beast or logs
-//  keeps its height, as it's only drawn narrower to fit. On a shore, nothing of one on land stands in the sea. Entering
-//  a hut moves no special, as specials are claimed first. A log's cut ends face out.
+//  keeps its height, as it's only drawn narrower to fit. On a shore, nothing of one on land stands in the sea, but on
+//  land just under the water's level it's still drawn. Entering a hut moves no special, as specials are claimed first.
+//  A log's cut ends face out.
 {
   const FLAT = 0.1,
     everyWay = [
@@ -687,10 +688,27 @@ expect(
     })
   );
 
-  const tallest = (key: string, improvements: string[]) =>
-      Math.max(
-        ...drawn(key, improvements, [], 7).points.map(([, y]) => y - FLAT)
-      ),
+  const landKeys = [
+      'Horse',
+      'Seal',
+      'Ivory',
+      'Peat',
+      'Spice',
+      'Wheat',
+      'Coal',
+      'Shield',
+      'Oasis',
+      'Oil',
+      'Unobtainium',
+    ],
+    // How tall it stands over the land, or nothing where nothing's drawn.
+    tallest = (key: string, improvements: string[]) => {
+      const { points } = drawn(key, improvements, [], 7);
+
+      return points.length === 0
+        ? null
+        : Math.max(...points.map(([, y]) => y - FLAT));
+    },
     lowered = [
       'Oil',
       'Oasis',
@@ -699,23 +717,35 @@ expect(
       'Coal',
       'Peat',
       'Unobtainium',
-    ].filter(
-      (key) => Math.abs(tallest(key, ['Fortress']) - tallest(key, [])) > 1e-6
-    ),
-    // On a square half land and half sea, east of its middle: what's under the sea's level, by more than a lump sinks
-    //  into the land.
-    wet = ['Horse', 'Seal', 'Ivory', 'Peat', 'Wheat', 'Coal', 'Shield', 'Oasis']
-      .flatMap((key) =>
-        Array.from({ length: 40 }, (_, at) => {
-          const x = at + 1,
-            { points } = drawn(key, [], [], x, (u) =>
-              u < x + 0.5 ? FLAT : -0.2
-            );
+    ].filter((key) => {
+      const open = tallest(key, []),
+        walled = tallest(key, ['Fortress']);
 
-          return points.some(([, y]) => y < -0.02) ? [`${key} ${x}`] : [];
-        })
+      return open === null || walled === null || Math.abs(walled - open) > 1e-6;
+    }),
+    // On a square half land and half sea, east of its middle, on 40 squares each: what's under the sea's level, by
+    //  more than a lump sinks into the land; and how often something's drawn, where its claim's on the land.
+    shore = landKeys.map((key) => {
+      let wet = 0,
+        shown = 0;
+
+      for (let x = 1; x <= 40; x++) {
+        const { points } = drawn(key, [], [], x, (u) =>
+          u < x + 0.5 ? FLAT : -0.2
+        );
+
+        wet += points.some(([, y]) => y < -0.02) ? 1 : 0;
+        shown += points.length > 0 ? 1 : 0;
+      }
+
+      return { key, wet, shown };
+    }),
+    // On land just under the water's level, as a low swamp's can be at the shore: still drawn, on 10 squares each.
+    shallow = landKeys.filter((key) =>
+      Array.from({ length: 10 }, (_, at) => at + 1).some(
+        (x) => drawn(key, [], [], x, () => -0.012).points.length === 0
       )
-      .flat(),
+    ),
     // Where its special stands, with a hut on the square and without.
     hutMoves = Array.from({ length: 40 }, (_, at) => at + 1).filter((x) => {
       const claimed = (hut: boolean) =>
@@ -739,9 +769,18 @@ expect(
     []
   );
   expect(
-    'inside a fortress, what isn’t a beast or logs is as tall as on open land; on a shore, nothing of one on land is in the sea; a hut moves no special; a log’s cut ends face out',
-    [lowered, wet.slice(0, 5), hutMoves, stack.ends > 0, stack.inward],
-    [[], [], [], true, 0]
+    'inside a fortress, what isn’t a beast or logs is as tall as on open land; a hut moves no special; a log’s cut ends face out',
+    [lowered, hutMoves, stack.ends > 0, stack.inward],
+    [[], [], true, 0]
+  );
+  expect(
+    'on a shore, nothing of a special on land is in the sea, and where its claim’s on the land it’s drawn; on land just under the water’s level it’s still drawn',
+    [
+      shore.filter(({ wet }) => wet > 0).map(({ key }) => key),
+      shore.filter(({ shown }) => shown < 10).map(({ key }) => key),
+      shallow,
+    ],
+    [[], [], []]
   );
 }
 
