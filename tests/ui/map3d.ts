@@ -1151,6 +1151,32 @@ expect(
 
     blinking.setActiveUnit(warriors as unknown as Unit);
 
+    // With frames, a tick asks for one, which only draws the scene again: no chunk laid, the camera not moved.
+    const blinkFrames: ((time: number) => void)[] = [];
+
+    Object.assign(globalThis, {
+      requestAnimationFrame: (callback: (time: number) => void): number =>
+        blinkFrames.push(callback),
+      cancelAnimationFrame: (): void => {},
+    });
+    staged.splice(0);
+
+    const chunksBefore = chunkBuilds.length,
+      viewsBefore = seenDown.length,
+      framed: unknown[] = [ticks(1), blinkFrames.length];
+
+    blinkFrames
+      .splice(0)
+      .forEach((callback) => callback(performance.now() + 1000));
+    framed.push(
+      staged.splice(0),
+      chunkBuilds.length - chunksBefore,
+      seenDown.length - viewsBefore,
+      blinkFrames.length
+    );
+    delete (globalThis as any).requestAnimationFrame;
+    delete (globalThis as any).cancelAnimationFrame;
+
     // Walking needs frames: those asked for given once it's set off.
     const asked: ((time: number) => void)[] = [];
 
@@ -1185,7 +1211,7 @@ expect(
     blinking.dispose();
 
     expect(
-      'the unit awaiting orders marked as chosen: a ring but for a blink alone, its figures hidden and shown in turn where it blinks, shown when marked afresh, a change taking at the next tick, in the theme’s colour, a colour chosen taking at the next tick too, none blinking with no unit awaiting orders, walking without a ring where it blinks, and the blink stopped once the map’s gone',
+      'the unit awaiting orders marked as chosen: a ring but for a blink alone, its figures hidden and shown in turn where it blinks, shown when marked afresh, a change taking at the next tick, in the theme’s colour, a colour chosen taking at the next tick too, none blinking with no unit awaiting orders, a tick with frames only drawing the scene again, walking without a ring where it blinks, and the blink stopped once the map’s gone',
       [
         blinkAlone,
         afresh,
@@ -1196,6 +1222,7 @@ expect(
         themed,
         recoloured,
         noneActive,
+        framed,
         walked.length > 0 &&
           walked.every(([active, ring]) => active && ring === false),
         stopped,
@@ -1221,6 +1248,7 @@ expect(
         '#e0b85a',
         [[[townKey, true]], '#ffffff'],
         [],
+        [[[townKey, false]], 1, ['render'], 0, 0, 0],
         true,
         true,
         [],

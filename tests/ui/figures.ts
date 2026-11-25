@@ -29,7 +29,11 @@ import {
   SpriteMaterial,
   Vector3,
 } from 'three';
-import unitUnder, { BLINKED_OUT } from '@civ-clone/ui-map-3d/markers/pickUnit';
+import unitUnder, {
+  BLINKED_OUT,
+  blinkAs,
+  blinkFigures,
+} from '@civ-clone/ui-map-3d/markers/pickUnit';
 import { UNIT_SCALE } from '@civ-clone/ui-map-3d/markers/drawMarker';
 import {
   UnitLook,
@@ -1297,25 +1301,46 @@ expect(
   );
 
   // Its figures hidden by the blink (`Stage#showFigures`), still its square, as they're seen there every other half a
-  //  second; hidden otherwise, not.
-  const figures = front.getObjectByName(FIGURES_PART)!;
+  //  second; hidden otherwise, not; shown again, as they were. A copy made afresh mid-blink (`Stage#drawIdling`) is
+  //  hidden too, and still picked; one made once it's shown again is shown.
+  const figures = front.getObjectByName(FIGURES_PART)!,
+    pointed = () => unitUnder(marked, camera, on(0, through, -0.04));
+
+  blinkFigures(front, false);
+
+  const blinkedOut = [figures.visible, pointed()],
+    copied = front.clone();
+
+  copied.getObjectByName(FIGURES_PART)!.visible = true;
+  blinkAs(front, copied);
+
+  const copiedOut = [
+    copied.getObjectByName(FIGURES_PART)!.visible,
+    unitUnder([['3,4', [copied]]], camera, on(0, through, -0.04)),
+  ];
 
   figures.visible = false;
-  figures.userData[BLINKED_OUT] = true;
-
-  const blinkedOut = unitUnder(marked, camera, on(0, through, -0.04));
-
-  figures.userData[BLINKED_OUT] = false;
-
-  const hidden = unitUnder(marked, camera, on(0, through, -0.04));
-
-  figures.visible = true;
   delete figures.userData[BLINKED_OUT];
 
+  const hidden = pointed();
+
+  blinkFigures(front, true);
+
+  const shownAgain = [figures.visible, pointed()];
+
+  blinkAs(front, copied);
+
   expect(
-    'a unit’s figures hidden by the blink are still its square’s; hidden otherwise, they aren’t',
-    [blinkedOut, hidden === '3,4'],
-    ['3,4', false]
+    'a unit’s figures hidden by the blink are still its square’s, and a copy made mid-blink’s; hidden otherwise, they aren’t; shown again, as before',
+    [
+      blinkedOut,
+      copiedOut,
+      hidden === '3,4',
+      shownAgain,
+      copied.getObjectByName(FIGURES_PART)!.visible,
+      blinkFigures(undefined, false),
+    ],
+    [[false, '3,4'], [false, '3,4'], false, [true, '3,4'], true, undefined]
   );
 
   // A squad close behind, where the same ray meets its figures too: the nearer's square, whichever's listed first.

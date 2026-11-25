@@ -439,7 +439,8 @@ export class MapView3D implements MapRenderer {
   }[] = [];
   #bannerCanvas: HTMLCanvasElement | null = null;
   #stopRestyled: () => void = (): void => {};
-  // A frame asked for to draw in, if one is; and whether it's to draw what's changed (`#draw`), not only units idling.
+  // A frame asked for to draw in, if one is; and whether it's to draw what's changed (`#draw`), not only units idling
+  //  or the blink.
   #frame: number | null = null;
   #wanted = false;
   // When the last frame drawn in a frame of the browser's began, by its clock; and the squares whose units were asked
@@ -3482,8 +3483,8 @@ export class MapView3D implements MapRenderer {
 
   // A frame: the tiles released taken, as many chunks built as the budget allows (every one, where there are no
   //  frames to spread them over), the camera on the square the map is centred on, and the scene drawn. Another frame
-  //  is asked for while chunks wait, and one only for units idling while they do. Drawn only for them (`idleOnly`),
-  //  nothing else has changed: they're posed, and the scene drawn.
+  //  is asked for while chunks wait, and one only for units idling while they do. Drawn only for them, or for the
+  //  blink's tick (`idleOnly`), nothing else has changed: what idles is posed, and the scene drawn.
   #frameDrawn(budget: number | null, idleOnly = false): void {
     const started = performance.now();
 
@@ -3734,8 +3735,8 @@ export class MapView3D implements MapRenderer {
   }
 
   // A frame asked for, if one isn't already: drawn whole if anything's asked for one by then (`#draw`), whenever it
-  //  comes; otherwise only for units idling, and only once `IDLE_FRAME` has passed since the last began, the frames
-  //  between passed over.
+  //  comes; otherwise only for units idling or the blink's tick, and only once `IDLE_FRAME` has passed since the last
+  //  began, the frames between passed over.
   #ask(): void {
     if (this.#disposed || this.#frame !== null) {
       return;

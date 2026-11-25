@@ -873,8 +873,9 @@ Each is looked up by its type name in the model set.
     white), whether it's standing or walking.
   - **Blink, or both:** its figures are hidden and shown in turn every half a second, as the 2D map's blink, while its
     flag and the pointer over it stay, and its stand where it's drawn with a model (the built-in set's figures are one
-    mesh with their stand). Marked afresh, it's shown, and blinks from there. Walking, it doesn't blink. Hidden, its
-    figures are still picked (§9.2, `BLINKED_OUT`), as the 2D map's blink doesn't change what's clicked either.
+    mesh with their stand). Each tick only draws the scene again, in a frame like those for units idling (§10, its
+    fifth part). Marked afresh, it's shown, and blinks from there. Walking, it doesn't blink. Hidden, its figures are
+    still picked (§9.2, `BLINKED_OUT`), as the 2D map's blink doesn't change what's clicked either.
   - **The pointer** over it, in the theme's colour, is drawn however it's marked, so it's found at any distance.
 - **Hidden units:** `t` hides units and cities, as it does on the 2D map, so the land shows as it is. A city's walls and
   name go, and its town: its buildings, on its square and round it, are laid with the land (§7.2), so every square with
@@ -1691,7 +1692,7 @@ stand. The map used to draw a frame only when something changed; while units idl
 - **Frames:** while any idles, frames are drawn for them about 30 a second (`IDLE_FRAME`, timed by when the
   browser's frames begin), the screen's others passed over. Such a frame only poses them and draws the scene: the camera, the land, the banners, the minimap and the rest
   are as they were. One asked for meanwhile, by anything that's changed, is drawn whole at once. Once none idle, the
-  frames stop.
+  frames stop. The blink's tick (§6.3) asks for one such frame too, as only its unit's figures have changed.
 - **Bounds** (`markers/rigBounds.ts`): a skinned mesh's own are its bind pose's, worked out once, so rigged copies
   weren't culled at all: each was drawn wherever it was. A rig's are now worked out as it's loaded, from the model's
   stance and every tenth of a second of each clip, and a tenth more, and taken by its copies, so one off the screen

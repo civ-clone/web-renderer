@@ -4,7 +4,7 @@
 //  the ground the figures hide.
 
 import { Camera, Mesh, Object3D, Raycaster, Vector2 } from 'three';
-import { UNIT_PART } from './drawMarker';
+import { FIGURES_PART, UNIT_PART } from './drawMarker';
 
 const raycaster = new Raycaster();
 
@@ -13,6 +13,30 @@ const raycaster = new Raycaster();
  *  they're seen there every other half a second, and the 2D map's blink doesn't change what's clicked either.
  */
 export const BLINKED_OUT = 'blinkedOut';
+
+/** `marker`'s figures, where it has them, shown or hidden by the blink: hidden, they're flagged to be picked still. */
+export const blinkFigures = (
+  marker: Object3D | undefined,
+  shown: boolean
+): void => {
+  const figures = marker?.getObjectByName(FIGURES_PART);
+
+  if (figures !== undefined) {
+    figures.visible = shown;
+    figures.userData[BLINKED_OUT] = !shown;
+  }
+};
+
+/** `to`'s figures shown or hidden as `from`'s are, mid-blink, so a copy made afresh blinks with them. */
+export const blinkAs = (from: Object3D, to: Object3D): void => {
+  const blinking = from.getObjectByName(FIGURES_PART),
+    figures = to.getObjectByName(FIGURES_PART);
+
+  if (blinking !== undefined && figures !== undefined) {
+    figures.visible = blinking.visible;
+    figures.userData[BLINKED_OUT] = blinking.userData[BLINKED_OUT] === true;
+  }
+};
 
 // `part` and what's in it shown, or hidden by the blink, gathered with its square's `key`.
 const gather = (

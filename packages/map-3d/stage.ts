@@ -58,7 +58,7 @@ import {
 } from './markers/drawMarker';
 import { TileMarker } from './markers/markerFor';
 import { idleChanges } from './idling';
-import unitUnder, { BLINKED_OUT } from './markers/pickUnit';
+import unitUnder, { blinkAs, blinkFigures } from './markers/pickUnit';
 import { OverlayMesh, PLANT_NUMBERS } from './overlay/overlayMesh';
 import { plantMatrices, plantsKept } from './overlay/thinning';
 import { FIELD_OF_VIEW, Orbit, eye, sightFor } from './camera/orbit';
@@ -927,15 +927,10 @@ export const createStage: StageFactory = (
       return;
     }
 
-    const original = markerOf(placed.marker, false, true),
-      // Its figures shown or hidden as the standing ones are, mid-blink (`showFigures`).
-      blinking = standing.getObjectByName(FIGURES_PART),
-      figures = original.getObjectByName(FIGURES_PART);
+    const original = markerOf(placed.marker, false, true);
 
-    if (blinking !== undefined && figures !== undefined) {
-      figures.visible = blinking.visible;
-      figures.userData[BLINKED_OUT] = blinking.userData[BLINKED_OUT] === true;
-    }
+    // Its figures shown or hidden as the standing ones are, mid-blink (`showFigures`).
+    blinkAs(standing, original);
 
     placed.idling = { rig, original, phase };
     placed.make = copyOf(original, true);
@@ -1383,15 +1378,7 @@ export const createStage: StageFactory = (
 
       // Its copies, and what they're copied from, so a copy made afresh blinks with them.
       [marked.original, marked.idling?.original, ...marked.drawn].forEach(
-        (each) => {
-          const figures = each?.getObjectByName(FIGURES_PART);
-
-          if (figures !== undefined) {
-            figures.visible = shown;
-            // Still picked while hidden (`unitUnder`).
-            figures.userData[BLINKED_OUT] = !shown;
-          }
-        }
+        (each) => blinkFigures(each, shown)
       );
     },
     setMarker: (key, at, marker): void => {
