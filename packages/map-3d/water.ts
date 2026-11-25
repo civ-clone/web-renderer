@@ -132,6 +132,12 @@ void main() {
 /** How long a square's cloud takes to clear once it's seen, in seconds (§4.5): at once under reduced motion. */
 export const CLOUD_CLEARING = 0.5;
 
+/**
+ * How many points clearing at once are sent each on its own (`Water#clear`), at most: more, as when much of the world is
+ *  seen at once, and the whole texture's sent instead. About 64 squares' worth.
+ */
+export const WHOLE_FROM = 4096;
+
 // What the texture holds of each point, in turn.
 const HEIGHT = 0,
   NEVER_SEEN = 1,
@@ -275,6 +281,16 @@ export class Water {
   clear(now: number, seconds: number): boolean {
     if (this.#clearing.size === 0) {
       return false;
+    }
+
+    // The whole texture sent rather than each point: where what was asked last time was never sent (the context lost
+    //  meanwhile, and made again empty), or where so much clears at once that one upload is cheaper.
+    if (
+      this.#texture.updateRanges.length > 0 ||
+      this.#clearing.size > WHOLE_FROM
+    ) {
+      this.#texture.clearUpdateRanges();
+      this.#whole = true;
     }
 
     this.#clearing.forEach((clearing, place) => {

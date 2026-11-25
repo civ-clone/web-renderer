@@ -8,7 +8,7 @@
 //    for the first time seen, it has none; only the points clearing are sent, once the whole texture has been.
 
 import { Color, Vector3 } from 'three';
-import Water, { Clouds } from '@civ-clone/ui-map-3d/water';
+import Water, { Clouds, WHOLE_FROM } from '@civ-clone/ui-map-3d/water';
 import { ChunkMesh } from '@civ-clone/ui-map-3d/terrain/chunks';
 
 const failures: string[] = [];
@@ -280,12 +280,55 @@ const points = texture.updateRanges.map(({ start, count }) => [
   count,
 ]);
 
+// Not sent before the next (the context lost meanwhile, and made again empty): the whole is sent instead.
+clearing.clear(30.3, 0.5);
+
+const neverSent = texture.updateRanges.length;
+
+texture.onUpdate?.(texture);
+clearing.clear(30.35, 0.5);
+
+const sentAgain = texture.updateRanges.length;
+
+// More than `WHOLE_FROM` points clearing at once, on a bigger ground: the whole is sent.
+const across = Math.ceil(Math.sqrt(WHOLE_FROM + 1)),
+  wide = { ...ground, columns: across, rows: across },
+  much = new Water(wide, new Color('#9fb3c4')),
+  muchTexture = much.texture(),
+  everywhere = (unseen: number): ChunkMesh => {
+    const positions = new Float32Array(across * across * 3);
+
+    for (let b = 0; b < across; b++) {
+      for (let a = 0; a < across; a++) {
+        positions.set([a * 0.5, -0.1, b * 0.5], (b * across + a) * 3);
+      }
+    }
+
+    return {
+      ...chunk(0, 0, () => 0),
+      positions,
+      unseen: new Float32Array(across * across).fill(unseen),
+    };
+  };
+
+much.setChunk(everywhere(1));
+much.setChunk(everywhere(0));
+muchTexture.onUpdate?.(muchTexture);
+much.clear(40, 0.5);
+
+const muchSent = [muchTexture.updateRanges.length, much.cloud(1, 1)];
+
+much.dispose();
+
 expect(
-  'the whole texture is sent once a chunk’s laid; after that, only each point clearing, its four channels',
-  [whole, points],
+  'the whole texture is sent once a chunk’s laid; after that, only each point clearing, its four channels, unless what was asked last time was never sent, or more than WHOLE_FROM are clearing',
+  [whole, points, neverSent, sentAgain, muchSent],
   [
     0,
     [0, 1, 2].flatMap((row) => [12, 13, 14].map((column) => [column, row, 4])),
+    0,
+    9,
+    [0, 1],
   ]
 );
 expect(
