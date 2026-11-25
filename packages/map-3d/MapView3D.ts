@@ -65,6 +65,7 @@ import Walks, {
 } from './walks';
 import Fades, { FADE } from './fades';
 import Wakes, { wakeShape } from './wakes';
+import { CLOUD_CLEARING } from './water';
 import Battles, {
   BATTLE_PACE,
   Battle,
@@ -3524,6 +3525,14 @@ export class MapView3D implements MapRenderer {
 
     this.#land.build(this.#stage, budget);
 
+    // The cloud over squares seen since their chunks were laid cleared as far as it has (§4.5): over half a second, or
+    //  at once where there are no frames to clear it over or motion's reduced.
+    const clearing =
+      this.#stage.clearCloud?.(
+        started / 1000,
+        budget !== null && !prefersReducedMotion() ? CLOUD_CLEARING : 0
+      ) ?? false;
+
     const rising = this.#followHeight(budget !== null);
 
     this.#showYields();
@@ -3556,6 +3565,7 @@ export class MapView3D implements MapRenderer {
       this.#battles.size() > 0 ||
       this.#fades.size() > 0 ||
       this.#wakes.size() > 0 ||
+      clearing ||
       moving ||
       rising
     ) {

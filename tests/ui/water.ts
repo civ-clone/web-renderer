@@ -4,6 +4,8 @@
 //  - it follows the camera, as wide as it sees, with the sun's direction for its glint;
 //  - it, and the cloud, know how far the ground runs down and whether it wraps over the poles, and are drawn only on
 //    the ground on a world that doesn't.
+//  - a square seen once its chunk's been laid has its water at once and clears its cloud over the time given; laid
+//    for the first time seen, it has none; only the points clearing are sent, once the whole texture has been.
 
 import { Color, Vector3 } from 'three';
 import Water, { Clouds } from '@civ-clone/ui-map-3d/water';
@@ -179,7 +181,125 @@ expect(
   ]
 );
 
-[wrapping, clouds, wrappingClouds].forEach((each) => each.dispose());
+// A square seen (§4.5): where its chunk was laid while it was never seen, its water's there at once and its cloud
+//  clears over the time given, from the first time it's cleared; where a chunk's laid over it for the first time, seen,
+//  it has no cloud at all; with no time to clear over (reduced motion), at once.
+const clearing = new Water(ground, new Color('#9fb3c4')),
+  // A chunk at (`u`, `v`) under the sea, each point never seen as `unseen` says.
+  laidAt = (u: number, v: number, unseen: number): ChunkMesh => ({
+    ...chunk(u, v, () => -0.1),
+    unseen: new Float32Array(9).fill(unseen),
+  }),
+  round = (n: number): number => Math.round(n * 100) / 100;
+
+clearing.setChunk(laidAt(0, 0, 1));
+
+const neverSeen = [clearing.unseen(1, 1), clearing.cloud(1, 1)];
+
+clearing.setChunk(laidAt(0, 0, 0));
+
+const seenNow = [clearing.unseen(1, 1), clearing.cloud(1, 1)],
+  begun = [clearing.clear(10, 0.5), clearing.cloud(1, 1)],
+  halfway = [clearing.clear(10.25, 0.5), round(clearing.cloud(1, 1))],
+  cleared = [
+    clearing.clear(10.5, 0.5),
+    clearing.cloud(1, 1),
+    clearing.clear(11, 0.5),
+  ];
+
+expect(
+  'a square seen once its chunk’s been laid has its water at once, and its cloud clears over the time given, from when it’s first cleared',
+  [neverSeen, seenNow, begun, halfway, cleared],
+  [
+    [true, 1],
+    [false, 1],
+    [true, 1],
+    [true, 0.5],
+    [false, 0, false],
+  ]
+);
+
+// Its corner at column 4: laid for the first time, seen.
+clearing.setChunk(laidAt(2, 0, 0));
+
+const firstLaid = [clearing.cloud(5, 1), clearing.clear(12, 0.5)];
+
+// Row 4.
+clearing.setChunk(laidAt(0, 2, 1));
+clearing.setChunk(laidAt(0, 2, 0));
+
+const atOnce = [clearing.clear(13, 0), clearing.cloud(1, 5)];
+
+// Column 8: seen, then laid again never seen before it's cleared (as a chunk laid again says it), which stops it.
+clearing.setChunk(laidAt(4, 0, 1));
+clearing.setChunk(laidAt(4, 0, 0));
+clearing.setChunk(laidAt(4, 0, 1));
+
+const stopped = [clearing.cloud(9, 1), clearing.clear(14, 0.5)];
+
+// Row 4, column 4: halfway cleared when it's laid again, seen, as the land changes: it carries on from where it was.
+clearing.setChunk(laidAt(2, 2, 1));
+clearing.setChunk(laidAt(2, 2, 0));
+clearing.clear(20, 0.5);
+clearing.clear(20.25, 0.5);
+clearing.setChunk(laidAt(2, 2, 0));
+
+const carriedOn = [
+  round(clearing.cloud(5, 5)),
+  clearing.clear(20.5, 0.5),
+  clearing.cloud(5, 5),
+];
+
+expect(
+  'a chunk laid for the first time over a square seen has no cloud there; with no time to clear over, it clears at once; laid again never seen, it stops clearing; laid again seen, it carries on',
+  [firstLaid, atOnce, stopped, carriedOn],
+  [
+    [0, false],
+    [false, 0],
+    [1, false],
+    [0.5, false, 0],
+  ]
+);
+
+// What's sent: the whole texture once a chunk's laid; once it has been (as the renderer says), only the points that
+//  are clearing, each its four channels. Column 12, rows 0 to 2.
+const texture = clearing.texture();
+
+clearing.setChunk(laidAt(6, 0, 1));
+clearing.setChunk(laidAt(6, 0, 0));
+clearing.clear(30, 0.5);
+
+const whole = texture.updateRanges.length;
+
+texture.onUpdate?.(texture);
+clearing.clear(30.25, 0.5);
+
+const points = texture.updateRanges.map(({ start, count }) => [
+  (start / 4) % ground.columns,
+  Math.floor(start / 4 / ground.columns),
+  count,
+]);
+
+expect(
+  'the whole texture is sent once a chunk’s laid; after that, only each point clearing, its four channels',
+  [whole, points],
+  [
+    0,
+    [0, 1, 2].flatMap((row) => [12, 13, 14].map((column) => [column, row, 4])),
+  ]
+);
+expect(
+  'the cloud reads how much cloud’s over each point as it clears; the sea, whether it’s never been seen',
+  [
+    /texture2D\(ground, \(point \/ cell \+ 0\.5\) \/ size\)\.b;/.test(
+      clouds.mesh.material.fragmentShader
+    ),
+    /here\.g > 0\.01/.test(water.mesh.material.fragmentShader),
+  ],
+  [true, true]
+);
+
+[wrapping, clouds, wrappingClouds, clearing].forEach((each) => each.dispose());
 water.dispose();
 
 if (failures.length > 0) {

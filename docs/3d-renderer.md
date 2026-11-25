@@ -567,6 +567,14 @@ blended across squares.
 
 - **Unseen squares** are covered by a cloud layer (a soft volume drawn in the shader) that thins over a short edge. A
   square becoming seen clears its cloud over half a second, or at once under reduced motion.
+  - As built (`water.ts`): the texture the sea reads holds four things for each of the land's points: its height,
+    whether it's never been seen (where no water's drawn), how much cloud is over it, and whether a chunk's been laid
+    over it yet. Where a chunk is laid again with a point seen that was laid never seen, its water's there at once, and
+    its cloud thins from where it was to none over `CLOUD_CLEARING` (half a second), from the next frame drawn, as the
+    cloud's own noise breaks it up. Where a chunk is laid over a point for the first time, seen, as the game starts or
+    the camera goes somewhere new, it has no cloud at all.
+  - The map draws frames while any is clearing. It clears at once under reduced motion, or with no frames to clear over.
+  - A chunk laid sends the whole texture again, as before. Between those, each frame sends only the points clearing.
 - **Squares seen before but not in sight now** are drawn as last seen, with the colour and light dimmed. This is only
   under rules that tell the two apart, the same as the 2D map.
 
