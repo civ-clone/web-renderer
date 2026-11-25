@@ -75,8 +75,8 @@ export const quickerBattle = (pace: BattlePace): BattlePace => ({
  * - the attacker plays `fight` from the start; where it shoots, it stands, the blow falling as its first figure's first
  *   shot to land lands, as long after it leaves as its kind flies (`SHOT_LOOKS`); where it doesn't, it lunges, and the
  *   blow falls as its clip says it lands (`ClipFacts#strike`), or else as it would; it's drawn till its last figure's
- *   clip is over, and the last of its shots' own is (`shotOver`): the
- *   puff where each landed, the smoke where each left over before it;
+ *   clip is over, and the last of its shots' own is (`shotOver`): the puff where each landed, the smoke where each left
+ *   over before it;
  * - the loser plays `die` from the blow, solid till its last figure's fallen, then fades.
  */
 export const clipPace = (

@@ -214,7 +214,16 @@ const round = (value: number) => Math.round(value * 10000) / 10000,
     [
       rigOf((json) => (json.models.partisan.rigged.strikes = { fight: 0.5 })),
       rigOf(
-        (json) => (json.models.partisan.rigged.strikes = { fight: 0, sink: 2 })
+        (json) =>
+          (json.models.partisan.rigged.strikes = { fight: 0.01, sink: 2 })
+      ),
+      // At its very start, as no blow lands: it'd lunge in no time.
+      rigOf((json) => (json.models.partisan.rigged.strikes = { fight: 0 })),
+      rigOf(
+        (json) =>
+          (json.models.partisan.rigged.strikes = {
+            fight: Number.POSITIVE_INFINITY,
+          })
       ),
       rigOf((json) => (json.models.partisan.rigged.strikes = [0.5])),
       rigOf((json) => (json.models.partisan.rigged.strikes = { fight: -0.1 })),
@@ -231,7 +240,9 @@ const round = (value: number) => Math.round(value * 10000) / 10000,
     ),
     [
       { fight: 0.5 },
-      { fight: 0 },
+      { fight: 0.01 },
+      'dropped',
+      'dropped',
       'dropped',
       'dropped',
       'dropped',
@@ -383,11 +394,13 @@ const rigged = (armature: Group | null = null): LoadedRig => {
   };
 
   expect(
-    'each role’s blow lands when its manifest says, within its clip; one after its clip’s over is refused',
-    [struck(1), struck(1.5), struck(2)],
+    'each role’s blow lands when its manifest says, within its clip, to a thousandth of a second, as a file keeps a clip’s times in 32 bits; one after its clip’s over is refused',
+    [struck(1), struck(1.5), struck(1.5009), struck(1.502), struck(2)],
     [
       [['die', 1]],
       [['die', 1.5]],
+      [['die', 1.5009]],
+      "models/rigged/partisan.glb: clip fall's blow lands after it's over (1.502 s)",
       "models/rigged/partisan.glb: clip fall's blow lands after it's over (2 s)",
     ]
   );

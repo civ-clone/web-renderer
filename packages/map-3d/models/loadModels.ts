@@ -174,7 +174,9 @@ export const clipsOf = (
 
     const strike = rigged.strikes?.[role];
 
-    if (strike !== undefined && strike > clip.duration) {
+    // To a thousandth: a glTF file keeps its clips' times in 32 bits, so one's length can be a hair short of the time a
+    //  manifest gives its last frame.
+    if (strike !== undefined && strike > clip.duration + 1e-3) {
       throw new Error(
         `${rigged.file}: clip ${name}'s blow lands after it's over (${strike} s)`
       );

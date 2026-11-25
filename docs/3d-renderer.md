@@ -1677,11 +1677,12 @@ in its set (plan 2.2). It's in the model's entry:
   what flies, as its model knows what it holds, not the unit's type.
 - **`strikes`** say when, in seconds into a role's clip, its blow lands, hand to hand, where it lets nothing fly: the
   Fanatic's torch thrust, `"strikes": { "fight": 0.5 }`. Without one, the blow falls a fifth of a second in, which only
-  a quick jab fits. Given only in a role that has a clip, and no later than its clip's over.
+  a quick jab fits. Given only in a role that has a clip, after its start and no later than its clip's over (to a
+  thousandth of a second, as a file keeps a clip's times in 32 bits).
 - **Checked as it's read** (`modelSet.ts`): its file as a model's is, a name for each clip, each shot's time, joint
-  and kind, of those the map draws, and each strike's time, in a role with a clip. A clip for a role the map doesn't play, as a later
-  one may, is left out. One the map can't play is dropped, and its model's drawn as it stands, the rest of the set as
-  it is.
+  and kind, of those the map draws, and each strike's time, over 0, in a role with a clip. A clip for a role the map
+  doesn't play, as a later one may, is left out. One the map can't play is dropped, and its model's drawn as it
+  stands, the rest of the set as it is.
 - **Built** (`tools/lib/hostedSets.js`): copied beside the page with its model, as `<id>.<hash>.<name>.rigged.glb`,
   as its SHA-256 says it is, the manifest naming it so. The deploy keeps it for one more deploy, as it keeps the
   model (`setsAskedFor`).

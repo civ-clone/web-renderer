@@ -168,7 +168,7 @@ const riggedOf = (value: unknown): RiggedModel | undefined => {
       value.strikes,
       clips,
       (each): each is number =>
-        typeof each === 'number' && Number.isFinite(each) && each >= 0
+        typeof each === 'number' && Number.isFinite(each) && each > 0
     );
 
   if (shots === null || strikes === null) {

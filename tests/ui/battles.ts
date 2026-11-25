@@ -629,6 +629,17 @@ expect(
           strike: 0.9,
         },
       },
+    },
+    // Its strike before its shot lands: still the shot.
+    strikingFirst: RigFacts = {
+      ...striker,
+      clips: {
+        fight: {
+          duration: 1.2,
+          shots: [{ at: 0.4, joint: 'muzzle', kind: 'bullet' }],
+          strike: 0.1,
+        },
+      },
     };
 
   expect(
@@ -637,6 +648,7 @@ expect(
       rounded(clipPace(pace, striker, null)),
       rounded(quickerBattle(clipPace(pace, striker, null))),
       round(clipPace(pace, strikerShooting, null).reach),
+      round(clipPace(pace, strikingFirst, null).reach),
     ],
     [
       {
@@ -651,6 +663,7 @@ expect(
         fade: 300,
         clips: { rate: 2, fight: true, die: false },
       },
+      round(400 + flies('bullet')),
       round(400 + flies('bullet')),
     ]
   );
