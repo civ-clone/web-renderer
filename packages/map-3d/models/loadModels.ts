@@ -55,6 +55,8 @@ export type LoadedRig = {
   scene: Object3D;
   clips: Map<ClipRole, AnimationClip>;
   shots: Map<ClipRole, ClipShot[]>;
+  // When each role's blow lands, in seconds into its clip, where it gives one (`RiggedModel#strikes`).
+  strikes: Map<ClipRole, number>;
   scale: number;
 };
 
@@ -112,9 +114,10 @@ export const partsOf = (scene: {
 
 /**
  * The clip each role plays of those a rigged copy's file has (`animations`, its scene `scene`), as its manifest names
- *  them (`rigged`), and the shots each lets fly. Throws, saying why, for a clip its file hasn't, or one with a track
- *  moving a node it can't find by name, as each figure's copy of the scene finds it: GLTFLoader names a track moving a
- *  node with no name by its uuid, which would move nothing on a copy.
+ *  them (`rigged`), the shots each lets fly, and when each one's blow lands, where it says. Throws, saying why, for a
+ *  clip its file hasn't, or one with a track moving a node it can't find by name, as each figure's copy of the scene
+ *  finds it: GLTFLoader names a track moving a node with no name by its uuid, which would move nothing on a copy. And
+ *  for a blow that lands after its clip's over.
  */
 export const clipsOf = (
   { animations, scene }: { animations: AnimationClip[]; scene: Object3D },
@@ -122,9 +125,11 @@ export const clipsOf = (
 ): {
   clips: Map<ClipRole, AnimationClip>;
   shots: Map<ClipRole, ClipShot[]>;
+  strikes: Map<ClipRole, number>;
 } => {
   const clips = new Map<ClipRole, AnimationClip>(),
-    shots = new Map<ClipRole, ClipShot[]>();
+    shots = new Map<ClipRole, ClipShot[]>(),
+    strikes = new Map<ClipRole, number>();
 
   CLIP_ROLES.forEach((role) => {
     const name = rigged.clips[role];
@@ -167,11 +172,25 @@ export const clipsOf = (
       );
     }
 
+    const strike = rigged.strikes?.[role];
+
+    // To a thousandth: a glTF file keeps its clips' times in 32 bits, so one's length can be a hair short of the time a
+    //  manifest gives its last frame.
+    if (strike !== undefined && strike > clip.duration + 1e-3) {
+      throw new Error(
+        `${rigged.file}: clip ${name}'s blow lands after it's over (${strike} s)`
+      );
+    }
+
     clips.set(role, clip);
     shots.set(role, fired);
+
+    if (strike !== undefined) {
+      strikes.set(role, strike);
+    }
   });
 
-  return { clips, shots };
+  return { clips, shots, strikes };
 };
 
 /**
@@ -387,11 +406,17 @@ export const loadModels = async (
 
       try {
         const gltf = await parsed(entry.rigged.file),
-          { clips, shots } = clipsOf(gltf, entry.rigged);
+          { clips, shots, strikes } = clipsOf(gltf, entry.rigged);
 
         rigged(
           id,
-          { scene: gltf.scene, clips, shots, scale: scaleOf(manifest, id) },
+          {
+            scene: gltf.scene,
+            clips,
+            shots,
+            strikes,
+            scale: scaleOf(manifest, id),
+          },
           types.get(id) ?? []
         );
       } catch (error) {

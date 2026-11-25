@@ -210,6 +210,48 @@ const round = (value: number) => Math.round(value * 10000) / 10000,
   );
 
   expect(
+    'a rigged copy says when each role’s blow lands, hand to hand, in seconds into its clip, in a role it names a clip for; a role the map doesn’t play left out; anything else wrong, and it’s dropped',
+    [
+      rigOf((json) => (json.models.partisan.rigged.strikes = { fight: 0.5 })),
+      rigOf(
+        (json) =>
+          (json.models.partisan.rigged.strikes = { fight: 0.01, sink: 2 })
+      ),
+      // At its very start, as no blow lands: it'd lunge in no time.
+      rigOf((json) => (json.models.partisan.rigged.strikes = { fight: 0 })),
+      rigOf(
+        (json) =>
+          (json.models.partisan.rigged.strikes = {
+            fight: Number.POSITIVE_INFINITY,
+          })
+      ),
+      rigOf((json) => (json.models.partisan.rigged.strikes = [0.5])),
+      rigOf((json) => (json.models.partisan.rigged.strikes = { fight: -0.1 })),
+      rigOf(
+        (json) => (json.models.partisan.rigged.strikes = { fight: Number.NaN })
+      ),
+      rigOf((json) => (json.models.partisan.rigged.strikes = { fight: '0.5' })),
+      rigOf((json) => {
+        delete json.models.partisan.rigged.clips.die;
+        json.models.partisan.rigged.strikes = { die: 0.5 };
+      }),
+    ].map((rigged) =>
+      typeof rigged === 'string' ? rigged : (rigged as RiggedModel).strikes
+    ),
+    [
+      { fight: 0.5 },
+      { fight: 0.01 },
+      'dropped',
+      'dropped',
+      'dropped',
+      'dropped',
+      'dropped',
+      'dropped',
+      'dropped',
+    ]
+  );
+
+  expect(
     'a shot says what it is, of the kinds the map draws',
     SHOT_KINDS.map((kind) =>
       rigOf((json) => (json.models.partisan.rigged.shots.fight[0].kind = kind))
@@ -293,6 +335,7 @@ const rigged = (armature: Group | null = null): LoadedRig => {
       ],
     ]),
     shots: new Map(),
+    strikes: new Map(),
     scale: 0.1,
   };
 };
@@ -332,6 +375,35 @@ const rigged = (armature: Group | null = null): LoadedRig => {
         return (error as Error).message;
       }
     };
+
+  // When each role's blow lands, where its manifest says, within its clip: one after it's over refused.
+  const struck = (strike: number): unknown => {
+    try {
+      return [
+        ...clipsOf(
+          {
+            animations: animations.map((clip) => clip.clone()),
+            scene: made.scene,
+          },
+          { ...entry, strikes: { die: strike } }
+        ).strikes,
+      ];
+    } catch (error) {
+      return (error as Error).message;
+    }
+  };
+
+  expect(
+    'each role’s blow lands when its manifest says, within its clip, to a thousandth of a second, as a file keeps a clip’s times in 32 bits; one after its clip’s over is refused',
+    [struck(1), struck(1.5), struck(1.5009), struck(1.502), struck(2)],
+    [
+      [['die', 1]],
+      [['die', 1.5]],
+      [['die', 1.5009]],
+      "models/rigged/partisan.glb: clip fall's blow lands after it's over (1.502 s)",
+      "models/rigged/partisan.glb: clip fall's blow lands after it's over (2 s)",
+    ]
+  );
 
   expect(
     'each role’s clip is the one its manifest names, with its shots, each leaving a node as three.js names it; one its file hasn’t, moving a node it can’t name, or shooting from a node it hasn’t, is refused',
@@ -862,11 +934,12 @@ expect(
 // What a rigged copy plays, as a battle's paced for it (`rigFacts`): each clip's length and shots, by role, and how
 //  many figures, how far apart.
 expect(
-  'what a rigged copy plays: each role’s clip, how long, and its shots; and its figures, how far apart in a clip',
+  'what a rigged copy plays: each role’s clip, how long, its shots, and when its blow lands, where it says; and its figures, how far apart in a clip',
   rigFacts(
     {
       ...rig,
       shots: new Map([['die', [{ at: 0.2, joint: 'arm' }]]]),
+      strikes: new Map([['move', 0.3]]),
     },
     3
   ),
@@ -874,7 +947,7 @@ expect(
     figures: 3,
     stagger: FIGURE_STAGGER,
     clips: {
-      move: { duration: 1, shots: [] },
+      move: { duration: 1, shots: [], strike: 0.3 },
       die: { duration: 1.5, shots: [{ at: 0.2, joint: 'arm' }] },
     },
   }

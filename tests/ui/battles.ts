@@ -612,6 +612,62 @@ expect(
     ]
   );
 
+  // Hand to hand, where its clip says when its blow lands (`strike`), as a torch's thrust half a second in: it lunges,
+  //  arriving as the blow lands then, drawn till its clip's over; twice as quick, the blow half as far in, its clip
+  //  played twice as quick, so it lands as it's played. Shots, where it has them too, say when it lands.
+  const striker: RigFacts = {
+      figures: 1,
+      stagger: 0.13,
+      clips: { fight: { duration: 1.2, shots: [], strike: 0.5 } },
+    },
+    strikerShooting: RigFacts = {
+      ...striker,
+      clips: {
+        fight: {
+          duration: 1.2,
+          shots: [{ at: 0.4, joint: 'muzzle', kind: 'bullet' }],
+          strike: 0.9,
+        },
+      },
+    },
+    // Its strike before its shot lands: still the shot.
+    strikingFirst: RigFacts = {
+      ...striker,
+      clips: {
+        fight: {
+          duration: 1.2,
+          shots: [{ at: 0.4, joint: 'muzzle', kind: 'bullet' }],
+          strike: 0.1,
+        },
+      },
+    };
+
+  expect(
+    'hand to hand, the blow lands as the clip says, lunging, drawn till its clip’s over; twice as quick, half as far in, the clip twice as quick; shots, where there are, say when',
+    [
+      rounded(clipPace(pace, striker, null)),
+      rounded(quickerBattle(clipPace(pace, striker, null))),
+      round(clipPace(pace, strikerShooting, null).reach),
+      round(clipPace(pace, strikingFirst, null).reach),
+    ],
+    [
+      {
+        reach: 500,
+        back: 700,
+        fade: 600,
+        clips: { rate: 1, fight: true, die: false },
+      },
+      {
+        reach: 250,
+        back: 350,
+        fade: 300,
+        clips: { rate: 2, fight: true, die: false },
+      },
+      round(400 + flies('bullet')),
+      round(400 + flies('bullet')),
+    ]
+  );
+
   const paced = clipPace(pace, thrower, thrower),
     quick = quickerBattle(paced),
     battles = new Battles(),

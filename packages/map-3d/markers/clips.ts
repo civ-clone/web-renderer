@@ -24,7 +24,12 @@ export const STRIDE = 2;
 export const FIGURE_STAGGER = 0.13;
 
 /** A role's clip on a rigged copy: how long it is, in seconds, and the shots its figures fire in it (`ClipShot`). */
-export type ClipFacts = { duration: number; shots: readonly ClipShot[] };
+export type ClipFacts = {
+  duration: number;
+  shots: readonly ClipShot[];
+  // When its blow lands, in seconds into it, where it says: hand to hand, with no shots.
+  strike?: number;
+};
 
 /**
  * What a unit drawn with a rigged copy plays, as battles are paced for it (`clipPace`): its clips, by role; how many
@@ -43,7 +48,11 @@ export const rigFacts = (rig: LoadedRig, figures: number): RigFacts => ({
   clips: Object.fromEntries(
     [...rig.clips].map(([role, clip]) => [
       role,
-      { duration: clip.duration, shots: rig.shots.get(role) ?? [] },
+      {
+        duration: clip.duration,
+        shots: rig.shots.get(role) ?? [],
+        ...(rig.strikes.has(role) ? { strike: rig.strikes.get(role) } : {}),
+      },
     ])
   ),
 });

@@ -1675,16 +1675,20 @@ in its set (plan 2.2). It's in the model's entry:
   the sixth part: `bottle`, `arrow`, `bullet` or `shell`, a bottle where it doesn't say). The map draws it flying
   from that joint to its target, as its kind flies. A shot may be given only in a role that has a clip. The set says
   what flies, as its model knows what it holds, not the unit's type.
-- **Checked as it's read** (`modelSet.ts`): its file as a model's is, a name for each clip, and each shot's time,
-  joint and kind, of those the map draws, in a role with a clip. A clip for a role the map doesn't play, as a later
-  one may, is left out. One the map can't play is dropped, and its model's drawn as it stands, the rest of the set as
-  it is.
+- **`strikes`** say when, in seconds into a role's clip, its blow lands, hand to hand, where it lets nothing fly: the
+  Fanatic's torch thrust, `"strikes": { "fight": 0.5 }`. Without one, the blow falls a fifth of a second in, which only
+  a quick jab fits. Given only in a role that has a clip, after its start and no later than its clip's over (to a
+  thousandth of a second, as a file keeps a clip's times in 32 bits).
+- **Checked as it's read** (`modelSet.ts`): its file as a model's is, a name for each clip, each shot's time, joint
+  and kind, of those the map draws, and each strike's time, over 0, in a role with a clip. A clip for a role the map
+  doesn't play, as a later one may, is left out. One the map can't play is dropped, and its model's drawn as it
+  stands, the rest of the set as it is.
 - **Built** (`tools/lib/hostedSets.js`): copied beside the page with its model, as `<id>.<hash>.<name>.rigged.glb`,
   as its SHA-256 says it is, the manifest naming it so. The deploy keeps it for one more deploy, as it keeps the
   model (`setsAskedFor`).
 - **Loaded** (`loadModels.ts`) once its model's drawing, with every check the model has. One that can't be had, names
-  a clip its file hasn't, or has a clip moving a node it can't find by name (as each figure's copy finds it), is said,
-  and the model's drawn as before.
+  a clip its file hasn't, has a clip moving a node it can't find by name (as each figure's copy finds it), or a blow
+  landing after its clip's over, is said, and the model's drawn as before.
 - **Drawn:** a unit at rest is drawn with its model's parts, merged, as before, but for one idling near the camera
   (the fifth part, below). A walker, or a unit fighting or
   fading out, which the stage draws as one, is drawn with the rigged copy (`MarkerKit#rigFigures`): each figure a copy
@@ -1709,7 +1713,9 @@ has a clip to play is paced as before.
 - **The attacker** plays `fight` from the start. Where its clip has shots, it stands where it is to shoot rather than
   lunging (`lunge` 0), and the blow falls as its first figure's first shot lands, the shot's time in the clip and its
   flight after (a bottle's 350 ms; each kind's since the sixth part). Where it has none, it lunges, and the blow falls
-  a fifth of a second in, as before. It's drawn till its last figure's clip is over, or the battle is.
+  when its clip says it lands (`strikes`), arriving at the edge of the square it attacks then, or a fifth of a second
+  in, as before. In a battle twice as quick, the blow's half as far in, as its clip plays twice as quick. It's drawn
+  till its last figure's clip is over, or the battle is.
 - **The loser** plays `die` from the blow: the defender where it stood, or the attacker where it is, lost. It stays
   solid till its last figure has fallen (`falls`), then fades in its puff of smoke as before.
 - **A squad's figures** are 0.13 s apart in a clip that loops, as walking, and each 0.13 s behind the one before in a
