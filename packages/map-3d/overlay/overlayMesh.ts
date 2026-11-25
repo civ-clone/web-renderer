@@ -20,10 +20,13 @@ import {
   CylinderGeometry,
   Euler,
   EulerOrder,
+  ExtrudeGeometry,
   Matrix3,
   Matrix4,
   Quaternion,
+  Shape,
   SphereGeometry,
+  Vector2,
   Vector3,
 } from 'three';
 import {
@@ -176,6 +179,26 @@ const box = new BoxGeometry(1, 1, 1),
     return made;
   })(),
   sphere = new SphereGeometry(0.5, 8, 6),
+  // The top half of a sphere, from its middle up: a silo's roof.
+  dome = new SphereGeometry(0.5, 8, 3, 0, Math.PI * 2, 0, Math.PI / 2),
+  // A wedge, its front face upright (towards +z), sloping from that face's top back to its bottom: the rock a tunnel's
+  //  dug into. Its faces flat.
+  wedge = (() => {
+    const made = new ExtrudeGeometry(
+      new Shape([
+        new Vector2(0.5, -0.5),
+        new Vector2(0.5, 0.5),
+        new Vector2(-0.5, -0.5),
+      ]),
+      { depth: 1, bevelEnabled: false }
+    );
+
+    made.translate(0, 0, -0.5);
+    made.rotateY(-Math.PI / 2);
+    made.computeVertexNormals();
+
+    return made;
+  })(),
   // Plants are many, thousands to a chunk: few sides each, and no ends where nothing sees them.
   stem = new CylinderGeometry(0.5, 0.5, 1, 4, 1, true),
   tier = new ConeGeometry(0.5, 1, 5, 1, true),
@@ -184,7 +207,7 @@ const box = new BoxGeometry(1, 1, 1),
   log = new CylinderGeometry(0.5, 0.5, 1, 8, 1, true),
   cutEnd = new CircleGeometry(0.5, 8);
 
-// Where on a square its mine, hut and specials stand, by seeded angle and how far out: plants keep clear of them.
+// Where on a square its mine, hut, specials and farm stand, by seeded angle and how far out: plants keep clear of them.
 const SPOTS = {
   mine: [3, 0.8],
   hut: [11, 0.64],
@@ -1183,9 +1206,16 @@ const downhill = (
   return Math.max(most, -least) < (back + ahead) * 0.05 ? null : way;
 };
 
+// The lowest of the ground under something round, `radius` across at (`u`, `v`), at its middle and its rim's eight
+//  corners (as `cylinder` and `cone` have them), and a little below: where it stands, so none of it hangs over a slope.
+const footOf = (layer: Layer, u: number, v: number, radius: number): number =>
+  Math.min(
+    ...ROUND.map(([du, dv]) => layer.ground(u + du * radius, v + dv * radius))
+  ) - 0.002;
+
 // A mine at (`u`, `v`), as big as `room` has space for: on a mountain, a tunnel's timbered mouth in the slope, a fan
 //  of spoil below it and a cart on its track; elsewhere, a headframe over its shaft, braced, its wheel at the top, an
-//  engine house with its chimney beside it, a cart, and spoil heaps.
+//  engine house with its chimney behind it, a cart, and spoil heaps.
 const mine = (
   layer: Layer,
   [u, v]: readonly [number, number],
@@ -1203,24 +1233,37 @@ const mine = (
         : fraction(seed, 41) * Math.PI * 2,
     at = turned(u, v, facing),
     ground = (x: number, z: number) => layer.ground(...at(x, z)),
+    // A heap of spoil, its peak over the ground at its middle, its rim down into the ground at its lowest.
     heap = (x: number, z: number, size: number) => {
-      const [hu, hv] = at(x * f, z * f);
+      const [hu, hv] = at(x * f, z * f),
+        radius = 0.04 * size * f,
+        peak = layer.ground(hu, hv) + 0.0445 * size * f,
+        base = footOf(layer, hu, hv, radius);
 
       layer.solid(
         cone,
-        [hu, layer.ground(hu, hv) + 0.022 * size * f, hv],
-        [0.08 * size * f, 0.045 * size * f, 0.08 * size * f],
+        [hu, (base + peak) / 2, hv],
+        [radius * 2, peak - base, radius * 2],
         SPOIL
       );
     },
+    // A cart, its body down to the lowest of the ground under it.
     cart = (x: number, z: number) => {
       const [cu, cv] = at(x * f, z * f),
-        y = layer.ground(cu, cv);
+        y = layer.ground(cu, cv),
+        low =
+          Math.min(
+            ...[-1, 1].flatMap((sx) =>
+              [-1, 1].map((sz) =>
+                ground((x + sx * 0.012) * f, (z + sz * 0.017) * f)
+              )
+            )
+          ) - 0.002;
 
       layer.solid(
         box,
-        [cu, y + 0.016 * f, cv],
-        [0.024 * f, 0.016 * f, 0.034 * f],
+        [cu, (low + y + 0.024 * f) / 2, cv],
+        [0.024 * f, y + 0.024 * f - low, 0.034 * f],
         IRON,
         [0, facing, 0]
       );
@@ -1234,42 +1277,48 @@ const mine = (
     };
 
   if (terrain === 'Mountains') {
-    // Its mouth, set into the slope behind it, its posts and lintel, and the fan of spoil tipped down in front: the
-    //  frame's top over the highest of the ground behind it and at its posts' feet, and each post, and the mouth, down
-    //  into the ground at its lowest, so none hangs over the slope below.
-    const feet = [-1, 1].map((side) => ground(side * 0.03 * f, 0)),
-      top = Math.max(ground(0, -0.03 * f), ...feet) + 0.07 * f,
-      [mu, mv] = at(0, -0.02 * f),
-      mouth =
-        Math.min(
-          ...[-0.005, -0.035].flatMap((z) =>
-            [-0.025, 0.025].map((x) => ground(x * f, z * f))
-          )
-        ) - 0.004;
+    // Its frame, posts and a lintel, its top over the highest of the ground behind it and at its posts' feet; its
+    //  mouth, dark, in the frame; the rock it's dug into, rising behind it, its face upright behind the mouth, over the
+    //  lintel, and sloping back into the ground, so seen from behind it's a rise in the slope; and the fan of spoil
+    //  tipped down in front. Each down into the ground at its lowest, so none hangs over the slope below.
+    const lowest = (points: readonly (readonly [number, number])[]) =>
+        Math.min(...points.map(([x, z]) => ground(x * f, z * f))),
+      top =
+        Math.max(
+          ground(0, -0.03 * f),
+          ground(-0.03 * f, 0),
+          ground(0.03 * f, 0)
+        ) +
+        0.07 * f,
+      across = (half: number, zs: readonly number[]) =>
+        zs.flatMap((z) => [-half, 0, half].map((x) => [x, z] as const)),
+      [mu, mv] = at(0, -0.007 * f),
+      mouth = lowest(across(0.025, [-0.004, -0.01])) - 0.004,
+      [ru, rv] = at(0, -0.071 * f),
+      rock = lowest(across(0.0425, [-0.011, -0.071, -0.131])) - 0.004;
 
     layer.solid(
       box,
       [mu, (mouth + top - 0.01 * f) / 2, mv],
-      [0.05 * f, top - 0.01 * f - mouth, 0.03 * f],
+      [0.05 * f, top - 0.01 * f - mouth, 0.006 * f],
       MOUTH,
       [0, facing, 0]
     );
-
-    // The rock it's dug into, rising behind it over its mouth, so seen from behind it's the slope's, not the mouth's
-    //  back: half a mound, its front edge at the mouth's face.
-    const [hu, hv] = at(0, -0.06 * f),
-      rock = ground(0, -0.06 * f);
-
     layer.solid(
-      sphere,
-      [hu, rock, hv],
-      [0.11 * f, 2 * Math.max(0.02 * f, top + 0.01 * f - rock), 0.11 * f],
+      wedge,
+      [ru, (rock + top + 0.012 * f) / 2, rv],
+      [0.085 * f, top + 0.012 * f - rock, 0.12 * f],
       HILLSIDE,
       [0, facing, 0]
     );
-    [-1, 1].forEach((side, index) => {
+    [-1, 1].forEach((side) => {
       const [pu, pv] = at(side * 0.03 * f, 0),
-        foot = feet[index]! - 0.004;
+        foot =
+          lowest(
+            across(0.005, [-0.005, 0.005]).map(
+              ([x, z]) => [x + side * 0.03, z] as const
+            )
+          ) - 0.002;
 
       layer.solid(
         box,
@@ -1381,9 +1430,20 @@ const mine = (
   cart(0.05, -0.02);
 };
 
-/** The colours of a mine's tunnel's mouth, on a mountain, and of its timbers, its posts and lintel. */
-export const TUNNEL_MOUTH = MOUTH,
-  TUNNEL_TIMBER = WOOD;
+/**
+ * The colours a mine's parts are drawn in: on a mountain, its tunnel's mouth, its timbers (posts and lintel, and a
+ *  headframe's legs elsewhere) and the rock it's dug into; elsewhere, its engine house's walls and roof; and its spoil
+ *  and its iron (a cart, and a headframe's wheel).
+ */
+export const MINE_COLOURS = {
+  mouth: MOUTH,
+  timber: WOOD,
+  rock: HILLSIDE,
+  engine: WALL,
+  roof: BARN_ROOF,
+  spoil: SPOIL,
+  iron: IRON,
+} as const;
 
 /**
  * The colours a farm's buildings are drawn in, among its fields, none a city's: its farmhouse's walls and roof, its
@@ -1452,17 +1512,20 @@ const farmstead = (
   const yard = at(-0.045 * f, -0.045 * f),
     yardGround = layer.ground(...yard);
 
+  // Each down into the ground at its lowest, its top over the ground at its middle.
   if (kind === 'farmland') {
+    const foot = footOf(layer, ...yard, 0.015 * f);
+
     layer.solid(
       cylinder,
-      [yard[0], yardGround + 0.05 * f, yard[1]],
-      [0.03 * f, 0.1 * f, 0.03 * f],
+      [yard[0], (foot + yardGround + 0.1 * f) / 2, yard[1]],
+      [0.03 * f, yardGround + 0.1 * f - foot, 0.03 * f],
       SILO
     );
     layer.solid(
-      sphere,
+      dome,
       [yard[0], yardGround + 0.1 * f, yard[1]],
-      [0.03 * f, 0.02 * f, 0.03 * f],
+      [0.03 * f, 0.04 * f, 0.03 * f],
       SILO
     );
   } else {
@@ -1471,12 +1534,13 @@ const farmstead = (
       [0.03, 0.012],
     ].forEach(([x, z]) => {
       const [hu, hv] = at(-0.045 * f + x! * f, -0.045 * f + z! * f),
-        hy = layer.ground(hu, hv);
+        hy = layer.ground(hu, hv),
+        foot = footOf(layer, hu, hv, 0.013 * f);
 
       layer.solid(
         cylinder,
-        [hu, hy + 0.01 * f, hv],
-        [0.026 * f, 0.02 * f, 0.026 * f],
+        [hu, (foot + hy + 0.02 * f) / 2, hv],
+        [0.026 * f, hy + 0.02 * f - foot, 0.026 * f],
         STRAW
       );
       layer.solid(
@@ -1488,10 +1552,16 @@ const farmstead = (
     });
   }
 
+  // The yard's, round its haystacks or its silo, in order round it.
   return [
     footprintOf(farmhouse),
     barn,
-    footprintOf({ at: yard, width: 0.06 * f, facing }),
+    [
+      [-0.06, -0.06],
+      [0, -0.06],
+      [0, -0.018],
+      [-0.06, -0.018],
+    ].map(([x, z]) => at(x! * f, z! * f)),
   ];
 };
 
