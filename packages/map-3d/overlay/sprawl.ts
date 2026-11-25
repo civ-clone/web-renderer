@@ -417,7 +417,12 @@ export type SuburbPlan = {
 };
 
 /** A road or railroad on a square, from its middle out one way, along its bend: `key` is the way it goes, its own. */
-export type Run = { key: number; points: readonly Point[] };
+export type Run = {
+  key: number;
+  points: readonly Point[];
+  // How far it reaches either side of its middle, as drawn (a road's width, a railroad's ballast), where that's known.
+  half?: number;
+};
 
 /**
  * What's on a square beside a city that its houses keep clear of, line or stand on their own side of: the same for every

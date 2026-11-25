@@ -17,6 +17,8 @@ import generateWorld from '@civ-clone/ui-map-3d/debug/generateWorld';
 import pageOptions from '@civ-clone/ui-map-3d/debug/pageOptions';
 import populate, {
   gallery,
+  improvementsGallery,
+  improvementsShown,
   specialsGallery,
   specialsRows,
   specialsShown,
@@ -145,6 +147,7 @@ expect(
     seen: 1,
     gallery: false,
     specials: false,
+    improvements: false,
     distance: null,
     x: 40,
     y: 25,
@@ -153,7 +156,7 @@ expect(
 expect(
   'each as asked',
   pageOptions(
-    '?grid=hex-odd-r&width=40&height=30&seed=9&seen=0.5&distance=12.5&x=3&y=4&gallery=1&specials=1'
+    '?grid=hex-odd-r&width=40&height=30&seed=9&seen=0.5&distance=12.5&x=3&y=4&gallery=1&specials=1&improvements=1'
   ),
   {
     topologyId: 'hex-odd-r',
@@ -163,6 +166,7 @@ expect(
     seen: 0.5,
     gallery: true,
     specials: true,
+    improvements: true,
     distance: 12.5,
     x: 3,
     y: 4,
@@ -179,6 +183,7 @@ expect(
     seen: 1,
     gallery: false,
     specials: false,
+    improvements: false,
     distance: null,
     x: 0,
     y: 80,
@@ -390,6 +395,86 @@ expect(
     specialsShown()[0]![1],
     0,
   ]
+);
+
+// Its improvements, on 30 by 20 squares as for its specials: each of what it shows once, on land, on its terrain, built
+//  as it says, three squares from any other, the nearest the middle first; each of its roads' neighbours with a road on
+//  its terrain; no cities or units.
+const works = field.map((tile) => ({
+    ...tile,
+    terrain: { ...tile.terrain },
+    city: { name: 'Gone' },
+    units: [{ _: 'Warrior' }],
+  })) as unknown as Tile[],
+  at = (x: number, y: number) =>
+    works.find((tile) => tile.x === x && tile.y === y),
+  names = (tile: Tile | undefined) =>
+    (tile?.improvements ?? []).map(({ _ }) => _).join('+');
+
+improvementsGallery(works, 15, 10);
+
+const builtAt = works.filter(
+    (tile) => (tile.improvements ?? []).length > 0 && names(tile) !== 'Road'
+  ),
+  shown = improvementsShown();
+
+expect(
+  'its improvements: each once, on its land, as it says, apart, nearest first, roads out, no cities or units',
+  [
+    builtAt.length,
+    builtAt.map((tile) => `${tile.terrain._}:${names(tile)}`).sort(),
+    builtAt.every((tile) => tile.isLand),
+    builtAt.every((a) =>
+      builtAt.every(
+        (b) => a === b || Math.abs(a.x - b.x) >= 3 || Math.abs(a.y - b.y) >= 3
+      )
+    ),
+    names(at(15, 10)),
+    shown.every(({ terrain, improvements, roads }) => {
+      const tile = builtAt.find(
+        (each) =>
+          each.terrain._ === terrain && names(each) === improvements.join('+')
+      );
+
+      return (
+        tile !== undefined &&
+        roads.every(([dx, dy]) => {
+          const neighbour = at(tile.x + dx, tile.y + dy);
+
+          return (
+            names(neighbour) === 'Road' && neighbour!.terrain._ === terrain
+          );
+        })
+      );
+    }),
+    works.filter((tile) => tile.city !== null || tile.units.length > 0).length,
+  ],
+  [
+    shown.length,
+    shown
+      .map(
+        ({ terrain, improvements }) => `${terrain}:${improvements.join('+')}`
+      )
+      .sort(),
+    true,
+    true,
+    shown[0]!.improvements.join('+'),
+    true,
+    0,
+  ]
+);
+
+// Its road through a fortress's corner: diagonally below on the square grid; on the others, where that's a neighbour
+//  only every other row, the square below, a neighbour on every row.
+expect(
+  'its road through a fortress’s corner, on each grid, goes to a neighbour on every row',
+  (['square', 'staggered-iso', 'hex-odd-r'] as const).map((topologyId) =>
+    improvementsShown(topologyId)
+      .filter(({ roads }) => roads.length === 1)
+      .filter(({ improvements }) => improvements.includes('Fortress'))
+      .map(({ roads }) => roads[0])
+  ),
+  [[[1, 1]], [[0, 1]], [[0, 1]]]
 );
 
 // On the staggered grid, where squares two rows apart touch at a corner, its specials are every fourth row.
