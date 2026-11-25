@@ -60,6 +60,7 @@ import { TileMarker } from './markers/markerFor';
 import { idleChanges } from './idling';
 import unitUnder from './markers/pickUnit';
 import { OverlayMesh, PLANT_NUMBERS } from './overlay/overlayMesh';
+import { plantMatrices, plantsKept } from './overlay/thinning';
 import { FIELD_OF_VIEW, Orbit, eye, sightFor } from './camera/orbit';
 import Water, { Clouds, Ground, SMOG_ORDER } from './water';
 import YieldIcons from './yieldIcons';
@@ -454,6 +455,9 @@ export const overlayCopies = (
       : []),
   ]);
 
+// Where a drawn copy's plants of a model keep how many they are, all of them, as fewer may be drawn.
+const ALL_PLANTS = 'allPlants';
+
 // The sun's shadow map's size, in texels a side, and how far the sun is from what it lights (its offset below).
 const SHADOW_MAP = 2048,
   SUN_DISTANCE = Math.hypot(30, 40, 20);
@@ -462,6 +466,9 @@ export const createStage: StageFactory = (
   canvas,
   { period, ground, yieldIcon }
 ) => {
+  // How tall the canvas is in the page's pixels, as it was last sized: how big things look on it (`thinPlants`).
+  let viewHeight = canvas.clientHeight || 1;
+
   const renderer = new WebGLRenderer({ antialias: true, canvas }),
     scene = new Scene(),
     camera = new PerspectiveCamera(
@@ -1056,9 +1063,63 @@ export const createStage: StageFactory = (
     }
   };
 
+  // A set's plants, each model's at each copy of each chunk drawn fewer when they're small on the screen (`plantsKept`),
+  //  by how deep into the view the nearest of them is, the same share for each of the model's parts, as they share its
+  //  matrices.
+  const reach = new Sphere(),
+    offset = new Vector3(),
+    forward = new Vector3(),
+    shares = new Map<InstancedBufferAttribute, number>(),
+    thinCopy = (copy: Object3D, focal: number): void => {
+      shares.clear();
+      copy.children.forEach((child) => {
+        const all = child.userData[ALL_PLANTS] as number | undefined,
+          mesh = child as InstancedMesh;
+
+        if (all === undefined || mesh.boundingSphere === null) {
+          return;
+        }
+
+        let share = shares.get(mesh.instanceMatrix);
+
+        if (share === undefined) {
+          reach.copy(mesh.boundingSphere).applyMatrix4(mesh.matrixWorld);
+          // How deep into the view the nearest of them is, along the way the camera looks.
+          share = plantsKept(
+            Math.max(
+              0,
+              offset.subVectors(reach.center, camera.position).dot(forward) -
+                reach.radius
+            ),
+            focal
+          );
+          shares.set(mesh.instanceMatrix, share);
+        }
+
+        mesh.count = Math.ceil(all * share);
+      });
+    },
+    thinPlants = (): void => {
+      camera.getWorldDirection(forward);
+
+      // The page's pixels a thing one unit tall stands, one unit deep into the view.
+      const focal =
+        viewHeight / (2 * Math.tan((camera.fov * Math.PI) / 180 / 2));
+
+      overlays.forEach(({ drawn }) => {
+        for (const copy of drawn) {
+          thinCopy(copy, focal);
+        }
+      });
+    };
+
   return {
-    render: (): void => renderer.render(scene, camera),
+    render: (): void => {
+      thinPlants();
+      renderer.render(scene, camera);
+    },
     resize: (width, height, pixelRatio): void => {
+      viewHeight = height;
       renderer.setPixelRatio(pixelRatio);
       // The canvas's own size only: the page's stylesheet sizes its box.
       renderer.setSize(width, height, false);
@@ -1160,11 +1221,7 @@ export const createStage: StageFactory = (
           spheres: Sphere[];
         }[] = [],
         plantsBox = new Box3(),
-        matrix = new Matrix4(),
-        turn = new Quaternion(),
-        up = new Vector3(0, 1, 0),
-        at = new Vector3(),
-        size = new Vector3();
+        at = new Vector3();
 
       Object.entries(mesh.plants).forEach(([id, laid]) => {
         const model = plantModels.get(id);
@@ -1173,24 +1230,17 @@ export const createStage: StageFactory = (
           return;
         }
 
-        const count = laid.length / PLANT_NUMBERS,
-          matrices = new Float32Array(count * 16);
+        // By their rank, so the first few drawn of them, small on the screen, are an even scatter (`plantsKept`).
+        const matrices = plantMatrices(laid, PLANT_NUMBERS, model.height);
 
-        for (let n = 0; n < count; n++) {
-          const [u, y, v, height, facing] = laid.subarray(
-              n * PLANT_NUMBERS,
-              (n + 1) * PLANT_NUMBERS
-            ),
-            scale = height! / model.height;
-
-          matrix
-            .compose(
-              at.set(u!, y!, v!),
-              turn.setFromAxisAngle(up, facing!),
-              size.set(scale, scale, scale)
+        for (let n = 0; n < laid.length / PLANT_NUMBERS; n++) {
+          plantsBox.expandByPoint(
+            at.set(
+              laid[n * PLANT_NUMBERS]!,
+              laid[n * PLANT_NUMBERS + 1]!,
+              laid[n * PLANT_NUMBERS + 2]!
             )
-            .toArray(matrices, n * 16);
-          plantsBox.expandByPoint(at.set(u!, y!, v!));
+          );
         }
 
         const shared = new InstancedBufferAttribute(matrices, 16);
@@ -1254,6 +1304,8 @@ export const createStage: StageFactory = (
               grown.instanceMatrix = matrices;
               grown.count = matrices.count;
               grown.boundingSphere = spheres[index]!;
+              // Thinned as it's drawn, by how small it is on the screen (`thinPlants`).
+              grown.userData[ALL_PLANTS] = matrices.count;
               grown.castShadow = true;
               grown.receiveShadow = true;
               drawn.add(grown);

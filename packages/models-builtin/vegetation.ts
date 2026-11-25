@@ -39,6 +39,13 @@ export type Plant = {
 
 export type Growth = {
   plants: readonly Plant[];
+  // For woods: how far apart their trees' lattice points are, about, where it isn't the woods' own (`CANOPY` on the
+  //  map). Woods that grow as one (`canopy`) share it.
+  spacing?: number;
+  // For woods: what grows under the trees and in the clearings, on a lattice of its own `spacing` apart, about, `share`
+  //  of its points planted where the woods are whole, each of `plants` as often as its count says. What's lower than a
+  //  unit's stand grows in the clearing about a square's middle too.
+  undergrowth?: { spacing: number; share: number; plants: readonly Plant[] };
   // For a forest: the share of its trees that are conifers, at the equator and at the poles.
   conifers?: readonly [number, number];
   // For woods, which grow as one across squares: which woods they are. Squares beside each other of the same woods
@@ -60,6 +67,14 @@ export const vegetationTable: { readonly [terrain: string]: Growth } = {
     plants: [plant('conifer', 8, [0.95, 1.4], '#2c5230', '#4a3424')],
     conifers: [0.15, 0.95],
     canopy: 'woods',
+    undergrowth: {
+      spacing: 0.13,
+      share: 0.6,
+      plants: [
+        plant('scrub', 4, [0.8, 1.2], '#4e6c36', '#4e6c36'),
+        plant('bush', 2, [0.7, 1.0], '#466e34', '#466e34'),
+      ],
+    },
   },
   Jungle: {
     plants: [
@@ -67,6 +82,15 @@ export const vegetationTable: { readonly [terrain: string]: Growth } = {
       plant('palm', 2, [0.9, 1.2], '#3f8a34', '#6b5236'),
     ],
     canopy: 'woods',
+    undergrowth: {
+      spacing: 0.11,
+      share: 0.7,
+      plants: [
+        plant('bush', 3, [0.8, 1.2], '#2f6b2a', '#2f6b2a'),
+        plant('scrub', 3, [0.9, 1.25], '#3a7a30', '#3a7a30'),
+        plant('shrub', 1, [0.8, 1.1], '#4a8a36', '#5a4a2e'),
+      ],
+    },
   },
   Swamp: {
     plants: [
@@ -74,6 +98,8 @@ export const vegetationTable: { readonly [terrain: string]: Growth } = {
       plant('deadTree', 2, [0.8, 1.1], '#4a4036', '#4a4036'),
     ],
     canopy: 'swamp',
+    // As sparse as woods were, as a swamp's mostly open.
+    spacing: 0.26,
   },
   Grassland: { plants: [plant('bush', 2, [0.8, 1.2], '#4e7a32', '#4e7a32')] },
   Plains: { plants: [plant('shrub', 3, [0.7, 1.1], '#7a7a3a', '#6a5a36')] },

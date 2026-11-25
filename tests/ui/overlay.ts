@@ -2406,12 +2406,37 @@ const landOf = (
       [...laid.values()].reduce(
         (sum, mesh) => sum + (mesh?.positions.length ?? 0),
         0
-      );
+      ),
+    // The points of what's laid that are a forest's or a jungle's trees' colours: their leaves and trunks.
+    treeColours = ['Forest', 'Jungle']
+      .flatMap((terrain) => vegetationTable[terrain]!.plants)
+      .flatMap(({ colour, detail }) => [new Color(colour), new Color(detail)]),
+    treeColoured = () =>
+      [...laid.values()].reduce((sum, mesh) => {
+        const colours = mesh?.colours ?? new Float32Array();
+
+        for (let at = 0; at < colours.length; at += 3) {
+          if (
+            treeColours.some(
+              ({ r, g, b }) =>
+                Math.abs(r - colours[at]!) +
+                  Math.abs(g - colours[at + 1]!) +
+                  Math.abs(b - colours[at + 2]!) <
+                1e-5
+            )
+          ) {
+            sum++;
+          }
+        }
+
+        return sum;
+      }, 0);
 
   land.queueAll(0, 0);
   land.build(stage, null);
 
   const builtIn = solids(),
+    builtInTrees = treeColoured(),
     chunks = laid.size;
 
   land.growWith(
@@ -2494,10 +2519,23 @@ const landOf = (
 
         return Math.max(...heights) / Math.min(...heights) < 1.25;
       }),
-      solids(),
+      solids() > 0 && solids() < builtIn,
+      // What's left built in is the undergrowth's: none of it the trees' colours, as there were before.
+      [builtInTrees > 0, treeColoured()],
       [...laid.values()].every((mesh) => mesh !== null),
     ],
-    [true, chunks, ['beech', 'pine'], ['palm', 'teak'], true, 0, [], 0, true]
+    [
+      true,
+      chunks,
+      ['beech', 'pine'],
+      ['palm', 'teak'],
+      true,
+      0,
+      [],
+      true,
+      [true, 0],
+      true,
+    ]
   );
 }
 
@@ -3665,17 +3703,20 @@ const onRoad = Array.from({ length: 60 }, (_, at) => {
           })
         )
       ),
-    offRoad = ([u, , v]: [number, number, number]): boolean =>
-      // Points of the road itself lie on it: only what stands further off it is a plant.
+    offRoad = ([u, y, v]: [number, number, number]): boolean =>
+      // Points of the road itself lie on it: only what stands further off it is a plant. Near the middle, where a
+      //  unit's figures stand on its stand, only what's lower than the stand (0.03) grows, trees' crowns reaching no
+      //  further in than 0.17, over the stand's rim.
       fromRoad(u, v) <= 0.036 ||
-      (Math.hypot(u - cu, v - cv) > 0.22 && fromRoad(u, v) >= 0.05);
+      ((Math.hypot(u - cu, v - cv) > 0.17 || y - heightAt(u) < 0.03 + 1e-3) &&
+        fromRoad(u, v) >= 0.05);
 
   return laidAt(forest(['Road'])!, 0.5, x, y).filter((point) => !offRoad(point))
     .length;
 }).filter((count) => count > 0);
 
 expect(
-  'its trees stand clear of the unit’s stand at the middle, and of the roads, wherever the square',
+  'its trees stand clear of the figures on a unit’s stand at the middle, only what’s lower than the stand growing there, and all of it clear of the roads, wherever the square',
   onRoad,
   []
 );
@@ -3689,17 +3730,23 @@ expect(
   ],
   [true, true]
 );
-// A conifer is fewer points than a broadleaf (two narrow tiers to a round crown): over 40 squares, a forest at the poles
-//  is far fewer points than one at the equator.
-const forestPoints = (latitude: number): number =>
-  Array.from({ length: 40 }, (_, at) =>
-    laidAt(forest()!, latitude, at % 20, Math.floor(at / 20))
-  ).reduce((sum, points) => sum + points.length, 0);
+// Over 40 squares, the share of a forest's trees that are conifers, at `latitude`.
+const conifersAt = (latitude: number): number => {
+  const trees = Array.from({ length: 40 }, (_, at) =>
+    layOverlay(
+      forest()!,
+      { ...place(at % 20, Math.floor(at / 20)), latitude },
+      soup()
+    ).grown.filter(([, , kind]) => kind === 'conifer' || kind === 'broadleaf')
+  ).flat();
+
+  return trees.filter(([, , kind]) => kind === 'conifer').length / trees.length;
+};
 
 expect(
   'a forest’s trees are mostly broadleaf at the equator and conifers at the poles',
-  forestPoints(1) < forestPoints(0) * 0.8,
-  true
+  [conifersAt(0) < 0.3, conifersAt(1) > 0.85],
+  [true, true]
 );
 expect(
   'its solids’ normals are of length one',
