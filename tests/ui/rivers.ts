@@ -305,7 +305,7 @@ ids.forEach((topologyId) => {
     [7, 1, 2, true]
   );
 
-  // Along every course, a little apart: where its own water is, over the sea's level, its level under the land round
+  // Along every course, a little apart: where its level's over the sea's, its level under the land round
   //  it without the river, seen and dry, at it and at its bed's edge and its bank's top; the land cut down under it
   //  across its water and its bed; and never raised anywhere.
   let over = 0,
@@ -346,7 +346,7 @@ ids.forEach((topologyId) => {
           const u = pu - (dv / length) * out * side,
             v = pv + (du / length) * out * side;
 
-          // Where its own water's drawn: at the sea's level or under, the sea's its water. At each point and halfway
+          // Where its level's over the sea's: at the sea's level or under, the sea's its water. At each point and halfway
           //  between, under it as `underLand` puts it; between those, the land may dip.
           if (
             onLand(u, v) &&
@@ -409,7 +409,7 @@ ids.forEach((topologyId) => {
   );
 
   expect(
-    `${topologyId}: a river’s level is under the land round it, seen and dry, across its water and bed, where its own water is; the land’s cut down under it there, never raised anywhere; its bed’s over the sea where it’s all over the sea’s level; and where courses meet, they’re at one level`,
+    `${topologyId}: a river’s level is under the land round it, seen and dry, across its water and bed, where its level’s over the sea’s; the land’s cut down under it there, never raised anywhere; its bed’s over the sea where it’s all over the sea’s level; and where courses meet, they’re at one level`,
     [
       over <= 1e-12,
       unburied,
