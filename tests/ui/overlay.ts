@@ -1579,9 +1579,10 @@ expect(
   // Fortresses and airbases (#1335), on 40 squares each, on land sloping two ways.
   //  - A fortress: its walls and towers stand on the ground, the walls their full height over the highest of it, all
   //    clear of the unit's stand. It has a gate wherever a road leaves through its walls, flanked by two towers, or in
-  //    its south wall where none does; where a road leaves through a corner, the corner's open, with no tower. So its
-  //    slate roofs are four corner towers' and two gate towers' with no road, four corners' and four gate towers' with
-  //    a road east and west, three corners' and two gate towers' with a road through a corner.
+  //    its south wall where none does; where a road leaves through a corner, the corner's open, with no tower. So it
+  //    has four corner towers and two gate towers with no road, four and four with a road east and west, and three
+  //    and two with a road through a corner. And a road or railroad leaving any of eight ways has none of its walls
+  //    or towers in its way, across its width, its ballast's for a railroad.
   //  - An airbase: its markings on its runway; its hangar, its doors and its control tower off it, its doors facing it;
   //    the hangar's walls and the tower's shaft on the ground.
   {
@@ -1619,11 +1620,16 @@ expect(
         offsets.map((offset) => neighbour(offset, ['Road'])),
       fortresses = (
         [
-          ['open', ['Fortress'], [], 6],
-          ['east and west', ['Fortress', 'Road'], roadsTo([1, 0], [-1, 0]), 8],
-          ['a corner', ['Fortress', 'Road'], roadsTo([1, 1]), 5],
-        ] as [string, string[], OverlayNeighbour[], number][]
-      ).map(([name, improvements, around, roofs]) =>
+          ['open', ['Fortress'], [], [4, 2]],
+          [
+            'east and west',
+            ['Fortress', 'Road'],
+            roadsTo([1, 0], [-1, 0]),
+            [4, 4],
+          ],
+          ['a corner', ['Fortress', 'Road'], roadsTo([1, 1]), [3, 2]],
+        ] as [string, string[], OverlayNeighbour[], [number, number]][]
+      ).map(([name, improvements, around, [cornered, gated]]) =>
         squares.map((x) => {
           const triangles = laidOn(x, improvements, around),
             [cu, cv] = place(x, 3).centre,
@@ -1668,13 +1674,12 @@ expect(
 
           return {
             name,
+            // Its corner towers, each a cylinder; its gates' towers, each under a four-sided roof, 8 triangles.
             roofs:
+              towers.length === cornered &&
               runsOf(triangles, FORTRESS_COLOURS.slate)
                 .map((run) => run.length)
-                .reduce(
-                  (sum, each) => sum + (each === 16 ? 1 : each / 8),
-                  0
-                ) === roofs,
+                .reduce((sum, each) => sum + (each === 8 ? 1 : 0), 0) === gated,
             grounded: [...walls, ...towers].every(grounded(slope)),
             tall: walls.every((wall) => {
               const points = pointsIn(wall),
@@ -1740,6 +1745,82 @@ expect(
           };
         })
       );
+
+    // How far (u, v) is from the segment `a`-`b`.
+    const distanceToSegment = (
+      [u, v]: readonly [number, number],
+      [au, av]: readonly [number, number],
+      [bu, bv]: readonly [number, number]
+    ) => {
+      const du = bu - au,
+        dv = bv - av,
+        t = Math.max(
+          0,
+          Math.min(1, ((u - au) * du + (v - av) * dv) / (du * du + dv * dv))
+        );
+
+      return Math.hypot(u - (au + du * t), v - (av + dv * t));
+    };
+
+    // A road, or a railroad, leaving each of eight ways, on 10 squares each: how many of a fortress's walls' and
+    //  towers' points are within its half-width (`ROAD_HALF`, the ballast's `BALLAST_HALF`) of its middle.
+    const inTheWay = (
+      [
+        [0, -1],
+        [1, -1],
+        [1, 0],
+        [1, 1],
+        [0, 1],
+        [-1, 1],
+        [-1, 0],
+        [-1, -1],
+      ] as [number, number][]
+    ).flatMap((offset) =>
+      (['road', 'railroad'] as const).map((kind) =>
+        squares.slice(0, 10).reduce((sum, x) => {
+          const at = place(x, 3, { height: slope }),
+            [cu, cv] = at.centre,
+            middle: (readonly [number, number])[] =
+              kind === 'road'
+                ? roadHalf(at, offset).points
+                : [
+                    [cu, cv],
+                    [cu + offset[0] / 2, cv + offset[1] / 2],
+                  ],
+            half = kind === 'road' ? 0.035 : 0.05,
+            improvements =
+              kind === 'road'
+                ? ['Fortress', 'Road']
+                : ['Fortress', 'Road', 'Railroad'];
+
+          return (
+            sum +
+            pointsIn(
+              trianglesOn(
+                overlayFor(square(improvements, { terrain: 'Plains' }), [
+                  neighbour(offset, improvements.slice(1)),
+                ])!,
+                at
+              ).filter(isColour(FORTRESS_COLOURS.stone, FORTRESS_COLOURS.slate))
+            ).filter(([u, , v]) =>
+              middle
+                .slice(1)
+                .some(
+                  (point, index) =>
+                    distanceToSegment([u, v], middle[index]!, point) <
+                    half - 1e-6
+                )
+            ).length
+          );
+        }, 0)
+      )
+    );
+
+    expect(
+      'a road or railroad through a fortress, any of eight ways, has none of its walls or towers in its way',
+      inTheWay,
+      inTheWay.map(() => 0)
+    );
 
     expect(
       'a fortress grounded, clear of the stand, gated where roads leave or to the south; an airbase’s hangar off it',

@@ -245,9 +245,13 @@ const SPOTS = {
 const MINE_ROOMS = [0.15, 0.12, 0.1] as const,
   FARM_ROOMS = [0.13, 0.1, 0.08] as const;
 
+// How far a road reaches either side of its middle, and a railroad's ballast.
+const ROAD_HALF = 0.035,
+  BALLAST_HALF = 0.05;
+
 // A fortress's walls, how far out from the square's middle, in its radius, how thick and how tall over the highest of
-//  the ground under them, and how wide a gate in them is; its towers' radius and height; and how far apart the
-//  merlons along the top of its walls are.
+//  the ground under them, and how wide a gate in them is with no road through it; its towers' radius and height; and
+//  how far apart the merlons along the top of its walls are.
 export const FORTRESS = {
   half: 0.62,
   thick: 0.03,
@@ -914,7 +918,7 @@ const road = (layer: Layer, route: Route): void => {
   route.joins.forEach((offset) => {
     const { points, ways } = roadHalf(place, offset);
 
-    layer.ribbon(points, 0.07, ROAD, LIFT.road, ways);
+    layer.ribbon(points, ROAD_HALF * 2, ROAD, LIFT.road, ways);
   });
   layer.disc(place.centre, route.alone ? 0.09 : 0.035, ROAD, LIFT.road);
 };
@@ -942,7 +946,7 @@ const railroad = (layer: Layer, route: Route): void => {
           ? [0, 0]
           : [(-(end[1] - v) / length) * 0.025, ((end[0] - u) / length) * 0.025];
 
-    layer.strip(place.centre, end, 0.1, BALLAST, LIFT.ballast);
+    layer.strip(place.centre, end, BALLAST_HALF * 2, BALLAST, LIFT.ballast);
 
     // Sleepers across it, then the two rails over them.
     for (let t = 0.1; t < 1; t += 0.2) {
@@ -1677,8 +1681,9 @@ const groundUnder = (
  * A fortress round the square's middle, its walls along `fortressLines`: each wall in lengths that step with the
  *  ground, from the lowest under each to its height over the highest, with merlons along its outer edge; a round tower
  *  at each corner under a slate roof; and a gate, flanked by two square towers, wherever a road or railroad leaves
- *  through its walls, or in its south wall, towards the camera, where none does. Where a road leaves through a corner,
- *  that corner is open, with no tower.
+ *  through its walls, wide enough for it at the angle it crosses, or in its south wall (towards the camera at its
+ *  starting heading) where none does. Where a road leaves through a corner, both walls are open there, as wide as the
+ *  widest gate that opened it, with no tower; and a gate's tower too near a corner's isn't drawn.
  */
 const fortress = (layer: Layer): void => {
   const corners = fortressCorners(layer.place),
@@ -1686,49 +1691,70 @@ const fortress = (layer: Layer): void => {
       corners[1]![0] - corners[0]![0],
       corners[1]![1] - corners[0]![1]
     ),
-    // Where each road or railroad leaves through a side: which side, and how far along it.
-    gates: [number, number][] = [];
+    // Where each road or railroad leaves through a side: which side, how far along it, and how far either side of
+    //  that its gate opens: its half-width across the wall, at the angle it crosses, and enough that a gate's tower,
+    //  as deep as the wall, clears its edge, and a little more, as a road bends.
+    gates: [number, number, number][] = [];
 
-  layer.runs.forEach(({ points }) =>
+  layer.runs.forEach(({ points, half = ROAD_HALF }) =>
     points.slice(1).forEach((point, index) =>
       corners.forEach((corner, side) => {
-        const along = crossing(
-          points[index]!,
-          point,
-          corner,
-          corners[(side + 1) % 4]!
-        );
+        const from = points[index]!,
+          next = corners[(side + 1) % 4]!,
+          along = crossing(from, point, corner, next);
 
-        if (along !== null) {
-          gates.push([side, along * length]);
+        if (along === null) {
+          return;
         }
+
+        // How square to the wall it crosses: its way's share across the wall, which runs along the side.
+        const [ru, rv] = [point[0] - from[0], point[1] - from[1]],
+          [su, sv] = [
+            (next[0] - corner[0]) / length,
+            (next[1] - corner[1]) / length,
+          ],
+          square = Math.max(
+            0.2,
+            Math.abs(ru * sv - rv * su) / Math.hypot(ru, rv)
+          ),
+          slant = Math.sqrt(1 - square * square) / square;
+
+        gates.push([
+          side,
+          along * length,
+          half / square + 0.018 * slant + 0.008,
+        ]);
       })
     )
   );
 
   if (gates.length === 0) {
-    gates.push([2, length / 2]);
+    gates.push([2, length / 2, FORTRESS.gate / 2]);
   }
 
-  const { gate, tower, thick, tall } = FORTRESS,
+  const { tower, thick, tall } = FORTRESS,
     // Each side's gaps, from and to, along it.
     gaps = [0, 1, 2, 3].map((side) =>
       gates
         .filter(([each]) => each === side)
-        .map(([, at]): [number, number] => [at - gate / 2, at + gate / 2])
-        .sort((a, b) => a[0] - b[0])
+        .map(([, at, wide]): [number, number] => [at - wide, at + wide])
     ),
-    // A corner is open where a gap on either side reaches into its tower: then both its walls are, there.
-    open = corners.map(
-      (_, corner) =>
-        gaps[corner]!.some(([from]) => from < tower) ||
-        gaps[(corner + 3) % 4]!.some(([, to]) => to > length - tower)
+    // A corner is open where a gap on either side reaches into its tower: then both its walls are, there, as far from
+    //  it as the furthest end of the gaps that opened it.
+    open = corners.map((_, corner) =>
+      Math.max(
+        0,
+        ...gaps[corner]!.filter(([from]) => from < tower).map(([, to]) => to),
+        ...gaps[(corner + 3) % 4]!.filter(([, to]) => to > length - tower).map(
+          ([from]) => length - from
+        )
+      )
     );
 
-  open.forEach((isOpen, corner) => {
-    if (isOpen) {
-      gaps[corner]!.push([-gate / 2, gate / 2]);
-      gaps[(corner + 3) % 4]!.push([length - gate / 2, length + gate / 2]);
+  open.forEach((wide, corner) => {
+    if (wide > 0) {
+      gaps[corner]!.push([-wide, wide]);
+      gaps[(corner + 3) % 4]!.push([length - wide, length + wide]);
     }
   });
 
@@ -1814,10 +1840,14 @@ const fortress = (layer: Layer): void => {
       }
     });
 
-    // A square tower each side of each gap, but where the gap opens a corner.
+    // A square tower each side of each gap, but at an open corner, or where it'd stand in a corner's tower.
+    const clear = tower + 0.036,
+      first = open[side]! > 0 ? 0 : clear,
+      last = length - (open[(side + 1) % 4]! > 0 ? 0 : clear);
+
     gaps[side]!.forEach(([a, b]) =>
       [a, b].forEach((end, index) => {
-        if (end <= tower || end >= length - tower) {
+        if (end <= first || end >= last) {
           return;
         }
 
@@ -1835,7 +1865,8 @@ const fortress = (layer: Layer): void => {
         layer.solid(
           pyramid,
           [at[0], top + 0.016, at[1]],
-          [0.05 * Math.SQRT2, 0.032, 0.05 * Math.SQRT2],
+          // Its eaves a hair past its walls, inside its gate's margin.
+          [0.04 * Math.SQRT2, 0.03, 0.04 * Math.SQRT2],
           SLATE,
           [0, facing + Math.PI / 4, 0]
         );
@@ -1845,7 +1876,7 @@ const fortress = (layer: Layer): void => {
 
   // A round tower at each corner that isn't open, under a slate roof.
   corners.forEach(([u, v], corner) => {
-    if (open[corner]) {
+    if (open[corner]! > 0) {
       return;
     }
 
@@ -1951,8 +1982,10 @@ const airbase = (layer: Layer): void => {
     [door[0], rv - toward * (RUNWAY.wide / 2 - 0.004)],
     wide * 0.6,
     TARMAC,
-    LIFT.road
+    LIFT.road + 0.001
   );
+  // What's claimed after keeps clear of it.
+  layer.lines.push([door, [door[0], rv - toward * (RUNWAY.wide / 2 - 0.004)]]);
   layer.solid(
     box,
     [hu, (low - 0.004 + eaves) / 2, hv],
@@ -2958,7 +2991,11 @@ export const layOverlay = (
           half
             .slice(1)
             .forEach((point, index) => layer.lines.push([half[index]!, point]));
-          layer.runs.push({ key: wayIndex(offset), points: half });
+          layer.runs.push({
+            key: wayIndex(offset),
+            points: half,
+            half: ROAD_HALF,
+          });
 
           return;
         }
@@ -2968,6 +3005,7 @@ export const layOverlay = (
         layer.runs.push({
           key: wayIndex(offset) + 100,
           points: [centre, halfway(place, offset)],
+          half: BALLAST_HALF,
         });
       });
 

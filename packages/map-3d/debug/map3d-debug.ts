@@ -37,7 +37,7 @@ const populated = (
   if (allSpecials) {
     specialsGallery(tiles, x, y, specialsRows(topologyId));
   } else if (allImprovements) {
-    improvementsGallery(tiles, x, y);
+    improvementsGallery(tiles, x, y, topologyId);
   } else if (laidOut) {
     gallery(tiles, x, y);
   } else {

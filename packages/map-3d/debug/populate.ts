@@ -494,9 +494,15 @@ export const specialsGallery = (
   });
 };
 
-/** What the page's improvements show (`?improvements=1`): on each terrain, what's built there, and the ways its road
- *  leaves it, by offset, each to a neighbour given a road too. */
-export const improvementsShown = (): {
+/**
+ * What the page's improvements show (`?improvements=1`): on each terrain, what's built there, and the ways its road
+ *  leaves it, by offset, each to a neighbour given a road too. The road through a fortress's corner goes to the
+ *  square diagonally below on the square grid; on the others, where that's a neighbour only every other row, to the
+ *  square below, a neighbour on every row, at a slant (through a corner on the staggered grid).
+ */
+export const improvementsShown = (
+  topologyId = 'square'
+): {
   terrain: string;
   improvements: string[];
   roads: [number, number][];
@@ -511,7 +517,11 @@ export const improvementsShown = (): {
       [-1, 0],
     ],
   },
-  { terrain: 'Grassland', improvements: ['Fortress', 'Road'], roads: [[1, 1]] },
+  {
+    terrain: 'Grassland',
+    improvements: ['Fortress', 'Road'],
+    roads: [topologyId === 'square' ? [1, 1] : [0, 1]],
+  },
   { terrain: 'Plains', improvements: ['Airbase'], roads: [] },
   { terrain: 'Grassland', improvements: ['Airbase', 'Road'], roads: [[0, -1]] },
   { terrain: 'Hills', improvements: ['Mine'], roads: [] },
@@ -528,7 +538,8 @@ export const improvementsShown = (): {
 export const improvementsGallery = (
   tiles: Tile[],
   x: number,
-  y: number
+  y: number,
+  topologyId = 'square'
 ): void => {
   const at = (tx: number, ty: number) =>
       tiles.find((tile) => tile.x === tx && tile.y === ty),
@@ -566,22 +577,24 @@ export const improvementsGallery = (
     tile.units = [];
   });
 
-  improvementsShown().forEach(({ terrain, improvements, roads }, index) => {
-    const tile = squares[index];
+  improvementsShown(topologyId).forEach(
+    ({ terrain, improvements, roads }, index) => {
+      const tile = squares[index];
 
-    if (tile === undefined) {
-      return;
-    }
-
-    built(tile, terrain, improvements);
-    roads.forEach(([dx, dy]) => {
-      const neighbour = at(tile.x + dx, tile.y + dy);
-
-      if (neighbour?.isLand) {
-        built(neighbour, terrain, ['Road']);
+      if (tile === undefined) {
+        return;
       }
-    });
-  });
+
+      built(tile, terrain, improvements);
+      roads.forEach(([dx, dy]) => {
+        const neighbour = at(tile.x + dx, tile.y + dy);
+
+        if (neighbour?.isLand) {
+          built(neighbour, terrain, ['Road']);
+        }
+      });
+    }
+  );
 };
 
 export default populate;

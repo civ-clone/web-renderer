@@ -722,13 +722,16 @@ Each is looked up by its type name in the model set.
     else stands there keeps clear of), clear of the unit's stand. Each wall is laid in lengths that step with the
     ground, from the lowest under each to 0.05 over the highest, with merlons along its outer edge. A round tower under
     a slate roof stands at each corner. Wherever a road or railroad leaves through a wall there's a gate, flanked by two
-    square towers, or one in the south wall, towards the camera, where none does; where a road leaves through a corner,
-    both walls are open there, with no tower.
+    square towers, as wide as the road, or the railroad's ballast, across the wall at the angle it crosses, with room
+    for the towers' depth and a little more; or, where none does, one in the south wall (towards the camera at its
+    starting heading). Where a road leaves through a corner, both walls are open there, as far as the gate that opened
+    it reaches, with no tower; a gate's tower that would stand in a corner's tower isn't drawn.
   - **As built, an airbase** (#1335): a runway across the square south of its middle, marked with a dashed line down
     its middle, its edges, and bars across each end; a hangar under a vaulted roof, its doors facing the runway, an
-    apron of tarmac between; and a control tower, a shaft with its glass cab. The hangar and the tower each claim the
-    most room there is for them inside the square, as a special does, off the runway (what stands there keeps its room
-    clear of the line down its middle). Their walls stand on the ground.
+    apron of tarmac between, a hair over any road it crosses; and a control tower, a shaft with its glass cab. The
+    hangar and the tower each claim the most room there is for them inside the square, as a special does, off the
+    runway (what stands there keeps its room clear of the line down its middle); the tower, and what's claimed after,
+    off the apron too. Their walls stand on the ground.
   - **The debug page** lays out fortresses, airbases, mines and farms, some with roads, with `improvements=1`.
 - **Pollution and fallout:** smog, a low, sooty brown haze over the square (#1335), darker than open land and rock,
   so it shows over mountains (forest, jungle and swamp are about as dark, and it's told from them by its hue):

@@ -464,6 +464,19 @@ expect(
   ]
 );
 
+// Its road through a fortress's corner: diagonally below on the square grid; on the others, where that's a neighbour
+//  only every other row, the square below, a neighbour on every row.
+expect(
+  'its road through a fortress’s corner, on each grid, goes to a neighbour on every row',
+  (['square', 'staggered-iso', 'hex-odd-r'] as const).map((topologyId) =>
+    improvementsShown(topologyId)
+      .filter(({ roads }) => roads.length === 1)
+      .filter(({ improvements }) => improvements.includes('Fortress'))
+      .map(({ roads }) => roads[0])
+  ),
+  [[[1, 1]], [[0, 1]], [[0, 1]]]
+);
+
 // On the staggered grid, where squares two rows apart touch at a corner, its specials are every fourth row.
 const staggered = field.map(
     (tile) =>
