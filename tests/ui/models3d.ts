@@ -255,6 +255,8 @@ const manifest = (): Record<string, unknown> => ({
       withPlants({ 'conifer tree': 'spare' }),
       withPlants({ 'Jungle:': 'spare' }),
       withPlants({ ':broadleaf': 'spare' }),
+      withPlants({ tree: 'spare' }),
+      withPlants({ 'Jungle:Broadleaf': 'spare' }),
       withPlants(['spare']),
       withPlants('spare'),
     ],
@@ -264,6 +266,8 @@ const manifest = (): Record<string, unknown> => ({
       'plant conifer tree: not a kind of plant, or drawn by a model the set hasn’t',
       'plant Jungle:: not a kind of plant, or drawn by a model the set hasn’t',
       'plant :broadleaf: not a kind of plant, or drawn by a model the set hasn’t',
+      'plant tree: not a kind of plant, or drawn by a model the set hasn’t',
+      'plant Jungle:Broadleaf: not a kind of plant, or drawn by a model the set hasn’t',
       'plant names not a list of plants',
       'plant names not a list of plants',
     ].map((reason) => reason.replace('’', "'"))

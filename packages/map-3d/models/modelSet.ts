@@ -1,6 +1,8 @@
 // A set of models for the 3D map (docs/3d-renderer.md §10): its manifest, as a hosted set's repository writes it, read
 //  and checked here, and which model draws each unit type. Pure: loading the models is `loadModels.ts`'s.
 
+import { PLANT_KINDS } from '@civ-clone/ui-models-builtin/vegetation';
+
 /**
  * A licence, or a credit's, by name and link; and, where it asks for one (CC BY, CC BY-SA), the credit shown wherever
  *  the set's used (docs/asset-library.md, "The manifest").
@@ -106,10 +108,15 @@ const isFile = (value: unknown): value is string =>
     .split('/')
     .every((part) => part !== '' && part !== '.' && part !== '..');
 
-// A plant as a set names it: a kind (`conifer`), or that kind on a terrain of its own (`Jungle:broadleaf`), letters
-//  only, each.
-const isPlant = (value: string): boolean =>
-  /^([A-Za-z]+:)?[A-Za-z]+$/.test(value);
+// A plant as a set names it: a kind of plant the map grows (`conifer`), or that kind on a terrain of its own
+//  (`Jungle:broadleaf`), its name letters only, as a rule set may name a terrain.
+const isPlant = (value: string): boolean => {
+  const match = /^(?:[A-Za-z]+:)?([A-Za-z]+)$/.exec(value);
+
+  return (
+    match !== null && (PLANT_KINDS as readonly string[]).includes(match[1]!)
+  );
+};
 
 const isRole = (value: string): value is ClipRole =>
   (CLIP_ROLES as readonly string[]).includes(value);

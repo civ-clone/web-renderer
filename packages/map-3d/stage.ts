@@ -28,16 +28,15 @@ import {
   Matrix4,
   Mesh,
   MeshBasicMaterial,
-  MeshDepthMaterial,
   MeshStandardMaterial,
   Object3D,
   PerspectiveCamera,
   Plane,
   Quaternion,
-  RGBADepthPacking,
   SRGBColorSpace,
   Scene,
   SkinnedMesh,
+  Sphere,
   Vector3,
   WebGLRenderer,
 } from 'three';
@@ -236,14 +235,10 @@ export interface Stage {
   dispose(): void;
 }
 
-// A model a set draws plants with, as the stage draws it: each of its parts, with its material and its shadow's; and
+// A model a set draws plants with, as the stage draws it: each of its parts, with its material; and
 //  how tall it stands over its origin, where it meets the ground (its roots may reach below), in its own units.
 type PlantModel = {
-  parts: {
-    geometry: BufferGeometry;
-    material: MeshStandardMaterial;
-    depth: MeshDepthMaterial;
-  }[];
+  parts: { geometry: BufferGeometry; material: MeshStandardMaterial }[];
   height: number;
 };
 
@@ -492,7 +487,8 @@ export const createStage: StageFactory = (
         span: [number, number];
       }
     >(),
-    // Each drawn copy's plants, as a set's models draw them: let go of with it.
+    // Each drawn copy's plants, as a set's models draw them: let go of with it. Every copy sharing a buffer of
+    //  matrices is let go of at once, never some of them, as the rest would draw from the buffer let go.
     letGoOfPlants = (drawn: Object3D): void =>
       drawn.children.forEach((child) => {
         if ((child as InstancedMesh).isInstancedMesh) {
@@ -500,8 +496,8 @@ export const createStage: StageFactory = (
         }
       }),
     // The models sets draw plants with, by their ids among every set's (`modelKey`): each of its parts, with its
-    //  material, as a tree's leaves are cut out and both sides drawn, and its shadow cut out as they are; and how tall
-    //  the model stands over its origin, in its own units.
+    //  material, as a tree's leaves are cut out and both sides drawn (its shadow cut out as they are); and how tall the
+    //  model stands over its origin, in its own units.
     plantModels = new Map<string, PlantModel>(),
     // A model drawing plants made ready: its parts' materials, clipped as what's laid on the land is.
     plantModelOf = (model: LoadedModel): PlantModel => {
@@ -513,27 +509,21 @@ export const createStage: StageFactory = (
       });
 
       return {
+        // Its shadow's cut out as its leaves are, as three.js makes a shadow's material from it (its map, its alpha
+        //  test, its side and its clipping).
         parts: model.parts.map(({ geometry, map, cutout, doubleSided }) => {
-          const side = cutout || doubleSided ? DoubleSide : FrontSide,
-            material = new MeshStandardMaterial({
-              map,
-              roughness: 0.85,
-              metalness: 0,
-              alphaTest: cutout ? 0.5 : 0,
-              side,
-              clipShadows: true,
-            }),
-            depth = new MeshDepthMaterial({
-              depthPacking: RGBADepthPacking,
-              map,
-              alphaTest: cutout ? 0.5 : 0,
-              side,
-            });
+          const material = new MeshStandardMaterial({
+            map,
+            roughness: 0.85,
+            metalness: 0,
+            alphaTest: cutout ? 0.5 : 0,
+            side: cutout || doubleSided ? DoubleSide : FrontSide,
+            clipShadows: true,
+          });
 
           material.clippingPlanes = overlayMaterial.clippingPlanes;
-          depth.clippingPlanes = overlayMaterial.clippingPlanes;
 
-          return { geometry, material, depth };
+          return { geometry, material };
         }),
         height: Math.max(box.max.y, 1e-6),
       };
@@ -972,9 +962,8 @@ export const createStage: StageFactory = (
     overlayMaterial.clippingPlanes = seen.v === null ? poles : null;
     hazeMaterial.clippingPlanes = overlayMaterial.clippingPlanes;
     plantModels.forEach(({ parts }) =>
-      parts.forEach(({ material, depth }) => {
+      parts.forEach(({ material }) => {
         material.clippingPlanes = overlayMaterial.clippingPlanes;
-        depth.clippingPlanes = overlayMaterial.clippingPlanes;
       })
     );
     stopped = seen.v === null;
@@ -995,7 +984,11 @@ export const createStage: StageFactory = (
         chunk.drawn = copiesOf(chunk, land);
       });
       overlays.forEach((overlay) => {
-        overlay.drawn.forEach((drawn) => land.remove(drawn));
+        // Every copy's plants let go of together: they share their matrices' buffer, which the new copies take again.
+        overlay.drawn.forEach((drawn) => {
+          letGoOfPlants(drawn);
+          land.remove(drawn);
+        });
         overlay.drawn = overlayCopiesOf(overlay);
       });
 
@@ -1163,6 +1156,8 @@ export const createStage: StageFactory = (
       const plants: {
           model: PlantModel;
           matrices: InstancedBufferAttribute;
+          // How far each of its parts reaches, the same at every copy of the world, worked out once.
+          spheres: Sphere[];
         }[] = [],
         plantsBox = new Box3(),
         matrix = new Matrix4(),
@@ -1195,12 +1190,25 @@ export const createStage: StageFactory = (
               size.set(scale, scale, scale)
             )
             .toArray(matrices, n * 16);
+          // Its foot and its top.
           plantsBox.expandByPoint(at.set(u!, y!, v!));
+          plantsBox.expandByPoint(at.set(u!, y! + height!, v!));
         }
+
+        const shared = new InstancedBufferAttribute(matrices, 16);
 
         plants.push({
           model,
-          matrices: new InstancedBufferAttribute(matrices, 16),
+          matrices: shared,
+          spheres: model.parts.map(({ geometry: part, material }) => {
+            const measured = new InstancedMesh(part, material, 0);
+
+            measured.instanceMatrix = shared;
+            measured.count = shared.count;
+            measured.computeBoundingSphere();
+
+            return measured.boundingSphere!;
+          }),
         });
       });
 
@@ -1240,17 +1248,16 @@ export const createStage: StageFactory = (
           }
 
           // Its plants, each model's part drawn once for all of them, casting shadows cut out as its leaves are.
-          plants.forEach(({ model, matrices }) =>
-            model.parts.forEach(({ geometry: part, material, depth }) => {
+          plants.forEach(({ model, matrices, spheres }) =>
+            model.parts.forEach(({ geometry: part, material }, index) => {
               // Made empty, to take the shared matrices rather than make its own.
               const grown = new InstancedMesh(part, material, 0);
 
               grown.instanceMatrix = matrices;
               grown.count = matrices.count;
-              grown.customDepthMaterial = depth;
+              grown.boundingSphere = spheres[index]!;
               grown.castShadow = true;
               grown.receiveShadow = true;
-              grown.computeBoundingSphere();
               drawn.add(grown);
             })
           );
@@ -1695,11 +1702,10 @@ export const createStage: StageFactory = (
       overlayMaterial.dispose();
       hazeMaterial.dispose();
       plantModels.forEach(({ parts }) =>
-        parts.forEach(({ geometry, material, depth }) => {
+        parts.forEach(({ geometry, material }) => {
           geometry.dispose();
           material.map?.dispose();
           material.dispose();
-          depth.dispose();
         })
       );
       plantModels.clear();

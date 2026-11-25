@@ -1276,6 +1276,12 @@ const landOf = (
           forest: mesh!.u + numbers[n * PLANT_NUMBERS]! < 16,
           height: numbers[n * PLANT_NUMBERS + 3]!,
           whole: numbers.length % PLANT_NUMBERS === 0,
+          // Where it stands within its chunk, as its corner's taken off: a chunk here is 16 across and down.
+          within:
+            numbers[n * PLANT_NUMBERS]! >= 0 &&
+            numbers[n * PLANT_NUMBERS]! <= 16 &&
+            numbers[n * PLANT_NUMBERS + 2]! >= 0 &&
+            numbers[n * PLANT_NUMBERS + 2]! <= 16,
         }))
       )
     ),
@@ -1317,7 +1323,7 @@ const landOf = (
           plants.filter(({ forest }) => !forest).map(({ model }) => model)
         ),
       ].sort(),
-      plants.every(({ whole }) => whole),
+      plants.every(({ whole, within }) => whole && within),
       tall.length,
       // Each model's trees as varied in height as the built-in set's sizes are.
       Object.keys(kinds).filter((model) => {
@@ -1328,9 +1334,9 @@ const landOf = (
         return Math.max(...heights) / Math.min(...heights) < 1.25;
       }),
       solids(),
-      laid.size,
+      [...laid.values()].every((mesh) => mesh !== null),
     ],
-    [true, chunks, ['beech', 'pine'], ['palm', 'teak'], true, 0, [], 0, chunks]
+    [true, chunks, ['beech', 'pine'], ['palm', 'teak'], true, 0, [], 0, true]
   );
 }
 

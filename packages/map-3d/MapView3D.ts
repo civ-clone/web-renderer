@@ -660,6 +660,9 @@ export class MapView3D implements MapRenderer {
   //  with its model, likewise. One that can't be had leaves what the type was drawn with, a later set's or the built-in
   //  set's figures, said once.
   #loadModels(url: string, rank: number): void {
+    // Whether any plant it draws is drawn with its model.
+    let grown = false;
+
     this.#stage
       .loadModels?.(
         url,
@@ -685,27 +688,43 @@ export class MapView3D implements MapRenderer {
             return;
           }
 
-          const taken = plants.filter(
-            (plant) => (this.#plants.get(plant)?.rank ?? Infinity) >= rank
-          );
-
-          if (taken.length === 0) {
-            return;
-          }
-
-          taken.forEach((plant) => this.#plants.set(plant, { id, rank }));
-          this.#land.growWith(
-            new Map(
-              [...this.#plants].map(([plant, { id: of }]) => [plant, of])
-            ),
-            ...this.#orbit.focus
-          );
-          this.#draw();
+          plants
+            .filter(
+              (plant) => (this.#plants.get(plant)?.rank ?? Infinity) >= rank
+            )
+            .forEach((plant) => {
+              this.#plants.set(plant, { id, rank });
+              grown = true;
+            });
         }
       )
+      // Laid again once for the set, once all its models have been tried, rather than for each as it arrives.
+      .then(() => {
+        if (grown && !this.#disposed) {
+          this.#growPlants();
+        }
+      })
       .catch((error: unknown) =>
         console.warn("The 3D map's models couldn't be loaded:", error)
       );
+  }
+
+  // Every plant a set's models draw laid again with them: a kind on a terrain of its own with its own model, but only
+  //  where no earlier set draws the kind, so the earliest set draws it, as with units.
+  #growPlants(): void {
+    const plants = new Map<string, string>();
+
+    this.#plants.forEach(({ id, rank }, plant) => {
+      const kind = plant.split(':').at(-1)!,
+        drawn = this.#plants.get(kind);
+
+      if (plant === kind || drawn === undefined || drawn.rank >= rank) {
+        plants.set(plant, id);
+      }
+    });
+
+    this.#land.growWith(plants, ...this.#focus());
+    this.#draw();
   }
 
   /** The land, for the `?debug=1` console. */
