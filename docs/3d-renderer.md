@@ -873,9 +873,10 @@ Each is looked up by its type name in the model set.
     white), whether it's standing or walking.
   - **Blink, or both:** its figures are hidden and shown in turn every half a second, as the 2D map's blink, while its
     flag and the pointer over it stay, and its stand where it's drawn with a model (the built-in set's figures are one
-    mesh with their stand). Each tick only draws the scene again, in a frame like those for units idling (§10, its
-    fifth part). Marked afresh, it's shown, and blinks from there. Walking, it doesn't blink. Hidden, its figures are
-    still picked (§9.2, `BLINKED_OUT`), as the 2D map's blink doesn't change what's clicked either.
+    mesh with their stand). A tick that only hides or shows them draws the scene again and nothing more, in a frame
+    like those for units idling (§10, its fifth part). Marked afresh, it's shown, and blinks from there. Walking, it
+    doesn't blink. Hidden, its figures are still picked (§9.2, `BLINKED_OUT`), as the 2D map's blink doesn't change
+    what's clicked either.
   - **The pointer** over it, in the theme's colour, is drawn however it's marked, so it's found at any distance.
 - **Hidden units:** `t` hides units and cities, as it does on the 2D map, so the land shows as it is. A city's walls and
   name go, and its town: its buildings, on its square and round it, are laid with the land (§7.2), so every square with

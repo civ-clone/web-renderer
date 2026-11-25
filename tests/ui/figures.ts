@@ -1302,16 +1302,19 @@ expect(
 
   // Its figures hidden by the blink (`Stage#showFigures`), still its square, as they're seen there every other half a
   //  second; hidden otherwise, not; shown again, as they were. A copy made afresh mid-blink (`Stage#drawIdling`) is
-  //  hidden too, and still picked; one made once it's shown again is shown.
+  //  hidden too, and still picked; one made once it's shown again is shown, and no longer flagged. The copy's made
+  //  before the blink, as `drawIdling`'s is made afresh, with none of its flag.
   const figures = front.getObjectByName(FIGURES_PART)!,
-    pointed = () => unitUnder(marked, camera, on(0, through, -0.04));
+    pointed = () => unitUnder(marked, camera, on(0, through, -0.04)),
+    copied = front.clone(),
+    copiedFlag = () =>
+      copied.getObjectByName(FIGURES_PART)!.userData[BLINKED_OUT] ?? null;
 
   blinkFigures(front, false);
 
   const blinkedOut = [figures.visible, pointed()],
-    copied = front.clone();
+    unflagged = copiedFlag();
 
-  copied.getObjectByName(FIGURES_PART)!.visible = true;
   blinkAs(front, copied);
 
   const copiedOut = [
@@ -1330,6 +1333,11 @@ expect(
 
   blinkAs(front, copied);
 
+  const copiedShown = [
+    copied.getObjectByName(FIGURES_PART)!.visible,
+    copiedFlag(),
+  ];
+
   expect(
     'a unit’s figures hidden by the blink are still its square’s, and a copy made mid-blink’s; hidden otherwise, they aren’t; shown again, as before',
     [
@@ -1337,10 +1345,19 @@ expect(
       copiedOut,
       hidden === '3,4',
       shownAgain,
-      copied.getObjectByName(FIGURES_PART)!.visible,
+      unflagged,
+      copiedShown,
       blinkFigures(undefined, false),
     ],
-    [[false, '3,4'], [false, '3,4'], false, [true, '3,4'], true, undefined]
+    [
+      [false, '3,4'],
+      [false, '3,4'],
+      false,
+      [true, '3,4'],
+      null,
+      [true, false],
+      undefined,
+    ]
   );
 
   // A squad close behind, where the same ray meets its figures too: the nearer's square, whichever's listed first.
