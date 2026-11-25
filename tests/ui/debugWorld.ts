@@ -4,6 +4,7 @@
 //  - its options, from its address;
 //  - its gallery: every unit type the built-in set names, once each, nearest the middle first, ships at sea and the rest
 //    on land, never on squares unseen, and no cities;
+//  - its specials: every special the built-in set draws, and a cairn, once each, likewise, each on its own square;
 //  - the land built over it, every chunk once, and the nearest to where the map is centred first, after it moves too.
 
 import { ChunkMesh } from '@civ-clone/ui-map-3d/terrain/chunks';
@@ -14,7 +15,12 @@ import Land from '@civ-clone/ui-map-3d/Land';
 import World from '@civ-clone/ui-map/components/World';
 import generateWorld from '@civ-clone/ui-map-3d/debug/generateWorld';
 import pageOptions from '@civ-clone/ui-map-3d/debug/pageOptions';
-import populate, { gallery } from '@civ-clone/ui-map-3d/debug/populate';
+import populate, {
+  gallery,
+  specialsGallery,
+  specialsRows,
+  specialsShown,
+} from '@civ-clone/ui-map-3d/debug/populate';
 import { unitTable } from '@civ-clone/ui-models-builtin/units';
 import { Tile } from '@civ-clone/ui-protocol/types';
 
@@ -138,6 +144,7 @@ expect(
     seed: 1,
     seen: 1,
     gallery: false,
+    specials: false,
     distance: null,
     x: 40,
     y: 25,
@@ -146,7 +153,7 @@ expect(
 expect(
   'each as asked',
   pageOptions(
-    '?grid=hex-odd-r&width=40&height=30&seed=9&seen=0.5&distance=12.5&x=3&y=4&gallery=1'
+    '?grid=hex-odd-r&width=40&height=30&seed=9&seen=0.5&distance=12.5&x=3&y=4&gallery=1&specials=1'
   ),
   {
     topologyId: 'hex-odd-r',
@@ -155,6 +162,7 @@ expect(
     seed: 9,
     seen: 0.5,
     gallery: true,
+    specials: true,
     distance: 12.5,
     x: 3,
     y: 4,
@@ -170,6 +178,7 @@ expect(
     seed: 1,
     seen: 1,
     gallery: false,
+    specials: false,
     distance: null,
     x: 0,
     y: 80,
@@ -319,6 +328,95 @@ expect(
     shelf[6 * 20 + 10]!.units[0]?._,
   ],
   [Object.keys(unitTable).sort(), [], 0, Object.keys(unitTable)[0]]
+);
+
+// Its specials, on 30 by 20 squares: three rows of sea at the top, with the squares nearest the middle never seen, and
+//  land, with a city and a unit on each square.
+const field = Array.from({ length: 600 }, (_, index) => {
+    const x = index % 30,
+      y = Math.floor(index / 30),
+      terrain =
+        y < 3 && x >= 12 && x <= 18 ? 'Unknown' : y < 3 ? 'Ocean' : 'Grassland';
+
+    return {
+      x,
+      y,
+      terrain: { _: terrain, features: [] },
+      isLand: terrain === 'Grassland',
+      city: { name: 'Gone' },
+      units: [{ _: 'Warrior' }],
+    } as unknown as Tile;
+  }),
+  // What each square was before the specials were laid, which lay their own terrain.
+  before = new Map(field.map((tile) => [tile, tile.terrain._])),
+  shownAt = (): [string, Tile][] => {
+    specialsGallery(field, 15, 10);
+
+    return field.flatMap((tile) =>
+      (tile.terrain.features ?? []).map((feature): [string, Tile] => [
+        `${tile.terrain._}:${feature._}`,
+        tile,
+      ])
+    );
+  },
+  shownSpecials = shownAt();
+
+expect(
+  'its specials: every one once, each on its terrain, at sea on the sea and on land on land, none unseen, each on its own, the nearest the middle first, no cities or units',
+  [
+    shownSpecials.map(([key]) => key).sort(),
+    shownSpecials
+      .filter(([key, tile]) =>
+        key.startsWith('Ocean:')
+          ? tile.isLand || before.get(tile) !== 'Ocean'
+          : !tile.isLand
+      )
+      .map(([key]) => key),
+    shownSpecials.some(([, a]) =>
+      shownSpecials.some(
+        ([, b]) =>
+          a !== b && Math.abs(a.x - b.x) <= 1 && Math.abs(a.y - b.y) <= 1
+      )
+    ),
+    field[10 * 30 + 15]!.terrain.features?.[0]?._,
+    field.filter((tile) => tile.city !== null || tile.units.length > 0).length,
+  ],
+  [
+    specialsShown()
+      .map(([terrain, feature]) => `${terrain}:${feature}`)
+      .sort(),
+    [],
+    false,
+    specialsShown()[0]![1],
+    0,
+  ]
+);
+
+// On the staggered grid, where squares two rows apart touch at a corner, its specials are every fourth row.
+const staggered = field.map(
+    (tile) =>
+      ({
+        ...tile,
+        terrain: { _: before.get(tile)!, features: [] },
+      } as unknown as Tile)
+  ),
+  staggeredRows = (() => {
+    specialsGallery(staggered, 15, 10, specialsRows('staggered-iso'));
+
+    return staggered
+      .filter((tile) => (tile.terrain.features ?? []).length > 0)
+      .map(({ y }) => y);
+  })();
+
+expect(
+  'on the staggered grid, its specials are every fourth row, every one shown; every other row on the others',
+  [
+    staggeredRows.every((y) => Math.abs(y - 10) % 4 === 0),
+    staggeredRows.length,
+    specialsRows('square'),
+    specialsRows('hex-odd-r'),
+  ],
+  [true, specialsShown().length, 2, 2]
 );
 
 // Its seeded cities, units and ships: none on squares never seen, on a world mostly unseen.

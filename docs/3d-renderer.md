@@ -635,6 +635,28 @@ How plants are placed:
 
 - **Specials:** a special (Fish, Coal, Wheat…) gets a small model on its square. It's looked up as `Terrain:Special`,
   the same key the tilesets use [verified: `names.special` in `packages/tileset-civ2/civ2.json`].
+  - **As built** (#1335, made by code until a hosted set brings models): big enough to be seen at play's zoom, each
+    takes up to 0.2 of room (`SPECIAL_ROOMS`) 0.85 of the way from the square's middle to its edge, clear of the unit's
+    stand and inside the square but for 0.03 (`EDGE_REACH`), so in one of its corners where there's room: nothing on a
+    neighbouring square keeps clear of it. Its place is sought a little nearer in too, where a hex's corners have the
+    most room. Where there's less (roads, walls, a hex's shallower corners), it takes the most there is, down to 0.1,
+    and is drawn smaller to fit, by its own reach (`SPECIAL_REACH`), never bigger than its own size (logs a little
+    bigger). What isn't a beast or logs keeps its height as it's drawn narrower, so it's never lower than it was.
+    Keeping to its square keeps it off the sea's floor past a shore; and as a guard, nothing on land stands deeper than
+    the sea's floor begins beside land (`inTheSea`), though it may stand on land just under the water's level, as a
+    low swamp's is at the shore. Inside a fortress's walls, where nothing has room, it takes the spot with the most, as
+    before.
+  - **Beasts** (`overlay/beasts.ts`) are made of plain shapes as units are, each a little larger than life, beside
+    units drawn twice life: horses with manes, tails and hooves, oxen (buffalo) with a hump and horns, deer (game, and
+    caribou on the tundra) with antlers, foxes (furs) with a bushy tail, an elephant (ivory) with its trunk and tusks,
+    seals lying with their heads up, and pheasants. A herd stands side by side, each a little ahead or behind and turned
+    a little its own way, as big as its room allows, by each beast's reach as its parts are turned (`beastReach`); one
+    whose place is in the sea isn't drawn. Horses are a bay, a chestnut and a grey (`coats`), so a herd shows
+    on the plains' tan.
+  - **The rest:** Civ1's shield on grassland (and Civ2's resources) is a stack of six logs, their cut ends pale; ores,
+    crops and turf are piles and clumps round a point; a shoal of fish swims round, one in three leaping; a whale
+    spouts; an oasis's palms lean out round its pool.
+  - **The debug page** lays out every special, one to a square, with `specials=1` (plan 2.1).
 - **Huts:** a hut is a small village.
 
 ### 5.3 Rivers

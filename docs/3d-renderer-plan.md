@@ -345,7 +345,7 @@ Epic's UE4 skeleton or only match its bone names.
   - A unit stands on a stand in its owner's second colour (a ship rides the water without one), behind a low wall when
     fortified. Its flag flies over it, with the stack's size, the 2D map's letter for what it's busy with, a veteran's
     star, and a bar for its hit points when it's hurt.
-  - The debug page lays out every unit type with `?gallery=1`.
+  - The debug page lays out every unit type with `?gallery=1`, and every special with `?specials=1` (#1335).
 - **Facing:** a unit faces the way it last moved, or attacked, from the map's events (P2), and a defender faces its
   attacker.
 - **Still to do in 2.1:** the `models` manifest kind and its validator; the ring following the marker option.
@@ -490,12 +490,12 @@ Plants are scattered by seed, each where it has room. They stay clear of a unit'
 - roads and railroads are draped over the land, joined to their neighbours as the 2D map joins them, along the topology's directions, and at the nearest copy across the world's seams. Roads wind like country lanes, each half bowing its own way and meeting its neighbour's at the edge; railroads are straight;
 - irrigation and farmland are rows of crops with ditches; pollution is a dark smear (smog since #1335: a low,
   see-through, sooty brown haze over the square, drawn after the sea, spec §5.4);
-- mines, fortresses, airbases, specials (`packages/models-builtin/specials.ts`, every feature Civ1 and Civ2 name) and huts are small solids, standing clear of a unit's stand;
+- mines, fortresses, airbases, specials (`packages/models-builtin/specials.ts`, every feature Civ1 and Civ2 name) and huts are small solids, standing clear of a unit's stand. Since #1335, specials are big enough to be seen at play's zoom, their beasts made of parts as units are (spec §5.2);
 - a chunk's overlay is made again with its land, or when what's laid on a square in it or next to it changes. A unit moving changes nothing laid, so it remakes nothing, and a road built rebuilds no land. Chunks are made nearest the camera first;
 - it's draped over the land as drawn (the chunks' flat triangles), so it never sinks into a hill, and read from the chunks' points, which also makes it cheap: about 15 ms a chunk on a populated world;
 - a unit's stand is thick enough to stand over all of it, and fields fit inside their square, whether a square, a diamond or a hex;
 - a city's lot has nothing laid on it, as the 2D map's city covers its square;
-- a square's mine, specials and hut each claim a spot clear of its roads, a fortress's walls, an airbase's runway and each other, and plants keep clear of all of them. Where there isn't room for that (roads all eight ways, or inside a fortress's walls), each takes the spot with the most;
+- a square's mine, specials and hut each claim a spot clear of its roads, a fortress's walls, an airbase's runway and each other, and plants keep clear of all of them. Specials, since #1335, take the most room there is inside their square, from 0.2 down to 0.1, and are drawn to fit. Where there isn't room for that (roads all eight ways, or inside a fortress's walls), each takes the spot with the most;
 - a chunk's overlay is made a few squares a frame within the frame's budget, so no frame waits on a busy chunk. A square changed before its chunk's make reaches it is read when it gets there, without beginning again;
 - with the view stopped at the poles of a world that wraps over them, a first or last row's overlay that reaches past a pole is drawn a period round too, clipped there, where the land between the far row's squares is its own.
 

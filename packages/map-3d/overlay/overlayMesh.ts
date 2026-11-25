@@ -14,10 +14,12 @@
 import {
   BoxGeometry,
   BufferGeometry,
+  CircleGeometry,
   Color,
   ConeGeometry,
   CylinderGeometry,
   Euler,
+  EulerOrder,
   Matrix3,
   Matrix4,
   Quaternion,
@@ -28,12 +30,14 @@ import {
   SpecialLook,
   specialLook,
 } from '@civ-clone/ui-models-builtin/specials';
+import { seaFloor } from '@civ-clone/ui-models-builtin/terrain';
 import {
   Growth,
   Plant,
   PlantKind,
   growthOf,
 } from '@civ-clone/ui-models-builtin/vegetation';
+import { BeastKind, beastParts, beastReach } from './beasts';
 import { Route, SquareOverlay } from './overlayFor';
 import {
   CityPlan,
@@ -120,6 +124,8 @@ const LIFT = {
   STONE = '#9d968a',
   TARMAC = '#4a4c50',
   WOOD = '#6b4a2e',
+  // A whale's spout.
+  SPOUT = '#eef3f5',
   SPOIL = '#7a6a58',
   THATCH = '#b89a5a',
   WALL = '#c9b48e',
@@ -140,14 +146,24 @@ const box = new BoxGeometry(1, 1, 1),
   // Plants are many, thousands to a chunk: few sides each, and no ends where nothing sees them.
   stem = new CylinderGeometry(0.5, 0.5, 1, 4, 1, true),
   tier = new ConeGeometry(0.5, 1, 5, 1, true),
-  crown = new SphereGeometry(0.5, 5, 3);
+  crown = new SphereGeometry(0.5, 5, 3),
+  // A log, open at its ends, which its cut ends close, each a flat disc facing out.
+  log = new CylinderGeometry(0.5, 0.5, 1, 8, 1, true),
+  cutEnd = new CircleGeometry(0.5, 8);
 
 // Where on a square its mine, hut and specials stand, by seeded angle and how far out: plants keep clear of them.
 const SPOTS = {
   mine: [3, 0.72],
   hut: [11, 0.64],
-  special: (index: number): [number, number] => [index + 1, 0.72],
+  special: (index: number): [number, number] => [index + 1, 0.85],
 } as const;
+
+// How much room a special takes round where it stands: a herd, a stack or a pile big enough to be seen at play's zoom,
+//  as far from the square's middle as clears the unit's stand (`SPOTS.special`), and inside the square but for a little
+//  (`EDGE_REACH`), so in one of its corners where there's room. Where there's less (roads, walls, a smaller square), it
+//  takes the most there is, and is drawn smaller, down to the last.
+const SPECIAL_ROOMS = [0.2, 0.16, 0.13, 0.1] as const,
+  EDGE_REACH = 0.03;
 
 // What stands on a square keeps this far, and its room, from the middle of its lines (half a road's width, and a
 //  little), and from the middle of the square (the unit's stand, and a little); and how many angles round a claim tries.
@@ -485,12 +501,13 @@ class Layer {
     at: readonly [number, number, number],
     size: readonly [number, number, number],
     css: string,
-    turn: readonly [number, number, number] = [0, 0, 0]
+    turn: readonly [number, number, number] = [0, 0, 0],
+    order: EulerOrder = 'XYZ'
   ): void {
     const { positions, normals } = trianglesOf(shape),
       matrix = MATRIX.compose(
         POSITION.set(...at),
-        ROTATION.setFromEuler(EULER.set(...turn)),
+        ROTATION.setFromEuler(EULER.set(...turn, order)),
         SCALE.set(...size)
       ),
       e = matrix.elements,
@@ -545,10 +562,12 @@ class Layer {
 
   /**
    * How much more than it needs something taking `room` at (`u`, `v`) has clear: of the square's lines, of what stands
-   *  there already, and of the unit's stand at its middle, the least of them. Less than none where it hasn't enough.
+   *  there already, and of the unit's stand at its middle, the least of them; and, if it's to stay `inside`, of the
+   *  square's edge, but for `EDGE_REACH`. Less than none where it hasn't enough.
    */
-  clearance(u: number, v: number, room: number): number {
-    const [cu, cv] = this.place.centre;
+  clearance(u: number, v: number, room: number, inside = false): number {
+    const [cu, cv] = this.place.centre,
+      { outline } = this.place;
     let least = Math.hypot(u - cu, v - cv) - STAND_CLEAR - room;
 
     this.lines.forEach(([a, b]) => {
@@ -557,6 +576,18 @@ class Layer {
     this.taken.forEach(([tu, tv, other]) => {
       least = Math.min(least, Math.hypot(u - tu, v - tv) - other - room);
     });
+
+    if (inside) {
+      // How far inside the edge, or past it, less than none.
+      const edge =
+        Math.min(
+          ...outline.map((corner, index) =>
+            distanceTo(u, v, corner, outline[(index + 1) % outline.length]!)
+          )
+        ) * (this.place.owns(u, v) ? 1 : -1);
+
+      least = Math.min(least, edge + EDGE_REACH - room);
+    }
 
     return least;
   }
@@ -572,24 +603,66 @@ class Layer {
    *  little further. Where none has room (a fortress's walls, or roads every way), the one with the most.
    */
   claim(n: number, distance: number, room: number): [number, number] {
+    const { at } = this.#search(n, distance, room);
+
+    this.taken.push([at[0], at[1], room]);
+
+    return at;
+  }
+
+  /**
+   * A place for something taking the most of `rooms` (largest first) it has room for inside the square, but for
+   *  `EDGE_REACH`, taken for it, with the room it takes: as `claim`, but trying a ring a little nearer in too, and the
+   *  last of `rooms` where none has room for any.
+   */
+  claimMost(
+    n: number,
+    distance: number,
+    rooms: readonly number[]
+  ): [number, number, number] {
+    let found = this.#search(n, distance, rooms[0]!, true),
+      room = rooms[0]!;
+
+    for (const each of rooms.slice(1)) {
+      if (found.clear >= 0) {
+        break;
+      }
+
+      found = this.#search(n, distance, each, true);
+      room = each;
+    }
+
+    this.taken.push([found.at[0], found.at[1], room]);
+
+    return [found.at[0], found.at[1], room];
+  }
+
+  // The first place with room, as `claim` tries them, or the one with the most, and how much it has to spare.
+  #search(
+    n: number,
+    distance: number,
+    room: number,
+    inside = false
+  ): { at: [number, number]; clear: number } {
     const first = fraction(this.place.seed, n) * Math.PI * 2,
       [u, v] = this.place.centre;
     let best: [number, number] = [u, v],
       most = -Infinity;
 
-    for (const out of [distance, distance * 0.88, distance * 1.1]) {
+    // Inside a square, a ring a little nearer than the first too, where a hex's corners have the most room.
+    for (const out of inside
+      ? [distance, distance * 0.94, distance * 0.88, distance * 1.1]
+      : [distance, distance * 0.88, distance * 1.1]) {
       for (let k = 0; k < CLAIM_ANGLES; k++) {
         const angle = first + (k / CLAIM_ANGLES) * Math.PI * 2,
           at: [number, number] = [
             u + Math.cos(angle) * out * this.place.radius,
             v + Math.sin(angle) * out * this.place.radius,
           ],
-          clear = this.clearance(at[0], at[1], room);
+          clear = this.clearance(at[0], at[1], room, inside);
 
         if (clear >= 0) {
-          this.taken.push([at[0], at[1], room]);
-
-          return at;
+          return { at, clear };
         }
 
         if (clear > most) {
@@ -599,9 +672,7 @@ class Layer {
       }
     }
 
-    this.taken.push([best[0], best[1], room]);
-
-    return best;
+    return { at: best, clear: most };
   }
 }
 
@@ -1103,167 +1174,418 @@ const pollution = (layer: Layer): void => {
   }
 };
 
-// One special, standing round `at`.
+// The shapes a beast's parts are made from.
+const BEAST_SHAPES = { box, sphere, ball: crown, cylinder, cone } as const;
+
+// A beast of `kind` standing on the land at (`u`, `v`), `scale` times its size, facing `facing`, in `colours`.
+const beast = (
+  layer: Layer,
+  kind: BeastKind,
+  [u, v]: readonly [number, number],
+  scale: number,
+  facing: number,
+  colours: { coat: string; detail: string; pale: string }
+): void => {
+  const y = layer.ground(u, v),
+    cos = Math.cos(facing),
+    sin = Math.sin(facing);
+
+  beastParts[kind].forEach(
+    ({ shape, colour, at: [x, py, z], size, pitch = 0, roll = 0 }) =>
+      layer.solid(
+        BEAST_SHAPES[shape],
+        [
+          u + (x * cos + z * sin) * scale,
+          y + py * scale,
+          v + (z * cos - x * sin) * scale,
+        ],
+        [size[0] * scale, size[1] * scale, size[2] * scale],
+        colours[colour],
+        // Its own roll and pitch, then turned with the beast.
+        [pitch, facing, roll],
+        'YXZ'
+      )
+  );
+};
+
+// A special's beasts round `at`, side by side as a herd grazes, each a little ahead or behind and turned a little its
+//  own way, its coat the next of its look's: as big as `room` has space for, and no bigger than a little over life.
+const herd = (
+  layer: Layer,
+  look: SpecialLook,
+  kind: BeastKind,
+  at: readonly [number, number],
+  room: number,
+  n: number
+): void => {
+  const { seed } = layer.place,
+    { across, along } = beastReach(kind),
+    heading = fraction(seed, n * 31 + 17) * Math.PI * 2,
+    members = Array.from({ length: look.count }, (_, k) => ({
+      side: (k - (look.count - 1) / 2) * across * 2.3,
+      ahead:
+        look.count === 1
+          ? 0
+          : (fraction(seed, n * 31 + k + 60) - 0.5) * along * 0.3,
+    })),
+    // How far its furthest reaches from `at`, with a little over for each beast's own turn.
+    reach =
+      Math.max(
+        ...members.map(({ side, ahead }) =>
+          Math.hypot(Math.abs(side) + across, Math.abs(ahead) + along)
+        )
+      ) * 1.08,
+    scale = Math.min(1.1, room / reach),
+    coats = [look.colour, ...(look.coats ?? [])],
+    cos = Math.cos(heading),
+    sin = Math.sin(heading);
+
+  members.forEach(({ side, ahead }, k) => {
+    const where: [number, number] = [
+      at[0] + (side * cos + ahead * sin) * scale,
+      at[1] + (ahead * cos - side * sin) * scale,
+    ];
+
+    // None stands in the sea, where its room reaches past the shore.
+    if (inTheSea(layer.ground(...where))) {
+      return;
+    }
+
+    beast(
+      layer,
+      kind,
+      where,
+      scale,
+      heading + (fraction(seed, n * 31 + k + 70) - 0.5) * 0.4,
+      {
+        coat: coats[k % coats.length]!,
+        detail: look.detail ?? look.colour,
+        pale: look.pale ?? look.detail ?? look.colour,
+      }
+    );
+  });
+};
+
+// `count` points round `at`, `out` from it, evenly from the `n`th seeded angle, each with its angle; just `at` for one.
+const ring = (
+  layer: Layer,
+  count: number,
+  at: readonly [number, number],
+  out: number,
+  n: number
+): [number, number, number][] => {
+  const start = fraction(layer.place.seed, n * 31 + 5) * Math.PI * 2;
+
+  return Array.from({ length: count }, (_, k) => {
+    const angle = start + (k / count) * Math.PI * 2;
+
+    return count === 1
+      ? [at[0], at[1], angle]
+      : [at[0] + Math.cos(angle) * out, at[1] + Math.sin(angle) * out, angle];
+  });
+};
+
+// Logs stacked along `facing`, three, then two, then one on top, as many as `count`, their cut ends pale, `fit` times
+//  their size.
+const logStack = (
+  layer: Layer,
+  look: SpecialLook,
+  [u, v]: readonly [number, number],
+  facing: number,
+  fit: number
+): void => {
+  const y = layer.ground(u, v),
+    cos = Math.cos(facing),
+    sin = Math.sin(facing),
+    radius = 0.025 * fit,
+    length = 0.17 * fit,
+    ends = look.detail ?? look.colour;
+  let left = look.count;
+
+  for (let row = 0; left > 0; row++) {
+    const inRow = Math.min(left, Math.max(1, 3 - row));
+
+    for (let k = 0; k < inRow; k++) {
+      const across = (k - (inRow - 1) / 2) * radius * 2.05,
+        up = radius + row * radius * 1.75,
+        at = (along: number): [number, number, number] => [
+          u + across * cos + along * sin,
+          y + up,
+          v + along * cos - across * sin,
+        ];
+
+      // Along `facing`, its length the cylinder's height laid down, and its ends, each facing out.
+      layer.solid(
+        log,
+        at(0),
+        [radius * 2, length, radius * 2],
+        look.colour,
+        [Math.PI / 2, facing, 0],
+        'YXZ'
+      );
+      [-1, 1].forEach((end) =>
+        layer.solid(
+          cutEnd,
+          at((end * length) / 2),
+          [radius * 2, radius * 2, 1],
+          ends,
+          [0, facing + (end < 0 ? Math.PI : 0), 0]
+        )
+      );
+    }
+
+    left -= inRow;
+  }
+};
+
+// How far each special laid round a point reaches from it at its own size, so it's drawn to fit its room: the ring it's
+//  laid round, and the most its shapes reach past it, from their sizes below.
+const SPECIAL_REACH: { readonly [shape in SpecialLook['shape']]?: number } = {
+  // A ring of lumps 0.07 out, each 0.078 across at most; the one in the middle is 1.3 times that.
+  rocks: 0.07 + 0.039,
+  crop: 0.075 + 0.0375,
+  fish: 0.08 + 0.0325,
+  // Its flukes, behind its back.
+  whale: Math.hypot(0.13 + 0.0175, 0.0475),
+  // Its base's corner.
+  derrick: Math.SQRT1_2 * 0.11,
+  // The palms round its pool and their crowns (their lean's `SPECIAL_LEAN`).
+  oasis: 0.09 + 0.055,
+  peat: 0.075 + Math.hypot(0.0375, 0.025),
+  // Logs three across, 2.05 of their radius (0.025) apart, and 0.17 long.
+  logs: Math.hypot(0.025 * 2.05 + 0.025, 0.085),
+  cairn: 0.0375,
+};
+
+// Whether a special's piece at a height of the land `y` would stand deeper than the sea's floor begins beside land: a
+//  guard for ground deeper than any a claim reaches, as `EDGE_REACH` keeps claims to their square. Land just under the
+//  water's level at a shore, as a low swamp's can be, isn't.
+const inTheSea = (y: number): boolean => y < seaFloor.shore;
+
+// How far an oasis's palms lean out at their tops, whatever its size, as they're as tall.
+const SPECIAL_LEAN = 0.16 * Math.sin(0.15) * 0.5;
+
+// One special, standing round `at`, as big as `room` has space for, and no bigger than its own size: logs a little
+//  bigger, as they're small for their room. The rest, but beasts and logs, keep their height where they've less room,
+//  so they're never lower than they were. On land, none of its pieces stands in the sea, where its room reaches past a
+//  shore, as no beast of a herd does.
 const special = (
   layer: Layer,
   look: SpecialLook,
   at: readonly [number, number],
+  room: number,
   n: number
 ): void => {
-  const detail = look.detail ?? look.colour,
-    jitter = (index: number, spread: number): [number, number] => [
-      at[0] + (fraction(layer.place.seed, n * 31 + index * 2) - 0.5) * spread,
-      at[1] +
-        (fraction(layer.place.seed, n * 31 + index * 2 + 1) - 0.5) * spread,
-    ],
-    afloat = look.shape === 'fish' || look.shape === 'whale';
+  const { seed } = layer.place,
+    detail = look.detail ?? look.colour,
+    facing = fraction(seed, n * 31 + 17) * Math.PI * 2,
+    // How much of its own size it's drawn across: each size and how far apart below is times this, but heights.
+    f = Math.min(
+      look.shape === 'logs' ? 1.2 : 1,
+      (room - (look.shape === 'oasis' ? SPECIAL_LEAN : 0)) /
+        (SPECIAL_REACH[look.shape] ?? room)
+    );
 
-  for (let index = 0; index < look.count; index++) {
-    const [u, v] = look.count === 1 ? [at[0], at[1]] : jitter(index, 0.1),
+  switch (look.shape) {
+    case 'horse':
+    case 'ox':
+    case 'deer':
+    case 'fox':
+    case 'elephant':
+    case 'seal':
+    case 'bird':
+      herd(layer, look, look.shape, at, room, n);
+
+      return;
+    case 'logs':
+      // Not in the sea.
+      if (!inTheSea(layer.ground(...at))) {
+        logStack(layer, look, at, facing, f);
+      }
+
+      return;
+    case 'rocks': {
+      // A lump in the middle, bigger, and the rest round it.
+      const lumps: [number, number, number][] = [
+        [at[0], at[1], 1.3],
+        ...ring(layer, look.count - 1, at, 0.07 * f, n).map(
+          ([u, v]): [number, number, number] => [u, v, 1]
+        ),
+      ];
+
+      lumps.forEach(([u, v, big], index) => {
+        const y = layer.ground(u, v);
+
+        if (!inTheSea(y)) {
+          layer.solid(
+            sphere,
+            [u, y + 0.016 * big, v],
+            [0.078 * big * f, 0.055 * big, 0.068 * big * f],
+            index % 2 === 1 ? detail : look.colour,
+            [0, fraction(seed, n * 31 + index + 17) * Math.PI * 2, 0]
+          );
+        }
+      });
+
+      return;
+    }
+    default:
+  }
+
+  ring(
+    layer,
+    look.count,
+    at,
+    (look.shape === 'fish' ? 0.08 : 0.075) * f,
+    n
+  ).forEach(([u, v, angle], index) => {
+    const afloat = look.shape === 'fish' || look.shape === 'whale',
       y = layer.ground(u, v, afloat),
-      facing = fraction(layer.place.seed, n * 31 + index + 17) * Math.PI * 2;
+      turn = fraction(seed, n * 31 + index + 17) * Math.PI * 2;
+
+    // An oasis's pool and palms, and a cairn, see to it themselves.
+    if (
+      !afloat &&
+      look.shape !== 'oasis' &&
+      look.shape !== 'cairn' &&
+      inTheSea(y)
+    ) {
+      return;
+    }
 
     switch (look.shape) {
-      case 'rocks':
-        layer.solid(
-          sphere,
-          [u, y + 0.012, v],
-          [0.05, 0.035, 0.045],
-          index % 2 === 1 ? detail : look.colour,
-          [0, facing, 0]
-        );
-        break;
       case 'crop':
-        layer.solid(cylinder, [u, y + 0.02, v], [0.008, 0.04, 0.008], detail);
+        layer.solid(
+          cylinder,
+          [u, y + 0.03, v],
+          [0.014 * f, 0.06, 0.014 * f],
+          detail
+        );
         layer.solid(
           sphere,
-          [u, y + 0.05, v],
-          [0.045, 0.04, 0.045],
+          [u, y + 0.08, v],
+          [0.075 * f, 0.065, 0.075 * f],
           look.colour
         );
         break;
-      case 'animal': {
-        const big = look.count === 1 ? 1.5 : 1;
+      case 'fish': {
+        // Every third leaping clear of the water, the rest at its surface, swimming round.
+        const leaps = index % 3 === 1;
 
         layer.solid(
-          box,
-          [u, y + 0.04 * big, v],
-          [0.035 * big, 0.03 * big, 0.07 * big],
+          sphere,
+          [u, y + (leaps ? 0.035 : 0.01), v],
+          [0.024 * f, 0.018, 0.065 * f],
           look.colour,
-          [0, facing, 0]
-        );
-        layer.solid(
-          box,
-          [
-            u + Math.sin(facing) * 0.04 * big,
-            y + 0.055 * big,
-            v + Math.cos(facing) * 0.04 * big,
-          ],
-          [0.022 * big, 0.024 * big, 0.03 * big],
-          detail,
-          [0, facing, 0]
-        );
-        layer.solid(
-          box,
-          [u, y + 0.013 * big, v],
-          [0.03 * big, 0.026 * big, 0.055 * big],
-          detail,
-          [0, facing, 0]
+          [leaps ? -0.6 : 0, -angle, 0],
+          'YXZ'
         );
         break;
       }
-      case 'bird':
+      case 'whale': {
+        // Its back, its flukes, and its spout, white over it.
+        const ahead = (out: number): [number, number] => [
+          u + Math.sin(turn) * out * f,
+          v + Math.cos(turn) * out * f,
+        ];
+
         layer.solid(
           sphere,
-          [u, y + 0.02, v],
-          [0.03, 0.025, 0.04],
+          [u, y, v],
+          [0.085 * f, 0.06, 0.24 * f],
           look.colour,
-          [0, facing, 0]
+          [0, turn, 0]
         );
         layer.solid(
           box,
-          [u - Math.sin(facing) * 0.03, y + 0.025, v - Math.cos(facing) * 0.03],
-          [0.008, 0.006, 0.04],
-          detail,
-          [0.4, facing, 0]
+          [ahead(-0.13)[0], y + 0.02, ahead(-0.13)[1]],
+          [0.095 * f, 0.007, 0.035 * f],
+          look.colour,
+          [0, turn, 0]
         );
-        break;
-      case 'fish':
+        layer.solid(
+          cone,
+          [ahead(0.06)[0], y + 0.07, ahead(0.06)[1]],
+          [0.035 * f, 0.09, 0.035 * f],
+          SPOUT
+        );
         layer.solid(
           sphere,
-          [u, y + 0.006, v],
-          [0.012, 0.01, 0.035],
-          look.colour,
-          [0, facing, 0]
+          [ahead(0.06)[0], y + 0.12, ahead(0.06)[1]],
+          [0.06 * f, 0.03, 0.06 * f],
+          SPOUT
         );
         break;
-      case 'whale':
-        layer.solid(sphere, [u, y, v], [0.07, 0.05, 0.2], look.colour, [
-          0,
-          facing,
-          0,
-        ]);
-        layer.solid(
-          box,
-          [u - Math.sin(facing) * 0.11, y + 0.02, v - Math.cos(facing) * 0.11],
-          [0.08, 0.006, 0.03],
-          look.colour,
-          [0, facing, 0]
-        );
-        break;
+      }
       case 'derrick':
-        layer.solid(box, [u, y + 0.008, v], [0.08, 0.016, 0.08], detail);
-        layer.solid(pyramid, [u, y + 0.1, v], [0.06, 0.18, 0.06], look.colour, [
-          0,
-          Math.PI / 4,
-          0,
-        ]);
-        break;
-      case 'oasis':
-        if (index === 0) {
-          layer.disc([u, v], 0.07, detail, LIFT.field + 0.002);
-        }
-
-        {
-          const [pu, pv] = jitter(index + 5, 0.1),
-            py = layer.ground(pu, pv);
-
-          layer.solid(
-            cylinder,
-            [pu, py + 0.06, pv],
-            [0.012, 0.12, 0.012],
-            WOOD
-          );
-          layer.solid(
-            cone,
-            [pu, py + 0.125, pv],
-            [0.09, 0.03, 0.09],
-            look.colour
-          );
-        }
-        break;
-      case 'peat':
-      case 'logs':
+        layer.solid(box, [u, y + 0.01, v], [0.11 * f, 0.02, 0.11 * f], detail);
         layer.solid(
-          look.shape === 'logs' ? cylinder : box,
-          [u, y + 0.012, v],
-          look.shape === 'logs' ? [0.022, 0.09, 0.022] : [0.05, 0.02, 0.035],
-          index % 2 === 1 && look.detail !== undefined
-            ? look.detail
-            : look.colour,
-          look.shape === 'logs' ? [0, facing, Math.PI / 2] : [0, facing, 0]
+          pyramid,
+          [u, y + 0.13, v],
+          [0.075 * f, 0.24, 0.075 * f],
+          look.colour,
+          [0, Math.PI / 4, 0]
+        );
+        break;
+      case 'oasis': {
+        if (index === 0 && !inTheSea(layer.ground(...at))) {
+          layer.disc(at, 0.1 * f, detail, LIFT.field + 0.002);
+        }
+
+        // Its palms round the pool's edge, leaning out a little.
+        const [pu, pv] = [
+            at[0] + Math.cos(angle) * 0.09 * f,
+            at[1] + Math.sin(angle) * 0.09 * f,
+          ],
+          py = layer.ground(pu, pv);
+
+        if (inTheSea(py)) {
+          break;
+        }
+
+        layer.solid(
+          cylinder,
+          [pu, py + 0.08, pv],
+          [0.014, 0.16, 0.014],
+          WOOD,
+          [0.15, Math.PI / 2 - angle, 0],
+          'YXZ'
+        );
+        layer.solid(
+          cone,
+          [
+            pu + Math.cos(angle) * SPECIAL_LEAN,
+            py + 0.165,
+            pv + Math.sin(angle) * SPECIAL_LEAN,
+          ],
+          [0.11 * f, 0.035, 0.11 * f],
+          look.colour
+        );
+        break;
+      }
+      case 'peat':
+        layer.solid(
+          box,
+          [u, y + 0.015, v],
+          [0.075 * f, 0.03, 0.05 * f],
+          look.colour,
+          [0, turn, 0]
         );
         break;
       default:
-        // A cairn: stones piled, smaller as they go up.
+        // A cairn: stones piled, smaller as they go up, not in the sea.
+        if (inTheSea(layer.ground(...at))) {
+          break;
+        }
+
         layer.solid(
           sphere,
-          [at[0], layer.ground(at[0], at[1]) + 0.012 + index * 0.018, at[1]],
-          [0.05 - index * 0.007, 0.025, 0.05 - index * 0.007],
+          [at[0], layer.ground(at[0], at[1]) + 0.018 + index * 0.027, at[1]],
+          [(0.075 - index * 0.01) * f, 0.037, (0.075 - index * 0.01) * f],
           look.colour
         );
     }
-  }
+  });
 };
 
 const hut = (layer: Layer, at: readonly [number, number]): void => {
@@ -1805,14 +2127,14 @@ export const layOverlay = (
     pollution(layer);
   }
 
-  overlay.specials.forEach(([terrain, feature], index) =>
-    special(
-      layer,
-      specialLook(terrain, feature),
-      layer.claim(...SPOTS.special(index), 0.1),
-      index + 1
-    )
-  );
+  overlay.specials.forEach(([terrain, feature], index) => {
+    const [u, v, room] = layer.claimMost(
+      ...SPOTS.special(index),
+      SPECIAL_ROOMS
+    );
+
+    special(layer, specialLook(terrain, feature), [u, v], room, index + 1);
+  });
 
   if (overlay.hut) {
     hut(layer, layer.claim(...SPOTS.hut, 0.13));

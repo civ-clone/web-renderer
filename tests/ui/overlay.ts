@@ -47,6 +47,7 @@ import Land from '@civ-clone/ui-map-3d/Land';
 import { ChunkMesh } from '@civ-clone/ui-map-3d/terrain/chunks';
 import * as Civ1Terrains from '@civ-clone/civ1-world/Terrains';
 import { vegetationTable } from '@civ-clone/ui-models-builtin/vegetation';
+import { seaFloor } from '@civ-clone/ui-models-builtin/terrain';
 import World from '@civ-clone/ui-map/components/World';
 
 const failures: string[] = [];
@@ -456,6 +457,410 @@ expect(
   ],
   [true, true]
 );
+
+// Specials are big enough to be seen at play's zoom (#1335): on flat land with nothing else on the square, a herd of
+//  horses and seals each reach across over a quarter of the square, a stack of logs (Civ1's shield on grassland) over a
+//  fifth, and each stands up off it; every beast stands on the land, not in it or over it; a herd of horses isn't all
+//  one coat; and where roads every way leave less room, a special takes less, so it's drawn smaller.
+{
+  const FLAT = 0.1,
+    laidOn = (feature: string) =>
+      overlayMesh(16, 0, [
+        {
+          overlay: overlayFor(
+            square([], { terrain: 'River', features: [feature] }),
+            []
+          )!,
+          place: place(17, 3, { height: () => FLAT }),
+        },
+      ]),
+    // How far it reaches across, the most any way round, and how tall it stands, and how low, over the land.
+    span = (feature: string) => {
+      const points = pointsOf(laidOn(feature)),
+        ys = points.map(([, y]) => y - FLAT);
+
+      return {
+        across: Math.max(
+          ...Array.from({ length: 36 }, (_, k) => {
+            const angle = (k / 36) * Math.PI,
+              along = points.map(
+                ([u, , v]) => u * Math.cos(angle) + v * Math.sin(angle)
+              );
+
+            return Math.max(...along) - Math.min(...along);
+          })
+        ),
+        tall: Math.max(...ys),
+        low: Math.min(...ys),
+      };
+    },
+    [horses, logs, seals] = ['Horse', 'Shield', 'Seal'].map(span),
+    beasts = ['Horse', 'Buffalo', 'Game', 'Furs', 'Ivory', 'Seal', 'Pheasant'],
+    herdColours = (() => {
+      const { colours } = laidOn('Horse');
+
+      return Array.from(
+        { length: colours.length / 3 },
+        (_, n) =>
+          new Color(colours[n * 3]!, colours[n * 3 + 1]!, colours[n * 3 + 2]!)
+      );
+    })(),
+    hasCoat = (css: string): boolean => {
+      const coat = new Color(css);
+
+      return herdColours.some(
+        ({ r, g, b }) =>
+          Math.abs(r - coat.r) + Math.abs(g - coat.g) + Math.abs(b - coat.b) <
+          1e-5
+      );
+    },
+    roomOn = (improvements: string[], neighbours: OverlayNeighbour[]) =>
+      layOverlay(
+        overlayFor(
+          square(improvements, { terrain: 'Hills', features: ['Coal'] }),
+          neighbours
+        )!,
+        place(17, 3, { height: () => FLAT }),
+        soup()
+      ).taken.find(([, , room]) => room >= 0.1)![2],
+    open = roomOn([], []),
+    crowded = roomOn(
+      ['Road'],
+      [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+        [1, 1],
+        [1, -1],
+        [-1, 1],
+        [-1, -1],
+      ].map((offset) => neighbour(offset as [number, number], ['Road']))
+    );
+
+  expect(
+    'horses and seals each reach across over a quarter of the square, logs over a fifth, and each stands up off it',
+    [
+      horses.across > 0.25 && horses.tall > 0.15,
+      logs.across > 0.2 && logs.tall > 0.12,
+      seals.across > 0.25 && seals.tall > 0.06,
+    ],
+    [true, true, true]
+  );
+  expect(
+    'every beast stands on the land; a herd of horses is a bay, a chestnut and a grey',
+    [
+      beasts.filter((feature) => {
+        const { low } = span(feature);
+
+        return low < -0.004 || low > 0.004;
+      }),
+      [
+        specialTable['Horse']!.colour,
+        ...(specialTable['Horse']!.coats ?? []),
+      ].map(hasCoat),
+    ],
+    [[], [true, true, true]]
+  );
+  expect(
+    'where roads every way leave less room, a special takes less: drawn smaller, never under the old size',
+    [open, crowded < open, crowded >= 0.1],
+    [0.2, true, true]
+  );
+}
+
+// Each special stays in the room it claims, and on its square but for a little (a little more inside a fortress's
+//  walls, where nothing has room), wherever it stands: on a square with nothing else, with roads every way, and
+//  inside a fortress, on 40 squares each, as where it stands is seeded. What's drawn of it is what's laid on the
+//  square with it less what's laid without it. Inside a fortress, where it has least room, what isn't a beast or logs
+//  keeps its height, as it's only drawn narrower to fit. On a shore, nothing of one on land stands in the sea, but on
+//  land just under the water's level it's still drawn. Entering a hut moves no special, as specials are claimed first.
+//  A log's cut ends face out.
+{
+  const FLAT = 0.1,
+    everyWay = [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+      [1, 1],
+      [1, -1],
+      [-1, 1],
+      [-1, -1],
+    ].map((offset) => neighbour(offset as [number, number], ['Road'])),
+    settings: [string, string[], OverlayNeighbour[]][] = [
+      ['open', [], []],
+      ['roads', ['Road'], everyWay],
+      ['fortress', ['Fortress'], []],
+    ],
+    keys = [...Object.keys(specialTable), 'Unobtainium'],
+    // Its points, and the room it claimed and where, on the square at (`x`, 3).
+    drawn = (
+      key: string,
+      improvements: string[],
+      around: OverlayNeighbour[],
+      x: number,
+      height: (u: number, v: number) => number = () => FLAT
+    ) => {
+      const [terrain, feature] = key.includes(':')
+          ? (key.split(':') as [string, string])
+          : ['River', key],
+        where = place(x, 3, { height }),
+        // What's laid on the square, with nothing growing (its terrain a river's, its special's look its own), as
+        //  plants keep clear of the special, and what it claims: nothing, where there's nothing to lay.
+        laid = (features: string[]) => {
+          const overlay = overlayFor(
+              square(improvements, { terrain, features }),
+              around
+            ),
+            into = soup();
+
+          if (overlay === null) {
+            return { points: [], taken: [] };
+          }
+
+          const { taken } = layOverlay(
+            { ...overlay, terrain: 'River' },
+            where,
+            into
+          );
+
+          return {
+            points: Array.from(
+              { length: into.positions.length / 3 },
+              (_, n): [number, number, number] => [
+                into.positions[n * 3]!,
+                into.positions[n * 3 + 1]!,
+                into.positions[n * 3 + 2]!,
+              ]
+            ),
+            taken,
+          };
+        },
+        without = new Map<string, number>(),
+        mark = ([u, y, v]: [number, number, number]) =>
+          `${u.toFixed(5)},${y.toFixed(5)},${v.toFixed(5)}`;
+
+      laid([]).points.forEach((point) =>
+        without.set(mark(point), (without.get(mark(point)) ?? 0) + 1)
+      );
+
+      const withIt = laid([feature]),
+        points = withIt.points.filter((point) => {
+          const left = without.get(mark(point)) ?? 0;
+
+          without.set(mark(point), left - 1);
+
+          return left <= 0;
+        }),
+        claim = withIt.taken.find(([, , room]) => room >= 0.1)!;
+
+      return { points, claim, x };
+    },
+    strays: string[] = [];
+
+  keys.forEach((key) =>
+    settings.forEach(([name, improvements, around]) => {
+      for (let x = 1; x <= 40; x++) {
+        const {
+          points,
+          claim: [cu, cv, room],
+        } = drawn(key, improvements, around, x);
+
+        // How far it reaches past its room, the most, and past the square's edge.
+        const over = Math.max(
+            0,
+            ...points.map(([u, , v]) => Math.hypot(u - cu, v - cv) - room)
+          ),
+          past = Math.max(
+            0,
+            ...points.map(([u, , v]) =>
+              Math.max(x - u, u - (x + 1), 3 - v, v - 4)
+            )
+          );
+
+        // Inside a fortress's walls, where nothing has room, it takes where it has the most, a little further past.
+        if (over > 1e-3 || past > (name === 'fortress' ? 0.05 : 0.03) + 1e-3) {
+          strays.push(
+            `${key} ${name} ${x}: ${over.toFixed(3)} ${past.toFixed(3)}`
+          );
+        }
+      }
+    })
+  );
+
+  const landKeys = [
+      'Horse',
+      'Seal',
+      'Ivory',
+      'Peat',
+      'Spice',
+      'Wheat',
+      'Coal',
+      'Shield',
+      'Oasis',
+      'Oil',
+      'Unobtainium',
+    ],
+    // How tall it stands over the land, or nothing where nothing's drawn.
+    tallest = (key: string, improvements: string[]) => {
+      const { points } = drawn(key, improvements, [], 7);
+
+      return points.length === 0
+        ? null
+        : Math.max(...points.map(([, y]) => y - FLAT));
+    },
+    lowered = [
+      'Oil',
+      'Oasis',
+      'Wheat',
+      'Wine',
+      'Coal',
+      'Peat',
+      'Unobtainium',
+    ].filter((key) => {
+      const open = tallest(key, []),
+        walled = tallest(key, ['Fortress']);
+
+      return open === null || walled === null || Math.abs(walled - open) > 1e-6;
+    }),
+    // On a square half land and half sea, east of its middle, on 40 squares each: what's under the sea's level, by
+    //  more than a lump sinks into the land; and how often something's drawn, where its claim's on the land.
+    shore = landKeys.map((key) => {
+      let wet = 0,
+        shown = 0;
+
+      for (let x = 1; x <= 40; x++) {
+        const { points } = drawn(key, [], [], x, (u) =>
+          u < x + 0.5 ? FLAT : -0.2
+        );
+
+        wet += points.some(([, y]) => y < -0.02) ? 1 : 0;
+        shown += points.length > 0 ? 1 : 0;
+      }
+
+      return { key, wet, shown };
+    }),
+    // On land just under the water's level, as a low swamp's can be at the shore, as low as the sea's floor begins
+    //  beside it: still drawn, on 10 squares each.
+    shallow = landKeys.filter((key) =>
+      Array.from({ length: 10 }, (_, at) => at + 1).some(
+        (x) =>
+          drawn(key, [], [], x, () => seaFloor.shore + 0.002).points.length ===
+          0
+      )
+    ),
+    // Where its special stands, with a hut on the square and without.
+    hutMoves = Array.from({ length: 40 }, (_, at) => at + 1).filter((x) => {
+      const claimed = (hut: boolean) =>
+        layOverlay(
+          overlayFor(
+            square([], { terrain: 'River', features: ['Horse'], hut }),
+            []
+          )!,
+          place(x, 3),
+          soup()
+        ).taken[0]!;
+
+      return claimed(true).join() !== claimed(false).join();
+    }),
+    // A stack's cut ends: the triangles in their pale, each facing away from the stack's middle along its logs.
+    stack = laidLogs();
+
+  expect(
+    'each special stays in the room it claims and on its square, but for a little, open, by roads and in a fortress',
+    strays.slice(0, 5),
+    []
+  );
+  expect(
+    'inside a fortress, what isn’t a beast or logs is as tall as on open land; a hut moves no special; a log’s cut ends face out',
+    [lowered, hutMoves, stack.ends > 0, stack.inward],
+    [[], [], true, 0]
+  );
+  expect(
+    'on a shore, nothing of a special on land is in the sea, and where its claim’s on the land it’s drawn; on land just under the water’s level it’s still drawn',
+    [
+      shore.filter(({ wet }) => wet > 0).map(({ key }) => key),
+      shore.filter(({ shown }) => shown < 10).map(({ key }) => key),
+      shallow,
+    ],
+    [[], [], []]
+  );
+}
+
+// On every grid, an open square's special takes the same room whatever its seed: the most a square of the grid has room
+//  for, in one of its corners, which a hex's are shallower, so it's sought a little nearer in too.
+{
+  const roomsOn = (topologyId: TopologyId): number[] => {
+    const width = 16,
+      height = 12,
+      world = new World({
+        _: 'World',
+        __: ['World', 'DataObject'],
+        id: 'world',
+        width,
+        height,
+        topologyId,
+        tiles: Array.from({ length: width * height }, (_, index) => ({
+          x: index % width,
+          y: Math.floor(index / width),
+          terrain: { _: 'Grassland', __: ['Grassland'], features: [] },
+          improvements: [],
+          units: [],
+          city: null,
+        })) as never,
+      }),
+      { layout } = new Land(world),
+      rooms = new Set<number>();
+
+    for (let y = 2; y < height - 2; y++) {
+      for (let x = 2; x < width - 2; x++) {
+        const centre = layout.centre(x, y),
+          outline = layout.outline(x, y),
+          radius = Math.min(
+            ...outline.map(([au, av], index) => {
+              const [bu, bv] = outline[(index + 1) % outline.length]!;
+
+              return (
+                Math.abs(
+                  (bu - au) * (av - centre[1]) - (au - centre[0]) * (bv - av)
+                ) / Math.hypot(bu - au, bv - av)
+              );
+            })
+          ),
+          { taken } = layOverlay(
+            overlayFor(
+              square([], { terrain: 'River', features: ['Horse'] }),
+              []
+            )!,
+            {
+              ...place(x, y, { height: () => 0.1 }),
+              centre,
+              toward: ([dx, dy]) => layout.centre(x + dx, y + dy),
+              radius,
+              outline,
+              owns: (u, v) => {
+                const [tx, ty] = layout.tileAt(u, v);
+
+                return tx === x && ty === y;
+              },
+            },
+            soup()
+          );
+
+        rooms.add(taken[0]![2]);
+      }
+    }
+
+    return [...rooms];
+  };
+
+  expect(
+    'on every grid, an open square’s special takes the same room, whatever its seed',
+    (['square', 'staggered-iso', 'hex-odd-r'] as TopologyId[]).map(roomsOn),
+    [[0.2], [0.2], [0.16]]
+  );
+}
 
 // What stands on a square stands clear of the unit's stand at its middle, 0.2 across: every special, a mine and a hut,
 //  on 300 squares each, as where they stand is seeded from the square.
@@ -3532,3 +3937,57 @@ if (failures.length > 0) {
 }
 
 process.stdout.write(`PASS overlay (${checks} checks)\n`);
+
+// The cut ends of a stack of logs on flat land: how many triangles there are in their pale, and how many face in
+//  toward the stack's middle rather than out along its logs.
+function laidLogs(): { ends: number; inward: number } {
+  const mesh = overlayMesh(16, 0, [
+      {
+        overlay: overlayFor(
+          square([], { terrain: 'River', features: ['Shield'] }),
+          []
+        )!,
+        place: place(17, 3, { height: () => 0.1 }),
+      },
+    ]),
+    pale = new Color(specialTable['Shield']!.detail!),
+    points = pointsOf(mesh),
+    middle = points
+      .reduce((sum, [u, , v]) => [sum[0] + u, sum[1] + v] as [number, number], [
+        0, 0,
+      ] as [number, number])
+      .map((sum) => sum / points.length);
+  let ends = 0,
+    inward = 0;
+
+  for (let at = 0; at < points.length; at += 3) {
+    const c = mesh.colours,
+      isPale =
+        Math.abs(c[at * 3]! - pale.r) +
+          Math.abs(c[at * 3 + 1]! - pale.g) +
+          Math.abs(c[at * 3 + 2]! - pale.b) <
+        1e-5;
+
+    if (!isPale) {
+      continue;
+    }
+
+    ends++;
+
+    const [au, , av] = points[at]!,
+      [bu, , bv] = points[at + 1]!,
+      [cu, , cv] = points[at + 2]!,
+      centroid = [(au + bu + cu) / 3, (av + bv + cv) / 3],
+      normal = [mesh.normals[at * 3]!, mesh.normals[at * 3 + 2]!];
+
+    if (
+      normal[0]! * (centroid[0]! - middle[0]!) +
+        normal[1]! * (centroid[1]! - middle[1]!) <
+      0
+    ) {
+      inward++;
+    }
+  }
+
+  return { ends, inward };
+}
