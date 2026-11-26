@@ -61,12 +61,14 @@ const gather = (
  * The square whose unit is drawn under the point `ndc` on the screen (from -1 to 1 across, and up), as `camera` sees
  *  it, the nearest to the camera where several are: its key, or nothing. `marked` is each square's key with the copies
  *  of its marker drawn, their matrices up to date. A unit's figures, its stand and the ring at its feet count, the
- *  figures even while the blink hides them; its flag and labels, and a city's buildings, don't.
+ *  figures even while the blink hides them; its flag and labels, and a city's buildings, don't. None further from the
+ *  camera than `within`: where the land's nearer, as a mountain in front of a unit is, the unit's hidden there.
  */
 export const unitUnder = (
   marked: Iterable<readonly [string, readonly Object3D[]]>,
   camera: Camera,
-  ndc: readonly [number, number]
+  ndc: readonly [number, number],
+  within: number = Infinity
 ): string | null => {
   const meshes: Mesh[] = [],
     keys = new Map<Object3D, string>();
@@ -86,6 +88,7 @@ export const unitUnder = (
   }
 
   raycaster.setFromCamera(new Vector2(ndc[0], ndc[1]), camera);
+  raycaster.far = within;
 
   const [hit] = raycaster.intersectObjects(meshes, false);
 

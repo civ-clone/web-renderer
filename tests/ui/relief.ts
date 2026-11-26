@@ -15,6 +15,7 @@ import createRelief, {
   WANDER,
   peakOf,
 } from '@civ-clone/ui-map-3d/terrain/relief';
+import { CEILING } from '@civ-clone/ui-map-3d/camera/pick';
 import { TopologyId } from '@civ-clone/ui-protocol/topology';
 import { SURFACES, terrainEntry } from '@civ-clone/ui-models-builtin/terrain';
 
@@ -978,6 +979,45 @@ ids.forEach((topologyId) => {
   }
 
   wrong = [];
+});
+
+// The land stays under the height picking steps down from (`CEILING`), with room to spare: a world of nothing but
+//  mountains, a massif as high as the relief makes it, every square looked at finely, on every grid and a few seeds.
+ids.forEach((topologyId) => {
+  const topology = topologyFor({ width, height, topologyId }),
+    layout = groundLayoutFor({
+      width,
+      height,
+      topologyId,
+      wrapsY: topology.wrapsY(),
+    });
+  let highest = -Infinity;
+
+  [1, 2, 3, 4].forEach((seed) => {
+    const massif = createRelief({
+      layout,
+      seed,
+      source: sourceFor(topology, () => 'Mountains'),
+    });
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const [u, v] = layout.centre(x, y);
+
+        for (let i = -0.5; i <= 0.5; i += 0.05) {
+          for (let j = -0.5; j <= 0.5; j += 0.05) {
+            highest = Math.max(highest, massif.height(u + i, v + j));
+          }
+        }
+      }
+    }
+  });
+
+  expect(
+    `${topologyId}: a massif of mountains rises over 1, but stays well under the ceiling picking steps down from`,
+    [highest > 1, highest < CEILING - 0.2],
+    [true, true]
+  );
 });
 
 if (failures.length > 0) {

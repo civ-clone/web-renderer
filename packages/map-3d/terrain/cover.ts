@@ -11,15 +11,16 @@ export const COVER = {
   //  (about 28°).
   rockFrom: 0.97,
   rockTo: 0.88,
-  // Snow from this height at the equator, and at the poles; whole a little above. A mountain's top is 0.32 to 0.47
-  //  high, about 0.40 for most, so near the equator about half the peaks are capped and two thirds have some snow,
-  //  and from halfway to the poles nearly every peak is capped.
-  snowAtEquator: 0.4,
-  snowAtPoles: 0.26,
-  snowDeepens: 0.04,
-  // Snow lies on ground more upright than `snowSlips`, wholly by `snowHolds`.
-  snowSlips: 0.85,
-  snowHolds: 0.95,
+  // Snow from this height at the equator, and at the poles; whole a little above. A mountain's top is mostly 0.75 to
+  //  0.95 high, about 0.85, up to about 1.05 in a massif, so fewer peaks are capped near the equator, and nearly all
+  //  from halfway to the poles, a little fewer than before mountains rose (#1391).
+  snowAtEquator: 0.86,
+  snowAtPoles: 0.56,
+  snowDeepens: 0.08,
+  // Snow lies on ground more upright than `snowSlips` (about 53° from level), wholly by `snowHolds` (about 37°), as a
+  //  peak's top is steep.
+  snowSlips: 0.6,
+  snowHolds: 0.8,
   // Wet where water squares are this share of what the ground's blended from, wholly by the second; up to this height
   //  over the sea.
   wetFrom: 0.1,

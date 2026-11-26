@@ -162,7 +162,7 @@ export class Water {
 
   constructor(ground: Ground, sky: Color) {
     this.#ground = ground;
-    // Half floats, which every WebGL2 can filter: at sea level, -0.2 to 1, they're good to a thousandth. Four a point:
+    // Half floats, which every WebGL2 can filter: at sea level, -0.2 to about 1.2, they're good to a thousandth. Four a point:
     //  its height; whether it's never been seen, which nothing has been yet, where no water's drawn; how much cloud is
     //  over it, the same but as it clears; and whether a chunk has been laid over it yet, as only then does a square
     //  seen clear its cloud rather than have none.

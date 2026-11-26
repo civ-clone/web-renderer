@@ -101,6 +101,7 @@ import {
 } from '@civ-clone/ui-models-hosted';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
+import standHeight from '@civ-clone/ui-map-3d/markers/standHeight';
 import { sourcesUnder, specifiersOf } from './lib/imports';
 import { createRequire } from 'module';
 import { join } from 'path';
@@ -250,8 +251,11 @@ const staged: string[] = [],
   yieldsSet: (YieldMesh | null)[] = [],
   // The square lit under the pointer, each time the stage was given it.
   highlightsSet: (HighlightMesh | null)[] = [],
-  // The square whose unit's drawn under the pointer, as the stage would say, if any.
-  unitUnderPointer: { key: string | null } = { key: null },
+  // The square whose unit's drawn under the pointer, as the stage would say, if any; and how far it was asked to look.
+  unitUnderPointer: { key: string | null; within: number[] } = {
+    key: null,
+    within: [],
+  },
   // What each unit, by its id, plays where it's drawn with a rigged copy, as the stage would say: none by default.
   rigFactsFor = new Map<string, RigFacts>(),
   // Every shot drawn since last cleared, by id, where it was each frame, `null` taken away; and the nodes asked where
@@ -284,7 +288,11 @@ const staged: string[] = [],
 
       return false;
     },
-    unitAt: () => unitUnderPointer.key,
+    unitAt: (_ndc, within) => {
+      unitUnderPointer.within.push(within ?? Infinity);
+
+      return unitUnderPointer.key;
+    },
     resize: (stageWidth, stageHeight, ratio) =>
       void staged.push(`resize ${stageWidth}×${stageHeight}@${ratio}`),
     setChunk: (i, j) => {
@@ -1346,7 +1354,7 @@ expect(
   {
     const land = view.land(),
       [townU, townV] = land.layout.centre(town.x, town.y),
-      ground = (): number => Math.max(0, land.surfaceAt(townU, townV)),
+      ground = (): number => standHeight(land.surface(), townU, townV),
       standing = (): number | undefined => markedAt.get(townKey)?.[1],
       raise = (tile: Tile, name: string): void => {
         (
@@ -2150,13 +2158,18 @@ expect(
     'Where?'
   );
   unitUnderPointer.key = '2,0';
+  unitUnderPointer.within.length = 0;
   clickAt(box.width / 2, box.height / 2);
   unitUnderPointer.key = null;
 
+  // No further than the land there, a hair past it: a unit behind a hill or a mountain, which hides it, isn't picked.
+  //  In the middle of the screen, that's the camera's distance from where it looks.
+  const lookedWithin = unitUnderPointer.within.at(-1) ?? Infinity;
+
   expect(
-    'a click on a unit’s figures picks its square, not the ground behind them',
-    picked,
-    ['1,1', '2,0']
+    'a click on a unit’s figures picks its square, not the ground behind them; a unit looked for no further than the land there',
+    [picked, Math.abs(lookedWithin - (chooser.orbit().distance + 0.05)) < 0.1],
+    [['1,1', '2,0'], true]
   );
 
   chooser.dispose();
@@ -2708,7 +2721,7 @@ expect(
   const groundAt = (x: number, y: number): number[] => {
       const [u, v] = middleOf(tiles[y * 4 + x] as Tile);
 
-      return [u, Math.max(0, glider.land().surfaceAt(u, v)), v].map(
+      return [u, standHeight(glider.land().surface(), u, v), v].map(
         (n) => Math.round(n * 100) / 100
       );
     },
@@ -3132,11 +3145,12 @@ expect(
     ]
   );
 
-  // Out of a city: from where it stood, in front of the buildings, at the height of the square's middle, where a unit in
-  //  a city stands, though the land in front lies a little higher or lower; to the middle of the square it's bound for.
+  // Out of a city: from where it stood, in front of the buildings, at the height a unit in a city stands at (its stand
+  //  over the highest of the land under it, at the square's middle), though the land in front lies a little higher or
+  //  lower; to the middle of the square it's bound for.
   const walled = tiles[1 * 4 + 1] as Tile,
     [cityU, cityV] = middleOf(walled),
-    cityStands = Math.max(0, glider.land().surfaceAt(cityU, cityV)),
+    cityStands = standHeight(glider.land().surface(), cityU, cityV),
     inFront = Math.max(0, glider.land().surfaceAt(cityU, cityV + 0.26));
 
   walled.city = {
@@ -3158,7 +3172,7 @@ expect(
   repatched([1, 1, []], [2, 1, []]);
 
   expect(
-    'out of a city, a unit sets off from in front of the buildings, at the height of the square’s middle, where it stood, though the land there lies higher or lower; and ends at the middle of the square it’s bound for',
+    'out of a city, a unit sets off from in front of the buildings, at the height it stood at, though the land there lies higher or lower; and ends at the middle of the square it’s bound for',
     [
       Math.abs(cityStands - inFront) > 1e-5,
       Math.abs(firstU! - cityU) < 0.01 &&

@@ -435,8 +435,10 @@ blended across squares.
   - a roughness (how much noise rides on it);
   - a shape (`flat`, `rolling`, `ridged` or `peaked`).
 
-  Typical values, in world units: ocean −0.15, rising to −0.03 at the shore; plains 0.02; hills 0.12, ridged;
-  mountains 0.35, ridged and peaked.
+  Typical values, in world units: ocean −0.15, rising to −0.03 at the shore; plains 0.02; hills 0.16, ridged, with
+  roughness 0.08; mountains 0.75, roughness 0.15, ridged and peaked, a mountain's top mostly 0.75 to 0.95 high, about
+  0.85, up to about 1.05 in a massif. Hills and
+  mountains were raised from 0.12 and 0.35 by #1391, so rivers rush down them and mountains stand over the land.
 - **Blending:**
   - A point takes its square and that square's neighbours (from the topology), each weighted by a smooth kernel of its
     distance from the square's middle (Wendland C2, radius 1.2 squares).
@@ -520,14 +522,21 @@ blended across squares.
 - **The built-in set** uses textures made by code. A hosted set can bring CC0 photographic textures (D3).
 - **As built (slice 3.1):** the surfaces' detail, blended, and rock, snow and wet ground by where the land lies.
   - **By where it lies** (`packages/map-3d/terrain/cover.ts`, the same numbers in the land's shader):
-    - **rock** where the ground's steep: from about 14° from level, whole by about 28°. So it's on mountains' flanks,
-      the steepest hills, and a mountain's foot where its slope reaches into a neighbour. Mountains' sides reach about
-      43° to 45° at their steepest (37° for most of the steepest), hills 35° to 38°, most under 13°. A texture laid flat
-      stretches about 1.4 times at 45°: rock mapped from three sides would fix that, and is still to do;
-    - **snow** above a snowline, 0.40 high at the equator and 0.26 at the poles, on ground level enough to hold it. A
-      mountain's top is 0.32 to 0.47 high, about 0.40 for most, so near the equator about half the peaks are capped and
-      two thirds have some snow, and from halfway to the poles nearly every peak is capped. Its latitude is the same at
-      every copy of the world, above or below;
+    - **rock** where the ground's steep: from about 14° from level, whole by about 28°. So it's on most of a
+      mountain, the steeper parts of hills, and a mountain's foot where its slope reaches into a neighbour. Since
+      #1391, mountains' sides reach about 64° to 68° at their steepest (58° for most of the steepest, 43° in the
+      middle), hills about 34° (up to 55° at a mountain's foot), most under 26°, so about a sixth of a block of hills
+      is rock. Those are from the height a sixteenth of a square either side, which reads a little steeper than the
+      land's mesh: before, measured so, mountains reached 44° to 49° (37° for most of the steepest, 23° in the
+      middle). A texture laid flat stretches about 2.3 times at 64°: rock mapped from three sides would fix that, and
+      is still to do;
+    - **snow** above a snowline, 0.86 high at the equator and 0.56 at the poles, on ground level enough to hold it:
+      none more upright than about 53° from level, whole by about 37°. A mountain's top is mostly 0.75 to 0.95 high,
+      about 0.85, up to about 1.05 in a massif. So on the debug page's worlds, counting a peak capped where any of its
+      square's points has snow over half, somewhat fewer peaks are capped near the equator than towards the poles, and
+      nearly all from halfway to them, a little fewer at each latitude than before #1391. A cap is small, as a peak's
+      top is steep. Its latitude is the same at every copy of the world,
+      above or below;
     - **wet**, darker and shinier, at the waterline, where water squares are part of what the ground's blended from
       (`GroundSample#shore`, carried by the mesh). Not by height alone: a swamp or a river inland, however low, stays
       dry.
@@ -867,7 +876,7 @@ How plants are placed:
       they were.
     - **Where:** Civ1's rivers, in their valleys, are nearly flat: along them they fall no more than about 0.06, and
       their water's steepest, across a mouth, about 0.095 where I've measured, just under `RAPIDS.from`, so they don't
-      break. Civ2's, a feature on hills and mountains, fall as steeply as 0.3 to 0.5 in places. A river's levels aren't ordered downhill yet, so where
+      break. Civ2's, a feature on hills and mountains, fall as steeply as 0.5 to 0.75 in places (0.3 to 0.5 before #1391). A river's levels aren't ordered downhill yet, so where
       one climbs out of a saddle between mountains, it breaks white there too (#1388).
     - **Drawn:** the shader whitens the water where its foam's over a noise of two sizes, by where it is on the ground
       (about 22 and 66 to a unit, a whole number of them to the world's period, so it's the same at every copy of the
@@ -994,7 +1003,14 @@ Each is looked up by its type name in the model set.
 - **In a city:** a unit stands at the city's edge, on its own side (the side it came in from), not inside the
   buildings.
 - **Facing:** a unit faces the way it last moved.
-- **Height:** it stands on the land's height at its feet.
+- **Height:** it stands on the land's height at its feet. Its stand's flat, so on a peak or a steep slope it stands on
+  the highest of the land under it (`markers/standHeight.ts`: the land's points under it, and its rim all round,
+  where it crosses the land's creases too), never sunk into it, and no higher. A walk through a square's middle
+  passes at that height too (`WalkPoint#middleLift`). At sea, a ship has no stand, so it rides the water at the
+  middle. Since mountains rose (#1391), a stand on a mountain perches on its summit, its rim off the land on the
+  steep side; and a unit in a city, which stands in front of the middle, is still at the middle's height, so it can
+  sink into a slope there; and the active unit's ring and a fortified unit's wall, a little wider than the stand,
+  can dip into a steep side (#1397).
 - **Size:** twice life size (`UNIT_SCALE`), as a tabletop game's figures are, so units read at a glance beside the
   cities and land, which are drawn life size. Their stands, and a fortified unit's wall, stay as they are, so a squad
   or a vehicle may reach past its stand, as a counter on a table does. A set says its models' sizes against each
@@ -1574,14 +1590,16 @@ mapEvent:
 ### 9.2 Picking
 
 - **A square:** a ray from the pointer meets what's shown there: the land, or the water's surface where the land is
-  below it (the sea at height 0, a lake or swamp pool at its own). It's stepped against the height function, taken as
-  no lower than the water, and refined. The point where it lands goes through `layout.tileAt`, then wraps.
+  below it (the sea at height 0, a lake or swamp pool at its own). It's stepped against the land as it's drawn
+  (`Land#surfaceAt`, since #1391), taken as no lower than the water, and refined. The point where it lands goes through `layout.tileAt`, then wraps.
 - **A unit:** a ray that passes through a unit's bounding sphere picks the unit before the square.
   - As built (`markers/pickUnit.ts`, `Stage.unitAt`): the ray meets what's drawn of each square's unit (its figures,
     stand and ring, at every copy of the world drawn), and the nearest it meets picks that unit's square, before the
     ground. Units are drawn twice life size, and aircraft fly over their stands, so their figures stand over the ground
     of the square behind: a click, a GoTo's square or a tooltip there goes to the square whose unit it's on, as it's
-    seen, even while the blink hides its figures (§6.3). A unit walking or fighting isn't picked.
+    seen, even while the blink hides its figures (§6.3). A unit walking or fighting isn't picked. Nor is one further
+    off than the land under the pointer (a hair past it, `LAND_SLACK`): one behind a hill or a mountain, which hides
+    it, isn't picked through it.
 - **A city:** a banner, or a city's lots, picks the city.
 - **Uses:** clicks, long presses, hover tooltips and target picking (Paradrop, Airlift) all go through these, with the
   tooltip content the 2D map gives [verified: `HoverSubject` in `GamePortal.ts`].

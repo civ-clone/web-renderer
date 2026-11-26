@@ -54,6 +54,11 @@ import {
   unfaded,
 } from '@civ-clone/ui-map-3d/markers/drawMarker';
 import { PUFF_BLOBS, puffAt } from '@civ-clone/ui-map-3d/markers/puff';
+import standHeight, {
+  STAND_REACH,
+} from '@civ-clone/ui-map-3d/markers/standHeight';
+import Land from '@civ-clone/ui-map-3d/Land';
+import World from '@civ-clone/ui-map/components/World';
 import Water, {
   CLOUD_ORDER,
   Clouds,
@@ -1300,6 +1305,19 @@ expect(
     [true, '3,4', '3,3', null, null]
   );
 
+  // Looked for no further than the land under the point (`MapView3D#tileAt`): a unit further off, behind a hill or a
+  //  mountain that hides it, isn't picked; one nearer is.
+  const distance = camera.position.distanceTo(new Vector3(0, through, -0.04));
+
+  expect(
+    'a unit further off than the land under the point isn’t picked; nearer, it is',
+    [
+      unitUnder(marked, camera, on(0, through, -0.04), distance - 0.3),
+      unitUnder(marked, camera, on(0, through, -0.04), distance + 0.3),
+    ],
+    [null, '3,4']
+  );
+
   // Its figures hidden by the blink (`Stage#showFigures`), still its square, as they're seen there every other half a
   //  second; hidden otherwise, not; shown again, as they were. A copy made afresh mid-blink (`Stage#drawIdling`) is
   //  hidden too, and still picked; one made once it's shown again is shown, and no longer flagged. The copy's made
@@ -1387,6 +1405,72 @@ expect(
     ['9,9', '3,4', '3,4']
   );
 }
+
+// A unit's stand on mountains and hills, on every grid: over the highest of the land under it, never sunk into it, and
+//  no higher than that, so it doesn't float further off the land than it must.
+(['square', 'staggered-iso', 'hex-odd-r'] as const).forEach((topologyId) => {
+  const width = 12,
+    height = 10,
+    world = new World({
+      _: 'World',
+      __: ['World', 'DataObject'],
+      id: 'world',
+      width,
+      height,
+      topologyId,
+      tiles: Array.from({ length: width * height }, (_, at) => {
+        const x = at % width,
+          y = Math.floor(at / width),
+          name = ['Mountains', 'Mountains', 'Hills', 'Grassland'][
+            (x * 3 + y * 5) % 4
+          ]!;
+
+        return {
+          x,
+          y,
+          isWater: false,
+          terrain: { _: name, __: [name], id: `${name}-${x}-${y}` },
+        };
+      }) as never,
+    }),
+    land = new Land(world),
+    ground = land.surface();
+  let sunk = 0,
+    floating = 0;
+
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const [u, v] = land.layout.centre(x, y),
+        stands = standHeight(ground, u, v);
+      let highest = -Infinity;
+
+      // Finely, all over the stand: every hundredth of its reach out, every degree round.
+      for (let out = 0; out <= 1.0001; out += 0.01) {
+        for (let way = 0; way < 360; way++) {
+          const angle = (way / 180) * Math.PI;
+
+          highest = Math.max(
+            highest,
+            ground.at(
+              u + Math.cos(angle) * STAND_REACH * out,
+              v + Math.sin(angle) * STAND_REACH * out
+            )
+          );
+        }
+      }
+
+      sunk = Math.max(sunk, highest - stands);
+      floating = Math.max(floating, stands - highest);
+    }
+  }
+
+  expect(
+    `${topologyId}: a unit's stand on mountains is over the highest of the land under it, and no higher`,
+    // To the fine look's own grain: a degree round and a hundredth out.
+    [sunk < 0.001, floating < 0.002],
+    [true, true]
+  );
+});
 
 if (failures.length > 0) {
   process.stderr.write(

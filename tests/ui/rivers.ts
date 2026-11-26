@@ -630,9 +630,13 @@ ids.forEach((topologyId) => {
     // A river square seen beside one never seen, which has a river.
     frontier: [number, number] = [9, 2],
     hidden = topology.neighbour(9, 2, a)!,
-    // Civ1's River terrain, but at the chain's end, which is hills with a river, as Civ2 has it, high over the sea.
+    // Civ1's River terrain, but at the chain's end, which is hills with a river, as Civ2 has it, high over the sea; and
+    //  its third square, mountains with a river, as Civ2 has it, the river through them.
     named = new Set([...river, key(lone), key(frontier), key(hidden)]),
-    terrains = new Map<string, string>([[key(end), 'Hills']]),
+    terrains = new Map<string, string>([
+      [key(end), 'Hills'],
+      [key(chain[2]!), 'Mountains'],
+    ]),
     rivers = new Set(named),
     terrainAt = (x: number, y: number): string =>
       terrains.get(`${x},${y}`) ??
@@ -695,8 +699,12 @@ ids.forEach((topologyId) => {
 
   // Along every course, a little apart: where its level's over the sea's, its level under the land round
   //  it without the river, seen and dry, at it and at its bed's edge and its bank's top; the land cut down under it
-  //  across its water and its bed; and never raised anywhere.
+  //  across its water and its bed; and never raised anywhere. `over` is as `relief.ts` takes its lows, so it holds by
+  //  how they're taken; `crossing` is the same land looked at across the river the other way, between the points
+  //  either side (the way `ribbons.ts` lays the water across), at its middle, its bed's edge and its bank's top, so a
+  //  level taken wrongly still shows. That's to half `underLand`'s margin under it, as it is now by about 0.0026.
   let over = 0,
+    crossing = -Infinity,
     unburied = true,
     inlandOverSea = true,
     raised = false;
@@ -708,13 +716,17 @@ ids.forEach((topologyId) => {
       const [pu, pv] = pointOf(placed, along),
         level = alongOf(course.levels, along),
         wide = alongOf(course.widths, along),
-        [du, dv] = [
+        // Across it as its level's taken (`relief.ts`'s lows): square to the line it's on, from the point at or before.
+        [, , du, dv] = pointAlong(course, along),
+        length = Math.hypot(du, dv) || 1,
+        // And across it between the points either side, a quarter of a step each way.
+        [bu, bv] = [
           pointOf(placed, Math.min(STEPS, along + 0.25))[0] -
             pointOf(placed, Math.max(0, along - 0.25))[0],
           pointOf(placed, Math.min(STEPS, along + 0.25))[1] -
             pointOf(placed, Math.max(0, along - 0.25))[1],
         ],
-        length = Math.hypot(du, dv) || 1,
+        bisected = Math.hypot(bu, bv) || 1,
         onLand = (u: number, v: number) => {
           const [x, y] = layout.tileAt(u, v),
             name = terrainAt(
@@ -743,6 +755,13 @@ ids.forEach((topologyId) => {
             Number.isInteger(along * 2)
           ) {
             over = Math.max(over, level - underLand(dry.height(u, v)));
+          }
+
+          const cu = pu - (bv / bisected) * out * side,
+            cv = pv + (bu / bisected) * out * side;
+
+          if (onLand(cu, cv) && level > 0 && out !== wide) {
+            crossing = Math.max(crossing, level - dry.height(cu, cv));
           }
 
           if (onLand(u, v) && level > 0 && out < wide + FLOOR) {
@@ -800,6 +819,7 @@ ids.forEach((topologyId) => {
     `${topologyId}: a river’s level is under the land round it, seen and dry, across its water and bed, where its level’s over the sea’s; the land’s cut down under it there, never raised anywhere; its bed’s over the sea where it’s all over the sea’s level; and where courses meet, they’re at one level`,
     [
       over <= 1e-12,
+      crossing < -MARGIN / 2,
       unburied,
       raised,
       inlandOverSea,
@@ -808,7 +828,7 @@ ids.forEach((topologyId) => {
       ),
       [...atMiddles.values()].some((levels) => levels.length > 1),
     ],
-    [true, true, false, true, true, true]
+    [true, true, true, false, true, true, true]
   );
 
   const [mouth] = mouths,

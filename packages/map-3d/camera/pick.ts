@@ -8,8 +8,12 @@
 
 import { GroundPoint, Orbit, rayThrough } from './orbit';
 
-/** How high the land can be anywhere, in world units: higher than any terrain's relief, with room for its noise. */
-export const CEILING = 1;
+/**
+ * How high the land can be anywhere, in world units: higher than any terrain's relief, with room for its noise. A
+ *  massif of mountains tops out about 1.05, and can't pass about 1.2 (#1391), which the relief's tests hold under this.
+ *  No higher than it needs: a ray's stepped from here down, on every move of the pointer.
+ */
+export const CEILING = 1.3;
 
 // How far apart, along the ray, the land is looked at, and how many times the meeting is halved.
 const STEP = 0.04,

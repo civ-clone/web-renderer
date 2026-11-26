@@ -43,6 +43,7 @@ import {
   between,
   clampOrbit,
   defaultOrbit,
+  eye,
   groundAt,
   lowestPitch,
   settled,
@@ -55,6 +56,7 @@ import { UnitMarkerMode } from '@civ-clone/ui-map/components/Map/UnitMarker';
 import CameraInput from './camera/CameraInput';
 import markerFor, { MarkerWords, TileMarker } from './markers/markerFor';
 import { IN_FRONT_OF_CITY, UNIT_SCALE } from './markers/drawMarker';
+import standHeight from './markers/standHeight';
 import { airborne, unitLook } from '@civ-clone/ui-models-builtin/units';
 import Walks, {
   OWN_PACE,
@@ -153,6 +155,11 @@ const HEIGHT_EASE = 0.25;
 
 // How long the mouse rests on a square before its tooltip opens, as on the 2D map.
 const HOVER_DELAY = 400;
+
+// How far past the land under a point on the screen a unit there may be and still be picked (`#tileAt`): the land's
+//  picked as it's drawn, and found to within a hair, and a unit standing on it is barely in front of it. A unit behind
+//  a hill or a mountain, hidden by it, is far further.
+const LAND_SLACK = 0.05;
 
 // How clear of the haze a city's banner is to take clicks and the mouse resting on it, from 1 short of the haze to 0
 //  where it hides the land: one fainter lets them through to the land, faded as it is.
@@ -1258,14 +1265,27 @@ export class MapView3D implements MapRenderer {
     inCity: boolean = Boolean(this.world.get(x, y).city)
   ): WalkPoint {
     const [u, v] = this.#land.layout.centre(x, y),
-      stands = Math.max(0, this.#land.surfaceAt(u, v)),
+      stands = this.#standsOn(x, y),
       at: [number, number] = [u, v + (inCity ? IN_FRONT_OF_CITY : 0)];
 
     return {
       at,
       lift: stands - Math.max(0, this.#land.surfaceAt(...at)),
       middle: [u, v],
+      // And over its middle, for a walk that passes through it.
+      middleLift: stands - Math.max(0, this.#land.surfaceAt(u, v)),
     };
+  }
+
+  // How high what's marked on the square at (`x`, `y`) stands: over the highest of the land under a unit's stand
+  //  (`standHeight`). At sea, on the water at the middle, as a ship has no stand: lifted by a shore its stand would
+  //  reach, it would float over the water.
+  #standsOn(x: number, y: number): number {
+    const [u, v] = this.#land.layout.centre(x, y);
+
+    return this.world.get(x, y).isWater
+      ? Math.max(0, this.#land.surfaceAt(u, v))
+      : standHeight(this.#land.surface(), u, v);
   }
 
   // A unit waiting for its patch steps on: it walks on from where it stands, and the walk that waited goes on waiting
@@ -2596,22 +2616,35 @@ export class MapView3D implements MapRenderer {
       return null;
     }
 
-    const ndc: [number, number] = [(x / width) * 2 - 1, 1 - (y / height) * 2],
-      unit = this.#stage.unitAt?.(ndc) ?? null;
+    // The land as it's drawn, its points read once each, as units stand on it and a unit's hidden by it.
+    const heights = new Map<number, number>(),
+      drawn = (u: number, v: number): number =>
+        this.#land.surfaceAt(u, v, heights),
+      ndc: [number, number] = [(x / width) * 2 - 1, 1 - (y / height) * 2],
+      ground = pickGround(
+        this.#orbit,
+        this.#lookHeight ?? 0,
+        ndc,
+        width / height,
+        drawn
+      ),
+      // A unit's drawn there only where it's nearer than the land: one behind a mountain is hidden by it.
+      [eyeU, eyeHeight, eyeV] = eye(this.#orbit, this.#lookHeight ?? 0),
+      within =
+        ground === null
+          ? Infinity
+          : Math.hypot(
+              ground[0] - eyeU,
+              Math.max(0, drawn(...ground)) - eyeHeight,
+              ground[1] - eyeV
+            ) + LAND_SLACK,
+      unit = this.#stage.unitAt?.(ndc, within) ?? null;
 
     if (unit !== null) {
       const [unitX, unitY] = unit.split(',').map(Number) as [number, number];
 
       return this.world.get(unitX, unitY);
     }
-
-    const ground = pickGround(
-      this.#orbit,
-      this.#lookHeight ?? 0,
-      ndc,
-      width / height,
-      (u, v) => this.#land.heightAt(u, v)
-    );
 
     if (ground === null) {
       return null;
@@ -3185,11 +3218,15 @@ export class MapView3D implements MapRenderer {
       inCity: (marker?.unit ?? null) !== null && marker?.inCity === true,
     });
 
-    // On the land as it's drawn, as what's laid on it is, so a unit's stand stands over that.
+    // On the land as it's drawn, as what's laid on it is, so a unit's stand stands over that, and over the highest of
+    //  it under the stand (`#standsOn`), only where something's marked: every square's marked again at times, as when
+    //  the towns are hidden (`t`), and most have nothing on them.
     const [u, v] = this.#land.layout.centre(x, y),
       at: [number, number, number] = [
         u,
-        Math.max(0, this.#land.surfaceAt(u, v)),
+        marker === null
+          ? Math.max(0, this.#land.surfaceAt(u, v))
+          : this.#standsOn(x, y),
         v,
       ],
       signature = marker === null ? null : JSON.stringify([marker, at]);
