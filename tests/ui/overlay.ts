@@ -26,6 +26,8 @@ import overlayFor, {
 } from '@civ-clone/ui-map-3d/overlay/overlayFor';
 import overlayMesh, {
   AIRBASE_COLOURS,
+  BRIDGE,
+  BRIDGE_COLOURS,
   FARMSTEAD_COLOURS,
   FORTRESS,
   FORTRESS_COLOURS,
@@ -38,19 +40,26 @@ import overlayMesh, {
   LIFT,
   ROAD_BOW,
   ROOFS,
+  ROUTE_COLOURS,
+  WATER_GATE,
   layOverlay,
   roadHalf,
   SMOG_LIFT,
   channelAcross,
+  riverNear,
   roomOf,
   rowAround,
   soup,
 } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
 import {
+  BANK,
   FLOOR,
   MEANDER,
+  POOL_WIDTH,
   RIVER_WIDTH,
+  bedOf,
 } from '@civ-clone/ui-map-3d/terrain/rivers';
+import { RIVER_LIFT } from '@civ-clone/ui-map-3d/terrain/ribbons';
 import { RiverPath } from '@civ-clone/ui-map-3d/terrain/relief';
 import { Stage, overlayCopies, polesAt } from '@civ-clone/ui-map-3d/stage';
 import sprawl, {
@@ -5423,6 +5432,8 @@ const differing = (
             [18.5, 3.5],
           ],
           widths: [RIVER_WIDTH, RIVER_WIDTH, RIVER_WIDTH],
+          // Under the land, as a river's level is (`underLand`).
+          levels: [0.05, 0.05, 0.05],
         },
       ],
       [
@@ -5434,6 +5445,8 @@ const differing = (
             [18, 4],
           ],
           widths: [RIVER_WIDTH, RIVER_WIDTH, RIVER_WIDTH],
+          // Under the land, as a river's level is (`underLand`).
+          levels: [0.05, 0.05, 0.05],
         },
       ],
     ],
@@ -5699,6 +5712,547 @@ const differing = (
     [[0, 0], [0, 0], true]
   );
 }
+
+// A mesh's points of a colour, where they are on the ground: (u, y, v).
+const pointsColoured = (mesh: OverlayMesh, css: string) => {
+  const { r, g, b } = new Color(css),
+    c = mesh.colours;
+
+  return pointsOf(mesh).filter(
+    (_, at) =>
+      Math.abs(c[at * 3]! - r) < 1e-4 &&
+      Math.abs(c[at * 3 + 1]! - g) < 1e-4 &&
+      Math.abs(c[at * 3 + 2]! - b) < 1e-4
+  );
+};
+
+// Bridges (§5.3): where a road, railroad or an airbase's runway crosses a river's water, it's on a bridge, its deck
+//  `BRIDGE.clearance` over the water's surface across the water and a little past it, falling to the land beyond, never
+//  under the land; walls along it there; a fortress's walls leave a gate for the river; and where no river's near, it's
+//  laid as it was.
+{
+  // A river from north to south through (17, 3)'s middle, at `level`.
+  const northSouth = (level: number): RiverPath => ({
+      points: [
+        [17.5, 2.5],
+        [17.5, 3.5],
+        [17.5, 4.5],
+      ],
+      widths: [RIVER_WIDTH, RIVER_WIDTH, RIVER_WIDTH],
+      levels: [level, level, level],
+    }),
+    // Land `top` high as `path` cuts it (`cutBy` in `rivers.ts`): down to its bed across its water and `FLOOR` past,
+    //  back up over `BANK`.
+    cut =
+      (top: number, path: RiverPath) =>
+      (u: number, v: number): number => {
+        const [distance, width, level] = riverNear(path, u, v),
+          bed = bedOf(level),
+          floor = width + FLOOR;
+
+        return distance <= floor
+          ? bed
+          : distance >= floor + BANK
+          ? top
+          : bed + ((top - bed) * (distance - floor)) / BANK;
+      },
+    // The water's surface on a river at `level`, as it's laid on its bed (`ribbons.ts`).
+    surfaceOf = (level: number) => Math.max(0, bedOf(level) + RIVER_LIFT),
+    // How far across a deck reaches from a river's middle line, at most, with its slope.
+    deckReach = RIVER_WIDTH + BRIDGE.past + BRIDGE.reach,
+    eastWest = (improvements: string[], along = improvements) =>
+      overlayFor(square(improvements), [
+        neighbour([1, 0], along),
+        neighbour([-1, 0], along),
+      ])!,
+    // Laid with its points where they are, not yet a chunk's 32-bit ones.
+    laid = (
+      overlay: SquareOverlay,
+      height: (u: number, v: number) => number,
+      rivers?: RiverPath[]
+    ): OverlayMesh => {
+      const into = soup();
+
+      layOverlay(overlay, { ...place(17, 3, { height }), rivers }, into);
+
+      return { ...into, u: 0, v: 0 } as unknown as OverlayMesh;
+    },
+    // How far a point is from the line from `a` to `b`.
+    offLine = (
+      u: number,
+      v: number,
+      [au, av]: readonly [number, number],
+      [bu, bv]: readonly [number, number]
+    ): number => {
+      const du = bu - au,
+        dv = bv - av,
+        t = Math.max(
+          0,
+          Math.min(1, ((u - au) * du + (v - av) * dv) / (du * du + dv * dv))
+        );
+
+      return Math.hypot(u - au - du * t, v - av - dv * t);
+    },
+    // Where the road's two halves' edges meet at its middle, either side: as far along the sum of the ways across them
+    //  as is half its width, 0.035, across each.
+    mitre = (() => {
+      const [a, b] = (
+          [
+            [1, 0],
+            [-1, 0],
+          ] as [number, number][]
+        ).map((offset) => roadHalf(place(17, 3), offset).ways[0]!),
+        [iu, iv] = [a![1], -a![0]],
+        [ou, ov] = [-b![1], b![0]],
+        k = 1 + iu * ou + iv * ov;
+
+      return [1, -1].map((side): [number, number] => [
+        17.5 + ((side * (iu + ou)) / k) * 0.035,
+        3.5 + ((side * (iv + ov)) / k) * 0.035,
+      ]);
+    })(),
+    // How far a point is from the middle of the road across the square, either half.
+    offRoad = (u: number, v: number) =>
+      Math.min(
+        ...[
+          [1, 0],
+          [-1, 0],
+        ].flatMap((offset) => {
+          const { points } = roadHalf(place(17, 3), offset as [number, number]);
+
+          return points
+            .slice(1)
+            .map((to, at) => offLine(u, v, points[at]!, to));
+        })
+      ),
+    // On flat land and in a gorge in hills: a road across the river, laid with it and without it.
+    crossings = [
+      ['flat land', 0.1, 0.097],
+      ['a gorge in hills', 0.5, 0.2],
+    ].map(([name, top, level]) => {
+      const river = northSouth(level as number),
+        height = cut(top as number, river),
+        road = eastWest(['Road']);
+
+      return {
+        name: name as string,
+        level: level as number,
+        height,
+        bridged: laid(road, height, [river]),
+        unbridged: laid(road, height),
+      };
+    });
+
+  expect(
+    'a road across a river, on flat land and in a gorge: over its water, on a deck its clearance over the water’s surface, flat across it and a little past, where without the river it’s lower; never under the land; past the deck’s reach, as without it',
+    crossings.map(({ name, level, height, bridged, unbridged }) => {
+      const over = (mesh: OverlayMesh) =>
+          pointsColoured(mesh, ROUTE_COLOURS.road).filter(
+            ([u]) => Math.abs(u - 17.5) <= RIVER_WIDTH
+          ),
+        deck = surfaceOf(level) + BRIDGE.clearance + LIFT.road,
+        // Each point past the deck's reach, by where it is.
+        beyond = (mesh: OverlayMesh) =>
+          new Map(
+            pointsColoured(mesh, ROUTE_COLOURS.road)
+              .filter(([u]) => Math.abs(u - 17.5) > deckReach + 1e-6)
+              .map(([u, y, v]) => [`${u.toFixed(5)},${v.toFixed(5)}`, y])
+          ),
+        before = beyond(unbridged),
+        after = beyond(bridged);
+
+      // Across the water and `BRIDGE.past` either side, flat.
+      const flat = pointsColoured(bridged, ROUTE_COLOURS.road).filter(
+        ([u]) => Math.abs(u - 17.5) <= RIVER_WIDTH + BRIDGE.past - 1e-6
+      );
+
+      return [
+        name,
+        over(bridged).length > 0,
+        Math.min(...over(bridged).map(([, y]) => y)) >= deck - 1e-9,
+        flat.every(([, y]) => Math.abs(y - deck) < 1e-9),
+        Math.max(...over(unbridged).map(([, y]) => y)) < deck - 1e-3,
+        pointsColoured(bridged, ROUTE_COLOURS.road).every(
+          ([u, y, v]) => y >= height(u, v) + LIFT.road - 1e-9
+        ),
+        after.size === before.size &&
+          [...after].every(
+            ([key, y]) => Math.abs(y - (before.get(key) ?? Infinity)) < 1e-9
+          ),
+      ];
+    }),
+    crossings.map(({ name }) => [name, true, true, true, true, true, true])
+  );
+
+  // On flat land, where its deck falls to the land past the water, the road's tilted with it: its normals lean away
+  //  from the river, as the land's under it don't.
+  {
+    const [{ bridged }] = crossings,
+      { r, g, b } = new Color(ROUTE_COLOURS.road),
+      ramp = Array.from({ length: bridged.positions.length / 3 }, (_, at) => at)
+        .filter(
+          (at) =>
+            Math.abs(bridged.colours[at * 3]! - r) < 1e-4 &&
+            Math.abs(bridged.colours[at * 3 + 1]! - g) < 1e-4 &&
+            Math.abs(bridged.colours[at * 3 + 2]! - b) < 1e-4
+        )
+        .filter((at) => {
+          const out = bridged.positions[at * 3]! - 17.5;
+
+          return (
+            Math.abs(out) > RIVER_WIDTH + BRIDGE.past + 0.005 &&
+            Math.abs(out) < RIVER_WIDTH + BRIDGE.past + 0.03
+          );
+        });
+
+    expect(
+      'where its deck falls to the land, the road leans with it, away from the river',
+      [
+        ramp.length > 0,
+        ramp.every(
+          (at) =>
+            bridged.normals[at * 3]! *
+              Math.sign(bridged.positions[at * 3]! - 17.5) >
+            0.05
+        ),
+      ],
+      [true, true]
+    );
+  }
+
+  // A road across a pool, a lone river square, whose water's round its middle: its deck flat across it and a little
+  //  past it every way.
+  {
+    const pool: RiverPath = {
+        points: Array.from({ length: 9 }, (): [number, number] => [17.5, 3.5]),
+        widths: Array.from({ length: 9 }, () => POOL_WIDTH),
+        levels: Array.from({ length: 9 }, () => 0.097),
+      },
+      height = (u: number, v: number) =>
+        Math.hypot(u - 17.5, v - 3.5) <= POOL_WIDTH + FLOOR
+          ? bedOf(0.097)
+          : 0.1,
+      onPool = pointsColoured(
+        laid(eastWest(['Road']), height, [pool]),
+        ROUTE_COLOURS.road
+      ).filter(
+        ([u, , v]) =>
+          Math.hypot(u - 17.5, v - 3.5) <= POOL_WIDTH + BRIDGE.past - 1e-6
+      ),
+      deck = surfaceOf(0.097) + BRIDGE.clearance + LIFT.road;
+
+    expect(
+      'a road across a pool: on a deck flat across its water and a little past it',
+      [onPool.length > 0, onPool.every(([, y]) => Math.abs(y - deck) < 1e-9)],
+      [true, true]
+    );
+  }
+
+  // A railroad across it and a road along it: their walls clear of the railroad's disc at the middle, where they meet.
+  {
+    const river = northSouth(0.097),
+      both = overlayFor(square(['Road', 'Railroad']), [
+        neighbour([1, 0], ['Road', 'Railroad']),
+        neighbour([-1, 0], ['Road', 'Railroad']),
+        neighbour([0, -1], ['Road']),
+        neighbour([0, 1], ['Road']),
+      ])!,
+      met = laid(both, cut(0.1, river), [river]),
+      walls = [
+        ...pointsColoured(met, BRIDGE_COLOURS.stone),
+        ...pointsColoured(met, BRIDGE_COLOURS.girder),
+      ];
+
+    expect(
+      'a railroad across a river and a road along it: walls on both, none in the railroad’s disc where they meet',
+      [
+        pointsColoured(met, BRIDGE_COLOURS.stone).length > 0,
+        pointsColoured(met, BRIDGE_COLOURS.girder).length > 0,
+        walls.every(([u, , v]) => Math.hypot(u - 17.5, v - 3.5) >= 0.05 - 1e-6),
+      ],
+      [true, true, true]
+    );
+  }
+
+  // Roads every way across it: no wall stands on any of them.
+  {
+    const river = northSouth(0.097),
+      everyWay = overlayFor(
+        square(['Road']),
+        (
+          [
+            [0, -1],
+            [1, -1],
+            [1, 0],
+            [1, 1],
+            [0, 1],
+            [-1, 1],
+            [-1, 0],
+            [-1, -1],
+          ] as [number, number][]
+        ).map((offset) => neighbour(offset, ['Road']))
+      )!,
+      walls = pointsColoured(
+        laid(everyWay, cut(0.1, river), [river]),
+        BRIDGE_COLOURS.stone
+      ),
+      roads = everyWay.road!.joins.map(
+        (offset) => roadHalf(place(17, 3), offset).points
+      );
+
+    expect(
+      'roads every way across a river: walls, none on any road',
+      [
+        walls.length > 0,
+        walls.every(([u, , v]) =>
+          roads.every((points) =>
+            points
+              .slice(1)
+              .every((to, at) => offLine(u, v, points[at]!, to) >= 0.035 - 5e-4)
+          )
+        ),
+      ],
+      [true, true]
+    );
+  }
+
+  expect(
+    'its walls: on its edges along its deck, never on it, and mitred at its middle either side, as a road through it; over the water’s surface by its parapet at most, their foot under it, none past the deck’s reach; none without the river',
+    crossings.map(({ name, level, bridged, unbridged }) => {
+      const walls = pointsColoured(bridged, BRIDGE_COLOURS.stone),
+        surface = surfaceOf(level);
+
+      return [
+        name,
+        walls.length > 0,
+        Math.max(...walls.map(([, y]) => y)) <=
+          surface + BRIDGE.clearance + LIFT.road + BRIDGE.parapet + 1e-6,
+        Math.min(...walls.map(([, y]) => y)) < surface,
+        walls.every(([u]) => Math.abs(u - 17.5) <= deckReach + 0.01),
+        // A road's half its width, 0.035, either side, on its edges as a ribbon lays it, its sides between its points'
+        //  (so a hair nearer its middle between them); by its middle, where its halves meet, mitred.
+        walls.every(([u, , v]) => {
+          const away = offRoad(u, v);
+
+          return (
+            away >= 0.035 - 5e-4 &&
+            (away <= 0.035 + BRIDGE.thick + 5e-4 ||
+              Math.hypot(u - 17.5, v - 3.5) < 0.1)
+          );
+        }),
+        // Mitred at its middle: a wall each side where its two halves' edges meet there.
+        mitre.every(([mu, mv]) =>
+          walls.some(([u, , v]) => Math.hypot(u - mu, v - mv) < 1e-6)
+        ),
+        pointsColoured(unbridged, BRIDGE_COLOURS.stone).length,
+      ];
+    }),
+    crossings.map(({ name }) => [name, true, true, true, true, true, true, 0])
+  );
+
+  // A railroad across it: its ballast and rails on the deck, girders either side.
+  {
+    const river = northSouth(0.097),
+      height = cut(0.1, river),
+      rail = laid(eastWest(['Road', 'Railroad']), height, [river]),
+      over = (css: string) =>
+        pointsColoured(rail, css).filter(
+          ([u]) => Math.abs(u - 17.5) <= RIVER_WIDTH
+        ),
+      deck = surfaceOf(0.097) + BRIDGE.clearance;
+
+    expect(
+      'a railroad across it: its ballast and rails on the deck, girders either side',
+      [
+        over(ROUTE_COLOURS.ballast).length > 0,
+        Math.min(...over(ROUTE_COLOURS.ballast).map(([, y]) => y)) >=
+          deck + LIFT.ballast - 1e-6,
+        Math.min(...over(ROUTE_COLOURS.rail).map(([, y]) => y)) >=
+          deck + LIFT.rail - 1e-6,
+        pointsColoured(rail, BRIDGE_COLOURS.girder).length > 0,
+        pointsColoured(rail, BRIDGE_COLOURS.stone).length,
+      ],
+      [true, true, true, true, 0]
+    );
+  }
+
+  // A fortress over it, with a road through it: its walls across the water leave a gate for it, where without the river
+  //  they come down to the land; and an airbase's runway across it, on a deck, with concrete walls.
+  {
+    const river = northSouth(0.097),
+      height = cut(0.1, river),
+      surface = surfaceOf(0.097),
+      fortress = eastWest(['Fortress', 'Road'], ['Road']),
+      // The fortress's walls over the river's water, north and south, away from the road's bridge.
+      gates = (mesh: OverlayMesh) =>
+        pointsColoured(mesh, FORTRESS_COLOURS.stone).filter(
+          ([u, , v]) =>
+            Math.abs(u - 17.5) < RIVER_WIDTH / 2 && Math.abs(v - 3.5) > 0.2
+        ),
+      airbase = overlayFor(square(['Airbase']), [])!,
+      runway = (mesh: OverlayMesh) =>
+        pointsColoured(mesh, AIRBASE_COLOURS.tarmac).filter(
+          ([u, , v]) =>
+            Math.abs(u - 17.5) <= RIVER_WIDTH &&
+            Math.abs(v - (3.5 + RUNWAY.south)) < RUNWAY.wide / 2
+        ),
+      withAirbase = laid(airbase, height, [river]);
+
+    expect(
+      'a fortress’s walls across the water leave a gate for it, where without the river they come down to the land; an airbase’s runway across it on a deck, with concrete walls',
+      [
+        gates(laid(fortress, height, [river])).length > 0,
+        Math.min(...gates(laid(fortress, height, [river])).map(([, y]) => y)) >=
+          surface + WATER_GATE - 1e-6,
+        Math.min(...gates(laid(fortress, height)).map(([, y]) => y)) < surface,
+        runway(withAirbase).length > 0,
+        Math.min(...runway(withAirbase).map(([, y]) => y)) >=
+          surface + BRIDGE.clearance + LIFT.runway - 1e-6,
+        pointsColoured(withAirbase, BRIDGE_COLOURS.concrete).length > 0,
+        pointsColoured(laid(airbase, height), BRIDGE_COLOURS.concrete).length,
+      ],
+      [true, true, true, true, true, true, 0]
+    );
+  }
+
+  // Where a river runs nearest a point: how far, and its width and level there, by where the point falls along the line
+  //  between its ends, as its channel's cut takes them; its level falling along it.
+  {
+    const falling: RiverPath = {
+      points: [
+        [10, 5],
+        [11, 5.2],
+        [12, 5],
+      ],
+      widths: [RIVER_WIDTH, RIVER_WIDTH * 2, RIVER_WIDTH * 3],
+      levels: [0.3, 0.2, 0.1],
+    };
+
+    expect(
+      'where a river runs nearest a point: how far, and its width and level there by where it falls along it',
+      [
+        riverNear(falling, 10, 5),
+        riverNear(falling, 11, 5.2),
+        riverNear(falling, 11.5, 5.6).map((x) => Math.round(x * 1e9) / 1e9),
+        riverNear(falling, 13, 5),
+      ],
+      [
+        [0, RIVER_WIDTH, 0.3],
+        [0, RIVER_WIDTH * 2, 0.2],
+        [
+          // Square to its second line, from (11, 5.2) to (12, 5).
+          Math.round((0.5 / Math.hypot(1, 0.2)) * 1e9) / 1e9,
+          Math.round(RIVER_WIDTH * 2.5 * 1e9) / 1e9,
+          0.15,
+        ],
+        [1, RIVER_WIDTH * 3, 0.1],
+      ]
+    );
+  }
+
+  // A river further off than any deck reaches changes nothing.
+  {
+    const far: RiverPath = {
+        points: [
+          [17.5, 6.5],
+          [18.5, 6.5],
+        ],
+        widths: [RIVER_WIDTH, RIVER_WIDTH],
+        levels: [0.097, 0.097],
+      },
+      road = eastWest(['Road', 'Railroad']),
+      key = (mesh: OverlayMesh) =>
+        JSON.stringify([
+          Array.from(mesh.positions),
+          Array.from(mesh.normals),
+          Array.from(mesh.colours),
+        ]);
+
+    expect(
+      'a river further off than any bridge reaches changes nothing laid',
+      key(laid(road, () => 0.1, [far])) === key(laid(road, () => 0.1)),
+      true
+    );
+  }
+}
+
+// Through the land, on every grid: a world with rivers across it and along it, roads and railroads every way over them.
+//  Wherever two squares' roads or railroads meet, at the edge between them or across the world's seam, they're at the
+//  same height, on a bridge or not; and some are on bridges, with walls.
+(['square', 'hex-odd-r', 'staggered-iso'] as const).forEach((topologyId) => {
+  const width = 20,
+    height = 16,
+    { land, laid, stage } = landOf(topologyId, width, height, (x, y) => ({
+      terrain:
+        x === 10 || y === 8 || (x === 0 && y > 4 && y < 12)
+          ? 'River'
+          : 'Grassland',
+      improvements:
+        (x > 5 && x < 15 && y > 3 && y < 13) || x === 19 || x === 0
+          ? y > 8
+            ? ['Road', 'Railroad']
+            : ['Road']
+          : [],
+    })),
+    { u: periodU } = land.layout.period(),
+    // Each colour's points' heights, by where they are on the ground, round the world's copies.
+    heights = new Map<string, Set<number>>(),
+    walls = { count: 0 };
+
+  land.queueAll(0, 0);
+  land.build(stage, null);
+
+  laid.forEach((mesh) => {
+    if (mesh === null) {
+      return;
+    }
+
+    const points = pointsOf(mesh);
+
+    [ROUTE_COLOURS.road, ROUTE_COLOURS.ballast, ROUTE_COLOURS.rail].forEach(
+      (css) => {
+        const { r, g, b } = new Color(css);
+
+        points.forEach(([u, y, v], at) => {
+          const c = mesh.colours;
+
+          if (
+            Math.abs(c[at * 3]! - r) < 1e-4 &&
+            Math.abs(c[at * 3 + 1]! - g) < 1e-4 &&
+            Math.abs(c[at * 3 + 2]! - b) < 1e-4
+          ) {
+            const key = `${css}:${(((u % periodU) + periodU) % periodU).toFixed(
+              4
+            )},${v.toFixed(4)}`;
+
+            heights.set(key, (heights.get(key) ?? new Set()).add(y));
+          }
+        });
+      }
+    );
+
+    walls.count += pointsColoured(mesh, BRIDGE_COLOURS.stone).length;
+  });
+
+  const mismatched = [...heights].filter(
+      ([, ys]) => Math.max(...ys) - Math.min(...ys) > 2e-6
+    ),
+    // How many points are over the land by more than a road's lift: on a deck.
+    raised = [...heights].filter(([key, ys]) => {
+      const [u, v] = key.split(':')[1]!.split(',').map(Number);
+
+      return (
+        key.startsWith(ROUTE_COLOURS.road) &&
+        Math.min(...ys) > land.heightAt(u!, v!) + LIFT.road + 1e-3
+      );
+    }).length;
+
+  expect(
+    `${topologyId}: where two squares’ roads and railroads meet, over rivers or not, across the seam too, they’re at one height; some on bridges, with walls`,
+    [mismatched.slice(0, 3).map(([key]) => key), raised > 0, walls.count > 0],
+    [[], true, true]
+  );
+});
 
 if (failures.length > 0) {
   process.stderr.write(

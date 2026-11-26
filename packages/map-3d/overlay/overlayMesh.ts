@@ -1,6 +1,7 @@
 // The shapes laid on the land (docs/3d-renderer.md §5.2, §5.4, plan 3.4), from what `overlayFor` says a square has, made
 //  by code for the built-in set:
-//  - roads, railroads and fields are draped over the land, sampled along it, a little above it;
+//  - roads, railroads and fields are draped over the land, sampled along it, a little above it; where a road, railroad
+//    or runway crosses a river's water, it's on a bridge, a little over it, with walls either side;
 //  - pollution is smog, a see-through haze draped higher over it, a mesh of its own;
 //  - mines, fortresses, airbases, specials and huts are small solids standing on it, specials at sea on the water;
 //  - a city's lot is its sprawl, and a city's houses spill onto its neighbours' squares as it grows;
@@ -57,7 +58,8 @@ import { IN_FRONT_OF_CITY } from '../markers/drawMarker';
 import { ditherRank } from './thinning';
 import { standAt } from './stands';
 import { RiverPath } from '../terrain/relief';
-import { FLOOR } from '../terrain/rivers';
+import { FLOOR, bedOf } from '../terrain/rivers';
+import { RIVER_LIFT } from '../terrain/ribbons';
 
 /** Where a square is, and what it needs to know of the land round it, to lay its overlay. */
 export type OverlayPlace = {
@@ -164,6 +166,28 @@ export const LIFT = {
   marking: 0.024,
 } as const;
 
+/**
+ * A bridge, where a road, railroad or an airbase's runway crosses a river's water (docs/3d-renderer.md §5.3): its deck
+ *  is `clearance` over the water's surface, flat across it and `past` either side, then falls to the land as steeply
+ *  as `slope`, for no more than `reach` further; and its walls stand `parapet` over the deck, `thick` thick.
+ */
+export const BRIDGE = {
+  clearance: 0.008,
+  past: 0.03,
+  slope: 0.35,
+  reach: 0.1,
+  parapet: 0.012,
+  thick: 0.008,
+} as const;
+
+/** How high over a river's water a fortress's wall leaves a gate for it, where the wall crosses it. */
+export const WATER_GATE = 0.02;
+
+// How long each length of a bridge's walls is, at most, so they follow the deck and the way it bends; and how long its
+//  walls are at the least, where they're drawn at all, so a road just reaching over the water has none.
+const WALL_PIECE = 0.03,
+  WALL_SHORTEST = 0.06;
+
 // How finely a draped strip follows the land: finer than the land's points are apart (0.125).
 const STEP = 0.06,
   ROAD = '#8c7a58',
@@ -188,6 +212,9 @@ const STEP = 0.06,
   STRAW = '#d4bc6a',
   SILO = '#b4b8bc',
   IRON = '#3a3a3a',
+  // A railroad bridge's girders, and the concrete walls of an airbase's runway where it crosses a river.
+  GIRDER = '#5d6268',
+  CONCRETE = '#a3a29b',
   BRICK = '#8a5a44',
   MOUTH = '#141210',
   // A mountain's rock (as the land's, `Mountains`), where a tunnel's dug into it.
@@ -387,6 +414,10 @@ const MATRIX = new Matrix4(),
   EULER = new Euler(),
   SCALE = new Vector3();
 
+// A river through a square, for the bridges over it: its course, and a circle round all its bridges reach, past which
+//  it's nothing: (`cu`, `cv`), and the radius.
+type Water = { path: RiverPath; cu: number; cv: number; reach: number };
+
 /** Lays shapes for one square into a soup of triangles. */
 class Layer {
   readonly soup: Soup;
@@ -399,9 +430,33 @@ class Layer {
     number
   ][];
 
+  // The rivers through the square, for the bridges over them.
+  readonly #waters: Water[];
+
   constructor(soup: Soup, place: OverlayPlace) {
     this.soup = soup;
     this.place = place;
+    this.#waters = (place.rivers ?? []).map((path) => {
+      const { points, widths } = path,
+        [su, sv] = points[0]!,
+        [eu, ev] = points[points.length - 1]!,
+        cu = (su + eu) / 2,
+        cv = (sv + ev) / 2;
+
+      return {
+        path,
+        cu,
+        cv,
+        reach:
+          Math.max(
+            ...points.map(
+              ([u, v], at) => Math.hypot(u - cu, v - cv) + (widths[at] ?? 0)
+            )
+          ) +
+          BRIDGE.past +
+          BRIDGE.reach,
+      };
+    });
     this.channels = (place.rivers ?? []).flatMap(({ points, widths }) =>
       points
         .slice(1)
@@ -425,15 +480,89 @@ class Layer {
     return afloat ? Math.max(0, height) : height;
   }
 
-  // The land's normal at a point, from its height either side.
-  #normal(u: number, v: number): [number, number, number] {
-    const e = NORMAL_STEP,
-      du =
-        (this.place.heightAt(u + e, v) - this.place.heightAt(u - e, v)) /
-        (2 * e),
-      dv =
-        (this.place.heightAt(u, v + e) - this.place.heightAt(u, v - e)) /
-        (2 * e),
+  // Where (`u`, `v`) is by a river through the square, if its bridges reach it: its water's surface there and how far
+  //  past its water's edge it is (less than none over its water), by where it falls along its course (`riverNear`).
+  //  Its water lies on its bed, `RIVER_LIFT` over it, but never under the sea's level (`ribbons.ts`).
+  #near(
+    { path, cu, cv, reach }: Water,
+    u: number,
+    v: number
+  ): [surface: number, beyond: number] | null {
+    if ((u - cu) ** 2 + (v - cv) ** 2 >= reach * reach) {
+      return null;
+    }
+
+    const [distance, width, level] = riverNear(path, u, v);
+
+    return [Math.max(0, bedOf(level) + RIVER_LIFT), distance - width];
+  }
+
+  /**
+   * How high a bridge's deck is at (`u`, `v`): `BRIDGE.clearance` over a river's water, across it and `BRIDGE.past`
+   *  either side, then falling as steeply as `BRIDGE.slope`; the highest of the rivers' there, and none (`-Infinity`)
+   *  where none reaches.
+   */
+  deckAt(u: number, v: number): number {
+    let highest = -Infinity;
+
+    for (const water of this.#waters) {
+      const near = this.#near(water, u, v);
+
+      if (near !== null) {
+        const out = Math.max(0, near[1] - BRIDGE.past);
+
+        if (out <= BRIDGE.reach) {
+          highest = Math.max(
+            highest,
+            near[0] + BRIDGE.clearance - BRIDGE.slope * out
+          );
+        }
+      }
+    }
+
+    return highest;
+  }
+
+  /** The water's surface at (`u`, `v`), where it's over a river's water or `BRIDGE.past` its edge; or none. */
+  waterAt(u: number, v: number): number | null {
+    let highest: number | null = null;
+
+    for (const water of this.#waters) {
+      const near = this.#near(water, u, v);
+
+      if (near !== null && near[1] <= BRIDGE.past) {
+        highest = Math.max(highest ?? -Infinity, near[0]);
+      }
+    }
+
+    return highest;
+  }
+
+  /** Whether any river runs through the square, for a bridge over it. */
+  get bridging(): boolean {
+    return this.#waters.length > 0;
+  }
+
+  // The land's normal at a point, from its height either side; or a bridge's deck's, where it's on one, `deck` high at
+  //  the point. A deck rises less than a unit for a unit along (as steeply as `BRIDGE.slope`, and its river's level far
+  //  less), so where it's further under the land either side than the step to it, it's under the land there too, and
+  //  needn't be asked: but just past its reach, where it's none, if another river's cut the land far lower than its own.
+  #normal(u: number, v: number, deck = -Infinity): [number, number, number] {
+    const e = NORMAL_STEP;
+    let east = this.place.heightAt(u + e, v),
+      west = this.place.heightAt(u - e, v),
+      south = this.place.heightAt(u, v + e),
+      north = this.place.heightAt(u, v - e);
+
+    if (deck + e >= Math.min(east, west, south, north)) {
+      east = Math.max(east, this.deckAt(u + e, v));
+      west = Math.max(west, this.deckAt(u - e, v));
+      south = Math.max(south, this.deckAt(u, v + e));
+      north = Math.max(north, this.deckAt(u, v - e));
+    }
+
+    const du = (east - west) / (2 * e),
+      dv = (south - north) / (2 * e),
       length = Math.hypot(du, 1, dv);
 
     return [-du / length, 1 / length, -dv / length];
@@ -443,20 +572,27 @@ class Layer {
     u: number,
     v: number,
     lift: number,
-    colour: [number, number, number]
+    colour: [number, number, number],
+    bridged = false
   ): void {
-    this.soup.positions.push(u, this.ground(u, v) + lift, v);
-    this.soup.normals.push(...this.#normal(u, v));
+    const deck = bridged && this.bridging ? this.deckAt(u, v) : -Infinity;
+
+    this.soup.positions.push(u, Math.max(this.ground(u, v), deck) + lift, v);
+    this.soup.normals.push(...this.#normal(u, v, deck));
     this.soup.colours.push(...colour);
   }
 
-  /** A strip `width` wide draped over the land from one point to another, `lift` over it. */
+  /**
+   * A strip `width` wide draped over the land from one point to another, `lift` over it: over a bridge's deck where
+   *  it's `bridged` and crosses a river.
+   */
   strip(
     from: readonly [number, number],
     to: readonly [number, number],
     width: number,
     css: string,
-    lift: number
+    lift: number,
+    bridged = false
   ): void {
     const colour = colourOf(css),
       length = Math.hypot(to[0] - from[0], to[1] - from[1]);
@@ -486,12 +622,12 @@ class Layer {
           [u3, v3] = at((step + 1) / steps, strand / strands);
 
         // Two triangles, wound anticlockwise seen from above (`v` runs south), so they face up and aren't culled.
-        this.#point(u0, v0, lift, colour);
-        this.#point(u1, v1, lift, colour);
-        this.#point(u2, v2, lift, colour);
-        this.#point(u1, v1, lift, colour);
-        this.#point(u3, v3, lift, colour);
-        this.#point(u2, v2, lift, colour);
+        this.#point(u0, v0, lift, colour, bridged);
+        this.#point(u1, v1, lift, colour, bridged);
+        this.#point(u2, v2, lift, colour, bridged);
+        this.#point(u1, v1, lift, colour, bridged);
+        this.#point(u3, v3, lift, colour, bridged);
+        this.#point(u2, v2, lift, colour, bridged);
       }
     }
   }
@@ -499,14 +635,15 @@ class Layer {
   /**
    * A ribbon `width` wide draped over the land along `points`, `lift` over it: across it at each point square to the
    *  way it goes there (`ways`, or from the point before to the one after), so it bends with no notch on the outside of
-   *  a bend, as strips end to end would leave.
+   *  a bend, as strips end to end would leave. Over a bridge's deck where it's `bridged` and crosses a river.
    */
   ribbon(
     points: readonly (readonly [number, number])[],
     width: number,
     css: string,
     lift: number,
-    ways?: readonly (readonly [number, number])[]
+    ways?: readonly (readonly [number, number])[],
+    bridged = false
   ): void {
     const colour = colourOf(css),
       // Across it at each point, from its right edge to its left, square to the way it goes there.
@@ -555,12 +692,12 @@ class Layer {
             [u3, v3] = at((step + 1) / steps, strand / strands);
 
           // Wound as a strip's are, facing up.
-          this.#point(u0, v0, lift, colour);
-          this.#point(u1, v1, lift, colour);
-          this.#point(u2, v2, lift, colour);
-          this.#point(u1, v1, lift, colour);
-          this.#point(u3, v3, lift, colour);
-          this.#point(u2, v2, lift, colour);
+          this.#point(u0, v0, lift, colour, bridged);
+          this.#point(u1, v1, lift, colour, bridged);
+          this.#point(u2, v2, lift, colour, bridged);
+          this.#point(u1, v1, lift, colour, bridged);
+          this.#point(u3, v3, lift, colour, bridged);
+          this.#point(u2, v2, lift, colour, bridged);
         }
       }
     }
@@ -624,13 +761,17 @@ class Layer {
     }
   }
 
-  /** A disc `radius` across draped over the land round `centre`, `lift` over it. */
+  /**
+   * A disc `radius` across draped over the land round `centre`, `lift` over it: over a bridge's deck where it's
+   *  `bridged` and over a river.
+   */
   disc(
     centre: readonly [number, number],
     radius: number,
     css: string,
     lift: number,
-    sides = 12
+    sides = 12,
+    bridged = false
   ): void {
     const colour = colourOf(css),
       [u, v] = centre,
@@ -649,22 +790,53 @@ class Layer {
           outerB = at(ring + 1, side + 1);
 
         if (ring === 0) {
-          this.#point(u, v, lift, colour);
-          this.#point(...outerB, lift, colour);
-          this.#point(...outerA, lift, colour);
+          this.#point(u, v, lift, colour, bridged);
+          this.#point(...outerB, lift, colour, bridged);
+          this.#point(...outerA, lift, colour, bridged);
         } else {
           const innerA = at(ring, side),
             innerB = at(ring, side + 1);
 
-          this.#point(...innerA, lift, colour);
-          this.#point(...innerB, lift, colour);
-          this.#point(...outerA, lift, colour);
-          this.#point(...innerB, lift, colour);
-          this.#point(...outerB, lift, colour);
-          this.#point(...outerA, lift, colour);
+          this.#point(...innerA, lift, colour, bridged);
+          this.#point(...innerB, lift, colour, bridged);
+          this.#point(...outerA, lift, colour, bridged);
+          this.#point(...innerB, lift, colour, bridged);
+          this.#point(...outerB, lift, colour, bridged);
+          this.#point(...outerA, lift, colour, bridged);
         }
       }
     }
+  }
+
+  /**
+   * A flat four-sided face, its corners in order round it, facing `normal` (a unit long): two triangles, wound to face
+   *  that way, so they're drawn from that side.
+   */
+  face(
+    corners: readonly (readonly [number, number, number])[],
+    normal: readonly [number, number, number],
+    colour: readonly [number, number, number]
+  ): void {
+    const [a, b, c, d] = corners as [
+        readonly [number, number, number],
+        readonly [number, number, number],
+        readonly [number, number, number],
+        readonly [number, number, number]
+      ],
+      // Which way the first triangle faces as its corners are given: anticlockwise, seen from the side it faces.
+      e1 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]],
+      e2 = [c[0] - a[0], c[1] - a[1], c[2] - a[2]],
+      facing =
+        (e1[1]! * e2[2]! - e1[2]! * e2[1]!) * normal[0] +
+        (e1[2]! * e2[0]! - e1[0]! * e2[2]!) * normal[1] +
+        (e1[0]! * e2[1]! - e1[1]! * e2[0]!) * normal[2],
+      order = facing >= 0 ? [a, b, c, a, c, d] : [a, c, b, a, d, c];
+
+    order.forEach((corner) => {
+      this.soup.positions.push(...corner);
+      this.soup.normals.push(...normal);
+      this.soup.colours.push(...colour);
+    });
   }
 
   /** A solid made of `shape`, its middle at (`u`, `y`, `v`), as big as `size`, turned by `turn`. */
@@ -909,6 +1081,10 @@ export const ROAD_BOW = 0.09;
 //  than a draped strip's step, and the ribbon needn't cut them again.
 const ROAD_PIECES = 8;
 
+// How little a road through a square turns at its middle, as the cosine of the angle between the ways its halves go,
+//  in and out, for its bridges' walls to be one, mitred there: a road straight through, however its halves bow.
+const THROUGH = 0.3;
+
 // A number of the square's own for each way out of it.
 const wayIndex = ([du, dv]: readonly [number, number]): number =>
   300 + (du + 3) * 7 + (dv + 3);
@@ -985,12 +1161,66 @@ const road = (layer: Layer, route: Route): void => {
     return;
   }
 
-  route.joins.forEach((offset) => {
-    const { points, ways } = roadHalf(place, offset);
+  const halves = route.joins.map((offset) => roadHalf(place, offset)),
+    keys = route.joins.map(wayIndex);
 
-    layer.ribbon(points, ROAD_HALF * 2, ROAD, LIFT.road, ways);
-  });
-  layer.disc(place.centre, route.alone ? 0.09 : 0.035, ROAD, LIFT.road);
+  halves.forEach(({ points, ways }) =>
+    layer.ribbon(points, ROAD_HALF * 2, ROAD, LIFT.road, ways, true)
+  );
+
+  // Its bridges' walls. Through the square, where its two halves turn no more than `THROUGH` at its middle, both
+  //  halves' as one, from one edge to the other, mitred at its middle, so they meet; otherwise each half's, open where
+  //  they meet.
+  const [a, b] = halves,
+    // Which way it comes in to its middle along its first half, and which way it goes out along its second.
+    [inU, inV] = a === undefined ? [0, 0] : [-a.ways[0]![0], -a.ways[0]![1]],
+    [outU, outV] = b?.ways[0] ?? [0, 0],
+    through = halves.length === 2 && inU * outU + inV * outV >= THROUGH;
+
+  if (through) {
+    const [iu, iv] = leftOf([inU, inV]),
+      [ou, ov] = leftOf([outU, outV]),
+      // On both edges: as far along their sides' sum as makes it a unit along each.
+      mitre = 1 + iu * ou + iv * ov;
+
+    bridgeWalls(
+      layer,
+      [...[...a!.points].reverse(), ...b!.points.slice(1)],
+      ROAD_HALF,
+      LIFT.road,
+      STONE,
+      layer.runs.filter(({ key }) => key !== keys[0] && key !== keys[1]),
+      [
+        ...a!.ways
+          .slice(1)
+          .reverse()
+          .map(([u, v]) => leftOf([-u, -v])),
+        [(iu + ou) / mitre, (iv + ov) / mitre],
+        ...b!.ways.slice(1).map(leftOf),
+      ]
+    );
+  } else {
+    halves.forEach(({ points, ways }, index) =>
+      bridgeWalls(
+        layer,
+        points,
+        ROAD_HALF,
+        LIFT.road,
+        STONE,
+        layer.runs.filter(({ key }) => key !== keys[index]),
+        ways.map(leftOf)
+      )
+    );
+  }
+
+  layer.disc(
+    place.centre,
+    route.alone ? 0.09 : 0.035,
+    ROAD,
+    LIFT.road,
+    12,
+    true
+  );
 };
 
 const railroad = (layer: Layer, route: Route): void => {
@@ -1005,9 +1235,13 @@ const railroad = (layer: Layer, route: Route): void => {
           [place.centre[0] + 0.12, place.centre[1]],
           [place.centre[0] - 0.12, place.centre[1]],
         ]
-      : route.joins.map((offset) => halfway(place, offset));
+      : route.joins.map((offset) => halfway(place, offset)),
+    // Each length's key among the square's runs, so its bridge's walls open only for the others.
+    keys = route.alone
+      ? []
+      : route.joins.map((offset) => wayIndex(offset) + 100);
 
-  ends.forEach((end) => {
+  ends.forEach((end, index) => {
     const [u, v] = place.centre,
       length = Math.hypot(end[0] - u, end[1] - v),
       // Across the line, a rail's distance from its middle.
@@ -1016,7 +1250,22 @@ const railroad = (layer: Layer, route: Route): void => {
           ? [0, 0]
           : [(-(end[1] - v) / length) * 0.025, ((end[0] - u) / length) * 0.025];
 
-    layer.strip(place.centre, end, BALLAST_HALF * 2, BALLAST, LIFT.ballast);
+    layer.strip(
+      place.centre,
+      end,
+      BALLAST_HALF * 2,
+      BALLAST,
+      LIFT.ballast,
+      true
+    );
+    bridgeWalls(
+      layer,
+      [place.centre, end],
+      BALLAST_HALF,
+      LIFT.rail,
+      GIRDER,
+      layer.runs.filter((run) => run.key !== keys[index])
+    );
 
     // Sleepers across it, then the two rails over them.
     for (let t = 0.1; t < 1; t += 0.2) {
@@ -1027,7 +1276,8 @@ const railroad = (layer: Layer, route: Route): void => {
         [at[0] - side[0] * 1.8, at[1] - side[1] * 1.8],
         0.014,
         SLEEPER,
-        LIFT.sleeper
+        LIFT.sleeper,
+        true
       );
     }
 
@@ -1037,12 +1287,13 @@ const railroad = (layer: Layer, route: Route): void => {
         [end[0] + side[0] * way, end[1] + side[1] * way],
         0.01,
         RAIL,
-        LIFT.rail
+        LIFT.rail,
+        true
       )
     );
   });
 
-  layer.disc(place.centre, 0.05, BALLAST, LIFT.ballast);
+  layer.disc(place.centre, 0.05, BALLAST, LIFT.ballast, 12, true);
 };
 
 // The shortest piece of a row of crops left between houses, or at its end: shorter, it's left out.
@@ -1648,6 +1899,24 @@ const mine = (
 /** The colours a fortress is drawn in: its stone, and its towers' slate roofs. */
 export const FORTRESS_COLOURS = { stone: STONE, slate: SLATE } as const;
 
+/** The colours roads and railroads are drawn in: a road's, and a railroad's ballast, sleepers and rails. */
+export const ROUTE_COLOURS = {
+  road: ROAD,
+  ballast: BALLAST,
+  sleeper: SLEEPER,
+  rail: RAIL,
+} as const;
+
+/**
+ * The colours a bridge's walls are drawn in: a road's stone (as a fortress's), a railroad's girders, and an airbase's
+ *  runway's concrete.
+ */
+export const BRIDGE_COLOURS = {
+  stone: STONE,
+  girder: GIRDER,
+  concrete: CONCRETE,
+} as const;
+
 /**
  * The colours an airbase is drawn in: its runway's tarmac and markings, its hangar's walls, roof and doors, and its
  *  control tower's glass.
@@ -1979,8 +2248,11 @@ const fortress = (layer: Layer): void => {
       for (let k = 0; k < steps; k++) {
         const middle = point(a + step * (k + 0.5)),
           [low, high] = groundUnder(layer, middle, step, thick, facing),
-          bottom = low - 0.004,
-          top = high + tall;
+          // Over a river's water, a gate for it under the wall.
+          water = layer.waterAt(...middle),
+          bottom =
+            water === null ? low - 0.004 : Math.max(low, water + WATER_GATE),
+          top = Math.max(high, bottom - tall / 2) + tall;
 
         layer.solid(
           box,
@@ -2104,14 +2376,26 @@ const airbase = (layer: Layer): void => {
       from: readonly [number, number],
       to: readonly [number, number],
       wide: number
-    ) => layer.strip(from, to, wide, MARKING, LIFT.marking);
+    ) => layer.strip(from, to, wide, MARKING, LIFT.marking, true);
 
   layer.strip(
     [u - reach, rv],
     [u + reach, rv],
     RUNWAY.wide,
     TARMAC,
-    LIFT.runway
+    LIFT.runway,
+    true
+  );
+  bridgeWalls(
+    layer,
+    [
+      [u - reach, rv],
+      [u + reach, rv],
+    ],
+    RUNWAY.wide / 2,
+    LIFT.runway,
+    CONCRETE,
+    layer.runs
   );
 
   // Its edges, and a bar across each end, then dashes down its middle between them.
@@ -2152,7 +2436,8 @@ const airbase = (layer: Layer): void => {
     [door[0], rv - toward * (RUNWAY.wide / 2 - 0.004)],
     wide * 0.6,
     TARMAC,
-    LIFT.apron
+    LIFT.apron,
+    true
   );
   // What's claimed after keeps clear of it.
   layer.lines.push([door, [door[0], rv - toward * (RUNWAY.wide / 2 - 0.004)]]);
@@ -3046,6 +3331,334 @@ const distanceTo = (
           );
 
   return Math.hypot(u - (a[0] + du * t), v - (a[1] + dv * t));
+};
+
+/**
+ * Where `path` runs nearest (`u`, `v`): how far that is from its middle line, and how wide its water is either side
+ *  and its level there, by where the point falls along the line between its ends, as its channel's cut takes them
+ *  (`cutBy` in `rivers.ts`), so they change smoothly as the point moves.
+ */
+export const riverNear = (
+  { points, widths, levels }: RiverPath,
+  u: number,
+  v: number
+): [distance: number, width: number, level: number] => {
+  const steps = points.length - 1,
+    [su, sv] = points[0]!,
+    [eu, ev] = points[steps]!,
+    du = eu - su,
+    dv = ev - sv,
+    length = du * du + dv * dv,
+    along =
+      length === 0
+        ? 0
+        : Math.max(0, Math.min(1, ((u - su) * du + (v - sv) * dv) / length)) *
+          steps,
+    step = Math.max(0, Math.min(steps - 1, Math.floor(along))),
+    t = steps === 0 ? 0 : along - step,
+    next = steps === 0 ? step : step + 1;
+  let distance = Math.hypot(u - su, v - sv);
+
+  for (let at = 0; at < steps; at++) {
+    distance = Math.min(
+      distance,
+      distanceTo(u, v, points[at]!, points[at + 1]!)
+    );
+  }
+
+  return [
+    distance,
+    (widths[step] ?? 0) * (1 - t) + (widths[next] ?? 0) * t,
+    (levels[step] ?? 0) * (1 - t) + (levels[next] ?? 0) * t,
+  ];
+};
+
+// Whether (`u`, `v`) is on one of `runs`: nearer its middle than `half` either side.
+const onAnother = (u: number, v: number, runs: readonly Run[]): boolean => {
+  for (const { points, half = ROAD_HALF } of runs) {
+    for (let at = 1; at < points.length; at++) {
+      if (distanceTo(u, v, points[at - 1]!, points[at]!) < half - 1e-9) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+};
+
+// A bridge's wall at a point along it: where its inner and outer faces stand, and how high its foot, the deck and its
+//  top are.
+type WallAt = {
+  inner: [number, number];
+  outer: [number, number];
+  foot: number;
+  deck: number;
+  top: number;
+};
+
+// Whether a bridge's wall at `middle` is on the line between it at `a` and at `b`, where it stands and how high, so one
+//  length from `a` to `b` follows it as two would.
+const inLine = (a: WallAt, middle: WallAt, b: WallAt): boolean => {
+  const du = b.inner[0] - a.inner[0],
+    dv = b.inner[1] - a.inner[1],
+    length = du * du + dv * dv,
+    t =
+      length === 0
+        ? 0
+        : ((middle.inner[0] - a.inner[0]) * du +
+            (middle.inner[1] - a.inner[1]) * dv) /
+          length,
+    off = (
+      p: readonly [number, number],
+      q: readonly [number, number],
+      r: readonly [number, number]
+    ) =>
+      Math.abs((r[0] - p[0]) * (q[1] - p[1]) - (r[1] - p[1]) * (q[0] - p[0])),
+    level = (key: 'foot' | 'deck' | 'top') =>
+      Math.abs(middle[key] - (a[key] + (b[key] - a[key]) * t));
+
+  return (
+    length > 0 &&
+    off(a.inner, middle.inner, b.inner) < 1e-9 &&
+    off(a.outer, middle.outer, b.outer) < 1e-9 &&
+    level('foot') < 1e-7 &&
+    level('deck') < 1e-7 &&
+    level('top') < 1e-7
+  );
+};
+
+// To the left of the way (`u`, `v`), as long.
+const leftOf = ([u, v]: readonly [number, number]): [number, number] => [-v, u];
+
+/**
+ * A bridge's walls along each side of a road, railroad or runway (`points`, `half` either side of its middle, laid
+ *  `lift` over its deck), where it's on one: from the land or the river's bed under them to `BRIDGE.parapet` over the
+ *  deck. Each stands on its edge as `Layer#ribbon` lays it, `half` along `sides` either side of each point (to its
+ *  left as it goes, a unit long, or longer where two halves of a road meet at an angle, so it's on both their edges;
+ *  or square to the way from the point before to the one after), so it follows its bends and ends where it does, and in
+ *  lengths that follow the deck. Not where they'd stand on one of `others` (the square's other roads and railroads,
+ *  `half` either side of theirs), so they open where those join it: at the square's middle, where they meet, its
+ *  disc's no wider than the widest of them.
+ */
+const bridgeWalls = (
+  layer: Layer,
+  points: readonly (readonly [number, number])[],
+  half: number,
+  lift: number,
+  css: string,
+  others: readonly Run[],
+  given?: readonly (readonly [number, number])[]
+): void => {
+  // None where no river runs through the square.
+  if (!layer.bridging) {
+    return;
+  }
+
+  const { thick, parapet } = BRIDGE,
+    colour = colourOf(css),
+    // Across it at each point, to its left as it goes.
+    sides =
+      given ??
+      points.map((point, index) => {
+        const before = points[index - 1] ?? point,
+          after = points[index + 1] ?? point,
+          length = Math.hypot(after[0] - before[0], after[1] - before[1]);
+
+        return length === 0
+          ? ([0, 0] as const)
+          : leftOf([
+              (after[0] - before[0]) / length,
+              (after[1] - before[1]) / length,
+            ]);
+      }),
+    // Its points finer, no further apart than `WALL_PIECE`, each with which way's across it there, between its points'
+    //  as a ribbon has it, and which way it goes.
+    along: {
+      at: [number, number];
+      side: [number, number];
+      way: [number, number];
+    }[] = [];
+
+  points.slice(1).forEach((to, index) => {
+    const from = points[index]!,
+      length = Math.hypot(to[0] - from[0], to[1] - from[1]),
+      fromSide = sides[index]!,
+      toSide = sides[index + 1]!;
+
+    if (length === 0) {
+      return;
+    }
+
+    const pieces = Math.ceil(length / WALL_PIECE),
+      last = index === points.length - 2;
+
+    for (let piece = 0; piece <= (last ? pieces : pieces - 1); piece++) {
+      const t = piece / pieces;
+
+      along.push({
+        at: [from[0] + (to[0] - from[0]) * t, from[1] + (to[1] - from[1]) * t],
+        side: [
+          fromSide[0] + (toSide[0] - fromSide[0]) * t,
+          fromSide[1] + (toSide[1] - fromSide[1]) * t,
+        ],
+        way: [(to[0] - from[0]) / length, (to[1] - from[1]) / length],
+      });
+    }
+  });
+
+  [1, -1].forEach((hand) => {
+    // Each point's wall: where its inner and outer faces stand, and how high its foot, the deck and its top are.
+    const walls = along.map(({ at, side }) => {
+        const inner: [number, number] = [
+            at[0] + side[0] * half * hand,
+            at[1] + side[1] * half * hand,
+          ],
+          outer: [number, number] = [
+            at[0] + side[0] * (half + thick) * hand,
+            at[1] + side[1] * (half + thick) * hand,
+          ],
+          ground = layer.ground(...inner),
+          deck = Math.max(ground, layer.deckAt(...inner)) + lift;
+
+        return {
+          inner,
+          outer,
+          foot: Math.min(ground, layer.ground(...outer)) - 0.003,
+          deck,
+          top: deck + parapet,
+        };
+      }),
+      // Whether there's a wall between each point and the next: where its middle's on a bridge, and its wall's clear of
+      //  the middle and the square's other roads and railroads.
+      standing = along.slice(1).map(({ at }, index) => {
+        const from = along[index]!.at,
+          mu = (from[0] + at[0]) / 2,
+          mv = (from[1] + at[1]) / 2,
+          { inner, outer } = walls[index]!,
+          next = walls[index + 1]!;
+
+        return (
+          layer.deckAt(mu, mv) > layer.ground(mu, mv) &&
+          // None of its corners on another road or railroad.
+          !onAnother(inner[0], inner[1], others) &&
+          !onAnother(outer[0], outer[1], others) &&
+          !onAnother(next.inner[0], next.inner[1], others) &&
+          !onAnother(next.outer[0], next.outer[1], others)
+        );
+      });
+
+    // None shorter than `WALL_SHORTEST`.
+    for (let from = 0; from < standing.length; ) {
+      if (!standing[from]) {
+        from++;
+
+        continue;
+      }
+
+      let to = from,
+        length = 0;
+
+      while (to < standing.length && standing[to]) {
+        const [au, av] = along[to]!.at,
+          [bu, bv] = along[to + 1]!.at;
+
+        length += Math.hypot(bu - au, bv - av);
+        to++;
+      }
+
+      if (length < WALL_SHORTEST) {
+        standing.fill(false, from, to);
+      }
+
+      from = to;
+    }
+
+    // Each run of it, from where it starts to where it stops, in as few lengths as follow it: one where it runs
+    //  straight and its foot, the deck and its top rise or fall evenly.
+    for (let from = 0; from < standing.length; ) {
+      if (!standing[from]) {
+        from++;
+
+        continue;
+      }
+
+      let to = from;
+
+      while (to < standing.length && standing[to]) {
+        to++;
+      }
+
+      for (let start = from, at = from + 1; at <= to; at++) {
+        if (at < to && inLine(walls[start]!, walls[at]!, walls[at + 1]!)) {
+          continue;
+        }
+
+        const a = walls[start]!,
+          b = walls[at]!,
+          [su, sv] = along[start]!.side,
+          out = Math.hypot(su, sv) || 1,
+          outward: [number, number, number] = [
+            (su / out) * hand,
+            0,
+            (sv / out) * hand,
+          ];
+
+        // Its outer face, from its foot; its inner face, over the deck; and its top.
+        layer.face(
+          [
+            [a.outer[0], a.foot, a.outer[1]],
+            [b.outer[0], b.foot, b.outer[1]],
+            [b.outer[0], b.top, b.outer[1]],
+            [a.outer[0], a.top, a.outer[1]],
+          ],
+          outward,
+          colour
+        );
+        layer.face(
+          [
+            [a.inner[0], a.deck, a.inner[1]],
+            [b.inner[0], b.deck, b.inner[1]],
+            [b.inner[0], b.top, b.inner[1]],
+            [a.inner[0], a.top, a.inner[1]],
+          ],
+          [-outward[0], 0, -outward[2]],
+          colour
+        );
+        layer.face(
+          [
+            [a.inner[0], a.top, a.inner[1]],
+            [a.outer[0], a.top, a.outer[1]],
+            [b.outer[0], b.top, b.outer[1]],
+            [b.inner[0], b.top, b.inner[1]],
+          ],
+          [0, 1, 0],
+          colour
+        );
+        start = at;
+      }
+
+      // Its ends, facing out along it.
+      (
+        [
+          [walls[from]!, along[from]!.way, -1],
+          [walls[to]!, along[to - 1]!.way, 1],
+        ] as const
+      ).forEach(([{ inner, outer, foot, top }, [gu, gv], toward]) =>
+        layer.face(
+          [
+            [inner[0], foot, inner[1]],
+            [outer[0], foot, outer[1]],
+            [outer[0], top, outer[1]],
+            [inner[0], top, inner[1]],
+          ],
+          [gu * toward, 0, gv * toward],
+          colour
+        )
+      );
+
+      from = to;
+    }
+  });
 };
 
 // What grows on the square, each where it has room: clear of the unit's stand at its middle, its roads, its mine, hut

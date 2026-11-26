@@ -1055,6 +1055,24 @@ ids.forEach((topologyId) => {
     [1, true, 1, true, 0]
   );
 
+  // Each with its levels, its course's, which its channel's cut under: for bridges over it.
+  expect(
+    `${topologyId}: each square’s courses come with their levels`,
+    [...fromLast, ...atFirst].map(({ widths, levels }) => {
+      const course = seam
+        .courses()
+        .find(({ course: { widths: each } }) => each === widths)?.course;
+
+      return (
+        course !== undefined &&
+        levels.length === course.levels.length &&
+        levels.every((level, at) => level === course.levels[at]) &&
+        levels.some((level) => level !== 0)
+      );
+    }),
+    [...fromLast, ...atFirst].map(() => true)
+  );
+
   // The water, as the chunks carry it, chunks four across, so the world's several: each course's drawn once, by the
   //  chunk that carries its start (as much of it as there is, by its area); facing up; and wherever it's over the sea's
   //  level, exactly its lift over the land as its mesh draws it, at its points, along its triangles' sides and inside
