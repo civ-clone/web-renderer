@@ -534,6 +534,8 @@ Still to do in 3.3: falls, which need a river's levels ordered downhill first (#
 
 Since #1335, farms have their buildings, mines their headframes and tunnels, fortresses walls with merlons, towers and gates where their roads leave, and airbases a marked runway, a hangar and a control tower (spec §5.4). Still to do in 3.4: improvements as models from a hosted set.
 
+**3.5, first part, the square under the pointer: done** (spec §4.6, "As built"). The square the mouse rests on is lit at once: a soft band of warm light inside its outline, brightest at the edge, laid over the land and what lies flat on it. Still to do in 3.5: grid lines as an option, the squares a city works lit while its map shows, and squares not in sight dimmed, once a rule set tells them from those seen before (Civ1's and Civ2's don't).
+
 ---
 
 ## M4: cities

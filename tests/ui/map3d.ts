@@ -70,6 +70,7 @@ import {
 import { FLASH_SIZE, Stage } from '@civ-clone/ui-map-3d/stage';
 import { movingKeys } from '@civ-clone/ui-client/lib/unitActionKeys';
 import { YieldMesh, yieldIconSize } from '@civ-clone/ui-map-3d/yields';
+import { HighlightMesh } from '@civ-clone/ui-map-3d/highlight';
 import {
   onPreloadedImagesChanged,
   setSprites,
@@ -247,6 +248,8 @@ const staged: string[] = [],
   markedAt = new Map<string, readonly [number, number, number]>(),
   // What each square yields, each time the stage was given it.
   yieldsSet: (YieldMesh | null)[] = [],
+  // The square lit under the pointer, each time the stage was given it.
+  highlightsSet: (HighlightMesh | null)[] = [],
   // The square whose unit's drawn under the pointer, as the stage would say, if any.
   unitUnderPointer: { key: string | null } = { key: null },
   // What each unit, by its id, plays where it's drawn with a rigged copy, as the stage would say: none by default.
@@ -385,6 +388,7 @@ const staged: string[] = [],
       }
     },
     setYields: (mesh) => void yieldsSet.push(mesh),
+    setHighlight: (mesh) => void highlightsSet.push(mesh),
     view: (orbit, height, period) => {
       lookedAt.splice(0, 3, orbit.focus[0], orbit.focus[1], height);
       seenDown.push(period?.v);
@@ -2265,6 +2269,138 @@ expect(
       ['closed'],
     ]
   );
+
+  // The square under the mouse, lit: at once, given to the stage only when it's another square, not by a key, as a
+  //  tooltip is; again as the map moves under a still mouse; none while a menu's open over the map, over a square never
+  //  seen, nor once the mouse has left the map.
+  {
+    const menu = { open: false },
+      lighter = new MapView3D(
+        {
+          activateUnit: () => {},
+          art: {
+            id: () => 'art',
+            nativeTileSize: () => ({ width: 16, height: 16 }),
+            scale: () => 1,
+            zoom: () => 1,
+          },
+          cameraDistance: { get: () => null, set: () => {} },
+          cityOpener: { opens: () => false, open: () => {} },
+          coveredBy: [],
+          lockVerticalEdges: false,
+          mapCanvas: ownCanvas,
+          minimapCanvas: null,
+          playerId: 'Player-1',
+          squares: {
+            click: () => {},
+            prompt: () => ({ close: () => {} }),
+            menu: () => {},
+            menuOnRightClick: () => false,
+            menuOpen: () => menu.open,
+            tooltip: () => false,
+            endTooltip: () => {},
+          },
+          transport,
+          world: new World(worldData),
+        },
+        fakeStage
+      ),
+      restAt = (clientX: number, clientY: number): void =>
+        void ownCanvas.dispatchEvent(
+          Object.assign(new Event('pointermove'), {
+            clientX,
+            clientY,
+            buttons: 0,
+            pointerId: 1,
+            isPrimary: true,
+            pointerType: 'mouse',
+          })
+        ),
+      // Each the stage was given since last asked: which square, by the middle of its points, or none.
+      lit = (): (string | null)[] =>
+        highlightsSet.splice(0).map((mesh) => {
+          if (mesh === null) {
+            return null;
+          }
+
+          const count = mesh.positions.length / 3,
+            [u, v] = [0, 2].map(
+              (axis) =>
+                Array.from(
+                  { length: count },
+                  (_, at) => mesh.positions[at * 3 + axis]!
+                ).reduce((sum, n) => sum + n, 0) / count
+            );
+
+          return `${Math.floor(u!)},${Math.floor(v!)}`;
+        }),
+      [cx, cy] = [box.width / 2, box.height / 2];
+
+    highlightsSet.splice(0);
+    lighter.centre(tiles[5] as Tile);
+    lit();
+    restAt(cx, cy);
+
+    const first = lit();
+
+    restAt(cx + 1, cy);
+    document.dispatchEvent(new Event('keydown'));
+
+    const same = lit();
+
+    // The map moved under the mouse, as the game centres it elsewhere.
+    lighter.centre(tiles[6] as Tile);
+
+    const moved = lit();
+
+    menu.open = true;
+    restAt(cx, cy + 1);
+
+    const underMenu = lit();
+
+    menu.open = false;
+    restAt(cx, cy);
+
+    const back = lit(),
+      // The land under it changed, to hills: laid again on them.
+      grass = tiles[6]!.terrain;
+
+    tiles[6]!.terrain = { ...grass, _: 'Hills' } as Tile['terrain'];
+    lighter.queueTile(tiles[6] as Tile);
+    lighter.releaseTiles();
+    lighter.flush();
+
+    const reshaped = lit();
+
+    tiles[6]!.terrain = grass;
+    lighter.queueTile(tiles[6] as Tile);
+    lighter.releaseTiles();
+    lighter.flush();
+    lit();
+    ownCanvas.dispatchEvent(new Event('pointerleave'));
+
+    const left = lit(),
+      // Over a square never seen.
+      before = tiles[6]!.terrain;
+
+    tiles[6]!.terrain = { ...before, _: 'Unknown' } as Tile['terrain'];
+    lighter.queueTile(tiles[6] as Tile);
+    lighter.releaseTiles();
+    lighter.flush();
+    restAt(cx, cy);
+
+    const unseen = lit();
+
+    tiles[6]!.terrain = before;
+    lighter.dispose();
+    highlightsSet.splice(0);
+
+    expect(
+      'the square under the mouse lit at once, only again for another square or where its land changes, not ended by a key; the map moving under it lights the square there; none under a menu, over a square never seen, or once the mouse has left',
+      [first, same, moved, underMenu, back, reshaped, left, unseen],
+      [['1,1'], [], ['2,1'], [null], ['2,1'], ['2,1'], [null], []]
+    );
+  }
 
   ownBox.remove();
   staged.splice(0);

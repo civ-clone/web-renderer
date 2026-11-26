@@ -43,6 +43,7 @@ import {
 import { ChunkMesh } from './terrain/chunks';
 import { puffAt } from './markers/puff';
 import landMaterial from './landMaterial';
+import { HighlightMesh } from './highlight';
 import riverMaterial from './riverMaterial';
 import {
   ALOFT_PART,
@@ -224,6 +225,11 @@ export interface Stage {
   /** What each square yields (`y`), drawn at every copy of the world in sight: what was drawn before is replaced. */
   setYields(mesh: YieldMesh | null): void;
   /**
+   * The square under the pointer lit (`highlight.ts`), at every copy of the world in sight, or none: what was lit
+   *  before goes.
+   */
+  setHighlight(mesh: HighlightMesh | null): void;
+  /**
    * The camera, round its focus raised to `height`, the land's there; and the world drawn as far round as `period`
    *  says, if the view's stopped at the poles, rather than as the world wraps.
    */
@@ -330,7 +336,9 @@ export type StageFactory = (
 const SKY = 0x9fb3c4,
   SKY_LIGHT = 0xd6e2ec,
   GROUND_LIGHT = 0x5b5140,
-  SUN = 0xfff0d8;
+  SUN = 0xfff0d8,
+  // The square under the pointer's light: a warm white.
+  HIGHLIGHT_LIGHT = new Color(0xfff3d6);
 
 /**
  * The copies of the world within `sight` of `focus`, as offsets on the ground: every multiple of the period across, and
@@ -688,6 +696,18 @@ export const createStage: StageFactory = (
     kit = new MarkerKit(),
     // What each square yields, over the land at every copy of the world, when they're shown.
     yieldsGroup = new Group(),
+    // The square under the pointer, lit (`highlight.ts`): a warm white, as bright at each point as it says, seen
+    //  through, and a little in front of what it lies on, as the rivers' water is.
+    highlightGroup = new Group(),
+    highlightMaterial = new MeshBasicMaterial({
+      color: 0xffffff,
+      vertexColors: true,
+      transparent: true,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    }),
     yields = new YieldIcons(yieldIcon ?? ((): null => null)),
     water = new Water(ground, new Color(SKY)),
     clouds = new Clouds(water.texture(), ground),
@@ -703,7 +723,9 @@ export const createStage: StageFactory = (
     // Whether the view's stopped at the poles.
     stopped = false,
     // The yields drawn now, at every copy of the world in sight, or none.
-    yieldsPlaced: Placed | null = null;
+    yieldsPlaced: Placed | null = null,
+    // The square lit now, at every copy of the world in sight, and its shape; or none.
+    highlightPlaced: (Placed & { geometry: BufferGeometry }) | null = null;
 
   // Taken down: models loaded after are let go of.
   let disposed = false;
@@ -723,6 +745,7 @@ export const createStage: StageFactory = (
   scene.add(land);
   scene.add(markersGroup);
   scene.add(yieldsGroup);
+  scene.add(highlightGroup);
   scene.add(water.mesh);
   scene.add(clouds.mesh);
 
@@ -1019,6 +1042,7 @@ export const createStage: StageFactory = (
     hazeMaterial.clippingPlanes = overlayMaterial.clippingPlanes;
     // Rivers' water too, so a course across the poles' water stops at them.
     riverWater.clippingPlanes = overlayMaterial.clippingPlanes;
+    highlightMaterial.clippingPlanes = overlayMaterial.clippingPlanes;
     plantModels.forEach(({ parts }) =>
       parts.forEach(({ material }) => {
         material.clippingPlanes = overlayMaterial.clippingPlanes;
@@ -1053,6 +1077,11 @@ export const createStage: StageFactory = (
       if (yieldsPlaced !== null) {
         yieldsPlaced.drawn.forEach((drawn) => yieldsGroup.remove(drawn));
         yieldsPlaced.drawn = copiesOf(yieldsPlaced, yieldsGroup);
+      }
+
+      if (highlightPlaced !== null) {
+        highlightPlaced.drawn.forEach((drawn) => highlightGroup.remove(drawn));
+        highlightPlaced.drawn = copiesOf(highlightPlaced, highlightGroup);
       }
     }
 
@@ -1771,6 +1800,38 @@ export const createStage: StageFactory = (
       yieldsPlaced = { at: [0, 0, 0], make: () => yields.make(), drawn: [] };
       yieldsPlaced.drawn = copiesOf(yieldsPlaced, yieldsGroup);
     },
+    setHighlight: (mesh): void => {
+      highlightPlaced?.drawn.forEach((drawn) => highlightGroup.remove(drawn));
+      highlightPlaced?.geometry.dispose();
+      highlightPlaced = null;
+
+      if (mesh === null || mesh.indices.length === 0) {
+        return;
+      }
+
+      const geometry = new BufferGeometry(),
+        colours = new Float32Array(mesh.brightness.length * 4);
+
+      mesh.brightness.forEach((bright, at) => {
+        colours.set(
+          [HIGHLIGHT_LIGHT.r, HIGHLIGHT_LIGHT.g, HIGHLIGHT_LIGHT.b, bright],
+          at * 4
+        );
+      });
+      geometry.setAttribute('position', new BufferAttribute(mesh.positions, 3));
+      geometry.setAttribute('color', new BufferAttribute(colours, 4));
+      geometry.setIndex(new BufferAttribute(mesh.indices, 1));
+      geometry.computeBoundingSphere();
+
+      // From the world's origin, as its points are.
+      highlightPlaced = {
+        geometry,
+        at: [0, 0, 0],
+        make: () => new Mesh(geometry, highlightMaterial),
+        drawn: [],
+      };
+      highlightPlaced.drawn = copiesOf(highlightPlaced, highlightGroup);
+    },
     view,
     loadModels: async (url, loaded, grown): Promise<void> => {
       await loadModels(
@@ -1900,6 +1961,8 @@ export const createStage: StageFactory = (
       clouds.dispose();
       material.dispose();
       riverWater.dispose();
+      highlightPlaced?.geometry.dispose();
+      highlightMaterial.dispose();
       detail.dispose();
       renderer.dispose();
     },

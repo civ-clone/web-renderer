@@ -586,6 +586,23 @@ blended across squares.
   layout.
 - **The square under the pointer** gets a soft highlight in its outline. The squares a city works get one too, while
   the city's map is shown.
+- **As built, the square under the pointer** (first part, `highlight.ts`):
+  - **What:** a band of warm light inside its outline, `HIGHLIGHT.width` (0.09) wide all round, its inner corners where
+    the bands along each side meet, as bright as `HIGHLIGHT.edge` (0.55) at the outline and fading smoothly to none at
+    its inner edge.
+  - **Where it lies:** on the land as its mesh draws it (`Land#surface`), cut along its cells as rivers' water is
+    (`lay` in `terrain/ribbons.ts`), `HIGHLIGHT.lift` (0.03) over it: over the highest of what's laid flat on the land,
+    a runway's markings, so it shows over fields, roads and railroads, while trees, buildings and units stand in front
+    of it. At sea, that much over the sea's surface. Drawn at every copy of the world, seen through, and clipped at the
+    poles where the view stops there.
+  - **Which square:** the one under the mouse as it rests over the map with no button held (`CameraInput`'s `hover`,
+    which also opens tooltips), picked as a click is (`#tileAt`, so a unit's square where a unit's under it). It's
+    picked again each frame, as the map can move under a still mouse, and laid again only where it's another square
+    or the land under it has changed. None over a square never seen, while a menu's open over the map, or once the
+    mouse has left the map or pressed. A key doesn't end it, as it does a tooltip.
+  - **Cost:** a frame where the mouse moves onto another square; none as it moves within one. On a late Civ1 save,
+    a move took 0.8 ms at the median and 1.6 ms at the 90th percentile, picking the square for the tooltip and the
+    light.
 
 ---
 

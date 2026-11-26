@@ -155,13 +155,23 @@ const cutAll = (
 
 /**
  * Lays `shapes`, flat and each convex, on `ground`: each cut along the land's cells (across and down) and their
- *  diagonals, so each piece is over one of the land's triangles, then each point of each piece `RIVER_LIFT` over the
- *  land there, but never under the sea's level, where the sea's surface is. Points in the same place are one point.
+ *  diagonals, so each piece is over one of the land's triangles, then each point of each piece `lift` over the land
+ *  there (`RIVER_LIFT`, a river's water's), but never under `sea` (the sea's level, where its surface is), and with
+ *  `shade` there in `foam` (a river's white water, `foamAt`, unless said). Points in the same place are one point.
  */
 export const lay = (
   into: RibbonMesh,
   shapes: readonly (readonly Point[])[],
-  ground: Ground
+  ground: Ground,
+  {
+    lift = RIVER_LIFT,
+    sea = 0,
+    shade = (u: number, v: number) => foamAt(ground, u, v),
+  }: {
+    lift?: number;
+    sea?: number;
+    shade?: (u: number, v: number) => number;
+  } = {}
 ): void => {
   const { spacingU, spacingV } = ground,
     across = ([u]: Point) => u / spacingU,
@@ -175,8 +185,8 @@ export const lay = (
 
       if (index === undefined) {
         index = into.positions.length / 3;
-        into.positions.push(u, Math.max(0, ground.at(u, v) + RIVER_LIFT), v);
-        into.foam.push(foamAt(ground, u, v));
+        into.positions.push(u, Math.max(sea, ground.at(u, v) + lift), v);
+        into.foam.push(shade(u, v));
         points.set(key, index);
       }
 
