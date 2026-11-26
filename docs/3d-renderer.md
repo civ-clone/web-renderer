@@ -813,19 +813,20 @@ How plants are placed:
       points). So the deck's height is the same at a point from either square, and two squares' roads, railroads and a
       city's streets meet at one height at the edge between them, on a bridge or not. Where no river's near, a square's
       laid as it was. Each point on a deck is worked out once for its square, as strips' triangles share their corners.
-    - **Its walls:** along a road's, railroad's or runway's edges, where it's on the deck, from the land or the river's
-      bed to `BRIDGE.parapet` (0.012) over it: stone for a road, iron girders for a railroad, concrete for a runway.
-      They stand on its edges as its ribbon lays them, so they follow its bends and end where it does. A road through
-      the square, its halves turning no more than about 70° at its middle, has its walls as one, mitred there.
-      Elsewhere they open where the square's other roads and railroads join, and where an airbase's runway crosses: no
-      corner of a wall stands on one. Lengths shorter than 0.06 are left out, so a road just reaching over the water at
-      a junction has none. A railroad's girders stand on its ballast's deck. Straight, evenly sloped lengths are one
-      face. A city's streets have no walls.
+    - **Its walls:** along a road's, railroad's, runway's or apron's edges, wherever the edge itself is on the deck
+      (not only its middle: a runway's far edge needn't be), from the land or the river's bed to `BRIDGE.parapet`
+      (0.012) over it: stone for a road, iron girders for a railroad, concrete for a runway and its apron. They stand
+      on its edges as its ribbon lays them, so they follow its bends and end where it does. A road through the square,
+      its halves turning no more than about 70° at its middle, has its walls as one, mitred there. Elsewhere they open
+      where the square's other roads and railroads join, and where an airbase's runway crosses, and a runway's and its
+      apron's open for each other: no corner of a wall stands on one. Lengths shorter than 0.06 are left out, so a
+      road just reaching over the water at a junction has none. A railroad's girders stand on its ballast's deck.
+      Straight, evenly sloped lengths are one face. A city's streets have no walls.
     - **Where they meet:** every road and railroad on a river square starts at its middle, where its rivers meet, so
       that's where they cross. One that runs the same way as a river runs along it on a causeway, the same deck and
       walls, as far as it's over the water.
-    - **A fortress's walls,** where a length of them is over the water at its middle or either end, leave a gate for
-      it, their foot `WATER_GATE` (0.02) over its surface.
+    - **A fortress's walls,** where a length of them is over the water, or within `BRIDGE.past` of it, at its middle
+      or either end, leave a gate for it, their foot `WATER_GATE` (0.02) over its surface.
     - **A unit** at a river square's middle still stands on the land, so a little lower than a road's deck there.
 
 ### 5.4 Tile improvements

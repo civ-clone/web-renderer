@@ -2440,17 +2440,6 @@ const airbase = (layer: Layer): void => {
     LIFT.runway,
     true
   );
-  bridgeWalls(
-    layer,
-    [
-      [u - reach, rv],
-      [u + reach, rv],
-    ],
-    RUNWAY.wide / 2,
-    LIFT.runway,
-    CONCRETE,
-    layer.runs
-  );
 
   // Its edges, and a bar across each end, then dashes down its middle between them.
   [-1, 1].forEach((side) =>
@@ -2483,18 +2472,36 @@ const airbase = (layer: Layer): void => {
     at = turned(hu, hv, facing),
     [low, high] = groundUnder(layer, [hu, hv], wide, long, facing),
     eaves = high + room * 0.12,
-    door = at(0, long / 2);
+    door = at(0, long / 2),
+    // The apron, from the hangar's doors to just inside the runway's edge, half as wide either side.
+    apronEnd: [number, number] = [
+      door[0],
+      rv - toward * (RUNWAY.wide / 2 - 0.004),
+    ],
+    apronHalf = wide * 0.3,
+    // The runway and the apron as lines their bridges' walls stand along: each open where the other meets it, and
+    //  where a road or railroad crosses.
+    runway: Run = {
+      key: 0,
+      points: [
+        [u - reach, rv],
+        [u + reach, rv],
+      ],
+      half: RUNWAY.wide / 2,
+    },
+    apron: Run = { key: 1, points: [door, apronEnd], half: apronHalf };
 
-  layer.strip(
-    door,
-    [door[0], rv - toward * (RUNWAY.wide / 2 - 0.004)],
-    wide * 0.6,
-    TARMAC,
-    LIFT.apron,
-    true
-  );
+  layer.strip(door, apronEnd, apronHalf * 2, TARMAC, LIFT.apron, true);
+  bridgeWalls(layer, runway.points, RUNWAY.wide / 2, LIFT.runway, CONCRETE, [
+    ...layer.runs,
+    apron,
+  ]);
+  bridgeWalls(layer, apron.points, apronHalf, LIFT.apron, CONCRETE, [
+    ...layer.runs,
+    runway,
+  ]);
   // What's claimed after keeps clear of it.
-  layer.lines.push([door, [door[0], rv - toward * (RUNWAY.wide / 2 - 0.004)]]);
+  layer.lines.push([door, apronEnd]);
   layer.solid(
     box,
     [hu, (low - 0.004 + eaves) / 2, hv],
@@ -3582,14 +3589,14 @@ const bridgeWalls = (
           top: deck + parapet,
         };
       }),
-      // Whether there's a wall between each point and the next: where its middle's on a bridge, and its wall's clear of
-      //  the middle and the square's other roads and railroads.
-      standing = along.slice(1).map(({ at }, index) => {
-        const from = along[index]!.at,
-          mu = (from[0] + at[0]) / 2,
-          mv = (from[1] + at[1]) / 2,
-          { inner, outer } = walls[index]!,
-          next = walls[index + 1]!;
+      // Whether there's a wall between each point and the next: where the edge it stands on is on a bridge's deck, there
+      //  and not only at the middle, as a runway's far edge needn't be; and clear of the square's other roads and
+      //  railroads.
+      standing = along.slice(1).map((_, index) => {
+        const { inner, outer } = walls[index]!,
+          next = walls[index + 1]!,
+          mu = (inner[0] + next.inner[0]) / 2,
+          mv = (inner[1] + next.inner[1]) / 2;
 
         return (
           layer.deckAt(mu, mv) > layer.ground(mu, mv) &&

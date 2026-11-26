@@ -5752,6 +5752,40 @@ const facesColoured = (mesh: OverlayMesh, css: string) => {
   return found;
 };
 
+// Whether a mesh's flat, upward faces of a colour cover the point (`u`, `v`) on the ground, seen from above.
+const coversAt = (
+  mesh: OverlayMesh,
+  css: string,
+  [u, v]: readonly [number, number]
+): boolean => {
+  const { r, g, b } = new Color(css),
+    { positions: p, normals: n, colours: c } = mesh;
+
+  for (let at = 0; at < p.length; at += 9) {
+    if (
+      Math.abs(c[at]! - r) < 1e-4 &&
+      Math.abs(c[at + 1]! - g) < 1e-4 &&
+      Math.abs(c[at + 2]! - b) < 1e-4 &&
+      n[at + 1]! > 0.9
+    ) {
+      const side = (i: number, j: number) =>
+          (p[j]! - p[i]!) * (v - p[i + 2]!) -
+          (p[j + 2]! - p[i + 2]!) * (u - p[i]!),
+        [d1, d2, d3] = [
+          side(at, at + 3),
+          side(at + 3, at + 6),
+          side(at + 6, at),
+        ];
+
+      if ((d1 >= 0 && d2 >= 0 && d3 >= 0) || (d1 <= 0 && d2 <= 0 && d3 <= 0)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+};
+
 // A mesh's points of a colour, where they are on the ground: (u, y, v).
 const pointsColoured = (mesh: OverlayMesh, css: string) => {
   const { r, g, b } = new Color(css),
@@ -6244,6 +6278,68 @@ const pointsColoured = (mesh: OverlayMesh, css: string) => {
         ],
         [1, RIVER_WIDTH * 3, 0.1],
       ]
+    );
+  }
+
+  // An airbase on a river running east from its square's middle, under the runway's north half, its hangar north of
+  //  it, so its apron crosses the water: the apron on the deck, with walls; the runway's walls only along its north
+  //  edge, which is on the deck, and open where the apron meets it; none along its south edge, on dry land.
+  {
+    const east: RiverPath = {
+        points: [
+          [3.5, 3.5],
+          [4, 3.5],
+          [4.5, 3.5],
+        ],
+        widths: [RIVER_WIDTH, RIVER_WIDTH, RIVER_WIDTH],
+        levels: [0.097, 0.097, 0.097],
+      },
+      into = soup(),
+      rv = 3.5 + RUNWAY.south;
+
+    layOverlay(
+      overlayFor(square(['Airbase']), [])!,
+      { ...place(3, 3, { height: cut(0.1, east) }), rivers: [east] },
+      into
+    );
+
+    const mesh = { ...into, u: 0, v: 0 } as unknown as OverlayMesh,
+      walls = pointsColoured(mesh, BRIDGE_COLOURS.concrete),
+      apron = pointsColoured(mesh, AIRBASE_COLOURS.tarmac).filter(
+        ([, , v]) => Math.abs(v - rv) > RUNWAY.wide / 2 + 1e-6
+      ),
+      over = apron.filter(
+        ([u, , v]) => riverNear(east, u, v)[0] <= RIVER_WIDTH
+      ),
+      [left, right] = [
+        Math.min(...apron.map(([u]) => u)),
+        Math.max(...apron.map(([u]) => u)),
+      ],
+      north = rv - RUNWAY.wide / 2;
+
+    expect(
+      'an airbase on a river running along its runway, its apron across it: the apron on the deck, with walls; the runway’s walls along its edge on the deck, open for the apron, and none on its far edge, on dry land',
+      [
+        over.length > 0,
+        over.every(
+          ([, y]) =>
+            y >= surfaceOf(0.097) + BRIDGE.clearance + LIFT.apron - 1e-9
+        ),
+        // The apron's walls, north of the runway, beside it.
+        walls.some(
+          ([u, , v]) =>
+            v < north - 0.01 &&
+            (Math.abs(u - left) <= BRIDGE.thick + 1e-6 ||
+              Math.abs(u - right) <= BRIDGE.thick + 1e-6)
+        ),
+        walls.every(([, , v]) => v < rv),
+        // No wall's top over the middle of the apron's mouth, where it meets the runway: a straight wall's one face.
+        !coversAt(mesh, BRIDGE_COLOURS.concrete, [
+          (left + right) / 2,
+          north - BRIDGE.thick / 2,
+        ]),
+      ],
+      [true, true, true, true, true]
     );
   }
 
