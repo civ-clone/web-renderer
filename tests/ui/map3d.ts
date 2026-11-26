@@ -2686,6 +2686,8 @@ expect(
           menu: () => {},
           menuOnRightClick: () => false,
           menuOpen: () => false,
+          tooltip: () => false,
+          endTooltip: () => {},
         },
         transport,
         world: new World(worldData),

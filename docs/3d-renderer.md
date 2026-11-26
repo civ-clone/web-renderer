@@ -621,6 +621,27 @@ blended across squares.
   - **Cost:** a frame where the mouse moves onto another square; none as it moves within one. On a late Civ1 save,
     a move took 0.8 ms at the median and 1.6 ms at the 90th percentile, picking the square for the tooltip and the
     light. A frame where the camera's moved picks it once more; one where it hasn't, not at all.
+- **As built, grid lines** (`grid.ts`):
+  - **What:** a thin dark line along every square's outline, on every grid: squares, the staggered grid's diamonds and
+    hexes. An option, off as it comes ("Grid lines on the 3D map", under `?3d=1`; `lines=1` on the debug page), shown
+    or hidden at once as it's changed, without the map built again.
+  - **How:** the land's own chunks drawn a second time with a material of their own, as each chunk's child. Each point
+    is lifted `GRID.lift` (0.04, the light's) over the land, or over the sea's surface at sea, and drawn only near a
+    square's edge: how far it is from the nearest edge of the square it's on comes from where it is on the ground, as
+    each grid lays its squares (`edgeDistance` in TS, the same sums in GLSL, `gridGlsl`), so there's nothing to build
+    and a line follows the land's mesh exactly, over hills and mountains alike. A line reaches `GRID.half` (0.012)
+    either side of an edge, as dark as `GRID.opacity` (0.3). Further off, where that's thinner than about a pixel
+    either side, it's that wide and fainter instead, so it doesn't crawl; and where a square's under about 14 pixels
+    across, it fades, gone by 6, as the lines would crowd it. None on a square never seen (the chunks' `unseen`).
+  - **Order:** seen through and writing no depth, and pulled in front of what it lies on as the light is
+    (`polygonOffset` -4, -8), so it's over fields, roads and railroads and under what stands. Drawn after the sea and
+    before the light (`GRID_ORDER`, 1.2): the sea's one plane across the world, which three.js can only order by
+    that, and the light's after the lines so it's over the line at a square's edge on every chunk alike, not over some
+    and under others as the camera moves.
+  - **Tried first:** strips laid along each square's outline like the light's band (`lay`), each square laying the
+    half of each line inside it. They lay exactly, but cost about 190 ms a chunk to make, more than the land itself,
+    which no frame's budget can split, and about as many triangles as the land.
+  - **Cost:** nothing to make. Shown, the land's triangles are drawn twice, the second time with a short shader.
 
 ---
 
