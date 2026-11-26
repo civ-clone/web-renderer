@@ -50,7 +50,7 @@ type Making = {
   done: number;
   laid: Soup;
   signatures: string[];
-  heights: Map<string, number>;
+  heights: Map<number, number>;
   keep: boolean;
 };
 
@@ -254,39 +254,46 @@ class Land {
    * The land's height at a point as it's drawn: flat triangles between the chunks' points, which on a hill can stand a
    *  little above or below the true relief. What's laid on the land follows this, so it's never under it.
    */
-  surfaceAt(u: number, v: number, heights = new Map<string, number>()): number {
+  surfaceAt(u: number, v: number, heights = new Map<number, number>()): number {
     const { spacingU, spacingV } = this.#grid,
       a = Math.floor(u / spacingU),
       b = Math.floor(v / spacingV),
       fu = u / spacingU - a,
       fv = v / spacingV - b,
-      at = (pa: number, pb: number): number => {
-        const key = `${pa},${pb}`;
-        let height = heights.get(key);
-
-        if (height === undefined) {
-          height = this.#relief.height(pa * spacingU, pb * spacingV);
-          heights.set(key, height);
-        }
-
-        return height;
-      },
-      topLeft = at(a, b),
-      topRight = at(a + 1, b),
-      bottomLeft = at(a, b + 1);
+      topLeft = this.#pointHeight(a, b, heights),
+      topRight = this.#pointHeight(a + 1, b, heights),
+      bottomLeft = this.#pointHeight(a, b + 1, heights);
 
     // As the chunks split each cell: the triangle by its top-left corner, or the one by its bottom-right.
     if (fu + fv <= 1) {
       return topLeft + (topRight - topLeft) * fu + (bottomLeft - topLeft) * fv;
     }
 
-    const bottomRight = at(a + 1, b + 1);
+    const bottomRight = this.#pointHeight(a + 1, b + 1, heights);
 
     return (
       bottomRight +
       (bottomLeft - bottomRight) * (1 - fu) +
       (topRight - bottomRight) * (1 - fv)
     );
+  }
+
+  // How high the land is at the chunks' point `pa` across and `pb` down, read once into `heights` for each: by a number
+  //  of its own, whole numbers far either side of the world's few thousand points across and down. A method, and its
+  //  key a number, as it's read for every point of everything laid on the land.
+  #pointHeight(pa: number, pb: number, heights: Map<number, number>): number {
+    const key = pa * 1048576 + pb;
+    let height = heights.get(key);
+
+    if (height === undefined) {
+      height = this.#relief.height(
+        pa * this.#grid.spacingU,
+        pb * this.#grid.spacingV
+      );
+      heights.set(key, height);
+    }
+
+    return height;
   }
 
   /** How the land's points lie on the ground, for the sea's surface to read their heights (`water.ts`). */
@@ -803,7 +810,7 @@ class Land {
   overlayOf(i: number, j: number): OverlayMesh | null {
     const { stepsU, stepsV, spacingU, spacingV } = this.#grid,
       // The land's heights at its points, each read once for the chunk.
-      heights = new Map<string, number>(),
+      heights = new Map<number, number>(),
       laid = (this.#chunksOfSquares().get(`${i},${j}`) ?? []).flatMap(
         ([x, y]) => this.#square(x, y, heights) ?? []
       );
@@ -817,7 +824,7 @@ class Land {
   #square(
     x: number,
     y: number,
-    heights: Map<string, number>
+    heights: Map<number, number>
   ): { overlay: SquareOverlay; place: OverlayPlace } | null {
     const overlay = this.#overlayAt(x, y);
 
