@@ -251,6 +251,8 @@ const staged: string[] = [],
   yieldsSet: (YieldMesh | null)[] = [],
   // The square lit under the pointer, each time the stage was given it.
   highlightsSet: (HighlightMesh | null)[] = [],
+  // Whether the grid's lines are shown, each time the stage was told.
+  gridsShown: boolean[] = [],
   // The square whose unit's drawn under the pointer, as the stage would say, if any; and how far it was asked to look.
   unitUnderPointer: { key: string | null; within: number[] } = {
     key: null,
@@ -397,6 +399,7 @@ const staged: string[] = [],
     },
     setYields: (mesh) => void yieldsSet.push(mesh),
     setHighlight: (mesh) => void highlightsSet.push(mesh),
+    showGrid: (shown) => void gridsShown.push(shown),
     view: (orbit, height, period) => {
       lookedAt.splice(0, 3, orbit.focus[0], orbit.focus[1], height);
       seenDown.push(period?.v);
@@ -2652,6 +2655,79 @@ expect(
       middleOf(tiles[10] as Tile),
     ]
   );
+
+  // The grid's lines (§4.6): hidden as the option comes; ticked in Options, shown, and drawn without the camera moving;
+  //  unticked, hidden; and nothing heard once the map's taken down.
+  {
+    let gridShown = false,
+      gridListener: (() => void) | null = null;
+
+    gridsShown.length = 0;
+
+    const gridded = new MapView3D(
+      {
+        activateUnit: () => {},
+        art: {
+          id: () => 'art',
+          nativeTileSize: () => ({ width: 16, height: 16 }),
+          scale: () => 1,
+          zoom: () => 1,
+        },
+        cameraDistance: { get: () => null, set: () => {} },
+        cityOpener: { opens: () => false, open: () => {} },
+        coveredBy: [],
+        lockVerticalEdges: false,
+        mapCanvas: ownCanvas,
+        minimapCanvas: null,
+        playerId: 'Player-1',
+        squares: {
+          click: () => {},
+          prompt: () => ({ close: () => {} }),
+          menu: () => {},
+          menuOnRightClick: () => false,
+          menuOpen: () => false,
+        },
+        transport,
+        world: new World(worldData),
+        grid: {
+          get: () => gridShown,
+          onChange: (changed) => {
+            gridListener = changed;
+
+            return () => {
+              gridListener = null;
+            };
+          },
+        },
+      },
+      fakeStage
+    );
+
+    runFrames();
+
+    const asItComes = gridsShown.splice(0);
+
+    staged.length = 0;
+    gridShown = true;
+    gridListener!();
+    runFrames();
+
+    const ticked = [gridsShown.splice(0), staged.includes('render')];
+
+    gridShown = false;
+    gridListener!();
+    runFrames();
+
+    const unticked = gridsShown.splice(0);
+
+    gridded.dispose();
+
+    expect(
+      'the grid’s lines: hidden as it comes; ticked, shown and drawn, the camera still; unticked, hidden; nothing heard once the map’s gone',
+      [asItComes, ticked, unticked, gridListener],
+      [[false], [[true], true], [false], null]
+    );
+  }
 
   // Close up, gliding to the square two along, before a frame's moved it: what's on the screen is what will be once it's
   //  there, so the game doesn't move it again for a unit by the square it's leaving, nor leave one it's going to.

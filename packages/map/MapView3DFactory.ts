@@ -119,6 +119,12 @@ export type MapView3DDeps = {
     get(): number;
     onChange(changed: () => void): () => void;
   };
+  // Whether the grid's lines are drawn, as the player chose it, and what tells of a change, returning what stops it.
+  //  None where there's none.
+  grid?: {
+    get(): boolean;
+    onChange(changed: () => void): () => void;
+  };
   // How units move from square to square, as the player chose it: walking, walking quickly, or at once (`off`); and
   //  whether other players' units are shown walking. Read at each move; walking, and shown, where there's none.
   walks?: {

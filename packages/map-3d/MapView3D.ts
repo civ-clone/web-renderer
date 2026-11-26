@@ -491,6 +491,7 @@ export class MapView3D implements MapRenderer {
   //  however many arrived.
   #modelsArrived = false;
   #stopUnitSize: () => void = (): void => {};
+  #stopGrid: () => void = (): void => {};
   // How the unit awaiting orders is marked, as the player chose it (`unitMarkerMode`), and in what colour, as the theme
   //  gives it, each read at each blink, and as they were last read; whether its figures are shown in the blink now; the
   //  square it's marked on; and what stops the blink.
@@ -580,6 +581,7 @@ export class MapView3D implements MapRenderer {
     this.#stage = stageFactory(deps.mapCanvas, {
       period: this.#land.layout.period(),
       ground: this.#land.ground(),
+      grid: this.#land.layout.topologyId,
       yieldIcon: deps.yieldIcon,
     });
 
@@ -624,6 +626,8 @@ export class MapView3D implements MapRenderer {
     }
 
     this.#bannersPaintedFor = this.#bannersFor();
+    // The grid's lines, where the player's asked for them (§4.6): drawn over the land as it's built.
+    this.#stage.showGrid?.(deps.grid?.get() ?? false);
     this.#land.queueAll(...this.#focus());
     // How the unit awaiting orders is marked, and in what colour, as the page says now, before anything's marked.
     this.#markerMode = deps.unitMarker ?? ((): UnitMarkerMode => 'ring');
@@ -680,6 +684,14 @@ export class MapView3D implements MapRenderer {
         if (size !== this.#unitSize && !this.#disposed) {
           this.#unitSize = size;
           this.#markAll();
+          this.#draw();
+        }
+      }) ?? ((): void => {});
+    // And the grid's lines shown or hidden, as Options changes them.
+    this.#stopGrid =
+      deps.grid?.onChange((): void => {
+        if (!this.#disposed) {
+          this.#stage.showGrid?.(deps.grid?.get() ?? false);
           this.#draw();
         }
       }) ?? ((): void => {});
@@ -926,6 +938,7 @@ export class MapView3D implements MapRenderer {
     this.#canvas.removeEventListener('pointerdown', this.#pressed, true);
 
     this.#stopUnitSize();
+    this.#stopGrid();
     this.#stopArtChanged();
     this.#stopRestyled();
     this.#bannerCanvas?.remove();

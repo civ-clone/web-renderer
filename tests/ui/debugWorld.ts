@@ -148,6 +148,7 @@ expect(
     gallery: false,
     specials: false,
     improvements: false,
+    lines: false,
     distance: null,
     x: 40,
     y: 25,
@@ -156,7 +157,7 @@ expect(
 expect(
   'each as asked',
   pageOptions(
-    '?grid=hex-odd-r&width=40&height=30&seed=9&seen=0.5&distance=12.5&x=3&y=4&gallery=1&specials=1&improvements=1'
+    '?grid=hex-odd-r&width=40&height=30&seed=9&seen=0.5&distance=12.5&x=3&y=4&gallery=1&specials=1&improvements=1&lines=1'
   ),
   {
     topologyId: 'hex-odd-r',
@@ -167,6 +168,7 @@ expect(
     gallery: true,
     specials: true,
     improvements: true,
+    lines: true,
     distance: 12.5,
     x: 3,
     y: 4,
@@ -184,6 +186,7 @@ expect(
     gallery: false,
     specials: false,
     improvements: false,
+    lines: false,
     distance: null,
     x: 0,
     y: 80,

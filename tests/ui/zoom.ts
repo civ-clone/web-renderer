@@ -25,9 +25,11 @@ import GameOptionsRegistry, {
 } from '@civ-clone/ui-platform/GameOptionsRegistry';
 import GameOptions, {
   unitSizeRow,
+  gridRows,
   walkRows,
 } from '@civ-clone/ui-menus/components/GameOptions';
 import {
+  MAP3D_GRID_OPTION,
   MAP3D_RIVALS_WALK_OPTION,
   MAP3D_UNIT_SIZE_OPTION,
   MAP3D_WALKS_OPTION,
@@ -815,6 +817,27 @@ const run = async (): Promise<void> => {
       ]
     );
 
+    // Whether the 3D map draws its grid's lines: only under `?3d=1`, not as it comes, and kept as it's chosen.
+    const grid = gridRows('?3d=1'),
+      gridBox = grid[0]?.querySelector('input') as HTMLInputElement,
+      gridFirst = [gridBox.type, gridBox.hasAttribute('checked')];
+
+    gridBox.checked = true;
+    gridBox.dispatchEvent(new Event('change'));
+
+    const gridChosen = options.get(MAP3D_GRID_OPTION),
+      gridReopened = gridRows('?3d=1')[0]
+        ?.querySelector('input')
+        ?.hasAttribute('checked');
+
+    options.set(MAP3D_GRID_OPTION, false);
+
+    expect(
+      "Options has whether the 3D map draws its grid's lines, under ?3d=1 only: not at first, kept as chosen, and as chosen opened again",
+      [gridRows('').length, grid.length, gridFirst, gridChosen, gridReopened],
+      [0, 1, ['checkbox', false], true, true]
+    );
+
     // The Options window has it on a page that asked for the 3D map, and not on one that didn't.
     const location = Object.getOwnPropertyDescriptor(globalThis, 'location'),
       windowFor = (search: string): boolean[] => {
@@ -834,6 +857,11 @@ const run = async (): Promise<void> => {
                   select.querySelector(`option[value="${speed}"]`) !== null
               )
             ),
+            // The grid's lines, by their label.
+            [...element.querySelectorAll('label')].some(
+              (label) =>
+                label.textContent === i18next.t('GameOptions.grid-lines')
+            ),
           ];
 
         optionsWindow.close();
@@ -849,11 +877,11 @@ const run = async (): Promise<void> => {
     }
 
     expect(
-      "the Options window has the 3D map's unit size, and how its units move, where the page asked for the 3D map, and not otherwise",
+      "the Options window has the 3D map's unit size, how its units move, and its grid's lines, where the page asked for the 3D map, and not otherwise",
       inWindow,
       [
-        [true, true],
-        [false, false],
+        [true, true, true],
+        [false, false, false],
       ]
     );
   }

@@ -44,6 +44,8 @@ import { ChunkMesh } from './terrain/chunks';
 import { puffAt } from './markers/puff';
 import landMaterial from './landMaterial';
 import { HighlightMesh } from './highlight';
+import gridMaterial from './grid';
+import { TopologyId } from '@civ-clone/ui-protocol/topology';
 import riverMaterial from './riverMaterial';
 import {
   ALOFT_PART,
@@ -64,7 +66,13 @@ import unitUnder, { blinkAs, blinkFigures } from './markers/pickUnit';
 import { OverlayMesh, PLANT_NUMBERS } from './overlay/overlayMesh';
 import { plantMatrices, plantsKept } from './overlay/thinning';
 import { FIELD_OF_VIEW, Orbit, eye, sightFor } from './camera/orbit';
-import Water, { Clouds, Ground, HIGHLIGHT_ORDER, SMOG_ORDER } from './water';
+import Water, {
+  Clouds,
+  GRID_ORDER,
+  Ground,
+  HIGHLIGHT_ORDER,
+  SMOG_ORDER,
+} from './water';
 import YieldIcons from './yieldIcons';
 import { YieldMesh } from './yields';
 import {
@@ -108,6 +116,8 @@ export interface Stage {
    *  the world as the land is: one laid before is replaced, and nothing takes it away.
    */
   setOverlay(i: number, j: number, mesh: OverlayMesh | null): void;
+  /** Whether the grid's lines are drawn over the land (`grid.ts`), as the player's chosen: they're not, as it comes. */
+  showGrid?(shown: boolean): void;
   /**
    * What's marked on the square `key` (`x,y`), standing at `at` (`u`, height, `v`), drawn at every copy of the world:
    *  one marked before is replaced, and nothing takes it away.
@@ -269,6 +279,8 @@ export type StageOptions = {
   period: { u: number; v: number | null };
   // How the land's points lie on the ground, for the sea's surface to read their heights.
   ground: Ground;
+  // The grid the world's squares lie on, for its lines (`grid.ts`): the square grid's, where it's not said.
+  grid?: TopologyId;
   // The icon for a yield (`Food`, `Production`, `Trade`), the map's pack's own or the interface's, or nothing where the
   //  art has none.
   yieldIcon?: (name: string) => CanvasImageSource | null;
@@ -512,7 +524,7 @@ const SHADOW_MAP = 2048,
 
 export const createStage: StageFactory = (
   canvas,
-  { period, ground, yieldIcon }
+  { period, ground, grid = 'square', yieldIcon }
 ) => {
   // How tall the canvas is in the page's pixels, as it was last sized: how big things look on it (`thinPlants`).
   let viewHeight = canvas.clientHeight || 1;
@@ -701,6 +713,8 @@ export const createStage: StageFactory = (
     //  `polygonOffset`) and the rivers' water, as they're pulled in front of the land further than the band's lift
     //  over them once the camera's far off, and further still on a slope, where their strips cut across the land's
     //  creases and it doesn't. Not far enough to show through what stands: about two of its own depth slope's pixels.
+    // The grid's lines (`grid.ts`): the land's chunks drawn again with them alone, when they're shown.
+    lines = gridMaterial(grid),
     highlightGroup = new Group(),
     highlightMaterial = new MeshBasicMaterial({
       color: 0xffffff,
@@ -1046,6 +1060,7 @@ export const createStage: StageFactory = (
     // Rivers' water too, so a course across the poles' water stops at them.
     riverWater.clippingPlanes = overlayMaterial.clippingPlanes;
     highlightMaterial.clippingPlanes = overlayMaterial.clippingPlanes;
+    lines.clippingPlanes = overlayMaterial.clippingPlanes;
     plantModels.forEach(({ parts }) =>
       parts.forEach(({ material }) => {
         material.clippingPlanes = overlayMaterial.clippingPlanes;
@@ -1202,6 +1217,9 @@ export const createStage: StageFactory = (
       renderer.render(scene, camera);
     },
     clearCloud: (now, seconds): boolean => water.clear(now, seconds),
+    showGrid: (shown): void => {
+      lines.visible = shown;
+    },
     resize: (width, height, pixelRatio): void => {
       viewHeight = height;
       renderer.setPixelRatio(pixelRatio);
@@ -1228,6 +1246,8 @@ export const createStage: StageFactory = (
       );
       // How much of what the ground's blended from is water, for wet ground at the waterline.
       geometry.setAttribute('shore', new BufferAttribute(mesh.shore, 1, true));
+      // Which points are on squares never seen, where the grid's lines aren't drawn.
+      geometry.setAttribute('unseen', new BufferAttribute(mesh.unseen, 1));
       geometry.setIndex(new BufferAttribute(mesh.indices, 1));
       geometry.computeBoundingSphere();
 
@@ -1264,10 +1284,14 @@ export const createStage: StageFactory = (
         river,
         at: [mesh.u, 0, mesh.v],
         make: () => {
-          const drawn = new Mesh(geometry, material);
+          const drawn = new Mesh(geometry, material),
+            gridLines = new Mesh(geometry, lines);
 
           drawn.castShadow = true;
           drawn.receiveShadow = true;
+          // After the sea and before the square under the pointer's light (`GRID_ORDER`), as each is seen through.
+          gridLines.renderOrder = GRID_ORDER;
+          drawn.add(gridLines);
 
           if (river !== null) {
             const water = new Mesh(river, riverWater);
@@ -1975,6 +1999,7 @@ export const createStage: StageFactory = (
       riverWater.dispose();
       highlightPlaced?.geometry.dispose();
       highlightMaterial.dispose();
+      lines.dispose();
       detail.dispose();
       renderer.dispose();
     },

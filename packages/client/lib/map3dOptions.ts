@@ -70,3 +70,9 @@ export const walkSpeedFor = (value: unknown): WalkSpeed =>
 
 /** The option whether other players' units are shown walking on the 3D map is kept in: they are, as it comes. */
 export const MAP3D_RIVALS_WALK_OPTION = 'map3dRivalsWalk';
+
+/**
+ * The option whether the 3D map draws its grid's lines, along every square's outline, is kept in (docs/3d-renderer.md
+ *  §4.6): it doesn't, as it comes.
+ */
+export const MAP3D_GRID_OPTION = 'map3dGrid';

@@ -66,6 +66,8 @@ export const setOptionDefaults = (): void => {
     // How the 3D map's units move, and whether other players' are shown moving. See `MAP3D_WALKS_OPTION`.
     map3dWalks: 'normal',
     map3dRivalsWalk: true,
+    // Whether the 3D map draws its grid's lines. See `MAP3D_GRID_OPTION`.
+    map3dGrid: false,
     // Civilization's music, with an ASOUND.CVL imported (#126): on, and its volume, 0 to 100. See `soundGain`.
     sound: true,
     soundVolume: 70,
