@@ -568,6 +568,13 @@ class Layer {
     return [-du / length, 1 / length, -dv / length];
   }
 
+  // Each point laid on a bridge's deck, or where one might be, as it's worked out once: how high, and its normal, by
+  //  where it is, across then down. Strips' and ribbons' triangles share their corners, so each is laid several times.
+  readonly #decked = new Map<
+    number,
+    Map<number, [height: number, nx: number, ny: number, nz: number]>
+  >();
+
   #point(
     u: number,
     v: number,
@@ -575,10 +582,32 @@ class Layer {
     colour: [number, number, number],
     bridged = false
   ): void {
-    const deck = bridged && this.bridging ? this.deckAt(u, v) : -Infinity;
+    if (!bridged || !this.bridging) {
+      this.soup.positions.push(u, this.ground(u, v) + lift, v);
+      this.soup.normals.push(...this.#normal(u, v));
+      this.soup.colours.push(...colour);
 
-    this.soup.positions.push(u, Math.max(this.ground(u, v), deck) + lift, v);
-    this.soup.normals.push(...this.#normal(u, v, deck));
+      return;
+    }
+
+    let across = this.#decked.get(u);
+
+    if (across === undefined) {
+      across = new Map();
+      this.#decked.set(u, across);
+    }
+
+    let at = across.get(v);
+
+    if (at === undefined) {
+      const deck = this.deckAt(u, v);
+
+      at = [Math.max(this.ground(u, v), deck), ...this.#normal(u, v, deck)];
+      across.set(v, at);
+    }
+
+    this.soup.positions.push(u, at[0] + lift, v);
+    this.soup.normals.push(at[1], at[2], at[3]);
     this.soup.colours.push(...colour);
   }
 
@@ -900,6 +929,9 @@ class Layer {
   //  it line them. And the roads past its corners, which they keep clear of too.
   readonly runs: Run[] = [];
   readonly past: [readonly [number, number], readonly [number, number]][] = [];
+  // What a road's or railroad's bridge walls open for as they do for the square's other roads and railroads: an
+  //  airbase's runway, laid over them.
+  readonly crossings: Run[] = [];
   readonly taken: [number, number, number][] = [];
   // Where each plant grown stands, and what it is.
   readonly grown: [number, number, PlantKind][] = [];
@@ -1189,7 +1221,10 @@ const road = (layer: Layer, route: Route): void => {
       ROAD_HALF,
       LIFT.road,
       STONE,
-      layer.runs.filter(({ key }) => key !== keys[0] && key !== keys[1]),
+      [
+        ...layer.runs.filter(({ key }) => key !== keys[0] && key !== keys[1]),
+        ...layer.crossings,
+      ],
       [
         ...a!.ways
           .slice(1)
@@ -1207,7 +1242,10 @@ const road = (layer: Layer, route: Route): void => {
         ROAD_HALF,
         LIFT.road,
         STONE,
-        layer.runs.filter(({ key }) => key !== keys[index]),
+        [
+          ...layer.runs.filter(({ key }) => key !== keys[index]),
+          ...layer.crossings,
+        ],
         ways.map(leftOf)
       )
     );
@@ -1262,9 +1300,12 @@ const railroad = (layer: Layer, route: Route): void => {
       layer,
       [place.centre, end],
       BALLAST_HALF,
-      LIFT.rail,
+      LIFT.ballast,
       GIRDER,
-      layer.runs.filter((run) => run.key !== keys[index])
+      [
+        ...layer.runs.filter((run) => run.key !== keys[index]),
+        ...layer.crossings,
+      ]
     );
 
     // Sleepers across it, then the two rails over them.
@@ -1488,9 +1529,10 @@ const city = (layer: Layer, plan: CityPlan): void => {
     [u, v] = place.centre,
     { plaza, streets, lots } = sprawl(place, plan, [u, v + IN_FRONT_OF_CITY]);
 
-  layer.disc(plaza.at, plaza.radius, PAVING, LIFT.road, 16);
+  // On a bridge's deck where it's over a river, as the roads that come into it are, so they meet it at its height.
+  layer.disc(plaza.at, plaza.radius, PAVING, LIFT.road, 16, true);
   streets.forEach(([from, to]) =>
-    layer.strip(from, to, STREET, PAVING, LIFT.road)
+    layer.strip(from, to, STREET, PAVING, LIFT.road, true)
   );
   lots.forEach((lot) => house(layer, lot));
 };
@@ -1899,12 +1941,16 @@ const mine = (
 /** The colours a fortress is drawn in: its stone, and its towers' slate roofs. */
 export const FORTRESS_COLOURS = { stone: STONE, slate: SLATE } as const;
 
-/** The colours roads and railroads are drawn in: a road's, and a railroad's ballast, sleepers and rails. */
+/**
+ * The colours roads and railroads are drawn in: a road's, a railroad's ballast, sleepers and rails, and a city's
+ *  streets and plaza.
+ */
 export const ROUTE_COLOURS = {
   road: ROAD,
   ballast: BALLAST,
   sleeper: SLEEPER,
   rail: RAIL,
+  street: PAVING,
 } as const;
 
 /**
@@ -2248,8 +2294,16 @@ const fortress = (layer: Layer): void => {
       for (let k = 0; k < steps; k++) {
         const middle = point(a + step * (k + 0.5)),
           [low, high] = groundUnder(layer, middle, step, thick, facing),
-          // Over a river's water, a gate for it under the wall.
-          water = layer.waterAt(...middle),
+          // Over a river's water, at its middle or either end, a gate for it under the wall.
+          water = [
+            point(a + step * k),
+            middle,
+            point(a + step * (k + 1)),
+          ].reduce<number | null>((highest, at) => {
+            const here = layer.waterAt(...at);
+
+            return here === null ? highest : Math.max(highest ?? here, here);
+          }, null),
           bottom =
             water === null ? low - 0.004 : Math.max(low, water + WATER_GATE),
           top = Math.max(high, bottom - tall / 2) + tall;
@@ -4087,6 +4141,14 @@ export const layOverlay = (
       [centre[0] - reach, centre[1] + RUNWAY.south],
       [centre[0] + reach, centre[1] + RUNWAY.south],
     ]);
+    layer.crossings.push({
+      key: 0,
+      points: [
+        [centre[0] - reach, centre[1] + RUNWAY.south],
+        [centre[0] + reach, centre[1] + RUNWAY.south],
+      ],
+      half: RUNWAY.wide / 2,
+    });
   }
 
   if (overlay.road !== null) {

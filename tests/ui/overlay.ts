@@ -5713,6 +5713,45 @@ const differing = (
   );
 }
 
+// A mesh's triangles of a colour: whether each is wound to face the way its normal says, so it's drawn from that side
+//  (anticlockwise seen from it), and its normal.
+const facesColoured = (mesh: OverlayMesh, css: string) => {
+  const { r, g, b } = new Color(css),
+    { positions: p, normals: n, colours: c } = mesh,
+    found: { facing: boolean; normal: [number, number, number] }[] = [];
+
+  for (let at = 0; at < p.length; at += 9) {
+    if (
+      Math.abs(c[at]! - r) < 1e-4 &&
+      Math.abs(c[at + 1]! - g) < 1e-4 &&
+      Math.abs(c[at + 2]! - b) < 1e-4
+    ) {
+      const e1 = [
+          p[at + 3]! - p[at]!,
+          p[at + 4]! - p[at + 1]!,
+          p[at + 5]! - p[at + 2]!,
+        ],
+        e2 = [
+          p[at + 6]! - p[at]!,
+          p[at + 7]! - p[at + 1]!,
+          p[at + 8]! - p[at + 2]!,
+        ],
+        normal: [number, number, number] = [n[at]!, n[at + 1]!, n[at + 2]!];
+
+      found.push({
+        facing:
+          (e1[1]! * e2[2]! - e1[2]! * e2[1]!) * normal[0] +
+            (e1[2]! * e2[0]! - e1[0]! * e2[2]!) * normal[1] +
+            (e1[0]! * e2[1]! - e1[1]! * e2[0]!) * normal[2] >
+          0,
+        normal,
+      });
+    }
+  }
+
+  return found;
+};
+
 // A mesh's points of a colour, where they are on the ground: (u, y, v).
 const pointsColoured = (mesh: OverlayMesh, css: string) => {
   const { r, g, b } = new Color(css),
@@ -6017,7 +6056,7 @@ const pointsColoured = (mesh: OverlayMesh, css: string) => {
   }
 
   expect(
-    'its walls: on its edges along its deck, never on it, and mitred at its middle either side, as a road through it; over the water’s surface by its parapet at most, their foot under it, none past the deck’s reach; none without the river',
+    'its walls: on its edges along its deck, never on it, and mitred at its middle either side, as a road through it, facing out, their ends closed; over the water’s surface by its parapet at most, their foot under it, none past the deck’s reach; none without the river',
     crossings.map(({ name, level, bridged, unbridged }) => {
       const walls = pointsColoured(bridged, BRIDGE_COLOURS.stone),
         surface = surfaceOf(level);
@@ -6044,10 +6083,30 @@ const pointsColoured = (mesh: OverlayMesh, css: string) => {
         mitre.every(([mu, mv]) =>
           walls.some(([u, , v]) => Math.hypot(u - mu, v - mv) < 1e-6)
         ),
+        // Each face wound to face out, and its ends closed, facing along the road, either way.
+        facesColoured(bridged, BRIDGE_COLOURS.stone).every(
+          ({ facing }) => facing
+        ),
+        [1, -1].every((way) =>
+          facesColoured(bridged, BRIDGE_COLOURS.stone).some(
+            ({ normal: [nu] }) => nu * way > 0.9
+          )
+        ),
         pointsColoured(unbridged, BRIDGE_COLOURS.stone).length,
       ];
     }),
-    crossings.map(({ name }) => [name, true, true, true, true, true, true, 0])
+    crossings.map(({ name }) => [
+      name,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      0,
+    ])
   );
 
   // A railroad across it: its ballast and rails on the deck, girders either side.
@@ -6062,7 +6121,7 @@ const pointsColoured = (mesh: OverlayMesh, css: string) => {
       deck = surfaceOf(0.097) + BRIDGE.clearance;
 
     expect(
-      'a railroad across it: its ballast and rails on the deck, girders either side',
+      'a railroad across it: its ballast and rails on the deck, girders either side on the ballast’s edges, standing on its deck, facing out',
       [
         over(ROUTE_COLOURS.ballast).length > 0,
         Math.min(...over(ROUTE_COLOURS.ballast).map(([, y]) => y)) >=
@@ -6070,9 +6129,21 @@ const pointsColoured = (mesh: OverlayMesh, css: string) => {
         Math.min(...over(ROUTE_COLOURS.rail).map(([, y]) => y)) >=
           deck + LIFT.rail - 1e-6,
         pointsColoured(rail, BRIDGE_COLOURS.girder).length > 0,
+        // Half the ballast's width, 0.05, either side of the line, and as thick as a wall.
+        pointsColoured(rail, BRIDGE_COLOURS.girder).every(([, , v]) => {
+          const away = Math.abs(v - 3.5);
+
+          return away >= 0.05 - 1e-6 && away <= 0.05 + BRIDGE.thick + 1e-6;
+        }),
+        over(BRIDGE_COLOURS.girder).some(
+          ([, y]) => Math.abs(y - (deck + LIFT.ballast)) < 1e-9
+        ),
+        facesColoured(rail, BRIDGE_COLOURS.girder).every(
+          ({ facing }) => facing
+        ),
         pointsColoured(rail, BRIDGE_COLOURS.stone).length,
       ],
-      [true, true, true, true, 0]
+      [true, true, true, true, true, true, true, 0]
     );
   }
 
@@ -6083,11 +6154,12 @@ const pointsColoured = (mesh: OverlayMesh, css: string) => {
       height = cut(0.1, river),
       surface = surfaceOf(0.097),
       fortress = eastWest(['Fortress', 'Road'], ['Road']),
-      // The fortress's walls over the river's water, north and south, away from the road's bridge.
+      // The fortress's walls over the river's water, north and south, away from the road's bridge: every length of
+      //  them over any of it.
       gates = (mesh: OverlayMesh) =>
         pointsColoured(mesh, FORTRESS_COLOURS.stone).filter(
           ([u, , v]) =>
-            Math.abs(u - 17.5) < RIVER_WIDTH / 2 && Math.abs(v - 3.5) > 0.2
+            Math.abs(u - 17.5) < RIVER_WIDTH && Math.abs(v - 3.5) > 0.2
         ),
       airbase = overlayFor(square(['Airbase']), [])!,
       runway = (mesh: OverlayMesh) =>
@@ -6096,10 +6168,17 @@ const pointsColoured = (mesh: OverlayMesh, css: string) => {
             Math.abs(u - 17.5) <= RIVER_WIDTH &&
             Math.abs(v - (3.5 + RUNWAY.south)) < RUNWAY.wide / 2
         ),
-      withAirbase = laid(airbase, height, [river]);
+      withAirbase = laid(airbase, height, [river]),
+      // With a road leaving it south, along the river and across the runway.
+      roadAcross = overlayFor(square(['Airbase', 'Road']), [
+        neighbour([0, 1], ['Road']),
+      ])!,
+      withRoad = laid(roadAcross, height, [river]),
+      road = roadHalf(place(17, 3), [0, 1]).points,
+      reach = 0.5 * RUNWAY.reach;
 
     expect(
-      'a fortress’s walls across the water leave a gate for it, where without the river they come down to the land; an airbase’s runway across it on a deck, with concrete walls',
+      'a fortress’s walls across the water leave a gate for it, where without the river they come down to the land; an airbase’s runway and its markings across it on a deck, with concrete walls, open where a road crosses it, as the road’s are for it',
       [
         gates(laid(fortress, height, [river])).length > 0,
         Math.min(...gates(laid(fortress, height, [river])).map(([, y]) => y)) >=
@@ -6110,8 +6189,26 @@ const pointsColoured = (mesh: OverlayMesh, css: string) => {
           surface + BRIDGE.clearance + LIFT.runway - 1e-6,
         pointsColoured(withAirbase, BRIDGE_COLOURS.concrete).length > 0,
         pointsColoured(laid(airbase, height), BRIDGE_COLOURS.concrete).length,
+        // Its markings on the deck too.
+        pointsColoured(withAirbase, AIRBASE_COLOURS.marking)
+          .filter(([u]) => Math.abs(u - 17.5) <= RIVER_WIDTH)
+          .every(
+            ([, y]) => y >= surface + BRIDGE.clearance + LIFT.marking - 1e-9
+          ),
+        // A road across the runway: its walls open for the runway, and the runway's for it.
+        pointsColoured(withRoad, BRIDGE_COLOURS.stone).length > 0,
+        pointsColoured(withRoad, BRIDGE_COLOURS.stone).every(
+          ([u, , v]) =>
+            Math.abs(v - (3.5 + RUNWAY.south)) >= RUNWAY.wide / 2 - 1e-6 ||
+            Math.abs(u - 17.5) >= reach
+        ),
+        pointsColoured(withRoad, BRIDGE_COLOURS.concrete).every(([u, , v]) =>
+          road
+            .slice(1)
+            .every((to, at) => offLine(u, v, road[at]!, to) >= 0.035 - 5e-4)
+        ),
       ],
-      [true, true, true, true, true, true, 0]
+      [true, true, true, true, true, true, 0, true, true, true, true]
     );
   }
 
@@ -6176,29 +6273,48 @@ const pointsColoured = (mesh: OverlayMesh, css: string) => {
   }
 }
 
-// Through the land, on every grid: a world with rivers across it and along it, roads and railroads every way over them.
-//  Wherever two squares' roads or railroads meet, at the edge between them or across the world's seam, they're at the
-//  same height, on a bridge or not; and some are on bridges, with walls.
+// Through the land, on every grid: a world with rivers across it and along it, roads and railroads every way over them,
+//  and a city where two rivers meet. Wherever two squares' roads, railroads or a city's streets meet, at the edge
+//  between them or across the world's seam, their decks are at one height, on a bridge or not; and some are on
+//  bridges, with walls.
 (['square', 'hex-odd-r', 'staggered-iso'] as const).forEach((topologyId) => {
   const width = 20,
     height = 16,
-    { land, laid, stage } = landOf(topologyId, width, height, (x, y) => ({
-      terrain:
-        x === 10 || y === 8 || (x === 0 && y > 4 && y < 12)
-          ? 'River'
-          : 'Grassland',
-      improvements:
-        (x > 5 && x < 15 && y > 3 && y < 13) || x === 19 || x === 0
-          ? y > 8
-            ? ['Road', 'Railroad']
-            : ['Road']
-          : [],
-    })),
+    { tiles, land, laid, stage } = landOf(
+      topologyId,
+      width,
+      height,
+      (x, y) => ({
+        terrain:
+          x === 10 || y === 8 || (x === 0 && y > 4 && y < 12)
+            ? 'River'
+            : 'Grassland',
+        improvements:
+          (x > 5 && x < 15 && y > 3 && y < 13) || x === 19 || x === 0
+            ? y > 8
+              ? ['Road', 'Railroad']
+              : ['Road']
+            : [],
+      })
+    ),
     { u: periodU } = land.layout.period(),
-    // Each colour's points' heights, by where they are on the ground, round the world's copies.
+    // Roads', railroads' and streets' points' heights, by where they are on the ground, round the world's copies, as
+    //  their decks: less each's lift.
     heights = new Map<string, Set<number>>(),
-    walls = { count: 0 };
+    kinds: [css: string, group: string, lift: number][] = [
+      [ROUTE_COLOURS.road, 'deck', LIFT.road],
+      [ROUTE_COLOURS.street, 'deck', LIFT.road],
+      [ROUTE_COLOURS.ballast, 'deck', LIFT.ballast],
+      [ROUTE_COLOURS.rail, 'deck', LIFT.rail],
+    ],
+    walls = { count: 0 },
+    streets = { count: 0 };
 
+  tiles[8 * width + 10]!.city = {
+    id: 'City-Bridges',
+    name: 'Bridges',
+    growth: { size: 8 },
+  } as never;
   land.queueAll(0, 0);
   land.build(stage, null);
 
@@ -6209,48 +6325,51 @@ const pointsColoured = (mesh: OverlayMesh, css: string) => {
 
     const points = pointsOf(mesh);
 
-    [ROUTE_COLOURS.road, ROUTE_COLOURS.ballast, ROUTE_COLOURS.rail].forEach(
-      (css) => {
-        const { r, g, b } = new Color(css);
+    kinds.forEach(([css, group, lift]) => {
+      const { r, g, b } = new Color(css);
 
-        points.forEach(([u, y, v], at) => {
-          const c = mesh.colours;
+      points.forEach(([u, y, v], at) => {
+        const c = mesh.colours;
 
-          if (
-            Math.abs(c[at * 3]! - r) < 1e-4 &&
-            Math.abs(c[at * 3 + 1]! - g) < 1e-4 &&
-            Math.abs(c[at * 3 + 2]! - b) < 1e-4
-          ) {
-            const key = `${css}:${(((u % periodU) + periodU) % periodU).toFixed(
-              4
-            )},${v.toFixed(4)}`;
+        if (
+          Math.abs(c[at * 3]! - r) < 1e-4 &&
+          Math.abs(c[at * 3 + 1]! - g) < 1e-4 &&
+          Math.abs(c[at * 3 + 2]! - b) < 1e-4
+        ) {
+          const key = `${group}:${(((u % periodU) + periodU) % periodU).toFixed(
+            4
+          )},${v.toFixed(4)}`;
 
-            heights.set(key, (heights.get(key) ?? new Set()).add(y));
-          }
-        });
-      }
-    );
+          heights.set(key, (heights.get(key) ?? new Set()).add(y - lift));
+        }
+      });
+    });
 
     walls.count += pointsColoured(mesh, BRIDGE_COLOURS.stone).length;
+    streets.count += pointsColoured(mesh, ROUTE_COLOURS.street).length;
   });
 
   const mismatched = [...heights].filter(
       ([, ys]) => Math.max(...ys) - Math.min(...ys) > 2e-6
     ),
-    // How many points are over the land by more than a road's lift: on a deck.
+    // How many points are over the land by more than the float's rounding: on a deck.
     raised = [...heights].filter(([key, ys]) => {
       const [u, v] = key.split(':')[1]!.split(',').map(Number);
 
       return (
-        key.startsWith(ROUTE_COLOURS.road) &&
-        Math.min(...ys) > land.heightAt(u!, v!) + LIFT.road + 1e-3
+        key.startsWith('deck') && Math.min(...ys) > land.heightAt(u!, v!) + 1e-3
       );
     }).length;
 
   expect(
-    `${topologyId}: where two squares’ roads and railroads meet, over rivers or not, across the seam too, they’re at one height; some on bridges, with walls`,
-    [mismatched.slice(0, 3).map(([key]) => key), raised > 0, walls.count > 0],
-    [[], true, true]
+    `${topologyId}: where two squares’ roads, railroads and a city’s streets meet, over rivers or not, across the seam too, their decks are at one height; some on bridges, with walls`,
+    [
+      mismatched.slice(0, 3).map(([key]) => key),
+      raised > 0,
+      walls.count > 0,
+      streets.count > 0,
+    ],
+    [[], true, true, true]
   );
 });
 
