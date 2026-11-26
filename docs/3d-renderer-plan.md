@@ -545,6 +545,8 @@ Since #1335, farms have their buildings, mines their headframes and tunnels, for
 
 **3.5, first part, the square under the pointer: done** (spec §4.6, "As built"). The square the mouse rests on is lit at once: a soft band of warm light inside its outline, brightest at the edge, laid over the land and what lies flat on it. Still to do in 3.5: grid lines as an option, the squares a city works lit while its map shows, and squares not in sight dimmed, once a rule set tells them from those seen before (Civ1's and Civ2's don't).
 
+**3.5, second part, grid lines: done** (spec §4.6, "As built, grid lines"). An option, off as it comes: a thin dark line along every square's outline on every grid, drawn as the land's own chunks again with a shader that finds each point's nearest edge, so it costs nothing to make and follows the land exactly, faded as squares get small on the screen. Still to do in 3.5: the squares a city works lit while its map shows, and squares not in sight dimmed, once a rule set tells them apart.
+
 ---
 
 ## M4: cities

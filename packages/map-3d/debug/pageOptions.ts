@@ -42,6 +42,8 @@ export const pageOptions = (search: string) => {
     specials: query.get('specials') === '1',
     // A square's improvements laid out about the middle: fortresses, airbases, mines and farms, some with roads.
     improvements: query.get('improvements') === '1',
+    // The grid's lines drawn, as the option draws them in a game.
+    lines: query.get('lines') === '1',
     // The camera's distance, if one was kept: the 3D map keeps it within its own range.
     distance: given('distance'),
     x: number('x', Math.floor(width / 2), 0, width - 1),

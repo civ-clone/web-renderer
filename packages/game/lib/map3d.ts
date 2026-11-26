@@ -11,6 +11,7 @@ import NotificationWindow from '@civ-clone/ui-component-window/NotificationWindo
 import build from '@civ-clone/ui-client/lib/build';
 import hostedModelSets from '@civ-clone/ui-models-hosted';
 import {
+  MAP3D_GRID_OPTION,
   MAP3D_RIVALS_WALK_OPTION,
   MAP3D_UNIT_SIZE_OPTION,
   MAP3D_WALKS_OPTION,
@@ -388,6 +389,16 @@ export const makeMapView = (
           }),
       },
       unitStatus,
+      // Whether the grid's lines are drawn (docs/3d-renderer.md §4.6), changed in Options as the game goes on.
+      grid: {
+        get: (): boolean => options.get(MAP3D_GRID_OPTION, false) === true,
+        onChange: (changed: () => void): (() => void) =>
+          options.onChange((key): void => {
+            if (key === MAP3D_GRID_OPTION) {
+              changed();
+            }
+          }),
+      },
       // How the unit awaiting orders is marked, as on the 2D map: the player's choice in Options, or the theme's.
       unitMarker: () => unitMarkerMode(options.get('unitMarker', 'theme')),
       // And in the theme's colour, as the 2D map's ring is.

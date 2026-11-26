@@ -37,6 +37,7 @@ import {
 } from '@civ-clone/ui-platform/lib/interfaceMode';
 import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
 import {
+  MAP3D_GRID_OPTION,
   MAP3D_RIVALS_WALK_OPTION,
   MAP3D_UNIT_SIZE_OPTION,
   MAP3D_WALKS_OPTION,
@@ -340,6 +341,33 @@ export const walkRows = (
 };
 
 /**
+ * Whether the 3D map draws its grid's lines, under `?3d=1` only (docs/3d-renderer.md §4.6): the map shows or hides them
+ *  as it's changed.
+ */
+export const gridRows = (
+  search: string = globalThis.location?.search ?? ''
+): HTMLElement[] => {
+  if (!map3dAsked(search)) {
+    return [];
+  }
+
+  const shown = s<HTMLInputElement>(
+    `<input type="checkbox"${
+      options.get(MAP3D_GRID_OPTION, false) === true ? ' checked' : ''
+    }>`
+  );
+
+  return [
+    s(
+      `<label>${t('GameOptions.grid-lines')}</label>`,
+      h(shown, {
+        change: () => options.set(MAP3D_GRID_OPTION, shown.checked),
+      })
+    ),
+  ];
+};
+
+/**
  * Interface (#735). Everything is put together for one interface as the page loads, so a change needs a new page: it
  *  loads at once from the main menu, and during a game the choice waits for the next load, with a hint saying so, as
  *  reloading would lose the game. Choosing also drops the visit's `?interface=`, which would otherwise outrank it.
@@ -528,6 +556,7 @@ export class GameOptions extends Window {
         }),
         ...unitSizeRow(),
         ...walkRows(),
+        ...gridRows(),
         s(
           `<label>${t('GameOptions.lock-vertical-edges')}</label>`,
           (() => {

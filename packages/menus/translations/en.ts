@@ -87,6 +87,7 @@ i18next.addResources('en', 'default', {
   'GameOptions.walks-choice.normal': 'Walk',
   'GameOptions.walks-choice.off': 'Move at once',
   'GameOptions.rivals-walk': "Show other players' units moving on the 3D map",
+  'GameOptions.grid-lines': 'Grid lines on the 3D map',
   // How big the 3D map draws its units (`?3d=1`), and the size they're at: 1.25×.
   'GameOptions.unit-size': 'Size of units on the 3D map',
   'GameOptions.unit-size-value': '{{size}}×',
