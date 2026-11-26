@@ -35,7 +35,7 @@ export type ChunkMesh = {
   surfacesB: Uint8Array;
   // How much of what the ground's blended from is water squares at each point, from 0 to 255 (`GroundSample#shore`).
   shore: Uint8Array;
-  // 1 at each point on a square never seen, and 0 elsewhere, for the cloud over them.
+  // 1 at each point on a square never seen, and 0 elsewhere, for the cloud over them, and the grid's lines not on them.
   unseen: Float32Array;
   indices: Uint32Array;
   // The water of the rivers whose courses start in the chunk, relative to its corner, as the land's points are, and how

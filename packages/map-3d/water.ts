@@ -48,7 +48,7 @@ export type Ground = {
  *  after it is always right: drawn before it, the sea would be painted over them. The light's after the lines, so it's
  *  drawn over the line at a square's edge on every chunk alike, not over some and under others as the camera moves.
  *  They can be over the cloud on high land, but the cloud's after them, as it's under them on low land, which is more
- *  often; and the lines and the light are never on a square never seen.
+ *  often; and the light's never on a square never seen, nor the lines but a step past the edge of what has been.
  */
 export const SEA_ORDER = 1,
   GRID_ORDER = 1.2,

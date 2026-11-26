@@ -161,7 +161,7 @@ ids.forEach((topologyId) => {
   material.onBeforeCompile(shader as never, undefined as never);
 
   expect(
-    `${topologyId}: the lines' material lifts the land, works out each point's edge, draws only near one and never where unseen; hidden as it comes, seen through`,
+    `${topologyId}: the lines' material lifts the land, works out each point's edge, draws only near one, its edge ramped straight across a pixel, and not where the land's wholly unseen; hidden as it comes, seen through`,
     [
       shader.vertexShader.includes(
         `transformed.y = max(transformed.y + ${GRID.lift}, ${GRID.lift});`
@@ -171,6 +171,9 @@ ids.forEach((topologyId) => {
         // A pixel's width across the edge from where it is, not from its distance, which folds at the line.
         shader.fragmentShader.includes('abs(dot(normal, dFdx(vGround)))') &&
         shader.fragmentShader.includes('step(0.999, vUnseen)') &&
+        shader.fragmentShader.includes(
+          'clamp((edge - reach + pixel * 0.5) / pixel, 0.0, 1.0)'
+        ) &&
         shader.fragmentShader.includes('diffuseColor.a *= line;'),
       material.visible,
       material.transparent,

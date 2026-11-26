@@ -172,8 +172,8 @@ float gridEdge(vec2 ground, out vec2 normal) {
 
 /**
  * The lines' material, for the land's chunks drawn again over the land on `grid`: each point `GRID.lift` over the land,
- *  or over the sea's surface, and drawn only where it's near an edge, as dark as `GRID.opacity`, never on a square never
- *  seen (`unseen`, each point's, as the chunks give it). Seen through, writing no depth, and pulled in front of what
+ *  or over the sea's surface, and drawn only where it's near an edge, as dark as `GRID.opacity`, and not where the
+ *  land's wholly on squares never seen (`unseen`, each point's, as the chunks give it). Seen through, writing no depth, and pulled in front of what
  *  it lies on as the square under the pointer's light is (`Stage`'s `highlightMaterial`), for the same reasons. Hidden
  *  as it comes.
  */
@@ -216,12 +216,14 @@ ${shader.fragmentShader.replace(
     across = max(fwidth(vGround.x), fwidth(vGround.y)),
     reach = max(${number(GRID.half)}, pixel * ${number(GRID.leastPixels)}),
     line = ${number(GRID.opacity)} * (${number(GRID.half)} / reach) *
-      (1.0 - smoothstep(reach - pixel * 0.5, reach + pixel * 0.5, edge)) *
+      // Its edge ramped straight across a pixel, so however a line falls between pixels, it's as dark in all.
+      (1.0 - clamp((edge - reach + pixel * 0.5) / pixel, 0.0, 1.0)) *
       (1.0 - smoothstep(${number(1 / GRID.fadedFrom)}, ${number(
     1 / GRID.goneAt
   )}, across)) *
-      // Not on a square never seen: where every point round it is, so the line along the edge of what's been seen is
-      //  whole, whichever square its points were taken from, and the cloud covers what spills a step under it.
+      // Not on a square never seen: only where every point round it is, so the line along the edge of what's been seen
+      //  keeps its inner half at least, whichever square its points were taken from. It can reach a step past it,
+      //  under the cloud's soft edge.
       (1.0 - step(0.999, vUnseen));
 
   if (line < 0.004) {
