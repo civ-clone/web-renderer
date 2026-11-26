@@ -93,7 +93,8 @@ export type OverlayPlace = {
   // How far the model a set draws a kind of plant with reaches round its origin, for each of its height, where it's
   //  known: the room a plant of that kind takes, in place of the built-in set's shape's (`ROOM`).
   plantReach?(kind: PlantKind): number | null;
-  // The rivers' courses through the square (`ReliefMap#coursesAt`): what's laid on it keeps clear of their channels.
+  // The rivers' courses through the square (`ReliefMap#coursesAt`): what's laid on it keeps clear of their channels,
+  //  and its roads, railroads and the rest cross their water on bridges.
   rivers?: readonly RiverPath[];
 };
 
@@ -169,7 +170,9 @@ export const LIFT = {
 /**
  * A bridge, where a road, railroad or an airbase's runway crosses a river's water (docs/3d-renderer.md §5.3): its deck
  *  is `clearance` over the water's surface, flat across it and `past` either side, then falls to the land as steeply
- *  as `slope`, for no more than `reach` further; and its walls stand `parapet` over the deck, `thick` thick.
+ *  as `slope`, for no more than `reach` further; and its walls stand `parapet` over the deck, `thick` thick, their
+ *  inner faces from `under` under it: more than a route laid on the deck, sampled more coarsely than its walls, is ever
+ *  off it where it bends, so no gap shows under them.
  */
 export const BRIDGE = {
   clearance: 0.008,
@@ -178,6 +181,7 @@ export const BRIDGE = {
   reach: 0.1,
   parapet: 0.012,
   thick: 0.008,
+  under: 0.005,
 } as const;
 
 /** How high over a river's water a fortress's wall leaves a gate for it, where the wall crosses it. */
@@ -546,7 +550,8 @@ class Layer {
   // The land's normal at a point, from its height either side; or a bridge's deck's, where it's on one, `deck` high at
   //  the point. A deck rises less than a unit for a unit along (as steeply as `BRIDGE.slope`, and its river's level far
   //  less), so where it's further under the land either side than the step to it, it's under the land there too, and
-  //  needn't be asked: but just past its reach, where it's none, if another river's cut the land far lower than its own.
+  //  needn't be asked. Not so just past a deck's reach, where it's none, where another river's cut the land far lower
+  //  than its own: there a normal can miss the deck beside it.
   #normal(u: number, v: number, deck = -Infinity): [number, number, number] {
     const e = NORMAL_STEP;
     let east = this.place.heightAt(u + e, v),
@@ -929,9 +934,11 @@ class Layer {
   //  it line them. And the roads past its corners, which they keep clear of too.
   readonly runs: Run[] = [];
   readonly past: [readonly [number, number], readonly [number, number]][] = [];
-  // What a road's or railroad's bridge walls open for as they do for the square's other roads and railroads: an
-  //  airbase's runway, laid over them.
+  // What bridges' walls open for as they do for the square's roads and railroads: an airbase's runway and its apron,
+  //  and a road or railroad on its own, which isn't one of its runs. And roads' and railroads' bridges' walls, laid
+  //  last, once all of those are known.
   readonly crossings: Run[] = [];
+  readonly later: (() => void)[] = [];
   readonly taken: [number, number, number][] = [];
   // Where each plant grown stands, and what it is.
   readonly grown: [number, number, PlantKind][] = [];
@@ -1117,6 +1124,13 @@ const ROAD_PIECES = 8;
 //  in and out, for its bridges' walls to be one, mitred there: a road straight through, however its halves bow.
 const THROUGH = 0.3;
 
+// The keys of what bridges' walls open for that isn't one of a square's runs (`Layer#crossings`): its own, apart from
+//  the runs' (`wayIndex`, 300 and more).
+const RUNWAY_KEY = 0,
+  APRON_KEY = 1,
+  ALONE_ROAD = 2,
+  ALONE_RAILROAD = 3;
+
 // A number of the square's own for each way out of it.
 const wayIndex = ([du, dv]: readonly [number, number]): number =>
   300 + (du + 3) * 7 + (dv + 3);
@@ -1215,40 +1229,53 @@ const road = (layer: Layer, route: Route): void => {
       // On both edges: as far along their sides' sum as makes it a unit along each.
       mitre = 1 + iu * ou + iv * ov;
 
-    bridgeWalls(
-      layer,
-      [...[...a!.points].reverse(), ...b!.points.slice(1)],
-      ROAD_HALF,
-      LIFT.road,
-      STONE,
-      [
-        ...layer.runs.filter(({ key }) => key !== keys[0] && key !== keys[1]),
-        ...layer.crossings,
-      ],
-      [
-        ...a!.ways
-          .slice(1)
-          .reverse()
-          .map(([u, v]) => leftOf([-u, -v])),
-        [(iu + ou) / mitre, (iv + ov) / mitre],
-        ...b!.ways.slice(1).map(leftOf),
-      ]
-    );
-  } else {
-    halves.forEach(({ points, ways }, index) =>
+    layer.later.push(() =>
       bridgeWalls(
         layer,
-        points,
+        [...[...a!.points].reverse(), ...b!.points.slice(1)],
         ROAD_HALF,
         LIFT.road,
         STONE,
         [
-          ...layer.runs.filter(({ key }) => key !== keys[index]),
+          ...layer.runs.filter(({ key }) => key !== keys[0] && key !== keys[1]),
           ...layer.crossings,
         ],
-        ways.map(leftOf)
+        [
+          ...a!.ways
+            .slice(1)
+            .reverse()
+            .map(([u, v]) => leftOf([-u, -v])),
+          [(iu + ou) / mitre, (iv + ov) / mitre],
+          ...b!.ways.slice(1).map(leftOf),
+        ]
       )
     );
+  } else {
+    halves.forEach(({ points, ways }, index) =>
+      layer.later.push(() =>
+        bridgeWalls(
+          layer,
+          points,
+          ROAD_HALF,
+          LIFT.road,
+          STONE,
+          [
+            ...layer.runs.filter(({ key }) => key !== keys[index]),
+            ...layer.crossings,
+          ],
+          ways.map(leftOf)
+        )
+      )
+    );
+  }
+
+  // On its own, its disc's what others' walls open for.
+  if (route.alone) {
+    layer.crossings.push({
+      key: ALONE_ROAD,
+      points: [place.centre, place.centre],
+      half: 0.09,
+    });
   }
 
   layer.disc(
@@ -1279,6 +1306,15 @@ const railroad = (layer: Layer, route: Route): void => {
       ? []
       : route.joins.map((offset) => wayIndex(offset) + 100);
 
+  // On its own, what others' walls open for.
+  if (route.alone) {
+    layer.crossings.push({
+      key: ALONE_RAILROAD,
+      points: [ends[0]!, ends[1]!],
+      half: BALLAST_HALF,
+    });
+  }
+
   ends.forEach((end, index) => {
     const [u, v] = place.centre,
       length = Math.hypot(end[0] - u, end[1] - v),
@@ -1296,16 +1332,18 @@ const railroad = (layer: Layer, route: Route): void => {
       LIFT.ballast,
       true
     );
-    bridgeWalls(
-      layer,
-      [place.centre, end],
-      BALLAST_HALF,
-      LIFT.ballast,
-      GIRDER,
-      [
-        ...layer.runs.filter((run) => run.key !== keys[index]),
-        ...layer.crossings,
-      ]
+    layer.later.push(() =>
+      bridgeWalls(
+        layer,
+        [place.centre, end],
+        BALLAST_HALF,
+        LIFT.ballast,
+        GIRDER,
+        [
+          ...layer.runs.filter((run) => run.key !== keys[index]),
+          ...layer.crossings.filter(({ key }) => key !== ALONE_RAILROAD),
+        ]
+      )
     );
 
     // Sleepers across it, then the two rails over them.
@@ -2482,23 +2520,32 @@ const airbase = (layer: Layer): void => {
     // The runway and the apron as lines their bridges' walls stand along: each open where the other meets it, and
     //  where a road or railroad crosses.
     runway: Run = {
-      key: 0,
+      key: RUNWAY_KEY,
       points: [
         [u - reach, rv],
         [u + reach, rv],
       ],
       half: RUNWAY.wide / 2,
     },
-    apron: Run = { key: 1, points: [door, apronEnd], half: apronHalf };
+    apron: Run = { key: APRON_KEY, points: [door, apronEnd], half: apronHalf },
+    // What else on the square their walls open for: a road or railroad on its own.
+    alone = layer.crossings.filter(
+      ({ key }) => key !== RUNWAY_KEY && key !== APRON_KEY
+    );
+
+  // Roads' and railroads' bridges' walls open for it, laid after it.
+  layer.crossings.push(apron);
 
   layer.strip(door, apronEnd, apronHalf * 2, TARMAC, LIFT.apron, true);
   bridgeWalls(layer, runway.points, RUNWAY.wide / 2, LIFT.runway, CONCRETE, [
     ...layer.runs,
     apron,
+    ...alone,
   ]);
   bridgeWalls(layer, apron.points, apronHalf, LIFT.apron, CONCRETE, [
     ...layer.runs,
     runway,
+    ...alone,
   ]);
   // What's claimed after keeps clear of it.
   layer.lines.push([door, apronEnd]);
@@ -3498,8 +3545,8 @@ const leftOf = ([u, v]: readonly [number, number]): [number, number] => [-v, u];
  *  left as it goes, a unit long, or longer where two halves of a road meet at an angle, so it's on both their edges;
  *  or square to the way from the point before to the one after), so it follows its bends and ends where it does, and in
  *  lengths that follow the deck. Not where they'd stand on one of `others` (the square's other roads and railroads,
- *  `half` either side of theirs), so they open where those join it: at the square's middle, where they meet, its
- *  disc's no wider than the widest of them.
+ *  and what else they open for, `Layer#crossings`, each `half` either side of its line), so they open where those join
+ *  or cross it: at the square's middle, where they meet, its disc's no wider than the widest of them.
  */
 const bridgeWalls = (
   layer: Layer,
@@ -3675,10 +3722,11 @@ const bridgeWalls = (
           outward,
           colour
         );
+        // From a hair under the deck, as the route's laid less finely than its walls where its deck bends.
         layer.face(
           [
-            [a.inner[0], a.deck, a.inner[1]],
-            [b.inner[0], b.deck, b.inner[1]],
+            [a.inner[0], a.deck - BRIDGE.under, a.inner[1]],
+            [b.inner[0], b.deck - BRIDGE.under, b.inner[1]],
             [b.inner[0], b.top, b.inner[1]],
             [a.inner[0], a.top, a.inner[1]],
           ],
@@ -4149,7 +4197,7 @@ export const layOverlay = (
       [centre[0] + reach, centre[1] + RUNWAY.south],
     ]);
     layer.crossings.push({
-      key: 0,
+      key: RUNWAY_KEY,
       points: [
         [centre[0] - reach, centre[1] + RUNWAY.south],
         [centre[0] + reach, centre[1] + RUNWAY.south],
@@ -4185,6 +4233,9 @@ export const layOverlay = (
   if (overlay.airbase) {
     airbase(layer);
   }
+
+  // Roads' and railroads' bridges' walls, open for an airbase's apron, now it's laid.
+  layer.later.forEach((lay) => lay());
 
   if (overlay.pollution) {
     pollution(layer);
