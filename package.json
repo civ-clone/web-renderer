@@ -148,6 +148,7 @@
     "test:clips-3d": "node tools/run-suite.js ui clips3d",
     "test:shots-3d": "node tools/run-suite.js ui shots3d",
     "test:models-3d": "node tools/run-suite.js ui models3d",
+    "test:highlight": "node tools/run-suite.js ui highlight",
     "test:hosted-models": "node tools/run-suite.js ui hostedModels",
     "test:overlay": "node tools/run-suite.js ui overlay",
     "test:woods": "node tools/run-suite.js ui woods",

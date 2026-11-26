@@ -21,6 +21,7 @@ import createRelief, { BEND, ReliefMap, WANDER } from './terrain/relief';
 import { ChunkGrid, buildChunk, chunkGrid, chunksNear } from './terrain/chunks';
 import { Stage } from './stage';
 import { Ground } from './water';
+import type { Ground as Draping } from './terrain/ribbons';
 import World from '@civ-clone/ui-map/components/World';
 import { Tile } from '@civ-clone/ui-protocol/types';
 import { seaFloor } from '@civ-clone/ui-models-builtin/terrain';
@@ -294,6 +295,20 @@ class Land {
     }
 
     return height;
+  }
+
+  /**
+   * The land as it's drawn, to lay something flat on it, cut along its cells as its mesh is (`lay`): its height at a
+   *  point (`surfaceAt`, each of its points read once), and how far apart its points are.
+   */
+  surface(): Draping {
+    const heights = new Map<number, number>();
+
+    return {
+      at: (u, v) => this.surfaceAt(u, v, heights),
+      spacingU: this.#grid.spacingU,
+      spacingV: this.#grid.spacingV,
+    };
   }
 
   /** How the land's points lie on the ground, for the sea's surface to read their heights (`water.ts`). */

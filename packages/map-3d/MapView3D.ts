@@ -76,6 +76,7 @@ import Battles, {
   quickerBattle,
 } from './battles';
 import pickGround from './camera/pick';
+import highlightOf from './highlight';
 import Minimap3D from './minimap/Minimap3D';
 import { LaidYields, innerOf, laidYields, yieldMesh } from './yields';
 import { BannerSite, bannerPlaces } from './banners';
@@ -387,6 +388,13 @@ export class MapView3D implements MapRenderer {
   //  been painted again, hidden or shown.
   #hover: Hover | null = null;
   #hoverChanged = false;
+  // Where the mouse rests over the map, on the canvas, or nowhere: it's left the map, or a press or a glide began. The
+  //  square under it is lit (`highlight.ts`): which, by its key, or none; and whether the land under it has changed.
+  #pointer: { x: number; y: number } | null = null;
+  #highlit: string | null = null;
+  #highlightStale = false;
+  // Where the camera was when the square under the mouse was last picked, to pick it again only once it's moved.
+  #highlightView = '';
   #playerId: string;
   #endHover = (): void => {
     const hover = this.#hover;
@@ -2736,6 +2744,13 @@ export class MapView3D implements MapRenderer {
   #hovered(
     at: { x: number; y: number; clientX: number; clientY: number } | null
   ): void {
+    this.#pointer = at === null ? null : { x: at.x, y: at.y };
+
+    // The square under it lit, at once: a frame drawn only where that's another square.
+    if (this.#showHighlight()) {
+      this.#draw();
+    }
+
     const subject =
         at === null || this.#waiting || this.#squares.menuOpen()
           ? null
@@ -3013,6 +3028,18 @@ export class MapView3D implements MapRenderer {
       );
 
     this.#releasedAt.clear();
+
+    // The square lit laid again where the land under it may have changed; and with none lit under the mouse, picked
+    //  again, as the square under it may have been seen since.
+    if (
+      replaced ||
+      (this.#pointer !== null &&
+        this.#highlit === null &&
+        squares.length > 0) ||
+      reshaped.some(([x, y]) => `${x},${y}` === this.#highlit)
+    ) {
+      this.#highlightStale = true;
+    }
 
     // What each released square was marked with, and every unit marked anywhere, as they were released, to tell which
     //  have come and gone.
@@ -3409,6 +3436,48 @@ export class MapView3D implements MapRenderer {
     return [...found.values()];
   }
 
+  // The square under the mouse lit (`highlight.ts`), over the land, unless it's never been seen or a menu's open over
+  //  the map; or none, where the mouse isn't over it. Laid again only where it's another square, or the land under it
+  //  has changed. In a frame (`framed`), picked again only where the camera's moved since. Says whether it's laid.
+  #showHighlight(framed = false): boolean {
+    const view = `${this.#orbit.focus.join(',')},${this.#orbit.distance},${
+      this.#orbit.yaw
+    },${this.#orbit.pitch},${this.#lookHeight ?? 0}`;
+
+    if (framed && view === this.#highlightView && !this.#highlightStale) {
+      return false;
+    }
+
+    // Kept only once the camera's placed for it: a unit's picked through the camera as it was last placed.
+    if (framed) {
+      this.#highlightView = view;
+    }
+
+    const pointer = this.#pointer,
+      tile =
+        pointer === null || this.#squares.menuOpen()
+          ? null
+          : this.#tileAt(pointer.x, pointer.y),
+      lit =
+        tile === null || tile.terrain._ === 'Unknown'
+          ? null
+          : `${tile.x},${tile.y}`;
+
+    if (lit === this.#highlit && !this.#highlightStale) {
+      return false;
+    }
+
+    this.#highlit = lit;
+    this.#highlightStale = false;
+    this.#stage.setHighlight(
+      tile === null || lit === null
+        ? null
+        : highlightOf(this.#land.layout, this.#land.surface(), tile.x, tile.y)
+    );
+
+    return true;
+  }
+
   // What each square yields, drawn again on the stage if it's out of date and shown, and taken away once it's hidden.
   #showYields(): void {
     if (!this.#yieldsShown) {
@@ -3537,6 +3606,9 @@ export class MapView3D implements MapRenderer {
 
     this.#showYields();
     this.#stage.view(this.#orbit, this.#lookHeight ?? 0, this.#period());
+    // The square under a still mouse, which may be another as the map moves under it: once the camera's placed, as a
+    //  unit's picked through it.
+    this.#showHighlight(true);
 
     const idling = this.#idle(started, true);
 
