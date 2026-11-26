@@ -436,7 +436,8 @@ blended across squares.
   - a shape (`flat`, `rolling`, `ridged` or `peaked`).
 
   Typical values, in world units: ocean −0.15, rising to −0.03 at the shore; plains 0.02; hills 0.16, ridged, with
-  roughness 0.08; mountains 0.75, roughness 0.15, ridged and peaked, a mountain's top 0.73 to 0.93 high. Hills and
+  roughness 0.08; mountains 0.75, roughness 0.15, ridged and peaked, a mountain's top mostly 0.73 to 0.93 high, up to
+  about 1.07 in a massif. Hills and
   mountains were raised from 0.12 and 0.35 by #1391, so rivers rush down them and mountains stand over the land.
 - **Blending:**
   - A point takes its square and that square's neighbours (from the topology), each weighted by a smooth kernel of its
@@ -525,13 +526,17 @@ blended across squares.
       mountain, the steeper parts of hills, and a mountain's foot where its slope reaches into a neighbour. Since
       #1391, mountains' sides reach about 64° to 68° at their steepest (58° for most of the steepest, 43° in the
       middle), hills about 34° (up to 55° at a mountain's foot), most under 26°, so about a sixth of a block of hills
-      is rock. A texture laid flat stretches about 2.3 times at 64°: rock mapped from three sides would fix that, and
+      is rock. Those are from the height a sixteenth of a square either side, which reads a little steeper than the
+      land's mesh: before, measured so, mountains reached 44° to 49° (37° for most of the steepest, 23° in the
+      middle). A texture laid flat stretches about 2.3 times at 64°: rock mapped from three sides would fix that, and
       is still to do;
     - **snow** above a snowline, 0.86 high at the equator and 0.56 at the poles, on ground level enough to hold it:
-      none more upright than about 53° from level, whole by about 37°. A mountain's top is 0.73 to 0.93 high, about
-      0.83 for most, so near the equator no peak is capped, about a quarter are a third of the way to the poles and
-      most from halfway to them (0, 3 and 7 of twelve peaks measured). A cap is small, as a peak's top is steep. Its
-      latitude is the same at every copy of the world, above or below;
+      none more upright than about 53° from level, whole by about 37°. A mountain's top is mostly 0.73 to 0.93 high,
+      about 0.83, up to about 1.07 in a massif. So on the debug page's worlds (80 by 50, two seeds, square and hex),
+      a quarter to a third of the peaks are capped near the equator, about two thirds a third of the way to the poles,
+      and nearly all from halfway to them, a little fewer than before #1391 (a third to two fifths, three quarters,
+      nearly all). A cap is small, as a peak's top is steep. Its latitude is the same at every copy of the world,
+      above or below;
     - **wet**, darker and shinier, at the waterline, where water squares are part of what the ground's blended from
       (`GroundSample#shore`, carried by the mesh). Not by height alone: a swamp or a river inland, however low, stays
       dry.
@@ -871,7 +876,7 @@ How plants are placed:
       they were.
     - **Where:** Civ1's rivers, in their valleys, are nearly flat: along them they fall no more than about 0.06, and
       their water's steepest, across a mouth, about 0.095 where I've measured, just under `RAPIDS.from`, so they don't
-      break. Civ2's, a feature on hills and mountains, fall as steeply as 0.3 to 0.5 in places. A river's levels aren't ordered downhill yet, so where
+      break. Civ2's, a feature on hills and mountains, fall as steeply as 0.5 to 0.75 in places (0.3 to 0.5 before #1391). A river's levels aren't ordered downhill yet, so where
       one climbs out of a saddle between mountains, it breaks white there too (#1388).
     - **Drawn:** the shader whitens the water where its foam's over a noise of two sizes, by where it is on the ground
       (about 22 and 66 to a unit, a whole number of them to the world's period, so it's the same at every copy of the
