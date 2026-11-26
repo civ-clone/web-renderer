@@ -59,7 +59,7 @@ import { ditherRank } from './thinning';
 import { standAt } from './stands';
 import { RiverPath } from '../terrain/relief';
 import { FLOOR, bedOf } from '../terrain/rivers';
-import { RIVER_LIFT } from '../terrain/ribbons';
+import { RIVER_LIFT, cutAlong } from '../terrain/ribbons';
 
 /** Where a square is, and what it needs to know of the land round it, to lay its overlay. */
 export type OverlayPlace = {
@@ -96,6 +96,11 @@ export type OverlayPlace = {
   // The rivers' courses through the square (`ReliefMap#coursesAt`): what's laid on it keeps clear of their channels,
   //  and its roads, railroads and the rest cross their water on bridges.
   rivers?: readonly RiverPath[];
+  // How far apart the land's points are, across and down, where `heightAt` is the land as its mesh draws it (flat
+  //  triangles between them, each cell split from its bottom left to its top right): what's laid flat on it is cut
+  //  along its cells there (`cutAlong`), so it lies exactly its lift over it everywhere. Where it's not given, what's
+  //  laid flat follows the land only at its own points.
+  spacing?: readonly [across: number, down: number];
 };
 
 /**
@@ -616,6 +621,78 @@ class Layer {
     this.soup.colours.push(...colour);
   }
 
+  // How far apart what's laid flat must have points of its own, to follow what it lies on: nothing, where it's cut
+  //  along the land's cells (`#flat`) and so lies exactly on it however far apart they are; but `STEP` on a
+  //  bridge's deck, which is curved, not flat between the land's points, or where the land's cells aren't known.
+  #step(bridged: boolean): number {
+    return this.place.spacing === undefined || (bridged && this.bridging)
+      ? STEP
+      : Infinity;
+  }
+
+  // A shape laid flat on the land, its corners anticlockwise seen from above and convex, `lift` over it: cut along the
+  //  land's cells where they're known (`OverlayPlace#spacing`), so each piece lies over one of its triangles and the
+  //  whole of it exactly `lift` over the land, not only at its corners; over a bridge's deck where it's `bridged`.
+  //  Where they're not known, a fan of triangles from its first corner.
+  #flat(
+    corners: readonly (readonly [number, number])[],
+    lift: number,
+    colour: [number, number, number],
+    bridged: boolean
+  ): void {
+    const spacing = this.place.spacing,
+      pieces =
+        spacing === undefined
+          ? [corners]
+          : cutAlong(corners, spacing[0], spacing[1]);
+
+    pieces.forEach((piece) => {
+      for (let at = 1; at + 1 < piece.length; at++) {
+        const [pu, pv] = piece[0]!,
+          [qu, qv] = piece[at]!,
+          [ru, rv] = piece[at + 1]!;
+
+        this.#point(pu, pv, lift, colour, bridged);
+        this.#point(qu, qv, lift, colour, bridged);
+        this.#point(ru, rv, lift, colour, bridged);
+      }
+    });
+  }
+
+  // A cell of a strip or a ribbon laid flat on the land, `lift` over it: from (`a`) to (`b`) along its left edge, and
+  //  (`c`) to (`d`) along its right, so anticlockwise seen from above it's `a`, `b`, `d`, `c`. Two triangles where the
+  //  land's cells aren't known, or where it's bent so it isn't convex; one shape, cut along the land's cells, where
+  //  they are, as it's fewer pieces than its two triangles cut apart.
+  #cell(
+    a: readonly [number, number],
+    b: readonly [number, number],
+    c: readonly [number, number],
+    d: readonly [number, number],
+    lift: number,
+    colour: [number, number, number],
+    bridged: boolean
+  ): void {
+    const round = [a, b, d, c],
+      turns = round.map(([u, v], at) => {
+        const [bu, bv] = round[(at + 1) % 4]!,
+          [cu, cv] = round[(at + 2) % 4]!;
+
+        return (bu - u) * (cv - bv) - (bv - v) * (cu - bu);
+      });
+
+    if (
+      this.place.spacing !== undefined &&
+      (turns.every((turn) => turn > 0) || turns.every((turn) => turn < 0))
+    ) {
+      this.#flat(round, lift, colour, bridged);
+
+      return;
+    }
+
+    this.#flat([a, b, c], lift, colour, bridged);
+    this.#flat([b, d, c], lift, colour, bridged);
+  }
+
   /**
    * A strip `width` wide draped over the land from one point to another, `lift` over it: over a bridge's deck where
    *  it's `bridged` and crosses a river.
@@ -635,9 +712,11 @@ class Layer {
       return;
     }
 
-    // Cut along it and across it finer than the land's points are apart, so it follows the land between them too.
-    const steps = Math.max(1, Math.ceil(length / STEP)),
-      strands = Math.max(1, Math.ceil(width / STEP)),
+    // Cut along it and across it finer than the land's points are apart where it's not cut along the land's own
+    //  cells, or it's on a bridge's deck, which isn't flat between them (`#step`), so it follows them between too.
+    const step = this.#step(bridged),
+      steps = Math.max(1, Math.ceil(length / step)),
+      strands = Math.max(1, Math.ceil(width / step)),
       // Across the strip, from its right edge to its left.
       side = [
         (-(to[1] - from[1]) / length) * width,
@@ -655,13 +734,16 @@ class Layer {
           [u2, v2] = at(step / steps, strand / strands),
           [u3, v3] = at((step + 1) / steps, strand / strands);
 
-        // Two triangles, wound anticlockwise seen from above (`v` runs south), so they face up and aren't culled.
-        this.#point(u0, v0, lift, colour, bridged);
-        this.#point(u1, v1, lift, colour, bridged);
-        this.#point(u2, v2, lift, colour, bridged);
-        this.#point(u1, v1, lift, colour, bridged);
-        this.#point(u3, v3, lift, colour, bridged);
-        this.#point(u2, v2, lift, colour, bridged);
+        // Wound anticlockwise seen from above (`v` runs south), so it faces up and isn't culled.
+        this.#cell(
+          [u0, v0],
+          [u1, v1],
+          [u2, v2],
+          [u3, v3],
+          lift,
+          colour,
+          bridged
+        );
       }
     }
   }
@@ -706,9 +788,11 @@ class Layer {
         continue;
       }
 
-      // Cut along it and across it finer than the land's points are apart, so it follows the land between them too.
-      const steps = Math.max(1, Math.ceil(length / STEP)),
-        strands = Math.max(1, Math.ceil(width / STEP)),
+      // Cut along it and across it finer than the land's points are apart where it's not cut along the land's own
+      //  cells, or it's on a bridge's deck (`#step`), so it follows them between too.
+      const step = this.#step(bridged),
+        steps = Math.max(1, Math.ceil(length / step)),
+        strands = Math.max(1, Math.ceil(width / step)),
         at = (t: number, w: number): [number, number] => [
           from[0] +
             (to[0] - from[0]) * t +
@@ -726,12 +810,15 @@ class Layer {
             [u3, v3] = at((step + 1) / steps, strand / strands);
 
           // Wound as a strip's are, facing up.
-          this.#point(u0, v0, lift, colour, bridged);
-          this.#point(u1, v1, lift, colour, bridged);
-          this.#point(u2, v2, lift, colour, bridged);
-          this.#point(u1, v1, lift, colour, bridged);
-          this.#point(u3, v3, lift, colour, bridged);
-          this.#point(u2, v2, lift, colour, bridged);
+          this.#cell(
+            [u0, v0],
+            [u1, v1],
+            [u2, v2],
+            [u3, v3],
+            lift,
+            colour,
+            bridged
+          );
         }
       }
     }
@@ -809,8 +896,9 @@ class Layer {
   ): void {
     const colour = colourOf(css),
       [u, v] = centre,
-      // In rings no further apart than the land's points, so a wide one follows the land too.
-      rings = Math.max(1, Math.ceil(radius / STEP)),
+      // In rings no further apart than the land's points where it's not cut along the land's own cells, or it's on a
+      //  bridge's deck (`#step`), so a wide one follows the land too.
+      rings = Math.max(1, Math.ceil(radius / this.#step(bridged))),
       at = (ring: number, side: number): [number, number] => {
         const angle = (side / sides) * Math.PI * 2,
           out = (ring / rings) * radius;
@@ -824,19 +912,13 @@ class Layer {
           outerB = at(ring + 1, side + 1);
 
         if (ring === 0) {
-          this.#point(u, v, lift, colour, bridged);
-          this.#point(...outerB, lift, colour, bridged);
-          this.#point(...outerA, lift, colour, bridged);
+          this.#flat([[u, v], outerB, outerA], lift, colour, bridged);
         } else {
           const innerA = at(ring, side),
             innerB = at(ring, side + 1);
 
-          this.#point(...innerA, lift, colour, bridged);
-          this.#point(...innerB, lift, colour, bridged);
-          this.#point(...outerA, lift, colour, bridged);
-          this.#point(...innerB, lift, colour, bridged);
-          this.#point(...outerB, lift, colour, bridged);
-          this.#point(...outerA, lift, colour, bridged);
+          this.#flat([innerA, innerB, outerA], lift, colour, bridged);
+          this.#flat([innerB, outerB, outerA], lift, colour, bridged);
         }
       }
     }

@@ -882,6 +882,16 @@ How plants are placed:
 
 Each is looked up by its type name in the model set.
 
+- **Laid flat, as built** (`Layer#flat` in `overlayMesh.ts`): roads, railroads, fields, a runway and its apron, and the
+  discs where routes meet are cut along the land's cells and their diagonals (`cutAlong` in `terrain/ribbons.ts`, as
+  rivers' water is), which `Land` gives them (`OverlayPlace#spacing`). So each piece lies over one of the land's
+  triangles, and all of it lies exactly its lift over the land, between its points as at them, however steep the land.
+  Each layer stays in its order everywhere: fields at 0.01, ditches 0.011, roads 0.014, an apron 0.015, ballast 0.016,
+  sleepers 0.018, rails 0.02, a runway 0.022 and its markings 0.024. Cut so, it needs no points of its own between the
+  land's. A strip's or a ribbon's length is one piece, cut where the land creases. Only on a bridge's deck, which is
+  curved, not flat between the land's points, does it keep points every `STEP` (0.06), as where the land's cells
+  aren't known.
+
 - **Road:** a strip laid on the land, from the square's middle toward each neighbour that has a road. Only the
   connected directions are drawn, as the 2D map does. As built (`roadHalf` in `overlayMesh.ts`), each half, from the
   middle to the edge it shares with the neighbour, is a lane, not a ruler's line: it bows a seeded way, each way out of

@@ -154,8 +154,23 @@ const cutAll = (
 };
 
 /**
+ * The convex shape `points`, flat, cut along the land's cells, `spacingU` across and `spacingV` down, and their
+ *  diagonals (from each cell's bottom left to its top right, as its mesh splits them): pieces, each over one of the
+ *  land's triangles and flat as it is, so a shape laid on the land through its pieces lies exactly on it. Each piece
+ *  is wound as `points` are.
+ */
+export const cutAlong = (
+  points: readonly Point[],
+  spacingU: number,
+  spacingV: number
+): Point[][] =>
+  cutAll(points, ([u]) => u / spacingU)
+    .flatMap((part) => cutAll(part, ([, v]) => v / spacingV))
+    .flatMap((part) => cutAll(part, ([u, v]) => u / spacingU + v / spacingV));
+
+/**
  * Lays `shapes`, flat and each convex, on `ground`: each cut along the land's cells (across and down) and their
- *  diagonals, so each piece is over one of the land's triangles, then each point of each piece `lift` over the land
+ *  diagonals (`cutAlong`), so each piece is over one of the land's triangles, then each point of each piece `lift` over the land
  *  there (`RIVER_LIFT`, a river's water's), but never under `sea` (the sea's level, where its surface is), and with
  *  `shade` there in `foam` (a river's white water, `foamAt`, unless said). Points in the same place are one point.
  */
@@ -174,9 +189,6 @@ export const lay = (
   } = {}
 ): void => {
   const { spacingU, spacingV } = ground,
-    across = ([u]: Point) => u / spacingU,
-    down = ([, v]: Point) => v / spacingV,
-    diagonal = ([u, v]: Point) => u / spacingU + v / spacingV,
     // Each point by where it is, to a millionth, so pieces either side of a line share their points there.
     points = new Map<string, number>(),
     pointAt = ([u, v]: Point): number => {
@@ -194,20 +206,17 @@ export const lay = (
     };
 
   shapes.forEach((flat) =>
-    cutAll(flat, across)
-      .flatMap((part) => cutAll(part, down))
-      .flatMap((part) => cutAll(part, diagonal))
-      .forEach((piece) => {
-        const indices = piece.map(pointAt);
+    cutAlong(flat, spacingU, spacingV).forEach((piece) => {
+      const indices = piece.map(pointAt);
 
-        for (let at = 1; at < indices.length - 1; at++) {
-          const [a, b, c] = [indices[0]!, indices[at]!, indices[at + 1]!];
+      for (let at = 1; at < indices.length - 1; at++) {
+        const [a, b, c] = [indices[0]!, indices[at]!, indices[at + 1]!];
 
-          if (a !== b && b !== c && a !== c) {
-            triangle(into, a, b, c);
-          }
+        if (a !== b && b !== c && a !== c) {
+          triangle(into, a, b, c);
         }
-      })
+      }
+    })
   );
 };
 
