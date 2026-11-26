@@ -888,6 +888,7 @@ class Land {
           .map((direction) => topology.offset(direction, x, y)),
         period: this.layout.period(),
         rivers: this.#relief.coursesAt(x, y),
+        spacing: [this.#grid.spacingU, this.#grid.spacingV],
       },
     };
   }

@@ -2721,10 +2721,176 @@ const landOf = (
     );
   });
 
+  // Each triangle laid flat, as far over the land at each of its corners, as far over it at its middle and its edges'
+  //  middles too, as `Land` gives what's laid its land's spacing to cut it along (to a 32-bit rounding's worth).
+  const flatLaid = { count: 0 },
+    astray = [...laid.values()].flatMap((mesh) => {
+      if (mesh === null) {
+        return [];
+      }
+
+      const corners = pointsOf(withoutFarmsteads(mesh)),
+        found: number[] = [];
+
+      for (let at = 0; at + 2 < corners.length; at += 3) {
+        const three = [corners[at]!, corners[at + 1]!, corners[at + 2]!];
+
+        if (
+          three.some(
+            ([u, , v]) => !(u > 0.1 && u < 31.9 && v > 0.1 && v < 15.9)
+          )
+        ) {
+          continue;
+        }
+
+        const over = ([u, y, v]: readonly number[]) => y - drawnAt(u!, v!),
+          lifts = three.map(over);
+
+        if (Math.max(...lifts) - Math.min(...lifts) > 1e-4) {
+          continue;
+        }
+
+        flatLaid.count++;
+
+        const mix = (w: [number, number, number]) =>
+          [0, 1, 2].map((axis) =>
+            three.reduce((sum, corner, k) => sum + corner[axis]! * w[k]!, 0)
+          );
+
+        found.push(
+          ...[
+            mix([1 / 3, 1 / 3, 1 / 3]),
+            mix([0.5, 0.5, 0]),
+            mix([0, 0.5, 0.5]),
+            mix([0.5, 0, 0.5]),
+          ]
+            .map((sample) => Math.abs(over(sample) - lifts[0]!))
+            .filter((strays) => strays > 1e-4)
+        );
+      }
+
+      return found;
+    });
+
   expect(
-    'roads and fields lie over the land as it’s drawn, even on hills, not under it',
-    below.length,
-    0
+    'roads and fields lie over the land as it’s drawn, even on hills, not under it; each triangle laid flat as far over it between its corners as at them',
+    [below.length, flatLaid.count > 1000, astray.length],
+    [0, true, 0]
+  );
+}
+
+// Laid exactly on steep land: ground as steep as mountains, folded into creases between its points, drawn as the land's
+//  mesh draws it (flat triangles between points 0.125 apart, each cell split along the line from its top right to its
+//  bottom left), with its spacing given, as `Land` gives it. Roads every way with a railroad through, irrigation and
+//  farmland: each triangle laid flat, as far over the land at each of its corners, is that far over it at its middle and
+//  its edges' middles too, so each of what's laid flat lies at its own lift over the land everywhere, and they stay in
+//  their order. Without the spacing, they don't: they're draped only at their own points, and cut across the creases.
+{
+  const spacing = 0.125,
+    relief = (u: number, v: number) =>
+      0.4 * Math.abs(Math.sin(2.7 * u + 1.3 * v)) +
+      0.25 * Math.sin(4.1 * v - 0.7 * u),
+    // The land as its mesh draws it: the triangle by a cell's top-left corner, or the one by its bottom-right.
+    drawn = (u: number, v: number): number => {
+      const a = Math.floor(u / spacing),
+        b = Math.floor(v / spacing),
+        fu = u / spacing - a,
+        fv = v / spacing - b,
+        at = (pa: number, pb: number) => relief(pa * spacing, pb * spacing);
+
+      return fu + fv <= 1
+        ? at(a, b) +
+            (at(a + 1, b) - at(a, b)) * fu +
+            (at(a, b + 1) - at(a, b)) * fv
+        : at(a + 1, b + 1) +
+            (at(a, b + 1) - at(a + 1, b + 1)) * (1 - fu) +
+            (at(a + 1, b) - at(a + 1, b + 1)) * (1 - fv);
+    },
+    everyWay = (
+      [
+        [0, -1],
+        [1, -1],
+        [1, 0],
+        [1, 1],
+        [0, 1],
+        [-1, 1],
+        [-1, 0],
+        [-1, -1],
+      ] as [number, number][]
+    ).map((offset) =>
+      neighbour(offset, offset[1] === 0 ? ['Road', 'Railroad'] : ['Road'])
+    ),
+    laidOn = (overlay: SquareOverlay, given: boolean) => {
+      const into = soup();
+
+      layOverlay(
+        overlay,
+        {
+          ...place(17, 3, { height: drawn }),
+          ...(given ? { spacing: [spacing, spacing] as const } : {}),
+        },
+        into
+      );
+
+      return into.positions;
+    },
+    // Of each triangle laid flat, as far over the land at each corner, how far it strays from that at its middle and
+    //  its edges' middles: the most of any, and how many were laid flat.
+    worst = (p: readonly number[]): [number, number] => {
+      let most = 0,
+        flat = 0;
+
+      for (let at = 0; at + 8 < p.length; at += 9) {
+        const corners = [0, 1, 2].map((k): [number, number, number] => [
+            p[at + k * 3]!,
+            p[at + k * 3 + 1]!,
+            p[at + k * 3 + 2]!,
+          ]),
+          over = ([u, y, v]: [number, number, number]) => y - drawn(u, v),
+          lifts = corners.map(over);
+
+        if (Math.max(...lifts) - Math.min(...lifts) > 1e-9) {
+          continue;
+        }
+
+        flat++;
+
+        const mix = (w: [number, number, number]): [number, number, number] =>
+          [0, 1, 2].map((axis) =>
+            corners.reduce((sum, corner, k) => sum + corner[axis]! * w[k]!, 0)
+          ) as [number, number, number];
+
+        [
+          mix([1 / 3, 1 / 3, 1 / 3]),
+          mix([0.5, 0.5, 0]),
+          mix([0, 0.5, 0.5]),
+          mix([0.5, 0, 0.5]),
+        ].forEach((sample) => {
+          most = Math.max(most, Math.abs(over(sample) - lifts[0]!));
+        });
+      }
+
+      return [most, flat];
+    },
+    roads = overlayFor(square(['Road', 'Railroad']), everyWay)!,
+    fields = overlayFor(square(['Irrigation']), [])!,
+    farmland = overlayFor(square(['Irrigation', 'Farmland']), [])!,
+    [roadsGiven, fieldsGiven, farmlandGiven, roadsNot] = [
+      worst(laidOn(roads, true)),
+      worst(laidOn(fields, true)),
+      worst(laidOn(farmland, true)),
+      worst(laidOn(roads, false)),
+    ];
+
+  expect(
+    'on steep land, given its spacing, roads every way, a railroad, irrigation and farmland lie exactly their lift over it everywhere, not only at their corners; without it, they cut across its creases',
+    [
+      roadsGiven[1] > 100 && roadsGiven[0] < 1e-9,
+      fieldsGiven[1] > 100 && fieldsGiven[0] < 1e-9,
+      farmlandGiven[1] > 100 && farmlandGiven[0] < 1e-9,
+      roadsNot[0] > 0.003,
+    ],
+    [true, true, true, true]
   );
 }
 
@@ -6736,9 +6902,11 @@ const pointsColoured = (mesh: OverlayMesh, css: string) => {
           Math.abs(c[at * 3 + 1]! - g) < 1e-4 &&
           Math.abs(c[at * 3 + 2]! - b) < 1e-4
         ) {
+          // To a hundred-thousandth: two squares' points at one place differ by a 32-bit rounding, but points laid
+          //  as near as 0.00004 apart, where a cell's cut along the land's, are two.
           const key = `${group}:${(((u % periodU) + periodU) % periodU).toFixed(
-            4
-          )},${v.toFixed(4)}`;
+            5
+          )},${v.toFixed(5)}`;
 
           heights.set(key, (heights.get(key) ?? new Set()).add(y - lift));
         }
