@@ -833,15 +833,18 @@ How plants are placed:
   - **White water** (fifth part, `foamAt` in `terrain/ribbons.ts`, `riverMaterial.ts`): where a river's water falls
     steeply, it breaks white.
     - **How white:** each point of its water has a `foam`, from 0 to 1, by how steeply the water falls there as it's
-      laid, taken across half the land's spacing either way: none under `RAPIDS.from` (0.1), all from `RAPIDS.full`
-      (0.25), and more the steeper between. So a drop over one of the land's cells whitens the water a little above and
-      below it too. It's by where a point is alone, so wherever strips and discs share a point or overlap, at bends and
-      junctions, they're as white as each other. Its points and triangles are as they were.
+      laid, taken just either side of it (a 32nd of the land's spacing), so by the land's triangles that meet there,
+      not a bank half a cell off: none under `RAPIDS.from` (0.1), all from `RAPIDS.full` (0.25), and more the steeper
+      between. Drawn between its points, a drop over one of the land's cells whitens the water a little above and below
+      it too. It's by where a point is alone, so wherever strips and discs share a point or overlap, at bends and
+      junctions, or two chunks draw water at one place, they're as white as each other. Its points and triangles are as
+      they were.
     - **Where:** Civ1's rivers, in their valleys, fall no more than about 0.06, so they never break. Civ2's, a feature
-      on hills and mountains, fall as steeply as 0.3 in places. A river's levels aren't ordered downhill yet, so where
+      on hills and mountains, fall as steeply as 0.3 to 0.5 in places. A river's levels aren't ordered downhill yet, so where
       one climbs out of a saddle between mountains, it breaks white there too (#1388).
     - **Drawn:** the shader whitens the water where its foam's over a noise of two sizes, by where it is on the ground
-      (22 and 66 to a unit), so it breaks in patches: more of them the more it foams, and nearly all white where it's
+      (about 22 and 66 to a unit, a whole number of them to the world's period, so it's the same at every copy of the
+      world: `latticeOf`), so it breaks in patches: more of them the more it foams, and nearly all white where it's
       steepest, with flecks of water between. It's rough there, as broken water's no mirror. It doesn't move: that's
       with #1365.
     - **No falls of their own:** a river holding its upper level to the edge between its squares, then falling, barely

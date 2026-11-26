@@ -521,7 +521,7 @@ export const createStage: StageFactory = (
     // The land's colour at each point, and its surfaces' detail over it (`landMaterial.ts`).
     { material, detail } = landMaterial(period, ground.rows * ground.spacingV),
     // The rivers' water (`terrain/ribbons.ts`), white where it breaks (`riverMaterial.ts`).
-    riverWater = riverMaterial(),
+    riverWater = riverMaterial(period),
     sun = new DirectionalLight(SUN, 2.6),
     // What's drawn at every copy of the world in sight: the land's chunks by `i,j`, and the squares' markers by `x,y`.
     //  Each has where it lies, how to make one copy of it, and the copies drawn now.

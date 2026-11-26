@@ -36,6 +36,7 @@ import {
   underLand,
 } from '@civ-clone/ui-map-3d/terrain/rivers';
 import { TopologyId } from '@civ-clone/ui-protocol/topology';
+import { latticeOf } from '@civ-clone/ui-map-3d/riverMaterial';
 import {
   Ground,
   RAPIDS,
@@ -1398,8 +1399,9 @@ ids.forEach((topologyId) => {
 });
 
 // White water (`foamAt`): none where the water falls less steeply than `RAPIDS.from`, all white from `RAPIDS.full`, and
-//  between, more the steeper, east or south; none where it's at the sea's level, flat, however the land under it falls.
-//  Each point of a river's water as white as `foamAt` says there.
+//  between, more the steeper, east or south; none where it's at the sea's level, flat, however the land under it falls;
+//  by the slope just either side of a point, not a bank a little off. Each point of a river's water as white as
+//  `foamAt` says there.
 {
   const sloping = (east: number, south = 0, at = 0.05): Ground => ({
       at: (u, v) => at + east * u + south * v,
@@ -1409,13 +1411,20 @@ ids.forEach((topologyId) => {
     middle = (RAPIDS.from + RAPIDS.full) / 2,
     course = courseFrom(0, 0, 1, 0, { seed: 5 }),
     into: RibbonMesh = { positions: [], indices: [], foam: [] },
-    steep = sloping(middle, 0.05);
+    steep = sloping(middle, 0.05),
+    // Flat, then a bank rising 1 in 1 from 0.03 east of (2, 3), its cells far taller than they're wide: the slope at
+    //  (2, 3) is taken just either side of it, across, not half a cell off, on the bank, nor half a cell down.
+    creased: Ground = {
+      at: (u) => 0.05 + Math.max(0, u - 2.03),
+      spacingU: 0.125,
+      spacingV: 2,
+    };
 
   course.levels = course.widths.map(() => 0.02);
   ribbonOf(course, 3, 4, into, steep);
 
   expect(
-    'white water: none under its least slope, all white from its most, between more the steeper, either way; none at the sea’s level; each point as white as where it is says',
+    'white water: none under its least slope, all white from its most, between more the steeper, either way; none at the sea’s level; none beside a bank, all on it; each point as white as where it is says',
     [
       foamAt(sloping(0), 2, 3),
       foamAt(sloping(0.06), 2, 3),
@@ -1428,6 +1437,8 @@ ids.forEach((topologyId) => {
       ) < 1e-9,
       foamAt(sloping(RAPIDS.from * 0.8, RAPIDS.from * 0.8), 2, 3) > 0,
       foamAt(sloping(0.4, 0, -2), 2, 3),
+      foamAt(creased, 2, 3),
+      foamAt(creased, 2.06, 3),
       into.foam.length === into.positions.length / 3 && into.foam.length > 0,
       into.foam.every(
         (white, at) =>
@@ -1435,72 +1446,153 @@ ids.forEach((topologyId) => {
           foamAt(steep, into.positions[at * 3]!, into.positions[at * 3 + 2]!)
       ),
     ],
-    [0, 0, 0, 1, 1, 0.5, true, true, 0, true, true]
+    [0, 0, 0, 1, 1, 0.5, true, true, 0, 0, 1, true, true]
   );
 }
 
-// Through the land, chunks four across: a river through mountains and hills to the sea. Civ1's, on River squares in
-//  their valleys, never breaks white. Civ2's, a feature on the mountains and hills themselves, breaks white where it
-//  falls from them. Wherever two chunks' water has a point at the same place on the world, it's as white in both.
+// Through the land, on each grid, chunks four across: a river east from (1, 5) to the sea, along the grid's edges,
+//  through mountains, hills and grassland. Civ1's, on River squares in their valleys, never breaks white. Civ2's, a
+//  feature on the mountains and hills themselves, breaks white where it falls from them. Wherever two chunks' water has
+//  a point at the same place on the world, it's as white in both, white water too, on some grid.
 {
-  const topology = topologyFor({ width, height, topologyId: 'square' }),
-    layout: GroundLayout = groundLayoutFor({
-      width,
-      height,
-      topologyId: 'square',
-      wrapsY: topology.wrapsY(),
-    }),
-    period = layout.period(),
-    land = (x: number) =>
-      x >= 11 ? 'Ocean' : x < 4 ? 'Mountains' : x < 7 ? 'Hills' : 'Grassland',
-    river = (x: number, y: number) => y === 5 && x >= 1 && x <= 10,
-    foamOf = (terrainAt: (x: number, y: number) => string) => {
-      const relief = createRelief({
-          layout,
-          source: sourceFor(topology, terrainAt, river),
+  const shared: number[][] = [],
+    worlds = ids.map((topologyId) => {
+      const topology = topologyFor({ width, height, topologyId }),
+        layout: GroundLayout = groundLayoutFor({
+          width,
+          height,
+          topologyId,
+          wrapsY: topology.wrapsY(),
         }),
-        grid = chunkGrid(layout, height, { size: 4 }),
-        // Each point's whiteness, by where it is on the world, to a hundred-thousandth.
-        byPlace = new Map<string, number[]>();
+        period = layout.period(),
+        eastOf = (x: number) => layout.centre(x, 5)[0],
+        land = (x: number, y: number) => {
+          const [u] = layout.centre(x, y);
 
-      for (let at = 0; at < grid.chunksU * grid.chunksV; at++) {
-        const chunk = buildChunk(
-          grid,
-          relief,
-          at % grid.chunksU,
-          Math.floor(at / grid.chunksU)
-        );
+          return u >= 11
+            ? 'Ocean'
+            : u < 4
+            ? 'Mountains'
+            : u < 7
+            ? 'Hills'
+            : 'Grassland';
+        },
+        // Each step on to the neighbour across an edge furthest east, short of the sea.
+        chain = new Set<string>();
+      let at: [number, number] | null = [1, 5];
 
-        chunk.river?.foam.forEach((white, point) => {
-          const u = chunk.river!.positions[point * 3]! + chunk.u,
-            v = chunk.river!.positions[point * 3 + 2]! + chunk.v,
-            key = `${(((u % period.u) + period.u) % period.u).toFixed(
-              5
-            )},${v.toFixed(5)}`;
+      while (at !== null) {
+        chain.add(`${at[0]},${at[1]}`);
 
-          byPlace.set(key, [...(byPlace.get(key) ?? []), white]);
-        });
+        const here = layout.centre(at[0], at[1])[0],
+          [next]: [number, number][] = topology
+            .edgeDirections()
+            .map((direction) => topology.neighbour(at![0], at![1], direction))
+            .filter(
+              (square): square is [number, number] =>
+                square !== null &&
+                layout.centre(square[0], square[1])[0] > here + 0.1 &&
+                land(square[0], square[1]) !== 'Ocean'
+            )
+            .sort(
+              ([ax, ay], [bx, by]) =>
+                layout.centre(bx, by)[0] - layout.centre(ax, ay)[0]
+            );
+
+        at = next ?? null;
       }
 
-      return [...byPlace.values()];
-    },
-    civ1 = foamOf((x, y) => (river(x, y) ? 'River' : land(x))),
-    civ2 = foamOf((x) => land(x));
+      const river = (x: number, y: number) => chain.has(`${x},${y}`),
+        foamOf = (terrainAt: (x: number, y: number) => string) => {
+          const relief = createRelief({
+              layout,
+              source: sourceFor(topology, terrainAt, river),
+            }),
+            grid = chunkGrid(layout, height, { size: 4 }),
+            // Each point's whiteness, by where it is on the world, to a hundred-thousandth.
+            byPlace = new Map<string, number[]>();
+
+          for (let at = 0; at < grid.chunksU * grid.chunksV; at++) {
+            const chunk = buildChunk(
+              grid,
+              relief,
+              at % grid.chunksU,
+              Math.floor(at / grid.chunksU)
+            );
+
+            chunk.river?.foam.forEach((white, point) => {
+              const u = chunk.river!.positions[point * 3]! + chunk.u,
+                v = chunk.river!.positions[point * 3 + 2]! + chunk.v,
+                key = `${(((u % period.u) + period.u) % period.u).toFixed(
+                  5
+                )},${(period.v === null
+                  ? v
+                  : ((v % period.v) + period.v) % period.v
+                ).toFixed(5)}`;
+
+              byPlace.set(key, [...(byPlace.get(key) ?? []), white]);
+            });
+          }
+
+          return [...byPlace.values()];
+        },
+        civ1 = foamOf((x, y) => (river(x, y) ? 'River' : land(x, y))),
+        civ2 = foamOf(land);
+
+      shared.push(...[...civ1, ...civ2].filter((whites) => whites.length > 1));
+
+      return [
+        topologyId,
+        chain.size >= 6 && eastOf(1) < 4,
+        civ1.flat().length > 0 && civ1.flat().every((white) => white === 0),
+        civ2.flat().some((white) => white > 0.5),
+        civ2.flat().some((white) => white === 0),
+      ];
+    });
 
   expect(
-    'white water through the land: none on Civ1’s River squares in their valleys; some on Civ2’s, where it falls from mountains and hills, some of it all white; at a place two chunks’ water shares, as white in both',
+    'white water through the land, on each grid: none on Civ1’s River squares in their valleys; some on Civ2’s, where it falls from mountains and hills; at a place two chunks’ water shares, as white in both, white water too',
     [
-      civ1.length > 0,
-      civ1.flat().every((white) => white === 0),
-      civ2.flat().some((white) => white > 0.5),
-      civ2.flat().some((white) => white === 1),
-      civ2.flat().some((white) => white === 0),
-      civ2.some((whites) => whites.length > 1),
-      civ2.every((whites) =>
+      worlds,
+      shared.some((whites) => whites.some((white) => white > 0)),
+      shared.every((whites) =>
         whites.every((white) => Math.abs(white - whites[0]!) < 1e-6)
       ),
     ],
-    [true, true, true, true, true, true, true]
+    [ids.map((topologyId) => [topologyId, true, true, true, true]), true, true]
+  );
+}
+
+// The white water's noise (`latticeOf`): a whole number of its cells in each period of the world, about as many to a
+//  unit as asked, so it's the same at every copy of the world; down a world that doesn't repeat, as many as asked.
+{
+  const fits = (period: { u: number; v: number | null }, perUnit: number) => {
+    const [scaleU, scaleV, cellsU, cellsV] = latticeOf(period, perUnit);
+
+    return [
+      Number.isInteger(cellsU) && near(scaleU * period.u, cellsU),
+      Math.abs(scaleU / perUnit - 1) < 0.05,
+      period.v === null
+        ? cellsV === 0 && scaleV === perUnit
+        : Number.isInteger(cellsV) &&
+          cellsV > 0 &&
+          near(scaleV * period.v, cellsV) &&
+          Math.abs(scaleV / perUnit - 1) < 0.05,
+    ];
+  };
+
+  expect(
+    'white water’s noise: a whole number of its cells to each period of the world, about as many to a unit as asked; down a world that doesn’t repeat, as many as asked',
+    [
+      fits({ u: 12, v: null }, 22),
+      fits({ u: 97.3, v: 64.6 }, 66),
+      fits({ u: 8, v: 6.93 }, 22),
+    ],
+    [
+      [true, true, true],
+      [true, true, true],
+      [true, true, true],
+    ]
   );
 }
 

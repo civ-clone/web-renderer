@@ -33,9 +33,12 @@ export const RIVER_LIFT = 0.004;
 /**
  * How steeply a river's water falls, as it's laid, where it starts to break white (`from`), and where it's all white
  *  (`full`): rise over run. Civ1's rivers, in their valleys, fall no more than about 0.06, so never break; Civ2's, over
- *  hills and mountains, fall as steeply as 0.3 in places.
+ *  hills and mountains, fall as steeply as 0.3 to 0.5 in places.
  */
 export const RAPIDS = { from: 0.1, full: 0.25 } as const;
+
+// How far either side of a point its water's slope is taken, as a share of the land's spacing.
+const PROBE = 1 / 32;
 
 // Smoothly from 0 to 1 as `t` goes from 0 to 1.
 const smooth = (t: number): number => {
@@ -45,15 +48,17 @@ const smooth = (t: number): number => {
 };
 
 /**
- * How white a river's water is at (`u`, `v`), laid on `ground`: by how steeply it falls there, taken across half the
- *  land's spacing either way, so a drop over one of its cells whitens the water a little above and below it too. By
- *  where it is alone, so wherever two strips or discs share a point, or overlap, they're as white as each other.
+ * How white a river's water is at (`u`, `v`), laid on `ground`: by how steeply it falls there, taken just either side
+ *  of it (`PROBE` of the land's spacing), so by the land's triangles that meet there, under the water, and not the bank
+ *  half a cell off. Drawn between its points, a drop over one of the land's cells whitens the water a little above and
+ *  below it too. By where it is alone, so wherever two strips or discs share a point, or overlap, they're as white as
+ *  each other.
  */
 export const foamAt = (ground: Ground, u: number, v: number): number => {
   const water = (pu: number, pv: number) =>
       Math.max(0, ground.at(pu, pv) + RIVER_LIFT),
-    eu = ground.spacingU / 2,
-    ev = ground.spacingV / 2,
+    eu = ground.spacingU * PROBE,
+    ev = ground.spacingV * PROBE,
     slope = Math.hypot(
       (water(u + eu, v) - water(u - eu, v)) / (eu * 2),
       (water(u, v + ev) - water(u, v - ev)) / (ev * 2)
