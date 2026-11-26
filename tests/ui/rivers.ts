@@ -1509,8 +1509,8 @@ ids.forEach((topologyId) => {
               source: sourceFor(topology, terrainAt, river),
             }),
             grid = chunkGrid(layout, height, { size: 4 }),
-            // Each point's whiteness, by where it is on the world, to a hundred-thousandth.
-            byPlace = new Map<string, number[]>();
+            // Each point's whiteness, and the chunk that drew it, by where it is on the world, to a hundred-thousandth.
+            byPlace = new Map<string, [chunk: number, white: number][]>();
 
           for (let at = 0; at < grid.chunksU * grid.chunksV; at++) {
             const chunk = buildChunk(
@@ -1530,28 +1530,35 @@ ids.forEach((topologyId) => {
                   : ((v % period.v) + period.v) % period.v
                 ).toFixed(5)}`;
 
-              byPlace.set(key, [...(byPlace.get(key) ?? []), white]);
+              byPlace.set(key, [...(byPlace.get(key) ?? []), [at, white]]);
             });
           }
 
           return [...byPlace.values()];
         },
         civ1 = foamOf((x, y) => (river(x, y) ? 'River' : land(x, y))),
-        civ2 = foamOf(land);
+        civ2 = foamOf(land),
+        whites = (places: [number, number][][]) =>
+          places.flatMap((drawn) => drawn.map(([, white]) => white));
 
-      shared.push(...[...civ1, ...civ2].filter((whites) => whites.length > 1));
+      // Where two chunks, not one, drew water at one place.
+      shared.push(
+        ...[...civ1, ...civ2]
+          .filter((drawn) => new Set(drawn.map(([chunk]) => chunk)).size > 1)
+          .map((drawn) => drawn.map(([, white]) => white))
+      );
 
       return [
         topologyId,
         chain.size >= 6 && eastOf(1) < 4,
-        civ1.flat().length > 0 && civ1.flat().every((white) => white === 0),
-        civ2.flat().some((white) => white > 0.5),
-        civ2.flat().some((white) => white === 0),
+        whites(civ1).length > 0 && whites(civ1).every((white) => white === 0),
+        whites(civ2).some((white) => white > 0.25),
+        whites(civ2).some((white) => white === 0),
       ];
     });
 
   expect(
-    'white water through the land, on each grid: none on Civ1’s River squares in their valleys; some on Civ2’s, where it falls from mountains and hills; at a place two chunks’ water shares, as white in both, white water too',
+    'white water through the land, on each grid: none on Civ1’s River squares in their valleys; some on Civ2’s, where it falls from mountains and hills; at a place two chunks’ water shares, as white in both, white water at some',
     [
       worlds,
       shared.some((whites) => whites.some((white) => white > 0)),

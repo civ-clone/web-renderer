@@ -81,11 +81,12 @@ float riverHash(vec2 at) {
   return fract((p.x + p.y) * p.z);
 }
 // A whole point of a lattice, \`cells\` of it to the world across and down, taken round where the world repeats, so it's
-//  the same at every copy of the world.
+//  the same at every copy of the world. Not \`mod\`, which a GPU dividing by a reciprocal can leave a whole lap over.
 vec2 riverWrap(vec2 whole, vec2 cells) {
+  vec2 laps = floor((whole + 0.5) / max(cells, 1.0));
   return vec2(
-    cells.x > 0.0 ? mod(whole.x, cells.x) : whole.x,
-    cells.y > 0.0 ? mod(whole.y, cells.y) : whole.y
+    cells.x > 0.0 ? whole.x - cells.x * laps.x : whole.x,
+    cells.y > 0.0 ? whole.y - cells.y * laps.y : whole.y
   );
 }
 // Smoothly between a lattice's points at \`at\` on the ground: its cells to a unit across and down, and to the world.

@@ -839,8 +839,9 @@ How plants are placed:
       it too. It's by where a point is alone, so wherever strips and discs share a point or overlap, at bends and
       junctions, or two chunks draw water at one place, they're as white as each other. Its points and triangles are as
       they were.
-    - **Where:** Civ1's rivers, in their valleys, fall no more than about 0.06, so they never break. Civ2's, a feature
-      on hills and mountains, fall as steeply as 0.3 to 0.5 in places. A river's levels aren't ordered downhill yet, so where
+    - **Where:** Civ1's rivers, in their valleys, are nearly flat: along them they fall no more than about 0.06, and
+      their water's steepest, across a mouth, about 0.095 where I've measured, just under `RAPIDS.from`, so they don't
+      break. Civ2's, a feature on hills and mountains, fall as steeply as 0.3 to 0.5 in places. A river's levels aren't ordered downhill yet, so where
       one climbs out of a saddle between mountains, it breaks white there too (#1388).
     - **Drawn:** the shader whitens the water where its foam's over a noise of two sizes, by where it is on the ground
       (about 22 and 66 to a unit, a whole number of them to the world's period, so it's the same at every copy of the

@@ -32,8 +32,9 @@ export const RIVER_LIFT = 0.004;
 
 /**
  * How steeply a river's water falls, as it's laid, where it starts to break white (`from`), and where it's all white
- *  (`full`): rise over run. Civ1's rivers, in their valleys, fall no more than about 0.06, so never break; Civ2's, over
- *  hills and mountains, fall as steeply as 0.3 to 0.5 in places.
+ *  (`full`): rise over run, any way. Civ1's rivers, in their valleys, are nearly flat, their water no steeper than about
+ *  0.095 where I've measured, across a mouth, so they don't break; Civ2's, over hills and mountains, fall as steeply as
+ *  0.3 to 0.5 in places.
  */
 export const RAPIDS = { from: 0.1, full: 0.25 } as const;
 
