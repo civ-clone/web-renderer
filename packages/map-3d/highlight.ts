@@ -8,9 +8,10 @@ import { Ground, RibbonMesh, lay } from './terrain/ribbons';
 
 /**
  * How wide the band is, in from the outline; how far over the land it lies, over the highest of what's laid flat on it
- *  (a runway's markings, `LIFT.marking`); and how bright it is at the outline, from 0 to 1.
+ *  (a runway's markings, `LIFT.marking`, 0.024 over the land, and 0.036 over it where they're on a bridge's deck over a
+ *  river at the outline); and how bright it is at the outline, from 0 to 1.
  */
-export const HIGHLIGHT = { width: 0.09, lift: 0.03, edge: 0.55 } as const;
+export const HIGHLIGHT = { width: 0.09, lift: 0.04, edge: 0.55 } as const;
 
 /** The band, as three.js takes it: its points, three numbers each; its triangles; and how bright it is at each point. */
 export type HighlightMesh = {
