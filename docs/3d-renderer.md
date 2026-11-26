@@ -1851,7 +1851,8 @@ in its set (plan 2.2). It's in the model's entry:
   for a rival's or a quick walk, slower as it gets going and stops. Each walk starts the clip from its start, and a
   squad's figures are 0.13 s apart. Waiting where it's come, or fighting, it stands as its model does, till `fight` and
   `die` are played. The Partisans' was the first; the Riflemen's, Musketmen's and Marines' followed, then the
-  Explorers', the Spies', the Fanatics', the Warriors', the Engineers' and the Alpine Troops', who glide on skis.
+  Explorers', the Spies', the Fanatics', the Warriors', the Engineers', the Alpine Troops', who glide on skis, and
+  the Paratroopers', who swing with their canopies about their planted feet.
 - **Since:** `fight` with its shots, and `die`, on the battles' own frames (the fourth part, below); and `idle`,
   with frames drawn for it (the fifth).
 
@@ -1946,6 +1947,10 @@ each kind goes as it would (`SHOT_LOOKS` in `shots.ts`):
   a node under its weapon) about half a second into its `fight`, the Marines three a sixth of a second apart, though
   Marines that attack and lose fire only the first, as the blow comes as it lands (`shotsFired`). Cannons fire once
   their models have rigged copies whose `fight` clips say so.
+- **The Paratroopers' gun:** their rigged copies, since models-realistic-by 7fd50670, fire three bullets a sixth of a
+  second apart from the hip, from 0.5 s into their `fight`, though, as the Marines, one that attacks and loses fires
+  only the first. Their `muzzle` hangs from the chest joint, with no `prop`, which needed nothing here either: a
+  shot's joint is found by its name (`jointOf`).
 
 ---
 
