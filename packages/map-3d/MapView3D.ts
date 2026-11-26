@@ -3029,8 +3029,15 @@ export class MapView3D implements MapRenderer {
 
     this.#releasedAt.clear();
 
-    // The square lit laid again where the land under it may have changed.
-    if (replaced || reshaped.some(([x, y]) => `${x},${y}` === this.#highlit)) {
+    // The square lit laid again where the land under it may have changed; and with none lit under the mouse, picked
+    //  again, as the square under it may have been seen since.
+    if (
+      replaced ||
+      (this.#pointer !== null &&
+        this.#highlit === null &&
+        squares.length > 0) ||
+      reshaped.some(([x, y]) => `${x},${y}` === this.#highlit)
+    ) {
       this.#highlightStale = true;
     }
 
@@ -3441,7 +3448,10 @@ export class MapView3D implements MapRenderer {
       return false;
     }
 
-    this.#highlightView = view;
+    // Kept only once the camera's placed for it: a unit's picked through the camera as it was last placed.
+    if (framed) {
+      this.#highlightView = view;
+    }
 
     const pointer = this.#pointer,
       tile =

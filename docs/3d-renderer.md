@@ -593,15 +593,19 @@ blended across squares.
     line's.
   - **Where it lies:** on the land as its mesh draws it (`Land#surface`), cut along its cells as rivers' water is
     (`lay` in `terrain/ribbons.ts`), `HIGHLIGHT.lift` (0.03) over it: over the highest of what's laid flat on the land,
-    a runway's markings, so it shows over fields, roads and railroads, while trees, buildings and units stand in front
-    of it. At sea, that much over the sea's surface. Drawn at every copy of the world, seen through, and clipped at the
+    a runway's markings. That's pulled in front of the land (`polygonOffset`) further than the band's lift over it
+    once the camera's far off, so the band's pulled in front a little more again (-2, -8, against the overlay's -2,
+    -6), and shows over fields, roads and railroads at any distance, while trees, buildings and units stand in front of
+    it. At sea, that much over the sea's surface. Drawn at every copy of the world, seen through, and clipped at the
     poles where the view stops there. Drawn after the sea (`HIGHLIGHT_ORDER`, before smog and the cloud, §4.5), as
     the sea, seen through, is one plane across the world that three.js can only order by that: drawn before it, the
     sea would be painted over it at sea and over drowned coasts.
   - **Which square:** the one under the mouse as it rests over the map with no button held (`CameraInput`'s `hover`,
     which also opens tooltips), picked as a click is (`#tileAt`, so a unit's square where a unit's under it). It's
     picked again in a frame where the camera's moved, once it's placed, as the map can move under a still mouse, and
-    laid again only where it's another square or the land under it has changed. None over a square never seen, while a menu's open over the map, or once the
+    laid again only where it's another square or the land under it has changed. Where the square under the mouse was
+    never seen, it's picked again when squares change, as it may be seen now. A unit walking under a still mouse
+    doesn't move it. None over a square never seen, while a menu's open over the map, or once the
     mouse has left the map or pressed. A key doesn't end it, as it does a tooltip.
   - **Cost:** a frame where the mouse moves onto another square; none as it moves within one. On a late Civ1 save,
     a move took 0.8 ms at the median and 1.6 ms at the 90th percentile, picking the square for the tooltip and the

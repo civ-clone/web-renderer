@@ -697,14 +697,18 @@ export const createStage: StageFactory = (
     // What each square yields, over the land at every copy of the world, when they're shown.
     yieldsGroup = new Group(),
     // The square under the pointer, lit (`highlight.ts`): a warm white, as bright at each point as it says, seen
-    //  through. Its lift keeps it over the land and what lies flat on it, so it isn't pulled in front of them as the
-    //  rivers' water is (`polygonOffset`).
+    //  through. Pulled in front of what it lies on, a little more than what's laid flat on the land is (the
+    //  overlay's `polygonOffset`) and the rivers' water, as they're pulled in front of the land further than the
+    //  band's lift over them once the camera's far off.
     highlightGroup = new Group(),
     highlightMaterial = new MeshBasicMaterial({
       color: 0xffffff,
       vertexColors: true,
       transparent: true,
       depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -8,
     }),
     yields = new YieldIcons(yieldIcon ?? ((): null => null)),
     water = new Water(ground, new Color(SKY)),

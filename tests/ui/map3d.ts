@@ -2421,14 +2421,43 @@ expect(
 
     const unseen = lit();
 
+    // Seen now, under the still mouse: lit.
     tiles[6]!.terrain = before;
+    lighter.queueTile(tiles[6] as Tile);
+    lighter.releaseTiles();
+    lighter.flush();
+
+    const revealed = lit();
+
     lighter.dispose();
     highlightsSet.splice(0);
 
     expect(
-      'the square under the mouse lit at once, only again for another square or where its land changes, not ended by a key; the map moving under it lights the square there; none under a menu, once pressed, over a square never seen, or once the mouse has left',
-      [first, same, moved, underMenu, back, reshaped, pressed, left, unseen],
-      [['1,1'], [], ['2,1'], [null], ['2,1'], ['2,1'], [null], [null], []]
+      'the square under the mouse lit at once, only again for another square or where its land changes, not ended by a key; the map moving under it lights the square there; none under a menu, once pressed, over a square never seen till it’s seen, or once the mouse has left',
+      [
+        first,
+        same,
+        moved,
+        underMenu,
+        back,
+        reshaped,
+        pressed,
+        left,
+        unseen,
+        revealed,
+      ],
+      [
+        ['1,1'],
+        [],
+        ['2,1'],
+        [null],
+        ['2,1'],
+        ['2,1'],
+        [null],
+        [null],
+        [],
+        ['2,1'],
+      ]
     );
   }
 
