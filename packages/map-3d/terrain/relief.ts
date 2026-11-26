@@ -104,10 +104,14 @@ export interface ReliefMap {
   coursesAt(x: number, y: number): readonly RiverPath[];
 }
 
-/** A river's course where it lies on the ground: its points (`u`, `v`), and how wide its water is either side at each. */
+/**
+ * A river's course where it lies on the ground: its points (`u`, `v`), and at each how wide its water is either side,
+ *  and its level, which its channel's cut under (`rivers.ts`).
+ */
 export type RiverPath = {
   points: readonly (readonly [number, number])[];
   widths: readonly number[];
+  levels: readonly number[];
 };
 
 // How much of a peak's height is its own, weighted by the square of its weight: the rest is in the blend with its
@@ -1322,6 +1326,7 @@ export const createRelief = ({
             mv + (course.points[step * 2 + 1] ?? 0),
           ]),
           widths: course.widths,
+          levels: course.levels,
         };
       });
     },

@@ -802,8 +802,34 @@ How plants are placed:
     place with the most, which can take it a little into a channel's bed, though not, where I've looked, its water. A
     field's rows stop short of a channel either side, where its round ends and the band between them cross the row
     (`channelAcross`, met at five lines down it). A city's lot is left alone: its plaza and buildings stand over the
-    river, as the 2D map's city covers its square. Roads, railroads, a fortress's walls and an airbase's runway still
-    cross the water as they lie on the land, till bridges.
+    river, as the 2D map's city covers its square.
+  - **Bridges** (fourth part, `overlayMesh.ts`): roads, railroads and an airbase's runway cross a river's water on a
+    bridge, and a city's plaza and streets lie on the same deck over it.
+    - **The deck:** where each is over the water, it's laid on a deck `BRIDGE.clearance` (0.008) over the water's
+      surface, flat across the water and `BRIDGE.past` (0.03) either side, then falling to the land as steeply as
+      `BRIDGE.slope` (0.35), never under the land (`Layer#deckAt`).
+    - **Its height:** the water's surface is taken from the river's level, where a point falls along its course, as
+      its channel's cut takes it (`riverNear`, from `ReliefMap#coursesAt`, which gives each course's levels with its
+      points). So the deck's height is the same at a point from either square, and two squares' roads, railroads and a
+      city's streets meet at one height at the edge between them, on a bridge or not. Where no river's near, a square's
+      laid as it was. Each point on a deck is worked out once for its square, as strips' triangles share their corners.
+    - **Its walls:** along a road's, railroad's, runway's or apron's edges, wherever the edge itself is on the deck
+      (not only its middle: a runway's far edge needn't be), from the land or the river's bed to `BRIDGE.parapet`
+      (0.012) over it: stone for a road, iron girders for a railroad, concrete for a runway and its apron. They stand
+      on its edges as its ribbon lays them, so they follow its bends and end where it does. A road through the square,
+      its halves turning no more than about 70° at its middle, has its walls as one, mitred there. Elsewhere they open
+      where the square's other roads and railroads join or a road or railroad on its own lies, and where an airbase's
+      runway or apron crosses (so roads' and railroads' walls are laid last, once the apron's laid); and a runway's and
+      its apron's open for each other: no corner of a wall stands on one. Lengths shorter than 0.06 are left out, so a
+      road just reaching over the water at a junction has none. A railroad's girders stand on its ballast's deck. Each
+      wall's inner face starts `BRIDGE.under` (0.005) under the deck, as its route is laid less finely than its walls
+      where its deck bends. Straight, evenly sloped lengths are one face. A city's streets have no walls.
+    - **Where they meet:** every road and railroad on a river square starts at its middle, where its rivers meet, so
+      that's where they cross. One that runs the same way as a river runs along it on a causeway, the same deck and
+      walls, as far as it's over the water.
+    - **A fortress's walls,** where a length of them is over the water, or within `BRIDGE.past` of it, at its middle
+      or either end, leave a gate for it, their foot `WATER_GATE` (0.02) over its surface.
+    - **A unit** at a river square's middle still stands on the land, so a little lower than a road's deck there.
 
 ### 5.4 Tile improvements
 
@@ -853,7 +879,9 @@ Each is looked up by its type name in the model set.
     its own (`LIFT`), so none lies in another's plane. The hangar and the tower each claim the most room there is for
     them inside the square, as a special does, off the runway (what stands there keeps its room clear of the line down
     its middle); the tower, and what's claimed after, off the apron too. Their walls stand on the ground.
-  - **The debug page** lays out fortresses, airbases, mines and farms, some with roads, with `improvements=1`.
+  - **The debug page** lays out fortresses, airbases, mines and farms, some with roads, with `improvements=1`; and on
+    Civ1's River squares with rivers through them, a road and a railroad across one, a road along one, a fortress and
+    an airbase on one.
 - **Pollution and fallout:** smog, a low, sooty brown haze over the square (#1335), darker than open land and rock,
   so it shows over mountains (forest, jungle and swamp are about as dark, and it's told from them by its hue):
   see-through, so the land and what's on it show through, thickest at its

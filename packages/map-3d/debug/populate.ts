@@ -496,9 +496,12 @@ export const specialsGallery = (
 
 /**
  * What the page's improvements show (`?improvements=1`): on each terrain, what's built there, and the ways its road
- *  leaves it, by offset, each to a neighbour given a road too. The road through a fortress's corner goes to the
- *  square diagonally below on the square grid; on the others, where that's a neighbour only every other row, to the
- *  square below, a neighbour on every row, at a slant (through a corner on the staggered grid).
+ *  leaves it, by offset, each to a neighbour given a road too (`along`, or only a road), on its own terrain or
+ *  `beside`'s. The road through a fortress's corner goes to the square diagonally below on the square grid; on the
+ *  others, where that's a neighbour only every other row, to the square below, a neighbour on every row, at a slant
+ *  (through a corner on the staggered grid). Then bridges: on Civ1's River, the neighbours above and below it River
+ *  too (`rivers`), so a river runs through it, with a road or a railroad crossing it, a road along it, a fortress and
+ *  an airbase on it.
  */
 export const improvementsShown = (
   topologyId = 'square'
@@ -506,6 +509,9 @@ export const improvementsShown = (
   terrain: string;
   improvements: string[];
   roads: [number, number][];
+  along?: string[];
+  beside?: string;
+  rivers?: [number, number][];
 }[] => [
   { terrain: 'Grassland', improvements: ['Fortress'], roads: [] },
   { terrain: 'Hills', improvements: ['Fortress'], roads: [] },
@@ -528,6 +534,49 @@ export const improvementsShown = (
   { terrain: 'Mountains', improvements: ['Mine'], roads: [] },
   { terrain: 'Grassland', improvements: ['Irrigation'], roads: [] },
   { terrain: 'Plains', improvements: ['Irrigation', 'Farmland'], roads: [] },
+  ...(
+    [
+      {
+        improvements: ['Road'],
+        roads: [
+          [1, 0],
+          [-1, 0],
+        ],
+        beside: 'Grassland',
+      },
+      {
+        improvements: ['Road', 'Railroad'],
+        roads: [
+          [1, 0],
+          [-1, 0],
+        ],
+        along: ['Road', 'Railroad'],
+        beside: 'Grassland',
+      },
+      { improvements: ['Road'], roads: [[0, -1]] },
+      {
+        improvements: ['Fortress', 'Road'],
+        roads: [
+          [1, 0],
+          [-1, 0],
+        ],
+        beside: 'Grassland',
+      },
+      { improvements: ['Airbase'], roads: [] },
+    ] as {
+      improvements: string[];
+      roads: [number, number][];
+      along?: string[];
+      beside?: string;
+    }[]
+  ).map((shown) => ({
+    ...shown,
+    terrain: 'River',
+    rivers: [
+      [0, -1],
+      [0, 1],
+    ] as [number, number][],
+  })),
 ];
 
 /**
@@ -578,7 +627,17 @@ export const improvementsGallery = (
   });
 
   improvementsShown(topologyId).forEach(
-    ({ terrain, improvements, roads }, index) => {
+    (
+      {
+        terrain,
+        improvements,
+        roads,
+        along = ['Road'],
+        beside = terrain,
+        rivers = [],
+      },
+      index
+    ) => {
       const tile = squares[index];
 
       if (tile === undefined) {
@@ -586,11 +645,18 @@ export const improvementsGallery = (
       }
 
       built(tile, terrain, improvements);
+      rivers.forEach(([dx, dy]) => {
+        const neighbour = at(tile.x + dx, tile.y + dy);
+
+        if (neighbour?.isLand) {
+          built(neighbour, 'River', []);
+        }
+      });
       roads.forEach(([dx, dy]) => {
         const neighbour = at(tile.x + dx, tile.y + dy);
 
         if (neighbour?.isLand) {
-          built(neighbour, terrain, ['Road']);
+          built(neighbour, beside, along);
         }
       });
     }

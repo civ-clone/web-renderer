@@ -399,7 +399,7 @@ expect(
 
 // Its improvements, on 30 by 20 squares as for its specials: each of what it shows once, on land, on its terrain, built
 //  as it says, three squares from any other, the nearest the middle first; each of its roads' neighbours with a road on
-//  its terrain; no cities or units.
+//  its terrain, or what it says on the terrain it says; each of its rivers' neighbours River; no cities or units.
 const works = field.map((tile) => ({
     ...tile,
     terrain: { ...tile.terrain },
@@ -413,10 +413,24 @@ const works = field.map((tile) => ({
 
 improvementsGallery(works, 15, 10);
 
-const builtAt = works.filter(
-    (tile) => (tile.improvements ?? []).length > 0 && names(tile) !== 'Road'
+const shown = improvementsShown(),
+  // Its roads' neighbours: from where each is built, by its roads.
+  neighbours = new Set(
+    works.flatMap((tile) =>
+      shown
+        .filter(
+          ({ terrain, improvements }) =>
+            tile.terrain._ === terrain && names(tile) === improvements.join('+')
+        )
+        .flatMap(({ roads }) =>
+          roads.map(([dx, dy]) => at(tile.x + dx, tile.y + dy))
+        )
+    )
   ),
-  shown = improvementsShown();
+  // Where each is built: not its roads' neighbours.
+  builtAt = works.filter(
+    (tile) => (tile.improvements ?? []).length > 0 && !neighbours.has(tile)
+  );
 
 expect(
   'its improvements: each once, on its land, as it says, apart, nearest first, roads out, no cities or units',
@@ -430,23 +444,34 @@ expect(
       )
     ),
     names(at(15, 10)),
-    shown.every(({ terrain, improvements, roads }) => {
-      const tile = builtAt.find(
-        (each) =>
-          each.terrain._ === terrain && names(each) === improvements.join('+')
-      );
+    shown.every(
+      ({
+        terrain,
+        improvements,
+        roads,
+        along = ['Road'],
+        beside = terrain,
+        rivers = [],
+      }) => {
+        // One built as it says, of those that look alike.
+        return builtAt.some(
+          (tile) =>
+            tile.terrain._ === terrain &&
+            names(tile) === improvements.join('+') &&
+            roads.every(([dx, dy]) => {
+              const neighbour = at(tile.x + dx, tile.y + dy);
 
-      return (
-        tile !== undefined &&
-        roads.every(([dx, dy]) => {
-          const neighbour = at(tile.x + dx, tile.y + dy);
-
-          return (
-            names(neighbour) === 'Road' && neighbour!.terrain._ === terrain
-          );
-        })
-      );
-    }),
+              return (
+                names(neighbour) === along.join('+') &&
+                neighbour!.terrain._ === beside
+              );
+            }) &&
+            rivers.every(
+              ([dx, dy]) => at(tile.x + dx, tile.y + dy)?.terrain._ === 'River'
+            )
+        );
+      }
+    ),
     works.filter((tile) => tile.city !== null || tile.units.length > 0).length,
   ],
   [

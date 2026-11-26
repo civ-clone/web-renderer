@@ -348,7 +348,7 @@ Epic's UE4 skeleton or only match its bone names.
     fortified. Its flag flies over it, with the stack's size, the 2D map's letter for what it's busy with, a veteran's
     star, and a bar for its hit points when it's hurt.
   - The debug page lays out every unit type with `?gallery=1`, every special with `?specials=1`, and fortresses,
-    airbases, mines and farms with `?improvements=1` (#1335).
+    airbases, mines and farms with `?improvements=1` (#1335), with bridges over rivers among them.
 - **Facing:** a unit faces the way it last moved, or attacked, from the map's events (P2), and a defender faces its
   attacker.
 - **The active unit's marker:** a ring, a blink or both, as the player chooses in Options, or the theme does, and in the
@@ -506,7 +506,10 @@ the sea.
 Then what's laid on the land keeps clear of their channels: fields stop short of them, and what grows, specials, mines,
 huts and farms stand clear.
 
-Still to do in 3.3: bridges, rapids and falls, and flow (with #1365).
+Then bridges: roads, railroads and an airbase's runway cross a river's water on a deck a little over it, with stone
+walls, iron girders or concrete along them there, and a fortress's walls leave a gate for it.
+
+Still to do in 3.3: rapids and falls, and flow (with #1365).
 
 **3.4, first part: done.** What's laid on the land is made by code (`packages/map-3d/overlay/`), one vertex-coloured mesh a chunk, so it costs a draw call a chunk (and one more for its smog, where it has any, since #1335):
 - roads and railroads are draped over the land, joined to their neighbours as the 2D map joins them, along the topology's directions, and at the nearest copy across the world's seams. Roads wind like country lanes, each half bowing its own way and meeting its neighbour's at the edge; railroads are straight;
