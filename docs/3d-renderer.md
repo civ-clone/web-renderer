@@ -630,9 +630,14 @@ blended across squares.
     square's edge: how far it is from the nearest edge of the square it's on comes from where it is on the ground, as
     each grid lays its squares (`edgeDistance` in TS, the same sums in GLSL, `gridGlsl`), so there's nothing to build
     and a line follows the land's mesh exactly, over hills and mountains alike. A line reaches `GRID.half` (0.012)
-    either side of an edge, as dark as `GRID.opacity` (0.3). Further off, where that's thinner than about a pixel
-    either side, it's that wide and fainter instead, so it doesn't crawl; and where a square's under about 14 pixels
-    across, it fades, gone by 6, as the lines would crowd it. None on a square never seen (the chunks' `unseen`).
+    either side of an edge, as dark as `GRID.opacity` (0.3). Further off, where that's thinner than 0.6 of a pixel
+    either side, it's that wide and fainter instead, so it doesn't crawl. A pixel's width there is taken across the
+    nearest edge from where the pixels are on the ground (`gridEdge` gives the edge's way across as well as how far
+    it is), not from how fast the distance to it changes, which folds at the line and would say a line between two
+    pixels has none. Where a square's under about 14 of the screen's device pixels across (taken the more foreshortened
+    way, so about 20 with the view turned an eighth), it fades, gone by 6, as the lines would crowd it. None on a
+    square never seen: only where every point round it is (the chunks' `unseen`), so the line along the edge of what's
+    been seen is whole, whichever square its points were taken from, and the cloud covers the step it spills under it.
   - **Order:** seen through and writing no depth, and pulled in front of what it lies on as the light is
     (`polygonOffset` -4, -8), so it's over fields, roads and railroads and under what stands. Drawn after the sea and
     before the light (`GRID_ORDER`, 1.2): the sea's one plane across the world, which three.js can only order by
@@ -642,6 +647,8 @@ blended across squares.
     half of each line inside it. They lay exactly, but cost about 190 ms a chunk to make, more than the land itself,
     which no frame's budget can split, and about as many triangles as the land.
   - **Cost:** nothing to make. Shown, the land's triangles are drawn twice, the second time with a short shader.
+  - **Still to see:** the light's 0.04 lift and pulling forward that the lines share can put a tick of a line a pixel
+    or two over a ridge's skyline, or over the foot of what stands near an edge, as the light's band can.
 
 ---
 

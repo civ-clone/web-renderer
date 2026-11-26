@@ -7,6 +7,7 @@ import groundLayoutFor from '@civ-clone/ui-map-3d/layouts';
 import {
   GRID,
   edgeDistance,
+  nearestEdge,
   gridGlsl,
   gridMaterial,
 } from '@civ-clone/ui-map-3d/grid';
@@ -56,9 +57,12 @@ ids.forEach((topologyId) => {
   });
 
   // Everywhere: a scatter of points over the world, its copies either side, and past both its poles, so its seams and
-  //  odd rows are among them. Each as far from the nearest edge of the square it's on as that square's outline says.
+  //  odd rows are among them. Each as far from the nearest edge of the square it's on as that square's outline says,
+  //  and that edge's way across a unit long and square to it, where one edge is nearest.
   let worst = 0,
-    looked = 0;
+    looked = 0,
+    across = 0,
+    crossed = 0;
 
   for (let n = 0; n < 4000; n++) {
     const u = -14 + ((n * 0.6180339887) % 1) * 40,
@@ -73,6 +77,27 @@ ids.forEach((topologyId) => {
 
     worst = Math.max(worst, Math.abs(edgeDistance(topologyId, u, v) - nearest));
     looked++;
+
+    const distances = corners.map((corner, at) =>
+        offSegment([u, v], corner, corners[(at + 1) % corners.length]!)
+      ),
+      closest = distances.indexOf(nearest),
+      [[au, av], [bu, bv]] = [
+        corners[closest]!,
+        corners[(closest + 1) % corners.length]!,
+      ],
+      length = Math.hypot(bu - au, bv - av),
+      [nu, nv] = nearestEdge(topologyId, u, v).normal;
+
+    // Not where two edges are about as near, at a corner, where either's way across would do.
+    if (distances.filter((d) => d - nearest < 1e-6).length === 1) {
+      across = Math.max(
+        across,
+        Math.abs(Math.hypot(nu, nv) - 1),
+        Math.abs((nu * (bu - au) + nv * (bv - av)) / length)
+      );
+      crossed++;
+    }
   }
 
   // Along every edge of a few squares, on it and a little in from it: none on it, and that far in.
@@ -112,14 +137,16 @@ ids.forEach((topologyId) => {
   });
 
   expect(
-    `${topologyId}: every point as far from the nearest edge as its square's outline says, at every copy of the world; none on an edge, and that far in from it; half a square at a middle`,
+    `${topologyId}: every point as far from the nearest edge as its square's outline says, at every copy of the world, and that edge's way across square to it; none on an edge, and that far in from it; half a square at a middle`,
     [
       looked,
       worst < 1e-9,
+      crossed > 3900,
+      across < 1e-9,
       alongEdges < 1e-9,
       Math.round(edgeDistance(topologyId, ...layout.centre(5, 4)) * 1e9) / 1e9,
     ],
-    [4000, true, true, 0.5]
+    [4000, true, true, true, true, 0.5]
   );
 
   // The material: its sums in three.js's own shaders, where they're put, its lift and lines; hidden as it comes, seen
@@ -140,8 +167,10 @@ ids.forEach((topologyId) => {
         `transformed.y = max(transformed.y + ${GRID.lift}, ${GRID.lift});`
       ) && shader.vertexShader.includes('vUnseen = unseen;'),
       shader.fragmentShader.includes(gridGlsl(topologyId)) &&
-        shader.fragmentShader.includes('float edge = gridEdge(vGround)') &&
-        shader.fragmentShader.includes('step(0.5, vUnseen)') &&
+        shader.fragmentShader.includes('gridEdge(vGround, normal)') &&
+        // A pixel's width across the edge from where it is, not from its distance, which folds at the line.
+        shader.fragmentShader.includes('abs(dot(normal, dFdx(vGround)))') &&
+        shader.fragmentShader.includes('step(0.999, vUnseen)') &&
         shader.fragmentShader.includes('diffuseColor.a *= line;'),
       material.visible,
       material.transparent,

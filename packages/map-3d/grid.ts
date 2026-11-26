@@ -48,82 +48,125 @@ const hexAcross = (du: number, dv: number): number =>
   );
 
 /**
- * How far the point (`u`, `v`) on the ground is from the nearest edge of the square it's on, on `grid`: 0 on an edge,
- *  and at most half a square's width at its middle.
+ * How far the point (`u`, `v`) on the ground is from the nearest edge of the square it's on, on `grid`, and that edge's
+ *  way across, a unit long, either way: 0 on an edge, and at most half a square's width at its middle.
  */
-export const edgeDistance = (
+export const nearestEdge = (
   grid: TopologyId,
   u: number,
   v: number
-): number => {
+): { distance: number; normal: [number, number] } => {
   if (grid === 'staggered-iso') {
     // Turned an eighth of a turn, the diamonds are squares, with edges where `u + v` and `v - u` are odd multiples of
     //  `HALF`.
-    return (
-      (HALF * Math.min(fromOdd((u + v) / HALF), fromOdd((v - u) / HALF))) /
-      Math.SQRT2
-    );
+    const along = fromOdd((u + v) / HALF),
+      down = fromOdd((v - u) / HALF);
+
+    return {
+      distance: (HALF * Math.min(along, down)) / Math.SQRT2,
+      normal: along < down ? [HALF, HALF] : [-HALF, HALF],
+    };
   }
 
   if (grid === 'hex-odd-r') {
-    // The hex it's on is the nearest by how far across it is: in the row of middles above it or the one below.
+    // The hex it's on is the nearest by how far across it is: in the row of middles above it or the one below. Its
+    //  nearest side is the one it's furthest along the way out to.
     const above = Math.floor((v - SIZE) / ROW);
-    let nearest = Infinity;
+    let nearest = Infinity,
+      normal: [number, number] = [1, 0];
 
     for (const row of [above, above + 1]) {
       const shift = 0.5 + (((row % 2) + 2) % 2) * 0.5,
-        middle = Math.round(u - shift) + shift;
+        du = u - (Math.round(u - shift) + shift),
+        dv = v - SIZE - row * ROW,
+        ways = [
+          Math.abs(du),
+          Math.abs(du / 2 + dv * SIN60),
+          Math.abs(du / 2 - dv * SIN60),
+        ],
+        across = Math.max(...ways);
 
-      nearest = Math.min(nearest, hexAcross(u - middle, v - SIZE - row * ROW));
+      if (across < nearest) {
+        nearest = across;
+        normal =
+          ways[0]! >= ways[1]! && ways[0]! >= ways[2]!
+            ? [1, 0]
+            : ways[1]! >= ways[2]!
+            ? [0.5, SIN60]
+            : [0.5, -SIN60];
+      }
     }
 
-    return 0.5 - nearest;
+    return { distance: 0.5 - nearest, normal };
   }
 
   const across = u - Math.floor(u),
-    down = v - Math.floor(v);
+    down = v - Math.floor(v),
+    fromSide = Math.min(across, 1 - across),
+    fromTop = Math.min(down, 1 - down);
 
-  return Math.min(across, 1 - across, down, 1 - down);
+  return {
+    distance: Math.min(fromSide, fromTop),
+    normal: fromSide < fromTop ? [1, 0] : [0, 1],
+  };
 };
+
+/** How far the point (`u`, `v`) on the ground is from the nearest edge of the square it's on, on `grid`. */
+export const edgeDistance = (grid: TopologyId, u: number, v: number): number =>
+  nearestEdge(grid, u, v).distance;
 
 // A number as GLSL takes it.
 const number = (n: number): string => (Number.isInteger(n) ? `${n}.0` : `${n}`);
 
-/** `edgeDistance` on `grid`, as GLSL: `float gridEdge(vec2 ground)`, the same sums. */
+/**
+ * `nearestEdge` on `grid`, as GLSL: `float gridEdge(vec2 ground, out vec2 normal)`, the distance returned and the way
+ *  across set, by the same sums.
+ */
 export const gridGlsl = (grid: TopologyId): string => {
   if (grid === 'staggered-iso') {
     return `float gridFromOdd(float t) {
   return abs(t - (2.0 * floor((t - 1.0) / 2.0 + 0.5) + 1.0));
 }
 
-float gridEdge(vec2 ground) {
+float gridEdge(vec2 ground, out vec2 normal) {
   float corner = ${number(HALF)};
+  float along = gridFromOdd((ground.x + ground.y) / corner), down = gridFromOdd((ground.y - ground.x) / corner);
 
-  return corner * min(gridFromOdd((ground.x + ground.y) / corner), gridFromOdd((ground.y - ground.x) / corner)) /
-    ${number(Math.SQRT2)};
+  normal = along < down ? vec2(corner, corner) : vec2(-corner, corner);
+
+  return corner * min(along, down) / ${number(Math.SQRT2)};
 }`;
   }
 
   if (grid === 'hex-odd-r') {
-    return `float gridEdge(vec2 ground) {
+    return `float gridEdge(vec2 ground, out vec2 normal) {
   float size = ${number(SIZE)}, row = ${number(ROW)}, sin60 = ${number(SIN60)};
   float above = floor((ground.y - size) / row), nearest = 1e9;
+
+  normal = vec2(1.0, 0.0);
 
   for (int k = 0; k < 2; k++) {
     float r = above + float(k), shift = 0.5 + mod(r, 2.0) * 0.5;
     vec2 off = ground - vec2(floor(ground.x - shift + 0.5) + shift, size + r * row);
+    float w0 = abs(off.x), w1 = abs(off.x / 2.0 + off.y * sin60), w2 = abs(off.x / 2.0 - off.y * sin60);
+    float across = max(w0, max(w1, w2));
 
-    nearest = min(nearest, max(abs(off.x), max(abs(off.x / 2.0 + off.y * sin60), abs(off.x / 2.0 - off.y * sin60))));
+    if (across < nearest) {
+      nearest = across;
+      normal = w0 >= w1 && w0 >= w2 ? vec2(1.0, 0.0) : w1 >= w2 ? vec2(0.5, sin60) : vec2(0.5, -sin60);
+    }
   }
 
   return 0.5 - nearest;
 }`;
   }
 
-  return `float gridEdge(vec2 ground) {
-  vec2 inside = fract(ground);
+  return `float gridEdge(vec2 ground, out vec2 normal) {
+  vec2 inside = fract(ground), off = min(inside, 1.0 - inside);
 
-  return min(min(inside.x, 1.0 - inside.x), min(inside.y, 1.0 - inside.y));
+  normal = off.x < off.y ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+
+  return min(off.x, off.y);
 }`;
 };
 
@@ -164,9 +207,12 @@ ${gridGlsl(grid)}
 ${shader.fragmentShader.replace(
   '#include <color_fragment>',
   `#include <color_fragment>
-  float edge = gridEdge(vGround),
-    // How far apart on the ground the screen's pixels are, here, along the way to the edge and any way.
-    pixel = max(fwidth(edge), 1e-6),
+  vec2 normal;
+  float edge = gridEdge(vGround, normal),
+    // How far apart on the ground the screen's pixels are, here: across the nearest edge, from where they are on the
+    //  ground rather than how far they are from the edge, which folds at the line and would say none on it; and
+    //  along either way.
+    pixel = max(abs(dot(normal, dFdx(vGround))) + abs(dot(normal, dFdy(vGround))), 1e-6),
     across = max(fwidth(vGround.x), fwidth(vGround.y)),
     reach = max(${number(GRID.half)}, pixel * ${number(GRID.leastPixels)}),
     line = ${number(GRID.opacity)} * (${number(GRID.half)} / reach) *
@@ -174,7 +220,9 @@ ${shader.fragmentShader.replace(
       (1.0 - smoothstep(${number(1 / GRID.fadedFrom)}, ${number(
     1 / GRID.goneAt
   )}, across)) *
-      (1.0 - step(0.5, vUnseen));
+      // Not on a square never seen: where every point round it is, so the line along the edge of what's been seen is
+      //  whole, whichever square its points were taken from, and the cloud covers what spills a step under it.
+      (1.0 - step(0.999, vUnseen));
 
   if (line < 0.004) {
     discard;

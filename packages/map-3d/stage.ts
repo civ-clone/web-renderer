@@ -708,13 +708,13 @@ export const createStage: StageFactory = (
     kit = new MarkerKit(),
     // What each square yields, over the land at every copy of the world, when they're shown.
     yieldsGroup = new Group(),
+    // The grid's lines (`grid.ts`): the land's chunks drawn again with them alone, when they're shown.
+    lines = gridMaterial(grid),
     // The square under the pointer, lit (`highlight.ts`): a warm white, as bright at each point as it says, seen
     //  through. Pulled in front of what it lies on more than what's laid flat on the land is (the overlay's
     //  `polygonOffset`) and the rivers' water, as they're pulled in front of the land further than the band's lift
     //  over them once the camera's far off, and further still on a slope, where their strips cut across the land's
     //  creases and it doesn't. Not far enough to show through what stands: about two of its own depth slope's pixels.
-    // The grid's lines (`grid.ts`): the land's chunks drawn again with them alone, when they're shown.
-    lines = gridMaterial(grid),
     highlightGroup = new Group(),
     highlightMaterial = new MeshBasicMaterial({
       color: 0xffffff,
