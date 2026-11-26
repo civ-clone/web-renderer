@@ -406,6 +406,10 @@ band along a hull, the wingtips). Still to do:
   bullet or a shell, and each flies as it would: a bullet straight and quick from a muzzle's flash and smoke, a shell
   high and slow, bursting where it lands. The Riflemen, Musketmen and Marines fire bullets, their rigged copies made in
   their set; shells wait on rigged copies that fire them.
+- **Clips, fifth part: done.** The Fanatics and the Warriors fight hand to hand: a Fanatic lunges with his torch, a
+  Warrior brings his club down overhand, each blow landing half a second in, as their clips' `strikes` say (#1380).
+  They stand, walk and fall with their own clips, made in their sets (civ-clone/models-realistic-by#23,
+  civ-clone/models-realistic-cc0#41), as do the Engineers, who don't fight.
 - **Clips, as planned:** rigged copies are to sit beside the static models, which their manifests go on naming. The
   clips are idle, moving and dying for every unit, fighting for combat units (shots in flight for ranged ones), Settlers
   working and settling, ships sinking and vehicles exploding. The map's side is to play them (`AnimationMixer`, skinned
