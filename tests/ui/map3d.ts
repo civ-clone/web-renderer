@@ -2377,6 +2377,36 @@ expect(
     lighter.releaseTiles();
     lighter.flush();
     lit();
+
+    // A press: none, till the mouse moves again.
+    ownCanvas.dispatchEvent(
+      Object.assign(new Event('pointerdown'), {
+        clientX: cx,
+        clientY: cy,
+        button: 0,
+        buttons: 1,
+        pointerId: 1,
+        isPrimary: true,
+        pointerType: 'mouse',
+      })
+    );
+
+    const pressed = lit();
+
+    ownCanvas.dispatchEvent(
+      Object.assign(new Event('pointerup'), {
+        clientX: cx,
+        clientY: cy,
+        button: 0,
+        buttons: 0,
+        pointerId: 1,
+        isPrimary: true,
+        pointerType: 'mouse',
+      })
+    );
+    lit();
+    restAt(cx, cy);
+    lit();
     ownCanvas.dispatchEvent(new Event('pointerleave'));
 
     const left = lit(),
@@ -2396,9 +2426,9 @@ expect(
     highlightsSet.splice(0);
 
     expect(
-      'the square under the mouse lit at once, only again for another square or where its land changes, not ended by a key; the map moving under it lights the square there; none under a menu, over a square never seen, or once the mouse has left',
-      [first, same, moved, underMenu, back, reshaped, left, unseen],
-      [['1,1'], [], ['2,1'], [null], ['2,1'], ['2,1'], [null], []]
+      'the square under the mouse lit at once, only again for another square or where its land changes, not ended by a key; the map moving under it lights the square there; none under a menu, once pressed, over a square never seen, or once the mouse has left',
+      [first, same, moved, underMenu, back, reshaped, pressed, left, unseen],
+      [['1,1'], [], ['2,1'], [null], ['2,1'], ['2,1'], [null], [null], []]
     );
   }
 

@@ -40,6 +40,9 @@ const offSegment = (
   return Math.hypot(u - au - du * t, v - av - dv * t);
 };
 
+// Smoothly from 0 to 1 as `t` goes from 0 to 1.
+const smoothly = (t: number): number => t * t * (3 - 2 * t);
+
 // Twice a polygon's area, either way round.
 const area = (points: readonly Point[]): number =>
   Math.abs(
@@ -161,6 +164,38 @@ const area = (points: readonly Point[]): number =>
           (away < HIGHLIGHT.width - 1e-9 || bright < 1e-6)
         );
       }),
+      // As bright as it says at each point, smoothly less the further in, with points between its edges, so it fades
+      //  as it says between them too.
+      points.every(
+        (point, at) =>
+          Math.abs(
+            mesh.brightness[at]! -
+              HIGHLIGHT.edge *
+                (1 -
+                  smoothly(Math.min(1, fromOutline(point) / HIGHLIGHT.width)))
+          ) < 1e-5
+      ),
+      // Between them even on land too coarse to cut it, so it has rings of its own.
+      ((coarse) =>
+        Array.from(
+          { length: coarse.positions.length / 3 },
+          (_, at): [number, number, number] => [
+            coarse.positions[at * 3]!,
+            0,
+            coarse.positions[at * 3 + 2]!,
+          ]
+        ).some((point) => {
+          const into = fromOutline(point) / HIGHLIGHT.width;
+
+          return into > 0.2 && into < 0.8;
+        }))(
+        highlightOf(
+          layout,
+          { at: () => 0.1, spacingU: 1e6, spacingV: 1e6 },
+          x,
+          y
+        )
+      ),
       // More the nearer the outline.
       points.every((a, i) =>
         points.every(
@@ -177,7 +212,7 @@ const area = (points: readonly Point[]): number =>
         (_, at) => sunk.positions[at * 3 + 1]
       ).every((h) => h === Math.fround(HIGHLIGHT.lift)),
     ],
-    [true, true, true, true, true, true, true, true]
+    [true, true, true, true, true, true, true, true, true, true]
   );
 });
 

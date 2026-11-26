@@ -64,7 +64,7 @@ import unitUnder, { blinkAs, blinkFigures } from './markers/pickUnit';
 import { OverlayMesh, PLANT_NUMBERS } from './overlay/overlayMesh';
 import { plantMatrices, plantsKept } from './overlay/thinning';
 import { FIELD_OF_VIEW, Orbit, eye, sightFor } from './camera/orbit';
-import Water, { Clouds, Ground, SMOG_ORDER } from './water';
+import Water, { Clouds, Ground, HIGHLIGHT_ORDER, SMOG_ORDER } from './water';
 import YieldIcons from './yieldIcons';
 import { YieldMesh } from './yields';
 import {
@@ -697,16 +697,14 @@ export const createStage: StageFactory = (
     // What each square yields, over the land at every copy of the world, when they're shown.
     yieldsGroup = new Group(),
     // The square under the pointer, lit (`highlight.ts`): a warm white, as bright at each point as it says, seen
-    //  through, and a little in front of what it lies on, as the rivers' water is.
+    //  through. Its lift keeps it over the land and what lies flat on it, so it isn't pulled in front of them as the
+    //  rivers' water is (`polygonOffset`).
     highlightGroup = new Group(),
     highlightMaterial = new MeshBasicMaterial({
       color: 0xffffff,
       vertexColors: true,
       transparent: true,
       depthWrite: false,
-      polygonOffset: true,
-      polygonOffsetFactor: -2,
-      polygonOffsetUnits: -2,
     }),
     yields = new YieldIcons(yieldIcon ?? ((): null => null)),
     water = new Water(ground, new Color(SKY)),
@@ -1827,7 +1825,15 @@ export const createStage: StageFactory = (
       highlightPlaced = {
         geometry,
         at: [0, 0, 0],
-        make: () => new Mesh(geometry, highlightMaterial),
+        make: () => {
+          const lit = new Mesh(geometry, highlightMaterial);
+
+          // After the sea and before smog and the cloud (`HIGHLIGHT_ORDER`), as each is seen through: drawn before
+          //  the sea, the sea would be painted over it at sea and over drowned coasts.
+          lit.renderOrder = HIGHLIGHT_ORDER;
+
+          return lit;
+        },
         drawn: [],
       };
       highlightPlaced.drawn = copiesOf(highlightPlaced, highlightGroup);

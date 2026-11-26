@@ -393,6 +393,8 @@ export class MapView3D implements MapRenderer {
   #pointer: { x: number; y: number } | null = null;
   #highlit: string | null = null;
   #highlightStale = false;
+  // Where the camera was when the square under the mouse was last picked, to pick it again only once it's moved.
+  #highlightView = '';
   #playerId: string;
   #endHover = (): void => {
     const hover = this.#hover;
@@ -3429,8 +3431,18 @@ export class MapView3D implements MapRenderer {
 
   // The square under the mouse lit (`highlight.ts`), over the land, unless it's never been seen or a menu's open over
   //  the map; or none, where the mouse isn't over it. Laid again only where it's another square, or the land under it
-  //  has changed. Says whether it has.
-  #showHighlight(): boolean {
+  //  has changed. In a frame (`framed`), picked again only where the camera's moved since. Says whether it's laid.
+  #showHighlight(framed = false): boolean {
+    const view = `${this.#orbit.focus.join(',')},${this.#orbit.distance},${
+      this.#orbit.yaw
+    },${this.#orbit.pitch},${this.#lookHeight ?? 0}`;
+
+    if (framed && view === this.#highlightView && !this.#highlightStale) {
+      return false;
+    }
+
+    this.#highlightView = view;
+
     const pointer = this.#pointer,
       tile =
         pointer === null || this.#squares.menuOpen()
@@ -3583,9 +3595,10 @@ export class MapView3D implements MapRenderer {
     const rising = this.#followHeight(budget !== null);
 
     this.#showYields();
-    // The square under a still mouse, which may be another as the map moves under it.
-    this.#showHighlight();
     this.#stage.view(this.#orbit, this.#lookHeight ?? 0, this.#period());
+    // The square under a still mouse, which may be another as the map moves under it: once the camera's placed, as a
+    //  unit's picked through it.
+    this.#showHighlight(true);
 
     const idling = this.#idle(started, true);
 

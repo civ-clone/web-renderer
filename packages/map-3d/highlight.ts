@@ -21,6 +21,9 @@ export type HighlightMesh = {
 
 type Point = readonly [u: number, v: number];
 
+// How many rings of points the band has between its outline and its inner edge, for its light to fade smoothly.
+const RINGS = 2;
+
 // How far `point` is from the segment from `a` to `b`.
 const offSegment = (
   [u, v]: Point,
@@ -48,7 +51,7 @@ const smooth = (t: number): number => {
 /**
  * The band inside the outline of the square at (`x`, `y`), as `layout` lays it, on `ground`: a strip `HIGHLIGHT.width`
  *  wide along each side, its inner corners where the strips' inner edges meet, so it's as wide all round. Each point
- *  as bright as `HIGHLIGHT.edge` at the outline, less the further in, to none at the band's inner edge.
+ *  as bright as `HIGHLIGHT.edge` at the outline, smoothly less the further in, to none at the band's inner edge.
  */
 export const highlightOf = (
   layout: GroundLayout,
@@ -68,18 +71,32 @@ export const highlightOf = (
 
       return toward >= 0 ? [nu, nv] : [-nu, -nv];
     }),
-    // Each corner's inner corner, where the bands along its two sides meet: `width` in from each.
-    inner = corners.map(([u, v], at): Point => {
-      const [pu, pv] = inwards[(at + corners.length - 1) % corners.length]!,
-        [nu, nv] = inwards[at]!,
-        mitre = 1 + pu * nu + pv * nv;
+    // A ring of corners `depth` in from the outline, each where the bands along its two sides meet, so it's `depth` in
+    //  from each: the outline itself, `RINGS` between, and the band's inner edge.
+    ring = (depth: number): Point[] =>
+      corners.map(([u, v], at): Point => {
+        const [pu, pv] = inwards[(at + corners.length - 1) % corners.length]!,
+          [nu, nv] = inwards[at]!,
+          mitre = 1 + pu * nu + pv * nv;
 
-      return [u + ((pu + nu) / mitre) * width, v + ((pv + nv) / mitre) * width];
-    }),
-    shapes = corners.map((corner, at) => {
-      const next = (at + 1) % corners.length;
+        return [
+          u + ((pu + nu) / mitre) * depth,
+          v + ((pv + nv) / mitre) * depth,
+        ];
+      }),
+    rings = Array.from({ length: RINGS + 2 }, (_, at) =>
+      ring((width * at) / (RINGS + 1))
+    ),
+    // A strip along each side between each ring and the next, so its light fades as it says between them, not
+    //  straight from the outline to the inner edge.
+    shapes = rings.slice(1).flatMap((within, step) => {
+      const without = rings[step]!;
 
-      return [corner, corners[next]!, inner[next]!, inner[at]!];
+      return corners.map((_, at) => {
+        const next = (at + 1) % corners.length;
+
+        return [without[at]!, without[next]!, within[next]!, within[at]!];
+      });
     }),
     into: RibbonMesh = { positions: [], indices: [], foam: [] };
 
