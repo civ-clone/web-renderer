@@ -37,6 +37,10 @@ export type WalkPoint = {
   at: readonly [number, number];
   lift: number;
   middle?: readonly [number, number];
+  // How far over the land at its square's middle it stands there, as a unit's stand stands over the highest of the
+  //  land under it (`markers/standHeight.ts`): for a walk that passes through the middle rather than stopping. None is
+  //  none.
+  middleLift?: number;
   // The way there from the point before, where it isn't straight, as a road bends (`Land#roadPath`): the points it
   //  passes between them, each from this point's middle (or the point itself, without one), so they go where it goes
   //  when it's taken a copy of the world round.
@@ -557,8 +561,11 @@ export class Walks {
     ) {
       walk.points[end] = {
         at: last.middle,
-        lift: 0,
+        lift: last.middleLift ?? 0,
         middle: last.middle,
+        ...(last.middleLift === undefined
+          ? {}
+          : { middleLift: last.middleLift }),
         // Still along the road there, as it bends.
         ...(last.via === undefined ? {} : { via: last.via }),
       };
@@ -573,6 +580,9 @@ export class Walks {
         nearest(arrive.at[1], last.at[1], v),
       ],
       lift: arrive.lift,
+      ...(arrive.middleLift === undefined
+        ? {}
+        : { middleLift: arrive.middleLift }),
       ...(arrive.middle === undefined
         ? {}
         : {

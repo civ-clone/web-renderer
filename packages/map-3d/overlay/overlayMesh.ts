@@ -555,10 +555,10 @@ class Layer {
   // The land's normal at a point, from its height either side; or a bridge's deck's, where it's on one, `deck` high at
   //  the point. A deck rises less than a unit for a unit along (`BRIDGE.slope` across its river, and its river's level
   //  falling as steeply as about 0.75 along it, under 0.83 together, since #1391), so where it's further under the land
-  //  either side than the step to it, it's under the land there too, and needn't be asked. Where a river's level climbs,
-  //  as it does in places till they're ordered downhill (#1388), it can rise more steeply, and a normal there can miss. Not so just past a deck's
+  //  either side than the step to it, it's under the land there too, and needn't be asked. Not so just past a deck's
   //  reach, where it's none, where another river's cut the land far lower than its own: there a normal can miss the
-  //  deck beside it.
+  //  deck beside it; nor where a river's level climbs, as it does in places till they're ordered downhill (#1388),
+  //  more steeply than that.
   #normal(u: number, v: number, deck = -Infinity): [number, number, number] {
     const e = NORMAL_STEP;
     let east = this.place.heightAt(u + e, v),

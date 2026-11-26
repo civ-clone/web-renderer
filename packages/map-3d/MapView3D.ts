@@ -157,8 +157,8 @@ const HEIGHT_EASE = 0.25;
 const HOVER_DELAY = 400;
 
 // How far past the land under a point on the screen a unit there may be and still be picked (`#tileAt`): the land's
-//  picked on its relief, which its mesh draws a little above or below, and a unit standing on it is barely in front of
-//  it. A unit behind a hill or a mountain, hidden by it, is far further.
+//  picked as it's drawn, and found to within a hair, and a unit standing on it is barely in front of it. A unit behind
+//  a hill or a mountain, hidden by it, is far further.
 const LAND_SLACK = 0.05;
 
 // How clear of the haze a city's banner is to take clicks and the mouse resting on it, from 1 short of the haze to 0
@@ -1265,20 +1265,27 @@ export class MapView3D implements MapRenderer {
     inCity: boolean = Boolean(this.world.get(x, y).city)
   ): WalkPoint {
     const [u, v] = this.#land.layout.centre(x, y),
-      stands = this.#standsOn(u, v),
+      stands = this.#standsOn(x, y),
       at: [number, number] = [u, v + (inCity ? IN_FRONT_OF_CITY : 0)];
 
     return {
       at,
       lift: stands - Math.max(0, this.#land.surfaceAt(...at)),
       middle: [u, v],
+      // And over its middle, for a walk that passes through it.
+      middleLift: stands - Math.max(0, this.#land.surfaceAt(u, v)),
     };
   }
 
-  // How high what's marked on a square stands, its middle at (`u`, `v`): over the highest of the land under a unit's
-  //  stand (`standHeight`).
-  #standsOn(u: number, v: number): number {
-    return standHeight(this.#land.surface(), u, v);
+  // How high what's marked on the square at (`x`, `y`) stands: over the highest of the land under a unit's stand
+  //  (`standHeight`). At sea, on the water at the middle, as a ship has no stand: lifted by a shore its stand would
+  //  reach, it would float over the water.
+  #standsOn(x: number, y: number): number {
+    const [u, v] = this.#land.layout.centre(x, y);
+
+    return this.world.get(x, y).isWater
+      ? Math.max(0, this.#land.surfaceAt(u, v))
+      : standHeight(this.#land.surface(), u, v);
   }
 
   // A unit waiting for its patch steps on: it walks on from where it stands, and the walk that waited goes on waiting
@@ -2609,13 +2616,17 @@ export class MapView3D implements MapRenderer {
       return null;
     }
 
-    const ndc: [number, number] = [(x / width) * 2 - 1, 1 - (y / height) * 2],
+    // The land as it's drawn, its points read once each, as units stand on it and a unit's hidden by it.
+    const heights = new Map<number, number>(),
+      drawn = (u: number, v: number): number =>
+        this.#land.surfaceAt(u, v, heights),
+      ndc: [number, number] = [(x / width) * 2 - 1, 1 - (y / height) * 2],
       ground = pickGround(
         this.#orbit,
         this.#lookHeight ?? 0,
         ndc,
         width / height,
-        (u, v) => this.#land.heightAt(u, v)
+        drawn
       ),
       // A unit's drawn there only where it's nearer than the land: one behind a mountain is hidden by it.
       [eyeU, eyeHeight, eyeV] = eye(this.#orbit, this.#lookHeight ?? 0),
@@ -2624,7 +2635,7 @@ export class MapView3D implements MapRenderer {
           ? Infinity
           : Math.hypot(
               ground[0] - eyeU,
-              Math.max(0, this.#land.heightAt(...ground)) - eyeHeight,
+              Math.max(0, drawn(...ground)) - eyeHeight,
               ground[1] - eyeV
             ) + LAND_SLACK,
       unit = this.#stage.unitAt?.(ndc, within) ?? null;
@@ -3208,9 +3219,16 @@ export class MapView3D implements MapRenderer {
     });
 
     // On the land as it's drawn, as what's laid on it is, so a unit's stand stands over that, and over the highest of
-    //  it under the stand (`#standsOn`).
+    //  it under the stand (`#standsOn`), only where something's marked: every square's marked again at times, as when
+    //  the towns are hidden (`t`), and most have nothing on them.
     const [u, v] = this.#land.layout.centre(x, y),
-      at: [number, number, number] = [u, this.#standsOn(u, v), v],
+      at: [number, number, number] = [
+        u,
+        marker === null
+          ? Math.max(0, this.#land.surfaceAt(u, v))
+          : this.#standsOn(x, y),
+        v,
+      ],
       signature = marker === null ? null : JSON.stringify([marker, at]);
 
     const changed = signature !== (this.#marked.get(key) ?? null);

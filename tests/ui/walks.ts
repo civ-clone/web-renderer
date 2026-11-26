@@ -660,6 +660,66 @@ const point = (u: number, v: number, lift = 0): WalkPoint => ({
   );
 }
 
+// Over a peak (#1391): a unit's stand stands over the highest of the land under it, so it's lifted off the land at a
+//  square's middle. It sets off at that lift, not sunk to the land, and a GoTo's steps pass each square's middle at
+//  its own lift, as it would stand there.
+{
+  const walks = new Walks({ u: 10, v: null }),
+    peak = (x: number, lift: number): WalkPoint => ({
+      at: [x, 1],
+      lift,
+      middle: [x, 1],
+      middleLift: lift,
+    });
+
+  walks.step(
+    'goer',
+    { x: 1, y: 1 },
+    { x: 2, y: 1 },
+    peak(1, 0.1),
+    peak(2, 0.2),
+    0,
+    pace
+  );
+
+  const setOff = walks.at(1).going[0]!.lift;
+
+  walks.step(
+    'goer',
+    { x: 2, y: 1 },
+    { x: 3, y: 1 },
+    peak(2, 0.2),
+    peak(3, 0.05),
+    1,
+    pace
+  );
+
+  const ends = walks.nextEnd() ?? 0;
+  let nearest = Infinity,
+    liftThere = NaN;
+
+  for (let now = 1; now < ends; now++) {
+    const [walker] = walks.at(now).going;
+
+    if (walker === undefined) {
+      break;
+    }
+
+    const off = Math.hypot(walker.at[0] - 2, walker.at[1] - 1);
+
+    if (off < nearest) {
+      nearest = off;
+      liftThere = walker.lift;
+    }
+  }
+
+  expect(
+    'over a peak, a unit sets off at its stand’s lift, and a GoTo passes each square’s middle at its own',
+    [round(setOff, 2), nearest < 0.02, round(liftThere, 2)],
+    [0.1, true, 0.2]
+  );
+}
+
 // A GoTo's steps through a city, all at once: through the city square's middle, not in front of its buildings, and
 //  ending in front of the last one's.
 {

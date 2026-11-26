@@ -1005,8 +1005,12 @@ Each is looked up by its type name in the model set.
 - **Facing:** a unit faces the way it last moved.
 - **Height:** it stands on the land's height at its feet. Its stand's flat, so on a peak or a steep slope it stands on
   the highest of the land under it (`markers/standHeight.ts`: the land's points under it, and its rim all round,
-  where it crosses the land's creases too), never sunk into it, and no higher. Since mountains rose (#1391), that
-  leaves a stand on a mountain perched on its summit, its rim off the land on the steep side (#1397).
+  where it crosses the land's creases too), never sunk into it, and no higher. A walk through a square's middle
+  passes at that height too (`WalkPoint#middleLift`). At sea, a ship has no stand, so it rides the water at the
+  middle. Since mountains rose (#1391), a stand on a mountain perches on its summit, its rim off the land on the
+  steep side; and a unit in a city, which stands in front of the middle, is still at the middle's height, so it can
+  sink into a slope there; and the active unit's ring and a fortified unit's wall, a little wider than the stand,
+  can dip into a steep side (#1397).
 - **Size:** twice life size (`UNIT_SCALE`), as a tabletop game's figures are, so units read at a glance beside the
   cities and land, which are drawn life size. Their stands, and a fortified unit's wall, stay as they are, so a squad
   or a vehicle may reach past its stand, as a counter on a table does. A set says its models' sizes against each
@@ -1586,8 +1590,8 @@ mapEvent:
 ### 9.2 Picking
 
 - **A square:** a ray from the pointer meets what's shown there: the land, or the water's surface where the land is
-  below it (the sea at height 0, a lake or swamp pool at its own). It's stepped against the height function, taken as
-  no lower than the water, and refined. The point where it lands goes through `layout.tileAt`, then wraps.
+  below it (the sea at height 0, a lake or swamp pool at its own). It's stepped against the land as it's drawn
+  (`Land#surfaceAt`, since #1391), taken as no lower than the water, and refined. The point where it lands goes through `layout.tileAt`, then wraps.
 - **A unit:** a ray that passes through a unit's bounding sphere picks the unit before the square.
   - As built (`markers/pickUnit.ts`, `Stage.unitAt`): the ray meets what's drawn of each square's unit (its figures,
     stand and ring, at every copy of the world drawn), and the nearest it meets picks that unit's square, before the
