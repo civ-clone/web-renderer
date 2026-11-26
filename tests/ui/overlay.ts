@@ -2723,54 +2723,59 @@ const landOf = (
 
   // Each triangle laid flat, as far over the land at each of its corners, as far over it at its middle and its edges'
   //  middles too, as `Land` gives what's laid its land's spacing to cut it along (to a 32-bit rounding's worth).
-  const astray = [...laid.values()].flatMap((mesh) => {
-    if (mesh === null) {
-      return [];
-    }
-
-    const corners = pointsOf(withoutFarmsteads(mesh)),
-      found: number[] = [];
-
-    for (let at = 0; at + 2 < corners.length; at += 3) {
-      const three = [corners[at]!, corners[at + 1]!, corners[at + 2]!];
-
-      if (
-        three.some(([u, , v]) => !(u > 0.1 && u < 31.9 && v > 0.1 && v < 15.9))
-      ) {
-        continue;
+  const flatLaid = { count: 0 },
+    astray = [...laid.values()].flatMap((mesh) => {
+      if (mesh === null) {
+        return [];
       }
 
-      const over = ([u, y, v]: readonly number[]) => y - drawnAt(u!, v!),
-        lifts = three.map(over);
+      const corners = pointsOf(withoutFarmsteads(mesh)),
+        found: number[] = [];
 
-      if (Math.max(...lifts) - Math.min(...lifts) > 1e-4) {
-        continue;
-      }
+      for (let at = 0; at + 2 < corners.length; at += 3) {
+        const three = [corners[at]!, corners[at + 1]!, corners[at + 2]!];
 
-      const mix = (w: [number, number, number]) =>
-        [0, 1, 2].map((axis) =>
-          three.reduce((sum, corner, k) => sum + corner[axis]! * w[k]!, 0)
+        if (
+          three.some(
+            ([u, , v]) => !(u > 0.1 && u < 31.9 && v > 0.1 && v < 15.9)
+          )
+        ) {
+          continue;
+        }
+
+        const over = ([u, y, v]: readonly number[]) => y - drawnAt(u!, v!),
+          lifts = three.map(over);
+
+        if (Math.max(...lifts) - Math.min(...lifts) > 1e-4) {
+          continue;
+        }
+
+        flatLaid.count++;
+
+        const mix = (w: [number, number, number]) =>
+          [0, 1, 2].map((axis) =>
+            three.reduce((sum, corner, k) => sum + corner[axis]! * w[k]!, 0)
+          );
+
+        found.push(
+          ...[
+            mix([1 / 3, 1 / 3, 1 / 3]),
+            mix([0.5, 0.5, 0]),
+            mix([0, 0.5, 0.5]),
+            mix([0.5, 0, 0.5]),
+          ]
+            .map((sample) => Math.abs(over(sample) - lifts[0]!))
+            .filter((strays) => strays > 1e-4)
         );
+      }
 
-      found.push(
-        ...[
-          mix([1 / 3, 1 / 3, 1 / 3]),
-          mix([0.5, 0.5, 0]),
-          mix([0, 0.5, 0.5]),
-          mix([0.5, 0, 0.5]),
-        ]
-          .map((sample) => Math.abs(over(sample) - lifts[0]!))
-          .filter((strays) => strays > 1e-4)
-      );
-    }
-
-    return found;
-  });
+      return found;
+    });
 
   expect(
     'roads and fields lie over the land as it’s drawn, even on hills, not under it; each triangle laid flat as far over it between its corners as at them',
-    [below.length, astray.length],
-    [0, 0]
+    [below.length, flatLaid.count > 1000, astray.length],
+    [0, true, 0]
   );
 }
 

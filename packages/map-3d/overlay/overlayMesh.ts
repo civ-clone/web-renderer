@@ -622,8 +622,9 @@ class Layer {
   }
 
   // How far apart what's laid flat must have points of its own, to follow what it lies on: nothing, where it's cut
-  //  along the land's cells (`#flat`) and so lies exactly on it however far apart they are; but `STEP` on a
-  //  bridge's deck, which is curved, not flat between the land's points, or where the land's cells aren't known.
+  //  along the land's cells (`#flat`) and so lies exactly on it however far apart they are; but `STEP` for a route
+  //  that may be on a bridge's deck (anywhere on a square a river reaches into), as a deck is curved, not flat
+  //  between the land's points, or where the land's cells aren't known.
   #step(bridged: boolean): number {
     return this.place.spacing === undefined || (bridged && this.bridging)
       ? STEP
@@ -651,6 +652,11 @@ class Layer {
         const [pu, pv] = piece[0]!,
           [qu, qv] = piece[at]!,
           [ru, rv] = piece[at + 1]!;
+
+        // None with no area, where a cut runs through a corner.
+        if (Math.abs((qu - pu) * (rv - pv) - (qv - pv) * (ru - pu)) < 1e-12) {
+          continue;
+        }
 
         this.#point(pu, pv, lift, colour, bridged);
         this.#point(qu, qv, lift, colour, bridged);
