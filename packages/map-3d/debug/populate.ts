@@ -501,7 +501,8 @@ export const specialsGallery = (
  *  others, where that's a neighbour only every other row, to the square below, a neighbour on every row, at a slant
  *  (through a corner on the staggered grid). Then bridges: on Civ1's River, the neighbours above and below it River
  *  too (`rivers`), so a river runs through it, with a road or a railroad crossing it, a road along it, a fortress and
- *  an airbase on it.
+ *  an airbase on it. Last, Civ2's River, a feature on hills (`river`), falling from mountains above to grassland below,
+ *  each with the feature too, white over rapids where it falls steeply, a road across it from plains either side.
  */
 export const improvementsShown = (
   topologyId = 'square'
@@ -511,7 +512,8 @@ export const improvementsShown = (
   roads: [number, number][];
   along?: string[];
   beside?: string;
-  rivers?: [number, number][];
+  river?: boolean;
+  rivers?: [dx: number, dy: number, terrain?: string][];
 }[] => [
   { terrain: 'Grassland', improvements: ['Fortress'], roads: [] },
   { terrain: 'Hills', improvements: ['Fortress'], roads: [] },
@@ -577,6 +579,20 @@ export const improvementsShown = (
       [0, 1],
     ] as [number, number][],
   })),
+  {
+    terrain: 'Hills',
+    river: true,
+    improvements: ['Road'],
+    roads: [
+      [1, 0],
+      [-1, 0],
+    ],
+    beside: 'Plains',
+    rivers: [
+      [0, -1, 'Mountains'],
+      [0, 1, 'Grassland'],
+    ],
+  },
 ];
 
 /**
@@ -592,12 +608,15 @@ export const improvementsGallery = (
 ): void => {
   const at = (tx: number, ty: number) =>
       tiles.find((tile) => tile.x === tx && tile.y === ty),
-    built = (tile: Tile, terrain: string, names: string[]) => {
+    // Built with `names` on `terrain`, and Civ2's River on it where it's `river`.
+    built = (tile: Tile, terrain: string, names: string[], river = false) => {
       tile.terrain = {
         ...tile.terrain,
         _: terrain,
         __: [terrain, 'Terrain', 'DataObject'],
-        features: [],
+        features: river
+          ? [{ _: 'River', __: [], id: `River-${tile.x}-${tile.y}` }]
+          : [],
       } as Tile['terrain'];
       tile.improvements = names.map((name) => ({
         _: name,
@@ -634,6 +653,7 @@ export const improvementsGallery = (
         roads,
         along = ['Road'],
         beside = terrain,
+        river = false,
         rivers = [],
       },
       index
@@ -644,12 +664,13 @@ export const improvementsGallery = (
         return;
       }
 
-      built(tile, terrain, improvements);
-      rivers.forEach(([dx, dy]) => {
+      built(tile, terrain, improvements, river);
+      // Civ1's River, or Civ2's on the terrain it says.
+      rivers.forEach(([dx, dy, on]) => {
         const neighbour = at(tile.x + dx, tile.y + dy);
 
         if (neighbour?.isLand) {
-          built(neighbour, 'River', []);
+          built(neighbour, on ?? 'River', [], on !== undefined);
         }
       });
       roads.forEach(([dx, dy]) => {

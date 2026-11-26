@@ -791,9 +791,9 @@ How plants are placed:
     relative to its corner as the land's points are, laid on that chunk's points and, past its edge, on the next
     chunk's as they'll be, and drawn with the land at each copy of the world: one more draw call a chunk with a river.
     With the view stopped at the poles, it's clipped at them as the overlays are (a course across the poles has water
-    only on the far edge's side for now: #1379). It's one colour for now (`RIVER_WATER`, darker and greener than the
-    sea at its shore), a little in front of the land under it (`polygonOffset`). It doesn't move yet: that's with
-    #1365.
+    only on the far edge's side for now: #1379). It's darker and greener than the sea at its shore, white where it
+    breaks (the fifth part, below), and a little in front of the land under it (`polygonOffset`, `riverMaterial.ts`).
+    It doesn't move yet: that's with #1365.
   - **Keeping clear** (third part, `overlayMesh.ts`): what's laid on a square keeps clear of the channels of the rivers
     through it (`ReliefMap#coursesAt`, each placed at the square's copy of the world, as `Land` gives them its overlay),
     out to their flat beds' edges (their water's width and `FLOOR`), as it keeps clear of its roads: what grows there,
@@ -830,6 +830,23 @@ How plants are placed:
     - **A fortress's walls,** where a length of them is over the water, or within `BRIDGE.past` of it, at its middle
       or either end, leave a gate for it, their foot `WATER_GATE` (0.02) over its surface.
     - **A unit** at a river square's middle still stands on the land, so a little lower than a road's deck there.
+  - **White water** (fifth part, `foamAt` in `terrain/ribbons.ts`, `riverMaterial.ts`): where a river's water falls
+    steeply, it breaks white.
+    - **How white:** each point of its water has a `foam`, from 0 to 1, by how steeply the water falls there as it's
+      laid, taken across half the land's spacing either way: none under `RAPIDS.from` (0.1), all from `RAPIDS.full`
+      (0.25), and more the steeper between. So a drop over one of the land's cells whitens the water a little above and
+      below it too. It's by where a point is alone, so wherever strips and discs share a point or overlap, at bends and
+      junctions, they're as white as each other. Its points and triangles are as they were.
+    - **Where:** Civ1's rivers, in their valleys, fall no more than about 0.06, so they never break. Civ2's, a feature
+      on hills and mountains, fall as steeply as 0.3 in places. A river's levels aren't ordered downhill yet, so where
+      one climbs out of a saddle between mountains, it breaks white there too (#1388).
+    - **Drawn:** the shader whitens the water where its foam's over a noise of two sizes, by where it is on the ground
+      (22 and 66 to a unit), so it breaks in patches: more of them the more it foams, and nearly all white where it's
+      steepest, with flecks of water between. It's rough there, as broken water's no mirror. It doesn't move: that's
+      with #1365.
+    - **No falls of their own:** a river holding its upper level to the edge between its squares, then falling, barely
+      sharpens its drop, as the land caps how long a level can be held, and it looks as its white water does. A fall
+      would need the land itself to step, or a river's levels ordered downhill first (#1388).
 
 ### 5.4 Tile improvements
 
@@ -881,7 +898,8 @@ Each is looked up by its type name in the model set.
     its middle); the tower, and what's claimed after, off the apron too. Their walls stand on the ground.
   - **The debug page** lays out fortresses, airbases, mines and farms, some with roads, with `improvements=1`; and on
     Civ1's River squares with rivers through them, a road and a railroad across one, a road along one, a fortress and
-    an airbase on one.
+    an airbase on one. Last, Civ2's River on hills, falling from mountains to grassland, white where it's steepest, a
+    road across it.
 - **Pollution and fallout:** smog, a low, sooty brown haze over the square (#1335), darker than open land and rock,
   so it shows over mountains (forest, jungle and swamp are about as dark, and it's told from them by its hue):
   see-through, so the land and what's on it show through, thickest at its

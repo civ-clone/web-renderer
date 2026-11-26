@@ -6,7 +6,9 @@
 //  - the same across the world's seam;
 //  - a square changed reshapes only the squares refresh says, and refreshed, the land's as if made afresh;
 //  - their water: facing up, each drawn once, by one chunk even on a chunk's border, and its lift over the land as its
-//    mesh draws it, exactly, everywhere, over hills and mountains too.
+//    mesh draws it, exactly, everywhere, over hills and mountains too;
+//  - white water: by how steeply the water falls where it is, alone, so the same wherever courses meet; none in Civ1's
+//    valleys, some where Civ2's rivers fall from mountains.
 
 import topologyFor, { Topology } from '@civ-clone/ui-client/lib/topologyFor';
 import groundLayoutFor, { GroundLayout } from '@civ-clone/ui-map-3d/layouts';
@@ -36,8 +38,10 @@ import {
 import { TopologyId } from '@civ-clone/ui-protocol/topology';
 import {
   Ground,
+  RAPIDS,
   RIVER_LIFT,
   RibbonMesh,
+  foamAt,
   ribbonOf,
 } from '@civ-clone/ui-map-3d/terrain/ribbons';
 import {
@@ -262,7 +266,7 @@ const flatArea = (mesh: {
     // Land too coarse to cut the water at all, unless asked: its lines a million apart, the water well clear of them.
     flat: Ground = { at: () => 0.01, spacingU: 1e6, spacingV: 1e6 },
     drawn = (each: typeof course, u = 3, v = 4, ground = flat): RibbonMesh => {
-      const into: RibbonMesh = { positions: [], indices: [] };
+      const into: RibbonMesh = { positions: [], indices: [], foam: [] };
 
       ribbonOf(each, u, v, into, ground);
 
@@ -539,7 +543,7 @@ const flatArea = (mesh: {
         0
       ),
       expectedArea = everywhere.courses().reduce((sum, { course }) => {
-        const into: RibbonMesh = { positions: [], indices: [] };
+        const into: RibbonMesh = { positions: [], indices: [], foam: [] };
 
         ribbonOf(course, 3, 4, into, {
           at: () => 0.01,
@@ -1089,7 +1093,7 @@ ids.forEach((topologyId) => {
         ),
         // Each course's water, flat and uncut.
         expectedArea = land.courses().reduce((sum, { course }) => {
-          const into: RibbonMesh = { positions: [], indices: [] };
+          const into: RibbonMesh = { positions: [], indices: [], foam: [] };
 
           ribbonOf(course, 0, 0, into, {
             at: () => 0.01,
@@ -1392,6 +1396,113 @@ ids.forEach((topologyId) => {
     []
   );
 });
+
+// White water (`foamAt`): none where the water falls less steeply than `RAPIDS.from`, all white from `RAPIDS.full`, and
+//  between, more the steeper, east or south; none where it's at the sea's level, flat, however the land under it falls.
+//  Each point of a river's water as white as `foamAt` says there.
+{
+  const sloping = (east: number, south = 0, at = 0.05): Ground => ({
+      at: (u, v) => at + east * u + south * v,
+      spacingU: 0.125,
+      spacingV: 0.125,
+    }),
+    middle = (RAPIDS.from + RAPIDS.full) / 2,
+    course = courseFrom(0, 0, 1, 0, { seed: 5 }),
+    into: RibbonMesh = { positions: [], indices: [], foam: [] },
+    steep = sloping(middle, 0.05);
+
+  course.levels = course.widths.map(() => 0.02);
+  ribbonOf(course, 3, 4, into, steep);
+
+  expect(
+    'white water: none under its least slope, all white from its most, between more the steeper, either way; none at the sea’s level; each point as white as where it is says',
+    [
+      foamAt(sloping(0), 2, 3),
+      foamAt(sloping(0.06), 2, 3),
+      Number(foamAt(sloping(RAPIDS.from), 2, 3).toFixed(9)),
+      foamAt(sloping(RAPIDS.full), 2, 3),
+      foamAt(sloping(0.4), 2, 3),
+      Number(foamAt(sloping(middle), 2, 3).toFixed(9)),
+      Math.abs(
+        foamAt(sloping(0, -middle, 1), 2, 3) - foamAt(sloping(middle), 2, 3)
+      ) < 1e-9,
+      foamAt(sloping(RAPIDS.from * 0.8, RAPIDS.from * 0.8), 2, 3) > 0,
+      foamAt(sloping(0.4, 0, -2), 2, 3),
+      into.foam.length === into.positions.length / 3 && into.foam.length > 0,
+      into.foam.every(
+        (white, at) =>
+          white ===
+          foamAt(steep, into.positions[at * 3]!, into.positions[at * 3 + 2]!)
+      ),
+    ],
+    [0, 0, 0, 1, 1, 0.5, true, true, 0, true, true]
+  );
+}
+
+// Through the land, chunks four across: a river through mountains and hills to the sea. Civ1's, on River squares in
+//  their valleys, never breaks white. Civ2's, a feature on the mountains and hills themselves, breaks white where it
+//  falls from them. Wherever two chunks' water has a point at the same place on the world, it's as white in both.
+{
+  const topology = topologyFor({ width, height, topologyId: 'square' }),
+    layout: GroundLayout = groundLayoutFor({
+      width,
+      height,
+      topologyId: 'square',
+      wrapsY: topology.wrapsY(),
+    }),
+    period = layout.period(),
+    land = (x: number) =>
+      x >= 11 ? 'Ocean' : x < 4 ? 'Mountains' : x < 7 ? 'Hills' : 'Grassland',
+    river = (x: number, y: number) => y === 5 && x >= 1 && x <= 10,
+    foamOf = (terrainAt: (x: number, y: number) => string) => {
+      const relief = createRelief({
+          layout,
+          source: sourceFor(topology, terrainAt, river),
+        }),
+        grid = chunkGrid(layout, height, { size: 4 }),
+        // Each point's whiteness, by where it is on the world, to a hundred-thousandth.
+        byPlace = new Map<string, number[]>();
+
+      for (let at = 0; at < grid.chunksU * grid.chunksV; at++) {
+        const chunk = buildChunk(
+          grid,
+          relief,
+          at % grid.chunksU,
+          Math.floor(at / grid.chunksU)
+        );
+
+        chunk.river?.foam.forEach((white, point) => {
+          const u = chunk.river!.positions[point * 3]! + chunk.u,
+            v = chunk.river!.positions[point * 3 + 2]! + chunk.v,
+            key = `${(((u % period.u) + period.u) % period.u).toFixed(
+              5
+            )},${v.toFixed(5)}`;
+
+          byPlace.set(key, [...(byPlace.get(key) ?? []), white]);
+        });
+      }
+
+      return [...byPlace.values()];
+    },
+    civ1 = foamOf((x, y) => (river(x, y) ? 'River' : land(x))),
+    civ2 = foamOf((x) => land(x));
+
+  expect(
+    'white water through the land: none on Civ1’s River squares in their valleys; some on Civ2’s, where it falls from mountains and hills, some of it all white; at a place two chunks’ water shares, as white in both',
+    [
+      civ1.length > 0,
+      civ1.flat().every((white) => white === 0),
+      civ2.flat().some((white) => white > 0.5),
+      civ2.flat().some((white) => white === 1),
+      civ2.flat().some((white) => white === 0),
+      civ2.some((whites) => whites.length > 1),
+      civ2.every((whites) =>
+        whites.every((white) => Math.abs(white - whites[0]!) < 1e-6)
+      ),
+    ],
+    [true, true, true, true, true, true, true]
+  );
+}
 
 if (failures.length > 0) {
   process.stderr.write(
