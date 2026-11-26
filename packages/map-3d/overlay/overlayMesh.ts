@@ -2239,7 +2239,8 @@ const fortress = (layer: Layer): void => {
             0.2,
             Math.abs(ru * sv - rv * su) / Math.hypot(ru, rv)
           ),
-          slant = Math.sqrt(1 - square * square) / square;
+          // Never the root of less than nothing, as its share can round to a hair over one.
+          slant = Math.sqrt(Math.max(0, 1 - square * square)) / square;
 
         gates.push([
           side,

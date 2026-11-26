@@ -5714,11 +5714,15 @@ const differing = (
 }
 
 // A mesh's triangles of a colour: whether each is wound to face the way its normal says, so it's drawn from that side
-//  (anticlockwise seen from it), and its normal.
+//  (anticlockwise seen from it), its normal, and its middle.
 const facesColoured = (mesh: OverlayMesh, css: string) => {
   const { r, g, b } = new Color(css),
     { positions: p, normals: n, colours: c } = mesh,
-    found: { facing: boolean; normal: [number, number, number] }[] = [];
+    found: {
+      facing: boolean;
+      normal: [number, number, number];
+      centre: [number, number, number];
+    }[] = [];
 
   for (let at = 0; at < p.length; at += 9) {
     if (
@@ -5745,6 +5749,9 @@ const facesColoured = (mesh: OverlayMesh, css: string) => {
             (e1[0]! * e2[1]! - e1[1]! * e2[0]!) * normal[2] >
           0,
         normal,
+        centre: [0, 1, 2].map(
+          (axis) => (p[at + axis]! + p[at + 3 + axis]! + p[at + 6 + axis]!) / 3
+        ) as [number, number, number],
       });
     }
   }
@@ -6126,11 +6133,28 @@ const pointsColoured = (mesh: OverlayMesh, css: string) => {
             ({ normal: [nu] }) => nu * way > 0.9
           )
         ),
+        // Each side, away from the middle: its outer face away from the road, its inner face toward it.
+        ((sides) =>
+          sides.length > 0 &&
+          sides.every(({ normal: [nu, , nv], centre: [u, , v] }) => {
+            const away = offRoad(u, v);
+
+            return (
+              offRoad(u + nu * 1e-3, v + nv * 1e-3) > away ===
+              away > 0.035 + BRIDGE.thick / 2
+            );
+          }))(
+          facesColoured(bridged, BRIDGE_COLOURS.stone).filter(
+            ({ normal: [, , nv], centre: [u] }) =>
+              Math.abs(nv) > 0.7 && Math.abs(u - 17.5) > 0.1
+          )
+        ),
         pointsColoured(unbridged, BRIDGE_COLOURS.stone).length,
       ];
     }),
     crossings.map(({ name }) => [
       name,
+      true,
       true,
       true,
       true,
@@ -6492,6 +6516,134 @@ const pointsColoured = (mesh: OverlayMesh, css: string) => {
         ]),
       ],
       [true, false]
+    );
+  }
+
+  // An airbase on a river running west to east across its square's middle, its runway's north half over the deck: with
+  //  a road through it from north to south, the road's walls open where the runway crosses them; with a railroad on its
+  //  own, no wall stands on its ballast.
+  {
+    const across: RiverPath = {
+        points: [
+          [2.5, 3.5],
+          [3, 3.5],
+          [3.5, 3.5],
+          [4, 3.5],
+          [4.5, 3.5],
+        ],
+        widths: [
+          RIVER_WIDTH,
+          RIVER_WIDTH,
+          RIVER_WIDTH,
+          RIVER_WIDTH,
+          RIVER_WIDTH,
+        ],
+        levels: [0.097, 0.097, 0.097, 0.097, 0.097],
+      },
+      laidOn = (overlay: SquareOverlay): OverlayMesh => {
+        const into = soup();
+
+        layOverlay(
+          overlay,
+          { ...place(3, 3, { height: cut(0.1, across) }), rivers: [across] },
+          into
+        );
+
+        return { ...into, u: 0, v: 0 } as unknown as OverlayMesh;
+      },
+      through = laidOn(
+        overlayFor(square(['Airbase', 'Road']), [
+          neighbour([0, -1], ['Road']),
+          neighbour([0, 1], ['Road']),
+        ])!
+      ),
+      lone = laidOn(overlayFor(square(['Airbase', 'Road', 'Railroad']), [])!),
+      // Points every 0.002 along a line across the square, at `v`, from `from` to `to`.
+      line = (from: number, to: number, v: number): [number, number][] =>
+        Array.from(
+          { length: Math.round((to - from) / 0.002) + 1 },
+          (_, at): [number, number] => [from + at * 0.002, v]
+        ),
+      runway = [3.57, 3.6].flatMap((v) => line(3.4, 3.6, v)),
+      ballast = [3.47, 3.5, 3.53].flatMap((v) => line(3.38, 3.62, v));
+
+    expect(
+      'an airbase on a river across its square: a road through it north to south on a bridge, its walls open where the runway crosses them; a railroad on its own, no wall on its ballast',
+      [
+        pointsColoured(through, BRIDGE_COLOURS.stone).length > 0,
+        runway.some((at) => coversAt(through, BRIDGE_COLOURS.stone, at)),
+        pointsColoured(lone, ROUTE_COLOURS.ballast).length > 0,
+        pointsColoured(lone, BRIDGE_COLOURS.concrete).length > 0,
+        ballast.some(
+          (at) =>
+            coversAt(lone, BRIDGE_COLOURS.concrete, at) ||
+            coversAt(lone, BRIDGE_COLOURS.girder, at)
+        ),
+      ],
+      [true, false, true, true, false]
+    );
+  }
+
+  // A city on a river through its square's middle: its plaza on the deck, as the roads and streets that come into it are.
+  {
+    const river = northSouth(0.097),
+      city = overlayFor(
+        {
+          ...square(['Road']),
+          city: { id: 'City-Deck', name: 'Deck', growth: { size: 4 } },
+        } as unknown as Parameters<typeof overlayFor>[0],
+        []
+      )!,
+      middle = pointsColoured(
+        laid(city, cut(0.1, river), [river]),
+        ROUTE_COLOURS.street
+      ).filter(([u, , v]) => Math.hypot(u - 17.5, v - 3.5) < 1e-6);
+
+    expect(
+      'a city on a river: its plaza’s middle on the deck, its clearance over the water',
+      [
+        middle.length > 0,
+        middle.every(
+          ([, y]) => y >= surfaceOf(0.097) + BRIDGE.clearance + LIFT.road - 1e-9
+        ),
+      ],
+      [true, true]
+    );
+  }
+
+  // A fortress with a road and a railroad through it at angles where a way's share across a wall rounds to a hair over
+  //  one: no point laid that isn't a number, with a river or without.
+  {
+    const river = northSouth(0.097),
+      fortress: SquareOverlay = {
+        ...overlayFor(square(['Fortress', 'Road', 'Railroad']), [])!,
+        road: {
+          joins: [
+            [1, 0],
+            [-1, 0],
+            [-1, -1],
+          ],
+          alone: false,
+        },
+        railroad: {
+          joins: [
+            [0, -1],
+            [1, 0],
+          ],
+          alone: false,
+        },
+      },
+      finite = (mesh: OverlayMesh) =>
+        Array.from(mesh.positions).every(Number.isFinite) &&
+        Array.from(mesh.normals).every(Number.isFinite);
+
+    expect(
+      'a fortress with a road and a railroad through it: every point and normal a number, with a river or without',
+      [
+        finite(laid(fortress, () => 0.1)),
+        finite(laid(fortress, cut(0.1, river), [river])),
+      ],
+      [true, true]
     );
   }
 
