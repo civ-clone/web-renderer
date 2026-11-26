@@ -630,9 +630,13 @@ ids.forEach((topologyId) => {
     // A river square seen beside one never seen, which has a river.
     frontier: [number, number] = [9, 2],
     hidden = topology.neighbour(9, 2, a)!,
-    // Civ1's River terrain, but at the chain's end, which is hills with a river, as Civ2 has it, high over the sea.
+    // Civ1's River terrain, but at the chain's end, which is hills with a river, as Civ2 has it, high over the sea; and
+    //  its third square, mountains with a river, as Civ2 has it, the river through them.
     named = new Set([...river, key(lone), key(frontier), key(hidden)]),
-    terrains = new Map<string, string>([[key(end), 'Hills']]),
+    terrains = new Map<string, string>([
+      [key(end), 'Hills'],
+      [key(chain[2]!), 'Mountains'],
+    ]),
     rivers = new Set(named),
     terrainAt = (x: number, y: number): string =>
       terrains.get(`${x},${y}`) ??
@@ -708,12 +712,8 @@ ids.forEach((topologyId) => {
       const [pu, pv] = pointOf(placed, along),
         level = alongOf(course.levels, along),
         wide = alongOf(course.widths, along),
-        [du, dv] = [
-          pointOf(placed, Math.min(STEPS, along + 0.25))[0] -
-            pointOf(placed, Math.max(0, along - 0.25))[0],
-          pointOf(placed, Math.min(STEPS, along + 0.25))[1] -
-            pointOf(placed, Math.max(0, along - 0.25))[1],
-        ],
+        // Across it as its level's taken (`relief.ts`'s lows): square to the line it's on, from the point at or before.
+        [, , du, dv] = pointAlong(course, along),
         length = Math.hypot(du, dv) || 1,
         onLand = (u: number, v: number) => {
           const [x, y] = layout.tileAt(u, v),

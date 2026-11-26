@@ -435,8 +435,9 @@ blended across squares.
   - a roughness (how much noise rides on it);
   - a shape (`flat`, `rolling`, `ridged` or `peaked`).
 
-  Typical values, in world units: ocean −0.15, rising to −0.03 at the shore; plains 0.02; hills 0.12, ridged;
-  mountains 0.35, ridged and peaked.
+  Typical values, in world units: ocean −0.15, rising to −0.03 at the shore; plains 0.02; hills 0.16, ridged, with
+  roughness 0.08; mountains 0.75, roughness 0.15, ridged and peaked, a mountain's top 0.73 to 0.93 high. Hills and
+  mountains were raised from 0.12 and 0.35 by #1391, so rivers rush down them and mountains stand over the land.
 - **Blending:**
   - A point takes its square and that square's neighbours (from the topology), each weighted by a smooth kernel of its
     distance from the square's middle (Wendland C2, radius 1.2 squares).
@@ -520,14 +521,17 @@ blended across squares.
 - **The built-in set** uses textures made by code. A hosted set can bring CC0 photographic textures (D3).
 - **As built (slice 3.1):** the surfaces' detail, blended, and rock, snow and wet ground by where the land lies.
   - **By where it lies** (`packages/map-3d/terrain/cover.ts`, the same numbers in the land's shader):
-    - **rock** where the ground's steep: from about 14° from level, whole by about 28°. So it's on mountains' flanks,
-      the steepest hills, and a mountain's foot where its slope reaches into a neighbour. Mountains' sides reach about
-      43° to 45° at their steepest (37° for most of the steepest), hills 35° to 38°, most under 13°. A texture laid flat
-      stretches about 1.4 times at 45°: rock mapped from three sides would fix that, and is still to do;
-    - **snow** above a snowline, 0.40 high at the equator and 0.26 at the poles, on ground level enough to hold it. A
-      mountain's top is 0.32 to 0.47 high, about 0.40 for most, so near the equator about half the peaks are capped and
-      two thirds have some snow, and from halfway to the poles nearly every peak is capped. Its latitude is the same at
-      every copy of the world, above or below;
+    - **rock** where the ground's steep: from about 14° from level, whole by about 28°. So it's on most of a
+      mountain, the steeper parts of hills, and a mountain's foot where its slope reaches into a neighbour. Since
+      #1391, mountains' sides reach about 64° to 68° at their steepest (58° for most of the steepest, 43° in the
+      middle), hills about 34° (up to 55° at a mountain's foot), most under 26°, so about a sixth of a block of hills
+      is rock. A texture laid flat stretches about 2.3 times at 64°: rock mapped from three sides would fix that, and
+      is still to do;
+    - **snow** above a snowline, 0.86 high at the equator and 0.56 at the poles, on ground level enough to hold it:
+      none more upright than about 53° from level, whole by about 37°. A mountain's top is 0.73 to 0.93 high, about
+      0.83 for most, so near the equator no peak is capped, about a quarter are a third of the way to the poles and
+      most from halfway to them (0, 3 and 7 of twelve peaks measured). A cap is small, as a peak's top is steep. Its
+      latitude is the same at every copy of the world, above or below;
     - **wet**, darker and shinier, at the waterline, where water squares are part of what the ground's blended from
       (`GroundSample#shore`, carried by the mesh). Not by height alone: a swamp or a river inland, however low, stays
       dry.

@@ -488,6 +488,11 @@ flash under reduced motion, and #1255's follow-ups.
 its neighbour's, across an edge or a corner, dipping to a saddle between them, so a chain of mountains is a range and
 a block of them a massif, not a grid of cones. Hills already run into one another, as their relief is blended.
 
+**Heights: raised (#1391).** Hills roll higher (0.16, rougher) and mountains rise more than twice as high (0.75, a
+top about 0.83), so Civ2's rivers rush white down them and mountains stand over the land round them (spec §4.1). The
+snowline rose with them, so about as many peaks are capped as before (spec §4.3). Still to do: a mountain beside a
+square never seen stands over the cloud there as a sheer wall, and roads and railroads climb over a mountain's top.
+
 **3.2, first part: done.** What grows is laid with the rest of the overlay, from the built-in set's table (`packages/models-builtin/vegetation.ts`):
 - forests' trees are conifers towards the poles and broadleaf towards the equator;
 - jungle has broadleaf and palms, swamps reeds and dead trees, and grassland, plains, tundra and hills bushes, shrubs and scrub;

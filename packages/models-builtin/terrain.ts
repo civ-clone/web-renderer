@@ -127,12 +127,12 @@ export const terrainTable: { readonly [terrain: string]: TerrainEntry } = {
     surface: 'grass',
   },
   Hills: {
-    relief: { base: 0.12, roughness: 0.04, shape: 'ridged' },
+    relief: { base: 0.16, roughness: 0.08, shape: 'ridged' },
     colour: '#7b7650',
     surface: 'plains',
   },
   Mountains: {
-    relief: { base: 0.35, roughness: 0.08, shape: 'peaked' },
+    relief: { base: 0.75, roughness: 0.15, shape: 'peaked' },
     colour: '#77726a',
     surface: 'rock',
   },
