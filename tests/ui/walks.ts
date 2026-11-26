@@ -720,6 +720,62 @@ const point = (u: number, v: number, lift = 0): WalkPoint => ({
   );
 }
 
+// Through a city on a slope: it stands in front of the buildings at one lift, but passes through the middle at the
+//  middle's own, not the one in front.
+{
+  const walks = new Walks({ u: 10, v: null }),
+    inCity: WalkPoint = {
+      at: [2, 1.26],
+      lift: 0.05,
+      middle: [2, 1],
+      middleLift: 0.15,
+    };
+
+  walks.step(
+    'goer',
+    { x: 1, y: 1 },
+    { x: 2, y: 1 },
+    { at: [1, 1], lift: 0, middle: [1, 1], middleLift: 0 },
+    inCity,
+    0,
+    pace
+  );
+  walks.step(
+    'goer',
+    { x: 2, y: 1 },
+    { x: 3, y: 1 },
+    inCity,
+    { at: [3, 1], lift: 0, middle: [3, 1], middleLift: 0 },
+    1,
+    pace
+  );
+
+  const ends = walks.nextEnd() ?? 0;
+  let nearest = Infinity,
+    liftThere = NaN;
+
+  for (let now = 1; now < ends; now++) {
+    const [walker] = walks.at(now).going;
+
+    if (walker === undefined) {
+      break;
+    }
+
+    const off = Math.hypot(walker.at[0] - 2, walker.at[1] - 1);
+
+    if (off < nearest) {
+      nearest = off;
+      liftThere = walker.lift;
+    }
+  }
+
+  expect(
+    'through a city on a slope, a GoTo passes the middle at the middle’s lift, not the one in front of the buildings',
+    [nearest < 0.02, round(liftThere, 2)],
+    [true, 0.15]
+  );
+}
+
 // A GoTo's steps through a city, all at once: through the city square's middle, not in front of its buildings, and
 //  ending in front of the last one's.
 {
