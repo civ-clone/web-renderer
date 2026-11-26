@@ -38,8 +38,13 @@ export type ChunkMesh = {
   // 1 at each point on a square never seen, and 0 elsewhere, for the cloud over them.
   unseen: Float32Array;
   indices: Uint32Array;
-  // The water of the rivers whose courses start in the chunk, relative to its corner, as the land's points are; or none.
-  river: { positions: Float32Array; indices: Uint32Array } | null;
+  // The water of the rivers whose courses start in the chunk, relative to its corner, as the land's points are, and how
+  //  white it is at each point (`foamAt`); or none.
+  river: {
+    positions: Float32Array;
+    indices: Uint32Array;
+    foam: Float32Array;
+  } | null;
 };
 
 /**
@@ -217,7 +222,7 @@ export const buildChunk = (
     };
 
   // The rivers' water: each course drawn by the chunk that carries its start, once, laid on the land as it's drawn.
-  const ribbon: RibbonMesh = { positions: [], indices: [] };
+  const ribbon: RibbonMesh = { positions: [], indices: [], foam: [] };
 
   relief.courses().forEach(({ course, u, v }) => {
     const [ci, cj] = carriedBy(grid, u, v);
@@ -248,6 +253,7 @@ export const buildChunk = (
         : {
             positions: new Float32Array(ribbon.positions),
             indices: new Uint32Array(ribbon.indices),
+            foam: new Float32Array(ribbon.foam),
           },
   };
 };

@@ -43,6 +43,7 @@ import {
 import { ChunkMesh } from './terrain/chunks';
 import { puffAt } from './markers/puff';
 import landMaterial from './landMaterial';
+import riverMaterial from './riverMaterial';
 import {
   ALOFT_PART,
   FIGURES_PART,
@@ -329,9 +330,7 @@ export type StageFactory = (
 const SKY = 0x9fb3c4,
   SKY_LIGHT = 0xd6e2ec,
   GROUND_LIGHT = 0x5b5140,
-  SUN = 0xfff0d8,
-  // A river's water: darker and greener than the sea at its shore, as a river's carries silt.
-  RIVER_WATER = 0x2f5f66;
+  SUN = 0xfff0d8;
 
 /**
  * The copies of the world within `sight` of `focus`, as offsets on the ground: every multiple of the period across, and
@@ -521,15 +520,8 @@ export const createStage: StageFactory = (
     land = new Group(),
     // The land's colour at each point, and its surfaces' detail over it (`landMaterial.ts`).
     { material, detail } = landMaterial(period, ground.rows * ground.spacingV),
-    // The rivers' water (`terrain/ribbons.ts`): a little in front of the land it lies on, which is close under it.
-    riverMaterial = new MeshStandardMaterial({
-      color: RIVER_WATER,
-      roughness: 0.3,
-      metalness: 0,
-      polygonOffset: true,
-      polygonOffsetFactor: -2,
-      polygonOffsetUnits: -2,
-    }),
+    // The rivers' water (`terrain/ribbons.ts`), white where it breaks (`riverMaterial.ts`).
+    riverWater = riverMaterial(period),
     sun = new DirectionalLight(SUN, 2.6),
     // What's drawn at every copy of the world in sight: the land's chunks by `i,j`, and the squares' markers by `x,y`.
     //  Each has where it lies, how to make one copy of it, and the copies drawn now.
@@ -1026,7 +1018,7 @@ export const createStage: StageFactory = (
     overlayMaterial.clippingPlanes = seen.v === null ? poles : null;
     hazeMaterial.clippingPlanes = overlayMaterial.clippingPlanes;
     // Rivers' water too, so a course across the poles' water stops at them.
-    riverMaterial.clippingPlanes = overlayMaterial.clippingPlanes;
+    riverWater.clippingPlanes = overlayMaterial.clippingPlanes;
     plantModels.forEach(({ parts }) =>
       parts.forEach(({ material }) => {
         material.clippingPlanes = overlayMaterial.clippingPlanes;
@@ -1225,6 +1217,9 @@ export const createStage: StageFactory = (
           new BufferAttribute(mesh.river.positions, 3)
         );
         river.setIndex(new BufferAttribute(mesh.river.indices, 1));
+
+        // How white its water is at each point (`riverMaterial.ts`).
+        river.setAttribute('foam', new BufferAttribute(mesh.river.foam, 1));
         river.computeVertexNormals();
         river.computeBoundingSphere();
       }
@@ -1243,7 +1238,7 @@ export const createStage: StageFactory = (
           drawn.receiveShadow = true;
 
           if (river !== null) {
-            const water = new Mesh(river, riverMaterial);
+            const water = new Mesh(river, riverWater);
 
             water.receiveShadow = true;
             drawn.add(water);
@@ -1904,7 +1899,7 @@ export const createStage: StageFactory = (
       water.dispose();
       clouds.dispose();
       material.dispose();
-      riverMaterial.dispose();
+      riverWater.dispose();
       detail.dispose();
       renderer.dispose();
     },

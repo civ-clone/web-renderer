@@ -2,12 +2,20 @@
 //  bed (`rivers.ts`) as the land's mesh draws it, a little over it, so it's never under the land nor left standing over
 //  it, wherever another course's channel has cut it lower. Its shapes are cut along the land's cells and their
 //  diagonals, so each piece lies over one of the land's triangles, and both are flat there: the water's exactly its
-//  lift over the land everywhere. Pure: the land's chunks carry it (`chunks.ts`), and the stage draws it.
+//  lift over the land everywhere. Where it falls steeply, it breaks white (`RAPIDS`). Pure: the land's chunks carry it
+//  (`chunks.ts`), and the stage draws it.
 
 import { Course, STEPS, alongOf, pointAlong } from './rivers';
 
-/** A river's water, as three.js takes it: its points, three numbers each, and its triangles, three points each. */
-export type RibbonMesh = { positions: number[]; indices: number[] };
+/**
+ * A river's water, as three.js takes it: its points, three numbers each, and its triangles, three points each; and at
+ *  each point, how white it is, from 0, still, to 1, all white water (`foamAt`).
+ */
+export type RibbonMesh = {
+  positions: number[];
+  indices: number[];
+  foam: number[];
+};
 
 /**
  * The land the water's laid on: how high its mesh draws it at (`u`, `v`), and how far apart its points are, across and
@@ -21,6 +29,44 @@ export type Ground = {
 
 /** How far over the land, as its mesh draws it, a river's water lies. */
 export const RIVER_LIFT = 0.004;
+
+/**
+ * How steeply a river's water falls, as it's laid, where it starts to break white (`from`), and where it's all white
+ *  (`full`): rise over run, any way. Civ1's rivers, in their valleys, are nearly flat, their water no steeper than about
+ *  0.095 where I've measured, across a mouth, so they don't break; Civ2's, over hills and mountains, fall as steeply as
+ *  0.3 to 0.5 in places.
+ */
+export const RAPIDS = { from: 0.1, full: 0.25 } as const;
+
+// How far either side of a point its water's slope is taken, as a share of the land's spacing.
+const PROBE = 1 / 32;
+
+// Smoothly from 0 to 1 as `t` goes from 0 to 1.
+const smooth = (t: number): number => {
+  const clamped = Math.max(0, Math.min(1, t));
+
+  return clamped * clamped * (3 - 2 * clamped);
+};
+
+/**
+ * How white a river's water is at (`u`, `v`), laid on `ground`: by how steeply it falls there, taken just either side
+ *  of it (`PROBE` of the land's spacing), so by the land's triangles that meet there, under the water, and not the bank
+ *  half a cell off. Drawn between its points, a drop over one of the land's cells whitens the water a little above and
+ *  below it too. By where it is alone, so wherever two strips or discs share a point, or overlap, they're as white as
+ *  each other.
+ */
+export const foamAt = (ground: Ground, u: number, v: number): number => {
+  const water = (pu: number, pv: number) =>
+      Math.max(0, ground.at(pu, pv) + RIVER_LIFT),
+    eu = ground.spacingU * PROBE,
+    ev = ground.spacingV * PROBE,
+    slope = Math.hypot(
+      (water(u + eu, v) - water(u - eu, v)) / (eu * 2),
+      (water(u, v + ev) - water(u, v - ev)) / (ev * 2)
+    );
+
+  return smooth((slope - RAPIDS.from) / (RAPIDS.full - RAPIDS.from));
+};
 
 // How many sides a pool has, and the disc at each end of a course where it joins others.
 const ROUND = 12;
@@ -130,6 +176,7 @@ export const lay = (
       if (index === undefined) {
         index = into.positions.length / 3;
         into.positions.push(u, Math.max(0, ground.at(u, v) + RIVER_LIFT), v);
+        into.foam.push(foamAt(ground, u, v));
         points.set(key, index);
       }
 

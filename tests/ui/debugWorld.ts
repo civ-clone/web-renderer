@@ -399,7 +399,8 @@ expect(
 
 // Its improvements, on 30 by 20 squares as for its specials: each of what it shows once, on land, on its terrain, built
 //  as it says, three squares from any other, the nearest the middle first; each of its roads' neighbours with a road on
-//  its terrain, or what it says on the terrain it says; each of its rivers' neighbours River; no cities or units.
+//  its terrain, or what it says on the terrain it says; each of its rivers' neighbours Civ1's River, or Civ2's on the
+//  terrain it says, and Civ2's on it where it says; no cities or units.
 const works = field.map((tile) => ({
     ...tile,
     terrain: { ...tile.terrain },
@@ -409,7 +410,10 @@ const works = field.map((tile) => ({
   at = (x: number, y: number) =>
     works.find((tile) => tile.x === x && tile.y === y),
   names = (tile: Tile | undefined) =>
-    (tile?.improvements ?? []).map(({ _ }) => _).join('+');
+    (tile?.improvements ?? []).map(({ _ }) => _).join('+'),
+  // Whether Civ2's River is on it, as a feature.
+  civ2River = (tile: Tile | undefined) =>
+    (tile?.terrain.features ?? []).some(({ _ }) => _ === 'River');
 
 improvementsGallery(works, 15, 10);
 
@@ -451,6 +455,7 @@ expect(
         roads,
         along = ['Road'],
         beside = terrain,
+        river = false,
         rivers = [],
       }) => {
         // One built as it says, of those that look alike.
@@ -466,9 +471,14 @@ expect(
                 neighbour!.terrain._ === beside
               );
             }) &&
-            rivers.every(
-              ([dx, dy]) => at(tile.x + dx, tile.y + dy)?.terrain._ === 'River'
-            )
+            civ2River(tile) === river &&
+            rivers.every(([dx, dy, on]) => {
+              const neighbour = at(tile.x + dx, tile.y + dy);
+
+              return on === undefined
+                ? neighbour?.terrain._ === 'River' && !civ2River(neighbour)
+                : neighbour?.terrain._ === on && civ2River(neighbour);
+            })
         );
       }
     ),
