@@ -1739,7 +1739,8 @@ in its set (plan 2.2). It's in the model's entry:
   for every two squares (`STRIDE`), so twice as quick as it's made at a player's quarter of a second a square, quicker
   for a rival's or a quick walk, slower as it gets going and stops. Each walk starts the clip from its start, and a
   squad's figures are 0.13 s apart. Waiting where it's come, or fighting, it stands as its model does, till `fight` and
-  `die` are played. The Partisans' was the first; the Riflemen's, Musketmen's and Marines' followed.
+  `die` are played. The Partisans' was the first; the Riflemen's, Musketmen's and Marines' followed, then the
+  Explorers', the Spies', the Fanatics', the Warriors' and the Engineers'.
 - **Since:** `fight` with its shots, and `die`, on the battles' own frames (the fourth part, below); and `idle`,
   with frames drawn for it (the fifth).
 
