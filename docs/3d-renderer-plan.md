@@ -411,6 +411,8 @@ band along a hull, the wingtips). Still to do:
   Warrior brings his club down overhand, each blow landing half a second in, as their clips' `strikes` say (#1380).
   They stand, walk and fall with their own clips, made in their sets (civ-clone/models-realistic-by#23,
   civ-clone/models-realistic-cc0#41), as do the Engineers, who don't fight.
+- **Clips, sixth part: done.** The Alpine Troops stand, glide on skis, fire a bullet from their rifles' muzzles about
+  half a second into their fight, and fall, with their own clips, made in their set (civ-clone/models-realistic-cc0#42).
 - **Clips, as planned:** rigged copies are to sit beside the static models, which their manifests go on naming. The
   clips are idle, moving and dying for every unit, fighting for combat units (shots in flight for ranged ones), Settlers
   working and settling, ships sinking and vehicles exploding. The map's side is to play them (`AnimationMixer`, skinned
