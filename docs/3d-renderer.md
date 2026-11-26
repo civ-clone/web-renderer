@@ -1818,7 +1818,7 @@ in its set (plan 2.2). It's in the model's entry:
   for a rival's or a quick walk, slower as it gets going and stops. Each walk starts the clip from its start, and a
   squad's figures are 0.13 s apart. Waiting where it's come, or fighting, it stands as its model does, till `fight` and
   `die` are played. The Partisans' was the first; the Riflemen's, Musketmen's and Marines' followed, then the
-  Explorers', the Spies', the Fanatics', the Warriors' and the Engineers'.
+  Explorers', the Spies', the Fanatics', the Warriors', the Engineers' and the Alpine Troops', who glide on skis.
 - **Since:** `fight` with its shots, and `die`, on the battles' own frames (the fourth part, below); and `idle`,
   with frames drawn for it (the fifth).
 
@@ -1908,11 +1908,11 @@ each kind goes as it would (`SHOT_LOOKS` in `shots.ts`):
   unlit, as the bottle's flame is: no see-through shapes, so nothing needs drawing in another order. A puff takes a
   size, and a flash.
 - **The Partisans' bottle** goes as it did: none of its numbers changed.
-- **Rifles:** the Riflemen, Musketmen and Marines have rigged copies since models-realistic-cc0 d1851f9d, which needed
-  nothing here. Each fires a bullet from its rifle's muzzle (`muzzle`, a node under its weapon) half a second into its
-  `fight`, the Marines three a sixth of a second apart, though Marines that attack and lose fire only the first, as
-  the blow comes as it lands (`shotsFired`). Cannons fire once their models have rigged copies whose `fight` clips say
-  so.
+- **Rifles:** the Riflemen, Musketmen and Marines have rigged copies since models-realistic-cc0 d1851f9d, and the
+  Alpine Troops since its 9ce1b464, which needed nothing here. Each fires a bullet from its rifle's muzzle (`muzzle`,
+  a node under its weapon) about half a second into its `fight`, the Marines three a sixth of a second apart, though
+  Marines that attack and lose fire only the first, as the blow comes as it lands (`shotsFired`). Cannons fire once
+  their models have rigged copies whose `fight` clips say so.
 
 ---
 
