@@ -503,8 +503,10 @@ Plants are scattered by seed, each where it has room. They stay clear of a unit'
 Then the water in them: a strip laid on each river's channel along its course, round where courses join, as far as
 the sea.
 
-Still to do in 3.3: specials, fields and the rest keeping clear of rivers, bridges, rapids and falls, and flow (with
-#1365).
+Then what's laid on the land keeps clear of their channels: fields stop short of them, and what grows, specials, mines,
+huts and farms stand clear.
+
+Still to do in 3.3: bridges, rapids and falls, and flow (with #1365).
 
 **3.4, first part: done.** What's laid on the land is made by code (`packages/map-3d/overlay/`), one vertex-coloured mesh a chunk, so it costs a draw call a chunk (and one more for its smog, where it has any, since #1335):
 - roads and railroads are draped over the land, joined to their neighbours as the 2D map joins them, along the topology's directions, and at the nearest copy across the world's seams. Roads wind like country lanes, each half bowing its own way and meeting its neighbour's at the edge; railroads are straight;

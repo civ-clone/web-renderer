@@ -794,6 +794,16 @@ How plants are placed:
     only on the far edge's side for now: #1379). It's one colour for now (`RIVER_WATER`, darker and greener than the
     sea at its shore), a little in front of the land under it (`polygonOffset`). It doesn't move yet: that's with
     #1365.
+  - **Keeping clear** (third part, `overlayMesh.ts`): what's laid on a square keeps clear of the channels of the rivers
+    through it (`ReliefMap#coursesAt`, each placed at the square's copy of the world, as `Land` gives them its overlay),
+    out to their flat beds' edges (their water's width and `FLOOR`), as it keeps clear of its roads: what grows there,
+    woods' trees, its specials, a mine, a hut and a farm's buildings (each through `Layer#clearance`), and the houses
+    of a city beside it that have spread onto it (`SuburbClear#channels`). Where there's room nowhere, each takes the
+    place with the most, which can take it a little into a channel's bed, though not, where I've looked, its water. A
+    field's rows stop short of a channel either side, where its round ends and the band between them cross the row
+    (`channelAcross`, met at five lines down it). A city's lot is left alone: its plaza and buildings stand over the
+    river, as the 2D map's city covers its square. Roads, railroads, a fortress's walls and an airbase's runway still
+    cross the water as they lie on the land, till bridges.
 
 ### 5.4 Tile improvements
 

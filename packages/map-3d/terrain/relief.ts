@@ -97,7 +97,18 @@ export interface ReliefMap {
   ): [number, number][];
   /** Every river's course, once each, with the middle of the square that makes it, on the world's first copy. */
   courses(): readonly { course: Course; u: number; v: number }[];
+  /**
+   * The rivers' courses that reach into the square at (`x`, `y`), each placed at that square's copy of the world: its
+   *  points, and how wide its water is either side at each. None where it's never been seen.
+   */
+  coursesAt(x: number, y: number): readonly RiverPath[];
 }
+
+/** A river's course where it lies on the ground: its points (`u`, `v`), and how wide its water is either side at each. */
+export type RiverPath = {
+  points: readonly (readonly [number, number])[];
+  widths: readonly number[];
+};
 
 // How much of a peak's height is its own, weighted by the square of its weight: the rest is in the blend with its
 //  neighbours.
@@ -1294,6 +1305,26 @@ export const createRelief = ({
     sample,
     height: (u: number, v: number): number => sample(u, v).height,
     refresh,
+    coursesAt: (x, y) => {
+      const at = index(x, y),
+        through = at === null ? [] : riversIn[at] ?? [],
+        makers = at === null ? [] : riversFrom[at] ?? [],
+        [cu, cv] = layout.centre(x, y);
+
+      // Where the middle of the square that made each is, from this square's at this copy of the world.
+      return through.map((course, which) => {
+        const mu = cu - (makers[which * 2] ?? 0),
+          mv = cv - (makers[which * 2 + 1] ?? 0);
+
+        return {
+          points: course.widths.map((_, step): [number, number] => [
+            mu + (course.points[step * 2] ?? 0),
+            mv + (course.points[step * 2 + 1] ?? 0),
+          ]),
+          widths: course.widths,
+        };
+      });
+    },
     courses: () =>
       [...coursesBy.values()].map(({ course, u, v }) => ({ course, u, v })),
   };

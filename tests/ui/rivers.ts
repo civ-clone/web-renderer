@@ -1024,6 +1024,37 @@ ids.forEach((topologyId) => {
     [true, 1, 0, true]
   );
 
+  // Each square's courses, as what's laid on it takes them (`coursesAt`), placed at its copy of the world: the river
+  //  across the seam, from its last column's square's middle, and at its first column's square, by its own middle,
+  //  not a world away; and a square it doesn't reach, none.
+  const [lastU, lastV] = layout.centre(width - 1, seamRow),
+    [firstU, firstV] =
+      across === undefined ? [0, 0] : layout.centre(...across[1]!),
+    fromLast = seam.coursesAt(width - 1, seamRow),
+    atFirst = across === undefined ? [] : seam.coursesAt(...across[1]!),
+    nearestTo = (
+      paths: readonly { points: readonly (readonly [number, number])[] }[],
+      u: number,
+      v: number
+    ) =>
+      Math.min(
+        ...paths.flatMap(({ points }) =>
+          points.map(([pu, pv]) => Math.hypot(pu - u, pv - v))
+        )
+      );
+
+  expect(
+    `${topologyId}: each square’s courses are placed at its copy of the world: from a square’s middle, and at the square across the seam by its own; none at a square it doesn’t reach`,
+    [
+      fromLast.length,
+      near(nearestTo(fromLast, lastU, lastV), 0, 1e-9),
+      atFirst.length,
+      near(nearestTo(atFirst, firstU, firstV), 0, 1e-9),
+      seam.coursesAt(3, 1).length,
+    ],
+    [1, true, 1, true, 0]
+  );
+
   // The water, as the chunks carry it, chunks four across, so the world's several: each course's drawn once, by the
   //  chunk that carries its start (as much of it as there is, by its area); facing up; and wherever it's over the sea's
   //  level, exactly its lift over the land as its mesh draws it, at its points, along its triangles' sides and inside

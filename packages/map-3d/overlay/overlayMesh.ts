@@ -56,6 +56,8 @@ import {
 import { IN_FRONT_OF_CITY } from '../markers/drawMarker';
 import { ditherRank } from './thinning';
 import { standAt } from './stands';
+import { RiverPath } from '../terrain/relief';
+import { FLOOR } from '../terrain/rivers';
 
 /** Where a square is, and what it needs to know of the land round it, to lay its overlay. */
 export type OverlayPlace = {
@@ -89,6 +91,8 @@ export type OverlayPlace = {
   // How far the model a set draws a kind of plant with reaches round its origin, for each of its height, where it's
   //  known: the room a plant of that kind takes, in place of the built-in set's shape's (`ROOM`).
   plantReach?(kind: PlantKind): number | null;
+  // The rivers' courses through the square (`ReliefMap#coursesAt`): what's laid on it keeps clear of their channels.
+  rivers?: readonly RiverPath[];
 };
 
 /**
@@ -387,10 +391,31 @@ const MATRIX = new Matrix4(),
 class Layer {
   readonly soup: Soup;
   readonly place: OverlayPlace;
+  // The rivers' channels through the square, each line of each course with how far either side of it its channel's
+  //  flat bed reaches (its water's width and `FLOOR`): what's laid on the square keeps clear of them, as of its lines.
+  readonly channels: [
+    readonly [number, number],
+    readonly [number, number],
+    number
+  ][];
 
   constructor(soup: Soup, place: OverlayPlace) {
     this.soup = soup;
     this.place = place;
+    this.channels = (place.rivers ?? []).flatMap(({ points, widths }) =>
+      points
+        .slice(1)
+        .map(
+          (
+            to,
+            at
+          ): [readonly [number, number], readonly [number, number], number] => [
+            points[at]!,
+            to,
+            Math.max(widths[at] ?? 0, widths[at + 1] ?? 0) + FLOOR,
+          ]
+        )
+    );
   }
 
   // The land's height at a point; at sea, the water's surface.
@@ -708,9 +733,9 @@ class Layer {
   readonly grown: [number, number, PlantKind][] = [];
 
   /**
-   * How much more than it needs something taking `room` at (`u`, `v`) has clear: of the square's lines, of what stands
-   *  there already, and of the unit's stand at its middle, the least of them; and, if it's to stay `inside`, of the
-   *  square's edge, but for `EDGE_REACH`. Less than none where it hasn't enough.
+   * How much more than it needs something taking `room` at (`u`, `v`) has clear: of the square's lines, of its rivers'
+   *  channels, of what stands there already, and of the unit's stand at its middle, the least of them; and, if it's to
+   *  stay `inside`, of the square's edge, but for `EDGE_REACH`. Less than none where it hasn't enough.
    */
   clearance(
     u: number,
@@ -725,6 +750,9 @@ class Layer {
 
     this.lines.forEach(([a, b]) => {
       least = Math.min(least, distanceTo(u, v, a, b) - LINE_CLEAR - room);
+    });
+    this.channels.forEach(([a, b, reach]) => {
+      least = Math.min(least, distanceTo(u, v, a, b) - reach - room);
     });
     this.taken.forEach(([tu, tv, other]) => {
       least = Math.min(least, Math.hypot(u - tu, v - tv) - other - room);
@@ -746,8 +774,8 @@ class Layer {
   }
 
   /**
-   * Whether (`u`, `v`) has `room` clear of the square's lines, of what stands there already, and of the stand, by
-   *  `stand` from the middle.
+   * Whether (`u`, `v`) has `room` clear of the square's lines, of its rivers' channels, of what stands there already,
+   *  and of the stand, by `stand` from the middle.
    */
   hasRoom(u: number, v: number, room: number, stand = STAND_CLEAR): boolean {
     return this.clearance(u, v, room, false, stand) >= 0;
@@ -1029,19 +1057,30 @@ export const rowAround = (
   to: number,
   v: number,
   width: number,
-  houses: readonly (readonly (readonly [number, number])[])[]
+  houses: readonly (readonly (readonly [number, number])[])[],
+  channels: readonly (readonly [
+    readonly [number, number],
+    readonly [number, number],
+    number
+  ])[] = []
 ): [number, number][] => {
-  const blocked = houses
-      .filter(
-        (corners) =>
-          Math.min(...corners.map(([, cv]) => cv)) - GAP < v + width / 2 &&
-          Math.max(...corners.map(([, cv]) => cv)) + GAP > v - width / 2
-      )
-      .map((corners): [number, number] => [
-        Math.min(...corners.map(([cu]) => cu)) - GAP,
-        Math.max(...corners.map(([cu]) => cu)) + GAP,
-      ])
-      .sort((a, b) => a[0] - b[0]),
+  const blocked = [
+      ...houses
+        .filter(
+          (corners) =>
+            Math.min(...corners.map(([, cv]) => cv)) - GAP < v + width / 2 &&
+            Math.max(...corners.map(([, cv]) => cv)) + GAP > v - width / 2
+        )
+        .map((corners): [number, number] => [
+          Math.min(...corners.map(([cu]) => cu)) - GAP,
+          Math.max(...corners.map(([cu]) => cu)) + GAP,
+        ]),
+      ...channels.flatMap(([a, b, reach]) => {
+        const across = channelAcross(a, b, reach, v, width);
+
+        return across === null ? [] : [across];
+      }),
+    ].sort((a, b) => a[0] - b[0]),
     pieces: [number, number][] = [];
   let start = from;
 
@@ -1060,8 +1099,89 @@ export const rowAround = (
   return pieces.filter(([a, b]) => b - a >= SHORTEST_ROW);
 };
 
+// Where `slope · u + offset` is between `low` and `high`, along a line: all of it, none, or between two `u`.
+const between = (
+  slope: number,
+  offset: number,
+  low: number,
+  high: number
+): [number, number] | null => {
+  if (slope === 0) {
+    return offset >= low && offset <= high ? [-Infinity, Infinity] : null;
+  }
+
+  const p = (low - offset) / slope,
+    q = (high - offset) / slope;
+
+  return [Math.min(p, q), Math.max(p, q)];
+};
+
+/**
+ * How far across a row `width` wide along `v` a river's channel crosses it, from `a` to `b` and `reach` either side,
+ *  with `GAP` either end: or nowhere. Its crossing of each of five lines down the row, its edges and between: on each,
+ *  where it meets the channel's round ends, and the band between them, all one, as the channel's convex.
+ */
+export const channelAcross = (
+  a: readonly [number, number],
+  b: readonly [number, number],
+  reach: number,
+  v: number,
+  width: number
+): [number, number] | null => {
+  const du = b[0] - a[0],
+    dv = b[1] - a[1],
+    length = Math.hypot(du, dv);
+  let low = Infinity,
+    high = -Infinity;
+
+  const take = (span: readonly [number, number] | null): void => {
+    if (span !== null && span[0] <= span[1]) {
+      low = Math.min(low, span[0]);
+      high = Math.max(high, span[1]);
+    }
+  };
+
+  [-0.5, -0.25, 0, 0.25, 0.5].forEach((share) => {
+    const line = v + width * share;
+
+    // Its round ends.
+    [a, b].forEach(([cu, cv]) => {
+      const half = reach * reach - (line - cv) ** 2;
+
+      take(half < 0 ? null : [cu - Math.sqrt(half), cu + Math.sqrt(half)]);
+    });
+
+    if (length === 0) {
+      return;
+    }
+
+    // The band between them: how far along the line from `a` to `b` a point is, from 0 to 1, and how far across it,
+    //  within `reach` either way; each straight along the row.
+    const along = between(
+        du / length ** 2,
+        ((line - a[1]) * dv - a[0] * du) / length ** 2,
+        0,
+        1
+      ),
+      across = between(
+        dv / length,
+        (-a[0] * dv - (line - a[1]) * du) / length,
+        -reach,
+        reach
+      );
+
+    take(
+      along === null || across === null
+        ? null
+        : [Math.max(along[0], across[0]), Math.min(along[1], across[1])]
+    );
+  });
+
+  return low === Infinity ? null : [low - GAP, high + GAP];
+};
+
 // Rows of crops across the square, with ditches between them: more rows, and yellower, for farmland. They give way to a
-//  city's houses on the square, stopping short of them.
+//  city's houses on the square, stopping short of them, and to the rivers through it, stopping short of their channels.
 const fields = (
   layer: Layer,
   kind: 'irrigation' | 'farmland',
@@ -1073,9 +1193,14 @@ const fields = (
     reach = inner * 0.9,
     width = (reach * 2) / rows,
     across = (v: number, wide: number, colour: string, lift: number): void =>
-      rowAround(centre[0] - reach, centre[0] + reach, v, wide, houses).forEach(
-        ([a, b]) => layer.strip([a, v], [b, v], wide, colour, lift)
-      );
+      rowAround(
+        centre[0] - reach,
+        centre[0] + reach,
+        v,
+        wide,
+        houses,
+        layer.channels
+      ).forEach(([a, b]) => layer.strip([a, v], [b, v], wide, colour, lift));
 
   for (let row = 0; row < rows; row++) {
     across(
@@ -1206,6 +1331,8 @@ const suburbs = (
       taken: layer.taken,
       // Out of the sea, where the land dips below it at the shore.
       ground: (u: number, v: number) => place.heightAt(u, v),
+      // And out of the rivers' channels.
+      channels: layer.channels,
     },
     lots = overlay.suburbs.flatMap((plan) =>
       suburb(place, plan, {

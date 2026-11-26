@@ -446,6 +446,9 @@ export type SuburbClear = {
   // How high the ground is at a point, below 0 under the water: no house stands with any of it in the sea. Dry
   //  everywhere without it.
   ground?: (u: number, v: number) => number;
+  // The rivers' channels through it (`Layer#channels`): each line of each course, and how far either side its bed
+  //  reaches, kept clear, round its ends too.
+  channels?: readonly (readonly [Point, Point, number])[];
 };
 
 // How much of the lots a city has room for on a neighbour's square are built, from all of them at its edge to fewer
@@ -465,6 +468,26 @@ const strip = ([a, b]: readonly [Point, Point], wide: number): Point[] => {
     [b[0] - nu, b[1] - nv],
     [a[0] - nu, a[1] - nv],
   ];
+};
+
+// A river's channel from `a` to `b`, `reach` either side: a strip as far either side, and as far on past each end, so it
+//  covers the channel's round ends, a little more at their corners.
+const channelStrip = ([a, b, reach]: readonly [
+  Point,
+  Point,
+  number
+]): Point[] => {
+  const length = Math.hypot(b[0] - a[0], b[1] - a[1]),
+    [du, dv] =
+      length === 0 ? [1, 0] : [(b[0] - a[0]) / length, (b[1] - a[1]) / length];
+
+  return strip(
+    [
+      [a[0] - du * reach, a[1] - dv * reach],
+      [b[0] + du * reach, b[1] + dv * reach],
+    ],
+    reach
+  );
 };
 
 // The pieces of a run, from point to point, but those of no length.
@@ -525,6 +548,7 @@ export const suburb = (
       ...clear.lines
         .filter(([a, b]) => Math.hypot(b[0] - a[0], b[1] - a[1]) > 0)
         .map((line) => strip(line, ROADSIDE)),
+      ...(clear.channels ?? []).map(channelStrip),
     ],
     // Which way a lot at `at` faces: square to the street it's beside, towards it, or else to the city.
     facingAt = (at: Point, width: number): number => {
