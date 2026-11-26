@@ -128,7 +128,7 @@ export interface Stage {
    *  camera last drew it, the nearest to it where several are; or nothing (`markers/pickUnit.ts`). A stage that can't
    *  say leaves the view to pick the ground.
    */
-  unitAt?(ndc: readonly [number, number]): string | null;
+  unitAt?(ndc: readonly [number, number], within?: number): string | null;
   /**
    * A walk under way (`id`, `walks.ts`), drawn as `marker`, its units alone with no city: one drawn before for it is
    *  replaced, and `null` takes it away.
@@ -1433,7 +1433,7 @@ export const createStage: StageFactory = (
       overlay.drawn = overlayCopiesOf(overlay);
       overlays.set(key, overlay);
     },
-    unitAt: (ndc): string | null => {
+    unitAt: (ndc, within): string | null => {
       // Each copy's matrices are brought up to date as it's made (`copiesOf`), and a walker's as it's drawn, so asking
       //  on each move of the pointer costs no walk of the whole scene.
       camera.updateMatrixWorld();
@@ -1441,7 +1441,8 @@ export const createStage: StageFactory = (
       return unitUnder(
         [...markers].map(([key, { drawn }]) => [key, drawn] as const),
         camera,
-        ndc
+        ndc,
+        within
       );
     },
     showFigures: (key, shown): void => {

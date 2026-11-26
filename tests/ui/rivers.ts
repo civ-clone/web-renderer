@@ -701,7 +701,8 @@ ids.forEach((topologyId) => {
   //  it without the river, seen and dry, at it and at its bed's edge and its bank's top; the land cut down under it
   //  across its water and its bed; and never raised anywhere. `over` is as `relief.ts` takes its lows, so it holds by
   //  how they're taken; `crossing` is the same land looked at across the river the other way, between the points
-  //  either side, where `ribbons.ts` lays the water's edges, so a level taken wrongly still shows.
+  //  either side (the way `ribbons.ts` lays the water across), at its middle, its bed's edge and its bank's top, so a
+  //  level taken wrongly still shows. That's to half `underLand`'s margin under it, as it is now by about 0.0026.
   let over = 0,
     crossing = -Infinity,
     unburied = true,
@@ -818,7 +819,7 @@ ids.forEach((topologyId) => {
     `${topologyId}: a river’s level is under the land round it, seen and dry, across its water and bed, where its level’s over the sea’s; the land’s cut down under it there, never raised anywhere; its bed’s over the sea where it’s all over the sea’s level; and where courses meet, they’re at one level`,
     [
       over <= 1e-12,
-      crossing < 0,
+      crossing < -MARGIN / 2,
       unburied,
       raised,
       inlandOverSea,

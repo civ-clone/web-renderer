@@ -436,8 +436,8 @@ blended across squares.
   - a shape (`flat`, `rolling`, `ridged` or `peaked`).
 
   Typical values, in world units: ocean −0.15, rising to −0.03 at the shore; plains 0.02; hills 0.16, ridged, with
-  roughness 0.08; mountains 0.75, roughness 0.15, ridged and peaked, a mountain's top mostly 0.73 to 0.93 high, up to
-  about 1.07 in a massif. Hills and
+  roughness 0.08; mountains 0.75, roughness 0.15, ridged and peaked, a mountain's top mostly 0.75 to 0.95 high, about
+  0.85, up to about 1.05 in a massif. Hills and
   mountains were raised from 0.12 and 0.35 by #1391, so rivers rush down them and mountains stand over the land.
 - **Blending:**
   - A point takes its square and that square's neighbours (from the topology), each weighted by a smooth kernel of its
@@ -531,11 +531,11 @@ blended across squares.
       middle). A texture laid flat stretches about 2.3 times at 64°: rock mapped from three sides would fix that, and
       is still to do;
     - **snow** above a snowline, 0.86 high at the equator and 0.56 at the poles, on ground level enough to hold it:
-      none more upright than about 53° from level, whole by about 37°. A mountain's top is mostly 0.73 to 0.93 high,
-      about 0.83, up to about 1.07 in a massif. So on the debug page's worlds (80 by 50, two seeds, square and hex),
-      a quarter to a third of the peaks are capped near the equator, about two thirds a third of the way to the poles,
-      and nearly all from halfway to them, a little fewer than before #1391 (a third to two fifths, three quarters,
-      nearly all). A cap is small, as a peak's top is steep. Its latitude is the same at every copy of the world,
+      none more upright than about 53° from level, whole by about 37°. A mountain's top is mostly 0.75 to 0.95 high,
+      about 0.85, up to about 1.05 in a massif. So on the debug page's worlds, counting a peak capped where any of its
+      square's points has snow over half, somewhat fewer peaks are capped near the equator than towards the poles, and
+      nearly all from halfway to them, a little fewer at each latitude than before #1391. A cap is small, as a peak's
+      top is steep. Its latitude is the same at every copy of the world,
       above or below;
     - **wet**, darker and shinier, at the waterline, where water squares are part of what the ground's blended from
       (`GroundSample#shore`, carried by the mesh). Not by height alone: a swamp or a river inland, however low, stays
@@ -1003,7 +1003,10 @@ Each is looked up by its type name in the model set.
 - **In a city:** a unit stands at the city's edge, on its own side (the side it came in from), not inside the
   buildings.
 - **Facing:** a unit faces the way it last moved.
-- **Height:** it stands on the land's height at its feet.
+- **Height:** it stands on the land's height at its feet. Its stand's flat, so on a peak or a steep slope it stands on
+  the highest of the land under it (`markers/standHeight.ts`: the land's points under it, and its rim all round,
+  where it crosses the land's creases too), never sunk into it, and no higher. Since mountains rose (#1391), that
+  leaves a stand on a mountain perched on its summit, its rim off the land on the steep side (#1397).
 - **Size:** twice life size (`UNIT_SCALE`), as a tabletop game's figures are, so units read at a glance beside the
   cities and land, which are drawn life size. Their stands, and a fortified unit's wall, stay as they are, so a squad
   or a vehicle may reach past its stand, as a counter on a table does. A set says its models' sizes against each
@@ -1590,7 +1593,9 @@ mapEvent:
     stand and ring, at every copy of the world drawn), and the nearest it meets picks that unit's square, before the
     ground. Units are drawn twice life size, and aircraft fly over their stands, so their figures stand over the ground
     of the square behind: a click, a GoTo's square or a tooltip there goes to the square whose unit it's on, as it's
-    seen, even while the blink hides its figures (§6.3). A unit walking or fighting isn't picked.
+    seen, even while the blink hides its figures (§6.3). A unit walking or fighting isn't picked. Nor is one further
+    off than the land under the pointer (a hair past it, `LAND_SLACK`): one behind a hill or a mountain, which hides
+    it, isn't picked through it.
 - **A city:** a banner, or a city's lots, picks the city.
 - **Uses:** clicks, long presses, hover tooltips and target picking (Paradrop, Airlift) all go through these, with the
   tooltip content the 2D map gives [verified: `HoverSubject` in `GamePortal.ts`].

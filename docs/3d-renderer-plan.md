@@ -489,9 +489,11 @@ its neighbour's, across an edge or a corner, dipping to a saddle between them, s
 a block of them a massif, not a grid of cones. Hills already run into one another, as their relief is blended.
 
 **Heights: raised (#1391).** Hills roll higher (0.16, rougher) and mountains rise more than twice as high (0.75, a
-top about 0.83), so Civ2's rivers rush white down them and mountains stand over the land round them (spec §4.1). The
-snowline rose with them, so about as many peaks are capped as before (spec §4.3). Still to do: a mountain beside a
-square never seen stands over the cloud there as a sheer wall, and roads and railroads climb over a mountain's top.
+top about 0.85), so Civ2's rivers rush white down them and mountains stand over the land round them (spec §4.1). The
+snowline rose with them, so about as many peaks are capped as before (spec §4.3). A unit's stand stands on the highest
+of the land under it, so it's never sunk into a peak, and a unit hidden behind a mountain isn't picked through it.
+Still to do: a mountain beside a square never seen stands over the cloud there as a sheer wall (#1393); what stands on
+a mountain sits on its summit (#1397); and roads and railroads climb over its top (#1383).
 
 **3.2, first part: done.** What grows is laid with the rest of the overlay, from the built-in set's table (`packages/models-builtin/vegetation.ts`):
 - forests' trees are conifers towards the poles and broadleaf towards the equator;
