@@ -73,6 +73,12 @@ export type Walker = {
   from: WalkSquare;
   before: WalkSquare;
   to: WalkSquare;
+  // How far into its stride it is, 0 to 1: none standing, rising as it gets going and falling as it stops, all of it at
+  //  the pace it keeps, so its figures can ease from how they stand into their walk and back (plan 2.2).
+  stride: number;
+  // Where it eases from or into, short of its stride: the square it set off from, getting going, or the one it's bound
+  //  for.
+  stance: WalkSquare;
 };
 
 /** How the player's own units walk: a step in a quarter of a second, a tenth getting going and stopping. */
@@ -751,8 +757,9 @@ export class Walks {
   }
 
   #walker(walk: Walk, now: number): Walker {
-    const { points, squares, turned } = walk,
+    const { points, squares, turned, motion } = walk,
       last = points.length - 1,
+      { speed } = motionAt(motion, now),
       along = this.#along(walk, now),
       index = Math.min(last - 1, Math.floor(along)),
       t = along - index,
@@ -821,6 +828,12 @@ export class Walks {
       from: walk.from,
       before: squares[last - 1] ?? squares[last]!,
       to: squares[last]!,
+      // Its speed over the fastest its motion goes: hurried or slowing to a step joined, never over its stride.
+      stride: motion.top > 0 ? Math.min(1, speed / motion.top) : 0,
+      stance:
+        now - motion.started < motion.rising && motion.rise > 0
+          ? walk.from
+          : squares[last]!,
     };
   }
 }

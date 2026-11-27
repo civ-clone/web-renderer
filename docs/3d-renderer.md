@@ -1892,7 +1892,19 @@ in its set (plan 2.2). It's in the model's entry:
   the Paratroopers', who swing with their canopies about their planted feet. Their swing takes a second, since
   models-realistic-by 8634a6cf (it took 2.4): half a swing for each square's width they go, so a walk from square to
   square across their sides ends upright, on squares, diamonds and hexes alike. A step to a corner, √2 as far, or one
-  to or from a city, which units stand in front of, still ends part-way through it, as other units' walks do.
+  to or from a city, which units stand in front of, still ends part-way through it, as other units' walks do, and
+  eases from there into how they idle (below).
+- **Setting off and stopping** (#1410): short of its stride, as it gets going and as it stops, its figures play
+  `move` over `idle`, as far as it's short (`Walker#stride`, its speed over the fastest its motion goes; `ClipUnder`).
+  So they ease from how they idled on the square they left into their walk, and from their walk into how they'll idle
+  on the square they come to, rather than snapping. Their idle is by the clock and the way into it that square idles
+  by (`idlePhase` of the walker's `stance`), so the square, marked again once it's there, idles on from where the
+  walker left off. It eases over the walk's ramp: a tenth of a second for the player's own units, a twentieth for
+  others', and half that at the quicker pace. A unit with no `idle` eases from and to standing as its model does.
+  Waiting for its patch, it stands as before.
+  - **Why:** between the end of a walk and the square's idle, most units' legs jumped 20° to 80°. The Riflemen's and
+    Musketmen's rifles, carried turned right round as they walk (162° and 171° from how they hold them idling), now
+    swing round rather than flip.
 - **Since:** `fight` with its shots, and `die`, on the battles' own frames (the fourth part, below); and `idle`,
   with frames drawn for it (the fifth).
 

@@ -1831,6 +1831,89 @@ const flown = (
   );
 }
 
+// Its stride: none standing as it sets off, rising with its pace to all of it, and falling to none again as it stops;
+//  easing from the square it set off from as it gets going, and into the one it's bound for after. A step joined at full
+//  pace keeps its stride, with no dip; thirty steps at once, hurried past full pace, never go over theirs.
+{
+  const walks = new Walks({ u: 10, v: null }),
+    east = (from: number, now: number) =>
+      walks.step(
+        'strider',
+        { x: from, y: 1 },
+        { x: from + 1, y: 1 },
+        point(from, 1),
+        point(from + 1, 1),
+        now,
+        pace
+      ),
+    strideAt = (now: number) => {
+      const { stride, stance } = walks.at(now).going[0]!;
+
+      return [round(stride, 2), [stance.x, stance.y]];
+    };
+
+  east(1, 0);
+
+  const setOff = [0, pace.ramp / 2, pace.ramp + 10].map(strideAt),
+    before = strideAt(199);
+
+  east(2, 200);
+
+  const after = strideAt(201),
+    end = walks.nextEnd() ?? 0,
+    stopping = [end - pace.ramp / 2, end - 1].map(strideAt),
+    hurried = new Walks({ u: 100, v: null });
+
+  for (let x = 1; x <= 30; x++) {
+    hurried.step(
+      'hurrier',
+      { x, y: 1 },
+      { x: x + 1, y: 1 },
+      point(x, 1),
+      point(x + 1, 1),
+      0,
+      pace
+    );
+  }
+
+  const strides: number[] = [];
+
+  for (let now = 0; now <= (hurried.nextEnd() ?? 0); now++) {
+    const [walker] = hurried.at(now).going;
+
+    if (walker !== undefined) {
+      strides.push(walker.stride);
+    }
+  }
+
+  expect(
+    'its stride: none as it sets off, from where it set off, rising to all of it and none again as it stops, into where it’s bound; a step joined at full pace with no dip; a hurried walk never over its stride',
+    [
+      setOff,
+      before,
+      after,
+      stopping,
+      Math.max(...strides),
+      Math.min(...strides) >= 0,
+    ],
+    [
+      [
+        [0, [1, 1]],
+        [0.5, [1, 1]],
+        [1, [2, 1]],
+      ],
+      [1, [2, 1]],
+      [1, [3, 1]],
+      [
+        [0.5, [3, 1]],
+        [0.01, [3, 1]],
+      ],
+      1,
+      true,
+    ]
+  );
+}
+
 if (failures.length > 0) {
   process.stderr.write(
     `FAIL walks: ${

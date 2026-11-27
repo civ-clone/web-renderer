@@ -827,6 +827,98 @@ kit.addRig('partisan', rig);
     ],
     [['move', true], 'die', true, true]
   );
+
+  // Short of its stride, a walker's figures play their walk over their idle clip, as far as it's short, each as far into
+  //  its idle as it'd be idling: all of it, posed just as idling; half, half way between its walk and its idle; with no
+  //  clip for what's under, half way to standing; none under, walking alone again.
+  const tilt = (angle: number) =>
+      new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), angle),
+    idling: LoadedRig = {
+      ...rig,
+      clips: new Map([
+        ...rig.clips,
+        [
+          'idle',
+          new AnimationClip('idle', 2, [
+            new QuaternionKeyframeTrack(
+              'arm.quaternion',
+              [0, 2],
+              [...tilt(Math.PI / 3).toArray(), ...tilt(-Math.PI / 3).toArray()]
+            ),
+          ]),
+        ],
+      ]),
+    },
+    blending = new WeakMap<Object3D, Playing>(),
+    figuresOf = () => asked.getObjectsByProperty('name', RIG_FIGURE),
+    arms = () =>
+      figuresOf().map((figure) =>
+        figure.getObjectByName('arm')!.quaternion.clone()
+      ),
+    rolesNow = () => figuresOf().map((figure) => blending.get(figure)?.role),
+    near = (a: Quaternion[], b: Quaternion[]) =>
+      a.length === b.length && a.every((each, i) => each.angleTo(b[i]!) < 1e-3),
+    under = (role: 'idle' | 'work', weight: number) => {
+      poseFigures(asked, idling, 'move', 0.5, blending, undefined, {
+        role,
+        seconds: 1.2,
+        weight,
+      });
+
+      return [arms(), rolesNow()] as const;
+    };
+
+  // Standing again, each bone as the model stands, as a figure's own mixer finds it: the mixers made for the checks
+  //  above, let go of mid-clip, left some posed.
+  poseFigures(asked, rig, null, 0, onward);
+  figuresOf().forEach((figure) =>
+    figure.traverse((each) => {
+      if ((each as Bone).isBone) {
+        each.quaternion.identity();
+      }
+    })
+  );
+  poseFigures(asked, idling, 'idle', 1.2, blending);
+
+  const idle = arms();
+
+  poseFigures(asked, idling, 'move', 0.5, blending);
+
+  const walk = arms(),
+    [all, allRoles] = under('idle', 1),
+    [half] = under('idle', 0.5),
+    [toStanding, standingRoles] = under('work', 0.5),
+    [alone, aloneRoles] = under('idle', 0);
+
+  expect(
+    'short of its stride, its walk over its idle clip as far as it’s short, each as far into its idle as idling: all of it as idling, half way between, half way to standing with no clip under, and its walk alone with none',
+    [
+      idle.length > 1 && idle[0]!.angleTo(idle[1]!) > 0.01,
+      near(all, idle),
+      allRoles,
+      near(
+        half,
+        walk.map((each, i) => each.clone().slerp(idle[i]!, 0.5))
+      ),
+      near(
+        toStanding,
+        walk.map((each) => each.clone().slerp(still, 0.5))
+      ),
+      standingRoles,
+      near(alone, walk),
+      aloneRoles,
+    ],
+    [
+      true,
+      true,
+      squad.map(() => 'move/idle'),
+      true,
+      true,
+      squad.map(() => 'move'),
+      true,
+      squad.map(() => 'move'),
+    ]
+  );
 }
 
 // How far into a clip it is: round and round for a role that loops, held at its end for one that doesn't.

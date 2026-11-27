@@ -94,14 +94,21 @@ export const idlePhase = (key: string): number => {
   return ((hash >>> 0) / 2 ** 32) * IDLE_SPREAD;
 };
 
-/** A figure's mixer, and the role it plays. */
-export type Playing = { mixer: AnimationMixer; role: ClipRole | null };
+/** A figure's mixer, and what it plays: a role, or one over another (`ClipUnder`), as `role/under`. */
+export type Playing = { mixer: AnimationMixer; role: string | null };
 
 /**
  * What a figure plays till its own time in a clip played once comes, as each is a little behind the one before: a role
  *  and how far into it, by the same clock (an attacker that's lost goes on fighting till its own fall begins).
  */
 export type ClipBefore = { role: ClipRole; seconds: number };
+
+/**
+ * A clip played under another, as a walker eases into its stride from how it stands and back (plan 2.2): its role, how
+ *  far into it by the same clock, and how much of the pose is its (0 to 1), the rest the clip over it. Where the rig
+ *  has no clip for its role, the figure eases to stand as the model does instead.
+ */
+export type ClipUnder = { role: ClipRole; seconds: number; weight: number };
 
 // How far into `role`'s clip figure `index` is, `seconds` in for the first: each further on in one that loops, and
 //  each a little behind the one before in one played once (`FIGURE_STAGGER`).
@@ -118,7 +125,9 @@ const figureSeconds = (
  * Each of `drawn`'s figures drawn with `rig` (`RIG_FIGURE`) posed as `role`'s clip has it `seconds` in, the second
  *  figure `FIGURE_STAGGER` further in a clip that loops, and that far behind in one played once, and so on; or, for no
  *  role, or one `rig` has no clip for, as the model stands. In one played once, a figure whose own time hasn't come
- *  plays `before`, where it's given, as it would. What each figure plays is kept in `playing`.
+ *  plays `before`, where it's given, as it would. With `under`, its clip's pose blends in as far as it says (each figure
+ *  as far into it as it would be on its own), or, for one `rig` hasn't, the model's own. What each figure plays is kept
+ *  in `playing`.
  */
 export const poseFigures = (
   drawn: Object3D,
@@ -126,7 +135,8 @@ export const poseFigures = (
   role: ClipRole | null,
   seconds: number,
   playing: WeakMap<Object3D, Playing>,
-  before?: ClipBefore
+  before?: ClipBefore,
+  under?: ClipUnder
 ): void =>
   drawn.getObjectsByProperty('name', RIG_FIGURE).forEach((figure, index) => {
     const own = role === null ? 0 : figureSeconds(role, seconds, index),
@@ -143,22 +153,56 @@ export const poseFigures = (
         mixer: new AnimationMixer(figure),
         role: null,
       },
-      asked = clip === undefined ? null : plays;
+      asked = clip === undefined ? null : plays,
+      // How much of the pose is `under`'s, and its clip, where it has one: none with nothing over it.
+      weight =
+        asked === null || under === undefined || under.role === asked
+          ? 0
+          : Math.min(1, Math.max(0, under.weight)),
+      beneath = weight > 0 ? rig.clips.get(under!.role) : undefined,
+      key =
+        asked === null
+          ? null
+          : beneath === undefined
+          ? asked
+          : `${asked}/${under!.role}`;
 
     playing.set(figure, now);
 
-    if (now.role !== asked) {
+    if (now.role !== key) {
       // Stopped, a clip puts back what it moved as it was before it played: the figure as the model stands.
       now.mixer.stopAllAction();
-      now.role = asked;
+      now.role = key;
 
       // Round and round, as `clipTime` says when it's at, so it never pauses at its end.
-      if (clip !== undefined) {
-        now.mixer.clipAction(clip).setLoop(LoopRepeat, Infinity).play();
-      }
+      [clip, beneath].forEach((played) => {
+        if (key !== null && played !== undefined) {
+          now.mixer.clipAction(played).setLoop(LoopRepeat, Infinity).play();
+        }
+      });
     }
 
-    if (clip !== undefined && asked !== null) {
-      now.mixer.setTime(clipTime(asked, clip.duration, at));
+    if (clip === undefined || asked === null) {
+      return;
     }
+
+    // Each as far into its clip as it is, by the clock, and as much of the pose as it has: what's left of the clip
+    //  over `under`'s, the model's own where it has no clip.
+    const over = now.mixer.clipAction(clip);
+
+    over.setEffectiveWeight(1 - weight);
+    over.time = clipTime(asked, clip.duration, at);
+
+    if (beneath !== undefined) {
+      const lower = now.mixer.clipAction(beneath);
+
+      lower.setEffectiveWeight(weight);
+      lower.time = clipTime(
+        under!.role,
+        beneath.duration,
+        figureSeconds(under!.role, under!.seconds, index)
+      );
+    }
+
+    now.mixer.update(0);
   });

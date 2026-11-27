@@ -23,7 +23,7 @@ import groundDirections from './layouts/directions';
 import World from '@civ-clone/ui-map/components/World';
 import { FLASH_SIZE, Stage, StageFactory, createStage } from './stage';
 import { ClipRole, ShotKind } from './models/modelSet';
-import { RigFacts, STRIDE } from './markers/clips';
+import { ClipUnder, RigFacts, STRIDE, idlePhase } from './markers/clips';
 import {
   HIT_PUFF,
   MUZZLE_PUFF,
@@ -1397,7 +1397,7 @@ export class MapView3D implements MapRenderer {
 
     this.#walksEnded(ended);
     going.forEach((walker) => {
-      const marker = this.#drawWalker(walker, true);
+      const marker = this.#drawWalker(walker, true, now);
 
       // Drawn sailing, a ship among its units, on top or carrying the one that is: its wake laid behind it.
       if (
@@ -1453,12 +1453,18 @@ export class MapView3D implements MapRenderer {
     });
   }
 
-  // A walker drawn as its units are now, where it is: what it's drawn as. Going, its figures walk, where they're drawn
-  //  with a rigged copy (plan 2.2), their legs keeping up with how far it's gone (`STRIDE`), from the start of their
-  //  walk as it sets off; waiting where it's come, they stand.
-  #drawWalker(walker: Walker, going = false): TileMarker | null {
+  // A walker drawn as its units are now, where it is, at `now`: what it's drawn as. Going, its figures walk, where
+  //  they're drawn with a rigged copy (plan 2.2), their legs keeping up with how far it's gone (`STRIDE`), from the start
+  //  of their walk as it sets off, and easing from how they idled on the square they left as they get going, and into
+  //  how they'll idle on the one they come to as they stop; waiting where it's come, they stand.
+  #drawWalker(
+    walker: Walker,
+    going = false,
+    now = performance.now()
+  ): TileMarker | null {
     const marker = this.#walkerMarker(walker.units);
-    let clip: { role: ClipRole; seconds: number } | null = null;
+    let clip: { role: ClipRole; seconds: number; under?: ClipUnder } | null =
+      null;
 
     if (going) {
       const last = this.#walked.get(walker.id),
@@ -1470,7 +1476,24 @@ export class MapView3D implements MapRenderer {
             : Math.hypot(walker.at[0] - last.at[0], walker.at[1] - last.at[1]));
 
       this.#walked.set(walker.id, { at: [walker.at[0], walker.at[1]], by });
-      clip = { role: 'move', seconds: by / STRIDE };
+
+      const { stance, stride } = walker;
+
+      clip = {
+        role: 'move',
+        seconds: by / STRIDE,
+        // Short of its stride, its idle clip under its walk as far as it's short, by the clock and the way into it the
+        //  square idles by (`Stage#idle`): it's marked there again posed as it was.
+        ...(stride < 1
+          ? {
+              under: {
+                role: 'idle',
+                seconds: now / 1000 + idlePhase(`${stance.x},${stance.y}`),
+                weight: 1 - stride,
+              },
+            }
+          : {}),
+      };
     }
 
     this.#drawFigure(walker, marker, 1, clip);
@@ -1479,7 +1502,8 @@ export class MapView3D implements MapRenderer {
   }
 
   // Something walking or fighting (`id`) drawn as `marker`, where it is, `opacity` solid; an aircraft flying, `aloft`
-  //  over its stand; its figures posed as `clip` has them, where they're drawn with a rigged copy, or standing.
+  //  over its stand; its figures posed as `clip` has them, with what it has under it, where they're drawn with a rigged
+  //  copy, or standing.
   #drawFigure(
     {
       id,
@@ -1491,7 +1515,7 @@ export class MapView3D implements MapRenderer {
       Partial<Pick<Walker, 'aloft'>>,
     marker: TileMarker | null,
     opacity = 1,
-    clip: Fighter['clip'] | null = null
+    clip: (Fighter['clip'] & { under?: ClipUnder }) | null = null
   ): void {
     const signature = marker === null ? null : JSON.stringify(marker);
 
@@ -1515,7 +1539,8 @@ export class MapView3D implements MapRenderer {
       id,
       clip?.role ?? null,
       clip?.seconds ?? 0,
-      clip?.before
+      clip?.before,
+      clip?.under
     );
   }
 
@@ -2225,6 +2250,8 @@ export class MapView3D implements MapRenderer {
           from: attackerSquare,
           before: attackerSquare,
           to: attackerSquare,
+          stride: 0,
+          stance: attackerSquare,
         };
 
         this.#unpatched.set(id, standing);
