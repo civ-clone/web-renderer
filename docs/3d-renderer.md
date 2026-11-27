@@ -1895,17 +1895,23 @@ in its set (plan 2.2). It's in the model's entry:
   to or from a city, which units stand in front of, still ends part-way through it, as other units' walks do, and
   eases from there into how they idle (below).
 - **Setting off and stopping** (#1410): short of its stride, as it gets going and as it stops, its figures play
-  `move` over `idle`, as far as it's short (`Walker#stride`, its speed over the fastest its motion goes; `ClipUnder`).
+  `move` over `idle`, as far as it's short (`Walker#stride`, its speed over its full pace unhurried; `ClipUnder`).
   So they ease from how they idled on the square they left into their walk, and from their walk into how they'll idle
   on the square they come to, rather than snapping. Their idle is by the clock and the way into it that square idles
   by (`idlePhase` of the walker's `stance`), so the square, marked again once it's there, idles on from where the
   walker left off. Where that square doesn't idle (`#idlesAt`, as `idleSquares` has it: too far from the camera, as
   at the default zoom), they ease from and to standing as the model does, as the square's drawn; so does a unit
-  with no `idle`. It eases over the walk's ramp: a tenth of a second for the player's own units, a twentieth for
-  others', and half that at the quicker pace. Waiting for its patch, it stands as before.
+  with no `idle`. Which it is is decided once, as each ease begins (`#eases`): a square idling only as it was, a
+  little further out than one may start to, or a camera moved meanwhile, doesn't switch it mid-way. It eases as the
+  walk gets up to full pace and slows from it, over its ramp: a tenth of a second for the player's own units, a
+  twentieth for others', and half that at the quicker pace. A hurried walk, a long GoTo or a railroad trip, gets up
+  to full pace quicker, so eases quicker: within a frame for the longest. Waiting for its patch, it stands as
+  before.
   - **Steps joined:** its stride is its speed over its full pace unhurried, so a long walk joined, hurried, stays in
-    its stride. One joined as it stops eases on into the square it was easing into, with no jump, till it's back in
-    its stride, and only then into where it's bound now: a walk's `stance` moves on only at its stride's fullest.
+    its stride, as does one joined at a quicker or slower pace, as the player changes it (its full pace is the
+    slowest of its steps'). One joined as it stops eases on into the square it was easing into, with no jump, till
+    it's back in its stride, and only then into where it's bound now: a walk's `stance` moves on only at its
+    stride's fullest.
   - **Why:** between the end of a walk and the square's idle, most units' legs jumped 20° to 80°. The Riflemen's and
     Musketmen's rifles, carried turned right round as they walk (162° and 171° from how they hold them idling), now
     swing round rather than flip.

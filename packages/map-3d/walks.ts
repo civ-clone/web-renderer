@@ -144,9 +144,9 @@ type Walk = {
   flies: boolean;
   flown: number;
   climb: { from: number; at: number };
-  // Its full pace, unhurried, in steps a ms, as its last step had it: how far into its stride it is is its speed over
-  //  this. And where it eases from or into, short of its stride, till its motion's as far into it as it gets: the
-  //  square it set off from, or where it was easing from or into as a step was joined, so that doesn't jump.
+  // Its full pace, unhurried, in steps a ms, the slowest its steps were taken at: how far into its stride it is is its
+  //  speed over this. And where it eases from or into, short of its stride, till its motion's as far into it as it
+  //  gets: the square it set off from, or where it was easing from or into as a step was joined, so that doesn't jump.
   full: number;
   stance: WalkSquare;
 };
@@ -616,7 +616,9 @@ export class Walks {
       walk.points.length - 1,
       pace
     );
-    walk.full = 1 / pace.step;
+    // At a quicker pace than it set off at, it's in its stride as soon as it was; at a slower one, once it's at it: so
+    //  its stride never jumps as a step's joined at another pace, as the player changes it.
+    walk.full = Math.min(walk.full, 1 / pace.step);
     walk.stance = stance;
     walk.turned = null;
 

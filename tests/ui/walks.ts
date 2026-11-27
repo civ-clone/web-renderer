@@ -1961,17 +1961,49 @@ const flown = (
     rail.east(x, 200);
   }
 
-  const hurried = rail.strideAt(201);
+  const hurried = rail.strideAt(201),
+    // The player's changed the pace as it walks: a step joined at full pace, quicker, and one slower.
+    quick = strider('quick'),
+    slow = strider('slow'),
+    slower: Pace = { step: 600, ramp: 240, most: 4000 };
+
+  quick.east(1, 0);
+  quick.walks.step(
+    'quick',
+    { x: 2, y: 1 },
+    { x: 3, y: 1 },
+    point(2, 1),
+    point(3, 1),
+    200,
+    { step: 150, ramp: 60, most: 1000 }
+  );
+  slow.east(1, 0);
+  slow.walks.step(
+    'slow',
+    { x: 2, y: 1 },
+    { x: 3, y: 1 },
+    point(2, 1),
+    point(3, 1),
+    200,
+    slower
+  );
+
+  const paces = [
+    quick.strideAt(201)[0],
+    slow.strideAt(201)[0],
+    slow.strideAt(200 + slower.ramp + 10)[0],
+  ];
 
   expect(
-    'joined as it stops, it eases on into where it was, with no jump, back into its stride, then into where it’s bound now; a long walk joined at full pace, hurried, stays in its stride',
-    [stopping, joined, inStride, atPace, hurried],
+    'joined as it stops, it eases on into where it was, with no jump, back into its stride, then into where it’s bound now; a long walk joined at full pace, hurried, stays in its stride, as does one joined at a quicker pace or a slower one',
+    [stopping, joined, inStride, atPace, hurried, paces],
     [
       [0.51, [2, 1]],
       [0.51, [2, 1]],
       [1, [3, 1]],
       [1, [2, 1]],
       [1, [22, 1]],
+      [1, 1, 1],
     ]
   );
 }

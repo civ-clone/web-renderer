@@ -3054,7 +3054,9 @@ expect(
       unders[0],
       easing > 1,
       weights.slice(0, easing).every((w, i, all) => i === 0 || w < all[i - 1]!),
-      unders.slice(easing).some((under) => under === null),
+      unders
+        .slice(easing, unders.lastIndexOf(null) + 1)
+        .every((under) => under === null),
       unders.at(-1)?.role,
       unders.at(-1)!.weight > 0.8,
       unders.at(-1)?.ahead,
@@ -3096,15 +3098,42 @@ expect(
   glider.setOrbit(closeIn);
   runFrames();
 
+  // Zoomed out as it gets going, its square idling as it set off: it eases on from idling, as it began to, and only
+  //  stopping, out where no square idles, into standing.
+  walkersUnder.clear();
+  stepped(walker, [0, 2], [1, 2]);
+  patch([0, 2, []], [1, 2, [walker]]);
+  runFrames(2);
+  glider.setOrbit({ ...closeIn, distance: 20 });
+  runFrames();
+
+  const zoomedAway = [...walkersUnder.values()].flat(),
+    inStrideAt = zoomedAway.indexOf(null);
+
+  repatched([1, 2, []], [0, 2, [walker]]);
+  glider.setOrbit(closeIn);
+  runFrames();
+
   expect(
-    'zoomed out, where no square idles, its walk over how it stands as its model does, getting going and stopping',
+    'zoomed out, where no square idles, its walk over how it stands as its model does, getting going and stopping; zoomed out as it gets going, it eases on from idling, as it began to, and into standing as it stops',
     [
       zoomedOut.length > 2,
       zoomedOut.every(([role]) => role === null),
       zoomedOut[0]![2] > 0.5,
       zoomedOut.at(-1)![2] > 0.8,
+      inStrideAt > 2,
+      zoomedAway.slice(0, inStrideAt).map((under) => under?.[0]),
+      zoomedAway.at(-1)?.[0],
     ],
-    [true, true, true, true]
+    [
+      true,
+      true,
+      true,
+      true,
+      true,
+      zoomedAway.slice(0, inStrideAt).map(() => 'idle'),
+      null,
+    ]
   );
 
   // Along a road, between two squares with one: the unit walks along it as it bends (`Land#roadPath`), not straight
