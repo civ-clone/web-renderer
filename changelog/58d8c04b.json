@@ -1,0 +1,1 @@
+{"version":"0.1.0@58d8c04b","date":"2026-11-27T21:12:24.000Z","localChanges":["chore: work towards a 3D map, not offered yet: under ?3d=1 the rock on mountains' steep sides is laid from the side it faces, so its cracks no longer run down them as streaks (#1413)"],"externalChanges":{}}
