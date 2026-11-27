@@ -1963,10 +1963,10 @@ each kind goes as it would (`SHOT_LOOKS` in `shots.ts`):
   before the blow, from where it aims, and none what its clip has after (`shotsFired`). With no `die` clip, it fades
   as before, firing every shot.
 - **Drawn** (`#placeShots`, `Stage#shot`, `Stage#puff`): each points the way it's going (`shotHeading`), the arc's
-  tangent, but for a bottle, which tumbles, and a shell, a ball. The smoke where it leaves a muzzle is timed from when
-  it left, so a bullet that leaves and lands between one frame and the next still shows it. Its flash is solid and
-  unlit, as the bottle's flame is: no see-through shapes, so nothing needs drawing in another order. A puff takes a
-  size, and a flash.
+  tangent, but for a bottle and a stone, which tumble, and a shell, a ball. The smoke where it leaves a muzzle is
+  timed from when it left, so a bullet that leaves and lands between one frame and the next still shows it. Its flash
+  is solid and unlit, as the bottle's flame is: no see-through shapes, so nothing needs drawing in another order. A
+  puff takes a size, and a flash.
 - **The Partisans' bottle** goes as it did: none of its numbers changed.
 - **Rifles:** the Riflemen, Musketmen and Marines have rigged copies since models-realistic-cc0 d1851f9d, and the
   Alpine Troops since its 9ce1b464, which needed nothing here. Each fires a bullet from its rifle's muzzle (`muzzle`,

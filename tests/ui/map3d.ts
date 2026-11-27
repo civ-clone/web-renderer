@@ -269,7 +269,7 @@ const staged: string[] = [],
   shotLooks = new Map<string, { kind: string; headings: number[][] }>(),
   puffLooks = new Map<string, { size: number; flash: number | null }>(),
   jointsAsked: [string, number, string][] = [],
-  // Each gun asked where it fires from: by walker, gun and how many guns, the stage saying a tenth of a square over
+  // Each shot fired as it's drawn asked where it leaves: by walker and which, the stage saying a tenth of a square over
   //  where the walker was last put.
   muzzlesAsked: [string, number][] = [],
   // Each time the stage was asked which units idle: the squares, in order, and how far in, by the clock; and whether it
@@ -5097,6 +5097,10 @@ expect(
         shots: shotLooks.size,
         landingsApart: new Set(landings).size,
         left: inFlight[0]?.[0] ?? null,
+        // When each shot was first drawn in flight, in order.
+        each: [...shotLooks.keys()]
+          .map((id) => inFlight.find(([, shot]) => shot === id)![0])
+          .sort((a, b) => a - b),
         landed: inFlight.at(-1)?.[0] ?? null,
         flashed:
           [...puffLooks.keys()].some((id) => id.endsWith('-hit')) &&
@@ -5124,7 +5128,7 @@ expect(
   walkersPosed.clear();
 
   expect(
-    'with no clip, a cannon fires its gun from where it stands: one shell from where the stage says its gun fires from, a tenth of a second in, landing as a shell flies, bursting with a flash; a battleship’s three guns each asked where they fire from, landing apart; lost, it fades where it stands; a catapult lobs a stone, a fifth of a second in, landing as a stone flies; archers loose an arrow each, from each figure, landing apart; spearmen still lunge, firing nothing',
+    'with no clip, a cannon fires its gun from where it stands: one shell from where the stage says its gun fires from, a tenth of a second in, landing as a shell flies, bursting with a flash; a battleship’s three guns each asked where they fire from, landing apart; lost, it fades where it stands; a catapult lobs a stone, a fifth of a second in, landing as a stone flies; archers loose an arrow each, from each figure, a ragged volley, landing apart; spearmen still lunge, firing nothing',
     [
       [
         cannonWon.alongs.every((at) => at === 0),
@@ -5167,6 +5171,12 @@ expect(
         archersWon.kinds,
         archersWon.landingsApart,
         archersWon.left! >= 250 && archersWon.left! < 266,
+        // A ragged volley, each 0.06 s after the one before, to a frame.
+        archersWon.each
+          .slice(1)
+          .every(
+            (at, index) => Math.abs(at - archersWon.each[index]! - 60) <= 16
+          ),
         archersWon.over,
       ],
       [Math.max(...spearmenWon.alongs), spearmenWon.muzzles, spearmenWon.shots],
@@ -5211,6 +5221,7 @@ expect(
         ],
         ['arrow'],
         3,
+        true,
         true,
         [['Unit-Q', 1], null, 0, 0],
       ],

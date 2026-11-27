@@ -200,7 +200,8 @@ export interface Stage {
   /**
    * A shot (`id`, `shots.ts`) in flight at `at` (`u`, height, `v`, on the world's own copy), `through` its flight from 0
    *  to 1, drawn at every copy of the world in sight as its `kind` is: a bottle alight, tumbling; an arrow, or a
-   *  bullet's streak, pointing the way it's `heading` (one long); a shell, a ball. `null` takes it away.
+   *  bullet's streak, pointing the way it's `heading` (one long); a shell, a ball; a stone, tumbling. `null` takes it
+   *  away.
    */
   shot?(
     id: string,
