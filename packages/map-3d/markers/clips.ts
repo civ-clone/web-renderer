@@ -105,10 +105,14 @@ export type ClipBefore = { role: ClipRole; seconds: number };
 
 /**
  * A clip played under another, as a walker eases into its stride from how it stands and back (plan 2.2): its role, how
- *  far into it by the same clock, and how much of the pose is its (0 to 1), the rest the clip over it. Where the rig
- *  has no clip for its role, the figure eases to stand as the model does instead.
+ *  far into it by the same clock, and how much of the pose is its (0 to 1), the rest the clip over it. For no role, or
+ *  one the rig has no clip for, the figure eases to stand as the model does instead.
  */
-export type ClipUnder = { role: ClipRole; seconds: number; weight: number };
+export type ClipUnder = {
+  role: ClipRole | null;
+  seconds: number;
+  weight: number;
+};
 
 // How far into `role`'s clip figure `index` is, `seconds` in for the first: each further on in one that loops, and
 //  each a little behind the one before in one played once (`FIGURE_STAGGER`).
@@ -125,9 +129,9 @@ const figureSeconds = (
  * Each of `drawn`'s figures drawn with `rig` (`RIG_FIGURE`) posed as `role`'s clip has it `seconds` in, the second
  *  figure `FIGURE_STAGGER` further in a clip that loops, and that far behind in one played once, and so on; or, for no
  *  role, or one `rig` has no clip for, as the model stands. In one played once, a figure whose own time hasn't come
- *  plays `before`, where it's given, as it would. With `under`, its clip's pose blends in as far as it says (each figure
- *  as far into it as it would be on its own), or, for one `rig` hasn't, the model's own. What each figure plays is kept
- *  in `playing`.
+ *  plays `before`, where it's given, as it would. With `under`, its clip's pose blends in as far as it says (each
+ *  figure as far into it as it would be on its own), or, for one `rig` hasn't, the model's own. What each figure plays
+ *  is kept in `playing`.
  */
 export const poseFigures = (
   drawn: Object3D,
@@ -159,7 +163,10 @@ export const poseFigures = (
         asked === null || under === undefined || under.role === asked
           ? 0
           : Math.min(1, Math.max(0, under.weight)),
-      beneath = weight > 0 ? rig.clips.get(under!.role) : undefined,
+      beneath =
+        weight > 0 && under!.role !== null
+          ? rig.clips.get(under!.role)
+          : undefined,
       key =
         asked === null
           ? null
@@ -198,9 +205,9 @@ export const poseFigures = (
 
       lower.setEffectiveWeight(weight);
       lower.time = clipTime(
-        under!.role,
+        under!.role!,
         beneath.duration,
-        figureSeconds(under!.role, under!.seconds, index)
+        figureSeconds(under!.role!, under!.seconds, index)
       );
     }
 

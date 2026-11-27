@@ -1899,9 +1899,13 @@ in its set (plan 2.2). It's in the model's entry:
   So they ease from how they idled on the square they left into their walk, and from their walk into how they'll idle
   on the square they come to, rather than snapping. Their idle is by the clock and the way into it that square idles
   by (`idlePhase` of the walker's `stance`), so the square, marked again once it's there, idles on from where the
-  walker left off. It eases over the walk's ramp: a tenth of a second for the player's own units, a twentieth for
-  others', and half that at the quicker pace. A unit with no `idle` eases from and to standing as its model does.
-  Waiting for its patch, it stands as before.
+  walker left off. Where that square doesn't idle (`#idlesAt`, as `idleSquares` has it: too far from the camera, as
+  at the default zoom), they ease from and to standing as the model does, as the square's drawn; so does a unit
+  with no `idle`. It eases over the walk's ramp: a tenth of a second for the player's own units, a twentieth for
+  others', and half that at the quicker pace. Waiting for its patch, it stands as before.
+  - **Steps joined:** its stride is its speed over its full pace unhurried, so a long walk joined, hurried, stays in
+    its stride. One joined as it stops eases on into the square it was easing into, with no jump, till it's back in
+    its stride, and only then into where it's bound now: a walk's `stance` moves on only at its stride's fullest.
   - **Why:** between the end of a walk and the square's idle, most units' legs jumped 20° to 80°. The Riflemen's and
     Musketmen's rifles, carried turned right round as they walk (162° and 171° from how they hold them idling), now
     swing round rather than flip.

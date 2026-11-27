@@ -1832,8 +1832,8 @@ const flown = (
 }
 
 // Its stride: none standing as it sets off, rising with its pace to all of it, and falling to none again as it stops;
-//  easing from the square it set off from as it gets going, and into the one it's bound for after. A step joined at full
-//  pace keeps its stride, with no dip; thirty steps at once, hurried past full pace, never go over theirs.
+//  easing from the square it set off from as it gets going, and into the one it's bound for after. A step joined at
+//  full pace keeps its stride, with no dip; thirty steps at once, hurried past full pace, never go over theirs.
 {
   const walks = new Walks({ u: 10, v: null }),
     east = (from: number, now: number) =>
@@ -1910,6 +1910,68 @@ const flown = (
       ],
       1,
       true,
+    ]
+  );
+}
+
+// Joined as it stops, it eases on from where it was easing into, with no jump, back into its stride, and only then
+//  into where it's bound now; a long walk joined at full pace, hurried, stays in its stride, with no dip.
+{
+  const strider = (unit: string) => {
+      const walks = new Walks({ u: 100, v: null });
+
+      return {
+        walks,
+        east: (from: number, now: number) =>
+          walks.step(
+            unit,
+            { x: from, y: 1 },
+            { x: from + 1, y: 1 },
+            point(from, 1),
+            point(from + 1, 1),
+            now,
+            pace
+          ),
+        strideAt: (now: number) => {
+          const { stride, stance } = walks.at(now).going[0]!;
+
+          return [round(stride, 2), [stance.x, stance.y]];
+        },
+      };
+    },
+    stopper = strider('stopper');
+
+  stopper.east(1, 0);
+
+  const end = stopper.walks.nextEnd() ?? 0,
+    joinedAt = end - pace.ramp / 2,
+    stopping = stopper.strideAt(joinedAt - 1);
+
+  stopper.east(2, joinedAt);
+
+  const joined = stopper.strideAt(joinedAt + 1),
+    inStride = stopper.strideAt(joinedAt + pace.ramp / 2 + 2),
+    rail = strider('rail');
+
+  rail.east(1, 0);
+
+  const atPace = rail.strideAt(199);
+
+  for (let x = 2; x <= 21; x++) {
+    rail.east(x, 200);
+  }
+
+  const hurried = rail.strideAt(201);
+
+  expect(
+    'joined as it stops, it eases on into where it was, with no jump, back into its stride, then into where it’s bound now; a long walk joined at full pace, hurried, stays in its stride',
+    [stopping, joined, inStride, atPace, hurried],
+    [
+      [0.51, [2, 1]],
+      [0.51, [2, 1]],
+      [1, [3, 1]],
+      [1, [2, 1]],
+      [1, [22, 1]],
     ]
   );
 }

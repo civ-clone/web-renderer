@@ -74,10 +74,10 @@ export type Walker = {
   before: WalkSquare;
   to: WalkSquare;
   // How far into its stride it is, 0 to 1: none standing, rising as it gets going and falling as it stops, all of it at
-  //  the pace it keeps, so its figures can ease from how they stand into their walk and back (plan 2.2).
+  //  full pace or hurried, so its figures can ease from how they stand into their walk and back (plan 2.2).
   stride: number;
   // Where it eases from or into, short of its stride: the square it set off from, getting going, or the one it's bound
-  //  for.
+  //  for, once it's in its stride; a step joined keeps the one it had.
   stance: WalkSquare;
 };
 
@@ -144,6 +144,11 @@ type Walk = {
   flies: boolean;
   flown: number;
   climb: { from: number; at: number };
+  // Its full pace, unhurried, in steps a ms, as its last step had it: how far into its stride it is is its speed over
+  //  this. And where it eases from or into, short of its stride, till its motion's as far into it as it gets: the
+  //  square it set off from, or where it was easing from or into as a step was joined, so that doesn't jump.
+  full: number;
+  stance: WalkSquare;
 };
 
 const sameSquare = (a: WalkSquare, b: WalkSquare): boolean =>
@@ -516,6 +521,8 @@ export class Walks {
         flies,
         flown: 0,
         climb: { from: climbed, at: 0 },
+        full: 1 / pace.step,
+        stance: from,
       };
 
     this.#walks.set(id, walk);
@@ -543,6 +550,7 @@ export class Walks {
       { along, speed } = motionAt(walk.motion, now),
       passed = Math.max(0, Math.floor(along) - 1),
       facing = walk.points.length > 1 ? this.#walker(walk, now).facing : null,
+      stance = this.#stanceAt(walk, now),
       end = walk.points.length - 1,
       into = along - (end - 1),
       flown = this.#along(walk, now);
@@ -608,6 +616,8 @@ export class Walks {
       walk.points.length - 1,
       pace
     );
+    walk.full = 1 / pace.step;
+    walk.stance = stance;
     walk.turned = null;
 
     if (facing !== null) {
@@ -756,6 +766,24 @@ export class Walks {
     return { at: [b.at[0], b.at[1]], way: wayOf(middle(a), middle(b)) };
   }
 
+  // Where `walk` eases from or into at `now`, short of its stride: once its motion's as far into its stride as it gets,
+  //  at full pace or, short of room for it, the fastest it goes, the square it's bound for; till then, the one it set
+  //  off from, or was easing from or into as its last step was joined. So it moves on only as its stride's fullest.
+  #stanceAt(walk: Walk, now: number): WalkSquare {
+    const { motion, full } = walk,
+      fullest = Math.min(full, motion.top),
+      at =
+        motion.speed >= fullest
+          ? motion.started
+          : motion.rise > 0
+          ? motion.started + (fullest - motion.speed) / motion.rise
+          : Infinity;
+
+    return motion.top > 0 && now >= at
+      ? walk.squares[walk.squares.length - 1]!
+      : walk.stance;
+  }
+
   #walker(walk: Walk, now: number): Walker {
     const { points, squares, turned, motion } = walk,
       last = points.length - 1,
@@ -828,12 +856,9 @@ export class Walks {
       from: walk.from,
       before: squares[last - 1] ?? squares[last]!,
       to: squares[last]!,
-      // Its speed over the fastest its motion goes: hurried or slowing to a step joined, never over its stride.
-      stride: motion.top > 0 ? Math.min(1, speed / motion.top) : 0,
-      stance:
-        now - motion.started < motion.rising && motion.rise > 0
-          ? walk.from
-          : squares[last]!,
+      // Its speed over its full pace, unhurried: a hurried walk's never over its stride.
+      stride: Math.min(1, speed / walk.full),
+      stance: this.#stanceAt(walk, now),
     };
   }
 }

@@ -238,7 +238,10 @@ const staged: string[] = [],
   walkersPosed = new Map<string, [string | null, number][]>(),
   // What each walker's figures played under that each frame, by its id: the role, how far in, how much of the pose, and
   //  when, by the clock; or nothing.
-  walkersUnder = new Map<string, ([string, number, number, number] | null)[]>(),
+  walkersUnder = new Map<
+    string,
+    ([string | null, number, number, number] | null)[]
+  >(),
   // The puffs of smoke drawn now, by id, where each bursts from and how far through it is; and every puff drawn since
   //  last cleared, by id, how far through it was each time.
   puffs = new Map<string, { at: readonly number[]; through: number }>(),
@@ -3073,6 +3076,35 @@ expect(
       Math.round(idlePhase('1,3') * 1000) / 1000,
       true,
     ]
+  );
+
+  // Zoomed out, where no square idles (`idleSquares`): its walk over how it stands as its model does, as the squares
+  //  are drawn, not over an idle clip no square plays.
+  const closeIn = glider.orbit();
+
+  glider.setOrbit({ ...closeIn, distance: 20 });
+  runFrames();
+  walkersUnder.clear();
+  stepped(walker, [0, 2], [1, 2]);
+  repatched([0, 2, []], [1, 2, [walker]]);
+
+  const zoomedOut = [...walkersUnder.values()]
+    .flat()
+    .filter((under) => under !== null);
+
+  repatched([1, 2, []], [0, 2, [walker]]);
+  glider.setOrbit(closeIn);
+  runFrames();
+
+  expect(
+    'zoomed out, where no square idles, its walk over how it stands as its model does, getting going and stopping',
+    [
+      zoomedOut.length > 2,
+      zoomedOut.every(([role]) => role === null),
+      zoomedOut[0]![2] > 0.5,
+      zoomedOut.at(-1)![2] > 0.8,
+    ],
+    [true, true, true, true]
   );
 
   // Along a road, between two squares with one: the unit walks along it as it bends (`Land#roadPath`), not straight

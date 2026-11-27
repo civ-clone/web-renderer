@@ -828,9 +828,9 @@ kit.addRig('partisan', rig);
     [['move', true], 'die', true, true]
   );
 
-  // Short of its stride, a walker's figures play their walk over their idle clip, as far as it's short, each as far into
-  //  its idle as it'd be idling: all of it, posed just as idling; half, half way between its walk and its idle; with no
-  //  clip for what's under, half way to standing; none under, walking alone again.
+  // Short of its stride, a walker's figures play their walk over their idle clip, as far as it's short, each as far
+  //  into its idle as it'd be idling: all of it, posed just as idling; half, half way between its walk and its idle;
+  //  with no clip for what's under, half way to standing; none under, walking alone again.
   const tilt = (angle: number) =>
       new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), angle),
     idling: LoadedRig = {

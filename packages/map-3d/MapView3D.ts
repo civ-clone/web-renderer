@@ -1454,9 +1454,10 @@ export class MapView3D implements MapRenderer {
   }
 
   // A walker drawn as its units are now, where it is, at `now`: what it's drawn as. Going, its figures walk, where
-  //  they're drawn with a rigged copy (plan 2.2), their legs keeping up with how far it's gone (`STRIDE`), from the start
-  //  of their walk as it sets off, and easing from how they idled on the square they left as they get going, and into
-  //  how they'll idle on the one they come to as they stop; waiting where it's come, they stand.
+  //  they're drawn with a rigged copy (plan 2.2), their legs keeping up with how far it's gone (`STRIDE`), from the
+  //  start of their walk as it sets off, and easing from how they idled on the square they left as they get going, and
+  //  into how they'll idle on the one they come to as they stop, or from and to standing where it doesn't idle;
+  //  waiting where it's come, they stand.
   #drawWalker(
     walker: Walker,
     going = false,
@@ -1482,12 +1483,13 @@ export class MapView3D implements MapRenderer {
       clip = {
         role: 'move',
         seconds: by / STRIDE,
-        // Short of its stride, its idle clip under its walk as far as it's short, by the clock and the way into it the
-        //  square idles by (`Stage#idle`): it's marked there again posed as it was.
+        // Short of its stride, under its walk as far as it's short, its idle clip, by the clock and the way into it the
+        //  square idles by (`Stage#idle`), so it's marked there again posed as it was; or, where the square doesn't
+        //  idle, standing as the model does, as it's drawn there.
         ...(stride < 1
           ? {
               under: {
-                role: 'idle',
+                role: this.#idlesAt(stance) ? 'idle' : null,
                 seconds: now / 1000 + idlePhase(`${stance.x},${stance.y}`),
                 weight: 1 - stride,
               },
@@ -3807,6 +3809,25 @@ export class MapView3D implements MapRenderer {
     }
 
     return idling;
+  }
+
+  // Whether the stack on `square` idles, or would, marked there now: units may idle, and it's as near the camera as
+  //  those idling must be (`idleSquares`).
+  #idlesAt({ x, y }: { x: number; y: number }): boolean {
+    const key = `${x},${y}`;
+
+    return (
+      this.#stage.idle !== undefined &&
+      this.#mayIdle() &&
+      idleSquares(
+        [key],
+        this.#orbit,
+        (x, y) => this.#land.layout.centre(x, y),
+        this.#period(),
+        this.#idlers,
+        (x, y, margin) => this.#visible(x, y, margin)
+      ).has(key)
+    );
   }
 
   // Whether units may idle: not without frames to play their clips in, with motion reduced, nor with units' moves not
