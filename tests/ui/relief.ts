@@ -486,6 +486,56 @@ ids.forEach((topologyId) => {
     });
   });
 
+  // A square seen alone among squares never seen: those round it that touch it only at a corner, on the grids that
+  //  have them, carry its land on too, with no step at any edge or corner of theirs.
+  const alone = createRelief({
+      layout,
+      source: sourceFor(topology, (x, y) =>
+        x === 6 && y === 5 ? 'Mountains' : 'Unknown'
+      ),
+    }),
+    aloneSteps: string[] = [];
+
+  for (let y = 3; y <= 7; y++) {
+    for (let x = 4; x <= 8; x++) {
+      if (x === 6 && y === 5) {
+        continue;
+      }
+
+      const [cu, cv] = layout.centre(x, y),
+        outline = layout.outline(x, y);
+
+      outline.forEach(([au, av], corner) => {
+        const [bu, bv] = outline[(corner + 1) % outline.length]!;
+
+        [0, 0.25, 0.5, 0.75].forEach((along) => {
+          const pu = au + (bu - au) * along,
+            pv = av + (bv - av) * along,
+            du = (pu - cu) * 1e-7,
+            dv = (pv - cv) * 1e-7,
+            inside = alone.sample(pu - du, pv - dv),
+            outside = alone.sample(pu + du, pv + dv),
+            step = Math.abs(inside.height - outside.height),
+            shade = Math.max(
+              ...inside.colour.map((value, channel) =>
+                Math.abs(value - (outside.colour[channel] ?? 0))
+              )
+            );
+
+          if (step > 1e-6 || shade > 1e-5) {
+            aloneSteps.push(`${x},${y} ${corner}@${along}: ${step} ${shade}`);
+          }
+        });
+      });
+    }
+  }
+
+  expect(
+    `${topologyId}: round a square seen alone among squares never seen, those touching it only at a corner carry its land on too, with no step at any edge or corner`,
+    aloneSteps.slice(0, 3),
+    []
+  );
+
   expect(
     `${topologyId}: a blob of squares never seen has no step at any edge of one, with land seen or between two never seen; and a square comes no nearer one not beside it than ${UNDER_CLOUD.flat}, so only those beside land seen are blended`,
     [blobSteps.slice(0, 3), nearestApart(topology, layout) > UNDER_CLOUD.flat],
@@ -1232,6 +1282,59 @@ ids.forEach((topologyId) => {
       ]
     );
   }
+
+  // Squares revealed (#1393): a block never seen among the ranges, seen three squares at a time, refreshed with those
+  //  alone released. At every step, all round the block, the land's as if made afresh: the land carried on into what's
+  //  still never seen follows what's now seen beside it.
+  const stillHidden = new Set<string>();
+
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -2; dx <= 2; dx++) {
+      stillHidden.add(`${6 + dx},${5 + dy}`);
+    }
+  }
+
+  const readHidden = (x: number, y: number): string =>
+      stillHidden.has(`${x},${y}`) ? 'Unknown' : ranged(x, y),
+    revealing = createRelief({
+      layout,
+      source: sourceFor(topology, readHidden),
+    }),
+    order = [...stillHidden],
+    [fromU, fromV] = layout.centre(3, 3),
+    [toU, toV] = layout.centre(9, 7),
+    unlikeFresh: string[] = [];
+
+  for (let at = 0; at < order.length; at += 3) {
+    const batch = order.slice(at, at + 3);
+
+    batch.forEach((square) => stillHidden.delete(square));
+    revealing.refresh(
+      batch.map((square) => square.split(',').map(Number) as [number, number])
+    );
+
+    const fresh = createRelief({
+      layout,
+      source: sourceFor(topology, readHidden),
+    });
+
+    for (let u = fromU; u <= toU; u += 0.2) {
+      for (let v = fromV; v <= toV; v += 0.2) {
+        if (
+          JSON.stringify(revealing.sample(u, v)) !==
+          JSON.stringify(fresh.sample(u, v))
+        ) {
+          unlikeFresh.push(`after ${batch.join(' ')} at ${u},${v}`);
+        }
+      }
+    }
+  }
+
+  expect(
+    `${topologyId}: squares never seen revealed a few at a time, each refreshed with those alone, leave the land as if made afresh, the land carried on into what's still never seen too`,
+    unlikeFresh.slice(0, 3),
+    []
+  );
 
   wrong = [];
 });

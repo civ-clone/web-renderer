@@ -93,9 +93,9 @@ export interface ReliefMap {
    *  terrain has and the mountains a range joins to them, or did, whose ridge to them has come or gone. Given
    *  `released`, those alone are looked at first, and the rest read again only if one of them has changed, as most
    *  changes (a unit moving, a city growing) change no terrain, and reading it all takes milliseconds. A square seen
-   *  changes the land of the squares never seen beside it too (`UNDER_CLOUD`), as far as 0.55 past its edge, which
-   *  aren't listed: `Land` rebuilds the land over its own reach round each square listed (`Land#reach`, 4 or 5),
-   *  which takes them in.
+   *  changes the land carried on into squares never seen (`UNDER_CLOUD`) too, beside it and wherever else that's
+   *  blended from it, which aren't listed: `Land` rebuilds the land over its own reach round each square listed
+   *  (`Land#reach`, 4 or 5), which takes them in.
    */
   refresh(
     released?: readonly (readonly [number, number])[]
@@ -104,7 +104,8 @@ export interface ReliefMap {
   courses(): readonly { course: Course; u: number; v: number }[];
   /**
    * The rivers' courses that reach into the square at (`x`, `y`), each placed at that square's copy of the world: its
-   *  points, and how wide its water is either side at each. None where it's never been seen.
+   *  points, and how wide its water is either side at each. None made by a square never seen, but those made beside
+   *  one can reach into it, and cut the land carried on there (`UNDER_CLOUD`).
    */
   coursesAt(x: number, y: number): readonly RiverPath[];
 }
@@ -1176,8 +1177,8 @@ export const createRelief = ({
       return flatUnseen();
     }
 
-    // Never seen: how far it is from the nearest land seen, and flat if that's as far as land carried on reaches, before
-    //  the blend's worked out.
+    // Never seen: how far it is from the nearest land seen, and flat if that's as far as land carried on reaches,
+    //  before the blend's worked out.
     let fromSeen = Infinity;
 
     if (ownSquare.unknown) {

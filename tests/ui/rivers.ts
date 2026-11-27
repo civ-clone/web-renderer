@@ -1624,9 +1624,9 @@ ids.forEach((topologyId) => {
 }
 
 // On each grid, a square never seen among mountains (#1393), with a river round it through every square beside it:
-//  where the river cuts the land seen at its edges (its banks reach them on the hex grid, hardly on the iso and not on the
-//  square), it cuts the land carried on into the square never seen as it cuts the land seen, so there's no wall there;
-//  but not under sea level.
+//  where the river cuts the land seen at its edges (its banks reach them on the hex grid, hardly on the iso and not on
+//  the square), it cuts the land carried on into the square never seen as it cuts the land seen, so there's no wall
+//  there; but not under sea level.
 ids.forEach((topologyId) => {
   const topology = topologyFor({ width, height, topologyId }),
     layout = groundLayoutFor({

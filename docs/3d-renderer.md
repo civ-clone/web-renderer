@@ -462,7 +462,8 @@ blended across squares.
     - **Under the cloud:** what stands over 0.14 is brought down to it, smoothly from the edge, wholly by 0.3 from
       the land seen, where the cloud's whole; and it all comes down to sea level from 0.4 to 0.55 (`UNDER_CLOUD` in
       `relief.ts`), as land seen nowhere near is. Never under sea level, as no water's drawn over it, so beside the
-      sea it's as it was.
+      sea it's as high as it was, at sea level, though its colour now takes a little of the sea's floor's, under the
+      cloud's edge, darkening as it goes.
     - **Rivers** beside it cut the land carried on as they cut the land seen, but not under sea level, so there's no
       wall where one runs by the edge either.
     - **Its colour** carries on too, darkening to the colour of land never seen as it comes down. It has no surface,
@@ -474,12 +475,14 @@ blended across squares.
     - **Cost:** only a square never seen with one seen beside it, across an edge or a corner, is blended, and only
       its points within 0.55 of land seen. No point of any other is that near, as the nearest a square comes to one
       not beside it is 1 on the square and iso grids and 1/√3 on the hex grid (the relief suite checks); further off, it
-      returns flat before the blend. Land never seen made flat no longer works out its colour each time, so building
-      the debug world's land on the square grid is quicker than before with some of it unseen (about 75 ms rather than
-      150 with none seen, 295 rather than 330 with a third), and the same with all of it seen.
-    - **Refreshed:** a square seen changes the land of the squares never seen beside it, up to 0.55 past its edge,
-      which `refresh()` doesn't list: `Land` rebuilds over its own reach round each square it does list
-      (`Land#reach`, 4 to 5), which takes them in.
+      returns flat before the blend. Land never seen made flat no longer works out its colour each time. So building
+      the debug world's land, on the square grid, is quicker with most of it unseen (about 60 ms rather than 100 with
+      none seen, 196 rather than 208 with a fifth), about the same with a third seen, a few per cent slower from half
+      (about 380 ms rather than 363), as the points carried on are blended, and the same with all of it seen.
+    - **Refreshed:** a square seen changes the land carried on into squares never seen beside it, up to 0.55 past
+      its edge, and wherever else land carried on is blended from it, which `refresh()` doesn't list: `Land` rebuilds
+      over its own reach round each square it does list (`Land#reach`, 4 to 5), which takes them in, and the relief
+      suite checks squares revealed a few at a time leave the land as if made afresh.
     - **Still seen:** a dark strip along the far side of land seen at the cloud's edge, as before. It looks to be the
       ground under the cloud's edge, darkening to the colour of land never seen, seen past it: the cloud's 0.18 up,
       so from the side, its edge is over land seen.
