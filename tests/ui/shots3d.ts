@@ -2,8 +2,8 @@
 //  - each figure's shots leave as its clip says, each figure a little after the one before, in the order they leave;
 //  - a squad's land a little apart, across the way they go, the middle one where it's aimed;
 //  - each flies from where it leaves to where it lands in an arc, rising most at its middle, the further it goes;
-//  - each kind as it goes: a bottle as the first did, a bullet straight and quick, a shell high and slow; each pointing
-//    the way it's going; what isn't said a bottle.
+//  - each kind as it goes: a bottle as the first did, a bullet straight and quick, a shell slow, a stone lobbed high;
+//    each pointing the way it's going; what isn't said a bottle.
 
 import {
   HIT_PUFF,
@@ -124,7 +124,7 @@ expect(
     };
 
   expect(
-    'a bottle goes as the first did; a bullet straight, and quickest, with smoke where it leaves; a shell highest and slowest, with smoke, its burst flashing; an arrow neither; every kind the map reads has a look',
+    'a bottle goes as the first did; a bullet straight, and quickest, with smoke where it leaves; a shell slowest, with smoke, its burst flashing; a stone lobbed highest, with neither; an arrow neither; every kind the map reads has a look',
     [
       SHOT_LOOKS.bottle.flight === 350 && SHOT_LOOKS.bottle.arc === SHOT_ARC,
       SHOT_LOOKS.bottle.hit === 1 &&
@@ -137,15 +137,20 @@ expect(
       SHOT_LOOKS.bullet.muzzle > 0 && SHOT_LOOKS.shell.muzzle > 0,
       SHOT_LOOKS.arrow.muzzle,
       SHOT_LOOKS.shell.burst && !SHOT_LOOKS.bullet.burst,
+      Math.max(...Object.values(SHOT_LOOKS).map(({ arc }) => arc)) ===
+        SHOT_LOOKS.stone.arc &&
+        SHOT_LOOKS.stone.muzzle === 0 &&
+        !SHOT_LOOKS.stone.burst,
       SHOT_KINDS.every((kind) => SHOT_LOOKS[kind] !== undefined),
     ],
     [
       true,
       true,
       [1.5, 0.2, 2],
-      ['bullet', 'bottle', 'arrow', 'shell'],
+      ['bullet', 'bottle', 'arrow', 'stone', 'shell'],
       true,
       0,
+      true,
       true,
       true,
     ]

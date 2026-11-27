@@ -49,8 +49,8 @@ import { TopologyId } from '@civ-clone/ui-protocol/topology';
 import riverMaterial from './riverMaterial';
 import {
   ALOFT_PART,
-  FIGURES_BOX,
   FIGURES_PART,
+  FIRES_FROM,
   Faded,
   MarkerKit,
   RIG_FIGURE,
@@ -193,18 +193,15 @@ export interface Stage {
     joint: string
   ): [number, number, number] | null;
   /**
-   * Where gun `gun` of `guns` on the walker `id` fires from, as it's turned and placed now (`u`, height, `v`, on the
-   *  world's own copy), as a shell leaves it (`muzzleOf`): nothing where it's not drawn.
+   * Where shot `index` of what the walker `id` fires as it's drawn leaves it, as it's turned and placed now (`u`,
+   *  height, `v`, on the world's own copy; `muzzleOf`): nothing where it's not drawn.
    */
-  muzzleAt?(
-    id: string,
-    gun: number,
-    guns: number
-  ): [number, number, number] | null;
+  muzzleAt?(id: string, index: number): [number, number, number] | null;
   /**
    * A shot (`id`, `shots.ts`) in flight at `at` (`u`, height, `v`, on the world's own copy), `through` its flight from 0
    *  to 1, drawn at every copy of the world in sight as its `kind` is: a bottle alight, tumbling; an arrow, or a
-   *  bullet's streak, pointing the way it's `heading` (one long); a shell, a ball. `null` takes it away.
+   *  bullet's streak, pointing the way it's `heading` (one long); a shell, a ball; a stone, tumbling. `null` takes it
+   *  away.
    */
   shot?(
     id: string,
@@ -430,76 +427,32 @@ export const jointOf = (
   return [at.x - offsetU, at.y, at.z - offsetV];
 };
 
-/** How far up what's drawn a gun's shell leaves it, from its foot to its top: about where a barrel or a deck is. */
-export const MUZZLE_HEIGHT = 0.4;
-
 /**
- * Where gun `gun` of `guns` fires from on the figures in `drawn` (`FIGURES_PART`), a thing drawn at the copy of the
- *  world at `offset`, as they're turned and placed now (`u`, height, `v`, on the world's own copy): the front of the
- *  box round them, the way they face, `MUZZLE_HEIGHT` up it, for one gun; for more, a warship's turrets, along its
- *  middle from the front to the back, as far apart as they're each the middle of a share of it. Whatever draws them,
- *  the built-in set or a model, with no node to say where a muzzle is: the figures alone, not their stand nor a ship's
- *  ripples. Nothing, with no figures.
+ * Where shot `index` of what the figures in `drawn` fire leaves them (`FIRES_FROM`, `firePoints`), `drawn` a thing
+ *  drawn at the copy of the world at `offset`, as they're turned and placed now (`u`, height, `v`, on the world's own
+ *  copy): the point it's at, of those its figures keep, round again past the last. Nothing, with no figures, or none
+ *  kept, as for one that doesn't fire as it's drawn.
  */
 export const muzzleOf = (
   drawn: Object3D | undefined,
-  gun: number,
-  guns: number,
+  index: number,
   [offsetU, offsetV]: readonly [number, number]
 ): [number, number, number] | null => {
-  const figures = drawn?.getObjectByName(FIGURES_PART);
+  const figures = drawn?.getObjectByName(FIGURES_PART),
+    points = figures?.userData[FIRES_FROM] as
+      | [number, number, number][]
+      | undefined;
 
-  if (figures === undefined) {
+  if (figures === undefined || points === undefined || points.length === 0) {
     return null;
   }
 
-  // In the figures' own frame, unturned, facing south, along `v`: where they are now, whatever's changed since they
-  //  were last drawn. The built-in set's figures, one geometry with their stand and ripples, keep the box round them
-  //  alone (`FIGURES_BOX`); a model's are meshes of their own.
-  figures.updateWorldMatrix(true, true);
+  // Where they are now, whatever's changed since they were last drawn.
+  figures.updateWorldMatrix(true, false);
 
-  const own = figures.userData[FIGURES_BOX] as number[] | undefined,
-    box =
-      own === undefined
-        ? new Box3()
-        : new Box3(
-            new Vector3(own[0], own[1], own[2]),
-            new Vector3(own[3], own[4], own[5])
-          ),
-    toFigures = figures.matrixWorld.clone().invert();
-
-  if (own === undefined) {
-    figures.traverse((object) => {
-      const mesh = object as Mesh;
-
-      if (!mesh.isMesh) {
-        return;
-      }
-
-      if (mesh.geometry.boundingBox === null) {
-        mesh.geometry.computeBoundingBox();
-      }
-
-      box.union(
-        mesh.geometry
-          .boundingBox!.clone()
-          .applyMatrix4(
-            new Matrix4().multiplyMatrices(toFigures, mesh.matrixWorld)
-          )
-      );
-    });
-  }
-
-  if (box.isEmpty()) {
-    return null;
-  }
-
-  const along = guns <= 1 ? 0 : (gun + 0.5) / guns,
-    at = new Vector3(
-      (box.min.x + box.max.x) / 2,
-      box.min.y + (box.max.y - box.min.y) * MUZZLE_HEIGHT,
-      box.max.z - (box.max.z - box.min.z) * along
-    ).applyMatrix4(figures.matrixWorld);
+  const at = new Vector3(...points[index % points.length]!).applyMatrix4(
+    figures.matrixWorld
+  );
 
   return [at.x - offsetU, at.y, at.z - offsetV];
 };
@@ -767,6 +720,13 @@ export const createStage: StageFactory = (
     streakShape = new CylinderGeometry(0.0025, 0.0025, 0.09, 4),
     streakGlow = new MeshBasicMaterial({ color: new Color('#ffe08a') }),
     shellShape = new IcosahedronGeometry(0.012, 1),
+    // A catapult's stone: rough, its faces flat.
+    stoneShape = new IcosahedronGeometry(0.02, 0),
+    stone = new MeshStandardMaterial({
+      color: new Color('#8a8378'),
+      roughness: 0.95,
+      flatShading: true,
+    }),
     iron = new MeshStandardMaterial({
       color: new Color('#2b2b2b'),
       roughness: 0.5,
@@ -916,8 +876,9 @@ export const createStage: StageFactory = (
       }
     });
 
-  // A shot's copies turned: a bottle's as far as it's tumbled `through` its flight, end over end, a turn and a half; an
-  //  arrow's and a bullet's streak's pointing the way it's going, the streak no longer than it's gone.
+  // A shot's copies turned: a bottle's as far as it's tumbled `through` its flight, end over end, a turn and a half,
+  //  and a stone's a turn over two ways; an arrow's and a bullet's streak's pointing the way it's going, the streak no
+  //  longer than it's gone.
   const up = new Vector3(0, 1, 0),
     pointing = new Vector3();
   const tumble = (shot: {
@@ -929,6 +890,12 @@ export const createStage: StageFactory = (
     shot.drawn.forEach((drawn) => {
       if (shot.kind === 'bottle') {
         drawn.rotation.set(shot.through * Math.PI * 3, 0, 0);
+      } else if (shot.kind === 'stone') {
+        drawn.rotation.set(
+          shot.through * Math.PI * 2,
+          shot.through * Math.PI,
+          0
+        );
       } else if (shot.kind === 'arrow' || shot.kind === 'bullet') {
         drawn.quaternion.setFromUnitVectors(
           up,
@@ -959,6 +926,8 @@ export const createStage: StageFactory = (
       group.add(streak);
     } else if (kind === 'shell') {
       group.add(new Mesh(shellShape, iron));
+    } else if (kind === 'stone') {
+      group.add(new Mesh(stoneShape, stone));
     } else {
       const alight = new Mesh(flameShape, flame);
 
@@ -1734,8 +1703,8 @@ export const createStage: StageFactory = (
         ? null
         : jointOf(walker.drawn[0], figure, joint, markerCopies[0] ?? [0, 0]);
     },
-    muzzleAt: (id, gun, guns): [number, number, number] | null =>
-      muzzleOf(walkers.get(id)?.drawn[0], gun, guns, markerCopies[0] ?? [0, 0]),
+    muzzleAt: (id, index): [number, number, number] | null =>
+      muzzleOf(walkers.get(id)?.drawn[0], index, markerCopies[0] ?? [0, 0]),
     shot: (
       id,
       at,
@@ -2077,6 +2046,8 @@ export const createStage: StageFactory = (
       streakGlow.dispose();
       shellShape.dispose();
       iron.dispose();
+      stoneShape.dispose();
+      stone.dispose();
       kit.dispose();
       yields.dispose();
       water.dispose();

@@ -1479,20 +1479,29 @@ mapEvent:
     see-through smoke, so they're drawn with the land and the units, and neither the sea nor the cloud needs drawing in
     another order round them. Not with nothing drawn falling (units hidden), and not for a battle shown at once; a
     battle ended at once, as one before its blow is by a step or a key, takes its puff with it.
-  - **Guns** (fourth part: `gunsFired` in `packages/models-builtin/units.ts`, `Guns` in `shots.ts`, `muzzleOf` in
-    `stage.ts`): an attacker with no clip to fight with whose look has guns fires them from where it stands rather than
-    lunging, as one that shoots in its clip does. A cannon, artillery and a howitzer have one, and so does a tank. A
-    warship has one for each of its guns: a frigate's broadside, an ironclad's, a destroyer's and a missile cruiser's
-    one, a cruiser's two and a battleship's three. Each fires a shell (`SHOT_LOOKS.shell`), as a rigged unit's are
-    drawn: laid for a tenth of a second, then fired, a warship's guns 0.15 s apart, landing a little apart. A shell
-    leaves the front of the unit's figures, four tenths of the way up them (`MUZZLE_HEIGHT`), and a warship's leave
-    along its hull from the bow back: a model's meshes, or the built-in set's figures alone, without their stand or a
-    ship's ripples, which are one geometry with them (`FIGURES_BOX`). The blow falls as the first lands, with smoke
-    and a flash at the muzzle and a burst with a flash where it lands. Lost, it fades where it stands. It's the
-    built-in look that says, whichever set draws the unit, as it is for whether a unit flies, so a hosted set's static
-    cannon fires too; for one the page doesn't have yet, out of the dark, the type the battle names. A catapult, a
-    trireme, a sail, a submarine and a carrier still close in, as do aircraft and missiles, and units drawn with a clip
-    of their own fight as their clip has them.
+  - **Guns, catapults and bows** (fourth and fifth parts: `unitFire` in `packages/models-builtin/units.ts`, `Fires`
+    and `FIRE_PACE` in `shots.ts`, `firePoints` in `markers/drawMarker.ts`, `muzzleOf` in `stage.ts`): an attacker
+    with no clip to fight with whose look fires shoots from where it stands rather than lunging, as one that shoots in
+    its clip does.
+    - **Guns:** a cannon, artillery, a howitzer and a tank fire a shell (`SHOT_LOOKS.shell`). A warship fires one for
+      each of its guns: a frigate's broadside, an ironclad's, a destroyer's and a missile cruiser's one, a cruiser's
+      two and a battleship's three. Laid for a tenth of a second, then fired, a warship's 0.15 s apart, landing a
+      little apart, with smoke and a flash at the muzzle and a burst with a flash where each lands. A shell leaves the
+      front of the unit's figures, four tenths of the way up them, and a warship's leave along its hull from the bow
+      back.
+    - **Catapults:** an ancient or medieval siege engine, drawn as a catapult, lobs a stone (`SHOT_LOOKS.stone`, a
+      rough grey stone, tumbling) from the top of its arm, wound for a fifth of a second, high over to the square
+      attacked.
+    - **Bows:** archers loose an arrow each, from in front of each figure at the shoulder, a quarter of a second in
+      and 0.06 s apart, a ragged volley landing a little apart.
+    - **Where from** (`FIRE_HEIGHTS`): worked out as the unit's drawn, from the box round its figures: a model's
+      meshes, or the built-in set's figures alone, without their stand or a ship's ripples, which are one geometry
+      with them. They're kept with the figures (`FIRES_FROM`), and the stage turns them to where the figures stand.
+    - **The blow** falls as the first shot lands. Lost, the unit fades where it stands. It's the built-in look that
+      says, whichever set draws the unit, as it is for whether a unit flies, so a hosted set's static cannon fires
+      too; for one the page doesn't have yet, out of the dark, the type the battle names. A trireme, a sail, a
+      submarine and a carrier still close in, as do aircraft, missiles, and soldiers with muskets and rifles, and units
+      drawn with a clip of their own fight as their clip has them.
   - **Fading:** a unit's figures, stand and ring fade by leaving out a share of their points (`alphaHash`), drawn with
     the solid models; see-through, they'd be drawn before the sea, and a ship's hull fading would cut a dark hole in it.
     Its flag and labels, drawn after the sea and the cloud, fade as see-through.
@@ -1571,10 +1580,10 @@ mapEvent:
   - A stack killed in a battle whose patch was held past the blow fades as the patch comes, the rest of it gone then.
   - Two other players' battle with their moves not shown is shown at once, but its loser fades out: a fade isn't a move.
 - **Still to come:**
-  - battles' rest (2.4): a catapult's stone, bows and muskets without clips, a submarine's torpedo, aircraft as they
-    fight, Civ2's rounds once they're sent (§8.1), a flash under reduced motion, a unit gone with its battle won (a
-    missile) fading rather than going at the end, and another player's unit walking onto the square it emptied rather
-    than being put there (#1255);
+  - battles' rest (2.4): muskets and rifles without clips, a submarine's torpedo, aircraft as they fight, Civ2's
+    rounds once they're sent (§8.1), a flash under reduced motion, a unit gone with its battle won (a missile) fading
+    rather than going at the end, and another player's unit walking onto the square it emptied rather than being put
+    there (#1255);
   - units that go while drawn elsewhere, walking or fighting, out of sight say, fade with neither (#1255).
 
 ---
@@ -1836,7 +1845,8 @@ in its set (plan 2.2). It's in the model's entry:
 - **The roles** are `idle`, `move`, `fight`, `die`, `work` and `settle`. `clips` names the clip in the file that each
   role plays. `idle`, `move` and `work` loop; the rest play once, and `die` holds its last frame (`clips.ts`).
 - **`shots`** say when, in seconds into a role's clip, a shot leaves, from which joint, and what it is (`kind`, since
-  the sixth part: `bottle`, `arrow`, `bullet` or `shell`, a bottle where it doesn't say). The map draws it flying
+  the sixth part: `bottle`, `arrow`, `bullet`, `shell` or, since plan 2.4's fifth part, `stone`, a bottle where it
+  doesn't say). The map draws it flying
   from that joint to its target, as its kind flies. A shot may be given only in a role that has a clip. The set says
   what flies, as its model knows what it holds, not the unit's type.
 - **`strikes`** say when, in seconds into a role's clip, its blow lands, hand to hand, where it lets nothing fly: the
@@ -1942,6 +1952,7 @@ each kind goes as it would (`SHOT_LOOKS` in `shots.ts`):
 | `arrow` | 450 ms | 0.2 | a shaft and its head, pointing the way it goes | | a puff a third as big |
 | `bullet` | 80 ms | none, straight | a bright streak trailing it, pointing the way it goes | a flash, and smoke a third as big | a puff a third as big |
 | `shell` | 700 ms | 0.35 | a dark ball | a flash, and smoke most as big | a burst: a flash, and a puff 1.6 times as big |
+| `stone` | 650 ms | 0.5 | a rough grey stone, tumbling | | a puff a little bigger than a fallen unit's |
 
 - **Pacing** (`clipPace`): the blow falls as the first shot to land lands, each as long after it leaves as its kind
   flies, so a bullet that leaves after a bottle can land first. The battle's drawn till the last shot's puff is over
@@ -1952,10 +1963,10 @@ each kind goes as it would (`SHOT_LOOKS` in `shots.ts`):
   before the blow, from where it aims, and none what its clip has after (`shotsFired`). With no `die` clip, it fades
   as before, firing every shot.
 - **Drawn** (`#placeShots`, `Stage#shot`, `Stage#puff`): each points the way it's going (`shotHeading`), the arc's
-  tangent, but for a bottle, which tumbles, and a shell, a ball. The smoke where it leaves a muzzle is timed from when
-  it left, so a bullet that leaves and lands between one frame and the next still shows it. Its flash is solid and
-  unlit, as the bottle's flame is: no see-through shapes, so nothing needs drawing in another order. A puff takes a
-  size, and a flash.
+  tangent, but for a bottle and a stone, which tumble, and a shell, a ball. The smoke where it leaves a muzzle is
+  timed from when it left, so a bullet that leaves and lands between one frame and the next still shows it. Its flash
+  is solid and unlit, as the bottle's flame is: no see-through shapes, so nothing needs drawing in another order. A
+  puff takes a size, and a flash.
 - **The Partisans' bottle** goes as it did: none of its numbers changed.
 - **Rifles:** the Riflemen, Musketmen and Marines have rigged copies since models-realistic-cc0 d1851f9d, and the
   Alpine Troops since its 9ce1b464, which needed nothing here. Each fires a bullet from its rifle's muzzle (`muzzle`,

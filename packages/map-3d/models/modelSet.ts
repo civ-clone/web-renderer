@@ -34,9 +34,16 @@ export const CLIP_ROLES: readonly ClipRole[] = [
 
 /**
  * What a shot is (`shots.ts`), as it's drawn and as quick as it flies: a bottle thrown, alight; an arrow; a bullet, a
- *  streak from a muzzle's flash; or a shell, a ball from a cannon's. A set says, as its model knows what it holds.
+ *  streak from a muzzle's flash; a shell, a ball from a cannon's; or a stone, a catapult's. A set says, as its model
+ *  knows what it holds.
  */
-export const SHOT_KINDS = ['bottle', 'arrow', 'bullet', 'shell'] as const;
+export const SHOT_KINDS = [
+  'bottle',
+  'arrow',
+  'bullet',
+  'shell',
+  'stone',
+] as const;
 
 export type ShotKind = (typeof SHOT_KINDS)[number];
 

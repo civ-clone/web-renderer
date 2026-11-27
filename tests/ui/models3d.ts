@@ -14,6 +14,7 @@
 //  - the kit lets go of its models when taken down.
 
 import {
+  Box3,
   BoxGeometry,
   BufferGeometry,
   Color,
@@ -30,6 +31,7 @@ import {
 import {
   AIRBORNE_LIFT,
   FIGURES_PART,
+  FIRES_FROM,
   Faded,
   MarkerKit,
   drawMarker,
@@ -660,6 +662,42 @@ const colours = ['#aa0000', '#ffffff'] as const,
 
 kit.addModel('hoplite', model);
 kit.addModel('statue', plain);
+
+// Archers drawn with a model loose their arrows from in front of each figure, as far in front of it as the model's
+//  meshes reach in front of the one furthest forward, six tenths up them (`firePoints`): from the model's meshes, not
+//  the built-in set's figures. Spearmen with it fire nothing.
+{
+  const look = unitTable['Archer']!,
+    figures = kit.modelFigures('hoplite', look, colours)!,
+    box = new Box3(),
+    kept = (type: string) =>
+      figuresOf(
+        drawMarker(kit, { city: null, unit: unit(type, { model: 'hoplite' }) })
+      )?.userData[FIRES_FROM] as number[][] | undefined;
+
+  figures.meshes.forEach(([geometry]) => {
+    geometry.computeBoundingBox();
+    box.union(geometry.boundingBox!);
+  });
+
+  const squad = formation(look.squad),
+    front = Math.max(...squad.map(([, z]) => z));
+
+  expect(
+    'archers drawn with a model loose an arrow each, from in front of each figure, as far as the model reaches, six tenths up; spearmen with it fire nothing',
+    [kept('Archer')?.map((point) => point.map(round)), kept('Spearman')],
+    [
+      squad.map(([x, z]) =>
+        [
+          x,
+          box.min.y + (box.max.y - box.min.y) * 0.6,
+          z + box.max.z - front,
+        ].map(round)
+      ),
+      undefined,
+    ]
+  );
+}
 
 // A squad: as many figures as stand for one unit, merged in each part's mesh, on the built-in set's stand.
 {

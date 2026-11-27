@@ -269,9 +269,9 @@ const staged: string[] = [],
   shotLooks = new Map<string, { kind: string; headings: number[][] }>(),
   puffLooks = new Map<string, { size: number; flash: number | null }>(),
   jointsAsked: [string, number, string][] = [],
-  // Each gun asked where it fires from: by walker, gun and how many guns, the stage saying a tenth of a square over
+  // Each shot fired as it's drawn asked where it leaves: by walker and which, the stage saying a tenth of a square over
   //  where the walker was last put.
-  muzzlesAsked: [string, number, number][] = [],
+  muzzlesAsked: [string, number][] = [],
   // Each time the stage was asked which units idle: the squares, in order, and how far in, by the clock; and whether it
   //  says some do, as a stage whose models have idle clips would.
   idleAsked: [string[], number][] = [],
@@ -359,10 +359,10 @@ const staged: string[] = [],
         ? null
         : [placed[0]!, placed[1]! + 0.2, placed[2]!];
     },
-    muzzleAt: (id, gun, guns) => {
+    muzzleAt: (id, index) => {
       const placed = walkersPlaced.get(id)?.at(-1);
 
-      muzzlesAsked.push([id, gun, guns]);
+      muzzlesAsked.push([id, index]);
 
       return placed === undefined
         ? null
@@ -5014,11 +5014,11 @@ expect(
     ]
   );
 
-  // With no clip to fight with, a cannon fires its gun from where it stands (`gunsFired`, plan 2.4) rather than
+  // With no clip to fight with, a cannon fires its gun from where it stands (`unitFire`, plan 2.4) rather than
   //  lunging: one shell, from the front of what's drawn (`Stage#muzzleAt`), a tenth of a second in, landing on the
   //  square attacked as a shell flies, the blow then, its burst flashing. A battleship's three guns fire one after
   //  another, each asked where it fires from, landing apart. Lost, a cannon fades where it stands, its shell landing
-  //  still. A catapult still closes in.
+  //  still. A catapult lobs a stone, and archers loose an arrow each. Spearmen still close in.
   const gunner = (id: string, type: string) =>
       ({ ...unitOf(id, 1), _: type } as Tile['units'][number]),
     gunFight = (
@@ -5091,12 +5091,16 @@ expect(
       return {
         alongs,
         fadedTo,
-        muzzles: muzzlesAsked.map(([id, gun, guns]) => [kind(id), gun, guns]),
+        muzzles: muzzlesAsked.map(([id, index]) => [kind(id), index]),
         joints: jointsAsked.length,
         kinds: [...new Set([...shotLooks.values()].map(({ kind }) => kind))],
         shots: shotLooks.size,
         landingsApart: new Set(landings).size,
         left: inFlight[0]?.[0] ?? null,
+        // When each shot was first drawn in flight, in order.
+        each: [...shotLooks.keys()]
+          .map((id) => inFlight.find(([, shot]) => shot === id)![0])
+          .sort((a, b) => a - b),
         landed: inFlight.at(-1)?.[0] ?? null,
         flashed:
           [...puffLooks.keys()].some((id) => id.endsWith('-hit')) &&
@@ -5114,7 +5118,9 @@ expect(
   const cannonWon = gunFight(gunner('Unit-C', 'Cannon'), 'attacker'),
     battleshipWon = gunFight(gunner('Unit-S', 'Battleship'), 'attacker'),
     cannonLost = gunFight(gunner('Unit-C', 'Cannon'), 'defender'),
-    catapultWon = gunFight(gunner('Unit-K', 'Catapult'), 'attacker');
+    catapultWon = gunFight(gunner('Unit-K', 'Catapult'), 'attacker'),
+    archersWon = gunFight(gunner('Unit-Q', 'Archer'), 'attacker'),
+    spearmenWon = gunFight(gunner('Unit-P', 'Spearman'), 'attacker');
 
   repatched([1, 1, []], [2, 1, []]);
   walkersSet.length = 0;
@@ -5122,7 +5128,7 @@ expect(
   walkersPosed.clear();
 
   expect(
-    'with no clip, a cannon fires its gun from where it stands: one shell from where the stage says its gun fires from, a tenth of a second in, landing as a shell flies, bursting with a flash; a battleship’s three guns each asked where they fire from, landing apart; lost, it fades where it stands; a catapult still lunges, firing nothing',
+    'with no clip, a cannon fires its gun from where it stands: one shell from where the stage says its gun fires from, a tenth of a second in, landing as a shell flies, bursting with a flash; a battleship’s three guns each asked where they fire from, landing apart; lost, it fades where it stands; a catapult lobs a stone, a fifth of a second in, landing as a stone flies; archers loose an arrow each, from each figure, a ragged volley, landing apart; spearmen still lunge, firing nothing',
     [
       [
         cannonWon.alongs.every((at) => at === 0),
@@ -5150,12 +5156,35 @@ expect(
           cannonLost.landed! < 100 + SHOT_LOOKS.shell.flight,
         cannonLost.over,
       ],
-      [Math.max(...catapultWon.alongs), catapultWon.muzzles, catapultWon.shots],
+      [
+        catapultWon.alongs.every((at) => at === 0),
+        catapultWon.muzzles,
+        catapultWon.kinds,
+        catapultWon.left! >= 200 && catapultWon.left! < 216,
+        catapultWon.landed! >= 200 + SHOT_LOOKS.stone.flight - 16 &&
+          catapultWon.landed! < 200 + SHOT_LOOKS.stone.flight,
+        catapultWon.over,
+      ],
+      [
+        archersWon.alongs.every((at) => at === 0),
+        archersWon.muzzles,
+        archersWon.kinds,
+        archersWon.landingsApart,
+        archersWon.left! >= 250 && archersWon.left! < 266,
+        // A ragged volley, each 0.06 s after the one before, to a frame.
+        archersWon.each
+          .slice(1)
+          .every(
+            (at, index) => Math.abs(at - archersWon.each[index]! - 60) <= 16
+          ),
+        archersWon.over,
+      ],
+      [Math.max(...spearmenWon.alongs), spearmenWon.muzzles, spearmenWon.shots],
     ],
     [
       [
         true,
-        [['battle', 0, 1]],
+        [['battle', 0]],
         0,
         ['shell'],
         true,
@@ -5166,15 +5195,36 @@ expect(
       ],
       [
         [
-          ['battle', 0, 3],
-          ['battle', 1, 3],
-          ['battle', 2, 3],
+          ['battle', 0],
+          ['battle', 1],
+          ['battle', 2],
         ],
         3,
         3,
         [['Unit-S', 1], null, 0, 0],
       ],
       [true, true, 1, true, [null, ['Unit-R', 1], 0, 0]],
+      [
+        true,
+        [['battle', 0]],
+        ['stone'],
+        true,
+        true,
+        [['Unit-K', 1], null, 0, 0],
+      ],
+      [
+        true,
+        [
+          ['battle', 0],
+          ['battle', 1],
+          ['battle', 2],
+        ],
+        ['arrow'],
+        3,
+        true,
+        true,
+        [['Unit-Q', 1], null, 0, 0],
+      ],
       [0.45, [], 0],
     ]
   );

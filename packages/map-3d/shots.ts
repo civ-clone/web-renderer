@@ -1,11 +1,12 @@
 // Shots on the 3D map (plan 2.2): what a unit drawn with a rigged copy throws or fires as it fights, as its clip has
 //  it (`ClipShot`). Each figure's shot leaves the node its clip names, at the time it names, the figure's own delay
 //  after (`FIGURE_STAGGER`), and lands on the loser's square as long after as its kind flies (`SHOT_LOOKS`), in an arc
-//  or straight, a little apart from the others. A unit drawn with no clip to play fires its guns, where it has them
-//  (plan 2.4, `Guns`). Pure: the view says where each leaves from and lands, and when, and asks where it is, and which
-//  way it's going, when it draws.
+//  or straight, a little apart from the others. A unit drawn with no clip to play fires as its look has it, where it
+//  does: guns, a catapult or bows (plan 2.4, `Fires`). Pure: the view says where each leaves from and lands, and when,
+//  and asks where it is, and which way it's going, when it draws.
 
 import { ClipShot, ShotKind } from './models/modelSet';
+import type { UnitFire } from '@civ-clone/ui-models-builtin/units';
 
 /**
  * A figure's shot in a clip: the figure, which of the clip's shots, the node it leaves, when, in seconds in, the time
@@ -41,6 +42,7 @@ export const SHOT_LOOKS: Readonly<Record<ShotKind, ShotLook>> = {
   arrow: { flight: 450, arc: 0.2, hit: 0.3, muzzle: 0, burst: false },
   bullet: { flight: 80, arc: 0, hit: 0.35, muzzle: 0.35, burst: false },
   shell: { flight: 700, arc: 0.35, hit: 1.6, muzzle: 0.8, burst: true },
+  stone: { flight: 650, arc: 0.5, hit: 1.1, muzzle: 0, burst: false },
 };
 
 /** What `shot` is: a bottle, where it doesn't say, as the Partisans' first was. */
@@ -66,32 +68,40 @@ export const MUZZLE_PUFF = 400;
 export const shotOver = (kind: ShotKind): number =>
   SHOT_LOOKS[kind].flight + HIT_PUFF;
 
-/** How long after its battle starts a gun fires, in seconds: as long as it takes to lay it. */
-export const GUN_LAID = 0.1;
-
-/** How far apart a unit's guns fire, in seconds: a warship's turrets, one after another. */
-export const GUN_STAGGER = 0.15;
+/**
+ * How each kind a unit fires with no clip of its own lets fly (`unitFire`), in seconds: how long after its battle
+ *  starts the first leaves, as long as it takes to lay a gun, wind a catapult or draw a bow; and how far apart the rest
+ *  leave, a warship's turrets one after another, a squad's arrows a ragged volley.
+ */
+export const FIRE_PACE: Readonly<
+  Record<UnitFire['kind'], { laid: number; stagger: number }>
+> = {
+  shell: { laid: 0.1, stagger: 0.15 },
+  stone: { laid: 0.2, stagger: 0.15 },
+  arrow: { laid: 0.25, stagger: 0.06 },
+};
 
 /**
- * What a unit fires as it attacks where it's drawn with no clip of its own to play (`gunsFired`): a shell from each of
- *  its guns, each a little after the one before, as a squad's figures fire, so each lands a little apart; each from the
- *  front of what's drawn (`Stage#muzzleAt`), as there's no node to leave.
+ * What a unit fires as it attacks where it's drawn with no clip of its own to play (`unitFire`): a shell from each of
+ *  its guns, a catapult's stone, or an arrow from each of its archers, each a little after the one before, as a squad's
+ *  figures fire, so each lands a little apart; each from where what's drawn says (`Stage#muzzleAt`), as there's no
+ *  node to leave.
  */
-export type Guns = {
+export type Fires = {
   shots: readonly ClipShot[];
-  // How many guns, and how far apart they fire: as a squad's figures and their stagger (`shotTimes`).
+  // How many fire, and how far apart: as a squad's figures and their stagger (`shotTimes`).
   figures: number;
   stagger: number;
 };
 
-/** What `guns` guns fire (`Guns`): none for none. */
-export const gunsShots = (guns: number): Guns | null =>
-  guns <= 0
+/** What `fire` lets fly (`Fires`): none for none. */
+export const firesShots = (fire: UnitFire | null): Fires | null =>
+  fire === null || fire.count <= 0
     ? null
     : {
-        shots: [{ at: GUN_LAID, joint: '', kind: 'shell' }],
-        figures: guns,
-        stagger: GUN_STAGGER,
+        shots: [{ at: FIRE_PACE[fire.kind].laid, joint: '', kind: fire.kind }],
+        figures: fire.count,
+        stagger: FIRE_PACE[fire.kind].stagger,
       };
 
 /**

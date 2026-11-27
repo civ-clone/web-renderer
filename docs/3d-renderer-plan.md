@@ -471,9 +471,12 @@ fading cuts no hole in the sea.
 **Fourth part, guns: done** (spec §8.2, "Guns"). Cannons, artillery, howitzers and tanks fire a shell from where they
 stand rather than charging, and warships fire their guns one after another, a battleship its three. Smoke and a flash
 leave the muzzle, and the shell bursts where it lands, the blow then. That's for units drawn without a fight clip of
-their own, by the built-in set or a hosted set's static model. Still to do: a catapult's stone, bows and muskets
-without clips, a submarine's torpedo, aircraft as they fight, Civ2's rounds, a flash under reduced motion, and
-#1255's follow-ups.
+their own, by the built-in set or a hosted set's static model.
+
+**Fifth part, catapults and bows: done** (spec §8.2, "Guns, catapults and bows"). Catapults lob a stone from the top
+of their arm, and archers loose an arrow each, a ragged volley, rather than charging. Still to do: muskets and rifles
+without clips, a submarine's torpedo, aircraft as they fight, Civ2's rounds, a flash under reduced motion, and #1255's
+follow-ups.
 
 - **What:**
   - melee, ranged, naval and air;
@@ -554,7 +557,9 @@ Since #1335, farms have their buildings, mines their headframes and tunnels, for
 
 **3.5, first part, the square under the pointer: done** (spec §4.6, "As built"). The square the mouse rests on is lit at once: a soft band of warm light inside its outline, brightest at the edge, laid over the land and what lies flat on it. Still to do in 3.5: grid lines as an option, the squares a city works lit while its map shows, and squares not in sight dimmed, once a rule set tells them from those seen before (Civ1's and Civ2's don't).
 
-**3.5, second part, grid lines: done** (spec §4.6, "As built, grid lines"). An option, off as it comes: a thin dark line along every square's outline on every grid, drawn as the land's own chunks again with a shader that finds each point's nearest edge, so it costs nothing to make and follows the land exactly, faded as squares get small on the screen. Still to do in 3.5: the squares a city works lit while its map shows, and squares not in sight dimmed, once a rule set tells them apart.
+**3.5, second part, grid lines: done** (spec §4.6, "As built, grid lines"). An option, off as it comes: a thin dark line along every square's outline on every grid, drawn as the land's own chunks again with a shader that finds each point's nearest edge, so it costs nothing to make and follows the land exactly, faded as squares get small on the screen. Still to do in 3.5: squares not in sight dimmed, once a rule set tells them apart.
+
+**3.5, the squares a city works: parked.** Lit on the map while the city's screen is open, they'd be hidden by it: the Modern city screen covers 90% of the map, and the Classic one all of it. Another way to show them, as while the mouse rests on a city, waits for a decision.
 
 ---
 
