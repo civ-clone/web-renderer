@@ -1,10 +1,12 @@
 // What covers the land by where it lies (docs/3d-renderer.md §4.3, `terrain/cover.ts`): bare rock where it's steep,
 //  snow high up, wet ground at the waterline.
 //  - Each rises from none to whole between its numbers, and not elsewhere.
+//  - Rock's texture is laid from above on gentle ground, from the side a steep slope faces, and from both between.
 //  - On a generated world of each grid: snow lies on mountains, or a peak's shoulder beside one, more towards the
 //    poles; rock on mountains' flanks and the steepest hills, and on the foot of a mountain or a hill where it reaches
 //    into a neighbour, but nowhere else; wet ground on plenty of the land beside water, and nowhere else, never on a
-//    swamp or a river inland, however low.
+//    swamp or a river inland, however low. Rock's texture, laid from three sides, stretches less on the steepest rock
+//    than laid flat, and never more than it does on a slope facing a corner.
 //  - On made-up worlds of each grid: a swamp inland is never wet; a sea beside a square never seen is all water to
 //    its edge; on a coast, the share of water is the sea floor's sand's, weighed as the surfaces are.
 
@@ -16,6 +18,7 @@ import { buildChunk, chunkGrid } from '@civ-clone/ui-map-3d/terrain/chunks';
 import {
   COVER,
   latitudeOf,
+  rockFacing,
   rockness,
   snowiness,
   wetness,
@@ -50,6 +53,86 @@ expect(
     rockness(0.93) > rockness(0.95),
   ],
   [0, 0, 1, 1, true]
+);
+
+// A normal tilted `degrees` from upright towards `facing` (0 east, 90 south), as `[east, up, south]`.
+const tilted = (degrees: number, facing: number): [number, number, number] => {
+  const tilt = (degrees * Math.PI) / 180,
+    turn = (facing * Math.PI) / 180;
+
+  return [
+    Math.sin(tilt) * Math.cos(turn),
+    Math.cos(tilt),
+    Math.sin(tilt) * Math.sin(turn),
+  ];
+};
+
+// How far a slope facing a corner is tilted, whose normal is as far along each of east, up and south: about 54.7°.
+const corner = (Math.acos(1 / Math.sqrt(3)) * 180) / Math.PI;
+
+// How much rock's texture is stretched where the ground's normal is `normal`, at most, laid flat or laid from three
+//  sides: laid from one side, the ground's stretched by one over its normal's part along it, each weighed.
+const stretchFlat = (normal: [number, number, number]): number => 1 / normal[1],
+  stretchFacing = (normal: [number, number, number]): number =>
+    rockFacing(normal).reduce(
+      (total, weight, axis) =>
+        weight === 0 ? total : total + weight / Math.abs(normal[axis] ?? 1),
+      0
+    );
+
+expect(
+  'rock’s texture: laid from above on level ground and where it’s too gentle for much rock; from the side a sheer face faces, whichever way; equally from above and the side at 45°, more from the side the steeper; its shares adding up to 1',
+  [
+    rockFacing([0, 1, 0]),
+    rockFacing(tilted(15, 30)),
+    [0, 90, 180, 270].map((facing) =>
+      rockFacing(tilted(90, facing)).map(round)
+    ),
+    rockFacing(tilted(45, 0)).map(round),
+    rockFacing(tilted(60, 0))[0] > rockFacing(tilted(50, 0))[0],
+    rockFacing(tilted(corner, 45)).map(round),
+    [0, 20, 35, 50, 65, 80].every((degrees) =>
+      [0, 30, 45, 100, 200, 315].every(
+        (facing) =>
+          Math.abs(
+            rockFacing(tilted(degrees, facing)).reduce((a, b) => a + b) - 1
+          ) < 1e-9
+      )
+    ),
+  ],
+  [
+    [0, 1, 0],
+    [0, 1, 0],
+    [
+      [1, 0, 0],
+      [0, 0, 1],
+      [1, 0, 0],
+      [0, 0, 1],
+    ],
+    [0.5, 0.5, 0],
+    true,
+    [0.333, 0.333, 0.333],
+    true,
+  ]
+);
+
+expect(
+  'rock’s texture laid from three sides: as stretched as laid flat on gentle ground; far less on a steep face, which laid flat stretches 2.3 times; never more than √3 times, on a slope facing a corner',
+  [
+    round(stretchFacing(tilted(15, 0))) === round(stretchFlat(tilted(15, 0))),
+    round(stretchFlat(tilted(64, 0))),
+    stretchFacing(tilted(64, 0)) < 1.2,
+    round(stretchFacing(tilted(corner, 45))),
+    Math.max(
+      ...[20, 35, 50, 65, 80, 89].flatMap((degrees) =>
+        [0, 15, 30, 45, 60, 100, 200, 315].map((facing) =>
+          stretchFacing(tilted(degrees, facing))
+        )
+      )
+    ) <=
+      Math.sqrt(3) + 1e-3,
+  ],
+  [true, 2.281, true, 1.732, true]
 );
 
 expect(
@@ -218,7 +301,10 @@ expect(
       >(),
       wetFar: string[] = [],
       rockFar: string[] = [],
-      snowFar: string[] = [];
+      snowFar: string[] = [],
+      // How much rock's texture is stretched, where it's rock: laid flat, and laid from three sides.
+      flat: number[] = [],
+      facing: number[] = [];
     let coastPoints = 0,
       coastWet = 0,
       polarSnow = 0,
@@ -235,6 +321,11 @@ expect(
             v = chunk.v + (chunk.positions[point * 3 + 2] ?? 0),
             up = chunk.positions[point * 3 + 1] ?? 0,
             upright = chunk.normals[point * 3 + 1] ?? 1,
+            normal: [number, number, number] = [
+              chunk.normals[point * 3] ?? 0,
+              upright,
+              chunk.normals[point * 3 + 2] ?? 0,
+            ],
             latitude = latitudeOf(v, extent),
             [x, y] = layout.tileAt(u, v),
             name = terrainAt(x, y),
@@ -242,6 +333,11 @@ expect(
             rock = rockness(upright),
             wet = wetness(up, (chunk.shore[point] ?? 0) / 255),
             count = counts.get(name) ?? { points: 0, snow: 0, rock: 0, wet: 0 };
+
+          if (rock > 0.5) {
+            flat.push(stretchFlat(normal));
+            facing.push(stretchFacing(normal));
+          }
 
           count.points++;
           count.snow += snow > 0.5 ? 1 : 0;
@@ -302,6 +398,25 @@ expect(
         }
       }
     }
+
+    // The stretch at a share of the way through, from least to most.
+    const at = (stretches: number[], share: number): number =>
+      [...stretches].sort((a, b) => a - b)[
+        Math.floor((stretches.length - 1) * share)
+      ] ?? 0;
+
+    // On worlds of every seed tried, laid flat: about 1.2 or less for half, 1.6 or less for nine in ten, up to about
+    //  2.3; laid from three sides, about 1.22 (a little more), 1.45, up to √3.
+    expect(
+      `${topologyId}: rock's texture, laid from three sides, stretches about as much as laid flat on most rock, less on the steepest tenth, and never more than √3 times, where laid flat it reaches over 2`,
+      [
+        at(facing, 0.5) < at(flat, 0.5) + 0.03,
+        at(facing, 0.9) < at(flat, 0.9) - 0.08,
+        at(facing, 1) <= Math.sqrt(3) + 1e-3,
+        at(flat, 1) > 2,
+      ],
+      [true, true, true, true]
+    );
 
     const share = (name: string, of: 'snow' | 'rock' | 'wet'): number => {
       const count = counts.get(name);

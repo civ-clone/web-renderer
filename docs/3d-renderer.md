@@ -516,7 +516,7 @@ blended across squares.
   weights use the same kernel as the relief, broken up by noise so the boundaries look natural and not square.
 - **Materials:** each material is a texture set (colour, normal, roughness), kept in a texture array. Slope and height
   add their own:
-  - bare rock on steep slopes, mapped from three sides (triplanar) so it doesn't stretch;
+  - bare rock on steep slopes, mapped from three sides (triplanar) so it stretches less;
   - snow above a height;
   - wet sand at the waterline.
 - **The built-in set** uses textures made by code. A hosted set can bring CC0 photographic textures (D3).
@@ -528,8 +528,7 @@ blended across squares.
       middle), hills about 34° (up to 55° at a mountain's foot), most under 26°, so about a sixth of a block of hills
       is rock. Those are from the height a sixteenth of a square either side, which reads a little steeper than the
       land's mesh: before, measured so, mountains reached 44° to 49° (37° for most of the steepest, 23° in the
-      middle). A texture laid flat stretches about 2.3 times at 64°: rock mapped from three sides would fix that, and
-      is still to do;
+      middle). Its texture is laid from three sides (below);
     - **snow** above a snowline, 0.86 high at the equator and 0.56 at the poles, on ground level enough to hold it:
       none more upright than about 53° from level, whole by about 37°. A mountain's top is mostly 0.75 to 0.95 high,
       about 0.85, up to about 1.05 in a massif. So on the debug page's worlds, counting a peak capped where any of its
@@ -558,9 +557,40 @@ blended across squares.
     along the ground's own slope. Far off, the detail's smaller copies even out to the colour, and each surface's own
     roughness: snow and mud shinier than before, rock a little, where all land was as rough. A square never seen has
     no surface, and lends none to its neighbours; the detail fades out towards it.
+  - **Rock laid from three sides** (triplanar): from above, from the east or west and from the north or south, each
+    weighed by how squarely the ground faces it (`rockFacing`, `COVER.rockFaces` and `COVER.rockSharp` in
+    `cover.ts`).
+    - **Why:** laid flat, a texture's stretched down a slope by one over the cosine of its tilt, so the rock's cracks
+      ran down mountains' steep sides as streaks.
+    - **How much less:** on the debug page's worlds, laid flat, half of the rock was stretched about 1.2 times or
+      less, nine in ten 1.6 or less, and the rest up to 2.3. Laid from three sides: 1.22 (a touch more), 1.45, and
+      never more than 1.73 (√3), on a slope facing a corner at about 55°, which faces all three sides alike. So the
+      steepest sides gain most: the tenth of the rock laid flat stretched most is about 1.35 to 1.4 now (1.1 to 1.73). A
+      slope of 45° facing a side is stretched about 1.4 either way. One of about 18° to 45° facing a side, or up to
+      55° facing a corner, is stretched a little more than laid flat, as it's blended: at worst about 6% more (1.65
+      rather than 1.56, at about 50° facing a corner; 40° facing east, 1.36 rather than 1.31). That's most of the
+      rock, but a fifth of it by more than 3%.
+    - **Gentle ground**, tilted less than about 17° (rock begins at about 14°), is laid from above alone, as before.
+    - **Blended** where the ground faces two or three sides, so the rock would be smoother there, as their shades and
+      bumps partly cancel: scaled back up about their mean (by one over the root of the sum of the weights' squares),
+      so it's as rugged wherever it's laid from, within about a tenth. That takes the three to be unalike where they
+      blend. Laid from the side, each is moved half a texture along the way it shares with laid from above (east to
+      west, or north to south), and from the east or west it's laid up across and south down, so the two from the
+      side share only height, one across and one down. Otherwise they'd match, or mirror, each other along lines or
+      across patches of a slope, and be made too rugged there. The two from the side can still match along lines on
+      a wall facing a corner, but the land's steepest is about 68°, where one of them weighs under 1%.
+    - **Bumps** tilt the ground along the side each is laid from, carried as a direction east, up and south for every
+      surface, rather than east and south.
+    - **Seams:** laid from the side, it repeats east to west and north to south as laid from above, as many whole
+      times as fit the world's period, and up by height, so neither the world's seam nor a chunk's border has one.
   - **Cost:** making the noise's slopes from a table rather than a sine and cosine each made the land quicker to build
     (about 520 ms for the debug world rather than 595), more than paying for the weights. Each point of the land
-    samples all eight textures, so their smaller copies are chosen alike where surfaces meet.
+    samples all eight textures, so their smaller copies are chosen alike where surfaces meet, and rock's twice more,
+    from the sides, everywhere: a branch would hide how they change from pixel to pixel, which chooses their smaller
+    copies (`textureGrad` could skip them on gentle ground, if it's ever worth it). Measured by the GPU on an M2 Pro
+    at 1600 by 1000, close in over the debug page's massif, with the browser's pane hidden so roughly, a frame took
+    about 0.1 to 0.35 ms longer: 3.3 to 3.5 ms looking low across it, rather than 3.2 to 3.3, and 2.6 to 2.8 at the
+    classic view's pitch, rather than 2.45.
 
 ### 4.4 Water
 
