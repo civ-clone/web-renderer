@@ -200,4 +200,17 @@ export const airborne = (look: UnitLook): boolean =>
   look.shape === 'helicopter' ||
   look.shape === 'missile';
 
+/**
+ * How many guns a unit that looks like `look` fires as it attacks, from where it stands rather than closing in: a
+ *  cannon's, a gun's or a tank's one, and a warship's turrets or its broadside; none for one that closes in, as a
+ *  catapult still does. How its attack is drawn, not what it can do.
+ */
+export const gunsFired = (look: UnitLook): number =>
+  look.shape === 'ship'
+    ? look.guns ?? 0
+    : (look.shape === 'siege' && look.era !== 'ancient') ||
+      (look.shape === 'vehicle' && look.large === true)
+    ? 1
+    : 0;
+
 export default unitTable;

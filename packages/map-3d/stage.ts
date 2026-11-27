@@ -192,6 +192,15 @@ export interface Stage {
     joint: string
   ): [number, number, number] | null;
   /**
+   * Where gun `gun` of `guns` on the walker `id` fires from, as it's turned and placed now (`u`, height, `v`, on the
+   *  world's own copy), as a shell leaves it (`muzzleOf`): nothing where it's not drawn.
+   */
+  muzzleAt?(
+    id: string,
+    gun: number,
+    guns: number
+  ): [number, number, number] | null;
+  /**
    * A shot (`id`, `shots.ts`) in flight at `at` (`u`, height, `v`, on the world's own copy), `through` its flight from 0
    *  to 1, drawn at every copy of the world in sight as its `kind` is: a bottle alight, tumbling; an arrow, or a
    *  bullet's streak, pointing the way it's `heading` (one long); a shell, a ball. `null` takes it away.
@@ -416,6 +425,69 @@ export const jointOf = (
 
   // As it's posed and placed now, whatever's changed since it was last drawn: three.js works its matrices out afresh.
   const at = node.getWorldPosition(new Vector3());
+
+  return [at.x - offsetU, at.y, at.z - offsetV];
+};
+
+/** How far up what's drawn a gun's shell leaves it, from its foot to its top: about where a barrel or a deck is. */
+export const MUZZLE_HEIGHT = 0.4;
+
+/**
+ * Where gun `gun` of `guns` fires from on the figures in `drawn` (`FIGURES_PART`), a thing drawn at the copy of the
+ *  world at `offset`, as they're turned and placed now (`u`, height, `v`, on the world's own copy): the front of the
+ *  box round them, the way they face, `MUZZLE_HEIGHT` up it, for one gun; for more, a warship's turrets, along its
+ *  middle from the front to the back, as far apart as they're each the middle of a share of it. Whatever draws them,
+ *  the built-in set or a model, with no node to say where a muzzle is. Nothing, with no figures.
+ */
+export const muzzleOf = (
+  drawn: Object3D | undefined,
+  gun: number,
+  guns: number,
+  [offsetU, offsetV]: readonly [number, number]
+): [number, number, number] | null => {
+  const figures = drawn?.getObjectByName(FIGURES_PART);
+
+  if (figures === undefined) {
+    return null;
+  }
+
+  // In the figures' own frame, unturned, facing south, along `v`: where they are now, whatever's changed since they
+  //  were last drawn.
+  figures.updateWorldMatrix(true, true);
+
+  const box = new Box3(),
+    toFigures = figures.matrixWorld.clone().invert();
+
+  figures.traverse((object) => {
+    const mesh = object as Mesh;
+
+    if (!mesh.isMesh) {
+      return;
+    }
+
+    if (mesh.geometry.boundingBox === null) {
+      mesh.geometry.computeBoundingBox();
+    }
+
+    box.union(
+      mesh.geometry
+        .boundingBox!.clone()
+        .applyMatrix4(
+          new Matrix4().multiplyMatrices(toFigures, mesh.matrixWorld)
+        )
+    );
+  });
+
+  if (box.isEmpty()) {
+    return null;
+  }
+
+  const along = guns <= 1 ? 0 : (gun + 0.5) / guns,
+    at = new Vector3(
+      (box.min.x + box.max.x) / 2,
+      box.min.y + (box.max.y - box.min.y) * MUZZLE_HEIGHT,
+      box.max.z - (box.max.z - box.min.z) * along
+    ).applyMatrix4(figures.matrixWorld);
 
   return [at.x - offsetU, at.y, at.z - offsetV];
 };
@@ -1650,6 +1722,8 @@ export const createStage: StageFactory = (
         ? null
         : jointOf(walker.drawn[0], figure, joint, markerCopies[0] ?? [0, 0]);
     },
+    muzzleAt: (id, gun, guns): [number, number, number] | null =>
+      muzzleOf(walkers.get(id)?.drawn[0], gun, guns, markerCopies[0] ?? [0, 0]),
     shot: (
       id,
       at,

@@ -9,7 +9,8 @@
 //  - the square attacked awaits the first blow still to fall there;
 //  - battles ended at once have their blows told, those not told already, and are over;
 //  - paced for its fighters' clips (`clipPace`), the attacker that shoots stands, the blow falling as its first shot
-//    lands, and is drawn till its clip's over; the loser falls, solid, then fades; each plays its clip, by the clock.
+//    lands, and is drawn till its clip's over; the loser falls, solid, then fades; each plays its clip, by the clock;
+//  - with no clip to fight with, an attacker with guns fires them from where it stands, as one that shoots does.
 
 import Battles, {
   BATTLE_PACE,
@@ -24,7 +25,14 @@ import Battles, {
   quickerBattle,
 } from '@civ-clone/ui-map-3d/battles';
 import { RigFacts } from '@civ-clone/ui-map-3d/markers/clips';
-import { HIT_PUFF, SHOT_LOOKS, shotOver } from '@civ-clone/ui-map-3d/shots';
+import {
+  GUN_LAID,
+  GUN_STAGGER,
+  HIT_PUFF,
+  SHOT_LOOKS,
+  gunsShots,
+  shotOver,
+} from '@civ-clone/ui-map-3d/shots';
 
 const failures: string[] = [];
 let checks = 0;
@@ -532,7 +540,7 @@ expect(
         fade: 600,
         lunge: 0,
         falls: 1860,
-        clips: { rate: 1, fight: true, die: true },
+        clips: { rate: 1, fight: true, die: true, shots: true },
       },
       {
         reach: 200,
@@ -552,7 +560,7 @@ expect(
         back: 900 + SHOT_FLIGHT + HIT_PUFF - 550,
         fade: 600,
         lunge: 0,
-        clips: { rate: 1, fight: true, die: false },
+        clips: { rate: 1, fight: true, die: false, shots: true },
       },
     ]
   );
@@ -600,14 +608,14 @@ expect(
         ),
         fade: 600,
         lunge: 0,
-        clips: { rate: 1, fight: true, die: false },
+        clips: { rate: 1, fight: true, die: false, shots: true },
       },
       {
         reach: 400 + flies('bullet'),
         back: 300 + shotOver('shell') - 400 - flies('bullet'),
         fade: 600,
         lunge: 0,
-        clips: { rate: 1, fight: true, die: false },
+        clips: { rate: 1, fight: true, die: false, shots: true },
       },
     ]
   );
@@ -668,6 +676,55 @@ expect(
     ]
   );
 
+  // With no clip to fight with, a cannon's one gun, and a battleship's three a little after one another, fired from
+  //  where it stands (`Guns`): the blow as its first shell lands, a little after it's laid; drawn till the last of its
+  //  shells' own is over, the last burst; its loser falling as its clip says. With a fight of its own, its clip, not
+  //  its guns; with a rigged copy but no fight, its guns. Won or lost, as long as its shells' bursts or the loser's
+  //  fade, the longer: a cannon's fade; a battleship's last shell, though it's lost.
+  const cannon = gunsShots(1)!,
+    battleship = gunsShots(3)!,
+    laidAndFlown = GUN_LAID * 1000 + SHOT_LOOKS.shell.flight,
+    shellOver = GUN_LAID * 1000 + shotOver('shell'),
+    guns = (more: object) => ({
+      reach: laidAndFlown,
+      back: shellOver - laidAndFlown,
+      fade: 600,
+      lunge: 0,
+      ...more,
+    });
+
+  expect(
+    'guns with no clip: fired from where it stands, the blow as the first shell lands, drawn till the last has burst; the loser falls as its clip says; a fight clip of its own wins; no guns, none; lost, or won, as long as its last shell’s burst or the loser’s fade, the longer; twice as quick, half as long',
+    [
+      rounded(clipPace(pace, null, null, cannon)),
+      rounded(clipPace(pace, null, null, battleship)),
+      rounded(clipPace(pace, null, thrower, cannon)),
+      rounded(clipPace(pace, brawler, null, cannon)),
+      rounded(clipPace(pace, { ...brawler, clips: {} }, null, cannon)),
+      gunsShots(0),
+      round(battleLength(clipPace(pace, null, null, cannon), false)),
+      round(battleLength(clipPace(pace, null, null, battleship), false)),
+      round(battleLength(quickerBattle(clipPace(pace, null, null, cannon)))),
+    ],
+    [
+      guns({ clips: { rate: 1, fight: false, die: false, shots: true } }),
+      guns({
+        back: round(shellOver + 2 * GUN_STAGGER * 1000 - laidAndFlown),
+        clips: { rate: 1, fight: false, die: false, shots: true },
+      }),
+      guns({
+        falls: 1860,
+        clips: { rate: 1, fight: false, die: true, shots: true },
+      }),
+      rounded(clipPace(pace, brawler, null)),
+      guns({ clips: { rate: 1, fight: false, die: false, shots: true } }),
+      null,
+      laidAndFlown + 600,
+      round(shellOver + 2 * GUN_STAGGER * 1000),
+      (laidAndFlown + 600) / 2,
+    ]
+  );
+
   const paced = clipPace(pace, thrower, thrower),
     quick = quickerBattle(paced),
     battles = new Battles(),
@@ -706,7 +763,7 @@ expect(
         fade: 300,
         lunge: 0,
         falls: 930,
-        clips: { rate: 2, fight: true, die: true },
+        clips: { rate: 2, fight: true, die: true, shots: true },
       },
       850 + 1860 + 600,
       850 + 1860 + 600,

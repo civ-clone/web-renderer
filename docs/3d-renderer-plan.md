@@ -466,8 +466,14 @@ out of sight or coming into it, fade in or out over half a second.
 
 **Third part, a puff of smoke: done.** Where the loser falls, a puff of grey smoke bursts out from the blow, rising and
 spreading as the loser fades, and it's gone with it. Fading units are dithered rather than see-through, so a ship
-fading cuts no hole in the sea. Still to do: ranged units firing, ships and aircraft as they fight, Civ2's rounds, a
-flash under reduced motion, and #1255's follow-ups.
+fading cuts no hole in the sea.
+
+**Fourth part, guns: done** (spec §8.2, "Guns"). Cannons, artillery, howitzers and tanks fire a shell from where they
+stand rather than charging, and warships fire their guns one after another, a battleship its three. Smoke and a flash
+leave the muzzle, and the shell bursts where it lands, the blow then. That's for units drawn without a fight clip of
+their own, by the built-in set or a hosted set's static model. Still to do: a catapult's stone, bows and muskets
+without clips, a submarine's torpedo, aircraft as they fight, Civ2's rounds, a flash under reduced motion, and
+#1255's follow-ups.
 
 - **What:**
   - melee, ranged, naval and air;

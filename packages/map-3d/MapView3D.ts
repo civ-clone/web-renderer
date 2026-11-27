@@ -30,6 +30,7 @@ import {
   SHOT_LOOKS,
   SHOT_TARGET,
   ShotTime,
+  gunsShots,
   landsAt,
   shotAt,
   shotHeading,
@@ -57,7 +58,11 @@ import CameraInput from './camera/CameraInput';
 import markerFor, { MarkerWords, TileMarker } from './markers/markerFor';
 import { IN_FRONT_OF_CITY, UNIT_SCALE } from './markers/drawMarker';
 import standHeight from './markers/standHeight';
-import { airborne, unitLook } from '@civ-clone/ui-models-builtin/units';
+import {
+  airborne,
+  gunsFired,
+  unitLook,
+} from '@civ-clone/ui-models-builtin/units';
 import Walks, {
   OWN_PACE,
   RIVALS_PACE,
@@ -326,7 +331,8 @@ export class MapView3D implements MapRenderer {
   // The puffs of smoke drawn where losers fall, and where shots land, by id (`#puff`, `#placeShots`).
   #puffs = new Set<string>();
   // The shots of battles whose attackers shoot (`shots.ts`), by battle: when each of its figures' shots leaves, in its
-  //  clip, which have, where they land, on the world's own copy, how many figures it has, and how quick its clip plays.
+  //  clip, which have, where they land, on the world's own copy, how many figures it has, and how quick its clip plays;
+  //  and whether they're its guns', with no clip, its figures then its guns (`Guns`).
   #shotsOf = new Map<
     string,
     {
@@ -335,6 +341,7 @@ export class MapView3D implements MapRenderer {
       target: [number, number, number];
       figures: number;
       rate: number;
+      guns: boolean;
     }
   >();
   // The shots in flight, or landed and bursting, or with smoke where they left, by id: their battle, what they are,
@@ -1069,15 +1076,23 @@ export class MapView3D implements MapRenderer {
 
         return marker === null ? null : this.#stage.rigFacts?.(marker) ?? null;
       },
-      attackerFacts = facts(
-        attackerUnit ?? this.#walkingUnits.get(attacker.id)
-      ),
+      attackerShown = attackerUnit ?? this.#walkingUnits.get(attacker.id),
+      attackerFacts = facts(attackerShown),
+      // With no clip of its own to fight with, its guns, where it's drawn with any, as a cannon or a warship is: on the
+      //  ground or at sea, not in the air.
+      look =
+        attackerShown === undefined
+          ? null
+          : unitLook(attackerShown._, attackerShown.__ ?? []),
+      guns =
+        look === null || airborne(look) ? null : gunsShots(gunsFired(look)),
       paced = clipPace(
         BATTLE_PACE,
         attackerFacts,
         winner === 'attacker'
           ? facts(before.find(({ id }) => id === defender.id))
-          : attackerFacts
+          : attackerFacts,
+        guns
       ),
       pace = speed === 'fast' ? quickerBattle(paced) : paced,
       busy = this.#battles.busyUntil([attacker.id, defender.id]),
@@ -1134,14 +1149,18 @@ export class MapView3D implements MapRenderer {
         this.#walks.endsAt(attacker.id) ?? now
       );
 
-    // Its attacker's shots, where it shoots, each landing on the square attacked, by the loser's feet.
-    const shots = attackerFacts?.clips.fight?.shots ?? [];
+    // Its attacker's shots, where it shoots, each landing on the square attacked, by the loser's feet: its clip's, or,
+    //  with none, its guns'.
+    const shooter = pace.clips?.fight ? attackerFacts : guns,
+      shots = pace.clips?.fight
+        ? attackerFacts?.clips.fight?.shots ?? []
+        : guns?.shots ?? [];
 
-    if (pace.clips?.fight && attackerFacts !== null && shots.length > 0) {
+    if (pace.clips?.shots && shooter !== null && shots.length > 0) {
       this.#shotsOf.set(battle.id, {
         // Lost, falling at the blow, only those its figures fire before they fall.
         times: shotsFired(
-          shotTimes(shots, attackerFacts.figures, attackerFacts.stagger),
+          shotTimes(shots, shooter.figures, shooter.stagger),
           winner !== 'attacker' && pace.clips.die
             ? (pace.reach / 1000) * pace.clips.rate
             : null
@@ -1151,8 +1170,9 @@ export class MapView3D implements MapRenderer {
           battle.fallsAt.at,
           battle.fallsAt.lift + SHOT_TARGET
         ),
-        figures: attackerFacts.figures,
+        figures: shooter.figures,
         rate: pace.clips.rate,
+        guns: !pace.clips.fight,
       });
     }
 
@@ -1675,7 +1695,8 @@ export class MapView3D implements MapRenderer {
   }
 
   // The shots of the battles under way at `now` (`shots.ts`): each figure's leaving the node its clip names as the
-  //  attacker's clip comes to it, where the figure's drawn now, or where the attacker is, and flying to the square
+  //  attacker's clip comes to it, where the figure's drawn now, or each gun's the front of what's drawn, as the
+  //  battle's clock comes to it (`Stage#muzzleAt`), or where the attacker is, and flying to the square
   //  attacked as its kind flies (`SHOT_LOOKS`), pointing the way it goes; one from a muzzle leaving smoke there, with a
   //  flash (`MUZZLE_PUFF`); each landed bursting in a puff of smoke there (`HIT_PUFF`), a shell's with a flash. Each
   //  puff's as quick as the battle's clips, added to `puffed`, then gone. Its attacker not drawn, as with units hidden
@@ -1697,7 +1718,9 @@ export class MapView3D implements MapRenderer {
         }
 
         const from =
-            this.#stage.jointAt?.(id, time.figure, time.joint) ??
+            (plan.guns
+              ? this.#stage.muzzleAt?.(id, time.figure, plan.figures)
+              : this.#stage.jointAt?.(id, time.figure, time.joint)) ??
             this.#onLand(at, lift + SHOT_TARGET),
           // Its target's copy nearest where it leaves, over the world's seam or not.
           { u: periodU, v: periodV } = this.#land.layout.period(),

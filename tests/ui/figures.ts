@@ -12,7 +12,8 @@
 //  - fading, its figures, stand and ring dithered, and its flag and labels see-through;
 //  - a puff of smoke where a unit falls: grey blobs bursting out, rising and spreading, swelling and shrinking away;
 //  - a ship out at sea in rings of ripples, and not in front of a city's buildings;
-//  - picked by what's drawn of it: a unit's figures standing over the ground of the square behind are its square's.
+//  - picked by what's drawn of it: a unit's figures standing over the ground of the square behind are its square's;
+//  - the guns a unit fires as it attacks, and where each fires from on what's drawn of it.
 
 import * as Civ1Units from '@civ-clone/civ1-unit/Units';
 import * as Civ2Units from '@civ-clone/civ2-unit/Units';
@@ -37,9 +38,11 @@ import unitUnder, {
 import { UNIT_SCALE } from '@civ-clone/ui-map-3d/markers/drawMarker';
 import {
   UnitLook,
+  gunsFired,
   unitLook,
   unitTable,
 } from '@civ-clone/ui-models-builtin/units';
+import { MUZZLE_HEIGHT, muzzleOf } from '@civ-clone/ui-map-3d/stage';
 import {
   ALOFT_PART,
   FIGURES_PART,
@@ -1471,6 +1474,81 @@ expect(
     [true, true]
   );
 });
+
+// The guns a unit fires as it attacks (`gunsFired`): a cannon, a gun or a tank one; a warship its turrets or broadside;
+//  none for those that close in, as a catapult, a trireme or a sailing ship without guns does.
+expect(
+  'guns: a cannon, a gun or a tank one, a warship as many as its turrets or its broadside, and none for the rest',
+  Object.entries(unitTable)
+    .filter(([, look]) => gunsFired(look) > 0)
+    .map(([type, look]) => [type, gunsFired(look)])
+    .sort(),
+  [
+    ['Artillery', 1],
+    ['Battleship', 3],
+    ['Cannon', 1],
+    ['Cruiser', 2],
+    ['Destroyer', 1],
+    ['Frigate', 1],
+    ['Howitzer', 1],
+    ['Ironclad', 1],
+    ['MissileCruiser', 1],
+    ['Tank', 1],
+  ]
+);
+
+// Where each gun fires from (`muzzleOf`): the front of what's drawn, the way it faces, `MUZZLE_HEIGHT` up it; a
+//  warship's turrets along its middle from the front back; drawn at a copy of the world, as on the world's own; and
+//  none with no figures.
+{
+  const cannonEast = drawMarker(kit, {
+      city: null,
+      unit: unit('Cannon', { facing: Math.PI / 2 }),
+    }),
+    battleshipNorth = drawMarker(kit, {
+      city: null,
+      unit: unit('Battleship', { facing: Math.PI }),
+    }),
+    // Turned a quarter or a half turn, the box round what's drawn is the box round its figures, turned.
+    boxOf = (drawn: Object3D) =>
+      new Box3().setFromObject(drawn.getObjectByName(FIGURES_PART)!),
+    cannon = boxOf(cannonEast),
+    battleship = boxOf(battleshipNorth),
+    up = (box: Box3) => box.min.y + (box.max.y - box.min.y) * MUZZLE_HEIGHT,
+    along = (box: Box3, share: number) =>
+      box.min.z + (box.max.z - box.min.z) * share,
+    rounded = (point: readonly number[] | null) =>
+      point?.map((value) => Math.round(value * 1e6) / 1e6) ?? null,
+    atHome = muzzleOf(cannonEast, 0, 1, [0, 0]);
+
+  cannonEast.position.set(10, 0, -4);
+
+  expect(
+    'a gun fires from the front of what’s drawn, the way it faces, as high up it as a barrel; a warship’s turrets along its middle, front to back; at a copy of the world as on its own; none with no figures',
+    [
+      rounded(atHome),
+      rounded(muzzleOf(cannonEast, 0, 1, [10, -4])),
+      [0, 1, 2].map((gun) =>
+        rounded(muzzleOf(battleshipNorth, gun, 3, [0, 0]))
+      ),
+      muzzleOf(undefined, 0, 1, [0, 0]),
+      muzzleOf(new Group(), 0, 1, [0, 0]),
+    ],
+    [
+      rounded([cannon.max.x, up(cannon), (cannon.min.z + cannon.max.z) / 2]),
+      rounded([cannon.max.x, up(cannon), (cannon.min.z + cannon.max.z) / 2]),
+      [1 / 6, 1 / 2, 5 / 6].map((share) =>
+        rounded([
+          (battleship.min.x + battleship.max.x) / 2,
+          up(battleship),
+          along(battleship, share),
+        ])
+      ),
+      null,
+      null,
+    ]
+  );
+}
 
 if (failures.length > 0) {
   process.stderr.write(
