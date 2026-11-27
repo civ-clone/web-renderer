@@ -23,7 +23,7 @@ import groundDirections from './layouts/directions';
 import World from '@civ-clone/ui-map/components/World';
 import { FLASH_SIZE, Stage, StageFactory, createStage } from './stage';
 import { ClipRole, ShotKind } from './models/modelSet';
-import { RigFacts, STRIDE } from './markers/clips';
+import { ClipUnder, RigFacts, STRIDE, idlePhase } from './markers/clips';
 import {
   HIT_PUFF,
   MUZZLE_PUFF,
@@ -287,6 +287,10 @@ export class MapView3D implements MapRenderer {
   #walkersDrawn = new Map<string, string>();
   // How far each walker's gone, by its id, and where it was last drawn: its figures' legs keep up (`STRIDE`).
   #walked = new Map<string, { at: [number, number]; by: number }>();
+  // Whether each walker's figures ease from or into idling, by its id, as decided once as its ease began, with the
+  //  square they ease from or into: so a square idling only as it was, a little further out than one may start
+  //  (`idleSquares`), doesn't switch them to standing mid-way, nor a camera moved meanwhile.
+  #eases = new Map<string, { key: string; idles: boolean }>();
   // Walks over before the patch for their units' last step has come, as when meeting a leader holds the patches: each
   //  stands where it ended, its units still left off their squares, until it comes. By its id, with the units it has.
   #unpatched = new Map<string, Walker>();
@@ -1397,7 +1401,7 @@ export class MapView3D implements MapRenderer {
 
     this.#walksEnded(ended);
     going.forEach((walker) => {
-      const marker = this.#drawWalker(walker, true);
+      const marker = this.#drawWalker(walker, true, now);
 
       // Drawn sailing, a ship among its units, on top or carrying the one that is: its wake laid behind it.
       if (
@@ -1453,12 +1457,19 @@ export class MapView3D implements MapRenderer {
     });
   }
 
-  // A walker drawn as its units are now, where it is: what it's drawn as. Going, its figures walk, where they're drawn
-  //  with a rigged copy (plan 2.2), their legs keeping up with how far it's gone (`STRIDE`), from the start of their
-  //  walk as it sets off; waiting where it's come, they stand.
-  #drawWalker(walker: Walker, going = false): TileMarker | null {
+  // A walker drawn as its units are now, where it is, at `now`: what it's drawn as. Going, its figures walk, where
+  //  they're drawn with a rigged copy (plan 2.2), their legs keeping up with how far it's gone (`STRIDE`), from the
+  //  start of their walk as it sets off, and easing from how they idled on the square they left as they get going, and
+  //  into how they'll idle on the one they come to as they stop, or from and to standing where it doesn't idle;
+  //  waiting where it's come, they stand.
+  #drawWalker(
+    walker: Walker,
+    going = false,
+    now = performance.now()
+  ): TileMarker | null {
     const marker = this.#walkerMarker(walker.units);
-    let clip: { role: ClipRole; seconds: number } | null = null;
+    let clip: { role: ClipRole; seconds: number; under?: ClipUnder } | null =
+      null;
 
     if (going) {
       const last = this.#walked.get(walker.id),
@@ -1470,7 +1481,39 @@ export class MapView3D implements MapRenderer {
             : Math.hypot(walker.at[0] - last.at[0], walker.at[1] - last.at[1]));
 
       this.#walked.set(walker.id, { at: [walker.at[0], walker.at[1]], by });
-      clip = { role: 'move', seconds: by / STRIDE };
+
+      const { stance, stride } = walker,
+        key = `${stance.x},${stance.y}`,
+        eased = this.#eases.get(walker.id),
+        idles =
+          stride >= 1
+            ? false
+            : eased?.key === key
+            ? eased.idles
+            : this.#idlesAt(stance);
+
+      if (stride >= 1) {
+        this.#eases.delete(walker.id);
+      } else {
+        this.#eases.set(walker.id, { key, idles });
+      }
+
+      clip = {
+        role: 'move',
+        seconds: by / STRIDE,
+        // Short of its stride, under its walk as far as it's short, its idle clip, by the clock and the way into it the
+        //  square idles by (`Stage#idle`), so it's marked there again posed as it was; or, where the square doesn't
+        //  idle, as decided as it began to ease (`#eases`), standing as the model does, as it's drawn there.
+        ...(stride < 1
+          ? {
+              under: {
+                role: idles ? 'idle' : null,
+                seconds: now / 1000 + idlePhase(key),
+                weight: 1 - stride,
+              },
+            }
+          : {}),
+      };
     }
 
     this.#drawFigure(walker, marker, 1, clip);
@@ -1479,7 +1522,8 @@ export class MapView3D implements MapRenderer {
   }
 
   // Something walking or fighting (`id`) drawn as `marker`, where it is, `opacity` solid; an aircraft flying, `aloft`
-  //  over its stand; its figures posed as `clip` has them, where they're drawn with a rigged copy, or standing.
+  //  over its stand; its figures posed as `clip` has them, with what it has under it, where they're drawn with a rigged
+  //  copy, or standing.
   #drawFigure(
     {
       id,
@@ -1491,7 +1535,7 @@ export class MapView3D implements MapRenderer {
       Partial<Pick<Walker, 'aloft'>>,
     marker: TileMarker | null,
     opacity = 1,
-    clip: Fighter['clip'] | null = null
+    clip: (Fighter['clip'] & { under?: ClipUnder }) | null = null
   ): void {
     const signature = marker === null ? null : JSON.stringify(marker);
 
@@ -1515,7 +1559,8 @@ export class MapView3D implements MapRenderer {
       id,
       clip?.role ?? null,
       clip?.seconds ?? 0,
-      clip?.before
+      clip?.before,
+      clip?.under
     );
   }
 
@@ -1542,6 +1587,7 @@ export class MapView3D implements MapRenderer {
   // The walker `id` taken off the stage, if it's drawn.
   #takeAway(id: string): void {
     this.#walked.delete(id);
+    this.#eases.delete(id);
 
     if (this.#walkersDrawn.delete(id)) {
       this.#stage.setWalker(id, null);
@@ -2225,6 +2271,8 @@ export class MapView3D implements MapRenderer {
           from: attackerSquare,
           before: attackerSquare,
           to: attackerSquare,
+          stride: 0,
+          stance: attackerSquare,
         };
 
         this.#unpatched.set(id, standing);
@@ -3780,6 +3828,25 @@ export class MapView3D implements MapRenderer {
     }
 
     return idling;
+  }
+
+  // Whether the stack on `square` idles, or would, marked there now: units may idle, and it's as near the camera as
+  //  those idling must be (`idleSquares`).
+  #idlesAt({ x, y }: { x: number; y: number }): boolean {
+    const key = `${x},${y}`;
+
+    return (
+      this.#stage.idle !== undefined &&
+      this.#mayIdle() &&
+      idleSquares(
+        [key],
+        this.#orbit,
+        (x, y) => this.#land.layout.centre(x, y),
+        this.#period(),
+        this.#idlers,
+        (x, y, margin) => this.#visible(x, y, margin)
+      ).has(key)
+    );
   }
 
   // Whether units may idle: not without frames to play their clips in, with motion reduced, nor with units' moves not

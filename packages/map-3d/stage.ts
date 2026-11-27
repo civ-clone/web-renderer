@@ -85,6 +85,7 @@ import {
 import { ClipRole, ShotKind } from './models/modelSet';
 import {
   ClipBefore,
+  ClipUnder,
   Playing,
   RigFacts,
   idlePhase,
@@ -162,14 +163,15 @@ export interface Stage {
   fadeWalker(id: string, opacity: number): void;
   /**
    * The walker `id`'s figures, where its unit's drawn with a model that has a rigged copy, posed as `role`'s clip has
-   *  them `seconds` in (plan 2.2, `clips.ts`), each playing `before` till its own time in it comes, where it's given:
-   *  or, for none, standing as the model does.
+   *  them `seconds` in (plan 2.2, `clips.ts`), each playing `before` till its own time in it comes, where it's given,
+   *  and blended with `under` as far as it says: or, for none, standing as the model does.
    */
   poseWalker?(
     id: string,
     role: ClipRole | null,
     seconds: number,
-    before?: ClipBefore
+    before?: ClipBefore,
+    under?: ClipUnder
   ): void;
   /**
    * The units marked on the squares `keys` (`x,y`) idling (plan 2.2), drawn with their models' rigged copies, each posed
@@ -316,6 +318,7 @@ type Walking = Placed & {
     role: ClipRole | null;
     seconds: number;
     before?: ClipBefore;
+    under?: ClipUnder;
   } | null;
 };
 
@@ -1186,7 +1189,8 @@ export const createStage: StageFactory = (
               posed.role,
               posed.seconds,
               playing,
-              posed.before
+              posed.before,
+              posed.under
             )
           );
         }
@@ -1676,16 +1680,16 @@ export const createStage: StageFactory = (
       });
       pose(walker);
     },
-    poseWalker: (id, role, seconds, before): void => {
+    poseWalker: (id, role, seconds, before, under): void => {
       const walker = walkers.get(id);
 
       if (walker === undefined || walker.rig === null) {
         return;
       }
 
-      walker.posed = { role, seconds, before };
+      walker.posed = { role, seconds, before, under };
       walker.drawn.forEach((drawn) =>
-        poseFigures(drawn, walker.rig!, role, seconds, playing, before)
+        poseFigures(drawn, walker.rig!, role, seconds, playing, before, under)
       );
     },
     rigFacts: (marker): RigFacts | null => {

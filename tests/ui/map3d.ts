@@ -29,7 +29,11 @@ import {
 import MapView2D from '@civ-clone/ui-game/MapView2D';
 import MapView3D, { keptCity } from '@civ-clone/ui-map-3d/MapView3D';
 import { bannerPlaces } from '@civ-clone/ui-map-3d/banners';
-import { RigFacts, STRIDE } from '@civ-clone/ui-map-3d/markers/clips';
+import {
+  RigFacts,
+  STRIDE,
+  idlePhase,
+} from '@civ-clone/ui-map-3d/markers/clips';
 import { SHOT_LOOKS } from '@civ-clone/ui-map-3d/shots';
 import {
   applyInterface,
@@ -232,6 +236,12 @@ const staged: string[] = [],
   walkersAloft = new Map<string, number[]>(),
   // How each walker's figures were posed each frame it was put, by its id: the clip's role, or none, and how far in.
   walkersPosed = new Map<string, [string | null, number][]>(),
+  // What each walker's figures played under that each frame, by its id: the role, how far in, how much of the pose, and
+  //  when, by the clock; or nothing.
+  walkersUnder = new Map<
+    string,
+    ([string | null, number, number, number] | null)[]
+  >(),
   // The puffs of smoke drawn now, by id, where each bursts from and how far through it is; and every puff drawn since
   //  last cleared, by id, how far through it was each time.
   puffs = new Map<string, { at: readonly number[]; through: number }>(),
@@ -337,8 +347,14 @@ const staged: string[] = [],
       ]);
       walkersAloft.set(id, [...(walkersAloft.get(id) ?? []), aloft]);
     },
-    poseWalker: (id, role, seconds, before) => {
+    poseWalker: (id, role, seconds, before, under) => {
       walkersPosed.set(id, [...(walkersPosed.get(id) ?? []), [role, seconds]]);
+      walkersUnder.set(id, [
+        ...(walkersUnder.get(id) ?? []),
+        under === undefined
+          ? null
+          : [under.role, under.seconds, under.weight, performance.now()],
+      ]);
 
       if (before !== undefined) {
         walkersBefore.add(`${role} after ${before.role}`);
@@ -2896,6 +2912,7 @@ expect(
   const leftAtOnce = unitOn(0, 3);
 
   walkersPosed.clear();
+  walkersUnder.clear();
   patch([0, 3, []], [1, 3, [walker]]);
   runFrames(1);
 
@@ -2906,7 +2923,20 @@ expect(
   // As it went, its figures walking (plan 2.2), their legs keeping up with how far it's gone: from the start of their
   //  walk, never back, to a square's width over the stride when it's there.
   const posed = [...walkersPosed.values()].flat(),
-    walkedTo = posed.map(([, seconds]) => seconds);
+    walkedTo = posed.map(([, seconds]) => seconds),
+    // Getting going and stopping, how far short of its stride it was, and how far ahead of the clock in the idle clip
+    //  under its walk: the way into it the square it left idled, then the one it's bound for will.
+    unders = [...walkersUnder.values()].flat().map((under) =>
+      under === null
+        ? null
+        : {
+            role: under[0],
+            weight: Math.round(under[2] * 100) / 100,
+            ahead: Math.round((under[1] - under[3] / 1000) * 1000) / 1000,
+          }
+    ),
+    easing = unders.findIndex((under) => under === null),
+    weights = unders.map((under) => under?.weight ?? 0);
 
   const firstStep = {
       arrived: unitOn(1, 3),
@@ -3016,6 +3046,94 @@ expect(
       Math.round(Math.max(...walkedTo) * STRIDE * 10) / 10,
     ],
     [true, true, true, 0, 1]
+  );
+
+  expect(
+    'getting going, its walk over its idle clip as it idled on the square it left, less of it each frame till it’s in its stride; stopping, more each frame, over its idle as it will idle on the square it’s bound for, by the same clock',
+    [
+      unders[0],
+      easing > 1,
+      weights.slice(0, easing).every((w, i, all) => i === 0 || w < all[i - 1]!),
+      unders
+        .slice(easing, unders.lastIndexOf(null) + 1)
+        .every((under) => under === null),
+      unders.at(-1)?.role,
+      unders.at(-1)!.weight > 0.8,
+      unders.at(-1)?.ahead,
+      weights
+        .slice(weights.lastIndexOf(0))
+        .every((w, i, all) => i === 0 || w > all[i - 1]!),
+    ],
+    [
+      {
+        role: 'idle',
+        weight: 0.84,
+        ahead: Math.round(idlePhase('0,3') * 1000) / 1000,
+      },
+      true,
+      true,
+      true,
+      'idle',
+      true,
+      Math.round(idlePhase('1,3') * 1000) / 1000,
+      true,
+    ]
+  );
+
+  // Zoomed out, where no square idles (`idleSquares`): its walk over how it stands as its model does, as the squares
+  //  are drawn, not over an idle clip no square plays.
+  const closeIn = glider.orbit();
+
+  glider.setOrbit({ ...closeIn, distance: 20 });
+  runFrames();
+  walkersUnder.clear();
+  stepped(walker, [0, 2], [1, 2]);
+  repatched([0, 2, []], [1, 2, [walker]]);
+
+  const zoomedOut = [...walkersUnder.values()]
+    .flat()
+    .filter((under) => under !== null);
+
+  repatched([1, 2, []], [0, 2, [walker]]);
+  glider.setOrbit(closeIn);
+  runFrames();
+
+  // Zoomed out as it gets going, its square idling as it set off: it eases on from idling, as it began to, and only
+  //  stopping, out where no square idles, into standing.
+  walkersUnder.clear();
+  stepped(walker, [0, 2], [1, 2]);
+  patch([0, 2, []], [1, 2, [walker]]);
+  runFrames(2);
+  glider.setOrbit({ ...closeIn, distance: 20 });
+  runFrames();
+
+  const zoomedAway = [...walkersUnder.values()].flat(),
+    inStrideAt = zoomedAway.indexOf(null);
+
+  repatched([1, 2, []], [0, 2, [walker]]);
+  glider.setOrbit(closeIn);
+  runFrames();
+
+  expect(
+    'zoomed out, where no square idles, its walk over how it stands as its model does, getting going and stopping; zoomed out as it gets going, it eases on from idling, as it began to, and into standing as it stops',
+    [
+      zoomedOut.length > 2,
+      zoomedOut.every(([role]) => role === null),
+      zoomedOut[0]![2] > 0.5,
+      zoomedOut.at(-1)![2] > 0.8,
+      inStrideAt > 2,
+      zoomedAway.slice(0, inStrideAt).map((under) => under?.[0]),
+      zoomedAway.at(-1)?.[0],
+    ],
+    [
+      true,
+      true,
+      true,
+      true,
+      true,
+      zoomedAway.slice(0, inStrideAt).map(() => 'idle'),
+      null,
+    ]
   );
 
   // Along a road, between two squares with one: the unit walks along it as it bends (`Land#roadPath`), not straight

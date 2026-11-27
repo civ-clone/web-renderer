@@ -1831,6 +1831,183 @@ const flown = (
   );
 }
 
+// Its stride: none standing as it sets off, rising with its pace to all of it, and falling to none again as it stops;
+//  easing from the square it set off from as it gets going, and into the one it's bound for after. A step joined at
+//  full pace keeps its stride, with no dip; thirty steps at once, hurried past full pace, never go over theirs.
+{
+  const walks = new Walks({ u: 10, v: null }),
+    east = (from: number, now: number) =>
+      walks.step(
+        'strider',
+        { x: from, y: 1 },
+        { x: from + 1, y: 1 },
+        point(from, 1),
+        point(from + 1, 1),
+        now,
+        pace
+      ),
+    strideAt = (now: number) => {
+      const { stride, stance } = walks.at(now).going[0]!;
+
+      return [round(stride, 2), [stance.x, stance.y]];
+    };
+
+  east(1, 0);
+
+  const setOff = [0, pace.ramp / 2, pace.ramp + 10].map(strideAt),
+    before = strideAt(199);
+
+  east(2, 200);
+
+  const after = strideAt(201),
+    end = walks.nextEnd() ?? 0,
+    stopping = [end - pace.ramp / 2, end - 1].map(strideAt),
+    hurried = new Walks({ u: 100, v: null });
+
+  for (let x = 1; x <= 30; x++) {
+    hurried.step(
+      'hurrier',
+      { x, y: 1 },
+      { x: x + 1, y: 1 },
+      point(x, 1),
+      point(x + 1, 1),
+      0,
+      pace
+    );
+  }
+
+  const strides: number[] = [];
+
+  for (let now = 0; now <= (hurried.nextEnd() ?? 0); now++) {
+    const [walker] = hurried.at(now).going;
+
+    if (walker !== undefined) {
+      strides.push(walker.stride);
+    }
+  }
+
+  expect(
+    'its stride: none as it sets off, from where it set off, rising to all of it and none again as it stops, into where it’s bound; a step joined at full pace with no dip; a hurried walk never over its stride',
+    [
+      setOff,
+      before,
+      after,
+      stopping,
+      Math.max(...strides),
+      Math.min(...strides) >= 0,
+    ],
+    [
+      [
+        [0, [1, 1]],
+        [0.5, [1, 1]],
+        [1, [2, 1]],
+      ],
+      [1, [2, 1]],
+      [1, [3, 1]],
+      [
+        [0.5, [3, 1]],
+        [0.01, [3, 1]],
+      ],
+      1,
+      true,
+    ]
+  );
+}
+
+// Joined as it stops, it eases on from where it was easing into, with no jump, back into its stride, and only then
+//  into where it's bound now; a long walk joined at full pace, hurried, stays in its stride, with no dip.
+{
+  const strider = (unit: string) => {
+      const walks = new Walks({ u: 100, v: null });
+
+      return {
+        walks,
+        east: (from: number, now: number) =>
+          walks.step(
+            unit,
+            { x: from, y: 1 },
+            { x: from + 1, y: 1 },
+            point(from, 1),
+            point(from + 1, 1),
+            now,
+            pace
+          ),
+        strideAt: (now: number) => {
+          const { stride, stance } = walks.at(now).going[0]!;
+
+          return [round(stride, 2), [stance.x, stance.y]];
+        },
+      };
+    },
+    stopper = strider('stopper');
+
+  stopper.east(1, 0);
+
+  const end = stopper.walks.nextEnd() ?? 0,
+    joinedAt = end - pace.ramp / 2,
+    stopping = stopper.strideAt(joinedAt - 1);
+
+  stopper.east(2, joinedAt);
+
+  const joined = stopper.strideAt(joinedAt + 1),
+    inStride = stopper.strideAt(joinedAt + pace.ramp / 2 + 2),
+    rail = strider('rail');
+
+  rail.east(1, 0);
+
+  const atPace = rail.strideAt(199);
+
+  for (let x = 2; x <= 21; x++) {
+    rail.east(x, 200);
+  }
+
+  const hurried = rail.strideAt(201),
+    // The player's changed the pace as it walks: a step joined at full pace, quicker, and one slower.
+    quick = strider('quick'),
+    slow = strider('slow'),
+    slower: Pace = { step: 600, ramp: 240, most: 4000 };
+
+  quick.east(1, 0);
+  quick.walks.step(
+    'quick',
+    { x: 2, y: 1 },
+    { x: 3, y: 1 },
+    point(2, 1),
+    point(3, 1),
+    200,
+    { step: 150, ramp: 60, most: 1000 }
+  );
+  slow.east(1, 0);
+  slow.walks.step(
+    'slow',
+    { x: 2, y: 1 },
+    { x: 3, y: 1 },
+    point(2, 1),
+    point(3, 1),
+    200,
+    slower
+  );
+
+  const paces = [
+    quick.strideAt(201)[0],
+    slow.strideAt(201)[0],
+    slow.strideAt(200 + slower.ramp + 10)[0],
+  ];
+
+  expect(
+    'joined as it stops, it eases on into where it was, with no jump, back into its stride, then into where it’s bound now; a long walk joined at full pace, hurried, stays in its stride, as does one joined at a quicker pace or a slower one',
+    [stopping, joined, inStride, atPace, hurried, paces],
+    [
+      [0.51, [2, 1]],
+      [0.51, [2, 1]],
+      [1, [3, 1]],
+      [1, [2, 1]],
+      [1, [22, 1]],
+      [1, 1, 1],
+    ]
+  );
+}
+
 if (failures.length > 0) {
   process.stderr.write(
     `FAIL walks: ${
