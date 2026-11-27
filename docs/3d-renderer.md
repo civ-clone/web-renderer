@@ -1908,10 +1908,12 @@ in its set (plan 2.2). It's in the model's entry:
   to full pace quicker, so eases quicker: within a frame for the longest. Waiting for its patch, it stands as
   before.
   - **Steps joined:** its stride is its speed over its full pace unhurried, so a long walk joined, hurried, stays in
-    its stride, as does one joined at a quicker or slower pace, as the player changes it (its full pace is the
-    slowest of its steps'). One joined as it stops eases on into the square it was easing into, with no jump, till
-    it's back in its stride, and only then into where it's bound now: a walk's `stance` moves on only at its
-    stride's fullest.
+    its stride, as does one joined in its stride at a quicker or slower pace, as the player changes it (its full pace
+    is the slowest of its steps'). One joined as it stops eases on into the square it was easing into, with no
+    jump, till it's back in its stride, and only then into where it's bound now: a walk's `stance` moves on only at
+    its stride's fullest. A step joined at a slower pace as it eases, though, puts it further into its stride at
+    once, and its stop at a quicker pace after that eases over only half its ramp: rare, as the player changes pace
+    mid-walk.
   - **Why:** between the end of a walk and the square's idle, most units' legs jumped 20° to 80°. The Riflemen's and
     Musketmen's rifles, carried turned right round as they walk (162° and 171° from how they hold them idling), now
     swing round rather than flip.

@@ -617,7 +617,8 @@ export class Walks {
       pace
     );
     // At a quicker pace than it set off at, it's in its stride as soon as it was; at a slower one, once it's at it: so
-    //  its stride never jumps as a step's joined at another pace, as the player changes it.
+    //  its stride holds as a step's joined in its stride at another pace, as the player changes it. Joined at a slower
+    //  one as it eases, it's further into its stride at once: rare, as the player changes pace mid-walk.
     walk.full = Math.min(walk.full, 1 / pace.step);
     walk.stance = stance;
     walk.turned = null;
