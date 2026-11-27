@@ -494,21 +494,37 @@ ids.forEach((topologyId) => {
     edgeOf = (relief: ReliefMap, u: number, v: number): [number, number] => [
       relief.height(u - 1e-7, v),
       relief.height(u + 1e-7, v),
-    ];
+    ],
+    // Points a twentieth apart over (`fromU`, `fromV`) to (`toU`, `toV`).
+    over = (
+      fromU: number,
+      fromV: number,
+      toU: number,
+      toV: number
+    ): [number, number][] =>
+      Array.from({ length: Math.round((toU - fromU) * 20) + 1 }, (_, i) =>
+        Array.from(
+          { length: Math.round((toV - fromV) * 20) + 1 },
+          (_, j): [number, number] => [fromU + i / 20, fromV + j / 20]
+        )
+      ).flat();
 
   expect(
-    'a square never seen among mountains carries on their land from its edges, as high there as the mountains, with no step (no wall), down under the cloud by its middle; a square never seen with nothing seen beside it is flat at sea level',
+    'a square never seen among mountains carries on their land from its edges, as high there as the mountains, with no step (no wall), under the cloud from 0.3 in (where, carried on, it would stand over it); a square never seen with nothing seen beside it is flat at sea level, and so is one beside land seen, from 0.6 from it',
     [
       Math.abs(edgeOf(hidden, 5, 5.5)[0] - edgeOf(hidden, 5, 5.5)[1]) < 1e-6,
       edgeOf(hidden, 5, 5.5)[1] > CLOUD_HEIGHT,
-      hidden.height(5.5, 5.5) <= UNDER_CLOUD.ceiling,
+      Math.max(
+        ...over(5.3, 5.3, 5.7, 5.7).map(([u, v]) => hidden.height(u, v))
+      ) <= UNDER_CLOUD.ceiling,
       hidden.height(5.5, 5.5) > 0,
       [0.05, 0.3, 0.5, 0.7, 0.95].every(
         (along) => block.height(5 + along, 5 + along) === 0
       ),
       block.height(4 + 1e-7, 4.5) > 0,
+      over(4.6, 4.6, 4.95, 6.4).every(([u, v]) => block.height(u, v) === 0),
     ],
-    [true, true, true, true, true, true]
+    [true, true, true, true, true, true, true]
   );
 
   // Read again for squares released: only those, unless one of them has changed, when every square is.
