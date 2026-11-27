@@ -160,7 +160,8 @@ export const shotsFired = (
 /**
  * Which way across its squad figure `figure` of `figures` stands, from 0 at its left to `figures` less one at its
  *  right, where the squad stands as `formation` has it, so each one's shot lands on its own side and none cross; or,
- *  for more than a squad stands, its place among them.
+ *  for more than a squad stands, its place among them. A warship's guns, in a line along its hull, are ordered so too,
+ *  which changes only which lands where.
  */
 export const acrossSquad = (figure: number, figures: number): number => {
   const places = formation(figures);

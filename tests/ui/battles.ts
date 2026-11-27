@@ -144,11 +144,11 @@ const battleOf = (
       1000,
       { ...pace }
     ),
-    // Its loser falling for half a second first, as a clip would have it.
+    // Its loser falling for 0.9 s first, as a clip would have it: longer than the missile takes to fade.
     spentFalls = battles.add(
       { ...battleOf('n', 'g', true, [6, 4], [7, 4]), spent: true },
       1000,
-      { ...pace, falls: 500 }
+      { ...pace, falls: 900 }
     );
 
   expect(
@@ -167,6 +167,11 @@ const battleOf = (
           flies,
           drawnSpent,
         ]),
+      // Faded by then, but still drawn, as nothing, while its loser falls.
+      battles
+        .at(1000 + 200 + 700)
+        .going.filter(({ battle }) => battle === spentFalls.id)
+        .map(({ fallen, opacity }) => [fallen, opacity]),
     ],
     [
       battleEnds(won),
@@ -178,6 +183,10 @@ const battleOf = (
       [
         [false, true, true],
         [true, false, false],
+      ],
+      [
+        [false, 0],
+        [true, 1],
       ],
     ]
   );

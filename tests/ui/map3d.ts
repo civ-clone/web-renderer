@@ -5154,7 +5154,8 @@ expect(
       ...gunner('Unit-G', 'Fighter'),
       player: rival.player,
     } as Tile['units'][number]),
-    missileWon = gunFight(gunner('Unit-M', 'CruiseMissile'), 'attacker');
+    missileWon = gunFight(gunner('Unit-M', 'CruiseMissile'), 'attacker'),
+    missileLost = gunFight(gunner('Unit-M', 'CruiseMissile'), 'defender');
 
   // A cannon the page doesn't have when its battle comes, out of the dark, there only after its gun's due (#1403): its
   //  shell's fired once it's drawn, rather than lost.
@@ -5193,7 +5194,7 @@ expect(
   walkersPosed.clear();
 
   expect(
-    'with no clip, a cannon fires its gun from where it stands: one shell from where the stage says its gun fires from, a tenth of a second in, landing as a shell flies, bursting with a flash; a battleship’s three guns each asked where they fire from, landing apart; lost, it fades where it stands; a catapult lobs a stone, a fifth of a second in, landing as a stone flies; archers loose an arrow each, from each figure, a ragged volley, landing apart; spearmen still lunge, firing nothing; a fighter lunges as it fires a burst of three from its nose as it is then, 0.035 s apart, no flash where they land, at a fighter in the air as high as it flies, what it downs falling there; a missile stays at the edge as it strikes, fading, with no puff of its own; a cannon out of the dark fires once it’s drawn',
+    'with no clip, a cannon fires its gun from where it stands: one shell from where the stage says its gun fires from, a tenth of a second in, landing as a shell flies, bursting with a flash; a battleship’s three guns each asked where they fire from, landing apart; lost, it fades where it stands; a catapult lobs a stone, a fifth of a second in, landing as a stone flies; archers loose an arrow each, from each figure, a ragged volley, landing apart; spearmen still lunge, firing nothing; a fighter lunges as it fires a burst of three from its nose as it is then, 0.035 s apart, no flash where they land, at a fighter in the air as high as it flies, what it downs falling there; a missile stays at the edge as it strikes, fading, with no puff of its own, but one that loses has its own; a cannon out of the dark fires once it’s drawn',
     [
       [
         cannonWon.alongs.every((at) => at === 0),
@@ -5270,6 +5271,7 @@ expect(
         missileWon.shots,
         missileWon.puffKinds,
         missileWon.fellAt,
+        missileLost.puffKinds,
       ],
       [firedInTheDark, firedOnceDrawn],
     ],
@@ -5340,7 +5342,8 @@ expect(
         [['Unit-F', 1], null, 0, 0],
       ],
       // Spent as it strikes, a missile stays at the edge, fading, its loser's the only puff.
-      [0.45, 0.45, true, 0, ['battle-puff'], [0]],
+      // One that loses is the loser, in its own puff.
+      [0.45, 0.45, true, 0, ['battle-puff'], [0], ['battle-puff']],
       [0, ['shell']],
     ]
   );

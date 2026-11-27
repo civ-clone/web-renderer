@@ -623,10 +623,14 @@ export class Battles {
       drawn.add(battle.attacker);
     }
 
-    // Gone, lost, while its last shots are still to land: drawn as nothing till they have.
+    // Gone, lost, while its last shots are still to land, or spent as it struck while its loser falls: drawn as nothing
+    //  till they have, or it has.
     if (
       first &&
-      (attacker > 0 || clips?.fight === true || clips?.shots === true)
+      (attacker > 0 ||
+        clips?.fight === true ||
+        clips?.shots === true ||
+        (battle.won && battle.spent === true))
     ) {
       fighters.push({
         id: battle.id,
@@ -641,7 +645,8 @@ export class Battles {
         facing: battle.facing,
         opacity: attacker,
         flies: battle.flies?.attacker ?? false,
-        spent: battle.spent ?? false,
+        // Spent only where it won: one that lost is the loser, its puff its own.
+        spent: battle.won && battle.spent === true,
         ...attackerPlays,
         ...(clips?.fight || clips?.shots
           ? { fought: ((now - battle.start) / 1000) * clips.rate }

@@ -1502,7 +1502,9 @@ mapEvent:
       (`airborneMiddle`), not at the ground beneath it, and one downed falls in its puff there.
     - **Missiles** (`spentStriking`, `BattleOf#spent`): a missile closes in as it would, firing nothing, and, spent
       as it strikes, stays at the edge and fades from the blow, though its loser falls first, rather than going
-      back. The loser's puff is the only one: it's the missile's blast.
+      back. The loser's puff is the only one: it's the missile's blast. Kept drawn, faded, till the battle's over, and
+      gone then, not drawn back where it stood, though its battle's patch is late. One that loses is the loser, fading
+      at the edge in its own puff, as any is.
     - **Out of the dark:** a shot due from an attacker the page doesn't have yet waits till it's drawn, then leaves as
       its clock has it, rather than being lost (#1403).
     - **Where from** (`FIRE_HEIGHTS`): worked out as the unit's drawn, from the box round its figures: a model's

@@ -2211,7 +2211,8 @@ export class MapView3D implements MapRenderer {
     const { id, attacker, won, from, attackerSquare, facing } = battle;
 
     if (this.#awaiting.has(attacker) && !this.#leftOff(attacker)) {
-      if (!won) {
+      // Lost, or spent as it struck, as a missile is: gone, not drawn back where it stood.
+      if (!won || battle.spent === true) {
         this.#gone.add(attacker);
       } else {
         const standing: Walker = {
