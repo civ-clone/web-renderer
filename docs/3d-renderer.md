@@ -1479,6 +1479,20 @@ mapEvent:
     see-through smoke, so they're drawn with the land and the units, and neither the sea nor the cloud needs drawing in
     another order round them. Not with nothing drawn falling (units hidden), and not for a battle shown at once; a
     battle ended at once, as one before its blow is by a step or a key, takes its puff with it.
+  - **Guns** (fourth part: `gunsFired` in `packages/models-builtin/units.ts`, `Guns` in `shots.ts`, `muzzleOf` in
+    `stage.ts`): an attacker with no clip to fight with whose look has guns fires them from where it stands rather than
+    lunging, as one that shoots in its clip does. A cannon, artillery and a howitzer have one, and so does a tank. A
+    warship has one for each of its guns: a frigate's broadside, an ironclad's, a destroyer's and a missile cruiser's
+    one, a cruiser's two and a battleship's three. Each fires a shell (`SHOT_LOOKS.shell`), as a rigged unit's are
+    drawn: laid for a tenth of a second, then fired, a warship's guns 0.15 s apart, landing a little apart. A shell
+    leaves the front of the unit's figures, four tenths of the way up them (`MUZZLE_HEIGHT`), and a warship's leave
+    along its hull from the bow back: a model's meshes, or the built-in set's figures alone, without their stand or a
+    ship's ripples, which are one geometry with them (`FIGURES_BOX`). The blow falls as the first lands, with smoke
+    and a flash at the muzzle and a burst with a flash where it lands. Lost, it fades where it stands. It's the
+    built-in look that says, whichever set draws the unit, as it is for whether a unit flies, so a hosted set's static
+    cannon fires too; for one the page doesn't have yet, out of the dark, the type the battle names. A catapult, a
+    trireme, a sail, a submarine and a carrier still close in, as do aircraft and missiles, and units drawn with a clip
+    of their own fight as their clip has them.
   - **Fading:** a unit's figures, stand and ring fade by leaving out a share of their points (`alphaHash`), drawn with
     the solid models; see-through, they'd be drawn before the sea, and a ship's hull fading would cut a dark hole in it.
     Its flag and labels, drawn after the sea and the cloud, fade as see-through.
@@ -1557,9 +1571,10 @@ mapEvent:
   - A stack killed in a battle whose patch was held past the blow fades as the patch comes, the rest of it gone then.
   - Two other players' battle with their moves not shown is shown at once, but its loser fades out: a fade isn't a move.
 - **Still to come:**
-  - battles' rest (2.4): a ranged unit firing, ships and aircraft as they fight, Civ2's rounds once they're sent (§8.1),
-    a flash under reduced motion, a unit gone with its battle won (a missile) fading rather than going at the end, and
-    another player's unit walking onto the square it emptied rather than being put there (#1255);
+  - battles' rest (2.4): a catapult's stone, bows and muskets without clips, a submarine's torpedo, aircraft as they
+    fight, Civ2's rounds once they're sent (§8.1), a flash under reduced motion, a unit gone with its battle won (a
+    missile) fading rather than going at the end, and another player's unit walking onto the square it emptied rather
+    than being put there (#1255);
   - units that go while drawn elsewhere, walking or fighting, out of sight say, fade with neither (#1255).
 
 ---

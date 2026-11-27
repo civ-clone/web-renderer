@@ -47,6 +47,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import {
   UnitLook,
   airborne,
+  gunsFired,
   unitLook,
 } from '@civ-clone/ui-models-builtin/units';
 
@@ -768,6 +769,21 @@ const drawUnit = (
 
   figures.name = FIGURES_PART;
   figures.rotation.y = unit.facing;
+
+  // With guns, the box round its figures alone, where they're one geometry with their stand and ripples: the same
+  //  fortified or not, as the bank isn't among them.
+  if (modelled === null && gunsFired(look) > 0) {
+    const alone = kit.body(look, unit.colours, false, unit.size, 'figures');
+
+    if (alone.boundingBox === null) {
+      alone.computeBoundingBox();
+    }
+
+    const { min, max } = alone.boundingBox!;
+
+    figures.userData[FIGURES_BOX] = [min.x, min.y, min.z, max.x, max.y, max.z];
+  }
+
   aloft.add(figures);
 
   if (apart || modelled !== null) {
@@ -867,6 +883,14 @@ export const UNIT_PART = 'unit';
 
 /** The name of a unit's figures, on their stand: what turns as a unit walking turns. */
 export const FIGURES_PART = 'figures';
+
+/**
+ * Where a unit's figures drawn by the built-in set with guns (`gunsFired`) keep the box round them alone, in their own
+ *  frame (`userData`), its least corner then its greatest, as numbers, as three.js copies what's kept there as JSON:
+ *  not their stand, its bank when fortified, nor a ship's ripples, which are one geometry with them. Where its guns
+ *  fire from is on it (`muzzleOf`).
+ */
+export const FIGURES_BOX = 'figuresBox';
 
 /** How many figures a unit that looks as `look` is drawn with: a squad on foot, or one. */
 export const figuresOf = (look: UnitLook): number =>

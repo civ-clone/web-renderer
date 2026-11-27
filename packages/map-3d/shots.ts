@@ -1,8 +1,9 @@
 // Shots on the 3D map (plan 2.2): what a unit drawn with a rigged copy throws or fires as it fights, as its clip has
 //  it (`ClipShot`). Each figure's shot leaves the node its clip names, at the time it names, the figure's own delay
 //  after (`FIGURE_STAGGER`), and lands on the loser's square as long after as its kind flies (`SHOT_LOOKS`), in an arc
-//  or straight, a little apart from the others. Pure: the view says where each leaves from and lands, and when, and
-//  asks where it is, and which way it's going, when it draws.
+//  or straight, a little apart from the others. A unit drawn with no clip to play fires its guns, where it has them
+//  (plan 2.4, `Guns`). Pure: the view says where each leaves from and lands, and when, and asks where it is, and which
+//  way it's going, when it draws.
 
 import { ClipShot, ShotKind } from './models/modelSet';
 
@@ -64,6 +65,34 @@ export const MUZZLE_PUFF = 400;
 /** How long after it leaves the last of a shot's own is over, in ms: the puff where it lands. */
 export const shotOver = (kind: ShotKind): number =>
   SHOT_LOOKS[kind].flight + HIT_PUFF;
+
+/** How long after its battle starts a gun fires, in seconds: as long as it takes to lay it. */
+export const GUN_LAID = 0.1;
+
+/** How far apart a unit's guns fire, in seconds: a warship's turrets, one after another. */
+export const GUN_STAGGER = 0.15;
+
+/**
+ * What a unit fires as it attacks where it's drawn with no clip of its own to play (`gunsFired`): a shell from each of
+ *  its guns, each a little after the one before, as a squad's figures fire, so each lands a little apart; each from the
+ *  front of what's drawn (`Stage#muzzleAt`), as there's no node to leave.
+ */
+export type Guns = {
+  shots: readonly ClipShot[];
+  // How many guns, and how far apart they fire: as a squad's figures and their stagger (`shotTimes`).
+  figures: number;
+  stagger: number;
+};
+
+/** What `guns` guns fire (`Guns`): none for none. */
+export const gunsShots = (guns: number): Guns | null =>
+  guns <= 0
+    ? null
+    : {
+        shots: [{ at: GUN_LAID, joint: '', kind: 'shell' }],
+        figures: guns,
+        stagger: GUN_STAGGER,
+      };
 
 /**
  * When each of `figures` figures' shots leaves in a clip whose shots are `shots`, each figure `stagger` seconds after

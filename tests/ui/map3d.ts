@@ -269,6 +269,9 @@ const staged: string[] = [],
   shotLooks = new Map<string, { kind: string; headings: number[][] }>(),
   puffLooks = new Map<string, { size: number; flash: number | null }>(),
   jointsAsked: [string, number, string][] = [],
+  // Each gun asked where it fires from: by walker, gun and how many guns, the stage saying a tenth of a square over
+  //  where the walker was last put.
+  muzzlesAsked: [string, number, number][] = [],
   // Each time the stage was asked which units idle: the squares, in order, and how far in, by the clock; and whether it
   //  says some do, as a stage whose models have idle clips would.
   idleAsked: [string[], number][] = [],
@@ -355,6 +358,15 @@ const staged: string[] = [],
       return placed === undefined
         ? null
         : [placed[0]!, placed[1]! + 0.2, placed[2]!];
+    },
+    muzzleAt: (id, gun, guns) => {
+      const placed = walkersPlaced.get(id)?.at(-1);
+
+      muzzlesAsked.push([id, gun, guns]);
+
+      return placed === undefined
+        ? null
+        : [placed[0]!, placed[1]! + 0.1, placed[2]!];
     },
     shot: (id, at, _through, kind = 'bottle', heading = [0, -1, 0]) => {
       shotsDrawn.set(id, [...(shotsDrawn.get(id) ?? []), at]);
@@ -4999,6 +5011,171 @@ expect(
         ['Unit-R', 1],
         ['Unit-T', 1],
       ],
+    ]
+  );
+
+  // With no clip to fight with, a cannon fires its gun from where it stands (`gunsFired`, plan 2.4) rather than
+  //  lunging: one shell, from the front of what's drawn (`Stage#muzzleAt`), a tenth of a second in, landing on the
+  //  square attacked as a shell flies, the blow then, its burst flashing. A battleship's three guns fire one after
+  //  another, each asked where it fires from, landing apart. Lost, a cannon fades where it stands, its shell landing
+  //  still. A catapult still closes in.
+  const gunner = (id: string, type: string) =>
+      ({ ...unitOf(id, 1), _: type } as Tile['units'][number]),
+    gunFight = (
+      attacker: Tile['units'][number],
+      winner: 'attacker' | 'defender'
+    ) => {
+      repatched([1, 1, [attacker]], [2, 1, [rival]]);
+      walkersSet.length = 0;
+      walkersPlaced.clear();
+      walkersFaded.clear();
+      shotsDrawn.clear();
+      shotLooks.clear();
+      puffLooks.clear();
+      muzzlesAsked.length = 0;
+      jointsAsked.length = 0;
+
+      const firedAt = now,
+        shotFrames: [number, string, readonly number[] | null][] = [],
+        alongs: number[] = [],
+        fadedTo: number[] = [],
+        // Each frame a shell's smoke was drawn where it left: how far it was over and off where the attacker stood.
+        muzzleOff: number[][] = [];
+
+      fought(attacker, [1, 1], rival, [2, 1], winner);
+      patch(
+        [1, 1, winner === 'attacker' ? [attacker] : []],
+        [2, 1, winner === 'attacker' ? [] : [rival]]
+      );
+
+      for (
+        let frame = 0;
+        frame < 400 && (frame === 0 || walkers.size > 0);
+        frame++
+      ) {
+        runFrames(1);
+        shotsDrawn.forEach((points, id) =>
+          points.forEach((at) => shotFrames.push([now - firedAt, id, at]))
+        );
+        shotsDrawn.clear();
+        walkersPlaced.forEach((frames, id) => {
+          if (kind(id) === 'battle') {
+            frames.forEach((point) => alongs.push(along(point)));
+            fadedTo.push(walkersFaded.get(id) ?? 1);
+
+            const stood = frames.at(-1)!;
+
+            puffs.forEach(({ at }, puff) => {
+              if (puff.endsWith('-muzzle')) {
+                muzzleOff.push(
+                  [0, 1, 2].map(
+                    (axis) =>
+                      Math.round((at[axis]! - stood[axis]!) * 1000) / 1000
+                  )
+                );
+              }
+            });
+          }
+        });
+        walkersPlaced.clear();
+      }
+
+      const inFlight = shotFrames.filter(([, , at]) => at !== null),
+        // Where each shot was last drawn in flight, across and down, to a hundredth.
+        landings = [...shotLooks.keys()].map((id) => {
+          const at = inFlight.filter(([, shot]) => shot === id).at(-1)![2]!;
+
+          return `${at[0]!.toFixed(2)},${at[2]!.toFixed(2)}`;
+        });
+
+      return {
+        alongs,
+        fadedTo,
+        muzzles: muzzlesAsked.map(([id, gun, guns]) => [kind(id), gun, guns]),
+        joints: jointsAsked.length,
+        kinds: [...new Set([...shotLooks.values()].map(({ kind }) => kind))],
+        shots: shotLooks.size,
+        landingsApart: new Set(landings).size,
+        left: inFlight[0]?.[0] ?? null,
+        landed: inFlight.at(-1)?.[0] ?? null,
+        flashed:
+          [...puffLooks.keys()].some((id) => id.endsWith('-hit')) &&
+          [...puffLooks.entries()]
+            .filter(([id]) => id.endsWith('-hit'))
+            .every(([, { flash }]) => flash !== null),
+        // Left from where the stage said each gun fires from, a tenth over where the attacker stood.
+        fromMuzzle:
+          muzzleOff.length > 0 &&
+          muzzleOff.every((off) => JSON.stringify(off) === '[0,0.1,0]'),
+        over: [unitOn(1, 1), unitOn(2, 1), walkers.size, puffs.size],
+      };
+    };
+
+  const cannonWon = gunFight(gunner('Unit-C', 'Cannon'), 'attacker'),
+    battleshipWon = gunFight(gunner('Unit-S', 'Battleship'), 'attacker'),
+    cannonLost = gunFight(gunner('Unit-C', 'Cannon'), 'defender'),
+    catapultWon = gunFight(gunner('Unit-K', 'Catapult'), 'attacker');
+
+  repatched([1, 1, []], [2, 1, []]);
+  walkersSet.length = 0;
+  walkersPlaced.clear();
+  walkersPosed.clear();
+
+  expect(
+    'with no clip, a cannon fires its gun from where it stands: one shell from where the stage says its gun fires from, a tenth of a second in, landing as a shell flies, bursting with a flash; a battleship’s three guns each asked where they fire from, landing apart; lost, it fades where it stands; a catapult still lunges, firing nothing',
+    [
+      [
+        cannonWon.alongs.every((at) => at === 0),
+        cannonWon.muzzles,
+        cannonWon.joints,
+        cannonWon.kinds,
+        cannonWon.left! >= 100 && cannonWon.left! < 116,
+        cannonWon.landed! >= 100 + SHOT_LOOKS.shell.flight - 16 &&
+          cannonWon.landed! < 100 + SHOT_LOOKS.shell.flight,
+        cannonWon.flashed,
+        cannonWon.fromMuzzle,
+        cannonWon.over,
+      ],
+      [
+        battleshipWon.muzzles,
+        battleshipWon.shots,
+        battleshipWon.landingsApart,
+        battleshipWon.over,
+      ],
+      [
+        cannonLost.alongs.every((at) => at === 0),
+        cannonLost.fadedTo.some((solid) => solid < 0.5),
+        cannonLost.shots,
+        cannonLost.landed! >= 100 + SHOT_LOOKS.shell.flight - 16 &&
+          cannonLost.landed! < 100 + SHOT_LOOKS.shell.flight,
+        cannonLost.over,
+      ],
+      [Math.max(...catapultWon.alongs), catapultWon.muzzles, catapultWon.shots],
+    ],
+    [
+      [
+        true,
+        [['battle', 0, 1]],
+        0,
+        ['shell'],
+        true,
+        true,
+        true,
+        true,
+        [['Unit-C', 1], null, 0, 0],
+      ],
+      [
+        [
+          ['battle', 0, 3],
+          ['battle', 1, 3],
+          ['battle', 2, 3],
+        ],
+        3,
+        3,
+        [['Unit-S', 1], null, 0, 0],
+      ],
+      [true, true, 1, true, [null, ['Unit-R', 1], 0, 0]],
+      [0.45, [], 0],
     ]
   );
 
