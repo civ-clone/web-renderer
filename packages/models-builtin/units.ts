@@ -203,12 +203,15 @@ export const airborne = (look: UnitLook): boolean =>
 /**
  * How many guns a unit that looks like `look` fires as it attacks, from where it stands rather than closing in: a
  *  cannon's, a gun's or a tank's one, and a warship's turrets or its broadside; none for one that closes in, as a
- *  catapult still does. How its attack is drawn, not what it can do.
+ *  catapult still does, an ancient or medieval siege engine being drawn as one. How its attack is drawn, not what it
+ *  can do.
  */
 export const gunsFired = (look: UnitLook): number =>
   look.shape === 'ship'
     ? look.guns ?? 0
-    : (look.shape === 'siege' && look.era !== 'ancient') ||
+    : (look.shape === 'siege' &&
+        look.era !== 'ancient' &&
+        look.era !== 'medieval') ||
       (look.shape === 'vehicle' && look.large === true)
     ? 1
     : 0;

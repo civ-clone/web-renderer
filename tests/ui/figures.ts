@@ -1526,6 +1526,29 @@ expect(
       point?.map((value) => Math.round(value * 1e6) / 1e6) ?? null,
     atHome = muzzleOf(cannonEast, 0, 1, [0, 0]),
     copied = muzzleOf(cannonEast.clone(), 0, 1, [0, 0]),
+    // Fortified, and drawn twice as big, facing south, unturned: the front of its figures alone as big.
+    bigFortified = muzzleOf(
+      drawMarker(kit, {
+        city: null,
+        unit: unit('Cannon', { fortified: true, size: 2 }),
+      }),
+      0,
+      1,
+      [0, 0]
+    ),
+    big = (() => {
+      const geometry = kit.body(
+        unitTable['Cannon']!,
+        colours,
+        false,
+        2,
+        'figures'
+      );
+
+      geometry.computeBoundingBox();
+
+      return geometry.boundingBox!;
+    })(),
     // A model's figures: a mesh of their own, off their middle.
     model = new Group(),
     modelFigures = new Group(),
@@ -1538,12 +1561,13 @@ expect(
   cannonEast.position.set(10, 0, -4);
 
   expect(
-    'a gun fires from the front of its figures, the way they face, as high up them as a barrel, not from its stand; a warship’s turrets along its hull, bow to stern, not its ripples; a copy fires as it does; a model’s from its meshes; at a copy of the world as on its own; none with no figures',
+    'a gun fires from the front of its figures, the way they face, as high up them as a barrel, not from its stand; a warship’s turrets along its hull, bow to stern, not its ripples; a copy fires as it does, and one fortified and twice as big from its figures as big; a model’s from its meshes; at a copy of the world as on its own; none with no figures',
     [
       rounded(atHome),
       // Facing east, turned a quarter: its front's its east, short of the stand's rim.
       atHome![0] < 0.19,
       rounded(copied),
+      rounded(bigFortified),
       rounded(muzzleOf(cannonEast, 0, 1, [10, -4])),
       [0, 1, 2].map((gun) =>
         rounded(muzzleOf(battleshipNorth, gun, 3, [0, 0]))
@@ -1557,6 +1581,7 @@ expect(
       rounded([cannon.max.z, up(cannon), -(cannon.min.x + cannon.max.x) / 2]),
       true,
       rounded([cannon.max.z, up(cannon), -(cannon.min.x + cannon.max.x) / 2]),
+      rounded([(big.min.x + big.max.x) / 2, up(big), big.max.z]),
       rounded([cannon.max.z, up(cannon), -(cannon.min.x + cannon.max.x) / 2]),
       // Turned a half, it's the other way round both ways.
       [1 / 6, 1 / 2, 5 / 6].map((share) =>

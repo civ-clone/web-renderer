@@ -770,15 +770,10 @@ const drawUnit = (
   figures.name = FIGURES_PART;
   figures.rotation.y = unit.facing;
 
-  // With guns, the box round its figures alone, where they're one geometry with their stand and ripples.
+  // With guns, the box round its figures alone, where they're one geometry with their stand and ripples: the same
+  //  fortified or not, as the bank isn't among them.
   if (modelled === null && gunsFired(look) > 0) {
-    const alone = kit.body(
-      look,
-      unit.colours,
-      unit.fortified,
-      unit.size,
-      'figures'
-    );
+    const alone = kit.body(look, unit.colours, false, unit.size, 'figures');
 
     if (alone.boundingBox === null) {
       alone.computeBoundingBox();
