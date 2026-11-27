@@ -56,7 +56,11 @@ import prefersReducedMotion from '@civ-clone/ui-map/lib/reducedMotion';
 import { UnitMarkerMode } from '@civ-clone/ui-map/components/Map/UnitMarker';
 import CameraInput from './camera/CameraInput';
 import markerFor, { MarkerWords, TileMarker } from './markers/markerFor';
-import { IN_FRONT_OF_CITY, UNIT_SCALE } from './markers/drawMarker';
+import {
+  AIRBORNE_LIFT,
+  IN_FRONT_OF_CITY,
+  UNIT_SCALE,
+} from './markers/drawMarker';
 import standHeight from './markers/standHeight';
 import {
   airborne,
@@ -1149,9 +1153,13 @@ export class MapView3D implements MapRenderer {
         this.#walks.endsAt(attacker.id) ?? now
       );
 
-    // Its attacker's shots, where it shoots, each landing on the square attacked, by the loser's feet: its clip's, or,
-    //  with none, what it fires as it's drawn.
-    const shooter = pace.clips?.fight ? attackerFacts : fires,
+    // Its attacker's shots, where it shoots, each landing on the square attacked, by the loser's feet, or, at an
+    //  aircraft, as high as it's drawn over its stand: its clip's, or, with none, what it fires as it's drawn.
+    const defenderShown = before.find(({ id }) => id === defender.id),
+      defenderFlies =
+        defenderShown !== undefined &&
+        airborne(unitLook(defenderShown._, defenderShown.__ ?? [])),
+      shooter = pace.clips?.fight ? attackerFacts : fires,
       shots = pace.clips?.fight
         ? attackerFacts?.clips.fight?.shots ?? []
         : fires?.shots ?? [];
@@ -1168,7 +1176,8 @@ export class MapView3D implements MapRenderer {
         left: new Set(),
         target: this.#onLand(
           battle.fallsAt.at,
-          battle.fallsAt.lift + SHOT_TARGET
+          battle.fallsAt.lift +
+            (defenderFlies ? AIRBORNE_LIFT * this.#unitSize : SHOT_TARGET)
         ),
         figures: shooter.figures,
         rate: pace.clips.rate,

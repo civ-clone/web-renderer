@@ -1495,16 +1495,18 @@ mapEvent:
     - **Bows:** archers loose an arrow each, from in front of each figure at the shoulder, a quarter of a second in
       and 0.06 s apart, a ragged volley landing a little apart.
     - **Aircraft** (sixth part): a fighter, a bomber or a helicopter closes in as it would (`UnitFire#closes`), and
-      fires a burst of three bullets from its nose as it does, 0.05 s apart, the first leaving 0.12 s in and landing
-      as it reaches the edge, the blow then; it pulls away as the rest land. Each has a flash and smoke at the nose.
+      fires a burst of three bullets from its nose as it does, 0.035 s apart, the first leaving a tenth of a second in
+      and landing as it reaches the edge, the blow then, the last leaving just before; it pulls away as the rest land.
+      Each has a flash and smoke at the nose. Shots at an aircraft are aimed as high as it's drawn over its stand
+      (`AIRBORNE_LIFT`), not at the ground beneath it.
     - **Where from** (`FIRE_HEIGHTS`): worked out as the unit's drawn, from the box round its figures: a model's
       meshes, or the built-in set's figures alone, without their stand or a ship's ripples, which are one geometry
       with them. They're kept with the figures (`FIRES_FROM`), and the stage turns them to where the figures stand.
-    - **The blow** falls as the first shot lands. Lost, the unit fades where it stands. It's the built-in look that
-      says, whichever set draws the unit, as it is for whether a unit flies, so a hosted set's static cannon fires
-      too; for one the page doesn't have yet, out of the dark, the type the battle names. A trireme, a sail, a
-      submarine and a carrier still close in, as do missiles and soldiers with muskets and rifles, and units drawn with
-      a clip of their own fight as their clip has them.
+    - **The blow** falls as the first shot lands. Lost, the unit fades where it stands, or, an aircraft, at the edge
+      it closed in to. It's the built-in look that says, whichever set draws the unit, as it is for whether a unit
+      flies, so a hosted set's static cannon fires too; for one the page doesn't have yet, out of the dark, the type the
+      battle names. A trireme, a sail, a submarine and a carrier still close in, as do missiles and soldiers with
+      muskets and rifles, and units drawn with a clip of their own fight as their clip has them.
   - **Fading:** a unit's figures, stand and ring fade by leaving out a share of their points (`alphaHash`), drawn with
     the solid models; see-through, they'd be drawn before the sea, and a ship's hull fading would cut a dark hole in it.
     Its flag and labels, drawn after the sea and the cloud, fade as see-through.

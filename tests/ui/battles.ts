@@ -783,15 +783,15 @@ expect(
         lunge: 0,
         clips: { rate: 1, fight: false, die: false, shots: true },
       },
-      // Its first lands as it reaches the edge, a fifth of a second in, as a lunge does; the last, 0.1 s on, lands
-      //  and bursts as it pulls away, drawn till then.
+      // Its first lands as it reaches the edge, a little under a fifth of a second in, the last leaving before then;
+      //  the last lands and puffs as it pulls away, drawn till then.
       {
-        reach: 200,
-        back: round(120 + 100 + shotOver('bullet') - 200),
+        reach: 180,
+        back: round(100 + 70 + shotOver('bullet') - 180),
         fade: 600,
         clips: { rate: 1, fight: false, die: false, shots: true },
       },
-      [0.12, 0.17, 0.22],
+      [0.1, 0.135, 0.17],
     ]
   );
 

@@ -83,8 +83,8 @@ export const FIRE_PACE: Readonly<
   shell: { laid: 0.1, stagger: 0.15, burst: 1, gap: 0 },
   stone: { laid: 0.2, stagger: 0.15, burst: 1, gap: 0 },
   arrow: { laid: 0.25, stagger: 0.06, burst: 1, gap: 0 },
-  // An aircraft's burst, the first landing as it reaches the edge (`BATTLE_PACE`), the rest as it pulls away.
-  bullet: { laid: 0.12, stagger: 0.05, burst: 3, gap: 0.05 },
+  // An aircraft's burst, the first landing as it reaches the edge, the blow then, all fired by then.
+  bullet: { laid: 0.1, stagger: 0.05, burst: 3, gap: 0.035 },
 };
 
 /**
