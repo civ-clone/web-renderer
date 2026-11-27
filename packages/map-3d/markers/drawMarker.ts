@@ -919,10 +919,12 @@ export const FIRES_FROM = 'firesFrom';
 
 /**
  * How far up what's drawn a shot leaves it, from its foot to its top: a barrel or a warship's guns (`front`), a
- *  catapult's arm at the top of its swing (`top`), and a bow drawn at the shoulder (`figures`).
+ *  helicopter's nose (`nose`), a catapult's arm at the top of its swing (`top`), and a bow drawn at the shoulder
+ *  (`figures`).
  */
 export const FIRE_HEIGHTS: Readonly<Record<UnitFire['from'], number>> = {
   front: 0.4,
+  nose: 0.4,
   top: 0.95,
   figures: 0.6,
 };
@@ -932,6 +934,7 @@ export const FIRE_HEIGHTS: Readonly<Record<UnitFire['from'], number>> = {
  *  south (+`v`), drawn `size` big, as high up them as `FIRE_HEIGHTS` says:
  * - from the `front`, the middle of the box's front for one; for more, a warship's guns, along its middle from the bow
  *   back, as far apart as they're each the middle of a share of it;
+ * - from the `nose`, halfway from the box's middle to its front, as a helicopter's rotor reaches well past its nose;
  * - from the `top`, the middle of its top;
  * - from its `figures`, each in front of its own figure where the squad stands (`formation`), as far in front of it as
  *   the box reaches in front of the one furthest forward.
@@ -947,6 +950,10 @@ export const firePoints = (
 
   if (fire.from === 'top') {
     return [[across, up('top'), (box.min.z + box.max.z) / 2]];
+  }
+
+  if (fire.from === 'nose') {
+    return [[across, up('nose'), (box.min.z + 3 * box.max.z) / 4]];
   }
 
   if (fire.from === 'figures') {

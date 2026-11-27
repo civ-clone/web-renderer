@@ -478,9 +478,13 @@ of their arm, and archers loose an arrow each, a ragged volley, rather than char
 
 **Sixth part, aircraft's bursts: done** (spec §8.2, "Aircraft"). Fighters, bombers and helicopters fire a burst of
 three bullets from the nose as they dive in, the first landing as they reach the edge. Shots at an aircraft are aimed
-at it, in the air. Still to do: bombers flying over
-their target and bombing it, muskets and rifles without clips, a submarine's torpedo, Civ2's rounds, a flash under
-reduced motion, and #1255's follow-ups.
+at it, in the air.
+
+**Loose ends: done.** An aircraft downed falls in its puff where it flew. A missile, spent as it strikes, fades at the
+edge as it strikes rather than going home. A squad's shots land on their own sides and don't cross (#1405); a
+helicopter fires from its cabin, not its rotor's tip (#1407); and a shot due from an attacker coming out of the dark
+waits till it's drawn (#1403). Still to do: bombers flying over their target and bombing it, muskets and rifles
+without clips, a submarine's torpedo, Civ2's rounds, a flash under reduced motion, and #1255's other follow-ups.
 
 - **What:**
   - melee, ranged, naval and air;

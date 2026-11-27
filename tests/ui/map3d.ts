@@ -5045,8 +5045,11 @@ expect(
         //  that frame, standing or closing in.
         muzzleOff: number[][] = [],
         muzzlesSeen = new Set<string>(),
-        // How high over the ground where it fell each shot's puff was, where it landed.
-        hitHeights = new Map<string, number>();
+        // How high over the ground where it fell each shot's puff was, where it landed; and the puff where the loser
+        //  fell, as it was first drawn, and every puff's kind drawn.
+        hitHeights = new Map<string, number>(),
+        fellAt: number[] = [],
+        puffKinds = new Set<string>();
 
       fought(attacker, [1, 1], defender, [2, 1], winner);
       patch(
@@ -5086,6 +5089,12 @@ expect(
         });
         walkersPlaced.clear();
         puffs.forEach(({ at }, puff) => {
+          puffKinds.add(puff.replace(/-\d+/g, ''));
+
+          if (kind(puff) === 'battle-puff' && fellAt.length === 0) {
+            fellAt.push(Math.round((at[1]! - groundAt(2, 1)[1]!) * 100) / 100);
+          }
+
           if (puff.endsWith('-hit') && !hitHeights.has(puff)) {
             hitHeights.set(
               puff,
@@ -5123,6 +5132,8 @@ expect(
             .filter(([id]) => id.endsWith('-hit'))
             .every(([, { flash }]) => flash !== null),
         hits: [...hitHeights.values()],
+        fellAt,
+        puffKinds: [...puffKinds].sort(),
         // Left from where the stage said each fires from, a tenth over where the attacker was as it left.
         fromMuzzle:
           muzzleOff.length > 0 &&
@@ -5142,7 +5153,40 @@ expect(
     dogfight = gunFight(gunner('Unit-F', 'Fighter'), 'attacker', {
       ...gunner('Unit-G', 'Fighter'),
       player: rival.player,
-    } as Tile['units'][number]);
+    } as Tile['units'][number]),
+    missileWon = gunFight(gunner('Unit-M', 'CruiseMissile'), 'attacker'),
+    missileLost = gunFight(gunner('Unit-M', 'CruiseMissile'), 'defender');
+
+  // A cannon the page doesn't have when its battle comes, out of the dark, there only after its gun's due (#1403): its
+  //  shell's fired once it's drawn, rather than lost.
+  repatched([1, 1, []], [2, 1, [rival]]);
+  shotLooks.clear();
+  glider.mapEvent({
+    kind: 'battle',
+    attacker: {
+      id: 'Unit-D',
+      type: 'Cannon',
+      player: 'Player-1',
+      tile: { x: 1, y: 1 },
+    },
+    defender: {
+      id: rival.id,
+      type: 'Phalanx',
+      player: 'Player-2',
+      tile: { x: 2, y: 1 },
+    },
+    winner: 'attacker',
+  });
+  runFrames(9);
+
+  const firedInTheDark = shotLooks.size;
+
+  patch([1, 1, [gunner('Unit-D', 'Cannon')]], [2, 1, []]);
+  runFrames();
+
+  const firedOnceDrawn = [...shotLooks.values()].map(({ kind }) => kind);
+
+  repatched([1, 1, []], [2, 1, []]);
 
   repatched([1, 1, []], [2, 1, []]);
   walkersSet.length = 0;
@@ -5150,7 +5194,7 @@ expect(
   walkersPosed.clear();
 
   expect(
-    'with no clip, a cannon fires its gun from where it stands: one shell from where the stage says its gun fires from, a tenth of a second in, landing as a shell flies, bursting with a flash; a battleship’s three guns each asked where they fire from, landing apart; lost, it fades where it stands; a catapult lobs a stone, a fifth of a second in, landing as a stone flies; archers loose an arrow each, from each figure, a ragged volley, landing apart; spearmen still lunge, firing nothing; a fighter lunges as it fires a burst of three from its nose as it is then, 0.035 s apart, no flash where they land, at a fighter in the air as high as it flies',
+    'with no clip, a cannon fires its gun from where it stands: one shell from where the stage says its gun fires from, a tenth of a second in, landing as a shell flies, bursting with a flash; a battleship’s three guns each asked where they fire from, landing apart; lost, it fades where it stands; a catapult lobs a stone, a fifth of a second in, landing as a stone flies; archers loose an arrow each, from each figure, a ragged volley, landing apart; spearmen still lunge, firing nothing; a fighter lunges as it fires a burst of three from its nose as it is then, 0.035 s apart, no flash where they land, at a fighter in the air as high as it flies, what it downs falling there; a missile stays at the edge as it strikes, fading, with no puff of its own, but one that loses has its own; a cannon out of the dark fires once it’s drawn',
     [
       [
         cannonWon.alongs.every((at) => at === 0),
@@ -5216,8 +5260,20 @@ expect(
         fighterWon.flashed === false,
         fighterWon.hits,
         dogfight.hits,
+        fighterWon.fellAt,
+        dogfight.fellAt,
         fighterWon.over,
       ],
+      [
+        Math.max(...missileWon.alongs),
+        missileWon.alongs.at(-1),
+        missileWon.fadedTo.some((solid) => solid < 0.5),
+        missileWon.shots,
+        missileWon.puffKinds,
+        missileWon.fellAt,
+        missileLost.puffKinds,
+      ],
+      [firedInTheDark, firedOnceDrawn],
     ],
     [
       [
@@ -5280,8 +5336,15 @@ expect(
         //  over that twice life size.
         [0.05, 0.05, 0.05],
         [0.63, 0.63, 0.63],
+        // Where what it downed fell: a unit on the ground at its feet; a fighter in the air, where it flew.
+        [0],
+        [0.63],
         [['Unit-F', 1], null, 0, 0],
       ],
+      // Spent as it strikes, a missile stays at the edge, fading, its loser's the only puff.
+      // One that loses is the loser, in its own puff.
+      [0.45, 0.45, true, 0, ['battle-puff'], [0], ['battle-puff']],
+      [0, ['shell']],
     ]
   );
 

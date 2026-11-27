@@ -189,6 +189,11 @@ export type BattleOf = {
   // The way the attacker faces, and the defender, as `Walker`'s `facing`.
   facing: number;
   defenderFacing: number;
+  // Which of them are drawn in the air, as aircraft are: none where it's not said.
+  flies?: { attacker: boolean; defender: boolean };
+  // Whether the attacker's spent as it strikes, as a missile is, gone with its blow though it won: fading at the edge,
+  //  as one that lost does, rather than going back.
+  spent?: boolean;
 };
 
 /** A battle under way, or waiting for another to be over. */
@@ -214,6 +219,10 @@ export type Fighter = {
   lift: number;
   facing: number;
   opacity: number;
+  // Whether it's drawn in the air, as an aircraft is; and, the attacker, whether it's spent as it strikes, as a missile
+  //  is (`BattleOf`).
+  flies: boolean;
+  spent: boolean;
   // The clip its figures play, and how far in, in seconds, where its battle's paced for clips (`clipPace`); and what
   //  each plays till its own time in that comes (`poseFigures`): an attacker that's lost fights on till it falls.
   clip?: { role: ClipRole; seconds: number; before?: ClipBefore };
@@ -238,7 +247,8 @@ const easeInOut = (t: number): number => t * t * (3 - 2 * t);
 
 /**
  * How far to the edge the attacker is at `now`, from 0 (where it stands) to 1 (the blow), as far as it lunges
- *  (`lunge`), and how solid it and the loser are drawn: the loser solid as it falls (`falls`), then fading.
+ *  (`lunge`), and how solid it and the loser are drawn: the loser solid as it falls (`falls`), then fading; and an
+ *  attacker that lost fading at the edge as the loser does, or, won but spent as it struck (`spent`), at once.
  */
 export const battleAt = (
   battle: Battle,
@@ -260,6 +270,15 @@ export const battleAt = (
 
   if (!battle.won) {
     return { reach: lunge, attacker: fading, fallen: 0 };
+  }
+
+  // Won, but spent as it strikes: it fades at the edge from the blow, as the loser falls, then fades.
+  if (battle.spent) {
+    return {
+      reach: lunge,
+      attacker: 1 - clamp(fade <= 0 ? 1 : since / fade),
+      fallen: fading,
+    };
   }
 
   return {
@@ -604,10 +623,14 @@ export class Battles {
       drawn.add(battle.attacker);
     }
 
-    // Gone, lost, while its last shots are still to land: drawn as nothing till they have.
+    // Gone, lost, while its last shots are still to land, or spent as it struck while its loser falls: drawn as nothing
+    //  till they have, or it has.
     if (
       first &&
-      (attacker > 0 || clips?.fight === true || clips?.shots === true)
+      (attacker > 0 ||
+        clips?.fight === true ||
+        clips?.shots === true ||
+        (battle.won && battle.spent === true))
     ) {
       fighters.push({
         id: battle.id,
@@ -621,6 +644,9 @@ export class Battles {
         lift: from.lift * (1 - reach),
         facing: battle.facing,
         opacity: attacker,
+        flies: battle.flies?.attacker ?? false,
+        // Spent only where it won: one that lost is the loser, its puff its own.
+        spent: battle.won && battle.spent === true,
         ...attackerPlays,
         ...(clips?.fight || clips?.shots
           ? { fought: ((now - battle.start) / 1000) * clips.rate }
@@ -638,6 +664,8 @@ export class Battles {
         lift: fallsAt.lift,
         facing: battle.defenderFacing,
         opacity: fallen,
+        flies: battle.flies?.defender ?? false,
+        spent: false,
         ...(clips?.die ? playing('die', blow) : {}),
       });
     }
