@@ -1889,7 +1889,10 @@ in its set (plan 2.2). It's in the model's entry:
   squad's figures are 0.13 s apart. Waiting where it's come, or fighting, it stands as its model does, till `fight` and
   `die` are played. The Partisans' was the first; the Riflemen's, Musketmen's and Marines' followed, then the
   Explorers', the Spies', the Fanatics', the Warriors', the Engineers', the Alpine Troops', who glide on skis, and
-  the Paratroopers', who swing with their canopies about their planted feet.
+  the Paratroopers', who swing with their canopies about their planted feet. Their swing takes a second, since
+  models-realistic-by 8634a6cf (it took 2.4): half a swing for each square's width they go, so a walk from square to
+  square across their sides ends upright, on squares, diamonds and hexes alike. A step to a corner, √2 as far, or one
+  to or from a city, which units stand in front of, still ends part-way through it, as other units' walks do.
 - **Since:** `fight` with its shots, and `die`, on the battles' own frames (the fourth part, below); and `idle`,
   with frames drawn for it (the fifth).
 

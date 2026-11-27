@@ -415,7 +415,8 @@ band along a hull, the wingtips). Still to do:
   half a second into their fight, and fall, with their own clips, made in their set (civ-clone/models-realistic-cc0#42).
 - **Clips, seventh part: done.** The Paratroopers sway under their canopies, swing as they move, fire their SMGs from
   the hip, three bullets from half a second into their fight (only the first, attacking and losing), and go limp in
-  the harness, with their own clips, made in their set (civ-clone/models-realistic-by#26).
+  the harness, with their own clips, made in their set (civ-clone/models-realistic-by#26). Their swing takes a second,
+  so a walk from square to square across their sides ends upright (civ-clone/models-realistic-by#27).
 - **Clips, as planned:** rigged copies are to sit beside the static models, which their manifests go on naming. The
   clips are idle, moving and dying for every unit, fighting for combat units (shots in flight for ranged ones), Settlers
   working and settling, ships sinking and vehicles exploding. The map's side is to play them (`AnimationMixer`, skinned
