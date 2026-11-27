@@ -1079,13 +1079,12 @@ export class MapView3D implements MapRenderer {
       attackerShown = attackerUnit ?? this.#walkingUnits.get(attacker.id),
       attackerFacts = facts(attackerShown),
       // With no clip of its own to fight with, its guns, where it's drawn with any, as a cannon or a warship is: on the
-      //  ground or at sea, not in the air.
+      //  ground or at sea, not in the air. One the page doesn't have yet, out of the dark, as the battle says it is.
       look =
         attackerShown === undefined
-          ? null
+          ? unitLook(attacker.type)
           : unitLook(attackerShown._, attackerShown.__ ?? []),
-      guns =
-        look === null || airborne(look) ? null : gunsShots(gunsFired(look)),
+      guns = airborne(look) ? null : gunsShots(gunsFired(look)),
       paced = clipPace(
         BATTLE_PACE,
         attackerFacts,

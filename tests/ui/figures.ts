@@ -19,6 +19,7 @@ import * as Civ1Units from '@civ-clone/civ1-unit/Units';
 import * as Civ2Units from '@civ-clone/civ2-unit/Units';
 import {
   Box3,
+  BoxGeometry,
   BufferGeometry,
   Color,
   Group,
@@ -1497,9 +1498,10 @@ expect(
   ]
 );
 
-// Where each gun fires from (`muzzleOf`): the front of what's drawn, the way it faces, `MUZZLE_HEIGHT` up it; a
-//  warship's turrets along its middle from the front back; drawn at a copy of the world, as on the world's own; and
-//  none with no figures.
+// Where each gun fires from (`muzzleOf`): the front of the figures, the way they face, `MUZZLE_HEIGHT` up them; a
+//  warship's turrets along its middle from the bow back. The built-in set's figures alone, not their stand nor a
+//  ship's ripples, one geometry with them, kept as its copies are made; a model's meshes, wherever they lie. Drawn at a
+//  copy of the world, as on the world's own; and none with no figures.
 {
   const cannonEast = drawMarker(kit, {
       city: null,
@@ -1509,41 +1511,62 @@ expect(
       city: null,
       unit: unit('Battleship', { facing: Math.PI }),
     }),
-    // Turned a quarter or a half turn, the box round what's drawn is the box round its figures, turned.
-    boxOf = (drawn: Object3D) =>
-      new Box3().setFromObject(drawn.getObjectByName(FIGURES_PART)!),
-    cannon = boxOf(cannonEast),
-    battleship = boxOf(battleshipNorth),
+    // The figures alone, unturned, facing south (+`v`).
+    alone = (type: string) => {
+      const geometry = kit.body(unitTable[type]!, colours, false, 1, 'figures');
+
+      geometry.computeBoundingBox();
+
+      return geometry.boundingBox!;
+    },
+    cannon = alone('Cannon'),
+    battleship = alone('Battleship'),
     up = (box: Box3) => box.min.y + (box.max.y - box.min.y) * MUZZLE_HEIGHT,
-    along = (box: Box3, share: number) =>
-      box.min.z + (box.max.z - box.min.z) * share,
     rounded = (point: readonly number[] | null) =>
       point?.map((value) => Math.round(value * 1e6) / 1e6) ?? null,
-    atHome = muzzleOf(cannonEast, 0, 1, [0, 0]);
+    atHome = muzzleOf(cannonEast, 0, 1, [0, 0]),
+    copied = muzzleOf(cannonEast.clone(), 0, 1, [0, 0]),
+    // A model's figures: a mesh of their own, off their middle.
+    model = new Group(),
+    modelFigures = new Group(),
+    hull = new Mesh(new BoxGeometry(0.2, 0.1, 0.4));
 
+  hull.position.set(0, 0.05, 0.05);
+  modelFigures.name = FIGURES_PART;
+  modelFigures.add(hull);
+  model.add(modelFigures);
   cannonEast.position.set(10, 0, -4);
 
   expect(
-    'a gun fires from the front of what’s drawn, the way it faces, as high up it as a barrel; a warship’s turrets along its middle, front to back; at a copy of the world as on its own; none with no figures',
+    'a gun fires from the front of its figures, the way they face, as high up them as a barrel, not from its stand; a warship’s turrets along its hull, bow to stern, not its ripples; a copy fires as it does; a model’s from its meshes; at a copy of the world as on its own; none with no figures',
     [
       rounded(atHome),
+      // Facing east, turned a quarter: its front's its east, short of the stand's rim.
+      atHome![0] < 0.19,
+      rounded(copied),
       rounded(muzzleOf(cannonEast, 0, 1, [10, -4])),
       [0, 1, 2].map((gun) =>
         rounded(muzzleOf(battleshipNorth, gun, 3, [0, 0]))
       ),
+      rounded(muzzleOf(model, 0, 1, [0, 0])),
       muzzleOf(undefined, 0, 1, [0, 0]),
       muzzleOf(new Group(), 0, 1, [0, 0]),
     ],
     [
-      rounded([cannon.max.x, up(cannon), (cannon.min.z + cannon.max.z) / 2]),
-      rounded([cannon.max.x, up(cannon), (cannon.min.z + cannon.max.z) / 2]),
+      // Turned a quarter, its front, +`v`, is +`u`, and its middle across, -`u`, is `v`.
+      rounded([cannon.max.z, up(cannon), -(cannon.min.x + cannon.max.x) / 2]),
+      true,
+      rounded([cannon.max.z, up(cannon), -(cannon.min.x + cannon.max.x) / 2]),
+      rounded([cannon.max.z, up(cannon), -(cannon.min.x + cannon.max.x) / 2]),
+      // Turned a half, it's the other way round both ways.
       [1 / 6, 1 / 2, 5 / 6].map((share) =>
         rounded([
-          (battleship.min.x + battleship.max.x) / 2,
+          -(battleship.min.x + battleship.max.x) / 2,
           up(battleship),
-          along(battleship, share),
+          -(battleship.max.z - (battleship.max.z - battleship.min.z) * share),
         ])
       ),
+      rounded([0, 0.04, 0.25]),
       null,
       null,
     ]

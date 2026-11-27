@@ -1485,12 +1485,14 @@ mapEvent:
     warship has one for each of its guns: a frigate's broadside, an ironclad's, a destroyer's and a missile cruiser's
     one, a cruiser's two and a battleship's three. Each fires a shell (`SHOT_LOOKS.shell`), as a rigged unit's are
     drawn: laid for a tenth of a second, then fired, a warship's guns 0.15 s apart, landing a little apart. A shell
-    leaves the front of what's drawn, four tenths of the way up it (`MUZZLE_HEIGHT`), and a warship's leave along its
-    middle from the bow back. The blow falls as the first lands, with smoke and a flash at the muzzle and a burst with
-    a flash where it lands. Lost, it fades where it stands. It's the built-in look that says, whichever set draws the
-    unit, as it is for whether a unit flies, so a hosted set's static cannon fires too. A catapult, a trireme, a sail, a
-    submarine and a carrier still close in, as do aircraft and missiles, and units drawn with a clip of their own fight
-    as their clip has them.
+    leaves the front of the unit's figures, four tenths of the way up them (`MUZZLE_HEIGHT`), and a warship's leave
+    along its hull from the bow back: a model's meshes, or the built-in set's figures alone, without their stand or a
+    ship's ripples, which are one geometry with them (`FIGURES_BOX`). The blow falls as the first lands, with smoke
+    and a flash at the muzzle and a burst with a flash where it lands. Lost, it fades where it stands. It's the
+    built-in look that says, whichever set draws the unit, as it is for whether a unit flies, so a hosted set's static
+    cannon fires too; for one the page doesn't have yet, out of the dark, the type the battle names. A catapult, a
+    trireme, a sail, a submarine and a carrier still close in, as do aircraft and missiles, and units drawn with a clip
+    of their own fight as their clip has them.
   - **Fading:** a unit's figures, stand and ring fade by leaving out a share of their points (`alphaHash`), drawn with
     the solid models; see-through, they'd be drawn before the sea, and a ship's hull fading would cut a dark hole in it.
     Its flag and labels, drawn after the sea and the cloud, fade as see-through.

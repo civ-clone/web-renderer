@@ -49,6 +49,7 @@ import { TopologyId } from '@civ-clone/ui-protocol/topology';
 import riverMaterial from './riverMaterial';
 import {
   ALOFT_PART,
+  FIGURES_BOX,
   FIGURES_PART,
   Faded,
   MarkerKit,
@@ -437,7 +438,8 @@ export const MUZZLE_HEIGHT = 0.4;
  *  world at `offset`, as they're turned and placed now (`u`, height, `v`, on the world's own copy): the front of the
  *  box round them, the way they face, `MUZZLE_HEIGHT` up it, for one gun; for more, a warship's turrets, along its
  *  middle from the front to the back, as far apart as they're each the middle of a share of it. Whatever draws them,
- *  the built-in set or a model, with no node to say where a muzzle is. Nothing, with no figures.
+ *  the built-in set or a model, with no node to say where a muzzle is: the figures alone, not their stand nor a ship's
+ *  ripples. Nothing, with no figures.
  */
 export const muzzleOf = (
   drawn: Object3D | undefined,
@@ -452,31 +454,41 @@ export const muzzleOf = (
   }
 
   // In the figures' own frame, unturned, facing south, along `v`: where they are now, whatever's changed since they
-  //  were last drawn.
+  //  were last drawn. The built-in set's figures, one geometry with their stand and ripples, keep the box round them
+  //  alone (`FIGURES_BOX`); a model's are meshes of their own.
   figures.updateWorldMatrix(true, true);
 
-  const box = new Box3(),
+  const own = figures.userData[FIGURES_BOX] as number[] | undefined,
+    box =
+      own === undefined
+        ? new Box3()
+        : new Box3(
+            new Vector3(own[0], own[1], own[2]),
+            new Vector3(own[3], own[4], own[5])
+          ),
     toFigures = figures.matrixWorld.clone().invert();
 
-  figures.traverse((object) => {
-    const mesh = object as Mesh;
+  if (own === undefined) {
+    figures.traverse((object) => {
+      const mesh = object as Mesh;
 
-    if (!mesh.isMesh) {
-      return;
-    }
+      if (!mesh.isMesh) {
+        return;
+      }
 
-    if (mesh.geometry.boundingBox === null) {
-      mesh.geometry.computeBoundingBox();
-    }
+      if (mesh.geometry.boundingBox === null) {
+        mesh.geometry.computeBoundingBox();
+      }
 
-    box.union(
-      mesh.geometry
-        .boundingBox!.clone()
-        .applyMatrix4(
-          new Matrix4().multiplyMatrices(toFigures, mesh.matrixWorld)
-        )
-    );
-  });
+      box.union(
+        mesh.geometry
+          .boundingBox!.clone()
+          .applyMatrix4(
+            new Matrix4().multiplyMatrices(toFigures, mesh.matrixWorld)
+          )
+      );
+    });
+  }
 
   if (box.isEmpty()) {
     return null;

@@ -5038,7 +5038,9 @@ expect(
       const firedAt = now,
         shotFrames: [number, string, readonly number[] | null][] = [],
         alongs: number[] = [],
-        fadedTo: number[] = [];
+        fadedTo: number[] = [],
+        // Each frame a shell's smoke was drawn where it left: how far it was over and off where the attacker stood.
+        muzzleOff: number[][] = [];
 
       fought(attacker, [1, 1], rival, [2, 1], winner);
       patch(
@@ -5060,6 +5062,19 @@ expect(
           if (kind(id) === 'battle') {
             frames.forEach((point) => alongs.push(along(point)));
             fadedTo.push(walkersFaded.get(id) ?? 1);
+
+            const stood = frames.at(-1)!;
+
+            puffs.forEach(({ at }, puff) => {
+              if (puff.endsWith('-muzzle')) {
+                muzzleOff.push(
+                  [0, 1, 2].map(
+                    (axis) =>
+                      Math.round((at[axis]! - stood[axis]!) * 1000) / 1000
+                  )
+                );
+              }
+            });
           }
         });
         walkersPlaced.clear();
@@ -5083,9 +5098,15 @@ expect(
         landingsApart: new Set(landings).size,
         left: inFlight[0]?.[0] ?? null,
         landed: inFlight.at(-1)?.[0] ?? null,
-        flashed: [...puffLooks.entries()]
-          .filter(([id]) => id.endsWith('-hit'))
-          .every(([, { flash }]) => flash !== null),
+        flashed:
+          [...puffLooks.keys()].some((id) => id.endsWith('-hit')) &&
+          [...puffLooks.entries()]
+            .filter(([id]) => id.endsWith('-hit'))
+            .every(([, { flash }]) => flash !== null),
+        // Left from where the stage said each gun fires from, a tenth over where the attacker stood.
+        fromMuzzle:
+          muzzleOff.length > 0 &&
+          muzzleOff.every((off) => JSON.stringify(off) === '[0,0.1,0]'),
         over: [unitOn(1, 1), unitOn(2, 1), walkers.size, puffs.size],
       };
     };
@@ -5101,7 +5122,7 @@ expect(
   walkersPosed.clear();
 
   expect(
-    'with no clip, a cannon fires its gun from where it stands: one shell from the front of what’s drawn, a tenth of a second in, landing as a shell flies, bursting with a flash; a battleship’s three guns each asked where they fire from, landing apart; lost, it fades where it stands; a catapult still lunges, firing nothing',
+    'with no clip, a cannon fires its gun from where it stands: one shell from where the stage says its gun fires from, a tenth of a second in, landing as a shell flies, bursting with a flash; a battleship’s three guns each asked where they fire from, landing apart; lost, it fades where it stands; a catapult still lunges, firing nothing',
     [
       [
         cannonWon.alongs.every((at) => at === 0),
@@ -5112,6 +5133,7 @@ expect(
         cannonWon.landed! >= 100 + SHOT_LOOKS.shell.flight - 16 &&
           cannonWon.landed! < 100 + SHOT_LOOKS.shell.flight,
         cannonWon.flashed,
+        cannonWon.fromMuzzle,
         cannonWon.over,
       ],
       [
@@ -5124,7 +5146,8 @@ expect(
         cannonLost.alongs.every((at) => at === 0),
         cannonLost.fadedTo.some((solid) => solid < 0.5),
         cannonLost.shots,
-        cannonLost.landed! >= 100 + SHOT_LOOKS.shell.flight - 16,
+        cannonLost.landed! >= 100 + SHOT_LOOKS.shell.flight - 16 &&
+          cannonLost.landed! < 100 + SHOT_LOOKS.shell.flight,
         cannonLost.over,
       ],
       [Math.max(...catapultWon.alongs), catapultWon.muzzles, catapultWon.shots],
@@ -5135,6 +5158,7 @@ expect(
         [['battle', 0, 1]],
         0,
         ['shell'],
+        true,
         true,
         true,
         true,
