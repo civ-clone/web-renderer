@@ -980,7 +980,7 @@ ids.forEach((topologyId) => {
     ];
 
   expect(
-    `${topologyId}: far from any river the land is as it was; a square never seen with a river isn't cut by it`,
+    `${topologyId}: far from any river the land is as it was; a square never seen with a river makes no course of its own, so its middle isn't cut`,
     [
       farFrom.every(([u, v]) => relief.height(u!, v!) === dry.height(u!, v!)),
       relief.height(hu, hv) === dry.height(hu, hv),
@@ -1622,6 +1622,70 @@ ids.forEach((topologyId) => {
     ]
   );
 }
+
+// On each grid, a square never seen among mountains (#1393), with a river round it through every square beside it: where
+//  the river cuts the land seen at its edges (its banks reach them on the hex grid, hardly on the iso and not on the
+//  square), it cuts the land carried on into the square never seen as it cuts the land seen, so there's no wall there;
+//  but not under sea level.
+ids.forEach((topologyId) => {
+  const topology = topologyFor({ width, height, topologyId }),
+    layout = groundLayoutFor({
+      width,
+      height,
+      topologyId,
+      wrapsY: topology.wrapsY(),
+    }),
+    unseen: [number, number] = [5, 5],
+    ring = new Set(
+      topology
+        .directions()
+        .map((direction) => topology.neighbour(...unseen, direction))
+        .filter((square): square is [number, number] => square !== null)
+        .map(([x, y]) => `${x},${y}`)
+    ),
+    terrainAt = (x: number, y: number): string =>
+      x === unseen[0] && y === unseen[1] ? 'Unknown' : 'Mountains',
+    dry = createRelief({
+      layout,
+      source: sourceFor(topology, terrainAt, () => false),
+    }),
+    relief = createRelief({
+      layout,
+      source: sourceFor(topology, terrainAt, (x, y) => ring.has(`${x},${y}`)),
+    }),
+    [cu, cv] = layout.centre(...unseen),
+    outline = layout.outline(...unseen),
+    walls: string[] = [];
+  let cutAtEdge = 0,
+    under = 0;
+
+  outline.forEach(([au, av], corner) => {
+    const [bu, bv] = outline[(corner + 1) % outline.length]!;
+
+    for (let step = 1; step < 40; step++) {
+      const along = step / 40,
+        pu = au + (bu - au) * along,
+        pv = av + (bv - av) * along,
+        du = (pu - cu) * 1e-7,
+        dv = (pv - cv) * 1e-7,
+        inside = relief.height(pu - du, pv - dv),
+        outside = relief.height(pu + du, pv + dv);
+
+      cutAtEdge += outside < dry.height(pu + du, pv + dv) - 0.02 ? 1 : 0;
+      under += inside < 0 ? 1 : 0;
+
+      if (Math.abs(inside - Math.max(0, outside)) > 1e-6) {
+        walls.push(`${corner}@${along}: ${inside} ${outside}`);
+      }
+    }
+  });
+
+  expect(
+    `${topologyId}: a river round a square never seen cuts the land carried on into it as it cuts the land seen, with no step at their edge, and not under sea level`,
+    [topologyId !== 'hex-odd-r' || cutAtEdge > 0, walls.slice(0, 3), under],
+    [true, [], 0]
+  );
+});
 
 if (failures.length > 0) {
   process.stderr.write(

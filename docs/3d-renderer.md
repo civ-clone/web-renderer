@@ -456,18 +456,27 @@ blended across squares.
   can't give it away.
   - **As built (#1393):** the land seen beside one carries on into it as the relief blends it, so there's no wall at
     the edge between them. Before, it dropped there to sea level over a step of the land's mesh, an eighth of a
-    square: a sheer, dark side up to 0.42 high on the debug page's worlds, over the cloud at 0.18 (`CLOUD_HEIGHT`).
-    - **Under the cloud:** what stands over 0.14 is brought down to it by 0.3 from the land seen, where the cloud's
-      whole, and it all comes down to sea level from 0.4 to 0.6 (`UNDER_CLOUD` in `relief.ts`), as land seen nowhere
-      near is. Never under sea level, as no water's drawn over it, so beside the sea it's as it was.
+    square: a sheer, dark side up to about 0.42 high on the debug page's worlds on the square grid, about 0.25 on the
+    iso grid and 0.18 on the hex grid, over the cloud at 0.18 (`CLOUD_HEIGHT`).
+    - **Under the cloud:** what stands over 0.14 is brought down to it, smoothly from the edge, wholly by 0.3 from
+      the land seen, where the cloud's whole; and it all comes down to sea level from 0.4 to 0.55 (`UNDER_CLOUD` in
+      `relief.ts`), as land seen nowhere near is. Never under sea level, as no water's drawn over it, so beside the
+      sea it's as it was.
+    - **Rivers** beside it cut the land carried on as they cut the land seen, but not under sea level, so there's no
+      wall where one runs by the edge either.
     - **Its colour** carries on too, darkening to the colour of land never seen as it comes down. It has no surface,
-      as before, so the detail fades out across the edge.
+      as before, so the detail fades out across the edge, and with it the rock, snow and wet ground by where the land
+      lies (§4.3): a snow cap or a rock face at the edge ends over a step of the mesh, and the slope carried on past
+      it is the terrain's colour alone.
     - **Only what's seen:** the height and colour it's given are the squares seen beside it, so nothing of its own is
       given away.
-    - **Cost:** only a square never seen with one seen beside it, across an edge or a corner, is blended, as no point
-      of any other is within 0.6 of land seen. Building the debug world's land took about 5 to 10% longer where half
-      of it or less was seen (about 365 ms rather than 340 with a third seen, 560 rather than 525 with three in
-      five), and the same with all of it seen.
+    - **Cost:** only a square never seen with one seen beside it, across an edge or a corner, is blended. No point
+      of any other is within 0.55 of land seen, as the nearest a square comes to one not beside it is 1 on the square
+      and iso grids and 1/√3 on the hex grid (the relief suite checks). Building the debug world's land took about 5
+      to 15% longer with some of it unseen (about 365 ms rather than 340 with a third seen, 560 rather than 525 with
+      three in five, more under load), and the same with all of it seen.
+    - **Refreshed:** a square seen changes the land of the squares never seen beside it, which `refresh()` doesn't
+      list: the land's rebuilt over the kernel's reach round each square it does list, which takes them in.
     - **Still seen:** a dark strip along the far side of land seen at the cloud's edge, as before. It looks to be the
       ground under the cloud's edge, darkening to the colour of land never seen, seen past it: the cloud's 0.18 up,
       so from the side, its edge is over land seen.

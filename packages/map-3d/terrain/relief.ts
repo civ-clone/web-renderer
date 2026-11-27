@@ -91,7 +91,9 @@ export interface ReliefMap {
    * Reads every square's terrain again, after the world's tiles have changed: the squares whose land has, those whose
    *  terrain has and the mountains a range joins to them, or did, whose ridge to them has come or gone. Given
    *  `released`, those alone are looked at first, and the rest read again only if one of them has changed, as most
-   *  changes (a unit moving, a city growing) change no terrain, and reading it all takes milliseconds.
+   *  changes (a unit moving, a city growing) change no terrain, and reading it all takes milliseconds. A square seen
+   *  changes the land of the squares never seen beside it too (`UNDER_CLOUD`), which aren't listed: callers rebuild
+   *  the land over the kernel's reach round each square listed, which takes them in.
    */
   refresh(
     released?: readonly (readonly [number, number])[]
@@ -176,15 +178,17 @@ export const BEND = 0.12;
 
 /**
  * Land never seen beside land seen (#1393): the seen land carries on under the cloud, as it's blended, rather than
- *  dropping to sea level at the edge as a wall. Within `within` of the edge (in world units), where the cloud's whole,
- *  what stands over `ceiling` is brought down to it, under the cloud (`CLOUD_HEIGHT`, 0.18); and from `flatFrom` to
- *  `flat` it comes down to sea level, as land seen nowhere near is.
+ *  dropping to sea level at the edge as a wall. What stands over `ceiling` is brought down to it, under the cloud
+ *  (`CLOUD_HEIGHT`, 0.18), smoothly from the edge, wholly by `within` from it (in world units), where the cloud's
+ *  whole; and from `flatFrom` to `flat` it all comes down to sea level, as land seen nowhere near is. `flat` is under
+ *  the nearest a square comes to one not beside it, on any grid (a hex's, 1/√3), so only squares beside land seen
+ *  have any.
  */
 export const UNDER_CLOUD = {
   ceiling: 0.14,
   within: 0.3,
   flatFrom: 0.4,
-  flat: 0.6,
+  flat: 0.55,
 } as const;
 
 // How low a range's saddle is between its peaks, as a share of the lower peak's own height: from `low` to `high`.
@@ -315,7 +319,8 @@ export const createRelief = ({
     // Which squares a range joins: peaks seen, on land.
     ranged: boolean[] = [],
     // Which squares never seen have a square seen beside them, across an edge or a corner: those whose land carries on
-    //  what's seen. No point further than `UNDER_CLOUD.flat` from land seen is in any other.
+    //  what's seen. No point of any other is within `UNDER_CLOUD.flat` of land seen, on any grid (the relief suite
+    //  checks), so any other is flat.
     frontier: boolean[] = [],
     // The rivers' courses that reach into each square, and where the middle of the square each was made by is from its
     //  own, as with ranges; and each course, by its ends, as it's drawn and the squares it reaches into, to tell which
@@ -1357,15 +1362,17 @@ export const createRelief = ({
 
   // The land as the rivers through its square cut it, the lowest any does, and its banks wet as the wettest makes them.
   const sample = (u: number, v: number): GroundSample => {
-    const land = landAt(u, v);
+    const land = landAt(u, v),
+      [x0, y0] = layout.tileAt(u, v),
+      own = index(x0, y0);
 
-    if (land.unseen) {
+    // Never seen, with nothing seen beside it: flat, as nothing reaches it. Beside land seen, the rivers there cut the
+    //  land carried on as they cut the land seen, so there's no wall at the edge there either, but not under sea level.
+    if (land.unseen && (own === null || frontier[own] !== true)) {
       return land;
     }
 
-    const [x0, y0] = layout.tileAt(u, v),
-      own = index(x0, y0),
-      through = own === null ? [] : riversIn[own] ?? [],
+    const through = own === null ? [] : riversIn[own] ?? [],
       makers = own === null ? [] : riversFrom[own] ?? [];
 
     if (through.length === 0) {
@@ -1384,7 +1391,7 @@ export const createRelief = ({
         land.height
       );
 
-      cut = Math.min(cut, height);
+      cut = Math.min(cut, land.unseen ? Math.max(0, height) : height);
       wet = Math.max(wet, wetness);
     });
 

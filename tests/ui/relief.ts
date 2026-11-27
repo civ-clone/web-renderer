@@ -173,6 +173,71 @@ const fromSeen = (
   return least;
 };
 
+// On each grid: how near a square comes to one not beside it, across an edge or a corner, from their outlines. A
+//  square never seen is blended only where one seen is beside it (`frontier`), so this must be over
+//  `UNDER_CLOUD.flat`, where land carried on from land seen comes down to sea level.
+const nearestApart = (topology: Topology, layout: GroundLayout): number => {
+  const toSegment = (
+      pu: number,
+      pv: number,
+      [au, av]: readonly [number, number],
+      [bu, bv]: readonly [number, number]
+    ): number => {
+      const du = bu - au,
+        dv = bv - av,
+        t = Math.max(
+          0,
+          Math.min(1, ((pu - au) * du + (pv - av) * dv) / (du * du + dv * dv))
+        );
+
+      return Math.hypot(pu - au - du * t, pv - av - dv * t);
+    },
+    apart = (
+      a: readonly (readonly [number, number])[],
+      b: readonly (readonly [number, number])[]
+    ): number =>
+      Math.min(
+        ...[
+          [a, b],
+          [b, a],
+        ].flatMap(([from, to]) =>
+          from!.flatMap(([pu, pv]) =>
+            to!.map((corner, at) =>
+              toSegment(pu, pv, corner, to![(at + 1) % to!.length]!)
+            )
+          )
+        )
+      );
+  let least = Infinity;
+
+  // A square on an even row and one on an odd, as rows alternate on the staggered and hex grids.
+  [
+    [5, 4],
+    [5, 5],
+  ].forEach(([x, y]) => {
+    const beside = new Set(
+      topology
+        .directions()
+        .map((direction) => topology.neighbour(x!, y!, direction))
+        .filter((square): square is [number, number] => square !== null)
+        .map(([nx, ny]) => `${nx},${ny}`)
+    );
+
+    for (let dy = -3; dy <= 3; dy++) {
+      for (let dx = -3; dx <= 3; dx++) {
+        if ((dx !== 0 || dy !== 0) && !beside.has(`${x! + dx},${y! + dy}`)) {
+          least = Math.min(
+            least,
+            apart(layout.outline(x!, y!), layout.outline(x! + dx, y! + dy))
+          );
+        }
+      }
+    }
+  });
+
+  return least;
+};
+
 // Where the land isn't the same as its copy a period along, across the world or down it where it wraps over the poles.
 const seamsIn = (relief: ReliefMap, layout: GroundLayout): string[] => {
   const { u: acrossPeriod, v: downPeriod } = layout.period(),
@@ -366,6 +431,64 @@ ids.forEach((topologyId) => {
       UNDER_CLOUD.ceiling < CLOUD_HEIGHT,
     ],
     [true, true, [], [], true]
+  );
+
+  // A blob of squares never seen, a square and all beside it, among the pattern's: no step at any edge of one, whether
+  //  with land seen or between two never seen, one beside land seen or not; and no square comes nearer one not beside
+  //  it than the land carried on reaches.
+  const blobbed = new Set(
+      [
+        [6, 5] as [number, number],
+        ...topology
+          .directions()
+          .map((direction) => topology.neighbour(6, 5, direction))
+          .filter((square): square is [number, number] => square !== null),
+      ].map(([x, y]) => `${x},${y}`)
+    ),
+    blob = createRelief({
+      layout,
+      source: sourceFor(topology, (x, y) =>
+        blobbed.has(`${x},${y}`) ? 'Unknown' : pattern(x, y)
+      ),
+    }),
+    blobSteps: string[] = [];
+
+  [...blobbed].forEach((at) => {
+    const [x, y] = at.split(',').map(Number) as [number, number],
+      [cu, cv] = layout.centre(x, y),
+      outline = layout.outline(x, y);
+
+    outline.forEach(([au, av], corner) => {
+      const [bu, bv] = outline[(corner + 1) % outline.length]!;
+
+      [0.25, 0.5, 0.75].forEach((along) => {
+        const pu = au + (bu - au) * along,
+          pv = av + (bv - av) * along,
+          du = (pu - cu) * 1e-7,
+          dv = (pv - cv) * 1e-7,
+          inside = blob.sample(pu - du, pv - dv),
+          outside = blob.sample(pu + du, pv + dv),
+          step = Math.abs(
+            inside.height -
+              (outside.unseen ? outside.height : Math.max(0, outside.height))
+          ),
+          shade = Math.max(
+            ...inside.colour.map((value, channel) =>
+              Math.abs(value - (outside.colour[channel] ?? 0))
+            )
+          );
+
+        if (step > 1e-6 || shade > 1e-5) {
+          blobSteps.push(`${at} ${corner}@${along}: ${step} ${shade}`);
+        }
+      });
+    });
+  });
+
+  expect(
+    `${topologyId}: a blob of squares never seen has no step at any edge of one, with land seen or between two never seen; and a square comes no nearer one not beside it than ${UNDER_CLOUD.flat}, so only those beside land seen are blended`,
+    [blobSteps.slice(0, 3), nearestApart(topology, layout) > UNDER_CLOUD.flat],
+    [[], true]
   );
 });
 
