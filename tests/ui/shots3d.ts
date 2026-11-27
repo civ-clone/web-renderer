@@ -1,6 +1,6 @@
 // Shots on the 3D map (plan 2.2, `shots.ts`):
 //  - each figure's shots leave as its clip says, each figure a little after the one before, in the order they leave;
-//  - a squad's land a little apart, across the way they go, the middle one where it's aimed;
+//  - a squad's land a little apart, across the way they go, each on its figure's side, the middle one where it's aimed;
 //  - each flies from where it leaves to where it lands in an arc, rising most at its middle, the further it goes;
 //  - each kind as it goes: a bottle as the first did, a bullet straight and quick, a shell slow, a stone lobbed high;
 //    each pointing the way it's going; what isn't said a bottle.
@@ -11,6 +11,7 @@ import {
   SHOT_ARC,
   SHOT_LOOKS,
   SHOT_SPREAD,
+  acrossSquad,
   kindOf,
   landsAt,
   shotAt,
@@ -71,22 +72,31 @@ expect(
   ]
 );
 
+// A squad of three stands back-middle, then at its right and its left (`formation`, unturned, facing south, its right
+//  -`u`). Facing east (+`u`), its right is +`v`: so the second, at its right, leaves on that side of the middle, and
+//  its shot lands there, as the third's lands at its left, none crossing (#1405).
 expect(
-  'a squad’s shots land a little apart, across the way they go, the middle one where it’s aimed; one going nowhere lands where it’s aimed',
+  'a squad’s shots land a little apart, across the way they go, each on the side its figure stands, the middle one where it’s aimed, none crossing; two on their own sides; more than a squad in order; one going nowhere lands where it’s aimed',
   [
     [0, 1, 2].map((figure) =>
       rounded(landsAt([0, 0.2, 0], [1, 0.05, 0], figure, 3))
     ),
+    [0, 1, 2].map((figure) => acrossSquad(figure, 3)),
     rounded(landsAt([0, 0, 0], [0, 0, 2], 0, 2)),
+    [0, 1, 2, 3].map((figure) => acrossSquad(figure, 4)),
     rounded(landsAt([1, 0, 1], [1, 0.1, 1], 0, 3)),
   ],
   [
     [
-      [1, 0.05, -SHOT_SPREAD],
       [1, 0.05, 0],
       [1, 0.05, SHOT_SPREAD],
+      [1, 0.05, -SHOT_SPREAD],
     ],
-    [SHOT_SPREAD / 2, 0, 2],
+    // Left to right: the third, the middle, the second.
+    [1, 2, 0],
+    // Going south (+`v`), the first of two, at its right, lands west, at the right of the way it goes.
+    [-SHOT_SPREAD / 2, 0, 2],
+    [0, 1, 2, 3],
     [1, 0.1, 1],
   ]
 );

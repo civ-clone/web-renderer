@@ -64,6 +64,7 @@ import {
 import standHeight from './markers/standHeight';
 import {
   airborne,
+  spentStriking,
   unitFire,
   unitLook,
 } from '@civ-clone/ui-models-builtin/units';
@@ -1133,6 +1134,11 @@ export class MapView3D implements MapRenderer {
       du = short(toU - fromU, periodU),
       dv = short(toV - fromV, periodV),
       attackerSquare = `${attacker.tile.x},${attacker.tile.y}`,
+      // The defender as it's drawn there, which may be in the air.
+      defenderShown = before.find(({ id }) => id === defender.id),
+      defenderFlies =
+        defenderShown !== undefined &&
+        airborne(unitLook(defenderShown._, defenderShown.__ ?? [])),
       battle = this.#battles.add(
         {
           attacker: attacker.id,
@@ -1146,6 +1152,8 @@ export class MapView3D implements MapRenderer {
           facing: this.#facings.get(attacker.id) ?? Math.atan2(du, dv),
           defenderFacing:
             this.#facings.get(defender.id) ?? Math.atan2(-du, -dv),
+          flies: { attacker: airborne(look), defender: defenderFlies },
+          spent: spentStriking(look),
         },
         now,
         pace,
@@ -1155,11 +1163,7 @@ export class MapView3D implements MapRenderer {
 
     // Its attacker's shots, where it shoots, each landing on the square attacked, by the loser's feet, or, at an
     //  aircraft, at its body's middle (`airborneMiddle`): its clip's, or, with none, what it fires as it's drawn.
-    const defenderShown = before.find(({ id }) => id === defender.id),
-      defenderFlies =
-        defenderShown !== undefined &&
-        airborne(unitLook(defenderShown._, defenderShown.__ ?? [])),
-      shooter = pace.clips?.fight ? attackerFacts : fires,
+    const shooter = pace.clips?.fight ? attackerFacts : fires,
       shots = pace.clips?.fight
         ? attackerFacts?.clips.fight?.shots ?? []
         : fires?.shots ?? [];
@@ -1717,7 +1721,13 @@ export class MapView3D implements MapRenderer {
     going.forEach(({ id, battle, at, lift, fallen, fought }) => {
       const plan = this.#shotsOf.get(battle);
 
-      if (plan === undefined || fallen || fought === undefined) {
+      // Not drawn yet, as one out of the dark the page doesn't have, its shots wait till it is.
+      if (
+        plan === undefined ||
+        fallen ||
+        fought === undefined ||
+        !this.#walkersDrawn.has(id)
+      ) {
         return;
       }
 
@@ -1839,11 +1849,16 @@ export class MapView3D implements MapRenderer {
   }
 
   // A puff of smoke where the loser `fighter` falls (`markers/puff.ts`), as far through as it's faded: its id.
-  #puff({ battle, at, lift, opacity }: Fighter): string {
+  #puff({ battle, at, lift, opacity, flies }: Fighter): string {
     const id = `${battle}-puff`;
 
     this.#puffs.add(id);
-    this.#stage.puff(id, this.#onLand(at, lift), 1 - opacity);
+    // An aircraft's where it's drawn, in the air.
+    this.#stage.puff(
+      id,
+      this.#onLand(at, lift + (flies ? airborneMiddle(this.#unitSize) : 0)),
+      1 - opacity
+    );
 
     return id;
   }
@@ -2149,8 +2164,12 @@ export class MapView3D implements MapRenderer {
 
     this.#drawFigure(fighter, marker, fighter.opacity, fighter.clip ?? null);
 
-    // The loser, drawn fading: what fell where it stood, or the attacker at the edge, having lost.
-    return marker !== null && (fighter.fallen || fighter.opacity < 1);
+    // The loser, drawn fading: what fell where it stood, or the attacker at the edge, having lost; not one spent as it
+    //  struck, as a missile is, which goes in the loser's.
+    return (
+      marker !== null &&
+      (fighter.fallen || (fighter.opacity < 1 && !fighter.spent))
+    );
   }
 
   // Battles that are over, taken away: each attacker back on its square, or, won and waiting for the battle's patch,

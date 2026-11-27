@@ -1504,7 +1504,7 @@ expect(
     ['Destroyer', 'shell', 1, 'front', false],
     ['Fighter', 'bullet', 1, 'front', true],
     ['Frigate', 'shell', 1, 'front', false],
-    ['Helicopter', 'bullet', 1, 'front', true],
+    ['Helicopter', 'bullet', 1, 'nose', true],
     ['Howitzer', 'shell', 1, 'front', false],
     ['Ironclad', 'shell', 1, 'front', false],
     ['MissileCruiser', 'shell', 1, 'front', false],
@@ -1526,7 +1526,7 @@ expect(
       );
 
   expect(
-    'where each shot leaves: a gun the middle of the front, four tenths up; guns along the middle; a catapult the top; archers in front of each figure, six tenths up',
+    'where each shot leaves: a gun the middle of the front, four tenths up; guns along the middle; a catapult the top; a helicopter halfway to its front; archers in front of each figure, six tenths up',
     [
       rounded(
         firePoints(
@@ -1551,6 +1551,13 @@ expect(
       ),
       rounded(
         firePoints(
+          { kind: 'bullet', count: 1, from: 'nose', closes: true },
+          box,
+          1
+        )
+      ),
+      rounded(
+        firePoints(
           { kind: 'arrow', count: 3, from: 'figures', closes: false },
           box,
           2
@@ -1564,6 +1571,8 @@ expect(
         [0, 0.08, -0.075],
       ],
       [[0, 0.19, 0.05]],
+      // Halfway from the middle, 0.05, to the front, 0.3.
+      [[0, 0.08, 0.175]],
       // The squad's stand twice as far apart drawn twice as big: the front pair at the front, the one behind 0.16
       //  behind them.
       [
@@ -1608,6 +1617,8 @@ expect(
     archers = alone('Archer'),
     fighter = alone('Fighter'),
     nose = muzzleOf(drawnAs('Fighter'), 0, [0, 0]),
+    helicopter = alone('Helicopter'),
+    rotorShort = muzzleOf(drawnAs('Helicopter'), 0, [0, 0]),
     atHome = muzzleOf(cannonEast, 0, [0, 0]),
     // Its points by hand, turned a quarter and placed: the second, (0.1, 0.1, 0.2), turned to (0.2, 0.1, -0.1).
     byHand = new Group(),
@@ -1645,12 +1656,15 @@ expect(
     rounded(nose),
     // Up in the air, where it flies, not at its stand.
     nose![1] > 0.2,
+    // A helicopter's well short of its rotor's tip, at its cabin.
+    rounded(rotorShort),
+    rotorShort![2] < helicopter.max.z - 0.05,
   ];
 
   cannonEast.position.set(10, 0, -4);
 
   expect(
-    'each shot leaves the figures alone, as they face: a cannon its front, short of its stand’s rim, its copy and one fortified and twice as big as they are; a battleship along its hull; a catapult its top; archers in front of each; a fighter its nose, up in the air; turned and placed by hand, round again; at a copy of the world; none with no figures or nothing kept',
+    'each shot leaves the figures alone, as they face: a cannon its front, short of its stand’s rim, its copy and one fortified and twice as big as they are; a battleship along its hull; a catapult its top; archers in front of each; a fighter its nose, up in the air; a helicopter its cabin, short of its rotor; turned and placed by hand, round again; at a copy of the world; none with no figures or nothing kept',
     [...results, rounded(muzzleOf(cannonEast, 0, [10, -4]))],
     [
       // Turned a quarter, its front, +`v`, is +`u`, and its middle across, -`u`, is `v`.
@@ -1694,6 +1708,12 @@ expect(
         (fighter.min.x + fighter.max.x) / 2,
         up(fighter, 0.4),
         fighter.max.z,
+      ]),
+      true,
+      rounded([
+        (helicopter.min.x + helicopter.max.x) / 2,
+        up(helicopter, 0.4),
+        (helicopter.min.z + 3 * helicopter.max.z) / 4,
       ]),
       true,
       rounded([

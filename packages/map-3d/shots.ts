@@ -7,6 +7,7 @@
 
 import { ClipShot, ShotKind } from './models/modelSet';
 import type { UnitFire } from '@civ-clone/ui-models-builtin/units';
+import { formation } from './markers/figures';
 
 /**
  * A figure's shot in a clip: the figure, which of the clip's shots, the node it leaves, when, in seconds in, the time
@@ -157,8 +158,25 @@ export const shotsFired = (
   falls === null ? [...times] : times.filter(({ at }) => at < falls);
 
 /**
+ * Which way across its squad figure `figure` of `figures` stands, from 0 at its left to `figures` less one at its
+ *  right, where the squad stands as `formation` has it, so each one's shot lands on its own side and none cross; or,
+ *  for more than a squad stands, its place among them.
+ */
+export const acrossSquad = (figure: number, figures: number): number => {
+  const places = formation(figures);
+
+  return figures < 2 || places.length !== figures
+    ? figure
+    : places
+        .map(([x], index) => [x, index] as const)
+        .sort(([a, i], [b, j]) => b - a || i - j)
+        .findIndex(([, index]) => index === figure);
+};
+
+/**
  * Where the shot of figure `figure` of `figures` lands, going from `from` to `target`: a little to one side of it or
- *  the other, across the way it goes, so a squad's don't land as one.
+ *  the other, across the way it goes, as the figure stands across its squad (`acrossSquad`), so a squad's don't land
+ *  as one, nor cross.
  */
 export const landsAt = (
   from: readonly [number, number, number],
@@ -169,7 +187,9 @@ export const landsAt = (
   const du = target[0] - from[0],
     dv = target[2] - from[2],
     length = Math.hypot(du, dv),
-    aside = (figure - (Math.max(1, figures) - 1) / 2) * SHOT_SPREAD;
+    aside =
+      (acrossSquad(figure, figures) - (Math.max(1, figures) - 1) / 2) *
+      SHOT_SPREAD;
 
   if (length === 0) {
     return [target[0], target[1], target[2]];

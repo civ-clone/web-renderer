@@ -1497,8 +1497,14 @@ mapEvent:
     - **Aircraft** (sixth part): a fighter, a bomber or a helicopter closes in as it would (`UnitFire#closes`), and
       fires a burst of three bullets from its nose as it does, 0.035 s apart, the first leaving a tenth of a second in
       and landing as it reaches the edge, the blow then, the last leaving just before; it pulls away as the rest land.
-      Each has a flash and smoke at the nose. Shots at an aircraft are aimed at its body's middle, as high as it's
-      drawn (`airborneMiddle`), not at the ground beneath it.
+      Each has a flash and smoke at the nose, a helicopter's halfway from its middle to its front (`nose`), short of
+      its rotor's tip (#1407). Shots at an aircraft are aimed at its body's middle, as high as it's drawn
+      (`airborneMiddle`), not at the ground beneath it, and one downed falls in its puff there.
+    - **Missiles** (`spentStriking`, `BattleOf#spent`): a missile closes in as it would, firing nothing, and, spent
+      as it strikes, stays at the edge and fades from the blow, though its loser falls first, rather than going
+      back. The loser's puff is the only one: it's the missile's blast.
+    - **Out of the dark:** a shot due from an attacker the page doesn't have yet waits till it's drawn, then leaves as
+      its clock has it, rather than being lost (#1403).
     - **Where from** (`FIRE_HEIGHTS`): worked out as the unit's drawn, from the box round its figures: a model's
       meshes, or the built-in set's figures alone, without their stand or a ship's ripples, which are one geometry
       with them. They're kept with the figures (`FIRES_FROM`), and the stage turns them to where the figures stand.
@@ -1586,9 +1592,8 @@ mapEvent:
   - Two other players' battle with their moves not shown is shown at once, but its loser fades out: a fade isn't a move.
 - **Still to come:**
   - battles' rest (2.4): muskets and rifles without clips, a submarine's torpedo, a bomber flying over its target and
-    bombing it, Civ2's rounds once they're sent (§8.1), a flash under reduced motion, a unit gone with its battle won
-    (a missile) fading rather than going at the end, and another player's unit walking onto the square it emptied
-    rather than being put there (#1255);
+    bombing it, Civ2's rounds once they're sent (§8.1), a flash under reduced motion, and another player's unit
+    walking onto the square it emptied rather than being put there (#1255);
   - units that go while drawn elsewhere, walking or fighting, out of sight say, fade with neither (#1255).
 
 ---
@@ -1911,10 +1916,11 @@ has a clip to play is paced as before.
   clip's tracks are), as that figure's clip comes to it (by the battle's clock since the sixth part), from where the
   node is as the figure's posed then
   (`Stage#jointAt`, `jointOf`). It flies the short way to the square attacked, over the world's seam or not, in an arc
-  (`SHOT_ARC`), landing by the loser's feet, a squad's a little apart (`SHOT_SPREAD`). Where it lands, it bursts in a
-  puff of smoke of its own (`HIT_PUFF`, half a second). The Partisans' is a bottle, alight at its neck, tumbling end
-  over end (`Stage#shot`). A battle ended at once takes its shots and their puffs with it. An attacker not drawn, as
-  with units hidden (`t`) but for the one ringed, throws nothing that's drawn.
+  (`SHOT_ARC`), landing by the loser's feet, a squad's a little apart (`SHOT_SPREAD`), each on the side its figure
+  stands across the squad (`acrossSquad`), so none cross (#1405). Where it lands, it bursts in a puff of smoke of its
+  own (`HIT_PUFF`, half a second). The Partisans' is a bottle, alight at its neck, tumbling end over end
+  (`Stage#shot`). A battle ended at once takes its shots and their puffs with it. An attacker not drawn, as with units
+  hidden (`t`) but for the one ringed, throws nothing that's drawn: its shots wait till it is (#1403).
 
 **As built, fifth part (clips, 2026-11-24): idling.** Units near the camera, with it close in, play `idle` where they
 stand. The map used to draw a frame only when something changed; while units idle, it draws frames for them.

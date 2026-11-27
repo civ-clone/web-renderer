@@ -132,6 +132,55 @@ const battleOf = (
       { reach: 1, attacker: 0, fallen: 0 },
     ]
   );
+
+  // Won but spent as it strikes, as a missile is: it stays at the edge, fading from the blow, rather than going back,
+  //  though its loser falls first; over as soon as a win is. What's drawn of it says it's spent, and which flies.
+  const spent = battles.add(
+      {
+        ...battleOf('m', 'f', true, [4, 4], [5, 4]),
+        spent: true,
+        flies: { attacker: true, defender: false },
+      },
+      1000,
+      { ...pace }
+    ),
+    // Its loser falling for half a second first, as a clip would have it.
+    spentFalls = battles.add(
+      { ...battleOf('n', 'g', true, [6, 4], [7, 4]), spent: true },
+      1000,
+      { ...pace, falls: 500 }
+    );
+
+  expect(
+    'won but spent: the blow as it would, then it fades at the edge from the blow, though its loser falls first, not going back; over as a win is; drawn as spent and flying, its loser as neither',
+    [
+      battleEnds(spent),
+      battleAt(spent, 1200),
+      battleAt(spent, 1500),
+      battleAt(spent, 1800),
+      battleAt(spentFalls, 1500),
+      battles
+        .at(1500)
+        .going.filter(({ battle }) => battle === spent.id)
+        .map(({ fallen, flies, spent: drawnSpent }) => [
+          fallen,
+          flies,
+          drawnSpent,
+        ]),
+    ],
+    [
+      battleEnds(won),
+      { reach: 1, attacker: 1, fallen: 1 },
+      { reach: 1, attacker: 0.5, fallen: 0.5 },
+      { reach: 1, attacker: 0, fallen: 0 },
+      // Gone half a fade after the blow, though its loser's still falling, solid.
+      { reach: 1, attacker: 0.5, fallen: 1 },
+      [
+        [false, true, true],
+        [true, false, false],
+      ],
+    ]
+  );
 }
 
 {

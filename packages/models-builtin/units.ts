@@ -203,17 +203,24 @@ export const airborne = (look: UnitLook): boolean =>
 /**
  * What a unit that looks like `look` fires as it attacks: a gun's shell, a catapult's stone, an archer's arrow, or an
  *  aircraft's burst of bullets; how many, one for each of a warship's guns or each of a squad's archers; where from on
- *  what's drawn, the front of its barrel or nose, a warship's guns along its hull (`front`), the top of a catapult's
- *  arm (`top`), or each figure (`figures`); and whether it closes in as it fires, as an aircraft diving at what it
- *  attacks does (`closes`), or stands. None for one that closes in with nothing to fire. How its attack is drawn, not
- *  what it can do.
+ *  what's drawn, the front of its barrel or nose, a warship's guns along its hull (`front`), a helicopter's nose,
+ *  short of its rotor (`nose`), the top of a catapult's arm (`top`), or each figure (`figures`); and whether it closes
+ *  in as it fires, as an aircraft diving at what it attacks does (`closes`), or stands. None for one that closes in
+ *  with nothing to fire. How its attack is drawn, not what it can do.
  */
 export type UnitFire = {
   kind: 'shell' | 'stone' | 'arrow' | 'bullet';
   count: number;
-  from: 'front' | 'top' | 'figures';
+  from: 'front' | 'nose' | 'top' | 'figures';
   closes: boolean;
 };
+
+/**
+ * Whether a unit that looks like `look` is spent as it strikes, gone with its blow though it wins: a missile. How it's
+ *  drawn, not what it does.
+ */
+export const spentStriking = (look: UnitLook): boolean =>
+  look.shape === 'missile';
 
 /** What a unit that looks like `look` fires as it attacks (`UnitFire`), or nothing, for one that closes in. */
 export const unitFire = (look: UnitLook): UnitFire | null =>
@@ -230,8 +237,10 @@ export const unitFire = (look: UnitLook): UnitFire | null =>
     ? { kind: 'shell', count: 1, from: 'front', closes: false }
     : look.shape === 'foot' && look.gear === 'bow'
     ? { kind: 'arrow', count: look.squad, from: 'figures', closes: false }
-    : look.shape === 'aircraft' || look.shape === 'helicopter'
+    : look.shape === 'aircraft'
     ? { kind: 'bullet', count: 1, from: 'front', closes: true }
+    : look.shape === 'helicopter'
+    ? { kind: 'bullet', count: 1, from: 'nose', closes: true }
     : null;
 
 export default unitTable;
