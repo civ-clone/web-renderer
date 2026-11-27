@@ -55,7 +55,10 @@ export type TerrainEntry = {
  */
 export const seaFloor = { shore: -0.03, deep: -0.15, reach: 3 } as const;
 
-/** A square the player has never seen (`Unknown`): flat, at sea level, under cloud (§4.5). */
+/**
+ * A square the player has never seen (`Unknown`): no relief of its own, under cloud (§4.5); the land seen beside it
+ *  carries on into it a little way (`UNDER_CLOUD` in the 3D map's `terrain/relief.ts`).
+ */
 export const unknownTerrain: TerrainEntry = {
   relief: { base: 0, roughness: 0, shape: 'flat' },
   colour: '#1b1f24',

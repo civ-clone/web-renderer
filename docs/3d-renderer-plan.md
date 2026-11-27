@@ -132,7 +132,8 @@ and a colour per terrain. It's built a few chunks a frame, from where the map is
   table in `packages/models-builtin/terrain.ts`.
 - **Tests:** `tests/ui/relief.ts` and `tests/ui/chunks.ts`.
 - **Colour:** one per terrain, blended by the same kernel as the height.
-- **Squares never seen:** flat at sea level and dark. The cloud over them is 1.4's.
+- **Squares never seen:** flat at sea level and dark. The cloud over them is 1.4's. Since #1393, the land seen beside
+  one carries on into it under the cloud.
 - **Speed:** an 80×50 world builds in 250–370 ms, 17–25 ms a chunk. A frame builds chunks until 10 ms have gone, but
   a chunk is built whole, so in practice a frame builds one: smaller chunks, or a chunk over several frames, are for
   M6.
@@ -517,8 +518,9 @@ a block of them a massif, not a grid of cones. Hills already run into one anothe
 top about 0.85), so Civ2's rivers rush white down them and mountains stand over the land round them (spec §4.1). The
 snowline rose with them, so about as many peaks are capped as before (spec §4.3). A unit's stand stands on the highest
 of the land under it, so it's never sunk into a peak, and a unit hidden behind a mountain isn't picked through it.
-Still to do: a mountain beside a square never seen stands over the cloud there as a sheer wall (#1393); what stands on
-a mountain sits on its summit (#1397); and roads and railroads climb over its top (#1383).
+A mountain beside a square never seen no longer stands over the cloud there as a sheer wall: the land seen carries on
+under the cloud, as it's blended (#1393, spec §4.1). Still to do: what stands on a mountain sits on its summit
+(#1397); and roads and railroads climb over its top (#1383).
 
 **3.2, first part: done.** What grows is laid with the rest of the overlay, from the built-in set's table (`packages/models-builtin/vegetation.ts`):
 - forests' trees are conifers towards the poles and broadleaf towards the equator;

@@ -452,8 +452,25 @@ blended across squares.
   `src/hex.js`, `civ1-tileset-pixelart`]), so the seam where the world wraps has no seam either.
 - **Sea depth** follows how far a square is from land, found by walking the squares (a breadth-first search).
 - **Squares never seen** (terrain `Unknown`, as the client gets them [verified: `packages/map/components/Map/Fog.ts`])
-  are flat, at sea level, under cloud (§4.5). The client is never sent an unseen square's terrain, so the relief can't
-  give it away.
+  have no relief of their own, under cloud (§4.5). The client is never sent an unseen square's terrain, so the relief
+  can't give it away.
+  - **As built (#1393):** the land seen beside one carries on into it as the relief blends it, so there's no wall at
+    the edge between them. Before, it dropped there to sea level over a step of the land's mesh, an eighth of a
+    square: a sheer, dark side up to 0.42 high on the debug page's worlds, over the cloud at 0.18 (`CLOUD_HEIGHT`).
+    - **Under the cloud:** what stands over 0.14 is brought down to it by 0.3 from the land seen, where the cloud's
+      whole, and it all comes down to sea level from 0.4 to 0.6 (`UNDER_CLOUD` in `relief.ts`), as land seen nowhere
+      near is. Never under sea level, as no water's drawn over it, so beside the sea it's as it was.
+    - **Its colour** carries on too, darkening to the colour of land never seen as it comes down. It has no surface,
+      as before, so the detail fades out across the edge.
+    - **Only what's seen:** the height and colour it's given are the squares seen beside it, so nothing of its own is
+      given away.
+    - **Cost:** only a square never seen with one seen beside it, across an edge or a corner, is blended, as no point
+      of any other is within 0.6 of land seen. Building the debug world's land took about 5 to 10% longer where half
+      of it or less was seen (about 365 ms rather than 340 with a third seen, 560 rather than 525 with three in
+      five), and the same with all of it seen.
+    - **Still seen:** a dark strip along the far side of land seen at the cloud's edge, as before. It looks to be the
+      ground under the cloud's edge, darkening to the colour of land never seen, seen past it: the cloud's 0.18 up,
+      so from the side, its edge is over land seen.
 - **Deterministic:** the same squares always give the same land. Every random choice is seeded from the square's
   co-ordinates.
 

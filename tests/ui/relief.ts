@@ -1,7 +1,8 @@
 // The land's relief (docs/3d-renderer.md §4.1, plan 1.1), on every grid:
 //  - the same squares always give the same land;
 //  - it has no step across any square's edge or corner, or where the world wraps;
-//  - a square never seen is flat at sea level, whatever is round it;
+//  - a square never seen carries on the land seen beside it with no step at their edge, brought under the cloud
+//    and to sea level further from it, and is flat at sea level with nothing seen beside it;
 //  - a mountain's peak stays in its own square;
 //  - the sea is shallow at the shore and deep further out;
 //  - a square changed changes the land near it, and nowhere else.
@@ -12,9 +13,11 @@ import createRelief, {
   BEND,
   ReliefMap,
   ReliefSource,
+  UNDER_CLOUD,
   WANDER,
   peakOf,
 } from '@civ-clone/ui-map-3d/terrain/relief';
+import { CLOUD_HEIGHT } from '@civ-clone/ui-map-3d/water';
 import { CEILING } from '@civ-clone/ui-map-3d/camera/pick';
 import { TopologyId } from '@civ-clone/ui-protocol/topology';
 import { SURFACES, terrainEntry } from '@civ-clone/ui-models-builtin/terrain';
@@ -131,6 +134,43 @@ const stepsIn = (
   });
 
   return steps;
+};
+
+// How far (`u`, `v`) is from the nearest square seen of those round (`x`, `y`), as far as two squares off either way:
+//  from its outline's nearest edge, as the point's outside it.
+const fromSeen = (
+  layout: GroundLayout,
+  unknown: (x: number, y: number) => boolean,
+  x: number,
+  y: number,
+  u: number,
+  v: number
+): number => {
+  let least = Infinity;
+
+  for (let dy = -2; dy <= 2; dy++) {
+    for (let dx = -2; dx <= 2; dx++) {
+      if (unknown(x + dx, y + dy)) {
+        continue;
+      }
+
+      const outline = layout.outline(x + dx, y + dy);
+
+      outline.forEach(([au, av], corner) => {
+        const [bu, bv] = outline[(corner + 1) % outline.length]!,
+          du = bu - au,
+          dv = bv - av,
+          t = Math.max(
+            0,
+            Math.min(1, ((u - au) * du + (v - av) * dv) / (du * du + dv * dv))
+          );
+
+        least = Math.min(least, Math.hypot(u - au - du * t, v - av - dv * t));
+      });
+    }
+  }
+
+  return least;
 };
 
 // Where the land isn't the same as its copy a period along, across the world or down it where it wraps over the poles.
@@ -252,25 +292,80 @@ ids.forEach((topologyId) => {
     []
   );
 
-  // A square never seen: flat at sea level, everywhere in it.
-  const unseen = squares.filter(([x, y]) => unknown(x, y));
+  // A square never seen: the land seen beside it carries on into it with no step at their edge, in height or colour,
+  //  unless the land seen is under sea level, as the sea's floor is, when it's at sea level; under the cloud from
+  //  `UNDER_CLOUD.within` of land seen, and at sea level from `UNDER_CLOUD.flat`; never under sea level.
+  const unseen = squares.filter(([x, y]) => unknown(x, y)),
+    walls: string[] = [],
+    overCloud: string[] = [];
+  let carried = 0;
+
+  unseen.forEach(([x, y]) => {
+    const [cu, cv] = layout.centre(x, y),
+      outline = layout.outline(x, y);
+
+    outline.forEach(([au, av], corner) => {
+      const [bu, bv] = outline[(corner + 1) % outline.length]!;
+
+      [0.25, 0.5, 0.75].forEach((along) => {
+        const pu = au + (bu - au) * along,
+          pv = av + (bv - av) * along,
+          du = (pu - cu) * 1e-7,
+          dv = (pv - cv) * 1e-7,
+          inside = relief.sample(pu - du, pv - dv),
+          outside = relief.sample(pu + du, pv + dv);
+
+        if (outside.unseen) {
+          return;
+        }
+
+        const step = Math.abs(inside.height - Math.max(0, outside.height)),
+          shade = Math.max(
+            ...inside.colour.map((value, channel) =>
+              Math.abs(value - (outside.colour[channel] ?? 0))
+            )
+          );
+
+        carried += inside.height > 0.01 ? 1 : 0;
+
+        if (step > 1e-6 || shade > 1e-5) {
+          walls.push(`${x},${y} ${corner}@${along}: ${step} ${shade}`);
+        }
+      });
+
+      // Further in: towards the middle from each corner and from halfway along each edge.
+      [
+        [au, av],
+        [(au + bu) / 2, (av + bv) / 2],
+      ].forEach(([ou, ov]) =>
+        [0.1, 0.3, 0.5, 0.7, 0.9, 1].forEach((share) => {
+          const pu = ou! + (cu - ou!) * share,
+            pv = ov! + (cv - ov!) * share,
+            here = relief.height(pu, pv),
+            from = fromSeen(layout, unknown, x, y, pu, pv);
+
+          if (
+            here < 0 ||
+            (from >= UNDER_CLOUD.within && here > UNDER_CLOUD.ceiling) ||
+            (from >= UNDER_CLOUD.flat && here !== 0)
+          ) {
+            overCloud.push(`${x},${y} ${pu},${pv}: ${here} at ${from}`);
+          }
+        })
+      );
+    });
+  });
 
   expect(
-    `${topologyId}: a square never seen is flat at sea level throughout`,
+    `${topologyId}: a square never seen carries on the land seen beside it with no step at their edge, in height or colour, but under the cloud from ${UNDER_CLOUD.within} of it, and at sea level from ${UNDER_CLOUD.flat}`,
     [
       unseen.length > 0,
-      unseen.every(([x, y]) => {
-        const [u, v] = layout.centre(x, y);
-
-        return layout
-          .outline(x, y)
-          .every(
-            ([ou, ov]) =>
-              relief.height(u + (ou - u) * 0.95, v + (ov - v) * 0.95) === 0
-          );
-      }),
+      carried > 0,
+      walls.slice(0, 3),
+      overCloud.slice(0, 3),
+      UNDER_CLOUD.ceiling < CLOUD_HEIGHT,
     ],
-    [true, true]
+    [true, true, [], [], true]
   );
 });
 
@@ -384,16 +479,36 @@ ids.forEach((topologyId) => {
   );
 
   const hidden = createRelief({
-    layout,
-    source: sourceFor(topology, (x, y) =>
-      x === 5 && y === 5 ? 'Unknown' : 'Mountains'
-    ),
-  });
+      layout,
+      source: sourceFor(topology, (x, y) =>
+        x === 5 && y === 5 ? 'Unknown' : 'Mountains'
+      ),
+    }),
+    // A block of three by three never seen among mountains: its middle square has nothing seen beside it.
+    block = createRelief({
+      layout,
+      source: sourceFor(topology, (x, y) =>
+        Math.abs(x - 5) <= 1 && Math.abs(y - 5) <= 1 ? 'Unknown' : 'Mountains'
+      ),
+    }),
+    edgeOf = (relief: ReliefMap, u: number, v: number): [number, number] => [
+      relief.height(u - 1e-7, v),
+      relief.height(u + 1e-7, v),
+    ];
 
   expect(
-    'a square never seen among mountains is still flat at sea level',
-    [0.5, 0.2, 0.8].map((along) => hidden.height(5 + along, 5 + 0.5)),
-    [0, 0, 0]
+    'a square never seen among mountains carries on their land from its edges, as high there as the mountains, with no step (no wall), down under the cloud by its middle; a square never seen with nothing seen beside it is flat at sea level',
+    [
+      Math.abs(edgeOf(hidden, 5, 5.5)[0] - edgeOf(hidden, 5, 5.5)[1]) < 1e-6,
+      edgeOf(hidden, 5, 5.5)[1] > CLOUD_HEIGHT,
+      hidden.height(5.5, 5.5) <= UNDER_CLOUD.ceiling,
+      hidden.height(5.5, 5.5) > 0,
+      [0.05, 0.3, 0.5, 0.7, 0.95].every(
+        (along) => block.height(5 + along, 5 + along) === 0
+      ),
+      block.height(4 + 1e-7, 4.5) > 0,
+    ],
+    [true, true, true, true, true, true]
   );
 
   // Read again for squares released: only those, unless one of them has changed, when every square is.

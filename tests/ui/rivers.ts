@@ -950,7 +950,7 @@ ids.forEach((topologyId) => {
             there = relief.height(pu + nu * 1e-7, pv + nv * 1e-7),
             [ox, oy] = layout.tileAt(pu + nu * 1e-3, pv + nv * 1e-3);
 
-          // Not into a square never seen, which is flat whatever's beside it.
+          // Not into a square never seen, which a river beside it doesn't cut.
           if (
             terrainAt(
               ((ox % width) + width) % width,
@@ -971,7 +971,7 @@ ids.forEach((topologyId) => {
     []
   );
 
-  // Far from any river, the land's as it was; the square never seen is flat, at sea level.
+  // Far from any river, the land's as it was; the square never seen isn't cut by the river in it.
   const [lu, lv] = layout.centre(...lone),
     [hu, hv] = layout.centre(...hidden),
     farFrom = [
@@ -980,13 +980,13 @@ ids.forEach((topologyId) => {
     ];
 
   expect(
-    `${topologyId}: far from any river the land is as it was; a square never seen with a river is flat at sea level`,
+    `${topologyId}: far from any river the land is as it was; a square never seen with a river isn't cut by it`,
     [
       farFrom.every(([u, v]) => relief.height(u!, v!) === dry.height(u!, v!)),
-      relief.height(hu, hv),
+      relief.height(hu, hv) === dry.height(hu, hv),
       relief.height(lu, lv) < dry.height(lu, lv),
     ],
-    [true, 0, true]
+    [true, true, true]
   );
 
   // The same across the world's seam: a river from its last column to its first.
