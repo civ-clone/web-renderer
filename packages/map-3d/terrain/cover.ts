@@ -1,5 +1,6 @@
 // What covers the land beyond its surfaces (docs/3d-renderer.md §4.3), by where it lies, not what its squares are:
-//  - bare rock where the ground is steep;
+//  - bare rock where the ground is steep, its texture laid from the side it faces, so it stretches less down a
+//    mountain's side;
 //  - snow high up, lower towards the poles, where the ground's level enough to hold it;
 //  - wet ground (darker, shinier, whatever its surface) at the waterline, where the land comes down to water.
 // Pure: each is a share from 0 to 1, as the land's shader works it out at every point it draws (`landMaterial.ts`),
@@ -11,6 +12,12 @@ export const COVER = {
   //  (about 28°).
   rockFrom: 0.97,
   rockTo: 0.88,
+  // Rock's texture is laid from above, from the east or west, and from the north or south, each weighed by how
+  //  squarely the ground faces it: by how far the normal's part along it is over `rockFaces`, to the power of
+  //  `rockSharp`. So ground tilted less than about 17°, gentler than nearly all rock, is laid from above alone, as the
+  //  other surfaces are, and a mountain's steep side mostly from the side it faces.
+  rockFaces: 0.3,
+  rockSharp: 4,
   // Snow from this height at the equator, and at the poles; whole a little above. A mountain's top is mostly 0.75 to
   //  0.95 high, about 0.85, up to about 1.05 in a massif, so fewer peaks are capped near the equator, and nearly all
   //  from halfway to the poles, a little fewer than before mountains rose (#1391).
@@ -50,6 +57,21 @@ export const rockness = (upright: number): number =>
   1 - smooth(COVER.rockTo, COVER.rockFrom, upright);
 
 /**
+ * How much of rock's texture is laid from the east or west, from above, and from the north or south, at ground whose
+ *  normal is `normal` (east, up and south, of length 1): from 0 to 1, adding up to 1.
+ */
+export const rockFacing = (
+  normal: [number, number, number]
+): [number, number, number] => {
+  const weights = normal.map(
+      (part) => Math.max(0, Math.abs(part) - COVER.rockFaces) ** COVER.rockSharp
+    ) as [number, number, number],
+    total = weights[0] + weights[1] + weights[2];
+
+  return weights.map((weight) => weight / total) as [number, number, number];
+};
+
+/**
  * How much of the ground is snow, by its height, how upright its normal is, and how far it is from the equator (0)
  *  to the poles (1).
  */
@@ -87,6 +109,14 @@ float coverRock(float upright) {
   return 1.0 - smoothstep(${number(COVER.rockTo)}, ${number(
   COVER.rockFrom
 )}, upright);
+}
+
+vec3 coverRockFacing(vec3 normal) {
+  vec3 weights = pow(max(abs(normal) - ${number(
+    COVER.rockFaces
+  )}, 0.0), vec3(${number(COVER.rockSharp)}));
+
+  return weights / (weights.x + weights.y + weights.z);
 }
 
 float coverSnow(float height, float upright, float latitude) {
