@@ -2345,7 +2345,7 @@ const run = async (): Promise<void> => {
         [
           [
             ['0ad-ancient', 'Credits (1)', 1],
-            ['realistic-cc0', 'Credits (4)', 4],
+            ['realistic-cc0', 'Credits (5)', 5],
             ['realistic-by', 'Credits (24)', 24],
           ],
           false,

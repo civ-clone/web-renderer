@@ -1865,11 +1865,12 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
 
 - **Realistic units made for civ.one**
   ([civ-clone/models-realistic-cc0](https://github.com/civ-clone/models-realistic-cc0), CC0 1.0: generated with Meshy,
-  and Meshy's community's):
+  and Meshy's community's, with Lucian Pavel's Lowpoly Molotov and Poly Haven's Wooden Handle Saber, by Ulan
+  Cabanilla):
   - 20 models, each drawing a unit type: Settlers, Warrior, Knight, Explorer, Sail, Crusader, Musketman, Rifleman,
     Cavalry, Dragoon, Alpine Troops, Partisan, Spy, Marine, Engineer, Bomber, Stealth Bomber, Frigate, Ironclad and
     Transport;
-  - 7.6 MB in all.
+  - about 8.1 MB in all, and 5 MB more for the rigged copies of those that move.
 
 - **Realistic units adapted from their authors'**
   ([civ-clone/models-realistic-by](https://github.com/civ-clone/models-realistic-by), CC BY 4.0, from Sketchfab, but
@@ -1924,8 +1925,8 @@ in its set (plan 2.2). It's in the model's entry:
   from that joint to its target, as its kind flies. A shot may be given only in a role that has a clip. The set says
   what flies, as its model knows what it holds, not the unit's type.
 - **`strikes`** say when, in seconds into a role's clip, its blow lands, hand to hand, where it lets nothing fly: the
-  Fanatic's torch thrust, `"strikes": { "fight": 0.5 }`, or the Cavalry's sabre slash, 0.55. Without one, the blow falls a fifth of a second in, which only
-  a quick jab fits. Given only in a role that has a clip, after its start and no later than its clip's over (to a
+  Fanatic's torch thrust, `"strikes": { "fight": 0.5 }`, or the Cavalry's sabre slash, 0.55. Without one, the blow
+  falls a fifth of a second in, which only a quick jab fits. Given only in a role that has a clip, after its start and no later than its clip's over (to a
   thousandth of a second, as a file keeps a clip's times in 32 bits).
 - **Checked as it's read** (`modelSet.ts`): its file as a model's is, a name for each clip, each shot's time, joint
   and kind, of those the map draws, and each strike's time, over 0, in a role with a clip. A clip for a role the map
@@ -1957,7 +1958,7 @@ in its set (plan 2.2). It's in the model's entry:
   to or from a city, which units stand in front of, still ends part-way through it, as other units' walks do, and
   eases from there into how they idle (below). The Cavalry's followed, since models-realistic-cc0 9b87297e, who trot:
   horse and rider are one figure, one skin, its root joint the horse's (`mount_hips`), which needed nothing here, as
-  no joint's found by name but a shot's.
+  nothing looks for a joint of its own by name, only a shot's, as its manifest names it.
 - **Setting off and stopping** (#1410): short of its stride, as it gets going and as it stops, its figures play
   `move` over `idle`, as far as it's short (`Walker#stride`, its speed over its full pace unhurried; `ClipUnder`).
   So they ease from how they idled on the square they left into their walk, and from their walk into how they'll idle
