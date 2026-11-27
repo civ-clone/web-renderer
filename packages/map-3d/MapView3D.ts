@@ -57,9 +57,9 @@ import { UnitMarkerMode } from '@civ-clone/ui-map/components/Map/UnitMarker';
 import CameraInput from './camera/CameraInput';
 import markerFor, { MarkerWords, TileMarker } from './markers/markerFor';
 import {
-  AIRBORNE_LIFT,
   IN_FRONT_OF_CITY,
   UNIT_SCALE,
+  airborneMiddle,
 } from './markers/drawMarker';
 import standHeight from './markers/standHeight';
 import {
@@ -1154,7 +1154,7 @@ export class MapView3D implements MapRenderer {
       );
 
     // Its attacker's shots, where it shoots, each landing on the square attacked, by the loser's feet, or, at an
-    //  aircraft, as high as it's drawn over its stand: its clip's, or, with none, what it fires as it's drawn.
+    //  aircraft, at its body's middle (`airborneMiddle`): its clip's, or, with none, what it fires as it's drawn.
     const defenderShown = before.find(({ id }) => id === defender.id),
       defenderFlies =
         defenderShown !== undefined &&
@@ -1177,7 +1177,7 @@ export class MapView3D implements MapRenderer {
         target: this.#onLand(
           battle.fallsAt.at,
           battle.fallsAt.lift +
-            (defenderFlies ? AIRBORNE_LIFT * this.#unitSize : SHOT_TARGET)
+            (defenderFlies ? airborneMiddle(this.#unitSize) : SHOT_TARGET)
         ),
         figures: shooter.figures,
         rate: pace.clips.rate,

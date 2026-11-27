@@ -5210,7 +5210,7 @@ expect(
         fighterWon.each
           .slice(1)
           .every(
-            (at, index) => Math.abs(at - fighterWon.each[index]! - 35) <= 16
+            (at, index) => Math.abs(at - fighterWon.each[index]! - 35) <= 8
           ),
         fighterWon.fromMuzzle,
         fighterWon.flashed === false,
@@ -5276,9 +5276,10 @@ expect(
         true,
         true,
         true,
-        // At a unit on the ground, by its feet; at an aircraft, as high as it's drawn over its stand, twice life size.
+        // At a unit on the ground, by its feet; at an aircraft, at its body's middle, on its stand 0.03 high and 0.3
+        //  over that twice life size.
         [0.05, 0.05, 0.05],
-        [0.57, 0.57, 0.57],
+        [0.63, 0.63, 0.63],
         [['Unit-F', 1], null, 0, 0],
       ],
     ]

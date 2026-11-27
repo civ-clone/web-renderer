@@ -1497,8 +1497,8 @@ mapEvent:
     - **Aircraft** (sixth part): a fighter, a bomber or a helicopter closes in as it would (`UnitFire#closes`), and
       fires a burst of three bullets from its nose as it does, 0.035 s apart, the first leaving a tenth of a second in
       and landing as it reaches the edge, the blow then, the last leaving just before; it pulls away as the rest land.
-      Each has a flash and smoke at the nose. Shots at an aircraft are aimed as high as it's drawn over its stand
-      (`AIRBORNE_LIFT`), not at the ground beneath it.
+      Each has a flash and smoke at the nose. Shots at an aircraft are aimed at its body's middle, as high as it's
+      drawn (`airborneMiddle`), not at the ground beneath it.
     - **Where from** (`FIRE_HEIGHTS`): worked out as the unit's drawn, from the box round its figures: a model's
       meshes, or the built-in set's figures alone, without their stand or a ship's ripples, which are one geometry
       with them. They're kept with the figures (`FIRES_FROM`), and the stage turns them to where the figures stand.
