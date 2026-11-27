@@ -13,6 +13,7 @@
 //  cities grow and change hands.
 
 import {
+  Box3,
   BufferGeometry,
   CanvasTexture,
   Color,
@@ -45,9 +46,10 @@ import TintedMaterial, { ownerTint } from './tinted';
 import boundClips from './rigBounds';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {
+  UnitFire,
   UnitLook,
   airborne,
-  gunsFired,
+  unitFire,
   unitLook,
 } from '@civ-clone/ui-models-builtin/units';
 
@@ -770,18 +772,35 @@ const drawUnit = (
   figures.name = FIGURES_PART;
   figures.rotation.y = unit.facing;
 
-  // With guns, the box round its figures alone, where they're one geometry with their stand and ripples: the same
-  //  fortified or not, as the bank isn't among them.
-  if (modelled === null && gunsFired(look) > 0) {
-    const alone = kit.body(look, unit.colours, false, unit.size, 'figures');
+  // Firing as it's drawn, where each shot leaves (`firePoints`): from the box round its figures alone, where they're
+  //  one geometry with their stand and ripples, the same fortified or not, as the bank isn't among them; or round a
+  //  model's meshes.
+  const fire = unitFire(look);
 
-    if (alone.boundingBox === null) {
-      alone.computeBoundingBox();
+  if (fire !== null) {
+    const box = new Box3();
+
+    if (modelled === null) {
+      const alone = kit.body(look, unit.colours, false, unit.size, 'figures');
+
+      if (alone.boundingBox === null) {
+        alone.computeBoundingBox();
+      }
+
+      box.copy(alone.boundingBox!);
+    } else {
+      modelled.meshes.forEach(([geometry]) => {
+        if (geometry.boundingBox === null) {
+          geometry.computeBoundingBox();
+        }
+
+        box.union(geometry.boundingBox!);
+      });
     }
 
-    const { min, max } = alone.boundingBox!;
-
-    figures.userData[FIGURES_BOX] = [min.x, min.y, min.z, max.x, max.y, max.z];
+    if (!box.isEmpty()) {
+      figures.userData[FIRES_FROM] = firePoints(fire, box, unit.size);
+    }
   }
 
   aloft.add(figures);
@@ -885,12 +904,61 @@ export const UNIT_PART = 'unit';
 export const FIGURES_PART = 'figures';
 
 /**
- * Where a unit's figures drawn by the built-in set with guns (`gunsFired`) keep the box round them alone, in their own
- *  frame (`userData`), its least corner then its greatest, as numbers, as three.js copies what's kept there as JSON:
- *  not their stand, its bank when fortified, nor a ship's ripples, which are one geometry with them. Where its guns
- *  fire from is on it (`muzzleOf`).
+ * Where a unit's figures that fire as they're drawn (`unitFire`) keep where each shot leaves them, in their own frame
+ *  (`userData`), as numbers, as three.js copies what's kept there as JSON (`firePoints`, `muzzleOf`).
  */
-export const FIGURES_BOX = 'figuresBox';
+export const FIRES_FROM = 'firesFrom';
+
+/**
+ * How far up what's drawn a shot leaves it, from its foot to its top: a barrel or a warship's guns (`front`), a
+ *  catapult's arm at the top of its swing (`top`), and a bow drawn at the shoulder (`figures`).
+ */
+export const FIRE_HEIGHTS: Readonly<Record<UnitFire['from'], number>> = {
+  front: 0.4,
+  top: 0.95,
+  figures: 0.6,
+};
+
+/**
+ * Where each of what a unit fires (`fire`) leaves figures that `box` is round, in their own frame, unturned, facing
+ *  south (+`v`), drawn `size` big, as high up them as `FIRE_HEIGHTS` says:
+ * - from the `front`, the middle of the box's front for one; for more, a warship's guns, along its middle from the bow
+ *   back, as far apart as they're each the middle of a share of it;
+ * - from the `top`, the middle of its top;
+ * - from its `figures`, each in front of its own figure where the squad stands (`formation`), as far in front of it as
+ *   the box reaches in front of the one furthest forward.
+ */
+export const firePoints = (
+  fire: UnitFire,
+  box: Box3,
+  size: number
+): [number, number, number][] => {
+  const up = (from: UnitFire['from']): number =>
+      box.min.y + (box.max.y - box.min.y) * FIRE_HEIGHTS[from],
+    across = (box.min.x + box.max.x) / 2;
+
+  if (fire.from === 'top') {
+    return [[across, up('top'), (box.min.z + box.max.z) / 2]];
+  }
+
+  if (fire.from === 'figures') {
+    const places = formation(fire.count).map(([x, z]): [number, number] => [
+        x * size,
+        z * size,
+      ]),
+      reach = box.max.z - Math.max(...places.map(([, z]) => z));
+
+    return places.map(([x, z]) => [x, up('figures'), z + reach]);
+  }
+
+  return Array.from({ length: fire.count }, (_, gun) => [
+    across,
+    up('front'),
+    fire.count <= 1
+      ? box.max.z
+      : box.max.z - ((box.max.z - box.min.z) * (gun + 0.5)) / fire.count,
+  ]);
+};
 
 /** How many figures a unit that looks as `look` is drawn with: a squad on foot, or one. */
 export const figuresOf = (look: UnitLook): number =>

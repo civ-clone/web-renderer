@@ -201,19 +201,33 @@ export const airborne = (look: UnitLook): boolean =>
   look.shape === 'missile';
 
 /**
- * How many guns a unit that looks like `look` fires as it attacks, from where it stands rather than closing in: a
- *  cannon's, a gun's or a tank's one, and a warship's turrets or its broadside; none for one that closes in, as a
- *  catapult still does, an ancient or medieval siege engine being drawn as one. How its attack is drawn, not what it
- *  can do.
+ * What a unit that looks like `look` fires as it attacks, from where it stands rather than closing in: a gun's shell, a
+ *  catapult's stone, or an archer's arrow; how many, one for each of a warship's guns or each of a squad's archers; and
+ *  where from on what's drawn, the front of its barrel, a warship's guns along its hull (`front`), the top of a
+ *  catapult's arm (`top`), or each figure (`figures`). None for one that closes in. How its attack is drawn, not what
+ *  it can do.
  */
-export const gunsFired = (look: UnitLook): number =>
+export type UnitFire = {
+  kind: 'shell' | 'stone' | 'arrow';
+  count: number;
+  from: 'front' | 'top' | 'figures';
+};
+
+/** What a unit that looks like `look` fires as it attacks (`UnitFire`), or nothing, for one that closes in. */
+export const unitFire = (look: UnitLook): UnitFire | null =>
   look.shape === 'ship'
-    ? look.guns ?? 0
-    : (look.shape === 'siege' &&
-        look.era !== 'ancient' &&
-        look.era !== 'medieval') ||
-      (look.shape === 'vehicle' && look.large === true)
-    ? 1
-    : 0;
+    ? (look.guns ?? 0) > 0
+      ? { kind: 'shell', count: look.guns!, from: 'front' }
+      : null
+    : look.shape === 'siege'
+    ? // An ancient or medieval siege engine is drawn as a catapult.
+      look.era === 'ancient' || look.era === 'medieval'
+      ? { kind: 'stone', count: 1, from: 'top' }
+      : { kind: 'shell', count: 1, from: 'front' }
+    : look.shape === 'vehicle' && look.large === true
+    ? { kind: 'shell', count: 1, from: 'front' }
+    : look.shape === 'foot' && look.gear === 'bow'
+    ? { kind: 'arrow', count: look.squad, from: 'figures' }
+    : null;
 
 export default unitTable;

@@ -16,14 +16,14 @@
 //   the attacker plays `fight` from the start, the blow falling as its first shot lands, standing where it is to shoot,
 //   or, hand to hand, as its clip says its blow lands (`ClipFacts#strike`), lunging;
 //   the loser plays `die` from the blow, solid till it's fallen, then fades.
-// - An attacker with no clip to play that has guns, as a cannon or a warship has (plan 2.4), fires them from where it
-//   stands, as one that shoots in its clip does, the blow falling as its first shell lands.
+// - An attacker with no clip to play that fires as it's drawn, as a cannon, a warship, a catapult or archers do (plan
+//   2.4), fires from where it stands, as one that shoots in its clip does, the blow falling as its first shot lands.
 //
 // Where a fighter is is on the ground (`u`, `v`), with a `lift`, as a walker's is.
 
 import type { ClipBefore, RigFacts } from './markers/clips';
 import { ClipRole } from './models/modelSet';
-import { Guns, SHOT_LOOKS, kindOf, shotOver } from './shots';
+import { Fires, SHOT_LOOKS, kindOf, shotOver } from './shots';
 import { WalkPoint, WalkSquare } from './walks';
 
 /** How fast a battle goes, in ms. */
@@ -51,7 +51,7 @@ export type BattleClips = {
   fight: boolean;
   // Whether the loser plays `die`, from the blow.
   die: boolean;
-  // Whether the attacker's shots fly, by the battle's clock: its `fight`'s, or its guns' with no clip (`Guns`).
+  // Whether the attacker's shots fly, by the battle's clock: its `fight`'s, or what it fires with no clip (`Fires`).
   shots?: boolean;
 };
 
@@ -81,27 +81,27 @@ export const quickerBattle = (pace: BattlePace): BattlePace => ({
  *   blow falls as its clip says it lands (`ClipFacts#strike`), or else as it would; it's drawn till its last figure's
  *   clip is over, and the last of its shots' own is (`shotOver`): the puff where each landed, the smoke where each left
  *   over before it;
- * - with no `fight` to play, an attacker with `guns` fires them as one that shoots in its clip does: it stands, the
- *   blow falling as its first shell lands, and it's drawn till the last of its shells' own is over;
+ * - with no `fight` to play, an attacker that `fires` as it's drawn does as one that shoots in its clip does: it
+ *   stands, the blow falling as its first shot lands, and it's drawn till the last of its shots' own is over;
  * - the loser plays `die` from the blow, solid till its last figure's fallen, then fades.
  */
 export const clipPace = (
   pace: BattlePace,
   attacker: RigFacts | null,
   loser: RigFacts | null,
-  guns: Guns | null = null
+  fired: Fires | null = null
 ): BattlePace => {
   const fight = attacker?.clips.fight,
     die = loser?.clips.die,
-    // Its guns, with no clip to play.
-    fires = fight === undefined ? guns : null;
+    // What it fires as it's drawn, with no clip to play.
+    fires = fight === undefined ? fired : null;
 
   if (fight === undefined && die === undefined && fires === null) {
     return pace;
   }
 
-  // A squad's figures play a clip that's played once each a little after the one before (`FIGURE_STAGGER`), and a
-  //  unit's guns fire a little after one another (`GUN_STAGGER`).
+  // A squad's figures play a clip that's played once each a little after the one before (`FIGURE_STAGGER`), and what a
+  //  unit fires with no clip leaves a little after one another (`FIRE_PACE`).
   const tail = (
       facts: Pick<RigFacts, 'figures' | 'stagger'> | null | undefined
     ): number => Math.max(0, (facts?.figures ?? 1) - 1) * (facts?.stagger ?? 0),
@@ -156,7 +156,7 @@ export const clipPace = (
 };
 
 // How long a battle at `pace` goes on after its blow: the attacker back where it stood, won, and the loser gone; and,
-//  where the attacker plays `fight` or fires its guns, its shots landed and burst, won or lost (`clipPace`).
+//  where the attacker plays `fight` or fires as it's drawn, its shots landed and burst, won or lost (`clipPace`).
 const afterBlow = (pace: BattlePace, won: boolean): number =>
   won || pace.clips?.fight === true || pace.clips?.shots === true
     ? Math.max(pace.back, (pace.falls ?? 0) + pace.fade)
@@ -214,8 +214,8 @@ export type Fighter = {
   // The clip its figures play, and how far in, in seconds, where its battle's paced for clips (`clipPace`); and what
   //  each plays till its own time in that comes (`poseFigures`): an attacker that's lost fights on till it falls.
   clip?: { role: ClipRole; seconds: number; before?: ClipBefore };
-  // The attacker, paced for its `fight` clip or its guns: how far into that it is, in seconds, by the battle's clock,
-  //  though it's falling, lost, so its figures' shots still leave as that clip has them, each as it comes to it.
+  // The attacker, paced for its `fight` clip or what it fires: how far into that it is, in seconds, by the battle's
+  //  clock, though it's falling, lost, so its figures' shots still leave as that clip has them, each as it comes to it.
   fought?: number;
 };
 

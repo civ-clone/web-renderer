@@ -19,7 +19,6 @@ import * as Civ1Units from '@civ-clone/civ1-unit/Units';
 import * as Civ2Units from '@civ-clone/civ2-unit/Units';
 import {
   Box3,
-  BoxGeometry,
   BufferGeometry,
   Color,
   Group,
@@ -39,14 +38,15 @@ import unitUnder, {
 import { UNIT_SCALE } from '@civ-clone/ui-map-3d/markers/drawMarker';
 import {
   UnitLook,
-  gunsFired,
+  unitFire,
   unitLook,
   unitTable,
 } from '@civ-clone/ui-models-builtin/units';
-import { MUZZLE_HEIGHT, muzzleOf } from '@civ-clone/ui-map-3d/stage';
+import { muzzleOf } from '@civ-clone/ui-map-3d/stage';
 import {
   ALOFT_PART,
   FIGURES_PART,
+  FIRES_FROM,
   Faded,
   IN_FRONT_OF_CITY,
   MarkerKit,
@@ -54,6 +54,7 @@ import {
   UNIT_PART,
   drawMarker,
   fade,
+  firePoints,
   unfade,
   unfaded,
 } from '@civ-clone/ui-map-3d/markers/drawMarker';
@@ -1476,124 +1477,183 @@ expect(
   );
 });
 
-// The guns a unit fires as it attacks (`gunsFired`): a cannon, a gun or a tank one; a warship its turrets or broadside;
-//  none for those that close in, as a catapult, a trireme or a sailing ship without guns does.
+// What a unit fires as it attacks (`unitFire`): a cannon, a gun or a tank a shell; a warship one for each of its guns;
+//  a catapult a stone; archers an arrow each. None for those that close in, as a trireme or soldiers with spears do.
 expect(
-  'guns: a cannon, a gun or a tank one, a warship as many as its turrets or its broadside, and none for the rest',
+  'fire: a cannon, a gun or a tank a shell from its front, a warship one for each of its guns, a catapult a stone from its top, archers an arrow each from each figure; none for the rest',
   Object.entries(unitTable)
-    .filter(([, look]) => gunsFired(look) > 0)
-    .map(([type, look]) => [type, gunsFired(look)])
+    .map(([type, look]) => [type, unitFire(look)] as const)
+    .filter(([, fire]) => fire !== null)
+    .map(([type, fire]) => [type, fire!.kind, fire!.count, fire!.from])
     .sort(),
   [
-    ['Artillery', 1],
-    ['Battleship', 3],
-    ['Cannon', 1],
-    ['Cruiser', 2],
-    ['Destroyer', 1],
-    ['Frigate', 1],
-    ['Howitzer', 1],
-    ['Ironclad', 1],
-    ['MissileCruiser', 1],
-    ['Tank', 1],
+    ['Archer', 'arrow', 3, 'figures'],
+    ['Artillery', 'shell', 1, 'front'],
+    ['Battleship', 'shell', 3, 'front'],
+    ['Cannon', 'shell', 1, 'front'],
+    ['Catapult', 'stone', 1, 'top'],
+    ['Cruiser', 'shell', 2, 'front'],
+    ['Destroyer', 'shell', 1, 'front'],
+    ['Frigate', 'shell', 1, 'front'],
+    ['Howitzer', 'shell', 1, 'front'],
+    ['Ironclad', 'shell', 1, 'front'],
+    ['MissileCruiser', 'shell', 1, 'front'],
+    ['Tank', 'shell', 1, 'front'],
   ]
 );
 
-// Where each gun fires from (`muzzleOf`): the front of the figures, the way they face, `MUZZLE_HEIGHT` up them; a
-//  warship's turrets along its middle from the bow back. The built-in set's figures alone, not their stand nor a
-//  ship's ripples, one geometry with them, kept as its copies are made; a model's meshes, wherever they lie. Drawn at a
-//  copy of the world, as on the world's own; and none with no figures.
+// Where each shot leaves figures a box is round (`firePoints`), in their own frame, facing south: the middle of its
+//  front, four tenths up, for one gun, and along its middle from the front for more; the middle of its top, nearly
+//  at it, for a catapult; and in front of each figure where a squad stands, six tenths up, as far as the box reaches in
+//  front of the one furthest forward.
 {
-  const cannonEast = drawMarker(kit, {
-      city: null,
-      unit: unit('Cannon', { facing: Math.PI / 2 }),
-    }),
-    battleshipNorth = drawMarker(kit, {
-      city: null,
-      unit: unit('Battleship', { facing: Math.PI }),
-    }),
-    // The figures alone, unturned, facing south (+`v`).
-    alone = (type: string) => {
-      const geometry = kit.body(unitTable[type]!, colours, false, 1, 'figures');
+  const box = new Box3(new Vector3(-0.1, 0, -0.2), new Vector3(0.1, 0.2, 0.3)),
+    rounded = (points: readonly (readonly number[])[]) =>
+      points.map((point) =>
+        point.map((value) => Math.round(value * 1e6) / 1e6)
+      );
 
-      geometry.computeBoundingBox();
+  expect(
+    'where each shot leaves: a gun the middle of the front, four tenths up; guns along the middle; a catapult the top; archers in front of each figure, six tenths up',
+    [
+      rounded(firePoints({ kind: 'shell', count: 1, from: 'front' }, box, 1)),
+      rounded(firePoints({ kind: 'shell', count: 2, from: 'front' }, box, 1)),
+      rounded(firePoints({ kind: 'stone', count: 1, from: 'top' }, box, 1)),
+      rounded(firePoints({ kind: 'arrow', count: 3, from: 'figures' }, box, 2)),
+    ],
+    [
+      [[0, 0.08, 0.3]],
+      [
+        [0, 0.08, 0.175],
+        [0, 0.08, -0.075],
+      ],
+      [[0, 0.19, 0.05]],
+      // The squad's stand twice as far apart drawn twice as big: the front pair at the front, the one behind 0.16
+      //  behind them.
+      [
+        [0, 0.12, 0.14],
+        [-0.12, 0.12, 0.3],
+        [0.12, 0.12, 0.3],
+      ],
+    ]
+  );
+}
 
-      return geometry.boundingBox!;
-    },
-    cannon = alone('Cannon'),
-    battleship = alone('Battleship'),
-    up = (box: Box3) => box.min.y + (box.max.y - box.min.y) * MUZZLE_HEIGHT,
-    rounded = (point: readonly number[] | null) =>
-      point?.map((value) => Math.round(value * 1e6) / 1e6) ?? null,
-    atHome = muzzleOf(cannonEast, 0, 1, [0, 0]),
-    copied = muzzleOf(cannonEast.clone(), 0, 1, [0, 0]),
-    // Fortified, and drawn twice as big, facing south, unturned: the front of its figures alone as big.
-    bigFortified = muzzleOf(
-      drawMarker(kit, {
-        city: null,
-        unit: unit('Cannon', { fortified: true, size: 2 }),
-      }),
-      0,
-      1,
-      [0, 0]
-    ),
-    big = (() => {
+// Where each shot leaves what's drawn, as it's drawn (`FIRES_FROM`), and where that is as it's turned and placed
+//  (`muzzleOf`): from the built-in set's figures alone, not their stand nor a ship's ripples; kept as its copies are
+//  made; fortified and bigger, from its figures as big. Turned to where the figures stand, at a copy of the world as on
+//  its own, round again past the last; none with no figures, or nothing kept, as for one that closes in.
+{
+  // The figures alone, unturned, facing south (+`v`).
+  const alone = (type: string, size = 1) => {
       const geometry = kit.body(
-        unitTable['Cannon']!,
+        unitTable[type]!,
         colours,
         false,
-        2,
+        size,
         'figures'
       );
 
       geometry.computeBoundingBox();
 
       return geometry.boundingBox!;
-    })(),
-    // A model's figures: a mesh of their own, off their middle.
-    model = new Group(),
-    modelFigures = new Group(),
-    hull = new Mesh(new BoxGeometry(0.2, 0.1, 0.4));
+    },
+    up = (box: Box3, share: number) =>
+      box.min.y + (box.max.y - box.min.y) * share,
+    rounded = (point: readonly number[] | null) =>
+      point?.map((value) => Math.round(value * 1e6) / 1e6) ?? null,
+    drawnAs = (type: string, more: Partial<UnitMarker> = {}) =>
+      drawMarker(kit, { city: null, unit: unit(type, more) }),
+    cannonEast = drawnAs('Cannon', { facing: Math.PI / 2 }),
+    cannon = alone('Cannon'),
+    big = alone('Cannon', 2),
+    battleship = alone('Battleship'),
+    catapult = alone('Catapult'),
+    archers = alone('Archer'),
+    atHome = muzzleOf(cannonEast, 0, [0, 0]),
+    // Its points by hand, turned a quarter and placed: the second, (0.1, 0.1, 0.2), turned to (0.2, 0.1, -0.1).
+    byHand = new Group(),
+    handFigures = new Group();
 
-  hull.position.set(0, 0.05, 0.05);
-  modelFigures.name = FIGURES_PART;
-  modelFigures.add(hull);
-  model.add(modelFigures);
+  handFigures.name = FIGURES_PART;
+  handFigures.userData[FIRES_FROM] = [
+    [0, 0.1, 0.2],
+    [0.1, 0.1, 0.2],
+  ];
+  handFigures.rotation.y = Math.PI / 2;
+  byHand.add(handFigures);
+  byHand.position.set(5, 0, 3);
+
+  const results = [
+    rounded(atHome),
+    // Facing east, turned a quarter: its front's its east, short of the stand's rim.
+    atHome![0] < 0.19,
+    rounded(muzzleOf(cannonEast.clone(), 0, [0, 0])),
+    rounded(
+      muzzleOf(drawnAs('Cannon', { fortified: true, size: 2 }), 0, [0, 0])
+    ),
+    [0, 1, 2].map((gun) =>
+      rounded(muzzleOf(drawnAs('Battleship', { facing: Math.PI }), gun, [0, 0]))
+    ),
+    rounded(muzzleOf(drawnAs('Catapult'), 0, [0, 0])),
+    [0, 1, 2].map((figure) =>
+      rounded(muzzleOf(drawnAs('Archer'), figure, [0, 0]))
+    ),
+    rounded(muzzleOf(byHand, 1, [0, 0])),
+    rounded(muzzleOf(byHand, 3, [5, 3])),
+    muzzleOf(undefined, 0, [0, 0]),
+    muzzleOf(new Group(), 0, [0, 0]),
+    muzzleOf(drawnAs('Spearman'), 0, [0, 0]),
+  ];
+
   cannonEast.position.set(10, 0, -4);
 
   expect(
-    'a gun fires from the front of its figures, the way they face, as high up them as a barrel, not from its stand; a warship’s turrets along its hull, bow to stern, not its ripples; a copy fires as it does, and one fortified and twice as big from its figures as big; a model’s from its meshes; at a copy of the world as on its own; none with no figures',
-    [
-      rounded(atHome),
-      // Facing east, turned a quarter: its front's its east, short of the stand's rim.
-      atHome![0] < 0.19,
-      rounded(copied),
-      rounded(bigFortified),
-      rounded(muzzleOf(cannonEast, 0, 1, [10, -4])),
-      [0, 1, 2].map((gun) =>
-        rounded(muzzleOf(battleshipNorth, gun, 3, [0, 0]))
-      ),
-      rounded(muzzleOf(model, 0, 1, [0, 0])),
-      muzzleOf(undefined, 0, 1, [0, 0]),
-      muzzleOf(new Group(), 0, 1, [0, 0]),
-    ],
+    'each shot leaves the figures alone, as they face: a cannon its front, short of its stand’s rim, its copy and one fortified and twice as big as they are; a battleship along its hull; a catapult its top; archers in front of each; turned and placed by hand, round again; at a copy of the world; none with no figures or nothing kept',
+    [...results, rounded(muzzleOf(cannonEast, 0, [10, -4]))],
     [
       // Turned a quarter, its front, +`v`, is +`u`, and its middle across, -`u`, is `v`.
-      rounded([cannon.max.z, up(cannon), -(cannon.min.x + cannon.max.x) / 2]),
+      rounded([
+        cannon.max.z,
+        up(cannon, 0.4),
+        -(cannon.min.x + cannon.max.x) / 2,
+      ]),
       true,
-      rounded([cannon.max.z, up(cannon), -(cannon.min.x + cannon.max.x) / 2]),
-      rounded([(big.min.x + big.max.x) / 2, up(big), big.max.z]),
-      rounded([cannon.max.z, up(cannon), -(cannon.min.x + cannon.max.x) / 2]),
+      rounded([
+        cannon.max.z,
+        up(cannon, 0.4),
+        -(cannon.min.x + cannon.max.x) / 2,
+      ]),
+      rounded([(big.min.x + big.max.x) / 2, up(big, 0.4), big.max.z]),
       // Turned a half, it's the other way round both ways.
       [1 / 6, 1 / 2, 5 / 6].map((share) =>
         rounded([
           -(battleship.min.x + battleship.max.x) / 2,
-          up(battleship),
+          up(battleship, 0.4),
           -(battleship.max.z - (battleship.max.z - battleship.min.z) * share),
         ])
       ),
-      rounded([0, 0.04, 0.25]),
+      rounded([
+        (catapult.min.x + catapult.max.x) / 2,
+        up(catapult, 0.95),
+        (catapult.min.z + catapult.max.z) / 2,
+      ]),
+      // The one behind its front pair, then its left and right, the front pair at the front.
+      [
+        [0, up(archers, 0.6), archers.max.z - 0.08],
+        [-0.06, up(archers, 0.6), archers.max.z],
+        [0.06, up(archers, 0.6), archers.max.z],
+      ].map(rounded),
+      [5.2, 0.1, 2.9],
+      [0.2, 0.1, -0.1],
       null,
       null,
+      null,
+      rounded([
+        cannon.max.z,
+        up(cannon, 0.4),
+        -(cannon.min.x + cannon.max.x) / 2,
+      ]),
     ]
   );
 }
