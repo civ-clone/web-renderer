@@ -558,21 +558,27 @@ blended across squares.
     roughness: snow and mud shinier than before, rock a little, where all land was as rough. A square never seen has
     no surface, and lends none to its neighbours; the detail fades out towards it.
   - **Rock laid from three sides** (triplanar): from above, from the east or west and from the north or south, each
-    weighed by how squarely the ground faces it (`rockFacing`, `COVER.rockFaces` and `rockSharp` in `cover.ts`).
+    weighed by how squarely the ground faces it (`rockFacing`, `COVER.rockFaces` and `COVER.rockSharp` in
+    `cover.ts`).
     - **Why:** laid flat, a texture's stretched down a slope by one over the cosine of its tilt, so the rock's cracks
       ran down mountains' steep sides as streaks.
     - **How much less:** on the debug page's worlds, laid flat, half of the rock was stretched about 1.2 times or
       less, nine in ten 1.6 or less, and the rest up to 2.3. Laid from three sides: 1.22 (a touch more), 1.45, and
       never more than 1.73 (√3), on a slope facing a corner at about 55°, which faces all three sides alike. So the
-      steepest sides gain most. A slope of about 45° is stretched about 1.4 either way, and one of 25° to 45° a
-      little more than laid flat, as it's blended (40° facing east: 1.36 rather than 1.31).
+      steepest sides gain most: the tenth of the rock laid flat stretched most is about 1.35 now (1.1 to 1.73). A
+      slope of 45° facing a side is stretched about 1.4 either way. One of about 18° to 45° facing a side, or up to
+      55° facing a corner, is stretched a little more than laid flat, as it's blended: at worst about 6% more (1.65
+      rather than 1.56, at about 49° facing a corner; 40° facing east, 1.36 rather than 1.31). That's most of the
+      rock, but a fifth of it by more than 3%.
     - **Gentle ground**, tilted less than about 17° (rock begins at about 14°), is laid from above alone, as before.
     - **Blended** where the ground faces two or three sides, so the rock would be smoother there, as their shades and
-      bumps partly cancel: scaled back up about their mean (by one over the root of the weights' squares), so it's as
-      rugged wherever it's laid from. That takes the three to be unalike, so each laid from the side is moved half a
-      texture along one way: otherwise laid from above and from the north or south would share where they sample east
-      to west, and laid from either side where they sample up, so they'd match, or mirror, each other across patches
-      of a slope where they blend, and be made too rugged there.
+      bumps partly cancel: scaled back up about their mean (by one over the root of the sum of the weights' squares),
+      so it's as rugged wherever it's laid from, within about a tenth. That takes the three to be unalike where they
+      blend. Laid from the side, each is moved half a texture along the way it shares with laid from above (east to
+      west, or north to south), and from the east or west it's laid up across and south down, so the two from the
+      side share only height, one across and one down. Otherwise they'd match, or mirror, each other along lines or
+      across patches of a slope, and be made too rugged there. The two from the side can still match along lines on
+      a wall facing a corner, but the land's steepest is about 68°, where one of them weighs under 1%.
     - **Bumps** tilt the ground along the side each is laid from, carried as a direction east, up and south for every
       surface, rather than east and south.
     - **Seams:** laid from the side, it repeats east to west and north to south as laid from above, as many whole

@@ -156,18 +156,20 @@ ${shader.fragmentShader
   vec3 groundNormal = transformDirectionByInverseViewMatrix(normalize(vNormal), viewMatrix);
   // Rock laid from above, from the east or west, and from the north or south (\`coverRockFacing\`), so it stretches
   //  less down a mountain's side: east to west and north to south as it repeats with the world, so no copy has a seam,
-  //  and up by height. Each from the side moved half a texture along one way, so no two share where they sample along
-  //  the same way: they'd match, or mirror, each other across patches of a slope where they blend. All three
-  //  everywhere, not only where it's steep, as a texture's smaller copies are chosen from how its coordinates change
-  //  from pixel to pixel, which a branch would hide (\`textureGrad\` could skip them on gentle ground).
+  //  and up by height. Laid from the side, each is moved half a texture along the way it shares with laid from above,
+  //  and from the east or west it's laid up across and south down, so the two from the side share only height, one
+  //  across and one down: they'd otherwise match, or mirror, each other along lines or patches of a slope where they
+  //  blend, which the blend's scaling up (below) would make too rugged. All three everywhere, not only where it's
+  //  steep, as a texture's smaller copies are chosen from how its coordinates change from pixel to pixel, which a
+  //  branch would hide (\`textureGrad\` could skip them on gentle ground).
   vec3 rockFacing = coverRockFacing(groundNormal);
   vec4 rockAbove = texture(surfaceDetail, vec3(surfaceAt, ${ROCK}.0));
-  vec4 rockAcross = texture(surfaceDetail, vec3(vGround.y / surfaceTile.y, vHeight / surfaceTile.y + 0.5, ${ROCK}.0));
+  vec4 rockAcross = texture(surfaceDetail, vec3(vHeight / surfaceTile.y, vGround.y / surfaceTile.y + 0.5, ${ROCK}.0));
   vec4 rockAlong = texture(surfaceDetail, vec3(vGround.x / surfaceTile.x + 0.5, vHeight / surfaceTile.x, ${ROCK}.0));
   vec4 rockDetail = rockFacing.x * rockAcross + rockFacing.y * rockAbove + rockFacing.z * rockAlong;
-  // Laid from the east or west, the texture's across is south and its down is up; from the north or south, its across
-  //  is east.
-  vec3 rockTilt = rockFacing.x * vec3(0.0, rockAcross.b * 2.0 - 1.0, rockAcross.g * 2.0 - 1.0)
+  // Laid from the east or west, the texture's across is up and its down is south; from the north or south, its across
+  //  is east and its down is up.
+  vec3 rockTilt = rockFacing.x * vec3(0.0, rockAcross.g * 2.0 - 1.0, rockAcross.b * 2.0 - 1.0)
     + rockFacing.y * laidFlat(rockAbove)
     + rockFacing.z * vec3(rockAlong.g * 2.0 - 1.0, rockAlong.b * 2.0 - 1.0, 0.0);
   // Two or three blended are smoother than one, as their shades and bumps partly cancel: scaled back up about their
