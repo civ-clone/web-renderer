@@ -5,7 +5,8 @@
 //
 // Each texel is four bytes:
 //  - red: how much the land's colour is scaled by, from 0.5 (0) to 1.5 (255), 1 on average;
-//  - green and blue: which way its bumps tilt the ground, across (east) and down (south), from -1 (0) to 1 (255);
+//  - green and blue: which way its bumps tilt the ground, across and down the texture (east and south where it's laid
+//    from above; `landMaterial.ts` lays rock's from the sides too), from -1 (0) to 1 (255);
 //  - alpha: how rough it is, from 0 to 1.
 
 import { SURFACES, Surface } from '@civ-clone/ui-models-builtin/terrain';

@@ -565,10 +565,10 @@ blended across squares.
     - **How much less:** on the debug page's worlds, laid flat, half of the rock was stretched about 1.2 times or
       less, nine in ten 1.6 or less, and the rest up to 2.3. Laid from three sides: 1.22 (a touch more), 1.45, and
       never more than 1.73 (√3), on a slope facing a corner at about 55°, which faces all three sides alike. So the
-      steepest sides gain most: the tenth of the rock laid flat stretched most is about 1.35 now (1.1 to 1.73). A
+      steepest sides gain most: the tenth of the rock laid flat stretched most is about 1.35 to 1.4 now (1.1 to 1.73). A
       slope of 45° facing a side is stretched about 1.4 either way. One of about 18° to 45° facing a side, or up to
       55° facing a corner, is stretched a little more than laid flat, as it's blended: at worst about 6% more (1.65
-      rather than 1.56, at about 49° facing a corner; 40° facing east, 1.36 rather than 1.31). That's most of the
+      rather than 1.56, at about 50° facing a corner; 40° facing east, 1.36 rather than 1.31). That's most of the
       rock, but a fifth of it by more than 3%.
     - **Gentle ground**, tilted less than about 17° (rock begins at about 14°), is laid from above alone, as before.
     - **Blended** where the ground faces two or three sides, so the rock would be smoother there, as their shades and
