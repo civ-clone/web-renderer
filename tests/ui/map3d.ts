@@ -5018,7 +5018,8 @@ expect(
   //  lunging: one shell, from the front of what's drawn (`Stage#muzzleAt`), a tenth of a second in, landing on the
   //  square attacked as a shell flies, the blow then, its burst flashing. A battleship's three guns fire one after
   //  another, each asked where it fires from, landing apart. Lost, a cannon fades where it stands, its shell landing
-  //  still. A catapult lobs a stone, and archers loose an arrow each. Spearmen still close in.
+  //  still. A catapult lobs a stone, and archers loose an arrow each. Spearmen still close in. A fighter closes in as
+  //  it fires a burst from its nose.
   const gunner = (id: string, type: string) =>
       ({ ...unitOf(id, 1), _: type } as Tile['units'][number]),
     gunFight = (
@@ -5120,7 +5121,8 @@ expect(
     cannonLost = gunFight(gunner('Unit-C', 'Cannon'), 'defender'),
     catapultWon = gunFight(gunner('Unit-K', 'Catapult'), 'attacker'),
     archersWon = gunFight(gunner('Unit-Q', 'Archer'), 'attacker'),
-    spearmenWon = gunFight(gunner('Unit-P', 'Spearman'), 'attacker');
+    spearmenWon = gunFight(gunner('Unit-P', 'Spearman'), 'attacker'),
+    fighterWon = gunFight(gunner('Unit-F', 'Fighter'), 'attacker');
 
   repatched([1, 1, []], [2, 1, []]);
   walkersSet.length = 0;
@@ -5128,7 +5130,7 @@ expect(
   walkersPosed.clear();
 
   expect(
-    'with no clip, a cannon fires its gun from where it stands: one shell from where the stage says its gun fires from, a tenth of a second in, landing as a shell flies, bursting with a flash; a battleship’s three guns each asked where they fire from, landing apart; lost, it fades where it stands; a catapult lobs a stone, a fifth of a second in, landing as a stone flies; archers loose an arrow each, from each figure, a ragged volley, landing apart; spearmen still lunge, firing nothing',
+    'with no clip, a cannon fires its gun from where it stands: one shell from where the stage says its gun fires from, a tenth of a second in, landing as a shell flies, bursting with a flash; a battleship’s three guns each asked where they fire from, landing apart; lost, it fades where it stands; a catapult lobs a stone, a fifth of a second in, landing as a stone flies; archers loose an arrow each, from each figure, a ragged volley, landing apart; spearmen still lunge, firing nothing; a fighter lunges as it fires a burst of three from its nose, a twentieth of a second apart, no flash where they land',
     [
       [
         cannonWon.alongs.every((at) => at === 0),
@@ -5180,6 +5182,19 @@ expect(
         archersWon.over,
       ],
       [Math.max(...spearmenWon.alongs), spearmenWon.muzzles, spearmenWon.shots],
+      [
+        Math.max(...fighterWon.alongs),
+        fighterWon.muzzles,
+        fighterWon.kinds,
+        fighterWon.left! >= 120 && fighterWon.left! < 136,
+        fighterWon.each
+          .slice(1)
+          .every(
+            (at, index) => Math.abs(at - fighterWon.each[index]! - 50) <= 16
+          ),
+        fighterWon.flashed === false,
+        fighterWon.over,
+      ],
     ],
     [
       [
@@ -5226,6 +5241,19 @@ expect(
         [['Unit-Q', 1], null, 0, 0],
       ],
       [0.45, [], 0],
+      [
+        0.45,
+        [
+          ['battle', 0],
+          ['battle', 0],
+          ['battle', 0],
+        ],
+        ['bullet'],
+        true,
+        true,
+        true,
+        [['Unit-F', 1], null, 0, 0],
+      ],
     ]
   );
 

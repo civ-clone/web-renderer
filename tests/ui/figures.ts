@@ -1478,27 +1478,39 @@ expect(
 });
 
 // What a unit fires as it attacks (`unitFire`): a cannon, a gun or a tank a shell; a warship one for each of its guns;
-//  a catapult a stone; archers an arrow each. None for those that close in, as a trireme or soldiers with spears do.
+//  a catapult a stone; archers an arrow each; an aircraft or a helicopter a burst of bullets, closing in as it fires.
+//  None for those that close in with nothing to fire, as a trireme, soldiers with spears or a missile do.
 expect(
-  'fire: a cannon, a gun or a tank a shell from its front, a warship one for each of its guns, a catapult a stone from its top, archers an arrow each from each figure; none for the rest',
+  'fire: a cannon, a gun or a tank a shell from its front, a warship one for each of its guns, a catapult a stone from its top, archers an arrow each from each figure; aircraft and helicopters a burst from the nose, closing in; none for the rest',
   Object.entries(unitTable)
     .map(([type, look]) => [type, unitFire(look)] as const)
     .filter(([, fire]) => fire !== null)
-    .map(([type, fire]) => [type, fire!.kind, fire!.count, fire!.from])
+    .map(([type, fire]) => [
+      type,
+      fire!.kind,
+      fire!.count,
+      fire!.from,
+      fire!.closes,
+    ])
     .sort(),
   [
-    ['Archer', 'arrow', 3, 'figures'],
-    ['Artillery', 'shell', 1, 'front'],
-    ['Battleship', 'shell', 3, 'front'],
-    ['Cannon', 'shell', 1, 'front'],
-    ['Catapult', 'stone', 1, 'top'],
-    ['Cruiser', 'shell', 2, 'front'],
-    ['Destroyer', 'shell', 1, 'front'],
-    ['Frigate', 'shell', 1, 'front'],
-    ['Howitzer', 'shell', 1, 'front'],
-    ['Ironclad', 'shell', 1, 'front'],
-    ['MissileCruiser', 'shell', 1, 'front'],
-    ['Tank', 'shell', 1, 'front'],
+    ['Archer', 'arrow', 3, 'figures', false],
+    ['Artillery', 'shell', 1, 'front', false],
+    ['Battleship', 'shell', 3, 'front', false],
+    ['Bomber', 'bullet', 1, 'front', true],
+    ['Cannon', 'shell', 1, 'front', false],
+    ['Catapult', 'stone', 1, 'top', false],
+    ['Cruiser', 'shell', 2, 'front', false],
+    ['Destroyer', 'shell', 1, 'front', false],
+    ['Fighter', 'bullet', 1, 'front', true],
+    ['Frigate', 'shell', 1, 'front', false],
+    ['Helicopter', 'bullet', 1, 'front', true],
+    ['Howitzer', 'shell', 1, 'front', false],
+    ['Ironclad', 'shell', 1, 'front', false],
+    ['MissileCruiser', 'shell', 1, 'front', false],
+    ['StealthBomber', 'bullet', 1, 'front', true],
+    ['StealthFighter', 'bullet', 1, 'front', true],
+    ['Tank', 'shell', 1, 'front', false],
   ]
 );
 
@@ -1516,10 +1528,34 @@ expect(
   expect(
     'where each shot leaves: a gun the middle of the front, four tenths up; guns along the middle; a catapult the top; archers in front of each figure, six tenths up',
     [
-      rounded(firePoints({ kind: 'shell', count: 1, from: 'front' }, box, 1)),
-      rounded(firePoints({ kind: 'shell', count: 2, from: 'front' }, box, 1)),
-      rounded(firePoints({ kind: 'stone', count: 1, from: 'top' }, box, 1)),
-      rounded(firePoints({ kind: 'arrow', count: 3, from: 'figures' }, box, 2)),
+      rounded(
+        firePoints(
+          { kind: 'shell', count: 1, from: 'front', closes: false },
+          box,
+          1
+        )
+      ),
+      rounded(
+        firePoints(
+          { kind: 'shell', count: 2, from: 'front', closes: false },
+          box,
+          1
+        )
+      ),
+      rounded(
+        firePoints(
+          { kind: 'stone', count: 1, from: 'top', closes: false },
+          box,
+          1
+        )
+      ),
+      rounded(
+        firePoints(
+          { kind: 'arrow', count: 3, from: 'figures', closes: false },
+          box,
+          2
+        )
+      ),
     ],
     [
       [[0, 0.08, 0.3]],
@@ -1570,6 +1606,8 @@ expect(
     battleship = alone('Battleship'),
     catapult = alone('Catapult'),
     archers = alone('Archer'),
+    fighter = alone('Fighter'),
+    nose = muzzleOf(drawnAs('Fighter'), 0, [0, 0]),
     atHome = muzzleOf(cannonEast, 0, [0, 0]),
     // Its points by hand, turned a quarter and placed: the second, (0.1, 0.1, 0.2), turned to (0.2, 0.1, -0.1).
     byHand = new Group(),
@@ -1604,12 +1642,15 @@ expect(
     muzzleOf(undefined, 0, [0, 0]),
     muzzleOf(new Group(), 0, [0, 0]),
     muzzleOf(drawnAs('Spearman'), 0, [0, 0]),
+    rounded(nose),
+    // Up in the air, where it flies, not at its stand.
+    nose![1] > 0.2,
   ];
 
   cannonEast.position.set(10, 0, -4);
 
   expect(
-    'each shot leaves the figures alone, as they face: a cannon its front, short of its stand’s rim, its copy and one fortified and twice as big as they are; a battleship along its hull; a catapult its top; archers in front of each; turned and placed by hand, round again; at a copy of the world; none with no figures or nothing kept',
+    'each shot leaves the figures alone, as they face: a cannon its front, short of its stand’s rim, its copy and one fortified and twice as big as they are; a battleship along its hull; a catapult its top; archers in front of each; a fighter its nose, up in the air; turned and placed by hand, round again; at a copy of the world; none with no figures or nothing kept',
     [...results, rounded(muzzleOf(cannonEast, 0, [10, -4]))],
     [
       // Turned a quarter, its front, +`v`, is +`u`, and its middle across, -`u`, is `v`.
@@ -1649,6 +1690,12 @@ expect(
       null,
       null,
       null,
+      rounded([
+        (fighter.min.x + fighter.max.x) / 2,
+        up(fighter, 0.4),
+        fighter.max.z,
+      ]),
+      true,
       rounded([
         cannon.max.z,
         up(cannon, 0.4),

@@ -70,15 +70,21 @@ export const shotOver = (kind: ShotKind): number =>
 
 /**
  * How each kind a unit fires with no clip of its own lets fly (`unitFire`), in seconds: how long after its battle
- *  starts the first leaves, as long as it takes to lay a gun, wind a catapult or draw a bow; and how far apart the rest
- *  leave, a warship's turrets one after another, a squad's arrows a ragged volley.
+ *  starts the first leaves, as long as it takes to lay a gun, wind a catapult or draw a bow; how far apart the rest
+ *  leave, a warship's turrets one after another, a squad's arrows a ragged volley; and how many each fires one after
+ *  another, and how far apart, an aircraft's burst.
  */
 export const FIRE_PACE: Readonly<
-  Record<UnitFire['kind'], { laid: number; stagger: number }>
+  Record<
+    UnitFire['kind'],
+    { laid: number; stagger: number; burst: number; gap: number }
+  >
 > = {
-  shell: { laid: 0.1, stagger: 0.15 },
-  stone: { laid: 0.2, stagger: 0.15 },
-  arrow: { laid: 0.25, stagger: 0.06 },
+  shell: { laid: 0.1, stagger: 0.15, burst: 1, gap: 0 },
+  stone: { laid: 0.2, stagger: 0.15, burst: 1, gap: 0 },
+  arrow: { laid: 0.25, stagger: 0.06, burst: 1, gap: 0 },
+  // An aircraft's burst, the first landing as it reaches the edge (`BATTLE_PACE`), the rest as it pulls away.
+  bullet: { laid: 0.12, stagger: 0.05, burst: 3, gap: 0.05 },
 };
 
 /**
@@ -92,17 +98,29 @@ export type Fires = {
   // How many fire, and how far apart: as a squad's figures and their stagger (`shotTimes`).
   figures: number;
   stagger: number;
+  // Whether it closes in as it fires, as an aircraft does, rather than standing.
+  closes: boolean;
 };
 
-/** What `fire` lets fly (`Fires`): none for none. */
-export const firesShots = (fire: UnitFire | null): Fires | null =>
-  fire === null || fire.count <= 0
-    ? null
-    : {
-        shots: [{ at: FIRE_PACE[fire.kind].laid, joint: '', kind: fire.kind }],
-        figures: fire.count,
-        stagger: FIRE_PACE[fire.kind].stagger,
-      };
+/** What `fire` lets fly (`Fires`), each a burst where its kind's is (`FIRE_PACE`): none for none. */
+export const firesShots = (fire: UnitFire | null): Fires | null => {
+  if (fire === null || fire.count <= 0) {
+    return null;
+  }
+
+  const { laid, stagger, burst, gap } = FIRE_PACE[fire.kind];
+
+  return {
+    shots: Array.from({ length: burst }, (_, shot) => ({
+      at: laid + shot * gap,
+      joint: '',
+      kind: fire.kind,
+    })),
+    figures: fire.count,
+    stagger,
+    closes: fire.closes,
+  };
+};
 
 /**
  * When each of `figures` figures' shots leaves in a clip whose shots are `shots`, each figure `stagger` seconds after
