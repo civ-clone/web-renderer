@@ -452,8 +452,40 @@ blended across squares.
   `src/hex.js`, `civ1-tileset-pixelart`]), so the seam where the world wraps has no seam either.
 - **Sea depth** follows how far a square is from land, found by walking the squares (a breadth-first search).
 - **Squares never seen** (terrain `Unknown`, as the client gets them [verified: `packages/map/components/Map/Fog.ts`])
-  are flat, at sea level, under cloud (§4.5). The client is never sent an unseen square's terrain, so the relief can't
-  give it away.
+  have no relief of their own, under cloud (§4.5). The client is never sent an unseen square's terrain, so the relief
+  can't give it away.
+  - **As built (#1393):** the land seen beside one carries on into it as the relief blends it, so there's no wall at
+    the edge between them. Before, it dropped there to sea level over a step of the land's mesh, an eighth of a
+    square: a sheer, dark side up to about 0.45 high on any grid, by the world (on the debug page's, seed 1, half
+    seen: about 0.43 on the square grid, 0.23 on the iso and 0.17 on the hex), over the cloud at 0.18
+    (`CLOUD_HEIGHT`).
+    - **Under the cloud:** what stands over 0.14 is brought down to it, smoothly from the edge, wholly by 0.3 from
+      the land seen, where the cloud's whole; and it all comes down to sea level from 0.4 to 0.55 (`UNDER_CLOUD` in
+      `relief.ts`), as land seen nowhere near is. Never under sea level, as no water's drawn over it, so beside the
+      sea it's as high as it was, at sea level, though its colour now takes a little of the sea's floor's, under the
+      cloud's edge, darkening as it goes.
+    - **Rivers** beside it cut the land carried on as they cut the land seen, but not under sea level, so there's no
+      wall where one runs by the edge either.
+    - **Its colour** carries on too, darkening to the colour of land never seen as it comes down. It has no surface,
+      as before, so the detail fades out across the edge, and with it the rock, snow and wet ground by where the land
+      lies (§4.3): a snow cap or a rock face at the edge ends over a step of the mesh, and the slope carried on past
+      it is the terrain's colour alone.
+    - **Only what's seen:** the height and colour it's given are those of the squares seen within the blend's reach,
+      so nothing of its own is given away.
+    - **Cost:** only a square never seen with one seen beside it, across an edge or a corner, is blended, and only
+      its points within 0.55 of land seen. No point of any other is that near, as the nearest a square comes to one
+      not beside it is 1 on the square and iso grids and 1/√3 on the hex grid (the relief suite checks); further off, it
+      returns flat before the blend. Land never seen made flat no longer works out its colour each time. So building
+      the debug world's land, on the square grid, is quicker with most of it unseen (about 60 ms rather than 100 with
+      none seen, 196 rather than 208 with a fifth), about the same with a third seen, a few per cent slower from half
+      (about 380 ms rather than 363), as the points carried on are blended, and the same with all of it seen.
+    - **Refreshed:** a square seen changes the land carried on into squares never seen beside it, up to 0.55 past
+      its edge, and wherever else land carried on is blended from it, which `refresh()` doesn't list: `Land` rebuilds
+      over its own reach round each square it does list (`Land#reach`, 4 to 5), which takes them in, and the relief
+      suite checks squares revealed a few at a time leave the land as if made afresh.
+    - **Still seen:** a dark strip along the far side of land seen at the cloud's edge, as before. It looks to be the
+      ground under the cloud's edge, darkening to the colour of land never seen, seen past it: the cloud's 0.18 up,
+      so from the side, its edge is over land seen.
 - **Deterministic:** the same squares always give the same land. Every random choice is seeded from the square's
   co-ordinates.
 
@@ -670,7 +702,7 @@ blended across squares.
     the view pans. None on squares never seen: only where every point round is (the chunks' `unseen`), so the line
     along the edge of what's been seen keeps its inner half at least, whichever square its points were taken from;
     the outer half's there on some sides only, and a line between two squares never seen can reach a step past the
-    edge, under the cloud's soft edge.
+    edge, under the cloud's soft edge, over the land seen carried on there (#1393), which may stand over the cloud.
   - **Order:** seen through and writing no depth, and pulled in front of what it lies on as the light is
     (`polygonOffset` -4, -8), so it's over fields, roads and railroads and under what stands. Drawn after the sea and
     before the light (`GRID_ORDER`, 1.2): the sea's one plane across the world, which three.js can only order by

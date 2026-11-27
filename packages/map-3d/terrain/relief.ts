@@ -12,9 +12,10 @@
 // - **Noise** repeats over the world's period, so the wrap has no seam either.
 // - **The sea's floor,** under every square the engine says is water, falls away from the shore, by how far a square is from land, walking the squares outwards from
 //   it as far as `seaFloor.reach`.
-// - **A square never seen** is flat, at sea level, whatever is round it: the client is never told its terrain, and its
-//   neighbours' relief doesn't spill into it. The step at its edge is mostly under cloud (§4.5): a hill or a mountain
-//   beside it stands through.
+// - **A square never seen** has no relief of its own: the client is never told its terrain. Beside land seen, that land
+//   carries on into it under the cloud, as it's blended, so there's no wall at its edge (#1393), brought under the
+//   cloud where the cloud's whole and to sea level further off (`UNDER_CLOUD`). With nothing seen beside it, it's
+//   flat, at sea level.
 // - **Rivers** (§5.3, `rivers.ts`) cut their channels into the land, each from a river square seen to its neighbours
 //   seen across an edge, with a river or water: their banks wet, darker.
 //
@@ -22,6 +23,7 @@
 
 import { GroundLayout } from '../layouts/GroundLayout';
 import { REACH, weight } from './kernel';
+import { smooth } from './cover';
 import { Noise, fractalNoise, periodicNoise } from './noise';
 import {
   BANK,
@@ -90,7 +92,10 @@ export interface ReliefMap {
    * Reads every square's terrain again, after the world's tiles have changed: the squares whose land has, those whose
    *  terrain has and the mountains a range joins to them, or did, whose ridge to them has come or gone. Given
    *  `released`, those alone are looked at first, and the rest read again only if one of them has changed, as most
-   *  changes (a unit moving, a city growing) change no terrain, and reading it all takes milliseconds.
+   *  changes (a unit moving, a city growing) change no terrain, and reading it all takes milliseconds. A square seen
+   *  changes the land carried on into squares never seen (`UNDER_CLOUD`) too, beside it and wherever else that's
+   *  blended from it, which aren't listed: `Land` rebuilds the land over its own reach round each square listed
+   *  (`Land#reach`, 4 or 5), which takes them in.
    */
   refresh(
     released?: readonly (readonly [number, number])[]
@@ -99,7 +104,8 @@ export interface ReliefMap {
   courses(): readonly { course: Course; u: number; v: number }[];
   /**
    * The rivers' courses that reach into the square at (`x`, `y`), each placed at that square's copy of the world: its
-   *  points, and how wide its water is either side at each. None where it's never been seen.
+   *  points, and how wide its water is either side at each. None made by a square never seen, but those made beside
+   *  one can reach into it, and cut the land carried on there (`UNDER_CLOUD`).
    */
   coursesAt(x: number, y: number): readonly RiverPath[];
 }
@@ -128,6 +134,17 @@ const linear = (hex: string): [number, number, number] => {
 
   return [channel(1), channel(3), channel(5)];
 };
+
+// Land never seen with no land seen near: flat, at sea level, the colour of land never seen, with no surface.
+const UNSEEN_COLOUR = linear(unknownTerrain.colour);
+
+const flatUnseen = (): GroundSample => ({
+  height: 0,
+  colour: [...UNSEEN_COLOUR],
+  surfaces: SURFACES.map(() => 0),
+  shore: 0,
+  unseen: true,
+});
 
 // A river's banks, wet: darker, muddy, and how much of it they take at the water's edge; and over how far they fade out
 //  as the land comes down to the sea's level, where the sea's drawn.
@@ -165,6 +182,21 @@ export const WANDER = 0.22;
 
 /** How far a range's saddle can stand off the line between its two peaks, either way, in world units. */
 export const BEND = 0.12;
+
+/**
+ * Land never seen beside land seen (#1393): the seen land carries on under the cloud, as it's blended, rather than
+ *  dropping to sea level at the edge as a wall. What stands over `ceiling` is brought down to it, under the cloud
+ *  (`CLOUD_HEIGHT`, 0.18), smoothly from the edge, wholly by `within` from it (in world units), where the cloud's
+ *  whole; and from `flatFrom` to `flat` it all comes down to sea level, as land seen nowhere near is. `flat` is under
+ *  the nearest a square comes to one not beside it, on any grid (a hex's, 1/√3), so only squares beside land seen
+ *  have any.
+ */
+export const UNDER_CLOUD = {
+  ceiling: 0.14,
+  within: 0.3,
+  flatFrom: 0.4,
+  flat: 0.55,
+} as const;
 
 // How low a range's saddle is between its peaks, as a share of the lower peak's own height: from `low` to `high`.
 const SADDLE = { low: 0.2, high: 0.5 };
@@ -293,6 +325,10 @@ export const createRelief = ({
     madeFrom: number[][] = [],
     // Which squares a range joins: peaks seen, on land.
     ranged: boolean[] = [],
+    // Which squares never seen have a square seen beside them, across an edge or a corner: those whose land carries on
+    //  what's seen. No point of any other is within `UNDER_CLOUD.flat` of land seen, on any grid (the relief suite
+    //  checks), so any other is flat.
+    frontier: boolean[] = [],
     // The rivers' courses that reach into each square, and where the middle of the square each was made by is from its
     //  own, as with ranges; and each course, by its ends, as it's drawn and the squares it reaches into, to tell which
     //  have changed.
@@ -444,6 +480,15 @@ export const createRelief = ({
     ranged = squares.map(
       ({ relief, unknown }, at) =>
         !unknown && !water[at] && relief.shape === 'peaked'
+    );
+    frontier = squares.map(
+      ({ unknown }, at) =>
+        unknown &&
+        source.neighbours(at % width, Math.floor(at / width)).some(([x, y]) => {
+          const there = index(x, y);
+
+          return there !== null && squares[there]?.unknown === false;
+        })
     );
 
     // The ranges made again only when a square they join has changed, or one now joins them: a square of sea or plain
@@ -1084,21 +1129,74 @@ export const createRelief = ({
 
   const offsets = [offsetsFor(0), offsetsFor(1)];
 
+  // Each square's outline, from its middle, by its row's parity: (`u`, `v`) by turns.
+  const outlines = [0, 1].map((parity) => {
+    const [cu, cv] = layout.centre(0, parity);
+
+    return layout.outline(0, parity).flatMap(([u, v]) => [u - cu, v - cv]);
+  });
+
+  // How far a point (`pu`, `pv`, from a square's middle) is from the square, on a row of `parity`: from its nearest
+  //  edge, as it's outside it.
+  const fromOutline = (pu: number, pv: number, parity: number): number => {
+    const corners = outlines[parity] ?? [],
+      count = corners.length / 2;
+    let least = Infinity;
+
+    for (let at = 0; at < count; at++) {
+      const next = (at + 1) % count;
+
+      least = Math.min(
+        least,
+        toSegment(
+          pu,
+          pv,
+          corners[at * 2]!,
+          corners[at * 2 + 1]!,
+          corners[next * 2]!,
+          corners[next * 2 + 1]!
+        )
+      );
+    }
+
+    return least;
+  };
+
   // The land at (`u`, `v`) as it would be with no rivers: what their levels are taken from.
   const landAt = (u: number, v: number): GroundSample => {
     const [x0, y0] = layout.tileAt(u, v),
       own = index(x0, y0),
       ownSquare = own === null ? null : squares[own] ?? null;
 
-    // Never seen, or off a world that doesn't wrap over the poles: flat, at sea level.
-    if (ownSquare === null || ownSquare.unknown) {
-      return {
-        height: 0,
-        colour: linear(unknownTerrain.colour),
-        surfaces: SURFACES.map(() => 0),
-        shore: 0,
-        unseen: true,
-      };
+    // Off a world that doesn't wrap over the poles, or never seen with nothing seen beside it: flat, at sea level.
+    if (
+      own === null ||
+      ownSquare === null ||
+      (ownSquare.unknown && frontier[own] !== true)
+    ) {
+      return flatUnseen();
+    }
+
+    // Never seen: how far it is from the nearest land seen, and flat if that's as far as land carried on reaches,
+    //  before the blend's worked out.
+    let fromSeen = Infinity;
+
+    if (ownSquare.unknown) {
+      (offsets[y0 & 1] ?? []).forEach(([dx, dy]) => {
+        const x = x0 + dx,
+          y = y0 + dy,
+          at = index(x, y);
+
+        if (at !== null && squares[at]?.unknown === false) {
+          const [cu, cv] = layout.centre(x, y);
+
+          fromSeen = Math.min(fromSeen, fromOutline(u - cu, v - cv, y & 1));
+        }
+      });
+
+      if (fromSeen >= UNDER_CLOUD.flat) {
+        return flatUnseen();
+      }
     }
 
     // Each noise at this point, once it's asked for.
@@ -1231,6 +1329,37 @@ export const createRelief = ({
       });
     }
 
+    // Never seen (`UNDER_CLOUD`): the land seen beside it carries on under the cloud, as it's blended, so there's no
+    //  wall at the edge, brought under the cloud where it's whole, and to sea level further off; with no surface, as
+    //  the cloud's. Never under sea level, as no water's drawn over it.
+    if (ownSquare.unknown) {
+      const carried = (total > 0 ? blended / total : 0) + mountains,
+        under = smooth(0, UNDER_CLOUD.within, fromSeen),
+        flat = smooth(UNDER_CLOUD.flatFrom, UNDER_CLOUD.flat, fromSeen),
+        [red0, green0, blue0] = ownSquare.colour;
+
+      return {
+        height:
+          Math.max(
+            0,
+            carried * (1 - under) +
+              Math.min(carried, UNDER_CLOUD.ceiling) * under
+          ) *
+          (1 - flat),
+        colour:
+          shades > 0
+            ? [
+                red / shades + (red0 - red / shades) * flat,
+                green / shades + (green0 - green / shades) * flat,
+                blue / shades + (blue0 - blue / shades) * flat,
+              ]
+            : ownSquare.colour,
+        surfaces: SURFACES.map(() => 0),
+        shore: 0,
+        unseen: true,
+      };
+    }
+
     return {
       height: (total > 0 ? blended / total : 0) + mountains,
       colour:
@@ -1252,7 +1381,10 @@ export const createRelief = ({
   const sample = (u: number, v: number): GroundSample => {
     const land = landAt(u, v);
 
-    if (land.unseen) {
+    // Never seen and at sea level, as all of it is but what's carried on from land seen beside it: as it is, as no
+    //  river cuts it under sea level. Carried on, the rivers there cut it as they cut the land seen, so there's no wall
+    //  at the edge there either.
+    if (land.unseen && land.height <= 0) {
       return land;
     }
 
@@ -1277,7 +1409,7 @@ export const createRelief = ({
         land.height
       );
 
-      cut = Math.min(cut, height);
+      cut = Math.min(cut, land.unseen ? Math.max(0, height) : height);
       wet = Math.max(wet, wetness);
     });
 

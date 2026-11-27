@@ -950,7 +950,7 @@ ids.forEach((topologyId) => {
             there = relief.height(pu + nu * 1e-7, pv + nv * 1e-7),
             [ox, oy] = layout.tileAt(pu + nu * 1e-3, pv + nv * 1e-3);
 
-          // Not into a square never seen, which is flat whatever's beside it.
+          // Not into a square never seen, which a river beside it doesn't cut.
           if (
             terrainAt(
               ((ox % width) + width) % width,
@@ -971,7 +971,7 @@ ids.forEach((topologyId) => {
     []
   );
 
-  // Far from any river, the land's as it was; the square never seen is flat, at sea level.
+  // Far from any river, the land's as it was; the square never seen isn't cut by the river in it.
   const [lu, lv] = layout.centre(...lone),
     [hu, hv] = layout.centre(...hidden),
     farFrom = [
@@ -980,13 +980,13 @@ ids.forEach((topologyId) => {
     ];
 
   expect(
-    `${topologyId}: far from any river the land is as it was; a square never seen with a river is flat at sea level`,
+    `${topologyId}: far from any river the land is as it was; a square never seen with a river makes no course of its own, so its middle isn't cut`,
     [
       farFrom.every(([u, v]) => relief.height(u!, v!) === dry.height(u!, v!)),
-      relief.height(hu, hv),
+      relief.height(hu, hv) === dry.height(hu, hv),
       relief.height(lu, lv) < dry.height(lu, lv),
     ],
-    [true, 0, true]
+    [true, true, true]
   );
 
   // The same across the world's seam: a river from its last column to its first.
@@ -1622,6 +1622,152 @@ ids.forEach((topologyId) => {
     ]
   );
 }
+
+// On each grid, a square never seen among mountains (#1393), with a river round it through every square beside it:
+//  where the river cuts the land seen at its edges (its banks reach them on the hex grid, hardly on the iso and not on
+//  the square), it cuts the land carried on into the square never seen as it cuts the land seen, so there's no wall
+//  there; but not under sea level.
+ids.forEach((topologyId) => {
+  const topology = topologyFor({ width, height, topologyId }),
+    layout = groundLayoutFor({
+      width,
+      height,
+      topologyId,
+      wrapsY: topology.wrapsY(),
+    }),
+    unseen: [number, number] = [5, 5],
+    ring = new Set(
+      topology
+        .directions()
+        .map((direction) => topology.neighbour(...unseen, direction))
+        .filter((square): square is [number, number] => square !== null)
+        .map(([x, y]) => `${x},${y}`)
+    ),
+    terrainAt = (x: number, y: number): string =>
+      x === unseen[0] && y === unseen[1] ? 'Unknown' : 'Mountains',
+    dry = createRelief({
+      layout,
+      source: sourceFor(topology, terrainAt, () => false),
+    }),
+    relief = createRelief({
+      layout,
+      source: sourceFor(topology, terrainAt, (x, y) => ring.has(`${x},${y}`)),
+    }),
+    [cu, cv] = layout.centre(...unseen),
+    outline = layout.outline(...unseen),
+    walls: string[] = [];
+  let cutAtEdge = 0,
+    under = 0;
+
+  outline.forEach(([au, av], corner) => {
+    const [bu, bv] = outline[(corner + 1) % outline.length]!;
+
+    for (let step = 1; step < 40; step++) {
+      const along = step / 40,
+        pu = au + (bu - au) * along,
+        pv = av + (bv - av) * along,
+        du = (pu - cu) * 1e-7,
+        dv = (pv - cv) * 1e-7,
+        inside = relief.height(pu - du, pv - dv),
+        outside = relief.height(pu + du, pv + dv);
+
+      cutAtEdge += outside < dry.height(pu + du, pv + dv) - 0.02 ? 1 : 0;
+      under += inside < 0 ? 1 : 0;
+
+      if (Math.abs(inside - Math.max(0, outside)) > 1e-6) {
+        walls.push(`${corner}@${along}: ${inside} ${outside}`);
+      }
+    }
+  });
+
+  expect(
+    `${topologyId}: a river round a square never seen cuts the land carried on into it as it cuts the land seen, with no step at their edge, and not under sea level`,
+    [topologyId !== 'hex-odd-r' || cutAtEdge > 0, walls.slice(0, 3), under],
+    [true, [], 0]
+  );
+});
+
+// On each grid, a square never seen beside a river's mouth (#1393): a river square of low grassland beside it, and the
+//  sea beside both. The mouth's bed runs on under the sea, and its levels under the low land, but the land carried on
+//  into the square never seen is never under sea level, as no water's drawn over it.
+ids.forEach((topologyId) => {
+  const topology = topologyFor({ width, height, topologyId }),
+    layout = groundLayoutFor({
+      width,
+      height,
+      topologyId,
+      wrapsY: topology.wrapsY(),
+    }),
+    unseen: [number, number] = [5, 5],
+    key = ([x, y]: [number, number]) => `${x},${y}`,
+    beside = (square: [number, number], edgesOnly: boolean) =>
+      (edgesOnly ? topology.edgeDirections() : topology.directions())
+        .map((direction) => topology.neighbour(...square, direction))
+        .filter((there): there is [number, number] => there !== null),
+    around = new Set(beside(unseen, false).map(key)),
+    // A river square across an edge from it, and the sea across an edge from that and beside the square never seen.
+    mouths = beside(unseen, true).flatMap((river) =>
+      beside(river, true)
+        .filter((sea) => around.has(key(sea)))
+        .map((sea): [[number, number], [number, number]] => [river, sea])
+    ),
+    under: string[] = [];
+
+  mouths.forEach(([river, sea]) => {
+    const terrainAt = (x: number, y: number): string =>
+        x === unseen[0] && y === unseen[1]
+          ? 'Unknown'
+          : key([x, y]) === key(sea)
+          ? 'Ocean'
+          : 'Grassland',
+      relief = createRelief({
+        layout,
+        source: sourceFor(
+          topology,
+          terrainAt,
+          (x, y) => key([x, y]) === key(river)
+        ),
+      }),
+      [cu, cv] = layout.centre(...unseen),
+      outline = layout.outline(...unseen);
+
+    outline.forEach(([au, av]) =>
+      [0, 0.02, 0.05, 0.1, 0.2, 0.4].forEach((share) => {
+        const pu = au + (cu - au) * share,
+          pv = av + (cv - av) * share,
+          { height: here, unseen: never } = relief.sample(pu, pv);
+
+        // Only in the square never seen: its corners are its neighbours'.
+        if (never && here < 0) {
+          under.push(`${key(river)} to ${key(sea)} at ${pu},${pv}: ${here}`);
+        }
+      })
+    );
+
+    outline.forEach(([au, av], corner) => {
+      const [bu, bv] = outline[(corner + 1) % outline.length]!;
+
+      for (let step = 0; step < 20; step++) {
+        const pu = au + ((bu - au) * step) / 20,
+          pv = av + ((bv - av) * step) / 20,
+          { height: here, unseen: never } = relief.sample(
+            pu - (pu - cu) * 1e-7,
+            pv - (pv - cv) * 1e-7
+          );
+
+        if (never && here < 0) {
+          under.push(`${key(river)} to ${key(sea)} edge ${corner}: ${here}`);
+        }
+      }
+    });
+  });
+
+  expect(
+    `${topologyId}: beside a river's mouth, the land carried on into a square never seen is never under sea level`,
+    [mouths.length > 0, under.slice(0, 3)],
+    [true, []]
+  );
+});
 
 if (failures.length > 0) {
   process.stderr.write(
