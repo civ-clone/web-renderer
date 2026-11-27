@@ -17,7 +17,8 @@
 //   or, hand to hand, as its clip says its blow lands (`ClipFacts#strike`), lunging;
 //   the loser plays `die` from the blow, solid till it's fallen, then fades.
 // - An attacker with no clip to play that fires as it's drawn, as a cannon, a warship, a catapult or archers do (plan
-//   2.4), fires from where it stands, as one that shoots in its clip does, the blow falling as its first shot lands.
+//   2.4), fires from where it stands, as one that shoots in its clip does, the blow falling as its first shot lands;
+//   an aircraft fires a burst as it closes in.
 //
 // Where a fighter is is on the ground (`u`, `v`), with a `lift`, as a walker's is.
 
@@ -82,7 +83,8 @@ export const quickerBattle = (pace: BattlePace): BattlePace => ({
  *   clip is over, and the last of its shots' own is (`shotOver`): the puff where each landed, the smoke where each left
  *   over before it;
  * - with no `fight` to play, an attacker that `fires` as it's drawn does as one that shoots in its clip does: it
- *   stands, the blow falling as its first shot lands, and it's drawn till the last of its shots' own is over;
+ *   stands, the blow falling as its first shot lands, and it's drawn till the last of its shots' own is over; or, one
+ *   that closes in as it fires, as an aircraft does, lunges as it would, the blow as its first shot lands;
  * - the loser plays `die` from the blow, solid till its last figure's fallen, then fades.
  */
 export const clipPace = (
@@ -142,7 +144,8 @@ export const clipPace = (
               : (fight.duration + tail(attacker)) * 1000 - reach,
             last - reach
           ),
-    ...(first === undefined ? {} : { lunge: 0 }),
+    // Shooting, it stands, but where it closes in as it fires, as an aircraft does.
+    ...(first === undefined || fires?.closes === true ? {} : { lunge: 0 }),
     ...(die === undefined
       ? {}
       : { falls: (die.duration + tail(loser)) * 1000 }),

@@ -5018,14 +5018,16 @@ expect(
   //  lunging: one shell, from the front of what's drawn (`Stage#muzzleAt`), a tenth of a second in, landing on the
   //  square attacked as a shell flies, the blow then, its burst flashing. A battleship's three guns fire one after
   //  another, each asked where it fires from, landing apart. Lost, a cannon fades where it stands, its shell landing
-  //  still. A catapult lobs a stone, and archers loose an arrow each. Spearmen still close in.
+  //  still. A catapult lobs a stone, and archers loose an arrow each. Spearmen still close in. A fighter closes in as
+  //  it fires a burst from its nose.
   const gunner = (id: string, type: string) =>
       ({ ...unitOf(id, 1), _: type } as Tile['units'][number]),
     gunFight = (
       attacker: Tile['units'][number],
-      winner: 'attacker' | 'defender'
+      winner: 'attacker' | 'defender',
+      defender: Tile['units'][number] = rival
     ) => {
-      repatched([1, 1, [attacker]], [2, 1, [rival]]);
+      repatched([1, 1, [attacker]], [2, 1, [defender]]);
       walkersSet.length = 0;
       walkersPlaced.clear();
       walkersFaded.clear();
@@ -5039,13 +5041,17 @@ expect(
         shotFrames: [number, string, readonly number[] | null][] = [],
         alongs: number[] = [],
         fadedTo: number[] = [],
-        // Each frame a shell's smoke was drawn where it left: how far it was over and off where the attacker stood.
-        muzzleOff: number[][] = [];
+        // Each shot's smoke where it left, as it was first drawn: how far it was over and off where the attacker was
+        //  that frame, standing or closing in.
+        muzzleOff: number[][] = [],
+        muzzlesSeen = new Set<string>(),
+        // How high over the ground where it fell each shot's puff was, where it landed.
+        hitHeights = new Map<string, number>();
 
-      fought(attacker, [1, 1], rival, [2, 1], winner);
+      fought(attacker, [1, 1], defender, [2, 1], winner);
       patch(
         [1, 1, winner === 'attacker' ? [attacker] : []],
-        [2, 1, winner === 'attacker' ? [] : [rival]]
+        [2, 1, winner === 'attacker' ? [] : [defender]]
       );
 
       for (
@@ -5066,7 +5072,8 @@ expect(
             const stood = frames.at(-1)!;
 
             puffs.forEach(({ at }, puff) => {
-              if (puff.endsWith('-muzzle')) {
+              if (puff.endsWith('-muzzle') && !muzzlesSeen.has(puff)) {
+                muzzlesSeen.add(puff);
                 muzzleOff.push(
                   [0, 1, 2].map(
                     (axis) =>
@@ -5078,6 +5085,14 @@ expect(
           }
         });
         walkersPlaced.clear();
+        puffs.forEach(({ at }, puff) => {
+          if (puff.endsWith('-hit') && !hitHeights.has(puff)) {
+            hitHeights.set(
+              puff,
+              Math.round((at[1]! - groundAt(2, 1)[1]!) * 100) / 100
+            );
+          }
+        });
       }
 
       const inFlight = shotFrames.filter(([, , at]) => at !== null),
@@ -5107,7 +5122,8 @@ expect(
           [...puffLooks.entries()]
             .filter(([id]) => id.endsWith('-hit'))
             .every(([, { flash }]) => flash !== null),
-        // Left from where the stage said each gun fires from, a tenth over where the attacker stood.
+        hits: [...hitHeights.values()],
+        // Left from where the stage said each fires from, a tenth over where the attacker was as it left.
         fromMuzzle:
           muzzleOff.length > 0 &&
           muzzleOff.every((off) => JSON.stringify(off) === '[0,0.1,0]'),
@@ -5120,7 +5136,13 @@ expect(
     cannonLost = gunFight(gunner('Unit-C', 'Cannon'), 'defender'),
     catapultWon = gunFight(gunner('Unit-K', 'Catapult'), 'attacker'),
     archersWon = gunFight(gunner('Unit-Q', 'Archer'), 'attacker'),
-    spearmenWon = gunFight(gunner('Unit-P', 'Spearman'), 'attacker');
+    spearmenWon = gunFight(gunner('Unit-P', 'Spearman'), 'attacker'),
+    fighterWon = gunFight(gunner('Unit-F', 'Fighter'), 'attacker'),
+    // Another player's fighter, attacked in the air.
+    dogfight = gunFight(gunner('Unit-F', 'Fighter'), 'attacker', {
+      ...gunner('Unit-G', 'Fighter'),
+      player: rival.player,
+    } as Tile['units'][number]);
 
   repatched([1, 1, []], [2, 1, []]);
   walkersSet.length = 0;
@@ -5128,7 +5150,7 @@ expect(
   walkersPosed.clear();
 
   expect(
-    'with no clip, a cannon fires its gun from where it stands: one shell from where the stage says its gun fires from, a tenth of a second in, landing as a shell flies, bursting with a flash; a battleship’s three guns each asked where they fire from, landing apart; lost, it fades where it stands; a catapult lobs a stone, a fifth of a second in, landing as a stone flies; archers loose an arrow each, from each figure, a ragged volley, landing apart; spearmen still lunge, firing nothing',
+    'with no clip, a cannon fires its gun from where it stands: one shell from where the stage says its gun fires from, a tenth of a second in, landing as a shell flies, bursting with a flash; a battleship’s three guns each asked where they fire from, landing apart; lost, it fades where it stands; a catapult lobs a stone, a fifth of a second in, landing as a stone flies; archers loose an arrow each, from each figure, a ragged volley, landing apart; spearmen still lunge, firing nothing; a fighter lunges as it fires a burst of three from its nose as it is then, 0.035 s apart, no flash where they land, at a fighter in the air as high as it flies',
     [
       [
         cannonWon.alongs.every((at) => at === 0),
@@ -5180,6 +5202,22 @@ expect(
         archersWon.over,
       ],
       [Math.max(...spearmenWon.alongs), spearmenWon.muzzles, spearmenWon.shots],
+      [
+        Math.max(...fighterWon.alongs),
+        fighterWon.muzzles,
+        fighterWon.kinds,
+        fighterWon.left! >= 100 && fighterWon.left! < 116,
+        fighterWon.each
+          .slice(1)
+          .every(
+            (at, index) => Math.abs(at - fighterWon.each[index]! - 35) <= 8
+          ),
+        fighterWon.fromMuzzle,
+        fighterWon.flashed === false,
+        fighterWon.hits,
+        dogfight.hits,
+        fighterWon.over,
+      ],
     ],
     [
       [
@@ -5226,6 +5264,24 @@ expect(
         [['Unit-Q', 1], null, 0, 0],
       ],
       [0.45, [], 0],
+      [
+        0.45,
+        [
+          ['battle', 0],
+          ['battle', 0],
+          ['battle', 0],
+        ],
+        ['bullet'],
+        true,
+        true,
+        true,
+        true,
+        // At a unit on the ground, by its feet; at an aircraft, at its body's middle, on its stand 0.03 high and 0.3
+        //  over that twice life size.
+        [0.05, 0.05, 0.05],
+        [0.63, 0.63, 0.63],
+        [['Unit-F', 1], null, 0, 0],
+      ],
     ]
   );
 

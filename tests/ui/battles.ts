@@ -681,10 +681,37 @@ expect(
   //  its guns; with a rigged copy but no fight, its guns. Won or lost, as long as its shells' bursts or the loser's
   //  fade, the longer: a cannon's fade; a battleship's last shell, though it's lost. A catapult's stone, wound a little
   //  longer, and three archers' arrows, a bow drawn longer still, each paced so.
-  const cannon = firesShots({ kind: 'shell', count: 1, from: 'front' })!,
-    battleship = firesShots({ kind: 'shell', count: 3, from: 'front' })!,
-    catapult = firesShots({ kind: 'stone', count: 1, from: 'top' })!,
-    archers = firesShots({ kind: 'arrow', count: 3, from: 'figures' })!,
+  const cannon = firesShots({
+      kind: 'shell',
+      count: 1,
+      from: 'front',
+      closes: false,
+    })!,
+    battleship = firesShots({
+      kind: 'shell',
+      count: 3,
+      from: 'front',
+      closes: false,
+    })!,
+    catapult = firesShots({
+      kind: 'stone',
+      count: 1,
+      from: 'top',
+      closes: false,
+    })!,
+    archers = firesShots({
+      kind: 'arrow',
+      count: 3,
+      from: 'figures',
+      closes: false,
+    })!,
+    // A fighter's burst of three, closing in as it fires.
+    fighter = firesShots({
+      kind: 'bullet',
+      count: 1,
+      from: 'front',
+      closes: true,
+    })!,
     GUN_LAID = FIRE_PACE.shell.laid,
     GUN_STAGGER = FIRE_PACE.shell.stagger,
     laidAndFlown = GUN_LAID * 1000 + SHOT_LOOKS.shell.flight,
@@ -698,20 +725,22 @@ expect(
     });
 
   expect(
-    'guns with no clip: fired from where it stands, the blow as the first shell lands, drawn till the last has burst; the loser falls as its clip says; a fight clip of its own wins; no guns, none; lost, or won, as long as its last shell’s burst or the loser’s fade, the longer; twice as quick, half as long; a catapult’s stone and archers’ arrows paced as they fly',
+    'guns with no clip: fired from where it stands, the blow as the first shell lands, drawn till the last has burst; the loser falls as its clip says; a fight clip of its own wins; no guns, none; lost, or won, as long as its last shell’s burst or the loser’s fade, the longer; twice as quick, half as long; a catapult’s stone and archers’ arrows paced as they fly; a fighter lunges as it would, its burst’s first landing as it reaches the edge, drawn till the last has',
     [
       rounded(clipPace(pace, null, null, cannon)),
       rounded(clipPace(pace, null, null, battleship)),
       rounded(clipPace(pace, null, thrower, cannon)),
       rounded(clipPace(pace, brawler, null, cannon)),
       rounded(clipPace(pace, { ...brawler, clips: {} }, null, cannon)),
-      firesShots({ kind: 'shell', count: 0, from: 'front' }),
+      firesShots({ kind: 'shell', count: 0, from: 'front', closes: false }),
       firesShots(null),
       round(battleLength(clipPace(pace, null, null, cannon), false)),
       round(battleLength(clipPace(pace, null, null, battleship), false)),
       round(battleLength(quickerBattle(clipPace(pace, null, null, cannon)))),
       rounded(clipPace(pace, null, null, catapult)),
       rounded(clipPace(pace, null, null, archers)),
+      rounded(clipPace(pace, null, null, fighter)),
+      fighter.shots.map(({ at }) => round(at)),
     ],
     [
       guns({ clips: { rate: 1, fight: false, die: false, shots: true } }),
@@ -754,6 +783,15 @@ expect(
         lunge: 0,
         clips: { rate: 1, fight: false, die: false, shots: true },
       },
+      // Its first lands as it reaches the edge, a little under a fifth of a second in, the last leaving before then;
+      //  the last lands and puffs as it pulls away, drawn till then.
+      {
+        reach: 180,
+        back: round(100 + 70 + shotOver('bullet') - 180),
+        fade: 600,
+        clips: { rate: 1, fight: false, die: false, shots: true },
+      },
+      [0.1, 0.135, 0.17],
     ]
   );
 

@@ -474,9 +474,13 @@ leave the muzzle, and the shell bursts where it lands, the blow then. That's for
 their own, by the built-in set or a hosted set's static model.
 
 **Fifth part, catapults and bows: done** (spec §8.2, "Guns, catapults and bows"). Catapults lob a stone from the top
-of their arm, and archers loose an arrow each, a ragged volley, rather than charging. Still to do: muskets and rifles
-without clips, a submarine's torpedo, aircraft as they fight, Civ2's rounds, a flash under reduced motion, and #1255's
-follow-ups.
+of their arm, and archers loose an arrow each, a ragged volley, rather than charging.
+
+**Sixth part, aircraft's bursts: done** (spec §8.2, "Aircraft"). Fighters, bombers and helicopters fire a burst of
+three bullets from the nose as they dive in, the first landing as they reach the edge. Shots at an aircraft are aimed
+at it, in the air. Still to do: bombers flying over
+their target and bombing it, muskets and rifles without clips, a submarine's torpedo, Civ2's rounds, a flash under
+reduced motion, and #1255's follow-ups.
 
 - **What:**
   - melee, ranged, naval and air;

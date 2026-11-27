@@ -90,6 +90,14 @@ const STAND_HEIGHT = 0.03,
   // How many labels the kit holds before it first lets go of those no longer drawn.
   SWEEP_FROM = 256;
 
+/**
+ * How high over the ground under its stand the middle of an aircraft's body is drawn, `size` big: on its stand, as high
+ *  as the built-in set's bodies fly (`markers/figures.ts`), 0.3, a model's underside half its thickness under that
+ *  (`AIRBORNE_LIFT`). Where what's fired at one is aimed.
+ */
+export const airborneMiddle = (size: number): number =>
+  STAND_HEIGHT + 0.3 * size;
+
 /** A unit's figures drawn with a set's model: a mesh for each of its parts, and how high they reach. */
 export type ModelFigures = {
   meshes: [BufferGeometry, Material][];

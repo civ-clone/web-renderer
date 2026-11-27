@@ -56,7 +56,11 @@ import prefersReducedMotion from '@civ-clone/ui-map/lib/reducedMotion';
 import { UnitMarkerMode } from '@civ-clone/ui-map/components/Map/UnitMarker';
 import CameraInput from './camera/CameraInput';
 import markerFor, { MarkerWords, TileMarker } from './markers/markerFor';
-import { IN_FRONT_OF_CITY, UNIT_SCALE } from './markers/drawMarker';
+import {
+  IN_FRONT_OF_CITY,
+  UNIT_SCALE,
+  airborneMiddle,
+} from './markers/drawMarker';
 import standHeight from './markers/standHeight';
 import {
   airborne,
@@ -1079,13 +1083,13 @@ export class MapView3D implements MapRenderer {
       attackerShown = attackerUnit ?? this.#walkingUnits.get(attacker.id),
       attackerFacts = facts(attackerShown),
       // With no clip of its own to fight with, what it fires as it's drawn, where it does, as a cannon, a warship, a
-      //  catapult or archers do (`unitFire`): on the ground or at sea, not in the air. One the page doesn't have yet,
-      //  out of the dark, as the battle says it is.
+      //  catapult, archers or an aircraft do (`unitFire`). One the page doesn't have yet, out of the dark, as the
+      //  battle says it is.
       look =
         attackerShown === undefined
           ? unitLook(attacker.type)
           : unitLook(attackerShown._, attackerShown.__ ?? []),
-      fires = airborne(look) ? null : firesShots(unitFire(look)),
+      fires = firesShots(unitFire(look)),
       paced = clipPace(
         BATTLE_PACE,
         attackerFacts,
@@ -1149,9 +1153,13 @@ export class MapView3D implements MapRenderer {
         this.#walks.endsAt(attacker.id) ?? now
       );
 
-    // Its attacker's shots, where it shoots, each landing on the square attacked, by the loser's feet: its clip's, or,
-    //  with none, what it fires as it's drawn.
-    const shooter = pace.clips?.fight ? attackerFacts : fires,
+    // Its attacker's shots, where it shoots, each landing on the square attacked, by the loser's feet, or, at an
+    //  aircraft, at its body's middle (`airborneMiddle`): its clip's, or, with none, what it fires as it's drawn.
+    const defenderShown = before.find(({ id }) => id === defender.id),
+      defenderFlies =
+        defenderShown !== undefined &&
+        airborne(unitLook(defenderShown._, defenderShown.__ ?? [])),
+      shooter = pace.clips?.fight ? attackerFacts : fires,
       shots = pace.clips?.fight
         ? attackerFacts?.clips.fight?.shots ?? []
         : fires?.shots ?? [];
@@ -1168,7 +1176,8 @@ export class MapView3D implements MapRenderer {
         left: new Set(),
         target: this.#onLand(
           battle.fallsAt.at,
-          battle.fallsAt.lift + SHOT_TARGET
+          battle.fallsAt.lift +
+            (defenderFlies ? airborneMiddle(this.#unitSize) : SHOT_TARGET)
         ),
         figures: shooter.figures,
         rate: pace.clips.rate,
