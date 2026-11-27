@@ -561,14 +561,18 @@ blended across squares.
     weighed by how squarely the ground faces it (`rockFacing`, `COVER.rockFaces` and `rockSharp` in `cover.ts`).
     - **Why:** laid flat, a texture's stretched down a slope by one over the cosine of its tilt, so the rock's cracks
       ran down mountains' steep sides as streaks.
-    - **How much less:** on the debug page's worlds, laid flat, rock was stretched about 1.2 times for half of it, 1.6
-      for nine in ten, and up to 2.3. Laid from three sides, it's about 1.2, 1.45, and never more than 1.73 (√3), on a
-      slope facing a corner at about 55°, which faces all three sides alike. So the steepest sides gain most, and a
-      slope of about 45°, stretched about 1.4 either way, little.
+    - **How much less:** on the debug page's worlds, laid flat, half of the rock was stretched about 1.2 times or
+      less, nine in ten 1.6 or less, and the rest up to 2.3. Laid from three sides: 1.22 (a touch more), 1.45, and
+      never more than 1.73 (√3), on a slope facing a corner at about 55°, which faces all three sides alike. So the
+      steepest sides gain most. A slope of about 45° is stretched about 1.4 either way, and one of 25° to 45° a
+      little more than laid flat, as it's blended (40° facing east: 1.36 rather than 1.31).
     - **Gentle ground**, tilted less than about 17° (rock begins at about 14°), is laid from above alone, as before.
     - **Blended** where the ground faces two or three sides, so the rock would be smoother there, as their shades and
       bumps partly cancel: scaled back up about their mean (by one over the root of the weights' squares), so it's as
-      rugged wherever it's laid from.
+      rugged wherever it's laid from. That takes the three to be unalike, so each laid from the side is moved half a
+      texture along one way: otherwise laid from above and from the north or south would share where they sample east
+      to west, and laid from either side where they sample up, so they'd match, or mirror, each other across patches
+      of a slope where they blend, and be made too rugged there.
     - **Bumps** tilt the ground along the side each is laid from, carried as a direction east, up and south for every
       surface, rather than east and south.
     - **Seams:** laid from the side, it repeats east to west and north to south as laid from above, as many whole
@@ -577,8 +581,10 @@ blended across squares.
     (about 520 ms for the debug world rather than 595), more than paying for the weights. Each point of the land
     samples all eight textures, so their smaller copies are chosen alike where surfaces meet, and rock's twice more,
     from the sides, everywhere: a branch would hide how they change from pixel to pixel, which chooses their smaller
-    copies. Measured by the GPU on an M2 Pro at 1600 by 1000, close in over the debug page's massif, a frame took
-    about 0.1 to 0.3 ms longer: 3.3 to 3.5 ms looking low across it, 2.45 to 2.6 at the classic view's pitch.
+    copies (`textureGrad` could skip them on gentle ground, if it's ever worth it). Measured by the GPU on an M2 Pro
+    at 1600 by 1000, close in over the debug page's massif, with the browser's pane hidden so roughly, a frame took
+    about 0.1 to 0.35 ms longer: 3.3 to 3.5 ms looking low across it, rather than 3.2 to 3.3, and 2.6 to 2.8 at the
+    classic view's pitch, rather than 2.45.
 
 ### 4.4 Water
 

@@ -7,7 +7,7 @@
 // Each surface's texture reaches about `SURFACE_TILE` across the ground before repeating, as many whole times as fit
 //  the world's period, across and down, so each copy of the world has the same detail and the seam none. It's laid by
 //  where a point is on the ground, not on its chunk, so chunks' borders have no seam either. Rock's is laid from three
-//  sides, weighed by which the ground faces (\`coverRockFacing\`, \`terrain/cover.ts\`), so it stretches less down a
+//  sides, weighed by which the ground faces (`coverRockFacing`, `terrain/cover.ts`), so it stretches less down a
 //  mountain's side.
 
 import {
@@ -156,12 +156,14 @@ ${shader.fragmentShader
   vec3 groundNormal = transformDirectionByInverseViewMatrix(normalize(vNormal), viewMatrix);
   // Rock laid from above, from the east or west, and from the north or south (\`coverRockFacing\`), so it stretches
   //  less down a mountain's side: east to west and north to south as it repeats with the world, so no copy has a seam,
-  //  and up by height. All three everywhere, not only where it's steep, as a texture's smaller copies are chosen from
-  //  how it changes from pixel to pixel, which a branch would hide.
+  //  and up by height. Each from the side moved half a texture along one way, so no two share where they sample along
+  //  the same way: they'd match, or mirror, each other across patches of a slope where they blend. All three
+  //  everywhere, not only where it's steep, as a texture's smaller copies are chosen from how its coordinates change
+  //  from pixel to pixel, which a branch would hide (\`textureGrad\` could skip them on gentle ground).
   vec3 rockFacing = coverRockFacing(groundNormal);
   vec4 rockAbove = texture(surfaceDetail, vec3(surfaceAt, ${ROCK}.0));
-  vec4 rockAcross = texture(surfaceDetail, vec3(vGround.y / surfaceTile.y, vHeight / surfaceTile.y, ${ROCK}.0));
-  vec4 rockAlong = texture(surfaceDetail, vec3(vGround.x / surfaceTile.x, vHeight / surfaceTile.x, ${ROCK}.0));
+  vec4 rockAcross = texture(surfaceDetail, vec3(vGround.y / surfaceTile.y, vHeight / surfaceTile.y + 0.5, ${ROCK}.0));
+  vec4 rockAlong = texture(surfaceDetail, vec3(vGround.x / surfaceTile.x + 0.5, vHeight / surfaceTile.x, ${ROCK}.0));
   vec4 rockDetail = rockFacing.x * rockAcross + rockFacing.y * rockAbove + rockFacing.z * rockAlong;
   // Laid from the east or west, the texture's across is south and its down is up; from the north or south, its across
   //  is east.

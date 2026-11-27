@@ -405,10 +405,10 @@ expect(
         Math.floor((stretches.length - 1) * share)
       ] ?? 0;
 
-    // On worlds of every seed tried, laid flat: about 1.2 for half, 1.6 for nine in ten, up to about 2.3; laid from
-    //  three sides, about 1.2, 1.45, up to √3.
+    // On worlds of every seed tried, laid flat: about 1.2 or less for half, 1.6 or less for nine in ten, up to about
+    //  2.3; laid from three sides, about 1.22 (a little more), 1.45, up to √3.
     expect(
-      `${topologyId}: rock's texture, laid from three sides, stretches no more than laid flat on most rock, less on the steepest tenth, and never more than √3 times, where laid flat it reaches over 2`,
+      `${topologyId}: rock's texture, laid from three sides, stretches about as much as laid flat on most rock, less on the steepest tenth, and never more than √3 times, where laid flat it reaches over 2`,
       [
         at(facing, 0.5) < at(flat, 0.5) + 0.03,
         at(facing, 0.9) < at(flat, 0.9) - 0.08,

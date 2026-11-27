@@ -1,6 +1,6 @@
 // What covers the land beyond its surfaces (docs/3d-renderer.md §4.3), by where it lies, not what its squares are:
 //  - bare rock where the ground is steep, its texture laid from the side it faces, so it stretches less down a
-//    mountain's side;
+//    mountain's steepest sides (and a little more on slopes of about 25° to 45°, where it's blended);
 //  - snow high up, lower towards the poles, where the ground's level enough to hold it;
 //  - wet ground (darker, shinier, whatever its surface) at the waterline, where the land comes down to water.
 // Pure: each is a share from 0 to 1, as the land's shader works it out at every point it draws (`landMaterial.ts`),
