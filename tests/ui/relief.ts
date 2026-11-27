@@ -372,7 +372,8 @@ ids.forEach((topologyId) => {
     outline.forEach(([au, av], corner) => {
       const [bu, bv] = outline[(corner + 1) % outline.length]!;
 
-      [0.25, 0.5, 0.75].forEach((along) => {
+      // Its corner too, where the squares round it meet.
+      [0, 0.25, 0.5, 0.75].forEach((along) => {
         const pu = au + (bu - au) * along,
           pv = av + (bv - av) * along,
           du = (pu - cu) * 1e-7,
@@ -461,7 +462,7 @@ ids.forEach((topologyId) => {
     outline.forEach(([au, av], corner) => {
       const [bu, bv] = outline[(corner + 1) % outline.length]!;
 
-      [0.25, 0.5, 0.75].forEach((along) => {
+      [0, 0.25, 0.5, 0.75].forEach((along) => {
         const pu = au + (bu - au) * along,
           pv = av + (bv - av) * along,
           du = (pu - cu) * 1e-7,
@@ -633,7 +634,7 @@ ids.forEach((topologyId) => {
       ).flat();
 
   expect(
-    'a square never seen among mountains carries on their land from its edges, as high there as the mountains, with no step (no wall), under the cloud from 0.3 in (where, carried on, it would stand over it); a square never seen with nothing seen beside it is flat at sea level, and so is one beside land seen, from 0.6 from it',
+    'a square never seen among mountains carries on their land from its edges, as high there as the mountains, with no step (no wall), under the cloud from 0.3 in (where, carried on, it would stand over it); a square never seen with nothing seen beside it is flat at sea level, and so is one beside land seen, from 0.55 from it',
     [
       Math.abs(edgeOf(hidden, 5, 5.5)[0] - edgeOf(hidden, 5, 5.5)[1]) < 1e-6,
       edgeOf(hidden, 5, 5.5)[1] > CLOUD_HEIGHT,

@@ -36,8 +36,8 @@ export const COVER = {
   wetUpTo: 0.03,
 } as const;
 
-// From 0 below `from` to 1 above `to`, smoothly: GLSL's `smoothstep`.
-const smooth = (from: number, to: number, value: number): number => {
+/** From 0 below `from` to 1 above `to`, smoothly: GLSL's `smoothstep`. */
+export const smooth = (from: number, to: number, value: number): number => {
   const t = Math.max(0, Math.min(1, (value - from) / (to - from)));
 
   return t * t * (3 - 2 * t);

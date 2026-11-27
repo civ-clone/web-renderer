@@ -223,7 +223,7 @@ ${shader.fragmentShader.replace(
   )}, across)) *
       // Not on a square never seen: only where every point round it is, so the line along the edge of what's been seen
       //  keeps its inner half at least, whichever square its points were taken from. It can reach a step past it,
-      //  under the cloud's soft edge.
+      //  under the cloud's soft edge, over the land seen carried on there (#1393), which may stand over the cloud.
       (1.0 - step(0.999, vUnseen));
 
   if (line < 0.004) {

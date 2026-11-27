@@ -1623,8 +1623,8 @@ ids.forEach((topologyId) => {
   );
 }
 
-// On each grid, a square never seen among mountains (#1393), with a river round it through every square beside it: where
-//  the river cuts the land seen at its edges (its banks reach them on the hex grid, hardly on the iso and not on the
+// On each grid, a square never seen among mountains (#1393), with a river round it through every square beside it:
+//  where the river cuts the land seen at its edges (its banks reach them on the hex grid, hardly on the iso and not on the
 //  square), it cuts the land carried on into the square never seen as it cuts the land seen, so there's no wall there;
 //  but not under sea level.
 ids.forEach((topologyId) => {
@@ -1684,6 +1684,88 @@ ids.forEach((topologyId) => {
     `${topologyId}: a river round a square never seen cuts the land carried on into it as it cuts the land seen, with no step at their edge, and not under sea level`,
     [topologyId !== 'hex-odd-r' || cutAtEdge > 0, walls.slice(0, 3), under],
     [true, [], 0]
+  );
+});
+
+// On each grid, a square never seen beside a river's mouth (#1393): a river square of low grassland beside it, and the
+//  sea beside both. The mouth's bed runs on under the sea, and its levels under the low land, but the land carried on
+//  into the square never seen is never under sea level, as no water's drawn over it.
+ids.forEach((topologyId) => {
+  const topology = topologyFor({ width, height, topologyId }),
+    layout = groundLayoutFor({
+      width,
+      height,
+      topologyId,
+      wrapsY: topology.wrapsY(),
+    }),
+    unseen: [number, number] = [5, 5],
+    key = ([x, y]: [number, number]) => `${x},${y}`,
+    beside = (square: [number, number], edgesOnly: boolean) =>
+      (edgesOnly ? topology.edgeDirections() : topology.directions())
+        .map((direction) => topology.neighbour(...square, direction))
+        .filter((there): there is [number, number] => there !== null),
+    around = new Set(beside(unseen, false).map(key)),
+    // A river square across an edge from it, and the sea across an edge from that and beside the square never seen.
+    mouths = beside(unseen, true).flatMap((river) =>
+      beside(river, true)
+        .filter((sea) => around.has(key(sea)))
+        .map((sea): [[number, number], [number, number]] => [river, sea])
+    ),
+    under: string[] = [];
+
+  mouths.forEach(([river, sea]) => {
+    const terrainAt = (x: number, y: number): string =>
+        x === unseen[0] && y === unseen[1]
+          ? 'Unknown'
+          : key([x, y]) === key(sea)
+          ? 'Ocean'
+          : 'Grassland',
+      relief = createRelief({
+        layout,
+        source: sourceFor(
+          topology,
+          terrainAt,
+          (x, y) => key([x, y]) === key(river)
+        ),
+      }),
+      [cu, cv] = layout.centre(...unseen),
+      outline = layout.outline(...unseen);
+
+    outline.forEach(([au, av]) =>
+      [0, 0.02, 0.05, 0.1, 0.2, 0.4].forEach((share) => {
+        const pu = au + (cu - au) * share,
+          pv = av + (cv - av) * share,
+          { height: here, unseen: never } = relief.sample(pu, pv);
+
+        // Only in the square never seen: its corners are its neighbours'.
+        if (never && here < 0) {
+          under.push(`${key(river)} to ${key(sea)} at ${pu},${pv}: ${here}`);
+        }
+      })
+    );
+
+    outline.forEach(([au, av], corner) => {
+      const [bu, bv] = outline[(corner + 1) % outline.length]!;
+
+      for (let step = 0; step < 20; step++) {
+        const pu = au + ((bu - au) * step) / 20,
+          pv = av + ((bv - av) * step) / 20,
+          { height: here, unseen: never } = relief.sample(
+            pu - (pu - cu) * 1e-7,
+            pv - (pv - cv) * 1e-7
+          );
+
+        if (never && here < 0) {
+          under.push(`${key(river)} to ${key(sea)} edge ${corner}: ${here}`);
+        }
+      }
+    });
+  });
+
+  expect(
+    `${topologyId}: beside a river's mouth, the land carried on into a square never seen is never under sea level`,
+    [mouths.length > 0, under.slice(0, 3)],
+    [true, []]
   );
 });
 

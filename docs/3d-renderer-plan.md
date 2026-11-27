@@ -132,8 +132,8 @@ and a colour per terrain. It's built a few chunks a frame, from where the map is
   table in `packages/models-builtin/terrain.ts`.
 - **Tests:** `tests/ui/relief.ts` and `tests/ui/chunks.ts`.
 - **Colour:** one per terrain, blended by the same kernel as the height.
-- **Squares never seen:** flat at sea level and dark. The cloud over them is 1.4's. Since #1393, the land seen beside
-  one carries on into it under the cloud.
+- **Squares never seen:** as built here, flat at sea level and dark, under 1.4's cloud. Since #1393, the land seen
+  beside one carries on into it under the cloud, and comes down to sea level within 0.55 of its edge.
 - **Speed:** an 80×50 world builds in 250–370 ms, 17–25 ms a chunk. A frame builds chunks until 10 ms have gone, but
   a chunk is built whole, so in practice a frame builds one: smaller chunks, or a chunk over several frames, are for
   M6.
