@@ -7,7 +7,8 @@
 //  - a marker fading has its own materials and casts no shadow under half solid: batches of its own;
 //  - one that can't be drawn so is drawn as a mesh of its own, on the camera's layer;
 //  - batches are kept from frame to frame, sent again and bounded round where their instances are now, for three.js to
-//    cull them by, grown as more are drawn, hidden while none are and let go of after a while;
+//    cull them by, grown as more are drawn, hidden while none are and let go of after a few seconds, however many
+//    frames come, and with the whole;
 //  - two owners' models of a type, the same shape, are batches of their own, in their own colours.
 
 import {
@@ -501,8 +502,12 @@ expect(
   [0, 0, true]
 );
 
-// None drawn for a while: the batches let go of.
-const kept = [...instances.batches.values()];
+// None drawn for a while: the batches kept hidden for a few seconds, however many frames come, then let go of.
+const idling = new MarkerInstances();
+
+idling.draw(gatherDrawn(owners).meshes, camera, sun, 1000);
+
+const kept = [...idling.batches.values()];
 let letGo = 0;
 
 kept.forEach((batch) =>
@@ -511,28 +516,69 @@ kept.forEach((batch) =>
   })
 );
 
-for (let frame = 0; frame < 40; frame++) {
-  instances.draw([], camera, sun);
+// Two hundred frames over the next two seconds, none drawn.
+for (let frame = 1; frame <= 200; frame++) {
+  idling.draw([], camera, sun, 1000 + frame * 10);
 }
 
+const keptAfterFrames = [
+  letGo,
+  idling.batches.size === kept.length,
+  kept.every((batch) => !batch.visible),
+];
+
+idling.draw([], camera, sun, 4500);
+
 expect(
-  'with none drawn in them for a while, the batches are let go of',
+  'with none drawn in them, the batches are kept hidden for a few seconds however many frames come, then let go of',
   [
     kept.length > 0,
+    keptAfterFrames,
     letGo,
-    instances.batches.size,
-    instances.group.children.length,
+    idling.batches.size,
+    idling.group.children.length,
   ],
-  [true, kept.length, 0, 0]
+  [true, [0, true, true], kept.length, 0, 0]
+);
+
+// Let go of while it still draws: its batches let go of with it.
+const live = new MarkerInstances(),
+  odd = drawMarker(kit, { city: null, unit: unit('Spearman') }),
+  oddGroup = new Group();
+
+meshOf(odd).receiveShadow = true;
+meshOf(odd).renderOrder = 2;
+oddGroup.add(odd);
+oddGroup.updateMatrixWorld(true);
+live.draw(gatherDrawn(oddGroup).meshes, camera, sun);
+
+const oddBatch = live.batches.get(batchKey(meshOf(odd)));
+let liveLetGo = 0;
+
+live.batches.forEach((batch) =>
+  batch.addEventListener('dispose', () => {
+    liveLetGo++;
+  })
+);
+
+const liveBatches = live.batches.size;
+
+live.dispose();
+
+expect(
+  'a batch takes shadows and is drawn in the order its meshes are; let go of while it still draws, its batches are let go of with it, and it draws nothing',
+  [
+    oddBatch?.receiveShadow,
+    oddBatch?.renderOrder,
+    liveBatches,
+    liveLetGo,
+    live.batches.size,
+    live.group.children.length,
+  ],
+  [true, 2, 1, 1, 0, 0]
 );
 
 instances.dispose();
-
-expect(
-  'let go of, it draws nothing',
-  [instances.batches.size, instances.group.children.length],
-  [0, 0]
-);
 
 if (failures.length > 0) {
   process.stderr.write(

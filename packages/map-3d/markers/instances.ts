@@ -88,17 +88,17 @@ export const batchKey = (mesh: Mesh): string =>
 const sphere = new Sphere(),
   viewing = new Matrix4();
 
-// How many of a batch there's room for at first, doubling as more are drawn; and how many frames running one's kept,
-//  hidden, with none drawn in it, before it's let go of: so a unit blinking out and in, or a walker leaving and
-//  coming back, doesn't make it afresh each time.
+// How many of a batch there's room for at first, doubling as more are drawn; and how long, in ms, one's kept, hidden,
+//  with none drawn in it, before it's let go of as it's next drawn: so a unit blinking out and in (half a second
+//  each), or a walker leaving and coming back, doesn't make it afresh each time, however often frames come.
 const ROOM = 16,
-  IDLE = 30;
+  KEEP = 3000;
 
 /** The markers' meshes, drawn as instances: add `group` to the scene, and `draw` them as each frame's drawn. */
 export class MarkerInstances {
   readonly group = new Group();
   #batches = new Map<string, InstancedMesh>();
-  // How many frames running each batch has had none drawn in it.
+  // When each batch had none drawn in it from, in ms.
   #idle = new Map<string, number>();
   #seen = new Frustum();
   #shadowed = new Frustum();
@@ -111,10 +111,16 @@ export class MarkerInstances {
   /**
    * Draws `meshes` (`gatherDrawn`) as instances: those `camera` sees, or that cast a shadow `shadow` (the sun's shadow
    *  camera, aimed) covers, each with others like it (`batchKey`). One that can't be drawn so (`batchable`) is put on
-   *  the camera's layer too, to be drawn as a mesh of its own. The world's matrices as they are: the caller works them
+   *  the camera's layer too, to be drawn as a mesh of its own. A batch with none drawn in it is hidden, and let go of
+   *  once it's had none for `KEEP` ms, `now` being the time. The world's matrices as they are: the caller works them
    *  out first. How many are drawn as instances.
    */
-  draw(meshes: readonly Mesh[], camera: Camera, shadow: Camera | null): number {
+  draw(
+    meshes: readonly Mesh[],
+    camera: Camera,
+    shadow: Camera | null,
+    now: number = performance.now()
+  ): number {
     this.#seen.setFromProjectionMatrix(
       viewing.multiplyMatrices(
         camera.projectionMatrix,
@@ -184,18 +190,18 @@ export class MarkerInstances {
         return;
       }
 
-      const idle = (this.#idle.get(key) ?? 0) + 1;
+      const since = this.#idle.get(key) ?? now;
 
       batch.visible = false;
       batch.count = 0;
 
-      if (idle > IDLE) {
+      if (now - since > KEEP) {
         this.group.remove(batch);
         batch.dispose();
         this.#batches.delete(key);
         this.#idle.delete(key);
       } else {
-        this.#idle.set(key, idle);
+        this.#idle.set(key, since);
       }
     });
 

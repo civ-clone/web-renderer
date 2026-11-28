@@ -1169,6 +1169,8 @@ Each is looked up by its type name in the model set.
   - Figures playing a clip are skinned, each posed its own way, so they're drawn as they were. So is a mesh whose
     material is see-through, or more than one: it's put back on the camera's layer.
   - A marker fading has materials of its own, so it's a batch of its own.
+  - A batch with none drawn in it is hidden, and kept for three seconds before it's let go of, so a unit blinking out
+    and in doesn't make one afresh each time.
   - Picking a unit still finds its meshes: the picker looks on every layer.
   - On that late game, at the default view a frame drops from 235 calls to 137, and looking low (30°) at the same
     distance from 441 to 291. Each mesh kept is drawn in both passes now, so triangles rise a little: 1.36M to 1.38M,
