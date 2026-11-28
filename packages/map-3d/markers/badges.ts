@@ -378,16 +378,18 @@ const position = new Vector3();
 const imageOf = (sprite: Sprite): BadgeImage | null =>
   (sprite.material.map?.image as BadgeImage | undefined) ?? null;
 
+/** Whether `object`, in a part shown, is a badge to draw: a sprite on `BADGE_LAYER`, its material shown. */
+export const isBadge = (object: Object3D): object is Sprite =>
+  object instanceof Sprite &&
+  object.layers.isEnabled(BADGE_LAYER) &&
+  object.material.visible;
+
 /** The badges in `root` to draw: every sprite on `BADGE_LAYER` shown, in a part shown, its material shown. */
 export const badgeSprites = (root: Object3D): Sprite[] => {
   const sprites: Sprite[] = [];
 
   root.traverseVisible((object) => {
-    if (
-      object instanceof Sprite &&
-      object.layers.isEnabled(BADGE_LAYER) &&
-      object.material.visible
-    ) {
+    if (isBadge(object)) {
       sprites.push(object);
     }
   });
@@ -483,8 +485,11 @@ export class Badges {
    *  world's matrices as they are: the caller works them out first.
    */
   gather(root: Object3D, camera: Camera): number {
-    const sprites = badgeSprites(root);
+    return this.draw(badgeSprites(root), camera);
+  }
 
+  /** Draws `sprites` (`badgeSprites`) as `gather` draws those it finds: how many. */
+  draw(sprites: readonly Sprite[], camera: Camera): number {
     this.atlas.hold(
       sprites.flatMap((sprite) => {
         const image = imageOf(sprite);

@@ -144,6 +144,7 @@
     "test:map-view": "node tools/run-suite.js ui mapView",
     "test:figures": "node tools/run-suite.js ui figures",
     "test:badges-3d": "node tools/run-suite.js ui badges3d",
+    "test:instances-3d": "node tools/run-suite.js ui instances3d",
     "test:shadow-fit-3d": "node tools/run-suite.js ui shadowFit3d",
     "test:map3d": "node tools/run-suite.js ui map3d",
     "test:banners-3d": "node tools/run-suite.js ui banners3d",

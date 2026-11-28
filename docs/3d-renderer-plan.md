@@ -277,6 +277,10 @@ Building another world from the form starts it in the middle again.
   On that game at the default view, a frame is 235 draw calls and 1.36M triangles, from 888 and 4.35M: within the
   budget (spec §9.4). Looking low (30°) at the same distance, it's 441 and 2.59M, from 974 and 4.92M, still over it.
 
+  Since #1204's instancing, units' and cities' meshes of the same shape and material are drawn together (spec §6.3).
+  On that game, the default view is 137 calls and 1.38M triangles, and the low one 291 calls, within the budget, but
+  2.63M triangles, still over it: the land and its plants alone are 2.25M there.
+
 - **What:**
   - the sea surface with depth tint and shore foam;
   - a sky made by code, with its environment map;

@@ -1159,6 +1159,22 @@ Each is looked up by its type name in the model set.
   - On a late game (a Civ2 save at turn 271, on a 52 × 130 map), it draws in one call what took 302 a frame for each
     copy of the world drawn. At the closest zoom a frame drops from 463 calls to 162, and at the default from 1,491
     to 888.
+- **Drawn as instances** (#1204, `markers/instances.ts`): a unit's figures, stand, wall and the ring at its feet, and a
+  city's walls, are drawn as instances. All those of the same shape in the same material are one draw call, as the
+  camera sees them and again for the sun's shadows.
+  - Each is still a mesh in its marker, but on a layer the camera doesn't draw (`MARKER_LAYER`). As each frame's drawn,
+    the stage gathers those shown, with the badges, in one walk.
+  - It keeps those the camera sees, or that cast a shadow the sun's shadow map covers, and fills a batch for each
+    shape, material and way of casting shadows. A batch is bounded round its instances for three.js to cull it by.
+  - Figures playing a clip are skinned, each posed its own way, so they're drawn as they were. So is a mesh whose
+    material is see-through, or more than one: it's put back on the camera's layer.
+  - A marker fading has materials of its own, so it's a batch of its own.
+  - A batch with none drawn in it is hidden, and kept for three seconds before it's let go of, so a unit blinking out
+    and in doesn't make one afresh each time.
+  - Picking a unit still finds its meshes: the picker looks on every layer.
+  - On that late game, at the default view a frame drops from 235 calls to 137, and looking low (30°) at the same
+    distance from 441 to 291. Each mesh kept is drawn in both passes now, so triangles rise a little: 1.36M to 1.38M,
+    and 2.59M to 2.63M.
 - **Hidden units:** `t` hides units and cities, as it does on the 2D map, so the land shows as it is. A city's walls and
   name go, and its town: its buildings, on its square and round it, are laid with the land (§7.2), so every square with
   a city on it or beside it is laid again as though none stood there, its woods and fields whole (but for one spot,
@@ -1927,8 +1943,8 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
   (`modelKey`: the manifest's address and the model's name).
 - **Drawn** (`MarkerKit.modelFigures`):
   - **Figures:** as many as stand for one unit of the type's look (D6), in its formation, merged in a mesh for each of
-    the model's parts. So a unit is a draw call for each part, besides its stand: mostly one or two, and eight for
-    the realistic Fighter and Helicopter.
+    the model's parts: mostly one or two, and eight for the realistic Fighter and Helicopter. Each part is drawn as
+    an instance with every other unit's of the same type and owner's colour (§6.3, #1204), but while it plays a clip.
   - **Size:** the set's size, or the model's own, times twice life size and the player's choice (§6.2).
   - **Where:** on the built-in set's stand, and behind its wall when fortified. A ship sits on the water in its
     ripples, with no stand.
