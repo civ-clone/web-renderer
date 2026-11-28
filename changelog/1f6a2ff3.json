@@ -1,0 +1,1 @@
+{"version":"0.1.0@1f6a2ff3","date":"2026-11-28T17:00:16.000Z","localChanges":["chore: work towards a 3D map, not offered yet: under ?3d=1 a city taken from or by you keeps its buildings, rather than its town being laid out afresh (closes #1430) (#1431)"],"externalChanges":{}}
