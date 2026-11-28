@@ -1388,6 +1388,10 @@ Landmark buildings replace ordinary lots near the middle:
     has.
   - **Still:** they don't flap, as smog doesn't drift.
 - **Captured:** the city keeps its buildings and changes colours.
+  - As built (#1430): a city's town, and the houses it spreads onto the squares beside it, are laid from its square
+    (`seedOf`, `overlay/overlayFor.ts`), which a city never leaves, not its id. A rival's city reaches the page as a
+    stand-in with an id of its own (`unknownCityOf`), so its id changes as it's taken from or by the player; its square
+    doesn't. Its name, banner and units take the new owner's colours.
 - **Destroyed:** the city is left as rubble for a few turns, as long as the client's tile still shows it, then it's
   gone.
 

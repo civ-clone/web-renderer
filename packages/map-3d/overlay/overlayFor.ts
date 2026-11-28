@@ -22,8 +22,22 @@ import {
 /** A neighbour of a square: how far off it is, in squares, before the world wraps, and what's on it. */
 export type OverlayNeighbour = {
   offset: readonly [number, number];
-  tile: Pick<Tile, 'city' | 'improvements'> & Partial<Pick<Tile, 'terrain'>>;
+  tile: Pick<Tile, 'city' | 'improvements'> &
+    Partial<Pick<Tile, 'terrain' | 'x' | 'y'>>;
 };
+
+/**
+ * The seed a city on `tile` is laid out from (`citySeed`): from its square, which a city never leaves, so its buildings
+ *  stay as they are whoever holds it. A rival's city reaches the page as a stand-in with an id of its own, so its id
+ *  changes as it's taken from or by the player (#1430). From its id where the square isn't said.
+ */
+export const seedOf = (
+  tile: Partial<Pick<Tile, 'x' | 'y'>>,
+  city: Pick<NonNullable<Tile['city']>, 'id' | 'name'>
+): number =>
+  typeof tile.x === 'number' && typeof tile.y === 'number'
+    ? citySeed(`${tile.x},${tile.y}`)
+    : citySeed(String(city.id ?? city.name ?? ''));
 
 /** The ways a road or railroad leaves its square, by its neighbours' offsets, or that it's on its own. */
 export type Route = {
@@ -100,7 +114,7 @@ export const woodsOf = (
  */
 export const overlayFor = (
   tile: Pick<Tile, 'improvements' | 'terrain' | 'goodyHut'> &
-    Partial<Pick<Tile, 'city' | 'isWater'>>,
+    Partial<Pick<Tile, 'city' | 'isWater' | 'x' | 'y'>>,
   neighbours: readonly OverlayNeighbour[]
 ): SquareOverlay | null => {
   if (tile.city) {
@@ -120,12 +134,12 @@ export const overlayFor = (
       vegetation: false,
       woods: [],
       paths: [],
-      // From its id, as the engine has it: the same city whoever holds it. Out to each neighbour whose road or railroad
-      //  comes in, as it lays its half (a road where the city's square has one too, or a railroad, which joins a city),
-      //  and towards the sea. In civil disorder, fires on its roofs (`disorder.ts`); celebrating, flags on them
+      // From its square (`seedOf`): the same city whoever holds it. Out to each neighbour whose road or railroad comes
+      //  in, as it lays its half (a road where the city's square has one too, or a railroad, which joins a city), and
+      //  towards the sea. In civil disorder, fires on its roofs (`disorder.ts`); celebrating, flags on them
       //  (`celebration.ts`), as the city's shown.
       city: planFor(
-        citySeed(String(city.id ?? city.name ?? '')),
+        seedOf(tile, city),
         city.growth?.size ?? 1,
         neighbours
           .filter(
@@ -223,13 +237,14 @@ export const overlayFor = (
     !UNBUILT.some((name) => has(tile, name))
   ) {
     overlay.suburbs = neighbours
-      .flatMap(({ offset, tile: { city } }): SuburbPlan[] => {
-        const steps = city ? suburbStepsFor(city.growth?.size ?? 1) : 0;
+      .flatMap(({ offset, tile: neighbour }): SuburbPlan[] => {
+        const { city } = neighbour,
+          steps = city ? suburbStepsFor(city.growth?.size ?? 1) : 0;
 
         return city && steps > 0
           ? [
               {
-                seed: citySeed(String(city.id ?? city.name ?? '')),
+                seed: seedOf(neighbour, city),
                 steps,
                 city: offset,
               },
