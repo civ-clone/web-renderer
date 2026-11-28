@@ -277,6 +277,10 @@ Building another world from the form starts it in the middle again.
   On that game at the default view, a frame is 235 draw calls and 1.36M triangles, from 888 and 4.35M: within the
   budget (spec §9.4). Looking low (30°) at the same distance, it's 441 and 2.59M, from 974 and 4.92M, still over it.
 
+  Since #1204's instancing, units' and cities' meshes of the same shape and material are drawn together (spec §6.3).
+  On that game, the default view is 137 calls and 1.38M triangles, and the low one 291 calls, within the budget, but
+  2.63M triangles, still over it: the land and its plants alone are 2.25M there.
+
 - **What:**
   - the sea surface with depth tint and shore foam;
   - a sky made by code, with its environment map;
@@ -643,8 +647,8 @@ on the screen over the rest, at every copy of the world in sight. Hidden with th
 them, with the yields.
 
 **Banners, second part (clicks and hovers): done** (spec §7.5). A click on a banner is for its city, and resting on one
-opens its tooltip over it, as on the 2D map. Still to do: fading those hidden behind the land, and the states
-(captured and destroyed) on the map itself.
+opens its tooltip over it, as on the 2D map. Still to do: fading those hidden behind the land, and the destroyed
+state on the map itself.
 
 **States, first part, civil disorder: done** (spec §7.4, "As built"). A city in disorder has fires on roofs behind its
 middle, laid with its buildings, and a column of smoke rising from each, leaning away from its units and keeping their
@@ -655,6 +659,9 @@ behind it shows whichever way the camera looks (#1420).
 roofs, a pole on each roof's peak and a pennant from its top, all one way in its wind, more as it grows, spread over its
 houses and apart from each other: your own cities, as only those say they're celebrating, and not while it's in
 disorder. Still, as smog is.
+
+**States, third part, captured: done** (spec §7.4). A city captured keeps its buildings, as they're laid by its own
+seed (`citySeed` of its id), and changes colours: its name and banner, and its units, take the new owner's.
 
 **Yields (`y`): done.** The 2D map's icons for what each square yields (the map's pack's own, or the interface's) stand
 in the world over each square's middle, as strategy maps show them, rather than on the screen:
@@ -677,8 +684,8 @@ in the world over each square's middle, as strategy maps show them, rather than 
 sets in 6.4.
 
 **That's met** (#1418, civil disorder the last row). Still to do in M4: 4.0's ages, 4.1's worked squares further out,
-side streets, eras and modernising, 4.2's building kit, and 4.3's captured and destroyed states and fading the banners
-hidden behind the land.
+side streets, eras and modernising, 4.2's building kit, and 4.3's destroyed state and fading the banners hidden behind
+the land.
 
 ---
 

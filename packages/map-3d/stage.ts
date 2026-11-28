@@ -78,6 +78,7 @@ import Water, {
 import YieldIcons from './yieldIcons';
 import shadowSides, { heightsOf } from './shadowFit';
 import Badges from './markers/badges';
+import MarkerInstances, { gatherDrawn } from './markers/instances';
 import { smokeMaterials, smokeMeshes } from './smoke';
 import { YieldMesh } from './yields';
 import {
@@ -831,6 +832,8 @@ export const createStage: StageFactory = (
     // What stands over units and cities in `markersGroup`, drawn together (`badges.ts`): gathered as each frame's
     //  drawn.
     badges = new Badges(BADGES),
+    // Units' and cities' meshes in `markersGroup`, drawn as instances (`instances.ts`): gathered as each frame's drawn.
+    instances = new MarkerInstances(),
     // What each square yields, over the land at every copy of the world, when they're shown.
     yieldsGroup = new Group(),
     // The grid's lines (`grid.ts`): the land's chunks drawn again with them alone, when they're shown.
@@ -891,6 +894,7 @@ export const createStage: StageFactory = (
   scene.add(land);
   scene.add(markersGroup);
   scene.add(badges.mesh);
+  scene.add(instances.group);
   scene.add(yieldsGroup);
   scene.add(highlightGroup);
   scene.add(water.mesh);
@@ -1348,7 +1352,12 @@ export const createStage: StageFactory = (
       scene.updateMatrixWorld();
       camera.updateMatrixWorld();
       thinPlants();
-      badges.gather(markersGroup, camera);
+      // What the markers draw together, gathered at once: their badges, and their meshes as instances, as the camera
+      //  sees them and the sun's shadows fall.
+      const drawn = gatherDrawn(markersGroup);
+
+      badges.draw(drawn.sprites, camera);
+      instances.draw(drawn.meshes, camera, sun.shadow.camera);
       renderer.render(scene, camera);
     },
     clearCloud: (now, seconds): boolean => water.clear(now, seconds),
@@ -2158,6 +2167,7 @@ export const createStage: StageFactory = (
       stone.dispose();
       kit.dispose();
       badges.dispose();
+      instances.dispose();
       yields.dispose();
       water.dispose();
       clouds.dispose();

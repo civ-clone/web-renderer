@@ -1159,6 +1159,20 @@ Each is looked up by its type name in the model set.
   - On a late game (a Civ2 save at turn 271, on a 52 × 130 map), it draws in one call what took 302 a frame for each
     copy of the world drawn. At the closest zoom a frame drops from 463 calls to 162, and at the default from 1,491
     to 888.
+- **Drawn as instances** (#1204, `markers/instances.ts`): a unit's figures, stand, wall and the ring at its feet, and a
+  city's walls, are drawn as instances. All those of the same shape in the same material are one draw call, as the
+  camera sees them and again for the sun's shadows.
+  - Each is still a mesh in its marker, but on a layer the camera doesn't draw (`MARKER_LAYER`). As each frame's drawn,
+    the stage gathers those shown, with the badges, in one walk.
+  - It keeps those the camera sees, or that cast a shadow the sun's shadow map covers, and fills a batch for each
+    shape, material and way of casting shadows. A batch is bounded round its instances for three.js to cull it by.
+  - Figures playing a clip are skinned, each posed its own way, so they're drawn as they were. So is a mesh whose
+    material is see-through, or more than one: it's put back on the camera's layer.
+  - A marker fading has materials of its own, so it's a batch of its own.
+  - Picking a unit still finds its meshes: the picker looks on every layer.
+  - On that late game, at the default view a frame drops from 235 calls to 137, and looking low (30°) at the same
+    distance from 441 to 291. Each mesh kept is drawn in both passes now, so triangles rise a little: 1.36M to 1.38M,
+    and 2.59M to 2.63M.
 - **Hidden units:** `t` hides units and cities, as it does on the 2D map, so the land shows as it is. A city's walls and
   name go, and its town: its buildings, on its square and round it, are laid with the land (§7.2), so every square with
   a city on it or beside it is laid again as though none stood there, its woods and fields whole (but for one spot,

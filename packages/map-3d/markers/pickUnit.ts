@@ -8,6 +8,9 @@ import { FIGURES_PART, UNIT_PART } from './drawMarker';
 
 const raycaster = new Raycaster();
 
+// On every layer: a unit's meshes are drawn as instances, on a layer of their own (`instances.ts`).
+raycaster.layers.enableAll();
+
 /**
  * Set in the `userData` of a unit's figures the blink has hidden (`Stage#showFigures`, §6.3): they're still picked, as
  *  they're seen there every other half a second, and the 2D map's blink doesn't change what's clicked either.

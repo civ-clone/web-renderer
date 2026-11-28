@@ -483,8 +483,11 @@ export class Badges {
    *  world's matrices as they are: the caller works them out first.
    */
   gather(root: Object3D, camera: Camera): number {
-    const sprites = badgeSprites(root);
+    return this.draw(badgeSprites(root), camera);
+  }
 
+  /** Draws `sprites` (`badgeSprites`) as `gather` draws those it finds: how many. */
+  draw(sprites: readonly Sprite[], camera: Camera): number {
     this.atlas.hold(
       sprites.flatMap((sprite) => {
         const image = imageOf(sprite);

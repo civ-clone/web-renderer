@@ -7,11 +7,11 @@
 //    veteran's star, and its hit points when hurt; a ring under the active one and a pointer over it.
 //
 // Every marker shares its geometries and its materials. A unit's figures, stand and wall are one geometry for each look
-//  in each pair of colours, and every city's walls one: a mesh each, so a draw call each at every copy of the world
-//  near enough to show (#1204; M6 instances them). Names and flags' labels are sprites drawn on a canvas, the same size
-//  on the screen however far away. What stands over units and cities is drawn all together, in one draw call
-//  (`badges.ts`, #1424), but for the pointer. Labels no marker shows any more are let go once enough have been made
-//  (`sweep`), as cities grow and change hands.
+//  in each pair of colours, and every city's walls one: a mesh each, drawn as instances of one another (`instances.ts`,
+//  #1204), but for figures playing a clip. Names and flags' labels are sprites drawn on a canvas, the same size on the
+//  screen however far away. What stands over units and cities is drawn all together, in one draw call (`badges.ts`,
+//  #1424), but for the pointer. Labels no marker shows any more are let go once enough have been made (`sweep`), as
+//  cities grow and change hands.
 
 import {
   Box3,
@@ -45,6 +45,7 @@ import { LoadedModel, LoadedRig, rigPart } from '../models/loadModels';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import TintedMaterial, { ownerTint } from './tinted';
 import { BADGE_LAYER } from './badges';
+import { instanced } from './instances';
 import boundClips from './rigBounds';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {
@@ -696,7 +697,7 @@ const drawCity = (kit: MarkerKit, city: CityMarker): Group => {
 
   // Its walls, if it has them; its buildings are laid with the land, as its sprawl (`overlay/sprawl.ts`).
   if (city.walled) {
-    group.add(new Mesh(kit.walls(), kit.figureMaterial));
+    group.add(instanced(new Mesh(kit.walls(), kit.figureMaterial)));
   }
 
   // About as tall on the screen as the 2D map's city names, whatever the distance: unless its banner says it instead.
@@ -770,7 +771,9 @@ const drawUnit = (
   //  one), behind a low wall when fortified: one mesh, facing the way it last went (its figures face south, unturned).
   //  A model's figures are a mesh for each of its parts, on the built-in set's stand.
   const figures =
-    modelled === null ? new Mesh(body!, kit.figureMaterial) : new Group();
+    modelled === null
+      ? instanced(new Mesh(body!, kit.figureMaterial))
+      : new Group();
 
   // Drawn to play a clip (`rigged`), with its model's rigged copy, where it has one: as the model stands till a clip's
   //  played, its badges as high over it.
@@ -783,7 +786,7 @@ const drawUnit = (
     rig.forEach((figure) => figures.add(figure));
   } else {
     modelled?.meshes.forEach(([geometry, material]) =>
-      figures.add(new Mesh(geometry, material))
+      figures.add(instanced(new Mesh(geometry, material)))
     );
   }
 
@@ -835,7 +838,7 @@ const drawUnit = (
 
     // A ship's has nothing to draw, at sea or not, but its ripples.
     if (base.getAttribute('position') !== undefined) {
-      group.add(new Mesh(base, kit.figureMaterial));
+      group.add(instanced(new Mesh(base, kit.figureMaterial)));
     }
   }
 
@@ -897,7 +900,7 @@ const drawUnit = (
     const colour = unit.ringColour ?? ACTIVE;
 
     if (unit.ring !== false) {
-      const halo = new Mesh(ring, kit.material(colour, true));
+      const halo = instanced(new Mesh(ring, kit.material(colour, true)));
 
       halo.rotation.x = Math.PI / 2;
       halo.position.y = 0.01;
