@@ -216,7 +216,10 @@ Object.defineProperties(mapCanvas.parentElement, {
   offsetHeight: { get: () => box.height },
 });
 
-// What the stage was asked to do: the test's DOM has no WebGL to draw with.
+// What the stage was asked to do: the test's DOM has no WebGL to draw with. Its views among it only while
+//  `viewsStaged` says, as a frame's view is its land's.
+let viewsStaged = false;
+
 const staged: string[] = [],
   // The land's chunks the stage was given, and where its camera looked last, apart from what's drawn.
   chunksSet = new Set<string>(),
@@ -431,6 +434,10 @@ const staged: string[] = [],
     view: (orbit, height, period) => {
       lookedAt.splice(0, 3, orbit.focus[0], orbit.focus[1], height);
       seenDown.push(period?.v);
+
+      if (viewsStaged) {
+        staged.push('view');
+      }
     },
     stats: () => ({ drawCalls: 0, triangles: 0, geometries: 0 }),
     dispose: () => void staged.push('dispose'),
@@ -753,12 +760,15 @@ expect(
   );
 
   box.width = 800;
+  viewsStaged = true;
   window.dispatchEvent(new Event('resize'));
+  viewsStaged = false;
 
-  expect('and again as the box changes size', staged.splice(0), [
-    'resize 800×480@1',
-    'render',
-  ]);
+  expect(
+    'and again as the box changes size, the camera aimed afresh for its new shape before it’s drawn, so the sun’s shadows are drawn over what it sees',
+    staged.splice(0),
+    ['resize 800×480@1', 'view', 'render']
+  );
 
   window.dispatchEvent(new Event('resize'));
 
