@@ -1,19 +1,24 @@
 // A city in civil disorder on the 3D map (docs/3d-renderer.md §7.4, plan 4.3): fires on the roofs of some of its
 //  buildings behind its middle, and a column of smoke rising from each, leaning away from where its units stand. One
 //  column for a small city, two from size 4 and three from size 8. Laid with the land, as its buildings are
-//  (`overlay/overlayMesh.ts`), so a fire stays on its roof however the city's lots are laid out. With no roof behind
-//  its middle it can burn on, a fire on the ground behind its plaza instead. Still, as smog is: it doesn't drift.
+//  (`overlay/overlayMesh.ts`), so a fire stays on its roof however the city's lots are laid out, its smoke see-through,
+//  so a unit behind it shows. With no roof behind its middle it can burn on, a fire on the ground behind its plaza
+//  instead. Still, as smog is: it doesn't drift.
 //
 // Pure: what's laid and where, on the ground (`u` east, `v` south), from a city's roofs and where its units stand.
 
 import { GAP, UNIT_ROOM } from './sprawl';
 
-/** One piece of a city's disorder: a flame or a puff of smoke, its middle (`u`, height, `v`), its size each way. */
+/**
+ * One piece of a city's disorder: a flame or a puff of smoke, its middle (`u`, height, `v`), its size each way, its
+ *  colour, and how solid it is: a flame wholly, a puff of smoke less so the higher it is, as it thins.
+ */
 export type DisorderPiece = {
   kind: 'fire' | 'smoke';
   at: [number, number, number];
   size: [number, number, number];
   colour: string;
+  alpha: number;
 };
 
 /** A roof a fire can burn on: where its building stands, how wide it is, and how high its eaves and its peak are. */
@@ -41,6 +46,10 @@ export const DISORDER = {
   lean: 0.03,
   // How far each puff's thrown either side of the way it leans, at most, so it billows rather than stacks.
   billow: 0.018,
+  // How solid the first puff is, and how much less each over it is, so the smoke thins as it rises and a unit behind
+  //  it shows through.
+  firstAlpha: 0.9,
+  alphaFalls: 0.05,
   // With no roof behind the city's middle: a fire this far behind its middle, on the ground behind its plaza.
   behindPlaza: 0.2,
 } as const;
@@ -117,6 +126,7 @@ const column = (
       at: [u - leanV * side, base + height / 2, v + leanU * side],
       size: [width, height, width],
       colour,
+      alpha: 1,
     });
   });
 
@@ -139,6 +149,7 @@ const column = (
       ],
       size: [width, width * 0.85, width],
       colour: SMOKE[puff] ?? SMOKE[SMOKE.length - 1]!,
+      alpha: DISORDER.firstAlpha - puff * DISORDER.alphaFalls,
     });
   }
 

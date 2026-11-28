@@ -42,19 +42,24 @@ export type Ground = {
 /**
  * The order what's see-through is drawn in, all of it after everything solid: the sea, then the grid's lines
  *  (`grid.ts`), then the square under the pointer lit (`highlight.ts`), then smog over the land, then the cloud, then
- *  what stands over units and cities (`markers/drawMarker.ts`). The sea and the cloud are each one plane across the
- *  world, which three.js can only order by this: it orders what's see-through by it, then by how far each thing's middle
- *  is, which says nothing for a plane that size. The lines, the light and smog are never under the sea's surface, so
- *  after it is always right: drawn before it, the sea would be painted over them. The light's after the lines, so it's
- *  drawn over the line at a square's edge on every chunk alike, not over some and under others as the camera moves.
- *  They can be over the cloud on high land, but the cloud's after them, as it's under them on low land, which is more
- *  often; and the light's never on a square never seen, nor the lines but a step past the edge of what has been.
+ *  smoke rising from a city, then what stands over units and cities (`markers/drawMarker.ts`). The sea and the cloud
+ *  are each one plane across the world, which three.js can only order by this: it orders what's see-through by it,
+ *  then by how far each thing's middle is, which says nothing for a plane that size. The lines, the light and smog are
+ *  never under the sea's surface, so after it is always right: drawn before it, the sea would be painted over them.
+ *  The light's after the lines, so it's drawn over the line at a square's edge on every chunk alike, not over some and
+ *  under others as the camera moves. They can be over the cloud on high land, but the cloud's after them, as it's
+ *  under them on low land, which is more often; and the light's never on a square never seen, nor the lines but a step
+ *  past the edge of what has been. Smoke rises well over the cloud's plane, so where they meet on the screen the
+ *  smoke's nearer: drawn before it, the cloud would paint over its tops. It's drawn in two passes, its depth then its
+ *  colour (`smoke.ts`).
  */
 export const SEA_ORDER = 1,
   GRID_ORDER = 1.2,
   HIGHLIGHT_ORDER = 1.25,
   SMOG_ORDER = 1.5,
-  CLOUD_ORDER = 2;
+  CLOUD_ORDER = 2,
+  SMOKE_DEPTH_ORDER = 2.5,
+  SMOKE_ORDER = 2.6;
 
 // Clear and green-blue at the shore, deep blue out at sea, as linear colours.
 const SHALLOW = new Color('#3f8a8c'),

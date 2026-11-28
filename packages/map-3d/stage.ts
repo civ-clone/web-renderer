@@ -64,7 +64,7 @@ import {
 import { TileMarker } from './markers/markerFor';
 import { idleChanges } from './idling';
 import unitUnder, { blinkAs, blinkFigures } from './markers/pickUnit';
-import { OverlayMesh, PLANT_NUMBERS } from './overlay/overlayMesh';
+import { OverlayMesh, PLANT_NUMBERS, SUN_FROM } from './overlay/overlayMesh';
 import { plantMatrices, plantsKept } from './overlay/thinning';
 import { FIELD_OF_VIEW, Orbit, eye, sightFor } from './camera/orbit';
 import Water, {
@@ -75,6 +75,7 @@ import Water, {
   SMOG_ORDER,
 } from './water';
 import YieldIcons from './yieldIcons';
+import { smokeMaterials, smokeMeshes } from './smoke';
 import { YieldMesh } from './yields';
 import {
   LoadedModel,
@@ -560,7 +561,7 @@ const ALL_PLANTS = 'allPlants';
 
 // The sun's shadow map's size, in texels a side, and how far the sun is from what it lights (its offset below).
 const SHADOW_MAP = 2048,
-  SUN_DISTANCE = Math.hypot(30, 40, 20);
+  SUN_DISTANCE = Math.hypot(...SUN_FROM);
 
 export const createStage: StageFactory = (
   canvas,
@@ -596,6 +597,7 @@ export const createStage: StageFactory = (
       Placed & {
         geometry: BufferGeometry;
         haze: BufferGeometry | null;
+        smoke: BufferGeometry | null;
         span: [number, number];
       }
     >(),
@@ -664,6 +666,9 @@ export const createStage: StageFactory = (
       side: DoubleSide,
       forceSinglePass: true,
     }),
+    // Smoke rising from a city in civil disorder, drawn in two passes (`smoke.ts`). Clipped as what's laid on the land
+    //  is.
+    smokeMaterial = smokeMaterials(),
     // What's laid on the land stops where the land does past a pole the view's stopped at: the last row's fields and
     //  roads on a staggered or hex world reach a little past it, where the land, the sea and the cloud stop (and are
     //  drawn a period round too, where the land is theirs: `overlayCopies`).
@@ -814,7 +819,7 @@ export const createStage: StageFactory = (
   scene.add(clouds.mesh);
 
   // From the south-east and well up, so slopes facing it are lit and the far sides of ridges fall into shade.
-  sun.position.set(30, 40, 20);
+  sun.position.set(...SUN_FROM);
   // One shadow map, over what the camera sees round its focus (`view`).
   sun.castShadow = true;
   sun.shadow.mapSize.set(SHADOW_MAP, SHADOW_MAP);
@@ -1088,7 +1093,7 @@ export const createStage: StageFactory = (
     const reach = orbit.distance * 2.2,
       shadow = sun.shadow.camera;
 
-    sun.position.set(u + 30, height + 40, v + 20);
+    sun.position.set(u + SUN_FROM[0], height + SUN_FROM[1], v + SUN_FROM[2]);
     sun.target.position.set(u, height, v);
     shadow.left = -reach;
     shadow.right = reach;
@@ -1113,6 +1118,8 @@ export const createStage: StageFactory = (
     clouds.pastThePoles(seen.v !== null);
     overlayMaterial.clippingPlanes = seen.v === null ? poles : null;
     hazeMaterial.clippingPlanes = overlayMaterial.clippingPlanes;
+    smokeMaterial.depth.clippingPlanes = overlayMaterial.clippingPlanes;
+    smokeMaterial.colour.clippingPlanes = overlayMaterial.clippingPlanes;
     // Rivers' water too, so a course across the poles' water stops at them.
     riverWater.clippingPlanes = overlayMaterial.clippingPlanes;
     highlightMaterial.clippingPlanes = overlayMaterial.clippingPlanes;
@@ -1377,6 +1384,7 @@ export const createStage: StageFactory = (
         });
         old.geometry.dispose();
         old.haze?.dispose();
+        old.smoke?.dispose();
         overlays.delete(key);
       }
 
@@ -1392,19 +1400,27 @@ export const createStage: StageFactory = (
       geometry.computeBoundingSphere();
       geometry.computeBoundingBox();
 
-      // Its haze, smog over pollution, where it has any: its own geometry, drawn see-through with the haze's material.
-      const haze =
-        mesh.haze.positions.length === 0 ? null : new BufferGeometry();
+      // Its haze, smog over pollution, and its smoke, where it has any: each its own geometry, drawn see-through with
+      //  its own material.
+      const seeThrough = ({
+          positions,
+          colours,
+        }: OverlayMesh['haze']): BufferGeometry | null => {
+          if (positions.length === 0) {
+            return null;
+          }
 
-      if (haze !== null) {
-        haze.setAttribute(
-          'position',
-          new BufferAttribute(mesh.haze.positions, 3)
-        );
-        haze.setAttribute('color', new BufferAttribute(mesh.haze.colours, 4));
-        haze.computeBoundingSphere();
-        haze.computeBoundingBox();
-      }
+          const made = new BufferGeometry();
+
+          made.setAttribute('position', new BufferAttribute(positions, 3));
+          made.setAttribute('color', new BufferAttribute(colours, 4));
+          made.computeBoundingSphere();
+          made.computeBoundingBox();
+
+          return made;
+        },
+        haze = seeThrough(mesh.haze),
+        rising = seeThrough(mesh.smoke);
 
       // Its plants, as a set's models draw them: each model's, where it's had, every plant's matrix in one buffer every
       //  copy of the world shares, standing on the land as tall as it's laid and turned its way.
@@ -1454,10 +1470,15 @@ export const createStage: StageFactory = (
         });
       });
 
-      // What's laid, its haze and its plants together: one may be all there is, as pollution alone.
+      // What's laid, its haze, its smoke and its plants together: one may be all there is, as pollution alone.
       const box = new Box3();
 
-      [geometry.boundingBox, haze?.boundingBox, plantsBox].forEach((each) => {
+      [
+        geometry.boundingBox,
+        haze?.boundingBox,
+        rising?.boundingBox,
+        plantsBox,
+      ].forEach((each) => {
         if (each !== undefined && each !== null && !each.isEmpty()) {
           box.union(each);
         }
@@ -1466,10 +1487,12 @@ export const createStage: StageFactory = (
       const overlay: Placed & {
         geometry: BufferGeometry;
         haze: BufferGeometry | null;
+        smoke: BufferGeometry | null;
         span: [number, number];
       } = {
         geometry,
         haze,
+        smoke: rising,
         // How far down the ground it reaches, from its top to its bottom.
         span: [mesh.v + box.min.z, mesh.v + box.max.z],
         at: [mesh.u, 0, mesh.v],
@@ -1487,6 +1510,13 @@ export const createStage: StageFactory = (
             //  the sea's behind it would be painted over, cut along the shore.
             smog.renderOrder = SMOG_ORDER;
             drawn.add(smog);
+          }
+
+          // After the cloud, which would paint over its tops, and before what stands over units.
+          if (rising !== null) {
+            smokeMeshes(rising, smokeMaterial).forEach((each) =>
+              drawn.add(each)
+            );
           }
 
           // Its plants, each model's part drawn once for all of them, casting shadows cut out as its leaves are.
@@ -1996,14 +2026,17 @@ export const createStage: StageFactory = (
         river?.dispose();
       });
       chunks.clear();
-      overlays.forEach(({ geometry, haze, drawn }) => {
+      overlays.forEach(({ geometry, haze, smoke, drawn }) => {
         drawn.forEach(letGoOfPlants);
         geometry.dispose();
         haze?.dispose();
+        smoke?.dispose();
       });
       overlays.clear();
       overlayMaterial.dispose();
       hazeMaterial.dispose();
+      smokeMaterial.depth.dispose();
+      smokeMaterial.colour.dispose();
       plantModels.forEach(({ parts }) =>
         parts.forEach(({ geometry, material }) => {
           geometry.dispose();

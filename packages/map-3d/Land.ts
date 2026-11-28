@@ -616,6 +616,7 @@ class Land {
         mesh =
           making.laid.positions.length === 0 &&
           making.laid.haze.positions.length === 0 &&
+          making.laid.smoke.positions.length === 0 &&
           making.laid.plants.size === 0
             ? null
             : meshOf(i * stepsU * spacingU, j * stepsV * spacingV, making.laid);
