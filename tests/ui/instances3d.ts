@@ -360,19 +360,32 @@ const lit = drawMarker(kit, { city: null, unit: unit('Spearman') }),
 
 meshOf(lit).castShadow = true;
 meshOf(unlit).castShadow = false;
+
+// And the same again, one taking shadows, and one drawn later.
+const taking = drawMarker(kit, { city: null, unit: unit('Spearman') }),
+  later = drawMarker(kit, { city: null, unit: unit('Spearman') });
+
+meshOf(taking).castShadow = true;
+meshOf(taking).receiveShadow = true;
+meshOf(later).castShadow = true;
+meshOf(later).renderOrder = 1;
+pair.add(taking, later);
 pair.add(lit, unlit);
 pair.updateMatrixWorld(true);
 instances.draw(gatherDrawn(pair).meshes, camera, sun);
 
 expect(
-  'the same shape and material, one casting a shadow and one not: a batch each, casting as its meshes do',
+  'the same shape and material, one casting a shadow and one not, one taking shadows, one drawn later: a batch each, casting, taking and drawn as its meshes are',
   [
     shown().length,
     shown()
-      .map(({ castShadow }) => castShadow)
+      .map(
+        ({ castShadow, receiveShadow, renderOrder, count }) =>
+          `${castShadow} ${receiveShadow} ${renderOrder} ${count}`
+      )
       .sort(),
   ],
-  [2, [false, true]]
+  [4, ['false false 0 1', 'true false 0 1', 'true false 1 1', 'true true 0 1']]
 );
 
 // Many the same: room made for them all.
@@ -505,7 +518,10 @@ expect(
 // None drawn for a while: the batches kept hidden for a few seconds, however many frames come, then let go of.
 const idling = new MarkerInstances();
 
-idling.draw(gatherDrawn(owners).meshes, camera, sun, 1000);
+// Well into the page's life, as the clock is in a browser.
+const T = 100000;
+
+idling.draw(gatherDrawn(owners).meshes, camera, sun, T + 1000);
 
 const kept = [...idling.batches.values()];
 let letGo = 0;
@@ -518,7 +534,7 @@ kept.forEach((batch) =>
 
 // Two hundred frames over the next two seconds, none drawn.
 for (let frame = 1; frame <= 200; frame++) {
-  idling.draw([], camera, sun, 1000 + frame * 10);
+  idling.draw([], camera, sun, T + 1000 + frame * 10);
 }
 
 const keptAfterFrames = [
@@ -527,18 +543,35 @@ const keptAfterFrames = [
   kept.every((batch) => !batch.visible),
 ];
 
-idling.draw([], camera, sun, 4500);
+// Drawn again at 3.1 s, then none for 2.9 s more: kept, its clock started afresh.
+idling.draw(gatherDrawn(owners).meshes, camera, sun, T + 3100);
+
+for (let frame = 1; frame <= 290; frame++) {
+  idling.draw([], camera, sun, T + 3100 + frame * 10);
+}
+
+const keptAfterReturn = [letGo, idling.batches.size === kept.length];
+
+idling.draw([], camera, sun, T + 6500);
+
+const afterLetGo = [letGo, idling.batches.size, idling.group.children.length];
+
+// Made afresh for one frame, then none: the new ones kept.
+idling.draw(gatherDrawn(owners).meshes, camera, sun, T + 7000);
+idling.draw([], camera, sun, T + 7010);
+
+const keptAfterRemake = idling.batches.size === kept.length;
 
 expect(
-  'with none drawn in them, the batches are kept hidden for a few seconds however many frames come, then let go of',
+  'with none drawn in them, the batches are kept hidden for a few seconds however many frames come, their clock started afresh as they’re drawn again, then let go of; made afresh, kept again',
   [
     kept.length > 0,
     keptAfterFrames,
-    letGo,
-    idling.batches.size,
-    idling.group.children.length,
+    keptAfterReturn,
+    afterLetGo,
+    keptAfterRemake,
   ],
-  [true, [0, true, true], kept.length, 0, 0]
+  [true, [0, true, true], [0, true], [kept.length, 0, 0], true]
 );
 
 // Let go of while it still draws: its batches let go of with it.
