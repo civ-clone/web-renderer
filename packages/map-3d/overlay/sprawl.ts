@@ -47,7 +47,8 @@ export type CityLayout = {
  * What a city's sprawl is laid out from: its seed, how many lots it has built (`lotsFor`), how many storeys taller
  *  those near its middle stand (`tierFor`), the ways its streets go out, and its neighbours of sea, one of which its
  *  quay's street goes down to, by their offsets. In civil disorder, how many columns of smoke rise from fires on its
- *  roofs (`disorder.ts`): none, or missing, when it isn't.
+ *  roofs (`disorder.ts`); celebrating, how many flags fly from its roofs (`celebration.ts`): each none, or missing,
+ *  when it isn't.
  */
 export type CityPlan = {
   seed: number;
@@ -56,6 +57,7 @@ export type CityPlan = {
   ways: (readonly [number, number])[];
   sea: (readonly [number, number])[];
   disorder?: number;
+  celebration?: number;
 };
 
 /** A city's walls: the ring they stand on, from the square's middle, and how thick they are, from it each way. */
@@ -125,7 +127,8 @@ export const planFor = (
   size: number,
   ways: readonly (readonly [number, number])[],
   sea: readonly (readonly [number, number])[] = [],
-  disorder = 0
+  disorder = 0,
+  celebration = 0
 ): CityPlan => ({
   seed,
   lots: lotsFor(size),
@@ -133,6 +136,7 @@ export const planFor = (
   ways: [...ways],
   sea: [...sea],
   ...(disorder > 0 ? { disorder } : {}),
+  ...(celebration > 0 ? { celebration } : {}),
 });
 
 /**

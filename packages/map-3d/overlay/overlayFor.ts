@@ -10,6 +10,7 @@
 import { Tile } from '@civ-clone/ui-protocol/types';
 import { growthOf } from '@civ-clone/ui-models-builtin/vegetation';
 import { disorderColumns } from './disorder';
+import { flagsFor } from './celebration';
 import {
   CityPlan,
   SuburbPlan,
@@ -121,7 +122,8 @@ export const overlayFor = (
       paths: [],
       // From its id, as the engine has it: the same city whoever holds it. Out to each neighbour whose road or railroad
       //  comes in, as it lays its half (a road where the city's square has one too, or a railroad, which joins a city),
-      //  and towards the sea. In civil disorder, fires on its roofs (`disorder.ts`), as the city's shown.
+      //  and towards the sea. In civil disorder, fires on its roofs (`disorder.ts`); celebrating, flags on them
+      //  (`celebration.ts`), as the city's shown.
       city: planFor(
         citySeed(String(city.id ?? city.name ?? '')),
         city.growth?.size ?? 1,
@@ -139,7 +141,8 @@ export const overlayFor = (
           .map(({ offset }) => offset),
         city.civilDisorderDeclared === true
           ? disorderColumns(city.growth?.size ?? 1)
-          : 0
+          : 0,
+        city.celebrateLeader === true ? flagsFor(city.growth?.size ?? 1) : 0
       ),
       suburbs: [],
       beside: [],
