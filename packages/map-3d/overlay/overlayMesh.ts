@@ -56,7 +56,8 @@ import {
   suburb,
 } from './sprawl';
 import { IN_FRONT_OF_CITY } from '../markers/drawMarker';
-import disorderPieces from './disorder';
+import disorderPieces, { Roof } from './disorder';
+import celebrationPieces from './celebration';
 import { ditherRank } from './thinning';
 import { standAt } from './stands';
 import { RiverPath } from '../terrain/relief';
@@ -1734,6 +1735,14 @@ const city = (layer: Layer, plan: CityPlan): void => {
   );
   lots.forEach((lot) => house(layer, lot));
 
+  // Its houses' roofs, as they're laid, for what's laid on them.
+  const roofs = (): Roof[] =>
+    lots.map((lot) => {
+      const { top, peak } = houseHeights(layer, lot);
+
+      return { at: lot.at, width: lot.width, eaves: top, peak };
+    });
+
   // In civil disorder: fires on some of its roofs behind its middle, and smoke rising from them, leaning away from its
   //  units (`disorder.ts`), each on the house that's laid there; the smoke see-through, so a unit behind it shows,
   //  whichever way the camera looks.
@@ -1741,11 +1750,7 @@ const city = (layer: Layer, plan: CityPlan): void => {
     disorderPieces({
       centre: [u, v],
       units,
-      roofs: lots.map((lot) => {
-        const { top, peak } = houseHeights(layer, lot);
-
-        return { at: lot.at, width: lot.width, eaves: top, peak };
-      }),
+      roofs: roofs(),
       seed: plan.seed,
       columns: plan.disorder ?? 0,
       ground: (gu, gv) => layer.ground(gu, gv),
@@ -1753,6 +1758,19 @@ const city = (layer: Layer, plan: CityPlan): void => {
       kind === 'fire'
         ? layer.solid(cone, at, size, colour)
         : layer.smoke(sphere, at, size, colour, alpha)
+    );
+  }
+
+  // Celebrating: flags on some of its roofs (`celebration.ts`), each on the house that's laid there.
+  if ((plan.celebration ?? 0) > 0) {
+    celebrationPieces({
+      centre: [u, v],
+      units,
+      roofs: roofs(),
+      seed: plan.seed,
+      flags: plan.celebration ?? 0,
+    }).forEach(({ at, size, colour, turn }) =>
+      layer.solid(box, at, size, colour, [0, turn, 0])
     );
   }
 };

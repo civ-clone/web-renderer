@@ -633,12 +633,17 @@ them, with the yields.
 
 **Banners, second part (clicks and hovers): done** (spec §7.5). A click on a banner is for its city, and resting on one
 opens its tooltip over it, as on the 2D map. Still to do: fading those hidden behind the land, and the states
-(celebration, captured and destroyed) on the map itself.
+(captured and destroyed) on the map itself.
 
 **States, first part, civil disorder: done** (spec §7.4, "As built"). A city in disorder has fires on roofs behind its
 middle, laid with its buildings, and a column of smoke rising from each, leaning away from its units and keeping their
 room: one for a small city, two from size 4 and three from 8. Still, as smog is. Its smoke is see-through, so a unit
 behind it shows whichever way the camera looks (#1420).
+
+**States, second part, celebration: done** (spec §7.4, "As built"). A city celebrating flies flags from some of its
+roofs, a pole on each roof's peak and a pennant from its top, all one way in its wind, more as it grows, spread over its
+houses and apart from each other: your own cities, as only those say they're celebrating, and not while it's in
+disorder. Still, as smog is.
 
 **Yields (`y`): done.** The 2D map's icons for what each square yields (the map's pack's own, or the interface's) stand
 in the world over each square's middle, as strategy maps show them, rather than on the screen:
@@ -661,8 +666,8 @@ in the world over each square's middle, as strategy maps show them, rather than 
 sets in 6.4.
 
 **That's met** (#1418, civil disorder the last row). Still to do in M4: 4.0's ages, 4.1's worked squares further out,
-side streets, eras and modernising, 4.2's building kit, and 4.3's other states and fading the banners hidden behind the
-land.
+side streets, eras and modernising, 4.2's building kit, and 4.3's captured and destroyed states and fading the banners
+hidden behind the land.
 
 ---
 

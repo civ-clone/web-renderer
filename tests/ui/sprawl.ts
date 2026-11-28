@@ -14,7 +14,10 @@
 //  - in civil disorder (`disorder.ts`), fires on roofs behind its middle, as many columns as its size has, or one on
 //    the ground behind its plaza with none there, every flame and puff keeping its units' room, its smoke rising,
 //    growing and leaning away from them and clear of every roof under it; the same for the same city, and a house
-//    left standing as a road's built keeping its fire, and its smoke the same, almost always.
+//    left standing as a road's built keeping its fire, and its smoke the same, almost always;
+//  - celebrating (`celebration.ts`), flags on its roofs, each pole rising from a roof's peak, its pennant from the top
+//    along the city's one wind, clear of every other roof and of its units' room, as many as its size has or as there
+//    are roofs for; the same for the same city.
 
 import { Color, Euler, Mesh, Vector3 } from 'three';
 import { TopologyId } from '@civ-clone/ui-protocol/topology';
@@ -58,6 +61,11 @@ import disorderPieces, {
   disorderColumns,
   nearestTo,
 } from '@civ-clone/ui-map-3d/overlay/disorder';
+import celebrationPieces, {
+  CELEBRATION,
+  CelebrationPiece,
+  flagsFor,
+} from '@civ-clone/ui-map-3d/overlay/celebration';
 
 const failures: string[] = [];
 let checks = 0;
@@ -1871,6 +1879,248 @@ expect(
     'a city in civil disorder: of the houses burning left standing as a road’s built, nine in ten or more keep their fire, each its column just as it was',
     [left > 500, kept >= left * 0.9, changed],
     [true, true, 0]
+  );
+}
+
+// A city celebrating, 30 seeds of it at 8 sizes, with streets out 4 sets of ways and the sea north or west, or none:
+//  its flags on its own roofs, each pole rising from a roof's peak at its middle, its pennant out from the pole's top
+//  along the city's one wind, within 50° of east or west, from either side, clear of every other roof (as the roof's
+//  square, turned as it faces, or under the pennant), of its units' room and of every other flag; every colour flown;
+//  as many as its size has at most, and here, every one of them; the same for the same city, and another another;
+//  none when it isn't celebrating.
+{
+  const place = squareAt(5, 5),
+    centre = place.centre,
+    units = inFrontOf(centre),
+    ground = 0.02,
+    roofOf = (lot: Lot) => {
+      const eaves = ground + lot.storeys * STOREY;
+
+      return {
+        at: lot.at,
+        width: lot.width,
+        eaves,
+        peak: eaves + lot.width * ROOF_RISE,
+      };
+    },
+    // How far a point is from a lot's square, along the ground, turned as it faces: 0 within.
+    fromSquare = ({ at: [lu, lv], width, facing }: Lot, u: number, v: number) =>
+      Math.hypot(
+        Math.max(
+          0,
+          Math.abs((u - lu) * Math.cos(facing) - (v - lv) * Math.sin(facing)) -
+            width / 2
+        ),
+        Math.max(
+          0,
+          Math.abs((u - lu) * Math.sin(facing) + (v - lv) * Math.cos(facing)) -
+            width / 2
+        )
+      ),
+    piecesOf = (
+      seed: number,
+      size: number,
+      ways: readonly (readonly [number, number])[],
+      sea: readonly (readonly [number, number])[]
+    ) => {
+      const flags = flagsFor(size),
+        plan = planFor(seed, size, ways, sea, 0, flags),
+        { lots } = sprawl(place, plan, units);
+
+      return {
+        plan,
+        flags,
+        lots,
+        pieces: celebrationPieces({
+          centre,
+          units,
+          roofs: lots.map(roofOf),
+          seed,
+          flags,
+        }),
+      };
+    },
+    // How far a point is from the segment from `a` to `b`, along the ground.
+    toSegment = (
+      [pu, pv]: readonly [number, number],
+      [au, av]: readonly [number, number],
+      [bu, bv]: readonly [number, number]
+    ) => {
+      const du = bu - au,
+        dv = bv - av,
+        along = Math.max(
+          0,
+          Math.min(1, ((pu - au) * du + (pv - av) * dv) / (du * du + dv * dv))
+        );
+
+      return Math.hypot(pu - (au + du * along), pv - (av + dv * along));
+    },
+    // Which side each city's wind blows from, and every pennant's colour, over them all.
+    sides = new Set<string>(),
+    colours = new Set<string>(),
+    wrong: string[] = [];
+  let cities = 0,
+    flown = 0,
+    wanted = 0,
+    none = 0;
+
+  for (let seed = 1; seed <= 30; seed++) {
+    [1, 2, 3, 4, 6, 8, 12, 20].forEach((size) =>
+      [[], [east], [north, south], [east, north, west, south]].forEach((ways) =>
+        [[], [north], [west]].forEach((sea) => {
+          const { plan, flags, lots, pieces } = piecesOf(seed, size, ways, sea),
+            poles = pieces.filter(({ kind }) => kind === 'pole'),
+            pennants = pieces.filter(({ kind }) => kind === 'pennant'),
+            name = `${seed} ${size} ${ways.join('|')} ${sea.join('|')}`,
+            winds = new Set<string>();
+
+          cities++;
+          flown += poles.length;
+          wanted += flags;
+          none += poles.length === 0 ? 1 : 0;
+
+          if (
+            plan.celebration !== flags ||
+            poles.length !== pennants.length ||
+            poles.length > flags
+          ) {
+            wrong.push(`${name}: ${poles.length} of ${flags} flags`);
+          }
+
+          poles.forEach((pole: CelebrationPiece, index) => {
+            const pennant = pennants[index]!,
+              lot = lots.find(
+                ({ at: [lu, lv] }) =>
+                  Math.hypot(lu - pole.at[0], lv - pole.at[2]) < 1e-9
+              ),
+              top = pole.at[1] + pole.size[1] / 2,
+              du = pennant.at[0] - pole.at[0],
+              dv = pennant.at[2] - pole.at[2],
+              low = pennant.at[1] - pennant.size[1] / 2;
+
+            winds.add(Math.atan2(dv, du).toFixed(9));
+
+            if (
+              lot === undefined ||
+              Math.abs(pole.at[1] - pole.size[1] / 2 - roofOf(lot).peak) >
+                1e-9 ||
+              Math.abs(pole.size[1] - CELEBRATION.pole) > 1e-9 ||
+              Math.abs(pennant.at[1] + pennant.size[1] / 2 - top) > 1e-9 ||
+              Math.abs(Math.hypot(du, dv) * 2 - pennant.size[0]) > 1e-9 ||
+              Math.abs(Math.sin((pennant.turn + Math.atan2(dv, du)) / 2)) > 1e-9
+            ) {
+              wrong.push(`${name}: flag ${index} off its roof or pole`);
+
+              return;
+            }
+
+            [0, 0.25, 0.5, 0.75, 1].forEach((along) => {
+              const pu = pole.at[0] + du * 2 * along,
+                pv = pole.at[2] + dv * 2 * along;
+
+              if (
+                Math.hypot(pu - units[0], pv - units[1]) <
+                DISORDER_ROOM - 1e-9
+              ) {
+                wrong.push(`${name}: flag ${index} in its units' room`);
+              }
+
+              if (
+                lots.some(
+                  (other) =>
+                    other !== lot &&
+                    fromSquare(other, pu, pv) <= 0 &&
+                    low < roofOf(other).peak
+                )
+              ) {
+                wrong.push(`${name}: flag ${index} in a roof`);
+              }
+            });
+          });
+
+          if (winds.size > 1) {
+            wrong.push(`${name}: ${winds.size} winds`);
+          }
+
+          // Its wind within 50° of east or west, and its flags apart: each pennant from every other pole and pennant.
+          pennants.forEach((pennant, index) => {
+            const pole = poles[index]!,
+              wind = Math.atan2(
+                pennant.at[2] - pole.at[2],
+                pennant.at[0] - pole.at[0]
+              ),
+              from: [number, number] = [pole.at[0], pole.at[2]],
+              tip: [number, number] = [
+                pole.at[0] + (pennant.at[0] - pole.at[0]) * 2,
+                pole.at[2] + (pennant.at[2] - pole.at[2]) * 2,
+              ];
+
+            sides.add(Math.cos(wind) > 0 ? 'east' : 'west');
+            colours.add(pennant.colour);
+
+            if (
+              Math.abs(Math.cos(wind)) <
+              Math.cos(CELEBRATION.windFromEastWest) - 1e-9
+            ) {
+              wrong.push(`${name}: its wind ${wind}`);
+            }
+
+            pennants.forEach((other, at) => {
+              const otherPole = poles[at]!,
+                otherFrom: [number, number] = [
+                  otherPole.at[0],
+                  otherPole.at[2],
+                ],
+                otherTip: [number, number] = [
+                  otherPole.at[0] + (other.at[0] - otherPole.at[0]) * 2,
+                  otherPole.at[2] + (other.at[2] - otherPole.at[2]) * 2,
+                ];
+
+              if (
+                at !== index &&
+                Math.min(
+                  toSegment(otherFrom, from, tip),
+                  toSegment(otherTip, from, tip),
+                  toSegment(from, otherFrom, otherTip),
+                  toSegment(tip, otherFrom, otherTip)
+                ) <
+                  CELEBRATION.apart - 1e-9
+              ) {
+                wrong.push(`${name}: flags ${index} and ${at} together`);
+              }
+            });
+          });
+        })
+      )
+    );
+  }
+
+  const same = (seed: number) =>
+    JSON.stringify(piecesOf(seed, 9, [east], []).pieces);
+
+  expect(
+    'a city celebrating: its flags on its own roofs, each pole rising from a roof’s peak, its pennant from the pole’s top along one wind near east or west, clear of every other roof, of its units’ room and of every other flag; winds both ways and every colour; as many as its size has at most, and here every one; the same for the same city, and another another; none when it isn’t',
+    [
+      [1, 2, 3, 4, 8, 12, 20].map(flagsFor),
+      wrong.slice(0, 3),
+      // Over all of them, none with no flag, and every one with as many as its size has; winds from both sides, and
+      //  every colour.
+      none,
+      flown === wanted,
+      sides.size,
+      colours.size,
+      same(5) === same(5),
+      same(5) !== same(6),
+      celebrationPieces({
+        centre,
+        units,
+        roofs: piecesOf(5, 9, [east], []).lots.map(roofOf),
+        seed: 5,
+        flags: 0,
+      }),
+      planFor(5, 9, [east], [], 0, 0).celebration,
+    ],
+    [[2, 2, 3, 3, 5, 7, 8], [], 0, true, 2, 5, true, true, [], undefined]
   );
 }
 

@@ -77,6 +77,11 @@ import {
   FLAMES,
   SMOKE,
 } from '@civ-clone/ui-map-3d/overlay/disorder';
+import {
+  CELEBRATION,
+  PENNANTS,
+  POLE,
+} from '@civ-clone/ui-map-3d/overlay/celebration';
 import { TopologyId } from '@civ-clone/ui-protocol/topology';
 import Land from '@civ-clone/ui-map-3d/Land';
 import { ChunkMesh } from '@civ-clone/ui-map-3d/terrain/chunks';
@@ -3332,6 +3337,184 @@ const landOf = (
       undefined,
       true,
       0,
+    ]
+  );
+}
+
+// A city celebrating (spec §7.4, `celebration.ts`), as it's shown, on sloping land: its plan says how many flags its
+//  size has, so its square's laid again as it starts celebrating and stops. Laid, at sizes 3 and 9, as many poles as
+//  that, each rising from the peak of the roof laid under it, with its pennant out from its top along one line; none
+//  laid when it isn't, nor in a rival's city, which says nothing of it, nor while it's in disorder.
+{
+  const tileOf = (size: number, celebrating: boolean) =>
+      ({
+        ...square(['Road']),
+        city: {
+          id: 'City-Joy',
+          name: 'Joy',
+          growth: { size },
+          celebrateLeader: celebrating,
+        },
+      } as unknown as Parameters<typeof overlayFor>[0]),
+    // Land rising to the south-east, so each house's peak is its own height.
+    at = place(17, 3, {
+      height: (u, v) => 0.05 + 0.12 * (u - 17) + 0.08 * (v - 3),
+    }),
+    units: [number, number] = [at.centre[0], at.centre[1] + IN_FRONT_OF_CITY],
+    // Each point of one of `colours`, back on the ground and its height, laid in a chunk whose corner's at (16, 2).
+    pointsOf = (overlay: SquareOverlay, colours: readonly string[]) => {
+      const laid = overlayMesh(16, 2, [{ overlay, place: at }]),
+        wanted = colours.map((css) => new Color(css)),
+        found: [number, number, number][] = [];
+
+      for (let point = 0; point < laid.colours.length; point += 3) {
+        if (
+          wanted.some(
+            ({ r, g, b }) =>
+              Math.abs(laid.colours[point]! - r) < 1e-4 &&
+              Math.abs(laid.colours[point + 1]! - g) < 1e-4 &&
+              Math.abs(laid.colours[point + 2]! - b) < 1e-4
+          )
+        ) {
+          found.push([
+            laid.positions[point]! + 16,
+            laid.positions[point + 1]!,
+            laid.positions[point + 2]! + 2,
+          ]);
+        }
+      }
+
+      return found;
+    },
+    // At `size`, celebrating: its plan's flags, how many lots have a pole, whether each pole's foot is the peak of the
+    //  roof laid there, and whether each pole has its pennant: from its top, level with it, out along one line from
+    //  its middle, as long as a pennant is.
+    laidAt = (size: number) => {
+      const celebrating = overlayFor(tileOf(size, true), [])!,
+        { lots } = sprawl(at, celebrating.city!, units),
+        poles = pointsOf(celebrating, [POLE]),
+        pennants = pointsOf(celebrating, PENNANTS),
+        roofs = pointsOf(celebrating, ROOFS),
+        // The lot a point's within a pole's width of the middle of.
+        lotAt = ([u, , v]: [number, number, number]) =>
+          lots.find(
+            (lot) =>
+              Math.hypot(u - lot.at[0], v - lot.at[1]) <= CELEBRATION.poleWidth
+          ),
+        flying = new Map<Lot, number>();
+
+      poles.forEach((point) => {
+        const lot = lotAt(point);
+
+        if (lot !== undefined) {
+          flying.set(lot, Math.min(flying.get(lot) ?? Infinity, point[1]));
+        }
+      });
+
+      return [
+        celebrating.city?.celebration,
+        flying.size,
+        poles.every((point) => lotAt(point) !== undefined) &&
+          [...flying].every(([lot, foot]) => {
+            // Its roof's apex, at its middle.
+            const peak = Math.max(
+              ...roofs
+                .filter(
+                  ([u, , v]) => Math.hypot(u - lot.at[0], v - lot.at[1]) < 1e-6
+                )
+                .map(([, y]) => y)
+            );
+
+            return Math.abs(foot - peak) < 1e-4;
+          }),
+        // Each pole's pennant, in the band of heights from its top down a pennant's height: some of it at the pole's
+        //  middle, its top level with the pole's, and its far end a pennant's length out, the same way for every flag,
+        //  as they all point the one way.
+        (() => {
+          const ends = [...flying].map(([lot, foot]) => {
+              const top = foot + CELEBRATION.pole,
+                band = pennants.filter(
+                  ([, y]) =>
+                    y >= top - CELEBRATION.pennantHeight - 1e-4 &&
+                    y <= top + 1e-4
+                ),
+                from = ([u, , v]: [number, number, number]) =>
+                  Math.hypot(u - lot.at[0], v - lot.at[1]);
+
+              return {
+                atPole: band.some(
+                  (point) =>
+                    from(point) <= CELEBRATION.pennantDepth &&
+                    Math.abs(point[1] - top) < 1e-4
+                ),
+                ways: band
+                  .filter(
+                    (point) =>
+                      Math.abs(from(point) - CELEBRATION.pennant) < 2e-3
+                  )
+                  .map(([u, , v]) => Math.atan2(v - lot.at[1], u - lot.at[0])),
+              };
+            }),
+            same = (a: number, b: number) =>
+              Math.abs(Math.sin((a - b) / 2)) < 0.03;
+
+          return (
+            ends.every(({ atPole }) => atPole) &&
+            (ends[0]?.ways ?? []).some((way) =>
+              ends.every(({ ways }) => ways.some((other) => same(way, other)))
+            )
+          );
+        })(),
+      ];
+    },
+    calm = overlayFor(tileOf(9, false), [])!,
+    celebrating = overlayFor(tileOf(9, true), [])!,
+    // A rival's city, its stand-in saying nothing of celebrating; and one celebrating as things stand while it's in
+    //  the disorder it declared at the turn's start.
+    rival = overlayFor(
+      {
+        ...square(['Road']),
+        city: { id: 'City-Rival', name: 'Rival', growth: { size: 9 } },
+      } as unknown as Parameters<typeof overlayFor>[0],
+      []
+    )!,
+    rioting = overlayFor(
+      {
+        ...square(['Road']),
+        city: {
+          id: 'City-Joy',
+          name: 'Joy',
+          growth: { size: 9 },
+          celebrateLeader: true,
+          civilDisorderDeclared: true,
+        },
+      } as unknown as Parameters<typeof overlayFor>[0],
+      []
+    )!;
+
+  expect(
+    'a city celebrating, on sloping land: its plan says how many flags its size has, and none when it isn’t, so its square’s laid again; laid at sizes 3 and 9, as many poles, each rising from the peak of the roof laid there, its pennant out from its top along one line; none laid when it isn’t, in a rival’s city, or in disorder',
+    [
+      laidAt(3),
+      laidAt(9),
+      calm.city?.celebration,
+      JSON.stringify(calm) !== JSON.stringify(celebrating),
+      pointsOf(calm, [POLE, ...PENNANTS]).length,
+      [rival.city?.celebration, pointsOf(rival, [POLE]).length],
+      [
+        rioting.city?.celebration,
+        rioting.city?.disorder,
+        pointsOf(rioting, [POLE]).length,
+      ],
+    ],
+    [
+      [3, 3, true, true],
+      [6, 6, true, true],
+      undefined,
+      true,
+      0,
+      [undefined, 0],
+      [undefined, 3, 0],
     ]
   );
 }
