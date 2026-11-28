@@ -421,6 +421,9 @@ band along a hull, the wingtips). Still to do:
 - **Clips, eighth part: done.** The Cavalry stand, trot, slash with their sabres, the blow landing 0.55 s into their
   fight, as their clip's `strikes` say, and go over with their horses, with their own clips, made in their set
   (civ-clone/models-realistic-cc0#45). Horse and rider are one figure, which needed nothing here.
+- **Clips, ninth part: done.** The Dragoons, made afresh standing, a carbine at the advance, stand, trot, fire a bullet
+  from the saddle about half a second into their fight, and go over with their horses, with their own clips, made in
+  their set (civ-clone/models-realistic-cc0#48), as the Cavalry's are but for their fight. That needed nothing here.
 - **Clips, setting off and stopping: done.** Short of their stride, as they get going and stop, units' figures play
   their walk over their idle, so they ease from one to the other rather than snapping (#1410).
 - **Clips, as planned:** rigged copies are to sit beside the static models, which their manifests go on naming. The
