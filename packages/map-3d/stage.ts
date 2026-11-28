@@ -49,6 +49,7 @@ import { TopologyId } from '@civ-clone/ui-protocol/topology';
 import riverMaterial from './riverMaterial';
 import {
   ALOFT_PART,
+  BADGES,
   FIGURES_PART,
   FIRES_FROM,
   Faded,
@@ -75,6 +76,7 @@ import Water, {
   SMOG_ORDER,
 } from './water';
 import YieldIcons from './yieldIcons';
+import Badges from './markers/badges';
 import { smokeMaterials, smokeMeshes } from './smoke';
 import { YieldMesh } from './yields';
 import {
@@ -758,6 +760,8 @@ export const createStage: StageFactory = (
     }),
     markersGroup = new Group(),
     kit = new MarkerKit(),
+    // What stands over units and cities in `markersGroup`, drawn together (`badges.ts`): gathered as each frame's drawn.
+    badges = new Badges(BADGES),
     // What each square yields, over the land at every copy of the world, when they're shown.
     yieldsGroup = new Group(),
     // The grid's lines (`grid.ts`): the land's chunks drawn again with them alone, when they're shown.
@@ -813,6 +817,7 @@ export const createStage: StageFactory = (
   scene.add(new HemisphereLight(SKY_LIGHT, GROUND_LIGHT, 0.9));
   scene.add(land);
   scene.add(markersGroup);
+  scene.add(badges.mesh);
   scene.add(yieldsGroup);
   scene.add(highlightGroup);
   scene.add(water.mesh);
@@ -1278,6 +1283,10 @@ export const createStage: StageFactory = (
   return {
     render: (): void => {
       thinPlants();
+      // Where the badges are now, as three.js would work it out to draw them, and where the camera is.
+      markersGroup.updateMatrixWorld();
+      camera.updateMatrixWorld();
+      badges.gather(markersGroup, camera);
       renderer.render(scene, camera);
     },
     clearCloud: (now, seconds): boolean => water.clear(now, seconds),
@@ -2086,6 +2095,7 @@ export const createStage: StageFactory = (
       stoneShape.dispose();
       stone.dispose();
       kit.dispose();
+      badges.dispose();
       yields.dispose();
       water.dispose();
       clouds.dispose();

@@ -269,6 +269,10 @@ Building another world from the form starts it in the middle again.
   populated debug world, 1,285 draw calls a frame at the default distance, from 2,181. The kit lets go of the city
   labels and buildings no marker uses, which grew with every size a city reached.
 
+  Since #1424, what stands over units and cities is drawn in one draw call (spec §6.3). On a late Civ2 game at the
+  default distance, that's 888 draw calls a frame, from 1,491. Most of what's left is the shadow map's, drawn over far
+  more than the camera sees: fitting it to the view is 6.1's.
+
 - **What:**
   - the sea surface with depth tint and shore foam;
   - a sky made by code, with its environment map;

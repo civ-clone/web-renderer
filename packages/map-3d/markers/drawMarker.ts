@@ -9,8 +9,9 @@
 // Every marker shares its geometries and its materials. A unit's figures, stand and wall are one geometry for each look
 //  in each pair of colours, and every city's walls one: a mesh each, so a draw call each at every copy of the world
 //  near enough to show (#1204; M6 instances them). Names and flags' labels are sprites drawn on a canvas, the same size
-//  on the screen however far away. Labels no marker shows any more are let go once enough have been made (`sweep`), as
-//  cities grow and change hands.
+//  on the screen however far away. What stands over units and cities is drawn all together, in one draw call
+//  (`badges.ts`, #1424), but for the pointer. Labels no marker shows any more are let go once enough have been made
+//  (`sweep`), as cities grow and change hands.
 
 import {
   Box3,
@@ -43,6 +44,7 @@ import {
 import { LoadedModel, LoadedRig, rigPart } from '../models/loadModels';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import TintedMaterial, { ownerTint } from './tinted';
+import { BADGE_LAYER } from './badges';
 import boundClips from './rigBounds';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {
@@ -638,13 +640,16 @@ const flagText = (unit: UnitMarker): string =>
     .filter((part) => part !== '')
     .join(' ');
 
-// The order what stands over units and cities is drawn in: after the sea, the smog, the cloud and the smoke
-//  (`water.ts`), so none covers it; and among themselves the far before the near, but the pointer over all.
-const BADGES = 3,
+/**
+ * The order what stands over units and cities is drawn in: after the sea, the smog, the cloud and the smoke
+ *  (`water.ts`), so none covers it; and among themselves the far before the near (`badges.ts`), but the pointer over all.
+ */
+export const BADGES = 3,
   POINTED = 4;
 
 // A sprite the same size on the screen however far away, as `width` and `height` say in the screen's units, standing
-//  `over` above the point it's put at, drawn over the land in the order `order` says.
+//  `over` above the point it's put at, drawn over the land in the order `order` says: drawn with the rest
+//  (`BADGE_LAYER`), but for the pointer, drawn after them all.
 const badge = (
   material: SpriteMaterial,
   width: number,
@@ -659,6 +664,10 @@ const badge = (
   sprite.renderOrder = order;
   // Its bounds are the screen's, which three.js doesn't know: it would cull it by the world's, while still on screen.
   sprite.frustumCulled = false;
+
+  if (order === BADGES) {
+    sprite.layers.set(BADGE_LAYER);
+  }
 
   return sprite;
 };
