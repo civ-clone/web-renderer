@@ -433,7 +433,6 @@ const SUN_TOWARD = new Vector3(...SUN_FROM).normalize();
 export const SMOKE_SHADE = 0.55;
 
 // Worked in, a solid at a time.
-
 const MATRIX = new Matrix4(),
   NORMALS = new Matrix3(),
   POSITION = new Vector3(),

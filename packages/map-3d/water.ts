@@ -50,14 +50,16 @@ export type Ground = {
  *  under others as the camera moves. They can be over the cloud on high land, but the cloud's after them, as it's
  *  under them on low land, which is more often; and the light's never on a square never seen, nor the lines but a step
  *  past the edge of what has been. Smoke rises well over the cloud's plane, so where they meet on the screen the
- *  smoke's nearer: drawn before it, the cloud would paint over its tops.
+ *  smoke's nearer: drawn before it, the cloud would paint over its tops. It's drawn in two passes, its depth then its
+ *  colour (`smoke.ts`).
  */
 export const SEA_ORDER = 1,
   GRID_ORDER = 1.2,
   HIGHLIGHT_ORDER = 1.25,
   SMOG_ORDER = 1.5,
   CLOUD_ORDER = 2,
-  SMOKE_ORDER = 2.5;
+  SMOKE_DEPTH_ORDER = 2.5,
+  SMOKE_ORDER = 2.6;
 
 // Clear and green-blue at the shore, deep blue out at sea, as linear colours.
 const SHALLOW = new Color('#3f8a8c'),

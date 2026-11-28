@@ -1324,12 +1324,15 @@ Landmark buildings replace ordinary lots near the middle:
     - **its flames** as the land's buildings are, lit, so a flame's side away from the sun is darker than a glow would
       be;
     - **its smoke** see-through, so a unit behind it shows through it whichever way the camera looks (#1420): a mesh
-      of its own in each chunk, lit by nothing, as smog is (§5.4), but drawn after the cloud (`SMOKE_ORDER`, 2.5), as
-      it rises well over the cloud's plane, which would otherwise paint over its tops, and before what stands over
-      units. Only each puff's faces toward the camera are drawn, so it's as solid as it says: 0.9 at the bottom, 0.05
-      less each puff up, to 0.65 at the top, as it thins. It takes no light, so each is shaded as the sun would
-      light it (`SUN_FROM`, where the stage puts it): its colour facing the sun, down to 0.55 of it away from it and
-      edge on, so it keeps its shape. It casts no shadow.
+      of its own in each chunk, lit by nothing, as smog is (§5.4), but drawn after the cloud, as it rises well over
+      the cloud's plane, which would otherwise paint over its tops, and before what stands over units (`smoke.ts`).
+      It's drawn twice: first only into the depth buffer (`SMOKE_DEPTH_ORDER`, 2.5), then its colour where it's the
+      nearest smoke (`SMOKE_ORDER`, 2.6). So each point on the screen takes one puff's surface, the nearest, however
+      many puffs a column stacks up there when it's seen end on, and the order they're laid in doesn't show. Its puffs
+      are closed, so only their faces toward the camera are drawn. Each is as solid as 0.9 at the bottom, 0.05 less
+      each puff up, to 0.65 at the top, as it thins. It takes no light, so each is shaded as the sun would light it
+      (`SUN_FROM`, where the stage puts it): its colour facing the sun, down to 0.55 of it away from it and edge on, so
+      it keeps its shape. It casts no shadow.
   - **Still:** it doesn't drift or flicker, as smog doesn't (§5.4): that would need frames drawn all the time, as
     idling does.
 - **We Love the King Day:** banners.

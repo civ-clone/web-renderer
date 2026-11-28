@@ -73,9 +73,9 @@ import Water, {
   Ground,
   HIGHLIGHT_ORDER,
   SMOG_ORDER,
-  SMOKE_ORDER,
 } from './water';
 import YieldIcons from './yieldIcons';
+import { smokeMaterials, smokeMeshes } from './smoke';
 import { YieldMesh } from './yields';
 import {
   LoadedModel,
@@ -666,15 +666,9 @@ export const createStage: StageFactory = (
       side: DoubleSide,
       forceSinglePass: true,
     }),
-    // Smoke rising from a city in civil disorder: see-through and lit by nothing, as smog is, but shaded as it's laid
-    //  (`overlayMesh.ts`), so only its faces toward the camera are drawn, each once, as solid as it says. Clipped as
-    //  what's laid on the land is.
-    smokeMaterial = new MeshBasicMaterial({
-      vertexColors: true,
-      transparent: true,
-      depthWrite: false,
-      fog: true,
-    }),
+    // Smoke rising from a city in civil disorder, drawn in two passes (`smoke.ts`). Clipped as what's laid on the land
+    //  is.
+    smokeMaterial = smokeMaterials(),
     // What's laid on the land stops where the land does past a pole the view's stopped at: the last row's fields and
     //  roads on a staggered or hex world reach a little past it, where the land, the sea and the cloud stop (and are
     //  drawn a period round too, where the land is theirs: `overlayCopies`).
@@ -1124,7 +1118,8 @@ export const createStage: StageFactory = (
     clouds.pastThePoles(seen.v !== null);
     overlayMaterial.clippingPlanes = seen.v === null ? poles : null;
     hazeMaterial.clippingPlanes = overlayMaterial.clippingPlanes;
-    smokeMaterial.clippingPlanes = overlayMaterial.clippingPlanes;
+    smokeMaterial.depth.clippingPlanes = overlayMaterial.clippingPlanes;
+    smokeMaterial.colour.clippingPlanes = overlayMaterial.clippingPlanes;
     // Rivers' water too, so a course across the poles' water stops at them.
     riverWater.clippingPlanes = overlayMaterial.clippingPlanes;
     highlightMaterial.clippingPlanes = overlayMaterial.clippingPlanes;
@@ -1425,7 +1420,7 @@ export const createStage: StageFactory = (
           return made;
         },
         haze = seeThrough(mesh.haze),
-        smoke = seeThrough(mesh.smoke);
+        rising = seeThrough(mesh.smoke);
 
       // Its plants, as a set's models draw them: each model's, where it's had, every plant's matrix in one buffer every
       //  copy of the world shares, standing on the land as tall as it's laid and turned its way.
@@ -1481,7 +1476,7 @@ export const createStage: StageFactory = (
       [
         geometry.boundingBox,
         haze?.boundingBox,
-        smoke?.boundingBox,
+        rising?.boundingBox,
         plantsBox,
       ].forEach((each) => {
         if (each !== undefined && each !== null && !each.isEmpty()) {
@@ -1497,7 +1492,7 @@ export const createStage: StageFactory = (
       } = {
         geometry,
         haze,
-        smoke,
+        smoke: rising,
         // How far down the ground it reaches, from its top to its bottom.
         span: [mesh.v + box.min.z, mesh.v + box.max.z],
         at: [mesh.u, 0, mesh.v],
@@ -1517,12 +1512,11 @@ export const createStage: StageFactory = (
             drawn.add(smog);
           }
 
-          if (smoke !== null) {
-            const rising = new Mesh(smoke, smokeMaterial);
-
-            // After the cloud (`SMOKE_ORDER`), which would paint over its tops, and before what stands over units.
-            rising.renderOrder = SMOKE_ORDER;
-            drawn.add(rising);
+          // After the cloud, which would paint over its tops, and before what stands over units.
+          if (rising !== null) {
+            smokeMeshes(rising, smokeMaterial).forEach((each) =>
+              drawn.add(each)
+            );
           }
 
           // Its plants, each model's part drawn once for all of them, casting shadows cut out as its leaves are.
@@ -2041,7 +2035,8 @@ export const createStage: StageFactory = (
       overlays.clear();
       overlayMaterial.dispose();
       hazeMaterial.dispose();
-      smokeMaterial.dispose();
+      smokeMaterial.depth.dispose();
+      smokeMaterial.colour.dispose();
       plantModels.forEach(({ parts }) =>
         parts.forEach(({ geometry, material }) => {
           geometry.dispose();

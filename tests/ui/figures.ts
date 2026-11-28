@@ -21,6 +21,7 @@ import {
   Box3,
   BufferGeometry,
   Color,
+  FrontSide,
   Group,
   Material,
   Mesh,
@@ -69,8 +70,10 @@ import Water, {
   Clouds,
   SEA_ORDER,
   SMOG_ORDER,
+  SMOKE_DEPTH_ORDER,
   SMOKE_ORDER,
 } from '@civ-clone/ui-map-3d/water';
+import { smokeMaterials, smokeMeshes } from '@civ-clone/ui-map-3d/smoke';
 import {
   Part,
   figureGeometry,
@@ -930,11 +933,48 @@ expect(
     sea.mesh.renderOrder === SEA_ORDER,
     cloud.mesh.renderOrder === CLOUD_ORDER,
     SEA_ORDER < SMOG_ORDER && SMOG_ORDER < CLOUD_ORDER,
-    CLOUD_ORDER < SMOKE_ORDER,
+    CLOUD_ORDER < SMOKE_DEPTH_ORDER && SMOKE_DEPTH_ORDER < SMOKE_ORDER,
     badges.every((sprite) => sprite.renderOrder > SMOKE_ORDER),
   ],
   [true, true, true, true, true]
 );
+
+// Smoke rising from a city, as the stage draws a chunk's (`smoke.ts`): two meshes of its geometry, after the cloud, its
+//  depth then its colour, so each point on the screen takes the nearest puff's surface only; each its front faces
+//  only, as its puffs are closed; its colour see-through, in the haze, writing no depth; neither casting a shadow.
+{
+  const geometry = new BufferGeometry(),
+    materials = smokeMaterials(),
+    meshes = smokeMeshes(geometry, materials),
+    { depth, colour } = materials;
+
+  expect(
+    'smoke rising from a city is drawn as two meshes after the cloud, its depth and then its colour, front faces only, its colour see-through in the haze, writing no depth; neither casts a shadow',
+    [
+      meshes.map((mesh) => mesh.renderOrder),
+      meshes.map((mesh) => mesh.material === depth || mesh.material === colour),
+      meshes.every((mesh) => mesh.geometry === geometry && !mesh.castShadow),
+      [depth.colorWrite, depth.depthWrite, depth.transparent],
+      [colour.colorWrite, colour.depthWrite, colour.transparent],
+      [colour.vertexColors, colour.fog],
+      [depth.side, colour.side].every((side) => side === FrontSide),
+      meshes[0]?.material === depth && meshes[1]?.material === colour,
+    ],
+    [
+      [SMOKE_DEPTH_ORDER, SMOKE_ORDER],
+      [true, true],
+      true,
+      [false, true, true],
+      [true, false, true],
+      [true, true],
+      true,
+      true,
+    ]
+  );
+  geometry.dispose();
+  depth.dispose();
+  colour.dispose();
+}
 cloud.dispose();
 sea.dispose();
 

@@ -3120,9 +3120,10 @@ const landOf = (
       height: (u, v) => 0.05 + 0.12 * (u - 17) + 0.08 * (v - 3),
     }),
     units: [number, number] = [at.centre[0], at.centre[1] + IN_FRONT_OF_CITY],
-    // Each point of one of `colours`, back on the ground and its height, laid on its own.
+    // Each point of one of `colours`, back on the ground and its height, laid on its own in a chunk whose corner's at
+    //  (16, 2), so its points are moved back each way.
     pointsOf = (overlay: SquareOverlay, colours: readonly string[]) => {
-      const laid = overlayMesh(16, 0, [{ overlay, place: at }]),
+      const laid = overlayMesh(16, 2, [{ overlay, place: at }]),
         wanted = colours.map((css) => new Color(css)),
         found: [number, number, number][] = [];
 
@@ -3138,7 +3139,7 @@ const landOf = (
           found.push([
             laid.positions[point]! + 16,
             laid.positions[point + 1]!,
-            laid.positions[point + 2]!,
+            laid.positions[point + 2]! + 2,
           ]);
         }
       }
@@ -3147,7 +3148,7 @@ const landOf = (
     },
     // Each point of the smoke, back on the ground and its height, with its colour and how solid it is.
     smokeOf = (overlay: SquareOverlay) => {
-      const { smoke } = overlayMesh(16, 0, [{ overlay, place: at }]),
+      const { smoke } = overlayMesh(16, 2, [{ overlay, place: at }]),
         found: { at: [number, number, number]; rgba: number[] }[] = [];
 
       for (let point = 0; point * 3 < smoke.positions.length; point++) {
@@ -3155,7 +3156,7 @@ const landOf = (
           at: [
             smoke.positions[point * 3]! + 16,
             smoke.positions[point * 3 + 1]!,
-            smoke.positions[point * 3 + 2]!,
+            smoke.positions[point * 3 + 2]! + 2,
           ],
           rgba: [...smoke.colours.slice(point * 4, point * 4 + 4)],
         });
@@ -3164,7 +3165,7 @@ const landOf = (
       return found;
     },
     hazeOf = (overlay: SquareOverlay) =>
-      overlayMesh(16, 0, [{ overlay, place: at }]).haze.positions.length,
+      overlayMesh(16, 2, [{ overlay, place: at }]).haze.positions.length,
     // How solid a puff of smoke can be, from the lowest to the highest.
     alphas = SMOKE.map(
       (colour, puff) => DISORDER.firstAlpha - puff * DISORDER.alphaFalls
