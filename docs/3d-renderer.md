@@ -1242,8 +1242,8 @@ All of these are driven by map events (§8):
   - dense at the middle, thinning outward;
   - reaching neighbouring squares at about size 4;
   - reaching worked squares further out at about size 10.
-- **Deterministic:** everything is seeded from the city's id and square. The same city, at the same size and era, is
-  always laid out the same.
+- **Deterministic:** everything is seeded from the city's square (#1430). The same city, at the same size and era, is
+  always laid out the same, whoever holds it.
 - **Growing:**
   - A city that grows keeps its buildings and adds lots.
   - A city that shrinks loses the outermost.
@@ -1255,9 +1255,9 @@ All of these are driven by map events (§8):
   - A paved plaza at its middle, and streets from it to the edge it shares with each neighbour whose road or railroad
     comes in (where the neighbour's half arrives), and one down to its quay, to the neighbour of sea most nearly the way
     they all lie on the ground.
-  - Lots: one sequence seeded from the city's id, from a jostled grid over the square, nearest the middle first. A city
-    of a size has that many from the front, 5 at size 1 and 2 more each size, up to 30 or as many as fit, so one that
-    grows keeps its buildings and adds the next out, and one that shrinks loses the outermost. About 25 or more fit
+  - Lots: one sequence seeded from the city's square, from a jostled grid over the square, nearest the middle first. A
+    city of a size has that many from the front, 5 at size 1 and 2 more each size, up to 30 or as many as fit, so one
+    that grows keeps its buildings and adds the next out, and one that shrinks loses the outermost. About 25 or more fit
     with no streets, 20 or more with one or two, and 13 or more with a street out every way. A road built clears a
     street through the lots in its way, rather than laying the city out afresh.
   - Each building's footprint, out to its roof's eaves, is inside the walls and clear of the streets, the plaza, the
@@ -1389,7 +1389,7 @@ Landmark buildings replace ordinary lots near the middle:
   - **Still:** they don't flap, as smog doesn't drift.
 - **Captured:** the city keeps its buildings and changes colours.
   - As built (#1430): a city's town, and the houses it spreads onto the squares beside it, are laid from its square
-    (`seedOf`, `overlay/overlayFor.ts`), which a city never leaves, not its id. A rival's city reaches the page as a
+    (`townSeedOf`, `overlay/overlayFor.ts`), which a city never leaves, not its id. A rival's city reaches the page as a
     stand-in with an id of its own (`unknownCityOf`), so its id changes as it's taken from or by the player; its square
     doesn't. Its name, banner and units take the new owner's colours.
 - **Destroyed:** the city is left as rubble for a few turns, as long as the client's tile still shows it, then it's
@@ -1459,7 +1459,7 @@ A Wonder stands on one of its city's squares, near the city, as Civ5 places them
 - **Choosing the square:**
   - from the city's area (§7.2): its own square excluded, then its neighbours, then further out;
   - never a square another Wonder holds, or one with a mine or fields;
-  - suitable squares ranked by how well they fit, ties broken by a seed from the city and the Wonder.
+  - suitable squares ranked by how well they fit, ties broken by a seed from the city's square and the Wonder.
 - **Staying put:** a Wonder's square is chosen once and kept while the city stands. The city growing, its lots and its
   worked squares never move it. Only the square itself becoming unsuitable, such as the land turning to sea, chooses
   again.

@@ -23,7 +23,7 @@ import {
 import overlayFor, {
   OverlayNeighbour,
   SquareOverlay,
-  seedOf,
+  townSeedOf,
 } from '@civ-clone/ui-map-3d/overlay/overlayFor';
 import overlayMesh, {
   AIRBASE_COLOURS,
@@ -4536,6 +4536,8 @@ expect(
     theirs = overlayFor(held('UnknownCity-1', 12, 7), []),
     ours = overlayFor(held('City-4', 12, 7), []),
     elsewhere = overlayFor(held('City-4', 13, 7), []),
+    // In the same column, a row down.
+    below = overlayFor(held('City-4', 12, 8), []),
     // A square beside it, which its houses spread onto, as its stand-in and as the city itself.
     beside = (id: string) =>
       overlayFor(
@@ -4556,15 +4558,25 @@ expect(
       )?.suburbs.map(({ seed }) => seed);
 
   expect(
-    'a city taken from or by the player, its id changed, keeps its buildings and the houses it’s spread beside it: laid from its square, not its id; another square, another town',
+    'a city taken from or by the player, its id changed, keeps its buildings and the houses it’s spread beside it, from one seed: laid from its square, not its id; another square, across or down, another town',
     [
       JSON.stringify(theirs?.city) === JSON.stringify(ours?.city),
       JSON.stringify(ours?.city) !== JSON.stringify(elsewhere?.city),
+      JSON.stringify(ours?.city) !== JSON.stringify(below?.city),
+      // Its own plan and the houses it spreads beside it from the one seed.
+      ours?.city?.seed === beside('City-4')?.[0],
       beside('UnknownCity-1'),
       JSON.stringify(beside('UnknownCity-1')) ===
         JSON.stringify(beside('City-4')),
     ],
-    [true, true, [seedOf({ x: 12, y: 7 }, { id: 'x', name: 'y' })], true]
+    [
+      true,
+      true,
+      true,
+      true,
+      [townSeedOf({ x: 12, y: 7 }, { id: 'x', name: 'y' })],
+      true,
+    ]
   );
 }
 

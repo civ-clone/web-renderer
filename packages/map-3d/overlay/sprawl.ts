@@ -107,7 +107,7 @@ export const lotsFor = (size: number): number =>
 export const tierFor = (size: number): number =>
   Math.floor(Math.max(0, size - 1) / 6);
 
-/** A number for a city from its id: the same every time. */
+/** A number for a city from a string that names it, its square (`townSeedOf`): the same every time. */
 export const citySeed = (id: string): number => {
   let hash = 2166136261;
 

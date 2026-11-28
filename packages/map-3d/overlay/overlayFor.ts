@@ -31,7 +31,7 @@ export type OverlayNeighbour = {
  *  stay as they are whoever holds it. A rival's city reaches the page as a stand-in with an id of its own, so its id
  *  changes as it's taken from or by the player (#1430). From its id where the square isn't said.
  */
-export const seedOf = (
+export const townSeedOf = (
   tile: Partial<Pick<Tile, 'x' | 'y'>>,
   city: Pick<NonNullable<Tile['city']>, 'id' | 'name'>
 ): number =>
@@ -134,12 +134,12 @@ export const overlayFor = (
       vegetation: false,
       woods: [],
       paths: [],
-      // From its square (`seedOf`): the same city whoever holds it. Out to each neighbour whose road or railroad comes
-      //  in, as it lays its half (a road where the city's square has one too, or a railroad, which joins a city), and
-      //  towards the sea. In civil disorder, fires on its roofs (`disorder.ts`); celebrating, flags on them
+      // From its square (`townSeedOf`): the same city whoever holds it. Out to each neighbour whose road or railroad
+      //  comes in, as it lays its half (a road where the city's square has one too, or a railroad, which joins a city),
+      //  and towards the sea. In civil disorder, fires on its roofs (`disorder.ts`); celebrating, flags on them
       //  (`celebration.ts`), as the city's shown.
       city: planFor(
-        seedOf(tile, city),
+        townSeedOf(tile, city),
         city.growth?.size ?? 1,
         neighbours
           .filter(
@@ -244,7 +244,7 @@ export const overlayFor = (
         return city && steps > 0
           ? [
               {
-                seed: seedOf(neighbour, city),
+                seed: townSeedOf(neighbour, city),
                 steps,
                 city: offset,
               },
