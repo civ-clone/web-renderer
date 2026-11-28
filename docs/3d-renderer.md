@@ -1811,6 +1811,15 @@ mapEvent:
 
 - **Sun:** one sun, high in the south-west of the default view, with cascaded shadow maps fitted to what the camera
   sees.
+  - As built (#1424, `shadowFit.ts`): one shadow map, 2048 px a side, not cascades yet. Its box's sides are fitted
+    round what the camera sees of the land, from the sea's floor to the highest land laid, and what stands on it
+    (`STANDS_OVER`), as far as the haze. It stays within the box it was before, `distance × 2.2` either way of the
+    focus, and as deep along the sun's light, so what's between the sun and what's seen still casts its shadow and
+    the map's bias means what it did.
+  - Its map covers far less of the land, so shadows are sharper at every zoom: a tree's or a waggon's has its outline.
+    Turning the camera, the box changes with it, but its shadows don't crawl any more than they did.
+  - On a late Civ2 game at the default view, the shadow pass draws 130 draw calls and 0.78M triangles a frame, from
+    783 and 3.77M.
 - **Sky:** a sky made by code, which lights the scene and gives reflections (an environment map).
 - **Haze:** height fog and aerial perspective toward the horizon.
 - **Tone:** ACES or AgX tone mapping, in sRGB. Antialiasing by MSAA, or by FXAA on Low.

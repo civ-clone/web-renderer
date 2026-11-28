@@ -76,6 +76,7 @@ import Water, {
   SMOG_ORDER,
 } from './water';
 import YieldIcons from './yieldIcons';
+import shadowSides from './shadowFit';
 import Badges from './markers/badges';
 import { smokeMaterials, smokeMeshes } from './smoke';
 import { YieldMesh } from './yields';
@@ -564,6 +565,72 @@ const ALL_PLANTS = 'allPlants';
 // The sun's shadow map's size, in texels a side, and how far the sun is from what it lights (its offset below).
 const SHADOW_MAP = 2048,
   SUN_DISTANCE = Math.hypot(...SUN_FROM);
+
+/**
+ * How high what stands on the land reaches over it, at the most, to take a shadow: a unit on a summit, at the biggest
+ *  size a player can choose (`UNIT_SCALE` times 1.5), its flight climbing, a city's buildings.
+ */
+export const STANDS_OVER = 1;
+
+/**
+ * The scene's `camera` placed and aimed for `orbit`, at its focus raised to `height`, on a world that repeats every
+ *  `seen`, as far as it sees (`sightOf`); and the `sun` placed over the focus, its shadows' box fitted round what the
+ *  camera sees, of land from `land`'s lowest to its highest and what stands on it (`shadowFit.ts`), within as far round
+ *  the focus as they always reached. The haze's start and end, as the camera sees them.
+ */
+export const aimCameras = (
+  camera: PerspectiveCamera,
+  sun: DirectionalLight,
+  orbit: Orbit,
+  height: number,
+  seen: { u: number; v: number | null },
+  [low, high]: readonly [number, number]
+): { near: number; far: number } => {
+  const [u, v] = orbit.focus,
+    [x, y, z] = eye(orbit, height),
+    { near, far } = sightOf(orbit, seen);
+
+  camera.position.set(x, y, z);
+  camera.lookAt(u, height, v);
+  camera.far = far * 1.2;
+  // As near as anything gets, no nearer: the depth there is to go round is spread over less, so what's laid a few
+  //  thousandths over the land doesn't flicker with it far out.
+  camera.near = Math.max(0.1, orbit.distance * 0.02);
+  camera.updateProjectionMatrix();
+  camera.updateMatrixWorld();
+
+  // The sun's direction stays the same wherever the camera looks.
+  const reach = orbit.distance * 2.2,
+    shadow = sun.shadow.camera;
+
+  sun.position.set(u + SUN_FROM[0], height + SUN_FROM[1], v + SUN_FROM[2]);
+  sun.target.position.set(u, height, v);
+  // Aimed as three.js aims it as it draws its shadows, to fit it round what the camera sees from there.
+  shadow.position.copy(sun.position);
+  shadow.lookAt(sun.target.position);
+  shadow.updateMatrixWorld();
+
+  const sides = shadowSides(
+    camera,
+    shadow,
+    far,
+    low,
+    high + STANDS_OVER,
+    reach
+  );
+
+  shadow.left = sides.left;
+  shadow.right = sides.right;
+  shadow.top = sides.top;
+  shadow.bottom = sides.bottom;
+  // As deep as it was wide, round the focus, the sun being as far from it as its offset is long: whatever's between
+  //  the sun and what's seen casts its shadow, and the map's bias, a share of its depth, is as it was.
+  shadow.near = Math.max(0.5, SUN_DISTANCE - reach * 1.6);
+  shadow.far = SUN_DISTANCE + reach * 1.6;
+  shadow.updateProjectionMatrix();
+
+  return { near, far };
+};
 
 export const createStage: StageFactory = (
   canvas,
@@ -1076,41 +1143,39 @@ export const createStage: StageFactory = (
     }
   };
 
+  // How low and high the land laid now goes: sea level both, with none laid.
+  const landHeights = (): [number, number] => {
+    let low = 0,
+      high = 0;
+
+    chunks.forEach(({ geometry: { boundingBox } }) => {
+      if (boundingBox !== null) {
+        low = Math.min(low, boundingBox.min.y);
+        high = Math.max(high, boundingBox.max.y);
+      }
+    });
+
+    return [low, high];
+  };
+
   const view = (
     orbit: Orbit,
     height: number,
     seen: { u: number; v: number | null } = period
   ): void => {
     const [u, v] = orbit.focus,
-      [x, y, z] = eye(orbit, height),
       sight = sightOf(orbit, seen),
-      { near, far } = sight;
+      { near, far } = aimCameras(
+        camera,
+        sun,
+        orbit,
+        height,
+        seen,
+        landHeights()
+      );
 
-    camera.position.set(x, y, z);
-    camera.lookAt(u, height, v);
-    camera.far = far * 1.2;
-    // As near as anything gets, no nearer: the depth there is to go round is spread over less, so what's laid a few
-    //  thousandths over the land doesn't flicker with it far out.
-    camera.near = Math.max(0.1, orbit.distance * 0.02);
-    camera.updateProjectionMatrix();
     fog.near = near;
     fog.far = far;
-
-    // The sun's direction stays the same wherever the camera looks, and its shadows cover what the camera sees round
-    //  its focus, which the haze doesn't hide much of.
-    const reach = orbit.distance * 2.2,
-      shadow = sun.shadow.camera;
-
-    sun.position.set(u + SUN_FROM[0], height + SUN_FROM[1], v + SUN_FROM[2]);
-    sun.target.position.set(u, height, v);
-    shadow.left = -reach;
-    shadow.right = reach;
-    shadow.top = reach;
-    shadow.bottom = -reach;
-    // As deep as it's wide, round the focus, the sun being as far from it as its offset is long.
-    shadow.near = Math.max(0.5, SUN_DISTANCE - reach * 1.6);
-    shadow.far = SUN_DISTANCE + reach * 1.6;
-    shadow.updateProjectionMatrix();
 
     // The sea's surface under the camera, as far as it sees.
     water.follow(
@@ -1327,6 +1392,8 @@ export const createStage: StageFactory = (
       geometry.setAttribute('unseen', new BufferAttribute(mesh.unseen, 1));
       geometry.setIndex(new BufferAttribute(mesh.indices, 1));
       geometry.computeBoundingSphere();
+      // How low and high it goes, for the sun's shadows to be drawn over what's seen of it (`view`).
+      geometry.computeBoundingBox();
 
       const old = chunks.get(key);
 

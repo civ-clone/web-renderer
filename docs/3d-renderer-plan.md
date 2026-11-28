@@ -254,8 +254,8 @@ Building another world from the form starts it in the middle again.
   How deep the water is comes from the land's own heights, which each chunk writes into a texture the size of the ground
   as it's built; the texture repeats as the world does. Teal over the shallows, deep blue out at sea, foam where it
   meets the land, the sky in it at a low angle, and the sun's glint.
-- **Shadows:** the sun casts one shadow map, fitted round the camera's focus as it moves and zooms. The land shadows
-  itself, and markers cast shadows on it.
+- **Shadows:** the sun casts one shadow map, fitted round what the camera sees as it moves, turns and zooms (#1424).
+  The land shadows itself, and markers cast shadows on it.
 - **Cloud** over the squares never seen (§4.5): a layer just over the land, reading which points are unseen from the
   same texture, softened over a short edge and broken up by noise. No water is drawn under it. A square seen clears its
   cloud over half a second, or at once under reduced motion (spec §4.5, "As built").
@@ -272,6 +272,10 @@ Building another world from the form starts it in the middle again.
   Since #1424's first part, what stands over units and cities is drawn in one draw call, but the pointer (spec §6.3). On
   a late Civ2 game at the default distance, that's 888 draw calls a frame, from 1,491. Most of what's left is the shadow
   map's, drawn over far more than the camera sees: fitting it to the view is 6.1's.
+
+  Since #1424's second part, the shadow map's box is fitted to what the camera sees, a first step of 6.1 (spec §9.3).
+  On that game at the default view, a frame is 235 draw calls and 1.36M triangles, from 888 and 4.35M: within the
+  budget (spec §9.4). Looking low (30°) at the same distance, it's 441 and 2.59M, from 974 and 4.92M, still over it.
 
 - **What:**
   - the sea surface with depth tint and shore foam;
