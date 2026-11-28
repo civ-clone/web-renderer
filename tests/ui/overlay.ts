@@ -3343,7 +3343,8 @@ const landOf = (
 
 // A city celebrating (spec §7.4, `celebration.ts`), as it's shown, on sloping land: its plan says how many flags its
 //  size has, so its square's laid again as it starts celebrating and stops. Laid, at sizes 3 and 9, as many poles as
-//  that, each rising from the peak of the roof laid under it, with a pennant at its top; none laid when it isn't.
+//  that, each rising from the peak of the roof laid under it, with its pennant out from its top along one line; none
+//  laid when it isn't, nor in a rival's city, which says nothing of it, nor while it's in disorder.
 {
   const tileOf = (size: number, celebrating: boolean) =>
       ({
@@ -3386,7 +3387,8 @@ const landOf = (
       return found;
     },
     // At `size`, celebrating: its plan's flags, how many lots have a pole, whether each pole's foot is the peak of the
-    //  roof laid there, and whether there are pennants over the poles' feet.
+    //  roof laid there, and whether each pole has its pennant: from its top, level with it, out along one line from
+    //  its middle, as long as a pennant is.
     laidAt = (size: number) => {
       const celebrating = overlayFor(tileOf(size, true), [])!,
         { lots } = sprawl(at, celebrating.city!, units),
@@ -3425,24 +3427,95 @@ const landOf = (
 
             return Math.abs(foot - peak) < 1e-4;
           }),
-        pennants.length > 0 &&
-          Math.min(...pennants.map(([, y]) => y)) >
-            Math.min(...[...flying.values()]),
+        // Each pole's pennant, in the band of heights from its top down a pennant's height: some of it at the pole's
+        //  middle, its top level with the pole's, and its far end a pennant's length out, the same way for every flag,
+        //  as they all point the one way.
+        (() => {
+          const ends = [...flying].map(([lot, foot]) => {
+              const top = foot + CELEBRATION.pole,
+                band = pennants.filter(
+                  ([, y]) =>
+                    y >= top - CELEBRATION.pennantHeight - 1e-4 &&
+                    y <= top + 1e-4
+                ),
+                from = ([u, , v]: [number, number, number]) =>
+                  Math.hypot(u - lot.at[0], v - lot.at[1]);
+
+              return {
+                atPole: band.some(
+                  (point) =>
+                    from(point) <= CELEBRATION.pennantDepth &&
+                    Math.abs(point[1] - top) < 1e-4
+                ),
+                ways: band
+                  .filter(
+                    (point) =>
+                      Math.abs(from(point) - CELEBRATION.pennant) < 2e-3
+                  )
+                  .map(([u, , v]) => Math.atan2(v - lot.at[1], u - lot.at[0])),
+              };
+            }),
+            same = (a: number, b: number) =>
+              Math.abs(Math.sin((a - b) / 2)) < 0.03;
+
+          return (
+            ends.every(({ atPole }) => atPole) &&
+            (ends[0]?.ways ?? []).some((way) =>
+              ends.every(({ ways }) => ways.some((other) => same(way, other)))
+            )
+          );
+        })(),
       ];
     },
     calm = overlayFor(tileOf(9, false), [])!,
-    celebrating = overlayFor(tileOf(9, true), [])!;
+    celebrating = overlayFor(tileOf(9, true), [])!,
+    // A rival's city, its stand-in saying nothing of celebrating; and one celebrating as things stand while it's in
+    //  the disorder it declared at the turn's start.
+    rival = overlayFor(
+      {
+        ...square(['Road']),
+        city: { id: 'City-Rival', name: 'Rival', growth: { size: 9 } },
+      } as unknown as Parameters<typeof overlayFor>[0],
+      []
+    )!,
+    rioting = overlayFor(
+      {
+        ...square(['Road']),
+        city: {
+          id: 'City-Joy',
+          name: 'Joy',
+          growth: { size: 9 },
+          celebrateLeader: true,
+          civilDisorderDeclared: true,
+        },
+      } as unknown as Parameters<typeof overlayFor>[0],
+      []
+    )!;
 
   expect(
-    'a city celebrating, on sloping land: its plan says how many flags its size has, and none when it isn’t, so its square’s laid again; laid at sizes 3 and 9, as many poles, each rising from the peak of the roof laid there, with pennants over them; none laid when it isn’t',
+    'a city celebrating, on sloping land: its plan says how many flags its size has, and none when it isn’t, so its square’s laid again; laid at sizes 3 and 9, as many poles, each rising from the peak of the roof laid there, its pennant out from its top along one line; none laid when it isn’t, in a rival’s city, or in disorder',
     [
       laidAt(3),
       laidAt(9),
       calm.city?.celebration,
       JSON.stringify(calm) !== JSON.stringify(celebrating),
       pointsOf(calm, [POLE, ...PENNANTS]).length,
+      [rival.city?.celebration, pointsOf(rival, [POLE]).length],
+      [
+        rioting.city?.celebration,
+        rioting.city?.disorder,
+        pointsOf(rioting, [POLE]).length,
+      ],
     ],
-    [[3, 3, true, true], [6, 6, true, true], undefined, true, 0]
+    [
+      [3, 3, true, true],
+      [6, 6, true, true],
+      undefined,
+      true,
+      0,
+      [undefined, 0],
+      [undefined, 3, 0],
+    ]
   );
 }
 

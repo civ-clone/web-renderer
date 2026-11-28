@@ -1341,13 +1341,18 @@ Landmark buildings replace ordinary lots near the middle:
     with its buildings when the towns are hidden (`t`). Its plan says how many (`CityPlan#celebration`): two for a
     city of size 1 or 2, one more every two sizes, up to eight, so its square's laid again as it starts celebrating
     and stops. Your own cities only, as the drawn city carries `celebrateLeader` for those; a rival's stand-in doesn't.
+    Not while it's in the disorder it declared at the turn's start, though raising its luxuries could make it
+    celebrate as things stand: its fires, not flags.
   - **Each flag:** a pole 0.16 tall rising from a roof's peak, and a pennant from its top, 0.085 long and 0.05 tall,
-    in red, gold, blue, white or green, each seeded; all of a city's pennants point the way its wind blows, seeded.
+    in red, gold, blue, white or green, each seeded; all of a city's pennants point the way its wind blows, seeded
+    within 50° of east or west, so at the classic view, looking north, they're mostly broadside on, never edge on.
   - **Where:** on roofs chosen by where each stands and the city's seed, as disorder's fires are, of those whose
     pennant is clear of every other roof, past its corners or over its peak, and of the room the buildings leave the
-    city's units. Outer houses stand lower than those near the middle, so the flags mostly fly from those. In the
-    suites, over 2,880 cities laid on the square grid (30 seeds at 8 sizes, streets out 4 sets of ways, the sea north
-    or west or none), every city had as many roofs for flags as its size has.
+    city's units, and that keep 0.012 from the flags already chosen, each pennant from the others' poles and pennants.
+    So they're spread over the city's houses, mostly behind its middle, as its units' room is in front: at the classic
+    view, some fly behind its banner. In the suites, over 2,880 cities laid on the square grid (30 seeds at 8 sizes,
+    streets out 4 sets of ways, the sea north or west or none), every city had as many roofs for flags as its size
+    has.
   - **Still:** they don't flap, as smog doesn't drift.
 - **Captured:** the city keeps its buildings and changes colours.
 - **Destroyed:** the city is left as rubble for a few turns, as long as the client's tile still shows it, then it's

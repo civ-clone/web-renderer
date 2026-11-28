@@ -641,8 +641,9 @@ room: one for a small city, two from size 4 and three from 8. Still, as smog is.
 behind it shows whichever way the camera looks (#1420).
 
 **States, second part, celebration: done** (spec §7.4, "As built"). A city celebrating flies flags from some of its
-roofs, a pole on each roof's peak and a pennant from its top, all one way in its wind, more as it grows: your own
-cities, as only those say they're celebrating. Still, as smog is.
+roofs, a pole on each roof's peak and a pennant from its top, all one way in its wind, more as it grows, spread over its
+houses and apart from each other: your own cities, as only those say they're celebrating, and not while it's in
+disorder. Still, as smog is.
 
 **Yields (`y`): done.** The 2D map's icons for what each square yields (the map's pack's own, or the interface's) stand
 in the world over each square's middle, as strategy maps show them, rather than on the screen:

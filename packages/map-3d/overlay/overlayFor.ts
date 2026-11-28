@@ -142,7 +142,11 @@ export const overlayFor = (
         city.civilDisorderDeclared === true
           ? disorderColumns(city.growth?.size ?? 1)
           : 0,
-        city.celebrateLeader === true ? flagsFor(city.growth?.size ?? 1) : 0
+        // Not while it's in disorder, which it's declared at the turn's start, though raising its luxuries could make
+        //  it celebrate as things stand: its fires, not flags.
+        city.celebrateLeader === true && city.civilDisorderDeclared !== true
+          ? flagsFor(city.growth?.size ?? 1)
+          : 0
       ),
       suburbs: [],
       beside: [],

@@ -1884,9 +1884,10 @@ expect(
 
 // A city celebrating, 30 seeds of it at 8 sizes, with streets out 4 sets of ways and the sea north or west, or none:
 //  its flags on its own roofs, each pole rising from a roof's peak at its middle, its pennant out from the pole's top
-//  along the city's one wind, clear of every other roof (as the roof's square, turned as it faces, or under the
-//  pennant) and of its units' room; as many as its size has at most, and here, every one of them; the same for the
-//  same city, and another another; none when it isn't celebrating.
+//  along the city's one wind, within 50° of east or west, from either side, clear of every other roof (as the roof's
+//  square, turned as it faces, or under the pennant), of its units' room and of every other flag; every colour flown;
+//  as many as its size has at most, and here, every one of them; the same for the same city, and another another;
+//  none when it isn't celebrating.
 {
   const place = squareAt(5, 5),
     centre = place.centre,
@@ -1939,6 +1940,24 @@ expect(
         }),
       };
     },
+    // How far a point is from the segment from `a` to `b`, along the ground.
+    toSegment = (
+      [pu, pv]: readonly [number, number],
+      [au, av]: readonly [number, number],
+      [bu, bv]: readonly [number, number]
+    ) => {
+      const du = bu - au,
+        dv = bv - av,
+        along = Math.max(
+          0,
+          Math.min(1, ((pu - au) * du + (pv - av) * dv) / (du * du + dv * dv))
+        );
+
+      return Math.hypot(pu - (au + du * along), pv - (av + dv * along));
+    },
+    // Which side each city's wind blows from, and every pennant's colour, over them all.
+    sides = new Set<string>(),
+    colours = new Set<string>(),
     wrong: string[] = [];
   let cities = 0,
     flown = 0,
@@ -2022,6 +2041,55 @@ expect(
           if (winds.size > 1) {
             wrong.push(`${name}: ${winds.size} winds`);
           }
+
+          // Its wind within 50° of east or west, and its flags apart: each pennant from every other pole and pennant.
+          pennants.forEach((pennant, index) => {
+            const pole = poles[index]!,
+              wind = Math.atan2(
+                pennant.at[2] - pole.at[2],
+                pennant.at[0] - pole.at[0]
+              ),
+              from: [number, number] = [pole.at[0], pole.at[2]],
+              tip: [number, number] = [
+                pole.at[0] + (pennant.at[0] - pole.at[0]) * 2,
+                pole.at[2] + (pennant.at[2] - pole.at[2]) * 2,
+              ];
+
+            sides.add(Math.cos(wind) > 0 ? 'east' : 'west');
+            colours.add(pennant.colour);
+
+            if (
+              Math.abs(Math.cos(wind)) <
+              Math.cos(CELEBRATION.windFromEastWest) - 1e-9
+            ) {
+              wrong.push(`${name}: its wind ${wind}`);
+            }
+
+            pennants.forEach((other, at) => {
+              const otherPole = poles[at]!,
+                otherFrom: [number, number] = [
+                  otherPole.at[0],
+                  otherPole.at[2],
+                ],
+                otherTip: [number, number] = [
+                  otherPole.at[0] + (other.at[0] - otherPole.at[0]) * 2,
+                  otherPole.at[2] + (other.at[2] - otherPole.at[2]) * 2,
+                ];
+
+              if (
+                at !== index &&
+                Math.min(
+                  toSegment(otherFrom, from, tip),
+                  toSegment(otherTip, from, tip),
+                  toSegment(from, otherFrom, otherTip),
+                  toSegment(tip, otherFrom, otherTip)
+                ) <
+                  CELEBRATION.apart - 1e-9
+              ) {
+                wrong.push(`${name}: flags ${index} and ${at} together`);
+              }
+            });
+          });
         })
       )
     );
@@ -2031,13 +2099,16 @@ expect(
     JSON.stringify(piecesOf(seed, 9, [east], []).pieces);
 
   expect(
-    'a city celebrating: its flags on its own roofs, each pole rising from a roof’s peak, its pennant from the pole’s top along one wind, clear of every other roof and of its units’ room; as many as its size has at most, and here every one; the same for the same city, and another another; none when it isn’t',
+    'a city celebrating: its flags on its own roofs, each pole rising from a roof’s peak, its pennant from the pole’s top along one wind near east or west, clear of every other roof, of its units’ room and of every other flag; winds both ways and every colour; as many as its size has at most, and here every one; the same for the same city, and another another; none when it isn’t',
     [
       [1, 2, 3, 4, 8, 12, 20].map(flagsFor),
       wrong.slice(0, 3),
-      // Over all of them, none with no flag, and every one with as many as its size has.
+      // Over all of them, none with no flag, and every one with as many as its size has; winds from both sides, and
+      //  every colour.
       none,
       flown === wanted,
+      sides.size,
+      colours.size,
       same(5) === same(5),
       same(5) !== same(6),
       celebrationPieces({
@@ -2049,7 +2120,7 @@ expect(
       }),
       planFor(5, 9, [east], [], 0, 0).celebration,
     ],
-    [[2, 2, 3, 3, 5, 7, 8], [], 0, true, true, true, [], undefined]
+    [[2, 2, 3, 3, 5, 7, 8], [], 0, true, 2, 5, true, true, [], undefined]
   );
 }
 
