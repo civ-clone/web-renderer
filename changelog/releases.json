@@ -1,4 +1,6 @@
 [
+{"version":"0.1.0@8534ad81","date":"2026-11-28T15:31:56.000Z","localChanges":["chore: work towards a 3D map, not offered yet: under ?3d=1 units' and cities' models are drawn together, many at once, so a low view of a late game draws far less (#1429)"],"externalChanges":{}}
+,
 {"version":"0.1.0@f5680049","date":"2026-11-28T13:36:20.000Z","localChanges":["chore: work towards a 3D map, not offered yet: under ?3d=1 the sun's shadows are drawn only over what the camera sees, sharper, and a late game draws far less (#1427)"],"externalChanges":{}}
 ,
 {"version":"0.1.0@babf8899","date":"2026-11-28T13:00:46.000Z","localChanges":["chore: work towards a 3D map, not offered yet: under ?3d=1 the flags, labels and names over units and cities are drawn all together, not one by one, a step towards a late game drawing smoothly (#1426)"],"externalChanges":{}}

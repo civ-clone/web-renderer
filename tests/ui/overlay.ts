@@ -23,6 +23,7 @@ import {
 import overlayFor, {
   OverlayNeighbour,
   SquareOverlay,
+  townSeedOf,
 } from '@civ-clone/ui-map-3d/overlay/overlayFor';
 import overlayMesh, {
   AIRBASE_COLOURS,
@@ -4518,6 +4519,63 @@ expect(
         ],
         [],
       ],
+    ]
+  );
+}
+
+// A city taken from or by the player: a rival's reaches the page as a stand-in with an id of its own, so its id changes
+//  as it changes hands, but its square doesn't (#1430).
+{
+  const held = (id: string, x: number, y: number) =>
+      ({
+        ...square([], { terrain: 'Grassland' }),
+        x,
+        y,
+        city: { id, name: 'Ulundi', growth: { size: 8 } },
+      } as unknown as Parameters<typeof overlayFor>[0]),
+    theirs = overlayFor(held('UnknownCity-1', 12, 7), []),
+    ours = overlayFor(held('City-4', 12, 7), []),
+    elsewhere = overlayFor(held('City-4', 13, 7), []),
+    // In the same column, a row down.
+    below = overlayFor(held('City-4', 12, 8), []),
+    // A square beside it, which its houses spread onto, as its stand-in and as the city itself.
+    beside = (id: string) =>
+      overlayFor(
+        square([], { terrain: 'Grassland' }) as Parameters<
+          typeof overlayFor
+        >[0],
+        [
+          {
+            offset: [-1, 0],
+            tile: {
+              improvements: [],
+              x: 12,
+              y: 7,
+              city: { id, name: 'Ulundi', growth: { size: 8 } },
+            } as unknown as OverlayNeighbour['tile'],
+          },
+        ]
+      )?.suburbs.map(({ seed }) => seed);
+
+  expect(
+    'a city taken from or by the player, its id changed, keeps its buildings and the houses it’s spread beside it, from one seed: laid from its square, not its id; another square, across or down, another town',
+    [
+      JSON.stringify(theirs?.city) === JSON.stringify(ours?.city),
+      JSON.stringify(ours?.city) !== JSON.stringify(elsewhere?.city),
+      JSON.stringify(ours?.city) !== JSON.stringify(below?.city),
+      // Its own plan and the houses it spreads beside it from the one seed.
+      ours?.city?.seed === beside('City-4')?.[0],
+      beside('UnknownCity-1'),
+      JSON.stringify(beside('UnknownCity-1')) ===
+        JSON.stringify(beside('City-4')),
+    ],
+    [
+      true,
+      true,
+      true,
+      true,
+      [townSeedOf({ x: 12, y: 7 }, { id: 'x', name: 'y' })],
+      true,
     ]
   );
 }

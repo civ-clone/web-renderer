@@ -1297,7 +1297,8 @@ expect(
         beside[1]! > 0,
         beside[2]! > beside[1]!,
         beside[3]! > beside[2]!,
-        beside[3]! >= 40,
+        // Plenty at size 20: how many is the city's seed's (36 to 87 for these, laid from their squares, #1430).
+        beside[3]! >= 30,
         groundDrawn > 100,
       ],
       [[], 0, true, true, true, true, true]
