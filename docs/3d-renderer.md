@@ -1299,6 +1299,22 @@ Landmark buildings replace ordinary lots near the middle:
 ### 7.4 States
 
 - **Civil disorder:** smoke and fires.
+  - **As built** (`packages/map-3d/markers/disorder.ts`, `MarkerKit#disorder`): fires on the city's roofs, and a column
+    of smoke rising from each: one column for a city under size 4, two from 4 and three from 8. They stand among its
+    buildings, 0.16 to 0.32 from its middle, behind it and beside it, as far as 100° round from straight behind, so
+    they're clear of its units, which stand in front.
+  - **Each column:** two flames, a cone each, orange and yellow, side by side 0.08 up. Over them, six puffs of smoke,
+    dark at the bottom and lighter as they rise, from 0.15 to 0.6 up. Each is bigger than the one under it, from 0.04
+    to 0.14 in radius, a little flatter than round, and leans further downwind the higher it is, as far as about 0.3. Each
+    puff is thrown a little either way, so the smoke billows rather than stacks. That's big enough to tell close in;
+    at the default zoom the city's banner, which already says it's in disorder, mostly covers it.
+  - **Each city's own:** the wind's way, where its columns stand and how its puffs are thrown all come from its name,
+    so the same city looks the same every time it's drawn.
+  - **Drawn:** the smoke as a figure is, lit, casting a shadow on the city; the fires unlit, glowing whichever way
+    the sun is (`MarkerKit#glowMaterial`), and casting none (`NO_SHADOW`, which the stage reads). Each is one
+    geometry for every city of that name and number of columns.
+  - **Still:** it doesn't drift or flicker, as smog doesn't (§5.4): that would need frames drawn all the time, as
+    idling does.
 - **We Love the King Day:** banners.
 - **Captured:** the city keeps its buildings and changes colours.
 - **Destroyed:** the city is left as rubble for a few turns, as long as the client's tile still shows it, then it's

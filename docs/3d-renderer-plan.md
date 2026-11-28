@@ -633,7 +633,11 @@ them, with the yields.
 
 **Banners, second part (clicks and hovers): done** (spec §7.5). A click on a banner is for its city, and resting on one
 opens its tooltip over it, as on the 2D map. Still to do: fading those hidden behind the land, and the states
-(disorder, celebration, captured and destroyed) on the map itself.
+(celebration, captured and destroyed) on the map itself.
+
+**States, first part, civil disorder: done** (spec §7.4, "As built"). A city in disorder has fires on its roofs, behind
+and beside its middle, and a column of smoke rising from each, leaning downwind: one for a small city, two from size 4
+and three from 8. Still, as smog is.
 
 **Yields (`y`): done.** The 2D map's icons for what each square yields (the map's pack's own, or the interface's) stand
 in the world over each square's middle, as strategy maps show them, rather than on the screen:
