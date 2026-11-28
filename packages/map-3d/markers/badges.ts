@@ -444,7 +444,9 @@ export const badgeInstances = (
     });
 
 // How many badges there's room for at first, the room doubling as more are drawn.
-const ROOM = 256;
+const ROOM = 256,
+  // How much sooner a badge drawn as a sprite of its own is drawn than the rest: still after the smoke (`water.ts`).
+  UNDER = 0.01;
 
 /** The badges, drawn together: add `mesh` to the scene, and `gather` them as each frame is drawn. */
 export class Badges {
@@ -477,7 +479,7 @@ export class Badges {
 
   /**
    * Draws the badges in `root` (`badgeSprites`) as `camera` sees them, their pictures in the atlas. One whose picture
-   *  doesn't fit in it is drawn as a sprite of its own, as they all were, on the camera's layer too, till it does. The
+   *  doesn't fit in it is drawn as a sprite of its own, on the camera's layer too, under the rest, till it does. The
    *  world's matrices as they are: the caller works them out first.
    */
   gather(root: Object3D, camera: Camera): number {
@@ -492,13 +494,19 @@ export class Badges {
     );
 
     sprites.forEach((sprite) => {
-      const image = imageOf(sprite);
+      const image = imageOf(sprite),
+        held = image === null || this.atlas.cellOf(image) !== null;
 
-      if (image === null || this.atlas.cellOf(image) !== null) {
+      if (held) {
         sprite.layers.disable(0);
       } else {
         sprite.layers.enable(0);
       }
+
+      // Under the rest, whatever its depth: three.js sorts the batch by its own place, not its badges'.
+      sprite.renderOrder = held
+        ? this.mesh.renderOrder
+        : this.mesh.renderOrder - UNDER;
     });
 
     const badges = badgeInstances(sprites, camera, (image) =>

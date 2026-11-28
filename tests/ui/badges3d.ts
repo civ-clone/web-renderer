@@ -14,6 +14,7 @@ import {
   Group,
   Object3D,
   PerspectiveCamera,
+  SRGBColorSpace,
   Sprite,
   SpriteMaterial,
   Vector3,
@@ -657,6 +658,33 @@ expect(
   ]
 );
 
+// Each drawn together off the camera's layer, at the badges' order; written afresh, as far as they're drawn.
+expect(
+  'gathered, those drawn together are off the camera’s layer, in the badges’ order; what’s written is sent again as far as it’s drawn; the atlas is read as the labels were',
+  [
+    badgeSprites(world).every(
+      (sprite) => !sprite.layers.isEnabled(0) && sprite.renderOrder === BADGES
+    ),
+    (['anchor', 'size', 'centre', 'colour', 'cell'] as const).map((name) => {
+      const attribute = mesh.geometry.getAttribute(name) as unknown as {
+        version: number;
+        itemSize: number;
+        updateRanges: { start: number; count: number }[];
+      };
+
+      return [
+        attribute.version > 0,
+        attribute.updateRanges.map(({ start, count }) => [
+          start,
+          count / attribute.itemSize,
+        ]),
+      ];
+    }),
+    badges.atlas.texture?.colorSpace,
+  ],
+  [true, Array.from({ length: 5 }, () => [true, [[0, 10]]]), SRGBColorSpace]
+);
+
 // A badge whose label's too wide for the atlas: drawn as a sprite of its own, as they all were, the rest together.
 const overflowing = new Group(),
   long = drawMarker(kit, {
@@ -680,6 +708,62 @@ expect(
   ],
   [1, true, true, false, true]
 );
+
+// More labels than the atlas holds at its most: those it can't hold drawn as sprites of their own, under the rest; drawn
+//  with fewer, held again, and drawn together.
+const flipping = new Badges(BADGES),
+  rows = Array.from({ length: 100 }, (_, index) => {
+    const marker = drawMarker(kit, {
+      city: null,
+      unit: unit({
+        status: `${String(index).padStart(3, '0')}${'W'.repeat(94)}`,
+      }),
+    });
+
+    marker.position.set(index % 10, 0, Math.floor(index / 10));
+
+    return marker;
+  }),
+  labelOf = (marker: Object3D): Sprite =>
+    spritesIn(marker).find((sprite) => sprite.material.map !== null)!,
+  allRows = new Group(),
+  lastRows = new Group();
+
+allRows.add(...rows);
+allRows.updateMatrixWorld(true);
+
+const drawnAll = flipping.gather(allRows, camera),
+  apart = rows.filter((marker) => labelOf(marker).layers.isEnabled(0)),
+  apartUnder = apart.every(
+    (marker) =>
+      labelOf(marker).renderOrder < BADGES &&
+      labelOf(marker).renderOrder > SMOKE_ORDER
+  );
+
+// Drawn as they are, but with the rest gone.
+lastRows.add(...apart);
+lastRows.updateMatrixWorld(true);
+
+const drawnApart = flipping.gather(lastRows, camera);
+
+expect(
+  'more labels than the atlas holds: those it can’t hold drawn as sprites of their own, under the rest; drawn again with fewer, held, and drawn together',
+  [
+    drawnAll,
+    apart.length,
+    apartUnder,
+    drawnApart,
+    apart.every(
+      (marker) =>
+        !labelOf(marker).layers.isEnabled(0) &&
+        labelOf(marker).renderOrder === BADGES
+    ),
+  ],
+  // Each row's flag, and the labels held: 84 rows of 48 under the white block's 24, in 4,096.
+  [100 + 84, 16, true, 32, true]
+);
+
+flipping.dispose();
 
 // More than there's room for at first.
 const crowd = new Group();
