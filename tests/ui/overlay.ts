@@ -69,6 +69,11 @@ import sprawl, {
   citySeed,
 } from '@civ-clone/ui-map-3d/overlay/sprawl';
 import { IN_FRONT_OF_CITY } from '@civ-clone/ui-map-3d/markers/drawMarker';
+import {
+  DISORDER_ROOM,
+  FLAMES,
+  SMOKE,
+} from '@civ-clone/ui-map-3d/overlay/disorder';
 import { TopologyId } from '@civ-clone/ui-protocol/topology';
 import Land from '@civ-clone/ui-map-3d/Land';
 import { ChunkMesh } from '@civ-clone/ui-map-3d/terrain/chunks';
@@ -3087,6 +3092,151 @@ const landOf = (
       wallReach.every((share) => share < 0.9),
     ],
     [11, true, true, true]
+  );
+}
+
+// A city in civil disorder (spec §7.4, `disorder.ts`), as it's shown, on sloping land: its plan says how many columns
+//  its size has, so its square's laid again as it goes into disorder and out of it. Laid, at each size, as many fires
+//  as that on roofs behind its middle, each flame rising from the eaves of the roof laid there, and smoke over each
+//  fire's flames, none in them, and over every roof it passes, every point of them keeping the room its buildings leave
+//  its units; none out of disorder.
+{
+  const tileOf = (size: number, disorder: boolean) =>
+      ({
+        ...square(['Road']),
+        city: {
+          id: 'City-Riot',
+          name: 'Riot',
+          growth: { size },
+          civilDisorderDeclared: disorder,
+        },
+      } as unknown as Parameters<typeof overlayFor>[0]),
+    // Land rising to the south-east, steeply enough that a house's highest corner stands well over its middle.
+    at = place(17, 3, {
+      height: (u, v) => 0.05 + 0.12 * (u - 17) + 0.08 * (v - 3),
+    }),
+    units: [number, number] = [at.centre[0], at.centre[1] + IN_FRONT_OF_CITY],
+    // Each point of one of `colours`, back on the ground and its height, laid on its own.
+    pointsOf = (overlay: SquareOverlay, colours: readonly string[]) => {
+      const laid = overlayMesh(16, 0, [{ overlay, place: at }]),
+        wanted = colours.map((css) => new Color(css)),
+        found: [number, number, number][] = [];
+
+      for (let point = 0; point < laid.colours.length; point += 3) {
+        if (
+          wanted.some(
+            ({ r, g, b }) =>
+              Math.abs(laid.colours[point]! - r) < 1e-4 &&
+              Math.abs(laid.colours[point + 1]! - g) < 1e-4 &&
+              Math.abs(laid.colours[point + 2]! - b) < 1e-4
+          )
+        ) {
+          found.push([
+            laid.positions[point]! + 16,
+            laid.positions[point + 1]!,
+            laid.positions[point + 2]!,
+          ]);
+        }
+      }
+
+      return found;
+    },
+    // At `size`, rioting: its plan's columns, how many roofs burn, whether each flame rises from the eaves of the roof
+    //  laid under it, behind the middle, whether there's smoke over each fire's flames and none in them, and over every
+    //  roof it passes, and whether all of it keeps its units' room.
+    laidAt = (size: number) => {
+      const rioting = overlayFor(tileOf(size, true), [])!,
+        { lots } = sprawl(at, rioting.city!, units),
+        flames = pointsOf(rioting, FLAMES),
+        smoke = pointsOf(rioting, SMOKE),
+        roofs = pointsOf(rioting, ROOFS),
+        // The lot a point's over: within its roof's eaves, its square, turned as it faces.
+        lotOver = ([u, , v]: [number, number, number]) =>
+          lots.find(({ at: [lu, lv], width, facing }) => {
+            const across =
+                (u - lu) * Math.cos(facing) - (v - lv) * Math.sin(facing),
+              ahead = (u - lu) * Math.sin(facing) + (v - lv) * Math.cos(facing);
+
+            return (
+              Math.max(Math.abs(across), Math.abs(ahead)) <= width / 2 + 1e-6
+            );
+          }),
+        // The roof laid over a lot, from its eaves to its peak.
+        roofOver = (lot: Lot): [number, number] => {
+          const over = roofs.filter((point) => lotOver(point) === lot);
+
+          return [
+            Math.min(...over.map(([, y]) => y)),
+            Math.max(...over.map(([, y]) => y)),
+          ];
+        },
+        // Each fire's flames' lowest point and highest, by the lot they're over.
+        burning = new Map<Lot, [number, number]>();
+
+      flames.forEach((point) => {
+        const lot = lotOver(point);
+
+        if (lot !== undefined) {
+          const [lowest, highest] = burning.get(lot) ?? [Infinity, -Infinity];
+
+          burning.set(lot, [
+            Math.min(lowest, point[1]),
+            Math.max(highest, point[1]),
+          ]);
+        }
+      });
+
+      return [
+        rioting.city?.disorder,
+        burning.size,
+        flames.every((point) => lotOver(point) !== undefined) &&
+          [...burning].every(
+            ([lot, [lowest]]) =>
+              lot.at[1] < at.centre[1] &&
+              Math.abs(lowest - roofOver(lot)[0]) < 1e-4
+          ),
+        // Over each fire, smoke as far out as its flames reach, none of it as low as their tips, and every point of it
+        //  over a roof over that roof's peak.
+        [...burning].every(([lot, [, highest]]) => {
+          const over = smoke.filter(
+            ([u, , v]) =>
+              Math.hypot(u - lot.at[0], v - lot.at[1]) <= lot.width / 2
+          );
+
+          return over.length > 0 && over.every(([, y]) => y > highest);
+        }) &&
+          smoke.every((point) => {
+            const lot = lotOver(point);
+
+            return lot === undefined || point[1] >= roofOver(lot)[1] - 1e-4;
+          }),
+        [...flames, ...smoke].every(
+          ([u, , v]) =>
+            Math.hypot(u - units[0], v - units[1]) >= DISORDER_ROOM - 1e-6
+        ),
+      ];
+    },
+    calm = overlayFor(tileOf(9, false), [])!,
+    rioting = overlayFor(tileOf(9, true), [])!;
+
+  expect(
+    'a city in civil disorder, on sloping land: its plan says how many columns its size has, and none when it’s calm, so its square’s laid again; laid at sizes 3, 4 and 9, as many roofs burning behind its middle, each flame rising from the eaves of the roof laid there, its smoke over its flames and every roof it passes, all of it keeping its units’ room; none laid when it’s calm',
+    [
+      laidAt(3),
+      laidAt(4),
+      laidAt(9),
+      calm.city?.disorder,
+      JSON.stringify(calm) !== JSON.stringify(rioting),
+      pointsOf(calm, [...FLAMES, ...SMOKE]).length,
+    ],
+    [
+      [1, 1, true, true, true],
+      [2, 2, true, true, true],
+      [3, 3, true, true, true],
+      undefined,
+      true,
+      0,
+    ]
   );
 }
 

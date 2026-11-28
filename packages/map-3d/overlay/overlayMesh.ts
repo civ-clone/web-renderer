@@ -55,6 +55,7 @@ import {
   suburb,
 } from './sprawl';
 import { IN_FRONT_OF_CITY } from '../markers/drawMarker';
+import disorderPieces from './disorder';
 import { ditherRank } from './thinning';
 import { standAt } from './stands';
 import { RiverPath } from '../terrain/relief';
@@ -1644,9 +1645,12 @@ export const ROOFS = ['#9c5a3c', '#7d4a36', '#6f6a64', '#8b6b4a'] as const;
 //  (`Land#keepCities`).
 const PAVING = '#a39a88',
   HOUSE = '#c4b8a2',
-  // How tall a building's storey is, and how wide its walls are, under the eaves of a roof its lot's width.
-  STOREY = 0.045,
+  // How wide a building's walls are, under the eaves of a roof its lot's width.
   WALLED = 0.86;
+
+/** How tall a city's building's storey is, and how high its roof rises over its eaves, as a share of its width. */
+export const STOREY = 0.045,
+  ROOF_RISE = 0.4;
 
 /**
  * A city's sprawl on its lot (`sprawl.ts`): its plaza paved, its streets out to the roads and its quay, and a building
@@ -1655,7 +1659,9 @@ const PAVING = '#a39a88',
 const city = (layer: Layer, plan: CityPlan): void => {
   const { place } = layer,
     [u, v] = place.centre,
-    { plaza, streets, lots } = sprawl(place, plan, [u, v + IN_FRONT_OF_CITY]);
+    // Where its units stand, in front of its buildings, which keep clear of them, as its disorder does.
+    units: [number, number] = [u, v + IN_FRONT_OF_CITY],
+    { plaza, streets, lots } = sprawl(place, plan, units);
 
   // On a bridge's deck where it's over a river, as the roads that come into it are, so they meet it at its height.
   layer.disc(plaza.at, plaza.radius, PAVING, LIFT.road, 16, true);
@@ -1663,6 +1669,46 @@ const city = (layer: Layer, plan: CityPlan): void => {
     layer.strip(from, to, STREET, PAVING, LIFT.road, true)
   );
   lots.forEach((lot) => house(layer, lot));
+
+  // In civil disorder: fires on some of its roofs behind its middle, and smoke rising from them, leaning away from its
+  //  units (`disorder.ts`), each on the house that's laid there.
+  if ((plan.disorder ?? 0) > 0) {
+    disorderPieces({
+      centre: [u, v],
+      units,
+      roofs: lots.map((lot) => {
+        const { top, peak } = houseHeights(layer, lot);
+
+        return { at: lot.at, width: lot.width, eaves: top, peak };
+      }),
+      seed: plan.seed,
+      columns: plan.disorder ?? 0,
+      ground: (gu, gv) => layer.ground(gu, gv),
+    }).forEach(({ kind, at, size, colour }) =>
+      layer.solid(kind === 'fire' ? cone : sphere, at, size, colour)
+    );
+  }
+};
+
+/**
+ * How a house on `lot` stands, each storey `storey` tall: from the lowest of the ground under it, so it stands on a
+ *  slope with no gap under any corner, to its storeys over the highest, and its roof's peak over that.
+ */
+const houseHeights = (
+  layer: Layer,
+  lot: Lot,
+  storey = STOREY
+): { low: number; top: number; peak: number } => {
+  const grounds = [[lot.at[0], lot.at[1]] as const, ...footprintOf(lot)].map(
+      ([gu, gv]) => layer.ground(gu, gv)
+    ),
+    top = Math.max(...grounds) + storey * lot.storeys;
+
+  return {
+    low: Math.min(...grounds) - 0.005,
+    top,
+    peak: top + lot.width * ROOF_RISE,
+  };
 };
 
 // A house on its lot, facing its way, its roof's eaves out to the lot's edges, standing on the land where it is: a
@@ -1680,15 +1726,8 @@ const house = (
       at: [bu, bv],
       width,
       facing,
-      storeys,
     } = lot,
-    // From the lowest of the ground under it, so it stands on a slope with no gap under any corner, to its storeys over
-    //  the highest.
-    grounds = [[bu, bv] as const, ...footprintOf(lot)].map(([gu, gv]) =>
-      layer.ground(gu, gv)
-    ),
-    low = Math.min(...grounds) - 0.005,
-    top = Math.max(...grounds) + storey * storeys;
+    { low, top } = houseHeights(layer, lot, storey);
 
   layer.solid(
     box,
@@ -1701,8 +1740,8 @@ const house = (
   //  `width` across, out to the lot's edges.
   layer.solid(
     pyramid,
-    [bu, top + width * 0.2, bv],
-    [width * Math.SQRT2, width * 0.4, width * Math.SQRT2],
+    [bu, top + (width * ROOF_RISE) / 2, bv],
+    [width * Math.SQRT2, width * ROOF_RISE, width * Math.SQRT2],
     roof,
     [0, facing + Math.PI / 4, 0]
   );

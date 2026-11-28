@@ -10,7 +10,11 @@
 //  - from size 4, its houses on its neighbours' squares, more as it grows, kept as it grows; each, as it's drawn, on its
 //    own square, outside the walls, clear of a unit's feet in front of the city and on that square, of the roads,
 //    railroads and fields drawn there and of every other house, the cities beside it included, on every grid; none on
-//    the sea, mountains or a mine; and those beside a road lining it.
+//    the sea, mountains or a mine; and those beside a road lining it;
+//  - in civil disorder (`disorder.ts`), fires on roofs behind its middle, as many columns as its size has, or one on
+//    the ground behind its plaza with none there, every flame and puff keeping its units' room, its smoke rising,
+//    growing and leaning away from them and clear of every roof under it; the same for the same city, and a house
+//    left standing as a road's built keeping its fire, and its smoke the same, almost always.
 
 import { Color, Euler, Mesh, Vector3 } from 'three';
 import { TopologyId } from '@civ-clone/ui-protocol/topology';
@@ -34,7 +38,12 @@ import sprawl, {
   suburbStepsFor,
   tierFor,
 } from '@civ-clone/ui-map-3d/overlay/sprawl';
-import { ROOFS, roadHalf } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
+import {
+  ROOFS,
+  ROOF_RISE,
+  STOREY,
+  roadHalf,
+} from '@civ-clone/ui-map-3d/overlay/overlayMesh';
 import { OverlayMesh } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
 import {
   IN_FRONT_OF_CITY,
@@ -42,6 +51,13 @@ import {
   drawMarker,
 } from '@civ-clone/ui-map-3d/markers/drawMarker';
 import { wallsGeometry } from '@civ-clone/ui-map-3d/markers/figures';
+import disorderPieces, {
+  DISORDER,
+  DISORDER_ROOM,
+  DisorderPiece,
+  disorderColumns,
+  nearestTo,
+} from '@civ-clone/ui-map-3d/overlay/disorder';
 
 const failures: string[] = [];
 let checks = 0;
@@ -1542,6 +1558,318 @@ expect(
     'on a neighbour’s square with no road in, the houses beside the way in face it, square to it',
     [beside.length >= 20, facingIt.length === beside.length],
     [true, true]
+  );
+}
+
+// A city in civil disorder, 30 seeds of it at 10 sizes, with streets out 4 sets of ways, and the sea north or west, or
+//  none: its fires on its own roofs behind its middle, each column's flames rising from one's eaves, within it, or on
+//  the ground behind its plaza where there's none (never, here); every piece keeping the room its buildings leave its
+//  units, and its smoke clear of every roof it reaches, as the roof's square, or over its peak; each column's smoke
+//  rising, growing and further from them than the puff under it.
+{
+  const place = squareAt(5, 5),
+    centre = place.centre,
+    units = inFrontOf(centre),
+    sizes = [1, 2, 3, 4, 6, 8, 12, 20, 32, 40],
+    wayss: (readonly (readonly [number, number])[])[] = [
+      [],
+      [east],
+      [north, south],
+      [east, north, west, south],
+    ],
+    seas: (readonly (readonly [number, number])[])[] = [[], [north], [west]],
+    perColumn = 2 + DISORDER.puffs,
+    ground = 0.02,
+    // A roof as the overlay lays it, on flat land 0.02 up: its eaves over its storeys, and its peak over them.
+    roofOf = (lot: Lot) => {
+      const eaves = ground + lot.storeys * STOREY;
+
+      return {
+        at: lot.at,
+        width: lot.width,
+        eaves,
+        peak: eaves + lot.width * ROOF_RISE,
+      };
+    },
+    // How far a point is from a lot's square, along the ground, its roof's eaves out to the square's edges, turned as
+    //  it faces: 0 within.
+    fromSquare = (
+      { at: [lu, lv], width, facing }: Lot,
+      u: number,
+      v: number
+    ) => {
+      const across = (u - lu) * Math.cos(facing) - (v - lv) * Math.sin(facing),
+        ahead = (u - lu) * Math.sin(facing) + (v - lv) * Math.cos(facing);
+
+      return Math.hypot(
+        Math.max(0, Math.abs(across) - width / 2),
+        Math.max(0, Math.abs(ahead) - width / 2)
+      );
+    },
+    wrong: string[] = [];
+  // How many cities had no roof to burn, and how many fewer columns than their size has.
+  let behindPlaza = 0,
+    short = 0;
+
+  for (let seed = 1; seed <= 30; seed++) {
+    sizes.forEach((size) =>
+      wayss.forEach((ways) =>
+        seas.forEach((sea) => {
+          const columns = disorderColumns(size),
+            { lots } = sprawl(place, planFor(seed, size, ways, sea), units),
+            pieces = disorderPieces({
+              centre,
+              units,
+              roofs: lots.map(roofOf),
+              seed,
+              columns,
+              ground: () => ground,
+            }),
+            count = pieces.length / perColumn,
+            fires = pieces.filter((piece) => piece.kind === 'fire'),
+            onGround = fires.every(
+              ({ at: [u, , v] }) =>
+                Math.abs(u - centre[0]) <= DISORDER.fireWidth &&
+                Math.abs(v - (centre[1] - DISORDER.behindPlaza)) <= 1e-9
+            ),
+            name = `${seed} ${size} ${ways.join('|')} ${sea.join('|')}`;
+
+          behindPlaza += onGround ? 1 : 0;
+          short += count < columns ? 1 : 0;
+
+          if (!Number.isInteger(count) || count < 1 || count > columns) {
+            wrong.push(`${name}: ${pieces.length} pieces`);
+          }
+
+          // Each flame on a roof behind the middle, rising from its eaves, half as wide as it, within it.
+          fires.forEach(({ at: [u, y, v], size: [width, height] }) => {
+            const base = y - height / 2;
+
+            if (
+              !onGround &&
+              !lots.some(
+                (lot) =>
+                  lot.at[1] < centre[1] &&
+                  Math.hypot(u - lot.at[0], v - lot.at[1]) + width / 2 <=
+                    lot.width / 2 + 1e-9 &&
+                  Math.abs(width - lot.width / 2) < 1e-9 &&
+                  Math.abs(base - roofOf(lot).eaves) < 1e-9
+              )
+            ) {
+              wrong.push(`${name}: a fire off a roof at ${u},${v}`);
+            }
+          });
+
+          // Clear of its units, and its smoke over every roof it reaches.
+          pieces.forEach((piece) => {
+            if (nearestTo(piece, units) < DISORDER_ROOM - 1e-9) {
+              wrong.push(`${name}: a ${piece.kind} in its units' room`);
+            }
+
+            if (
+              piece.kind === 'smoke' &&
+              lots.some(
+                (lot) =>
+                  fromSquare(lot, piece.at[0], piece.at[2]) <
+                    piece.size[0] / 2 &&
+                  piece.at[1] - piece.size[1] / 2 < roofOf(lot).peak
+              )
+            ) {
+              wrong.push(`${name}: smoke in a roof`);
+            }
+          });
+
+          for (let column = 0; column < count; column++) {
+            const smoke = pieces
+                .slice(column * perColumn, (column + 1) * perColumn)
+                .filter((piece) => piece.kind === 'smoke'),
+              fromUnits = (piece: DisorderPiece) =>
+                Math.hypot(piece.at[0] - units[0], piece.at[2] - units[1]);
+
+            smoke.slice(1).forEach((piece, at) => {
+              const under = smoke[at]!;
+
+              if (
+                piece.at[1] <= under.at[1] ||
+                piece.size[0] <= under.size[0] ||
+                fromUnits(piece) <= fromUnits(under)
+              ) {
+                wrong.push(`${name}: column ${column} puff ${at + 1}`);
+              }
+            });
+          }
+        })
+      )
+    );
+  }
+
+  const same = (seed: number) =>
+    JSON.stringify(
+      disorderPieces({
+        centre,
+        units,
+        roofs: sprawl(place, planFor(seed, 9, [east]), units).lots.map(roofOf),
+        seed,
+        columns: 3,
+        ground: () => ground,
+      })
+    );
+
+  expect(
+    'a city in civil disorder: its fires on its own roofs behind its middle, or on the ground behind its plaza with none there, as many columns as its size has at most; every piece keeping its units’ room; each column’s smoke rising, growing and leaning away from them; none out of disorder; the same for the same city, and another another',
+    [
+      [1, 3, 4, 7, 8, 20].map(disorderColumns),
+      // As far from its units as its buildings keep.
+      DISORDER_ROOM === UNIT_ROOM + GAP,
+      wrong.slice(0, 3),
+      disorderPieces({
+        centre,
+        units,
+        roofs: [],
+        seed: 1,
+        columns: 0,
+        ground: () => ground,
+      }),
+      same(5) === same(5),
+      same(5) !== same(6),
+      // Over all of them, none with no roof to burn, and none with fewer columns than its size has.
+      behindPlaza,
+      short,
+      // With only a roof in front of its middle: one column, on the ground behind its plaza.
+      disorderPieces({
+        centre,
+        units,
+        roofs: [
+          {
+            at: [centre[0] + 0.15, centre[1] + 0.05],
+            width: 0.05,
+            eaves: 0.18,
+            peak: 0.2,
+          },
+        ],
+        seed: 1,
+        columns: 2,
+        ground: () => ground,
+      })
+        .filter((piece) => piece.kind === 'fire')
+        .map(({ at: [u, y, v], size: [, height] }) => [
+          Math.abs(u - centre[0]) <= DISORDER.fireWidth,
+          Math.round((y - height / 2) * 1e6) / 1e6,
+          Math.round((centre[1] - v) * 1e6) / 1e6,
+        ]),
+    ],
+    [
+      [1, 1, 2, 2, 3, 3],
+      true,
+      [],
+      [],
+      true,
+      true,
+      0,
+      0,
+      [
+        [true, ground, DISORDER.behindPlaza],
+        [true, ground, DISORDER.behindPlaza],
+      ],
+    ]
+  );
+
+  // A roof right behind its middle, so near its units that its column would come into their room (its smoke, here):
+  //  passed over, for the ground behind its plaza.
+  expect(
+    'a city in civil disorder: a roof whose column would come into its units’ room is passed over',
+    disorderPieces({
+      centre,
+      units,
+      roofs: [
+        {
+          at: [centre[0], centre[1] - 0.01],
+          width: 0.05,
+          eaves: 0.18,
+          peak: 0.2,
+        },
+      ],
+      seed: 1,
+      columns: 1,
+      ground: () => ground,
+    })
+      .filter((piece) => piece.kind === 'fire')
+      .map(({ at: [, , v] }) => Math.round((centre[1] - v) * 1e6) / 1e6),
+    [DISORDER.behindPlaza, DISORDER.behindPlaza]
+  );
+
+  // A road built into a city in disorder, clearing a street through some of its lots and taking others further out in
+  //  their place: of the houses burning that are left standing, nearly all keep their fire, unless a lot taken ranks
+  //  ahead, and each that does keeps its column just as it was.
+  const burningIn = (
+      seed: number,
+      size: number,
+      ways: readonly (readonly [number, number])[]
+    ) => {
+      const { lots } = sprawl(place, planFor(seed, size, ways), units),
+        pieces = disorderPieces({
+          centre,
+          units,
+          roofs: lots.map(roofOf),
+          seed,
+          columns: disorderColumns(size),
+          ground: () => ground,
+        }),
+        spot = ([u, v]: readonly [number, number]) =>
+          `${u.toFixed(9)},${v.toFixed(9)}`,
+        // Each burning house's column, by where it stands: its two flames either side of it.
+        burning = new Map<string, string>();
+
+      for (let column = 0; column * perColumn < pieces.length; column++) {
+        const [left, right] = pieces.slice(column * perColumn),
+          at = [
+            (left!.at[0] + right!.at[0]) / 2,
+            (left!.at[2] + right!.at[2]) / 2,
+          ] as const;
+
+        burning.set(
+          spot(at),
+          JSON.stringify(
+            pieces.slice(column * perColumn, (column + 1) * perColumn)
+          )
+        );
+      }
+
+      return { standing: new Set(lots.map((lot) => spot(lot.at))), burning };
+    },
+    roadsBuilt: (readonly (readonly [number, number])[])[][] = [
+      [[], [east]],
+      [[east], [east, north]],
+      [[north], [north, west]],
+    ];
+  let left = 0,
+    kept = 0,
+    changed = 0;
+
+  for (let seed = 1; seed <= 40; seed++) {
+    [3, 4, 6, 8, 12, 20].forEach((size) =>
+      roadsBuilt.forEach(([before, after]) => {
+        const was = burningIn(seed, size, before!),
+          is = burningIn(seed, size, after!);
+
+        was.burning.forEach((column, at) => {
+          if (is.standing.has(at)) {
+            left++;
+
+            if (is.burning.has(at)) {
+              kept++;
+              changed += is.burning.get(at) === column ? 0 : 1;
+            }
+          }
+        });
+      })
+    );
+  }
+
+  expect(
+    'a city in civil disorder: of the houses burning left standing as a road’s built, nine in ten or more keep their fire, each its column just as it was',
+    [left > 500, kept >= left * 0.9, changed],
+    [true, true, 0]
   );
 }
 

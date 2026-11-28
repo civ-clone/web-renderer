@@ -9,6 +9,7 @@
 
 import { Tile } from '@civ-clone/ui-protocol/types';
 import { growthOf } from '@civ-clone/ui-models-builtin/vegetation';
+import { disorderColumns } from './disorder';
 import {
   CityPlan,
   SuburbPlan,
@@ -120,7 +121,7 @@ export const overlayFor = (
       paths: [],
       // From its id, as the engine has it: the same city whoever holds it. Out to each neighbour whose road or railroad
       //  comes in, as it lays its half (a road where the city's square has one too, or a railroad, which joins a city),
-      //  and towards the sea.
+      //  and towards the sea. In civil disorder, fires on its roofs (`disorder.ts`), as the city's shown.
       city: planFor(
         citySeed(String(city.id ?? city.name ?? '')),
         city.growth?.size ?? 1,
@@ -135,7 +136,10 @@ export const overlayFor = (
           .filter(({ tile: neighbour }) =>
             SEA.includes(neighbour.terrain?._ ?? '')
           )
-          .map(({ offset }) => offset)
+          .map(({ offset }) => offset),
+        city.civilDisorderDeclared === true
+          ? disorderColumns(city.growth?.size ?? 1)
+          : 0
       ),
       suburbs: [],
       beside: [],
