@@ -1919,8 +1919,8 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
   - 2.7 MB in all, each a unit posed as it stands still, from one atlas (and a second for what's see-through).
 
 - **Realistic units made for civ.one**
-  ([civ-clone/models-realistic-cc0](https://github.com/civ-clone/models-realistic-cc0), CC0 1.0: generated with Meshy,
-  but for the Frigate, from Meshy's community, with Lucian Pavel's Lowpoly Molotov and Poly Haven's Wooden Handle
+  ([civ-clone/models-realistic-cc0](https://github.com/civ-clone/models-realistic-cc0), CC0 1.0: generated with Meshy
+  (but for the Frigate, from Meshy's community), with Lucian Pavel's Lowpoly Molotov and Poly Haven's Wooden Handle
   Saber, by Ulan Cabanilla):
   - 20 models, each drawing a unit type: Settlers, Warrior, Knight, Explorer, Sail, Crusader, Musketman, Rifleman,
     Cavalry, Dragoon, Alpine Troops, Partisan, Spy, Marine, Engineer, Bomber, Stealth Bomber, Frigate, Ironclad and
@@ -1937,12 +1937,12 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
 
   The realistic ones are reduced from far finer models, each to a few thousand triangles, with its colours baked into
   one texture (JPEG, 512 px for people and 1024 px for the rest), and a second, of up to 512 px, where a prop was put in
-  (the Partisan's molotov, the Diplomat's hat, the Paratrooper's canopy, the Fanatic's torch, the Cavalry's sabre, the
-  Dragoon's carbine). Each ship floats with its waterline at its origin, and each but the people has a scale of its own,
-  so all sit beside each other and 0 A.D.'s units. Each takes its owner's colour on one part, such as a coat, a sail, a
-  band along a hull or the wingtips: a second material says so (`extras.playerColour`) over the faces that take it, with
-  a PNG at half the texture's size, grey where the colour goes, whose alpha is the mask. The Paratrooper, canopy and
-  all, is as tall as the Knight.
+  (the Partisan's molotov, the Diplomat's hat, the Paratrooper's canopy, the Fanatic's torch, the Riflemen's, Marines'
+  and Alpine Troops' rifles, the Musketmen's musket, the Cavalry's sabre, the Dragoon's carbine). Each ship floats with
+  its waterline at its origin, and each but the people has a scale of its own, so all sit beside each other and 0 A.D.'s
+  units. Each takes its owner's colour on one part, such as a coat, a sail, a band along a hull or the wingtips: a
+  second material says so (`extras.playerColour`) over the faces that take it, with a PNG at half the texture's size,
+  grey where the colour goes, whose alpha is the mask. The Paratrooper, canopy and all, is as tall as the Knight.
 
   Each is a dependency of the renderer, pinned by its commit in the lockfile. One package here
   (`packages/models-hosted`) declares the three (`civ-clone.hostedModels`), and gives the page them in order, 0 A.D.'s
@@ -2007,15 +2007,15 @@ in its set (plan 2.2). It's in the model's entry:
   for a rival's or a quick walk, slower as it gets going and stops. Each walk starts the clip from its start, and a
   squad's figures are 0.13 s apart. Waiting where it's come, or fighting, it stands as its model does, till `fight` and
   `die` are played. The Partisans' was the first; the Riflemen's, Musketmen's and Marines' followed, then the
-  Explorers', the Spies', the Fanatics', the Warriors', the Engineers', the Alpine Troops', who glide on skis, and
-  the Paratroopers', who swing with their canopies about their planted feet. Their swing takes a second, since
+  Explorers', the Spies', the Fanatics', the Warriors', the Engineers', the Alpine Troops', who glide on skis, and the
+  Paratroopers', who swing with their canopies about their planted feet. Their swing takes a second, since
   models-realistic-by 8634a6cf (it took 2.4): half a swing for each square's width they go, so a walk from square to
-  square across their sides ends upright, on squares, diamonds and hexes alike. A step to a corner, √2 as far, or one
-  to or from a city, which units stand in front of, still ends part-way through it, as other units' walks do, and
-  eases from there into how they idle (below). The Cavalry's followed, since models-realistic-cc0 9b87297e, who trot:
-  horse and rider are one figure, one skin, its root joint the horse's (`mount_hips`), which needed nothing here, as
-  nothing looks for a joint of its own by name, only a shot's, as its manifest names it. The Dragoons', since its
-  97fec702, trot as the Cavalry do, with the same keys.
+  square across their sides ends upright, on squares, diamonds and hexes alike. A step to a corner, √2 as far, or one to
+  or from a city, which units stand in front of, still ends part-way through it, as other units' walks do, and eases
+  from there into how they idle (below). The Cavalry's followed, since models-realistic-cc0 9b87297e, who trot: horse
+  and rider are one figure, one skin, its root joint the horse's (`mount_hips`), which needed nothing here, as nothing
+  looks for a joint of its own by name, only a shot's, as its manifest names it. The Dragoons' followed, since
+  models-realistic-cc0 97fec702, who trot as the Cavalry do, with the same keys.
 - **Setting off and stopping** (#1410): short of its stride, as it gets going and as it stops, its figures play
   `move` over `idle`, as far as it's short (`Walker#stride`, its speed over its full pace unhurried; `ClipUnder`).
   So they ease from how they idled on the square they left into their walk, and from their walk into how they'll idle
@@ -2130,12 +2130,11 @@ each kind goes as it would (`SHOT_LOOKS` in `shots.ts`):
   is solid and unlit, as the bottle's flame is: no see-through shapes, so nothing needs drawing in another order. A
   puff takes a size, and a flash.
 - **The Partisans' bottle** goes as it did: none of its numbers changed.
-- **Rifles:** the Riflemen, Musketmen and Marines have rigged copies since models-realistic-cc0 d1851f9d, and the
-  Alpine Troops since its 9ce1b464, and the Dragoons, from the saddle, since its 97fec702, which needed nothing here.
-  Each fires a bullet from its rifle's or carbine's muzzle (`muzzle`, a node under its weapon) about half a second into
-  its `fight`, the Marines three a sixth of a second apart, though
-  Marines that attack and lose fire only the first, as the blow comes as it lands (`shotsFired`). Cannons fire once
-  their models have rigged copies whose `fight` clips say so.
+- **Rifles:** the Riflemen, Musketmen and Marines have rigged copies since models-realistic-cc0 d1851f9d, and the Alpine
+  Troops since its 9ce1b464, and the Dragoons, from the saddle, since its 97fec702, which needed nothing here. Each
+  fires a bullet from its rifle's or carbine's muzzle (`muzzle`, a node under its weapon) about half a second into its
+  `fight`, the Marines three a sixth of a second apart, though Marines that attack and lose fire only the first, as the
+  blow comes as it lands (`shotsFired`). Cannons fire once their models have rigged copies whose `fight` clips say so.
 - **The Paratroopers' gun:** their rigged copies, since models-realistic-by 7fd50670, fire three bullets a sixth of a
   second apart from the hip, from 0.5 s into their `fight`, though, as the Marines, one that attacks and loses fires
   only the first. Their `muzzle` hangs from the chest joint, with no `prop`, which needed nothing here either: a
