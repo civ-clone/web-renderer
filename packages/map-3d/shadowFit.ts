@@ -8,7 +8,7 @@
 // Pure, given three.js's cameras as they're placed: the scene's, and the sun's shadow camera, aimed as three.js aims it
 //  (`LightShadow#updateMatrices`).
 
-import { Camera, PerspectiveCamera, Vector3 } from 'three';
+import { BufferGeometry, Camera, PerspectiveCamera, Vector3 } from 'three';
 
 // The narrowest a box is drawn, across or up: past it, what's seen is all outside the box it was.
 const MINIMUM = 1e-3;
@@ -59,8 +59,8 @@ const EDGES: readonly (readonly [number, number])[] = [
 
 /**
  * The points round what `camera` sees as far as `depth` from it (the haze, past which nothing shows) between the
- *  heights `low` and `high` (the land, and what stands on it): the corners of what it sees between them, where its
- *  edges cross them, and those of its corners between them. All it sees between them is inside them.
+ *  heights `low` and `high` (the land, and what stands on it): where the edges of what it sees cross them, and those of
+ *  its corners between them. All it sees between them is inside them.
  */
 export const seenBetween = (
   camera: PerspectiveCamera,
@@ -123,6 +123,32 @@ export const shadowSides = (
     !(sides.top - sides.bottom > MINIMUM)
     ? { left: -reach, right: reach, bottom: -reach, top: reach }
     : sides;
+};
+
+/**
+ * How low and how high the land in `geometries` goes, its chunks' bounds worked out where they haven't been: sea
+ *  level both, with none.
+ */
+export const heightsOf = (
+  geometries: Iterable<BufferGeometry>
+): [number, number] => {
+  let low = 0,
+    high = 0;
+
+  for (const geometry of geometries) {
+    if (geometry.boundingBox === null) {
+      geometry.computeBoundingBox();
+    }
+
+    const box = geometry.boundingBox;
+
+    if (box !== null && !box.isEmpty()) {
+      low = Math.min(low, box.min.y);
+      high = Math.max(high, box.max.y);
+    }
+  }
+
+  return [low, high];
 };
 
 export default shadowSides;

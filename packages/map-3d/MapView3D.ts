@@ -4073,6 +4073,8 @@ export class MapView3D implements MapRenderer {
 
     this.#size = size;
     this.#stage.resize(width, height, ratio);
+    // The camera aimed afresh for the page's new shape: the sun's shadows are drawn over what it sees, which changes.
+    this.#stage.view(this.#orbit, this.#lookHeight ?? 0, this.#period());
 
     // The banners' canvas over the map's, as big, in the screen's own pixels.
     if (this.#bannerCanvas !== null) {

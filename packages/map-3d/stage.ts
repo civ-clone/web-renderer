@@ -5,11 +5,11 @@
 // The land comes in chunks (`terrain/chunks.ts`), each drawn at every copy of the world the camera can see (§3.1), so
 //  the land carries on past the world's seam whichever way it looks. The sea's surface lies over it (`water.ts`). The
 //  camera is an orbit (`camera/orbit.ts`): the view says where it is, and the haze, how far it sees, and the sun's
-//  shadows, fitted to what it sees, follow its distance.
+//  shadows are drawn over what it sees (`shadowFit.ts`).
 
 import {
   ACESFilmicToneMapping,
-  PCFSoftShadowMap,
+  PCFShadowMap,
   Box3,
   BufferAttribute,
   BufferGeometry,
@@ -76,7 +76,7 @@ import Water, {
   SMOG_ORDER,
 } from './water';
 import YieldIcons from './yieldIcons';
-import shadowSides from './shadowFit';
+import shadowSides, { heightsOf } from './shadowFit';
 import Badges from './markers/badges';
 import { smokeMaterials, smokeMeshes } from './smoke';
 import { YieldMesh } from './yields';
@@ -567,8 +567,9 @@ const SHADOW_MAP = 2048,
   SUN_DISTANCE = Math.hypot(...SUN_FROM);
 
 /**
- * How high what stands on the land reaches over it, at the most, to take a shadow: a unit on a summit, at the biggest
- *  size a player can choose (`UNIT_SCALE` times 1.5), its flight climbing, a city's buildings.
+ * How high what takes the sun's shadow reaches over the land it stands on, at the most, with room to spare: what grows
+ *  on it (a tree 0.3 tall) and what's built (a city's storeys). Units and aircraft cast shadows but don't take them,
+ *  and what casts needs no room: the sun's light is parallel, so it's over what it shades as the box sees it.
  */
 export const STANDS_OVER = 1;
 
@@ -876,7 +877,9 @@ export const createStage: StageFactory = (
   renderer.localClippingEnabled = true;
   renderer.toneMapping = ACESFilmicToneMapping;
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = PCFSoftShadowMap;
+  // Filtered by a few lookups round each point, softened at its edge. (three.js has dropped its softer filter, and
+  //  draws this one for it.)
+  renderer.shadowMap.type = PCFShadowMap;
 
   scene.background = new Color(SKY);
   // Where everything is, worked out as each frame's drawn (`render`), before the badges are gathered, not again.
@@ -1143,20 +1146,10 @@ export const createStage: StageFactory = (
     }
   };
 
-  // How low and high the land laid now goes: sea level both, with none laid.
-  const landHeights = (): [number, number] => {
-    let low = 0,
-      high = 0;
-
-    chunks.forEach(({ geometry: { boundingBox } }) => {
-      if (boundingBox !== null) {
-        low = Math.min(low, boundingBox.min.y);
-        high = Math.max(high, boundingBox.max.y);
-      }
-    });
-
-    return [low, high];
-  };
+  // How low and high the land laid now goes, for the sun's shadows to be drawn over what's seen of it: sea level both,
+  //  with none laid.
+  const landHeights = (): [number, number] =>
+    heightsOf([...chunks.values()].map(({ geometry }) => geometry));
 
   const view = (
     orbit: Orbit,
@@ -1392,8 +1385,6 @@ export const createStage: StageFactory = (
       geometry.setAttribute('unseen', new BufferAttribute(mesh.unseen, 1));
       geometry.setIndex(new BufferAttribute(mesh.indices, 1));
       geometry.computeBoundingSphere();
-      // How low and high it goes, for the sun's shadows to be drawn over what's seen of it (`view`).
-      geometry.computeBoundingBox();
 
       const old = chunks.get(key);
 

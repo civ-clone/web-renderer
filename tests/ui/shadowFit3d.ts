@@ -3,12 +3,14 @@
 //  - the box lies inside the one the shadows were drawn over before, and everything the camera can see of the land and
 //    what stands on it that that box covered, this one covers too, looking every way the camera can, near and far, on
 //    pages of every shape;
-//  - its depth along the sun's light is as it was;
+//  - its depth along the sun's light is as it was, and three.js aims its camera as it was aimed for it;
 //  - at the default view it's a small part of the box it was;
 //  - seeing nothing of the land, it's the box it was.
 
 import {
+  BufferGeometry,
   DirectionalLight,
+  Float32BufferAttribute,
   Frustum,
   Matrix4,
   OrthographicCamera,
@@ -16,7 +18,11 @@ import {
   Vector3,
 } from 'three';
 import { STANDS_OVER, aimCameras } from '@civ-clone/ui-map-3d/stage';
-import { seenBetween, shadowSides } from '@civ-clone/ui-map-3d/shadowFit';
+import {
+  heightsOf,
+  seenBetween,
+  shadowSides,
+} from '@civ-clone/ui-map-3d/shadowFit';
 import { SUN_FROM } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
 import {
   DISTANCE_MAX,
@@ -122,10 +128,7 @@ for (const distance of [DISTANCE_MIN, 12, 24, 50, DISTANCE_MAX]) {
   }
 }
 
-const fit = (
-  { yaw, pitch, distance, aspect, height }: Case,
-  heights: readonly [number, number] = land
-) => {
+const fit = ({ yaw, pitch, distance, aspect, height }: Case) => {
   const camera = new PerspectiveCamera(
       (FIELD_OF_VIEW * 180) / Math.PI,
       aspect,
@@ -134,7 +137,7 @@ const fit = (
     ),
     sun = new DirectionalLight(),
     orbit = { focus: [3, 7] as [number, number], yaw, pitch, distance },
-    { far } = aimCameras(camera, sun, orbit, height, period, heights),
+    { far } = aimCameras(camera, sun, orbit, height, period, land),
     shadow = sun.shadow.camera,
     reach = distance * 2.2,
     // The box it was: as wide either way of the focus as the camera's twice and a bit its distance from it.
@@ -150,17 +153,18 @@ const fit = (
   before.updateProjectionMatrix();
   before.updateMatrixWorld();
 
-  return { camera, shadow, before, reach, far };
+  return { camera, sun, shadow, before, reach, far };
 };
 
 let missed = 0,
+  unaimed = 0,
   outside = 0,
   deeper = 0,
   points = 0,
   example = '';
 
 cases.forEach((one) => {
-  const { camera, shadow, before, reach, far } = fit(one),
+  const { camera, sun, shadow, before, reach, far } = fit(one),
     now = frustumOf(shadow),
     was = frustumOf(before);
 
@@ -178,6 +182,22 @@ cases.forEach((one) => {
     deeper++;
   }
 
+  // As three.js aims it as it draws the shadows: from the sun, at its target.
+  const aimed = shadow.matrixWorld.clone();
+
+  sun.updateMatrixWorld();
+  sun.target.updateMatrixWorld();
+  sun.shadow.updateMatrices(sun);
+
+  if (
+    !aimed.elements.every(
+      (value, index) =>
+        Math.abs(value - shadow.matrixWorld.elements[index]!) < 1e-9
+    )
+  ) {
+    unaimed++;
+  }
+
   seenPoints(camera, far).forEach((point) => {
     if (within(was, point)) {
       points++;
@@ -191,9 +211,9 @@ cases.forEach((one) => {
 });
 
 expect(
-  'the box lies inside the one the shadows were drawn over before, as deep along the sun’s light, and everything the camera sees of the land and what stands on it that that one covered, this one covers too: looking every way, near and far, on pages of every shape',
-  [cases.length, points > 100000, outside, deeper, missed, example],
-  [2400, true, 0, 0, 0, '']
+  'the box lies inside the one the shadows were drawn over before, as deep along the sun’s light, aimed as three.js aims it, and everything the camera sees of the land and what stands on it that that one covered, this one covers too: looking every way, near and far, on pages of every shape',
+  [cases.length, points > 100000, outside, deeper, unaimed, missed, example],
+  [2400, true, 0, 0, 0, 0, '']
 );
 
 // The default view, on a page a little wider than it's tall.
@@ -211,7 +231,7 @@ const standard = fit({
 
 expect(
   'at the default view, the box is a small part of the one it was',
-  share < 0.25,
+  share < 0.15,
   true
 );
 
@@ -233,6 +253,33 @@ expect(
     shadowSides(skyward, sunCamera, sightFor(24).far, low, high, 52.8),
   ],
   [0, { left: -52.8, right: 52.8, bottom: -52.8, top: 52.8 }]
+);
+
+// The land's heights, from its chunks, whatever's been worked out of their bounds.
+const chunk = (...heights: number[]): BufferGeometry =>
+    new BufferGeometry().setAttribute(
+      'position',
+      new Float32BufferAttribute(
+        heights.flatMap((y, index) => [index, y, 0]),
+        3
+      )
+    ),
+  bounded = chunk(0.2, 0.9);
+
+bounded.computeBoundingBox();
+
+expect(
+  'the land’s heights from its chunks, their bounds worked out where they haven’t been; sea level both with none, or with chunks of nothing',
+  [
+    heightsOf([chunk(-0.12, 0.05), bounded, chunk(0.4, 1.05)]),
+    heightsOf([]),
+    heightsOf([new BufferGeometry()]),
+  ].map((pair) => pair.map((n) => Math.round(n * 1000) / 1000)),
+  [
+    [-0.12, 1.05],
+    [0, 0],
+    [0, 0],
+  ]
 );
 
 if (failures.length > 0) {
