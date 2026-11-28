@@ -49,6 +49,7 @@ import { TopologyId } from '@civ-clone/ui-protocol/topology';
 import riverMaterial from './riverMaterial';
 import {
   ALOFT_PART,
+  BADGES,
   FIGURES_PART,
   FIRES_FROM,
   Faded,
@@ -75,6 +76,7 @@ import Water, {
   SMOG_ORDER,
 } from './water';
 import YieldIcons from './yieldIcons';
+import Badges from './markers/badges';
 import { smokeMaterials, smokeMeshes } from './smoke';
 import { YieldMesh } from './yields';
 import {
@@ -758,6 +760,9 @@ export const createStage: StageFactory = (
     }),
     markersGroup = new Group(),
     kit = new MarkerKit(),
+    // What stands over units and cities in `markersGroup`, drawn together (`badges.ts`): gathered as each frame's
+    //  drawn.
+    badges = new Badges(BADGES),
     // What each square yields, over the land at every copy of the world, when they're shown.
     yieldsGroup = new Group(),
     // The grid's lines (`grid.ts`): the land's chunks drawn again with them alone, when they're shown.
@@ -807,12 +812,15 @@ export const createStage: StageFactory = (
   renderer.shadowMap.type = PCFSoftShadowMap;
 
   scene.background = new Color(SKY);
+  // Where everything is, worked out as each frame's drawn (`render`), before the badges are gathered, not again.
+  scene.matrixWorldAutoUpdate = false;
   // Haze into the distance (§9.3), so the land fades into the sky rather than ending at an edge: how far follows the
   //  camera's distance.
   scene.fog = fog;
   scene.add(new HemisphereLight(SKY_LIGHT, GROUND_LIGHT, 0.9));
   scene.add(land);
   scene.add(markersGroup);
+  scene.add(badges.mesh);
   scene.add(yieldsGroup);
   scene.add(highlightGroup);
   scene.add(water.mesh);
@@ -1277,7 +1285,12 @@ export const createStage: StageFactory = (
 
   return {
     render: (): void => {
+      // Where everything is now, once, here rather than as three.js draws (`matrixWorldAutoUpdate`): the plants are
+      //  thinned and the badges gathered by it. And where the camera is, which three.js works out itself as well.
+      scene.updateMatrixWorld();
+      camera.updateMatrixWorld();
       thinPlants();
+      badges.gather(markersGroup, camera);
       renderer.render(scene, camera);
     },
     clearCloud: (now, seconds): boolean => water.clear(now, seconds),
@@ -2086,6 +2099,7 @@ export const createStage: StageFactory = (
       stoneShape.dispose();
       stone.dispose();
       kit.dispose();
+      badges.dispose();
       yields.dispose();
       water.dispose();
       clouds.dispose();

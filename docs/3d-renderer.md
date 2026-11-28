@@ -1142,6 +1142,23 @@ Each is looked up by its type name in the model set.
     doesn't blink. Hidden, its figures are still picked (§9.2, `BLINKED_OUT`), as the 2D map's blink doesn't change
     what's clicked either.
   - **The pointer** over it, in the theme's colour, is drawn however it's marked, so it's found at any distance.
+- **Drawn together** (#1424, `markers/badges.ts`): what stands over units and cities, a unit's flag, label and bar and
+  a city's name, is drawn in one draw call for all of them in sight, where each was a draw call of its own.
+  - Each is still a sprite in its marker, placed, copied, walked and faded with it, but on a layer the camera doesn't
+    draw (`BADGE_LAYER`).
+  - As each frame's drawn, the stage gathers those shown and draws each as an instance of one quad, as three.js draws a
+    sprite: the same size on the screen, over all, in the haze. They're in the order three.js would sort them, far
+    before near, and a marker's in the order they're made.
+  - The labels' pictures are copied into one atlas, each with its edges drawn round it, so it's drawn as its own picture
+    was. Flags and bars are drawn from a white block in it.
+  - It's copied afresh with only the labels drawn when one doesn't fit, or when it holds many that aren't drawn any
+    more. It's grown when they still don't fit, or when they'd take most of it, up to 4,096 px tall: 400 to 600 city
+    names. Past that it holds as many as fit, and isn't copied afresh again until the labels drawn change. A label it
+    can't hold is drawn as a sprite of its own, as they all were, but under the rest.
+  - The pointer over the unit awaiting orders stays a sprite of its own, drawn after them all.
+  - On a late game (a Civ2 save at turn 271, on a 52 × 130 map), it draws in one call what took 302 a frame for each
+    copy of the world drawn. At the closest zoom a frame drops from 463 calls to 162, and at the default from 1,491
+    to 888.
 - **Hidden units:** `t` hides units and cities, as it does on the 2D map, so the land shows as it is. A city's walls and
   name go, and its town: its buildings, on its square and round it, are laid with the land (§7.2), so every square with
   a city on it or beside it is laid again as though none stood there, its woods and fields whole (but for one spot,
