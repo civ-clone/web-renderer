@@ -11,8 +11,8 @@
 //    own square, outside the walls, clear of a unit's feet in front of the city and on that square, of the roads,
 //    railroads and fields drawn there and of every other house, the cities beside it included, on every grid; none on
 //    the sea, mountains or a mine; and those beside a road lining it;
-//  - in civil disorder (`disorder.ts`), fires on roofs behind its middle, as many columns as its size has, or one in
-//    the street behind its plaza with none there, every flame and puff keeping its units' room, its smoke rising,
+//  - in civil disorder (`disorder.ts`), fires on roofs behind its middle, as many columns as its size has, or one on
+//    the ground behind its plaza with none there, every flame and puff keeping its units' room, its smoke rising,
 //    growing and leaning away from them; the same for the same city.
 
 import { Color, Euler, Mesh, Vector3 } from 'three';
@@ -1560,8 +1560,8 @@ expect(
   );
 }
 
-// A city in civil disorder, over many cities, at 8 sizes, with streets out 4 sets of ways, and the sea on 2 sides or
-//  none: its fires on its own roofs behind its middle, each column's flames rising from one's eaves, within it, or on
+// A city in civil disorder, over many cities, at 8 sizes, with streets out 4 sets of ways, and the sea north or west,
+//  or none: its fires on its own roofs behind its middle, each column's flames rising from one's eaves, within it, or on
 //  the ground behind its plaza where there's none (never, here); every piece keeping the room its buildings leave its
 //  units, and its smoke over every roof it reaches; each column's smoke rising, growing and further from them than the
 //  puff under it.
@@ -1700,7 +1700,7 @@ expect(
     );
 
   expect(
-    'a city in civil disorder: its fires on its own roofs behind its middle, or in the street behind its plaza with none there, as many columns as its size has at most; every piece keeping its units’ room; each column’s smoke rising, growing and leaning away from them; none out of disorder; the same for the same city, and another another',
+    'a city in civil disorder: its fires on its own roofs behind its middle, or on the ground behind its plaza with none there, as many columns as its size has at most; every piece keeping its units’ room; each column’s smoke rising, growing and leaning away from them; none out of disorder; the same for the same city, and another another',
     [
       [1, 3, 4, 7, 8, 20].map(disorderColumns),
       wrong.slice(0, 3),
@@ -1755,10 +1755,10 @@ expect(
     ]
   );
 
-  // A roof right behind its middle, so near its units that a flame on it would be in their room: passed over, for the
-  //  street behind its plaza.
+  // A roof right behind its middle, so near its units that its column would come into their room (its smoke, here):
+  //  passed over, for the ground behind its plaza.
   expect(
-    'a city in civil disorder: a roof whose fire would be in its units’ room is passed over',
+    'a city in civil disorder: a roof whose column would come into its units’ room is passed over',
     disorderPieces({
       centre,
       units,

@@ -1,12 +1,12 @@
 // A city in civil disorder on the 3D map (docs/3d-renderer.md §7.4, plan 4.3): fires on the roofs of some of its
 //  buildings behind its middle, and a column of smoke rising from each, leaning away from where its units stand. One
 //  column for a small city, two from size 4 and three from size 8. Laid with the land, as its buildings are
-//  (`overlay/overlayMesh.ts`), so a fire stays on its roof however the city's lots are laid out. With no roof to burn
-//  behind its middle, a fire on the ground behind its plaza instead. Still, as smog is: it doesn't drift.
+//  (`overlay/overlayMesh.ts`), so a fire stays on its roof however the city's lots are laid out. With no roof behind
+//  its middle it can burn on, a fire on the ground behind its plaza instead. Still, as smog is: it doesn't drift.
 //
 // Pure: what's laid and where, on the ground (`u` east, `v` south), from a city's roofs and where its units stand.
 
-import { UNIT_ROOM } from './sprawl';
+import { GAP, UNIT_ROOM } from './sprawl';
 
 /** One piece of a city's disorder: a flame or a puff of smoke, its middle (`u`, height, `v`), its size each way. */
 export type DisorderPiece = {
@@ -47,9 +47,9 @@ export const DISORDER = {
 
 /**
  * How far from where a city's units stand its disorder keeps, along the ground: the room its buildings already leave
- *  them (`UNIT_ROOM`), so smoke and fire are no nearer a unit than a house is.
+ *  them (`UNIT_ROOM`, and the gap round each), so smoke and fire are no nearer a unit than a house is.
  */
-export const DISORDER_ROOM = UNIT_ROOM;
+export const DISORDER_ROOM = UNIT_ROOM + GAP;
 
 /** Its colours: its smoke's, from dark to lighter as it rises and thins, and its flames'. */
 export const SMOKE = [
@@ -178,7 +178,14 @@ export const disorderPieces = ({
             ))
       ),
     burning = roofs
-      .map((roof, at) => ({ roof, order: share(seed, 1000 + at) }))
+      // Ordered by where each stands, not which lot it is, so a house keeps its fire when a street clears another.
+      .map((roof) => ({
+        roof,
+        order: share(
+          seed,
+          Math.round(roof.at[0] * 4096) * 65537 + Math.round(roof.at[1] * 4096)
+        ),
+      }))
       .filter(({ roof }) => roof.at[1] < centre[1])
       .sort((a, b) => a.order - b.order)
       .map(({ roof }, which) =>

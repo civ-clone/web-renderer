@@ -1659,7 +1659,9 @@ export const STOREY = 0.045,
 const city = (layer: Layer, plan: CityPlan): void => {
   const { place } = layer,
     [u, v] = place.centre,
-    { plaza, streets, lots } = sprawl(place, plan, [u, v + IN_FRONT_OF_CITY]);
+    // Where its units stand, in front of its buildings, which keep clear of them, as its disorder does.
+    units: [number, number] = [u, v + IN_FRONT_OF_CITY],
+    { plaza, streets, lots } = sprawl(place, plan, units);
 
   // On a bridge's deck where it's over a river, as the roads that come into it are, so they meet it at its height.
   layer.disc(plaza.at, plaza.radius, PAVING, LIFT.road, 16, true);
@@ -1673,7 +1675,7 @@ const city = (layer: Layer, plan: CityPlan): void => {
   if ((plan.disorder ?? 0) > 0) {
     disorderPieces({
       centre: [u, v],
-      units: [u, v + IN_FRONT_OF_CITY],
+      units,
       roofs: lots.map((lot) => {
         const { top, peak } = houseHeights(layer, lot);
 
