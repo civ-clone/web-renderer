@@ -53,7 +53,6 @@ import {
   FIRES_FROM,
   Faded,
   MarkerKit,
-  NO_SHADOW,
   RIG_FIGURE,
   UNIT_PART,
   drawMarker,
@@ -992,8 +991,7 @@ export const createStage: StageFactory = (
     const original = drawMarker(kit, marker, flying, rigged);
 
     original.traverse((object) => {
-      object.castShadow =
-        object instanceof Mesh && object.userData[NO_SHADOW] !== true;
+      object.castShadow = object instanceof Mesh;
     });
 
     return original;

@@ -69,6 +69,12 @@ import sprawl, {
   citySeed,
 } from '@civ-clone/ui-map-3d/overlay/sprawl';
 import { IN_FRONT_OF_CITY } from '@civ-clone/ui-map-3d/markers/drawMarker';
+import {
+  DISORDER,
+  DISORDER_ROOM,
+  FLAMES,
+  SMOKE,
+} from '@civ-clone/ui-map-3d/overlay/disorder';
 import { TopologyId } from '@civ-clone/ui-protocol/topology';
 import Land from '@civ-clone/ui-map-3d/Land';
 import { ChunkMesh } from '@civ-clone/ui-map-3d/terrain/chunks';
@@ -3087,6 +3093,82 @@ const landOf = (
       wallReach.every((share) => share < 0.9),
     ],
     [11, true, true, true]
+  );
+}
+
+// A city in civil disorder (spec §7.4, `disorder.ts`), as it's shown: its plan says how many columns its size has, so
+//  its square's laid again as it goes into disorder and out of it. Laid, fires on its roofs behind its middle and smoke
+//  over them, every point of them keeping the room its buildings leave its units; none out of disorder.
+{
+  const tileOf = (size: number, disorder: boolean) =>
+      ({
+        ...square(['Road']),
+        city: {
+          id: 'City-Riot',
+          name: 'Riot',
+          growth: { size },
+          civilDisorderDeclared: disorder,
+        },
+      } as unknown as Parameters<typeof overlayFor>[0]),
+    calm = overlayFor(tileOf(9, false), [])!,
+    rioting = overlayFor(tileOf(9, true), [])!,
+    at = place(17, 3),
+    units: [number, number] = [at.centre[0], at.centre[1] + IN_FRONT_OF_CITY],
+    { lots } = sprawl(at, rioting.city!, units),
+    // Each point of one of `colours`, back on the ground and its height, laid on its own.
+    pointsOf = (overlay: SquareOverlay, colours: readonly string[]) => {
+      const laid = overlayMesh(16, 0, [{ overlay, place: at }]),
+        wanted = colours.map((css) => new Color(css)),
+        found: [number, number, number][] = [];
+
+      for (let point = 0; point < laid.colours.length; point += 3) {
+        if (
+          wanted.some(
+            ({ r, g, b }) =>
+              Math.abs(laid.colours[point]! - r) < 1e-4 &&
+              Math.abs(laid.colours[point + 1]! - g) < 1e-4 &&
+              Math.abs(laid.colours[point + 2]! - b) < 1e-4
+          )
+        ) {
+          found.push([
+            laid.positions[point]! + 16,
+            laid.positions[point + 1]!,
+            laid.positions[point + 2]!,
+          ]);
+        }
+      }
+
+      return found;
+    },
+    flames = pointsOf(rioting, FLAMES),
+    smoke = pointsOf(rioting, SMOKE),
+    // Whether a flame's point is over a lot behind the city's middle: within its footprint, and a flame's width.
+    onRoofBehind = ([u, , v]: [number, number, number]) =>
+      lots.some(
+        (lot) =>
+          lot.at[1] < at.centre[1] &&
+          Math.hypot(u - lot.at[0], v - lot.at[1]) <=
+            lot.width / 2 + DISORDER.fireWidth
+      );
+
+  expect(
+    'a city in civil disorder: its plan says three columns at size 9, and none when it’s calm, so its square’s laid again; laid, flames on roofs behind its middle and smoke over them, all of it keeping its units’ room; none laid when it’s calm',
+    [
+      rioting.city?.disorder,
+      calm.city?.disorder,
+      JSON.stringify(calm) !== JSON.stringify(rioting),
+      flames.length > 0,
+      smoke.length > 0,
+      flames.every(onRoofBehind),
+      [...flames, ...smoke].every(
+        ([u, , v]) =>
+          Math.hypot(u - units[0], v - units[1]) >= DISORDER_ROOM - 1e-6
+      ),
+      Math.min(...smoke.map(([, y]) => y)) >
+        Math.max(...flames.map(([, y]) => y)) - 0.05,
+      pointsOf(calm, [...FLAMES, ...SMOKE]).length,
+    ],
+    [3, undefined, true, true, true, true, true, true, 0]
   );
 }
 

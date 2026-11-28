@@ -13,9 +13,7 @@
 //  - a puff of smoke where a unit falls: grey blobs bursting out, rising and spreading, swelling and shrinking away;
 //  - a ship out at sea in rings of ripples, and not in front of a city's buildings;
 //  - picked by what's drawn of it: a unit's figures standing over the ground of the square behind are its square's;
-//  - the guns a unit fires as it attacks, and where each fires from on what's drawn of it;
-//  - a city in civil disorder: fires on its roofs behind and beside its middle, clear of its units, and smoke rising
-//    from each, leaning downwind; more columns the bigger it is, the same for the same city.
+//  - the guns a unit fires as it attacks, and where each fires from on what's drawn of it.
 
 import * as Civ1Units from '@civ-clone/civ1-unit/Units';
 import * as Civ2Units from '@civ-clone/civ2-unit/Units';
@@ -47,13 +45,11 @@ import {
 import { muzzleOf } from '@civ-clone/ui-map-3d/stage';
 import {
   ALOFT_PART,
-  DISORDER_PART,
   FIGURES_PART,
   FIRES_FROM,
   Faded,
   IN_FRONT_OF_CITY,
   MarkerKit,
-  NO_SHADOW,
   SHADOW_GONE,
   UNIT_PART,
   drawMarker,
@@ -63,11 +59,6 @@ import {
   unfaded,
 } from '@civ-clone/ui-map-3d/markers/drawMarker';
 import { PUFF_BLOBS, puffAt } from '@civ-clone/ui-map-3d/markers/puff';
-import disorderPieces, {
-  DISORDER,
-  disorderColumns,
-} from '@civ-clone/ui-map-3d/markers/disorder';
-import { SPRAWL_REACH } from '@civ-clone/ui-map-3d/overlay/sprawl';
 import standHeight, {
   STAND_REACH,
 } from '@civ-clone/ui-map-3d/markers/standHeight';
@@ -680,115 +671,6 @@ expect(
     cityParts(true, true).map((object) => object.type),
   ],
   [[], ['Mesh']]
-);
-
-// A city in civil disorder: its fires and smoke, one group in its marker, each a mesh, laid out by its name and size.
-const rioting = (name: string, size: number, disorder = true): Object3D[] => {
-  const found: Object3D[] = [];
-
-  drawMarker(kit, {
-    city: { name, size, colours, walled: true, disorder, unnamed: true },
-    unit: null,
-  }).traverse((object) => found.push(object));
-
-  return found;
-};
-
-const riot = rioting('Roma', 9),
-  riotGroup = riot.find((object) => object.name === DISORDER_PART),
-  [smokeMesh, fireMesh] = (riotGroup?.children ?? []) as Mesh[];
-
-expect(
-  'a city in civil disorder: a part of its marker of its own, its smoke lit as figures are, casting a shadow, and its fires glowing, casting none; none for a city not in disorder; each made once for its name and number of columns',
-  [
-    riotGroup !== undefined,
-    smokeMesh?.material === kit.figureMaterial,
-    fireMesh?.material === kit.glowMaterial,
-    fireMesh?.userData[NO_SHADOW],
-    smokeMesh?.userData[NO_SHADOW],
-    rioting('Roma', 9, false).some((object) => object.name === DISORDER_PART),
-    kit.disorder('Roma', 9) === kit.disorder('Roma', 12),
-    kit.disorder('Roma', 9) !== kit.disorder('Roma', 7),
-    kit.disorder('Roma', 9) !== kit.disorder('Veii', 9),
-  ],
-  [true, true, true, true, undefined, false, true, true, true]
-);
-
-// Laid out over many cities' names and every size: each column's fires on its roofs, among its buildings, behind and
-//  beside its middle and clear of its units in front; its smoke over them, each puff higher, bigger and further
-//  downwind than the one under it.
-const badLayout: string[] = [];
-
-[
-  'Roma',
-  'Veii',
-  'Babylon',
-  'Thebes',
-  'Delphi',
-  'Lagash',
-  'Ur',
-  'Kish',
-  'Corinth',
-  'Sparta',
-  'Athens',
-  'Hamburg',
-].forEach((name) =>
-  [1, 3, 4, 7, 8, 15].forEach((size) => {
-    const pieces = disorderPieces(name, size),
-      columns = disorderColumns(size),
-      perColumn = 2 + DISORDER.puffs;
-
-    if (pieces.length !== columns * perColumn) {
-      badLayout.push(`${name} ${size}: ${pieces.length} pieces`);
-    }
-
-    for (let column = 0; column < columns; column++) {
-      const of = pieces.slice(column * perColumn, (column + 1) * perColumn),
-        fires = of.filter((piece) => piece.kind === 'fire'),
-        smoke = of.filter((piece) => piece.kind === 'smoke'),
-        [baseX, , baseZ] = fires[0]!.at,
-        wind = (piece: (typeof smoke)[number]) =>
-          Math.hypot(piece.at[0] - baseX, piece.at[2] - baseZ);
-
-      fires.forEach(({ at: [x, y, z], size: [width] }) => {
-        if (
-          Math.hypot(x, z) + width > SPRAWL_REACH ||
-          // No further forward than the widest spread at the furthest reach: just past the middle, either side.
-          z > -Math.cos(DISORDER.spread) * DISORDER.far + 1e-9 ||
-          Math.hypot(x, z - IN_FRONT_OF_CITY) < 0.25 ||
-          y >= DISORDER.firstPuff
-        ) {
-          badLayout.push(`${name} ${size}: a fire at ${x},${y},${z}`);
-        }
-      });
-
-      smoke.forEach((piece, at) => {
-        const under = smoke[at - 1];
-
-        if (
-          under !== undefined &&
-          (piece.at[1] <= under.at[1] ||
-            piece.size[0] <= under.size[0] ||
-            wind(piece) + DISORDER.billow * 3 < wind(under))
-        ) {
-          badLayout.push(`${name} ${size}: puff ${at} of column ${column}`);
-        }
-      });
-    }
-  })
-);
-
-expect(
-  'a city in civil disorder: one column of smoke a small city, two from size 4, three from size 8, each two fires on its roofs among its buildings, behind and beside its middle, clear of its units in front, and smoke rising over them, each puff higher, bigger and no nearer the fires than the one under it, but for its billowing; the same for the same city',
-  [
-    [1, 3, 4, 7, 8, 15].map(disorderColumns),
-    badLayout.slice(0, 3),
-    JSON.stringify(disorderPieces('Roma', 9)) ===
-      JSON.stringify(disorderPieces('Roma', 9)),
-    JSON.stringify(disorderPieces('Roma', 9)) !==
-      JSON.stringify(disorderPieces('Veii', 9)),
-  ],
-  [[1, 1, 2, 2, 3, 3], [], true, true]
 );
 
 // A city's label is made for each size it reaches, so the kit lets go of those no marker uses, once it holds enough of

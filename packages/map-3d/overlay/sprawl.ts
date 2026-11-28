@@ -46,7 +46,8 @@ export type CityLayout = {
 /**
  * What a city's sprawl is laid out from: its seed, how many lots it has built (`lotsFor`), how many storeys taller
  *  those near its middle stand (`tierFor`), the ways its streets go out, and its neighbours of sea, one of which its
- *  quay's street goes down to, by their offsets.
+ *  quay's street goes down to, by their offsets. In civil disorder, how many columns of smoke rise from fires on its
+ *  roofs (`disorder.ts`): none, or missing, when it isn't.
  */
 export type CityPlan = {
   seed: number;
@@ -54,6 +55,7 @@ export type CityPlan = {
   tier: number;
   ways: (readonly [number, number])[];
   sea: (readonly [number, number])[];
+  disorder?: number;
 };
 
 /** A city's walls: the ring they stand on, from the square's middle, and how thick they are, from it each way. */
@@ -114,18 +116,23 @@ export const citySeed = (id: string): number => {
   return hash >>> 0;
 };
 
-/** What a city seeded `seed` of `size` is laid out from, with its streets out the `ways`, and the `sea` beside it. */
+/**
+ * What a city seeded `seed` of `size` is laid out from, with its streets out the `ways`, and the `sea` beside it; and,
+ *  in civil disorder, its fires' columns (`disorder`, from `disorder.ts`'s `disorderColumns`), none when it isn't.
+ */
 export const planFor = (
   seed: number,
   size: number,
   ways: readonly (readonly [number, number])[],
-  sea: readonly (readonly [number, number])[] = []
+  sea: readonly (readonly [number, number])[] = [],
+  disorder = 0
 ): CityPlan => ({
   seed,
   lots: lotsFor(size),
   tier: tierFor(size),
   ways: [...ways],
   sea: [...sea],
+  ...(disorder > 0 ? { disorder } : {}),
 });
 
 /**

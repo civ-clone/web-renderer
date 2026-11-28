@@ -17,15 +17,12 @@ import {
   BufferGeometry,
   CanvasTexture,
   Color,
-  ConeGeometry,
   DoubleSide,
   FrontSide,
   Group,
   Material,
-  IcosahedronGeometry,
   Matrix4,
   Mesh,
-  MeshBasicMaterial,
   MeshStandardMaterial,
   Object3D,
   SRGBColorSpace,
@@ -39,12 +36,10 @@ import {
   BodyPart,
   FigureColours,
   formation,
-  mergeParts,
   wallsGeometry,
   figureGeometry,
   unitBodyGeometry,
 } from './figures';
-import disorderPieces, { DisorderPiece, disorderColumns } from './disorder';
 import { LoadedModel, LoadedRig, rigPart } from '../models/loadModels';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import TintedMaterial, { ownerTint } from './tinted';
@@ -129,11 +124,6 @@ export class MarkerKit {
   // Those bounded as far as their clips take them (`boundClips`): once each.
   #bounded = new WeakSet<LoadedRig>();
   #walls: BufferGeometry | null = null;
-  // A city's disorder (`disorder`), its smoke and its fires, by its name and how many columns it has.
-  #disorder = new Map<
-    string,
-    { smoke: BufferGeometry; fire: BufferGeometry }
-  >();
   #flats = new Map<string, SpriteMaterial>();
   // The pointer over the unit awaiting orders, in each colour it's drawn in.
   #pointers = new Map<string, SpriteMaterial>();
@@ -146,8 +136,6 @@ export class MarkerKit {
     roughness: 0.8,
     metalness: 0.05,
   });
-  // What glows, unlit, as bright whichever way the sun is, with its colours in its vertices: a city's fires.
-  readonly glowMaterial = new MeshBasicMaterial({ vertexColors: true });
   readonly geometries = {
     // The ring at the feet of the unit awaiting orders.
     ring: new TorusGeometry(0.23, 0.018, 8, 36),
@@ -453,38 +441,6 @@ export class MarkerKit {
     return this.#walls;
   }
 
-  /**
-   * A city's disorder (`markers/disorder.ts`), named `name` and `size` big: its smoke, lit, and its fires, which glow
-   *  (`glowMaterial`), each one geometry, made once for each name and number of columns.
-   */
-  disorder(
-    name: string,
-    size: number
-  ): { smoke: BufferGeometry; fire: BufferGeometry } {
-    const key = `${name}\n${disorderColumns(size)}`;
-    let made = this.#disorder.get(key);
-
-    if (made === undefined) {
-      const pieces = disorderPieces(name, size),
-        of = (kind: DisorderPiece['kind']) =>
-          mergeParts(
-            pieces
-              .filter((piece) => piece.kind === kind)
-              .map(({ at, size: [x, y, z], colour }) => ({
-                shape: kind === 'fire' ? flameShape : puffShape,
-                colour,
-                at,
-                size: [x, y, z],
-              }))
-          );
-
-      made = { smoke: of('smoke'), fire: of('fire') };
-      this.#disorder.set(key, made);
-    }
-
-    return made;
-  }
-
   /** A unit's figures as `look` says, in `colours`, made once for each. */
   figure(look: UnitLook, colours: FigureColours): BufferGeometry {
     const key = JSON.stringify([look, colours]);
@@ -637,12 +593,6 @@ export class MarkerKit {
     this.#bodies.forEach((geometry) => geometry.dispose());
     this.#walls?.dispose();
     this.#walls = null;
-    this.#disorder.forEach(({ smoke, fire }) => {
-      smoke.dispose();
-      fire.dispose();
-    });
-    this.#disorder.clear();
-    this.glowMaterial.dispose();
     this.#bodies.clear();
     [...this.#models].forEach(([id, model]) => this.#letGoOfModel(id, model));
     this.figureMaterial.dispose();
@@ -731,36 +681,12 @@ const label = (
 // Where a city's name stands, over its middle.
 const CITY_NAME_AT: [number, number, number] = [0, 0.36, 0];
 
-/** The name of a city's disorder in its marker: its fires and smoke (`markers/disorder.ts`). */
-export const DISORDER_PART = 'disorder';
-
-/** Set in a mesh's `userData`, it casts no shadow, as the rest of a marker does: a city's fires. */
-export const NO_SHADOW = 'noShadow';
-
-// A city's disorder's shapes: a puff of smoke, a ball of radius 1; a flame, a cone pointing up, 1 across its base and
-//  2 high, its middle at its own.
-const puffShape = new IcosahedronGeometry(1, 1),
-  flameShape = new ConeGeometry(1, 2, 7);
-
 const drawCity = (kit: MarkerKit, city: CityMarker): Group => {
   const group = new Group();
 
   // Its walls, if it has them; its buildings are laid with the land, as its sprawl (`overlay/sprawl.ts`).
   if (city.walled) {
     group.add(new Mesh(kit.walls(), kit.figureMaterial));
-  }
-
-  // In civil disorder: fires on its roofs and smoke rising from them (`markers/disorder.ts`). The smoke casts a
-  //  shadow, as the rest of a marker does; the fires, which light rather than shade, don't (`NO_SHADOW`).
-  if (city.disorder) {
-    const { smoke, fire } = kit.disorder(city.name, city.size),
-      disorder = new Group(),
-      flames = new Mesh(fire, kit.glowMaterial);
-
-    flames.userData[NO_SHADOW] = true;
-    disorder.name = DISORDER_PART;
-    disorder.add(new Mesh(smoke, kit.figureMaterial), flames);
-    group.add(disorder);
   }
 
   // About as tall on the screen as the 2D map's city names, whatever the distance: unless its banner says it instead.

@@ -1299,20 +1299,22 @@ Landmark buildings replace ordinary lots near the middle:
 ### 7.4 States
 
 - **Civil disorder:** smoke and fires.
-  - **As built** (`packages/map-3d/markers/disorder.ts`, `MarkerKit#disorder`): fires on the city's roofs, and a column
-    of smoke rising from each: one column for a city under size 4, two from 4 and three from 8. They stand among its
-    buildings, 0.16 to 0.32 from its middle, behind it and beside it, as far as 100° round from straight behind, so
-    they're clear of its units, which stand in front.
-  - **Each column:** two flames, a cone each, orange and yellow, side by side 0.08 up. Over them, six puffs of smoke,
-    dark at the bottom and lighter as they rise, from 0.15 to 0.6 up. Each is bigger than the one under it, from 0.04
-    to 0.14 in radius, a little flatter than round, and leans further downwind the higher it is, as far as about 0.3. Each
-    puff is thrown a little either way, so the smoke billows rather than stacks. That's big enough to tell close in;
-    at the default zoom the city's banner, which already says it's in disorder, mostly covers it.
-  - **Each city's own:** the wind's way, where its columns stand and how its puffs are thrown all come from its name,
-    so the same city looks the same every time it's drawn.
-  - **Drawn:** the smoke as a figure is, lit, casting a shadow on the city; the fires unlit, glowing whichever way
-    the sun is (`MarkerKit#glowMaterial`), and casting none (`NO_SHADOW`, which the stage reads). Each is one
-    geometry for every city of that name and number of columns.
+  - **As built** (`packages/map-3d/overlay/disorder.ts`): laid with the land, as its buildings are
+    (`overlayMesh.ts`'s `city`), so a fire stays on its roof however the city's lots are laid out, and goes with its
+    buildings when the towns are hidden (`t`). Its plan says how many columns (`CityPlan#disorder`): one for a city
+    under size 4, two from 4 and three from 8, so its square's laid again as it goes into disorder and out of it.
+  - **Where:** fires on the peaks of roofs behind its middle, chosen by its seed, as many as its columns, of those
+    whose whole column keeps the room its buildings leave its units (`UNIT_ROOM`, 0.25 from where they stand), so smoke
+    and fire are no nearer a unit than a house is. Over 2,880 cities laid on the square grid, every size, with streets
+    out every way and the sea beside some, each had a roof to burn; with none, one burns in the street behind its
+    plaza, on the ground.
+  - **Each column:** two flames, cones 0.05 across, 0.1 and 0.075 tall, in orange and yellow, sunk a little into the
+    roof's peak. Over them, six puffs of smoke, from 0.06 over the flames, 0.09 apart, dark at the bottom and lighter
+    as they rise, from 0.076 to 0.276 across and a little flatter than round. Each leans further from where the units
+    stand the higher it is, as far as about 0.3, and is thrown a little to one side or the other, so the smoke billows
+    rather than stacks. That's big enough to tell close in; at the default zoom the city's banner, which already says
+    it's in disorder, mostly covers it.
+  - **Drawn** as the land's buildings are, lit: so a flame's side away from the sun is darker than a glow would be.
   - **Still:** it doesn't drift or flicker, as smog doesn't (§5.4): that would need frames drawn all the time, as
     idling does.
 - **We Love the King Day:** banners.
