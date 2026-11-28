@@ -709,8 +709,8 @@ expect(
   [1, true, true, false, true]
 );
 
-// More labels than the atlas holds at its most: those it can't hold drawn as sprites of their own, under the rest; drawn
-//  with fewer, held again, and drawn together.
+// More labels than the atlas holds at its most: those it can't hold drawn as sprites of their own, under the rest;
+//  drawn with fewer, held again, and drawn together.
 const flipping = new Badges(BADGES),
   rows = Array.from({ length: 100 }, (_, index) => {
     const marker = drawMarker(kit, {
