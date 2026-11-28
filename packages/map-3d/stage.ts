@@ -575,7 +575,7 @@ export const STANDS_OVER = 1;
 
 /**
  * The scene's `camera` placed and aimed for `orbit`, at its focus raised to `height`, on a world that repeats every
- *  `seen`, as far as it sees (`sightOf`); and the `sun` placed over the focus, its shadows' box fitted round what the
+ *  `seen`, as far as it sees (`sightFor`); and the `sun` placed over the focus, its shadows' box fitted round what the
  *  camera sees, of land from `land`'s lowest to its highest and what stands on it (`shadowFit.ts`), within as far round
  *  the focus as they always reached. The haze's start and end, as the camera sees them.
  */
@@ -589,7 +589,7 @@ export const aimCameras = (
 ): { near: number; far: number } => {
   const [u, v] = orbit.focus,
     [x, y, z] = eye(orbit, height),
-    { near, far } = sightOf(orbit, seen);
+    { near, far } = sightFor(orbit.distance, seen);
 
   camera.position.set(x, y, z);
   camera.lookAt(u, height, v);
@@ -898,7 +898,7 @@ export const createStage: StageFactory = (
 
   // From the south-east and well up, so slopes facing it are lit and the far sides of ridges fall into shade.
   sun.position.set(...SUN_FROM);
-  // One shadow map, over what the camera sees round its focus (`view`).
+  // One shadow map, over what the camera sees (`aimCameras`).
   sun.castShadow = true;
   sun.shadow.mapSize.set(SHADOW_MAP, SHADOW_MAP);
   sun.shadow.bias = -0.0004;

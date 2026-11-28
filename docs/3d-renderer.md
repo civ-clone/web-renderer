@@ -1817,9 +1817,10 @@ mapEvent:
     focus, and as deep along the sun's light, so what's between the sun and what's seen still casts its shadow and
     the map's bias means what it did.
   - Its map covers far less of the land, so shadows are sharper at every zoom: a tree's or a waggon's has its outline.
-  - It's fitted again whenever the camera moves, turns or zooms, and when the page changes shape. Turning or tilting,
-    the box's size changes with it, so its texels shift a little each frame: by under a texel, less than panning has
-    always moved them. On screen, a slow turn changed about 3% more pixels from frame to frame than it did.
+  - It's fitted again whenever the camera moves, turns or zooms, and when the page changes shape. So turning or tilting
+    now resamples the map each frame, as panning always has: its texels shift, by under a texel a frame on a very slow
+    turn (0.02°) and by tens of texels on a key's turn. On screen, the slow turn changed about 3% more pixels from frame
+    to frame than it did. Steadying it (a box of set sizes, its corner on whole texels) is for 6.1's cascades.
   - On a late Civ2 game at the default view, the shadow pass draws 130 draw calls and 0.78M triangles a frame, from
     783 and 3.77M.
 - **Sky:** a sky made by code, which lights the scene and gives reflections (an environment map).
