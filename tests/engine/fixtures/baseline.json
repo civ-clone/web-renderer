@@ -28,8 +28,8 @@
       },
       "dto": {
         "objects": 790,
-        "bytes": 140771,
-        "hash": "8e3bd417"
+        "bytes": 140907,
+        "hash": "73e4b105"
       },
       "registries": {
         "cities": 0,
@@ -256,8 +256,8 @@
       },
       "dto": {
         "objects": 2342,
-        "bytes": 412468,
-        "hash": "ec7b949d"
+        "bytes": 412672,
+        "hash": "c4ccce99"
       },
       "registries": {
         "cities": 4,
@@ -517,8 +517,8 @@
       },
       "dto": {
         "objects": 62493,
-        "bytes": 10969827,
-        "hash": "8ea2ce63"
+        "bytes": 10971459,
+        "hash": "52f82711"
       },
       "registries": {
         "cities": 5,

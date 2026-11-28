@@ -239,6 +239,22 @@ prerequisite P1) with a `walled` flag on every city, the first piece of `appeara
   - Civ2 by the eras its city styles already use.
 
   Complete Civ2 support probably needs this anyway. A city's `era` is its owner's age.
+
+  **As built (2026-11-28):** each player's age is `era` on their `Player`, one of `ancient`, `classical`, `medieval`,
+  `renaissance`, `industrial` and `modern` (the protocol's `Era`). Nothing draws it yet.
+  - **The rule set decides it** through the worker rules' `era` hook. Under rules without one, no player has it.
+  - **Civ1:** the latest of civ1-enhanced's research tiers the player knows an advance of (`lib/latestTier`, the tiers
+    its ages and research costs use), whether the ages are on or not. Its eight ages are folded into six: Electric
+    with Industrial, Space with Modern. Only that function is imported, so the plain civ1 set loads none of
+    civ1-enhanced's rules.
+  - **Civ2:** the citizens' row (`peopleEra`), the finest of the rows its city styles use, so never classical or
+    medieval.
+  - **Your own player** has it as AdditionalData. **A rival** has it on its stand-in, read as the stand-in is sent, so
+    the page has every rival's age, with or without an embassy. A city's owner is a ref to one or the other.
+  - **When it changes:** an advance that starts a new age sends it again. Your own player's `era` goes on its own,
+    then your cities' squares. A rival's cities you've been sent go again with their squares. The first advance each
+    player gains after the client starts counts as a new age, as the one before it can't be worked out. An observer
+    watching several players gets a member's new age when that member next goes in full.
 - **Rivals' Wonders** are a follow-up. At first, Wonders stand beside your own cities only. Your own Wonders are
   already known to the page, through the Wonders report's `own` rows and your cities' data.
 

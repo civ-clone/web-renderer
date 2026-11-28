@@ -5,6 +5,7 @@
 //   rules' `citizenMoods` from the same calculator;
 // - what each square in a city's radius yields it (`squareYields`): a Harbour's ocean square differs from its own;
 // - the city's style row and citizens' row by its owner's advances, and a capital drawn larger (`style`);
+// - the player's age (`era`, D9): the citizens' row, a rival's on its stand-in;
 // - the specialists the city may have (`specialistsAvailable`: Entertainers only below size 5);
 // - the gold Capitalization makes (`goldPerTurn`), and the build list's progress after a change (`buildItemDetails`):
 //   a person's change across categories halves it, and changing back the same turn restores it;
@@ -51,6 +52,7 @@ import { playerView } from '@civ-clone/ui-worker-client/Client/View';
 import { registerPatchEvents } from '@civ-clone/ui-worker-client/Client/events/patchEvents';
 import Added from '@civ-clone/core-player/Rules/Added';
 import UnknownCity from '@civ-clone/ui-worker-client/UnknownObjects/City';
+import UnknownPlayer from '@civ-clone/ui-worker-client/UnknownObjects/Player';
 import World from '@civ-clone/core-world/World';
 import { instance as additionalDataRegistryInstance } from '@civ-clone/core-data-object/AdditionalDataRegistry';
 import { defaultGame } from '@civ-clone/core-game/defaultGame';
@@ -232,7 +234,9 @@ const run = async (): Promise<void> => {
   // Styles by era.
 
   const research = defaultGame.playerResearch.getByPlayer(us),
-    styleOf = () => additional(inland, 'style');
+    styleOf = () => additional(inland, 'style'),
+    // The player's age as it goes (D9), at each step: the citizens' row.
+    eras = [additional(us, 'era')];
 
   expect('to begin with: ancient', styleOf(), {
     era: 'ancient',
@@ -242,6 +246,7 @@ const run = async (): Promise<void> => {
 
   research.addAdvance(Invention);
   research.addAdvance(Philosophy);
+  eras.push(additional(us, 'era'));
 
   expect(
     'Invention and Philosophy: the citizens are renaissance, the city still ancient',
@@ -250,6 +255,7 @@ const run = async (): Promise<void> => {
   );
 
   research.addAdvance(Industrialization);
+  eras.push(additional(us, 'era'));
 
   expect('Industrialization: both industrial', styleOf(), {
     era: 'industrial',
@@ -258,10 +264,18 @@ const run = async (): Promise<void> => {
   });
 
   research.addAdvance(Automobile);
+  eras.push(additional(us, 'era'));
 
   expect('Automobile alone: still industrial', styleOf().era, 'industrial');
 
   research.addAdvance(Electronics);
+  eras.push(additional(us, 'era'));
+
+  expect(
+    "the player's age is the citizens' row, never classical or medieval",
+    eras,
+    ['ancient', 'renaissance', 'industrial', 'industrial', 'modern']
+  );
 
   expect('Automobile and Electronics: both modern', styleOf(), {
     era: 'modern',
@@ -291,6 +305,18 @@ const run = async (): Promise<void> => {
     "a rival's city sent as a stand-in carries its style",
     [standIn.keys().includes('style'), standIn.style()],
     [true, { era: 'ancient', people: 'ancient', larger: false }]
+  );
+
+  const theirStandIn = UnknownPlayer.fromPlayer(theirs.player());
+
+  expect(
+    'a rival sent as a stand-in carries its age, as ours goes',
+    [
+      theirStandIn.keys().includes('era'),
+      theirStandIn.era(),
+      workerRules().era!(us),
+    ],
+    [true, 'ancient', 'modern']
   );
 
   // Specialists.
@@ -523,6 +549,13 @@ const run = async (): Promise<void> => {
     const theirCity = unknownCityOf(theirs),
       theirResearch = defaultGame.playerResearch.getByPlayer(them);
 
+    // Their first advance since the client started counts as a new age (D9), as the one before it can't be known.
+    expect(
+      "a rival's first advance: its city's square goes again, with its age",
+      emit('player:research-complete', theirResearch),
+      [`tile ${tileId(theirs.tile())}`]
+    );
+
     expect(
       "a rival's advance that doesn't change its cities' era sends nothing",
       emit('player:research-complete', theirResearch),
@@ -531,11 +564,16 @@ const run = async (): Promise<void> => {
 
     theirResearch.addAdvance(Industrialization);
 
+    // Its square is given twice here, for its style and for its age, which the queue sends once.
     expect(
       "a rival's advance into a new era: its city's stand-in is drawn in it, and goes again with its square",
       [emit('player:research-complete', theirResearch), theirCity.style()],
       [
-        [`update ${theirCity.id()}`, `tile ${tileId(theirs.tile())}`],
+        [
+          `update ${theirCity.id()}`,
+          `tile ${tileId(theirs.tile())}`,
+          `tile ${tileId(theirs.tile())}`,
+        ],
         { era: 'industrial', people: 'industrial', larger: false },
       ]
     );

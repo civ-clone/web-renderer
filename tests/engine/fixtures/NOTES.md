@@ -626,3 +626,19 @@ moves, and the three checksums move with it (`99a58e61 / e7ec61bb / 781cb858`
 random-call counts are unchanged: the field isn't sent to the client. Run again
 with `_generatorId` made transient, the result is byte-identical to the
 previous `baseline.json`.
+
+## Accepted change: DTO bytes, each player's age (D9)
+
+The worker rules now send each player's age (`era`, which the 3D map will draw
+their cities in): on your own player, and on the stand-ins of rivals. Civ1's is
+the latest of civ1-enhanced's research tiers the player knows an advance of,
+folded into six eras; Civ2's is its citizens' row. The DTO the harness
+serialises carries the new field: its bytes at turn 1 rise from 140771 to
+140907, at turn 10 from 412468 to 412672, and at turn 50 from 10969827 to
+10971459, and its hashes change with them. The client transcript's messages
+change the same way, with as many messages as before: with the 63 `era` values
+taken out, it is the same as before. Nobody gains an advance in its 20 turns,
+so no square is sent again for one.
+
+The checksums (`3fa76a42 / 5c342a72 / e8cd02b7`), state counts, rule totals and
+random-call counts are unchanged: nothing in the engine changes.

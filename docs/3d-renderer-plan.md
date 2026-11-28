@@ -607,6 +607,12 @@ Since #1335, farms have their buildings, mines their headframes and tunnels, for
   `lib/advanceTiers` out of `civ1-enhanced` into a package the worker can use.
 - **Civ2's era:** from its style.
 
+**First part, each player's age: done** (spec D9, "As built"). Every player the page is sent has `era`, your own and
+rivals', and it's sent again when an advance starts a new age. Civ1's comes from civ1-enhanced's tiers, imported on
+their own with no lifting needed; Civ2's from its citizens' row. Nothing draws it yet.
+
+Still to do: drawing cities by their era (4.2), each city's landmarks, and Wonders for your own cities.
+
 ### 4.1 Sprawl
 
 - **What:** the area, streets, lots, growth and modernising, as pure functions with tests (spec §7.2), drawn as plain

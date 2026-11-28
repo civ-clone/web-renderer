@@ -230,8 +230,8 @@ export class PlayerPatches {
   }
 
   // One of the player's keys on its own, as an update of that key (#411): the list of its units or cities when one is
-  //  added, which go as refs, as each is sent on its own.
-  playerKey(key: 'cities' | 'units'): void {
+  //  added, which go as refs, as each is sent on its own, or its age when an advance starts a new one (D9).
+  playerKey(key: 'cities' | 'era' | 'units'): void {
     if (this.#queued.has(`${this.#view().primary().id()} ${key}`)) {
       return;
     }

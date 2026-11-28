@@ -87,6 +87,7 @@
     "test:terrain-rules": "node tools/run-suite.js engine terrainRules",
     "test:civil-disorder": "node tools/run-suite.js engine civilDisorder",
     "test:city-walls": "node tools/run-suite.js engine cityWalls",
+    "test:player-eras": "node tools/run-suite.js engine playerEras",
     "test:diplomats": "node tools/run-suite.js engine diplomats",
     "test:treaty": "node tools/run-suite.js engine treaty",
     "test:game-failures": "node tools/run-suite.js engine gameFailures",

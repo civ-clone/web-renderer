@@ -34,6 +34,16 @@ export interface CityStyle {
   larger: boolean;
 }
 
+// A player's age, which its cities are drawn in, as the rules decide it (D9): Civ1's by its advance tiers, Civ2's by
+//  its citizens' row, which has no classical or medieval.
+export type Era =
+  | 'ancient'
+  | 'classical'
+  | 'medieval'
+  | 'renaissance'
+  | 'industrial'
+  | 'modern';
+
 export interface City extends EntityInstance<'City'> {
   name: string;
   build: CityBuild;
@@ -194,6 +204,8 @@ export interface Player extends EntityInstance {
   actions: PlayerAction[];
   civilization: Civilization;
   cities: City[];
+  // Its age, a rival's too (its stand-in carries it), under rules that say. `null` where they give it none.
+  era?: Era | null;
   government: PlayerGovernment;
   mandatoryActions: PlayerAction[];
   research: PlayerResearch;
