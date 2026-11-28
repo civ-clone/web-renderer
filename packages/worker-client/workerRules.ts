@@ -24,13 +24,14 @@ import type { CityImprovementRegistry } from '@civ-clone/core-city-improvement/C
 import type { InteractionRegistry } from '@civ-clone/core-diplomacy/InteractionRegistry';
 import type { PlayerGovernmentRegistry } from '@civ-clone/core-government/PlayerGovernmentRegistry';
 import type { Treaty } from '@civ-clone/ui-protocol/reports';
+import type { Era } from '@civ-clone/ui-protocol/types';
 import type { NotificationTable } from './Client/notifications/NotificationContext';
 import Notification from '@civ-clone/ui-protocol/Notification';
 import type Turn from '@civ-clone/core-turn-based-game/Turn';
 
 export type PlayerActionType = new (...args: any[]) => PlayerAction;
 
-export type { Treaty };
+export type { Era, Treaty };
 
 // What a rule set's own notices are made of (`notifications`), so a rule set's worker rules needn't reach past the
 //  worker client.
@@ -126,6 +127,11 @@ export type WorkerRules = {
    *  has, with no say.
    */
   walled?: (city: City) => boolean;
+  /**
+   * The age `player` is in, which the map draws their cities in (D9): sent as the `era` AdditionalData of your own
+   *  player, and on a rival's stand-in, read as it's sent. Under rules without it, a player goes with none.
+   */
+  era?: (player: Player) => Era | null;
   /**
    * Whether having seen a city a player holds or founded counts as meeting them, for naming them (`hasMet`). Yes by
    *  default, as the client has always had it (Civ1); Civ2's rules say no, as the Apollo Program shows every city

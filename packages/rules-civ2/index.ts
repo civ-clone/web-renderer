@@ -86,6 +86,7 @@ import { limitedRates, maxRates } from './AdditionalData/tradeRates';
 import stagedHappiness from '@civ-clone/civ2-city-happiness/lib/stagedHappiness';
 import civilDisorderDeclared from './AdditionalData/civilDisorderDeclared';
 import walledData, { walled } from './AdditionalData/walled';
+import eraData, { era } from './AdditionalData/era';
 import { levelOf } from '@civ-clone/civ2-difficulty/level';
 import {
   conquestBonusFor,
@@ -189,6 +190,8 @@ export const civ2Rules: WorkerRules = {
   // Whether a rival's city is drawn walled, as last seen, as one's own is (`walled`): its City Walls or its owner's
   //  Great Wall (#688, #1069).
   walled: (city) => walled(city),
+  // The age a rival's cities are drawn in, read as its stand-in is sent, as one's own player's is (`era`, D9).
+  era: (player) => era(player),
   // civ2-score's conquest bonus, which reads whether eliminated civilizations come back (M2e).
   conquestBonus: (player, gameResults, playerWorlds, rules) =>
     conquestBonusFor(player, gameResults, playerWorlds, rules),
@@ -234,6 +237,7 @@ export const register = (): void => {
     attackSound(),
     civilDisorderDeclared(),
     walledData(),
+    eraData(),
     terrainDefenceBonus(),
     terrainMoveCost(),
     unitHitPoints(),

@@ -27,6 +27,7 @@ import { ClientContext, Disposer, Registries } from '../ClientContext';
 import { filterToReference, filterToReferenceAllExcept } from '../refs';
 import { knownUnknownCity } from '../standIns';
 import type UnknownCity from '../../UnknownObjects/City';
+import type { Era } from '@civ-clone/ui-protocol/types';
 import { workerRules } from '../../workerRules';
 
 export type PatchEventsContext = Pick<
@@ -624,10 +625,51 @@ export const registerPatchEvents = (
     })
   );
 
+  // Each player's age as this client last worked it out (D9), under rules that say: an advance can start a new one,
+  //  which sends the player's cities again with their squares, as the map draws them in it. A player not in it yet
+  //  counts as changed: the advance is already known when it's told of, so what came before it can't be worked out.
+  const eras: WeakMap<Player, Era | null> = new WeakMap();
+
+  const eraChanged = (player: Player): boolean => {
+    const eraOf = workerRules().era;
+
+    if (eraOf === undefined) {
+      return false;
+    }
+
+    const era = eraOf(player),
+      changed = !eras.has(player) || eras.get(player) !== era;
+
+    eras.set(player, era);
+
+    return changed;
+  };
+
+  // The squares of `player`'s cities the view knows. A rival's stand-in reads its owner's age as it's sent, so each
+  //  goes with the age it's in now; only those the player has been sent, as one never sent has nothing to draw again.
+  //  A square that goes for its style as well goes once: the queue sends each once a flush.
+  const citySquaresAgain = (player: Player): void =>
+    ctx.cities.getByPlayer(player).forEach((city: City) => {
+      const playerTile = ctx.view.tile(city.tile());
+
+      if (!playerTile || (!ctx.view.owns(player) && !knownUnknownCity(city))) {
+        return;
+      }
+
+      ctx.patches.tile(playerTile);
+    });
+
   // The advance is told of in `Client/notifications/player.ts`.
   on('player:research-complete', (playerResearch) => {
-    if (!ctx.view.owns(playerResearch.player())) {
-      redrawRivalCities(ctx.cities.getByPlayer(playerResearch.player()));
+    const player = playerResearch.player(),
+      newEra = eraChanged(player);
+
+    if (!ctx.view.owns(player)) {
+      redrawRivalCities(ctx.cities.getByPlayer(player));
+
+      if (newEra) {
+        citySquaresAgain(player);
+      }
 
       return;
     }
@@ -635,6 +677,13 @@ export const registerPatchEvents = (
     ctx.patches.update(playerResearch.id(), () =>
       playerResearch.toPlainObject(ctx.dataFilter(filterToReference(Player)))
     );
+
+    // Our own age goes as an update of that key alone, ahead of our cities' squares, as patches are built in order.
+    //  Only the primary player's: another owner in an observer's view goes with its age when it goes in full.
+    if (newEra && player === ctx.view.primary()) {
+      ctx.patches.playerKey('era');
+      citySquaresAgain(player);
+    }
   });
 
   // The cities whose improvements are gone (#184). The player is told in `Client/notifications/city.ts`.

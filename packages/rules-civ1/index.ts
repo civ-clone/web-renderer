@@ -36,6 +36,7 @@ import autoBuild from '@civ-clone/civ1-city/lib/autoBuild';
 import { civilDisorder } from '@civ-clone/civ1-city-happiness/lib/cityStatus';
 import civilDisorderDeclared from './AdditionalData/civilDisorderDeclared';
 import conquestBonusFor from '@civ-clone/civ1-game-end/lib/conquestBonusFor';
+import eraData, { era } from './AdditionalData/era';
 import { levelOf } from '@civ-clone/civ1-difficulty/level';
 import { wonderHistory } from '@civ-clone/civ1-wonder/lib/wonderHistory';
 import walledData, { walled } from './AdditionalData/walled';
@@ -53,6 +54,8 @@ export const civ1Rules: WorkerRules = {
   civilDisorder: (city) => civilDisorder(city) !== null,
   // Whether a rival's city is drawn walled, as last seen, as one's own is (`walled`, #688).
   walled: (city) => walled(city),
+  // The age a rival's cities are drawn in, read as its stand-in is sent, as one's own player's is (`era`, D9).
+  era: (player) => era(player),
   autoBuild: (cityBuild, rules) => autoBuild(cityBuild, rules),
   citizenMoods: (cityGrowth, specialists) =>
     citizenSummary(
@@ -95,7 +98,8 @@ export const register = (): void => {
     civilDisorderDeclared(),
     terrainDefenceBonus(),
     terrainMoveCost(),
-    walledData()
+    walledData(),
+    eraData()
   );
 };
 

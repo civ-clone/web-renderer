@@ -18,6 +18,7 @@
     "@civ-clone/civ1-city-happiness": "*",
     "@civ-clone/civ1-city-improvement": "*",
     "@civ-clone/civ1-difficulty": "*",
+    "@civ-clone/civ1-enhanced": "*",
     "@civ-clone/civ1-game-end": "*",
     "@civ-clone/civ1-government": "*",
     "@civ-clone/civ1-unit": "*",
@@ -25,7 +26,10 @@
     "@civ-clone/core-city": "^0.1.26",
     "@civ-clone/core-city-improvement": "^0.1.7",
     "@civ-clone/core-data-object": "^0.1.19",
+    "@civ-clone/core-game": "^0.1.17",
     "@civ-clone/core-government": "^0.1.6",
+    "@civ-clone/core-player": "^0.1.10",
+    "@civ-clone/core-science": "^0.1.9",
     "@civ-clone/core-terrain": "^0.1.4",
     "@civ-clone/library-government": "^0.1.2"
   }
