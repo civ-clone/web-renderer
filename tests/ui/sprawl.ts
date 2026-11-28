@@ -1692,7 +1692,8 @@ expect(
               if (
                 piece.at[1] <= under.at[1] ||
                 piece.size[0] <= under.size[0] ||
-                fromUnits(piece) <= fromUnits(under)
+                fromUnits(piece) <= fromUnits(under) ||
+                piece.alpha >= under.alpha
               ) {
                 wrong.push(`${name}: column ${column} puff ${at + 1}`);
               }

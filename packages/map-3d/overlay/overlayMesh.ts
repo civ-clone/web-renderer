@@ -417,6 +417,17 @@ const trianglesOf = (
 };
 
 // Worked in, a solid at a time.
+/**
+ * Where the sun is, from what it lights: the stage puts its light there (`stage.ts`), and what's laid in the haze,
+ *  which takes no light, is shaded as it would light it.
+ */
+export const SUN_FROM = [30, 40, 20] as const;
+
+const SUN_TOWARD = new Vector3(...SUN_FROM).normalize();
+
+/** How light what's laid in the haze is on its side away from the sun, and edge on to it, as a share of its colour. */
+export const HAZY_SHADE = 0.55;
+
 const MATRIX = new Matrix4(),
   NORMALS = new Matrix3(),
   POSITION = new Vector3(),
@@ -1004,6 +1015,52 @@ class Layer {
       );
       soup.normals.push(tx / length, ty / length, tz / length);
       soup.colours.push(r, g, b);
+    }
+  }
+
+  /**
+   * A `shape` laid see-through in the haze, as `solid` lays one, as solid as `alpha`. The haze takes no light, so it's
+   *  shaded here as the sun lights the land: fully on its side facing it, darker away from it, so it keeps its shape.
+   */
+  hazy(
+    shape: BufferGeometry,
+    at: readonly [number, number, number],
+    size: readonly [number, number, number],
+    css: string,
+    alpha: number
+  ): void {
+    const { positions, normals } = trianglesOf(shape),
+      matrix = MATRIX.compose(
+        POSITION.set(...at),
+        ROTATION.identity(),
+        SCALE.set(...size)
+      ),
+      e = matrix.elements,
+      n = NORMALS.getNormalMatrix(matrix).elements,
+      [r, g, b] = colourOf(css),
+      haze = this.soup.haze;
+
+    for (let at = 0; at < positions.length; at += 3) {
+      const x = positions[at]!,
+        y = positions[at + 1]!,
+        z = positions[at + 2]!,
+        nx = normals[at]!,
+        ny = normals[at + 1]!,
+        nz = normals[at + 2]!,
+        tx = n[0]! * nx + n[3]! * ny + n[6]! * nz,
+        ty = n[1]! * nx + n[4]! * ny + n[7]! * nz,
+        tz = n[2]! * nx + n[5]! * ny + n[8]! * nz,
+        facing =
+          (tx * SUN_TOWARD.x + ty * SUN_TOWARD.y + tz * SUN_TOWARD.z) /
+          (Math.hypot(tx, ty, tz) || 1),
+        lit = HAZY_SHADE + (1 - HAZY_SHADE) * Math.max(0, facing);
+
+      haze.positions.push(
+        e[0]! * x + e[4]! * y + e[8]! * z + e[12]!,
+        e[1]! * x + e[5]! * y + e[9]! * z + e[13]!,
+        e[2]! * x + e[6]! * y + e[10]! * z + e[14]!
+      );
+      haze.colours.push(r * lit, g * lit, b * lit, alpha);
     }
   }
 
@@ -1671,7 +1728,8 @@ const city = (layer: Layer, plan: CityPlan): void => {
   lots.forEach((lot) => house(layer, lot));
 
   // In civil disorder: fires on some of its roofs behind its middle, and smoke rising from them, leaning away from its
-  //  units (`disorder.ts`), each on the house that's laid there.
+  //  units (`disorder.ts`), each on the house that's laid there; the smoke see-through, in the haze, so a unit behind
+  //  it shows, whichever way the camera looks.
   if ((plan.disorder ?? 0) > 0) {
     disorderPieces({
       centre: [u, v],
@@ -1684,8 +1742,10 @@ const city = (layer: Layer, plan: CityPlan): void => {
       seed: plan.seed,
       columns: plan.disorder ?? 0,
       ground: (gu, gv) => layer.ground(gu, gv),
-    }).forEach(({ kind, at, size, colour }) =>
-      layer.solid(kind === 'fire' ? cone : sphere, at, size, colour)
+    }).forEach(({ kind, at, size, colour, alpha }) =>
+      kind === 'fire'
+        ? layer.solid(cone, at, size, colour)
+        : layer.hazy(sphere, at, size, colour, alpha)
     );
   }
 };

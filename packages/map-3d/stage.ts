@@ -64,7 +64,7 @@ import {
 import { TileMarker } from './markers/markerFor';
 import { idleChanges } from './idling';
 import unitUnder, { blinkAs, blinkFigures } from './markers/pickUnit';
-import { OverlayMesh, PLANT_NUMBERS } from './overlay/overlayMesh';
+import { OverlayMesh, PLANT_NUMBERS, SUN_FROM } from './overlay/overlayMesh';
 import { plantMatrices, plantsKept } from './overlay/thinning';
 import { FIELD_OF_VIEW, Orbit, eye, sightFor } from './camera/orbit';
 import Water, {
@@ -560,7 +560,7 @@ const ALL_PLANTS = 'allPlants';
 
 // The sun's shadow map's size, in texels a side, and how far the sun is from what it lights (its offset below).
 const SHADOW_MAP = 2048,
-  SUN_DISTANCE = Math.hypot(30, 40, 20);
+  SUN_DISTANCE = Math.hypot(...SUN_FROM);
 
 export const createStage: StageFactory = (
   canvas,
@@ -814,7 +814,7 @@ export const createStage: StageFactory = (
   scene.add(clouds.mesh);
 
   // From the south-east and well up, so slopes facing it are lit and the far sides of ridges fall into shade.
-  sun.position.set(30, 40, 20);
+  sun.position.set(...SUN_FROM);
   // One shadow map, over what the camera sees round its focus (`view`).
   sun.castShadow = true;
   sun.shadow.mapSize.set(SHADOW_MAP, SHADOW_MAP);
@@ -1088,7 +1088,7 @@ export const createStage: StageFactory = (
     const reach = orbit.distance * 2.2,
       shadow = sun.shadow.camera;
 
-    sun.position.set(u + 30, height + 40, v + 20);
+    sun.position.set(u + SUN_FROM[0], height + SUN_FROM[1], v + SUN_FROM[2]);
     sun.target.position.set(u, height, v);
     shadow.left = -reach;
     shadow.right = reach;
