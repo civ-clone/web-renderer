@@ -70,7 +70,6 @@ import sprawl, {
 } from '@civ-clone/ui-map-3d/overlay/sprawl';
 import { IN_FRONT_OF_CITY } from '@civ-clone/ui-map-3d/markers/drawMarker';
 import {
-  DISORDER,
   DISORDER_ROOM,
   FLAMES,
   SMOKE,
@@ -3142,24 +3141,54 @@ const landOf = (
     },
     flames = pointsOf(rioting, FLAMES),
     smoke = pointsOf(rioting, SMOKE),
-    // Whether a flame's point is over a lot behind the city's middle: within its footprint, and a flame's width.
-    onRoofBehind = ([u, , v]: [number, number, number]) =>
-      lots.some(
+    roofs = pointsOf(rioting, ROOFS),
+    // The lot a point's over: within its roof's eaves, as far as its corners.
+    lotOver = ([u, , v]: [number, number, number]) =>
+      lots.find(
         (lot) =>
-          lot.at[1] < at.centre[1] &&
           Math.hypot(u - lot.at[0], v - lot.at[1]) <=
-            lot.width / 2 + DISORDER.fireWidth
-      );
+          (lot.width * Math.SQRT2) / 2 + 1e-6
+      ),
+    // Each flame's lowest point, by the lot it's over, and the height of the roof laid there, from its eaves to its peak.
+    burning = new Map<Lot, number>();
+
+  flames.forEach((point) => {
+    const lot = lotOver(point);
+
+    if (lot !== undefined) {
+      burning.set(lot, Math.min(burning.get(lot) ?? Infinity, point[1]));
+    }
+  });
+
+  const roofHeights = (lot: Lot): [number, number] => {
+      const over = roofs.filter((point) => lotOver(point) === lot);
+
+      return [
+        Math.min(...over.map(([, y]) => y)),
+        Math.max(...over.map(([, y]) => y)),
+      ];
+    },
+    // Every flame over a roof behind the city's middle, rising from that roof's eaves as it's laid.
+    onRoofBehind =
+      flames.every((point) => lotOver(point) !== undefined) &&
+      [...burning].every(([lot, lowest]) => {
+        const [eaves, peak] = roofHeights(lot);
+
+        return (
+          lot.at[1] < at.centre[1] && lowest >= eaves - 1e-4 && lowest < peak
+        );
+      });
 
   expect(
-    'a city in civil disorder: its plan says three columns at size 9, and none when it’s calm, so its square’s laid again; laid, flames on roofs behind its middle and smoke over them, all of it keeping its units’ room; none laid when it’s calm',
+    'a city in civil disorder: its plan says three columns at size 9, and none when it’s calm, so its square’s laid again; laid, flames on three roofs behind its middle, rising from each roof’s eaves as it’s laid, and smoke over them, all of it keeping its units’ room; none laid when it’s calm',
     [
       rioting.city?.disorder,
       calm.city?.disorder,
       JSON.stringify(calm) !== JSON.stringify(rioting),
       flames.length > 0,
       smoke.length > 0,
-      flames.every(onRoofBehind),
+      onRoofBehind,
+      burning.size,
       [...flames, ...smoke].every(
         ([u, , v]) =>
           Math.hypot(u - units[0], v - units[1]) >= DISORDER_ROOM - 1e-6
@@ -3168,7 +3197,7 @@ const landOf = (
         Math.max(...flames.map(([, y]) => y)) - 0.05,
       pointsOf(calm, [...FLAMES, ...SMOKE]).length,
     ],
-    [3, undefined, true, true, true, true, true, true, 0]
+    [3, undefined, true, true, true, true, 3, true, true, 0]
   );
 }
 

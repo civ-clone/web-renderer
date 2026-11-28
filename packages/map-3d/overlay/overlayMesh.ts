@@ -1645,10 +1645,11 @@ export const ROOFS = ['#9c5a3c', '#7d4a36', '#6f6a64', '#8b6b4a'] as const;
 //  (`Land#keepCities`).
 const PAVING = '#a39a88',
   HOUSE = '#c4b8a2',
-  // How tall a building's storey is, how wide its walls are, under the eaves of a roof its lot's width, and how high
-  //  its roof rises over them, as a share of its width.
-  STOREY = 0.045,
-  WALLED = 0.86,
+  // How wide a building's walls are, under the eaves of a roof its lot's width.
+  WALLED = 0.86;
+
+/** How tall a city's building's storey is, and how high its roof rises over its eaves, as a share of its width. */
+export const STOREY = 0.045,
   ROOF_RISE = 0.4;
 
 /**
@@ -1673,10 +1674,11 @@ const city = (layer: Layer, plan: CityPlan): void => {
     disorderPieces({
       centre: [u, v],
       units: [u, v + IN_FRONT_OF_CITY],
-      roofs: lots.map((lot) => ({
-        at: lot.at,
-        peak: houseHeights(layer, lot).peak,
-      })),
+      roofs: lots.map((lot) => {
+        const { top, peak } = houseHeights(layer, lot);
+
+        return { at: lot.at, width: lot.width, eaves: top, peak };
+      }),
       seed: plan.seed,
       columns: plan.disorder ?? 0,
       ground: (gu, gv) => layer.ground(gu, gv),

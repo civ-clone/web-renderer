@@ -37,7 +37,12 @@ import sprawl, {
   suburbStepsFor,
   tierFor,
 } from '@civ-clone/ui-map-3d/overlay/sprawl';
-import { ROOFS, roadHalf } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
+import {
+  ROOFS,
+  ROOF_RISE,
+  STOREY,
+  roadHalf,
+} from '@civ-clone/ui-map-3d/overlay/overlayMesh';
 import { OverlayMesh } from '@civ-clone/ui-map-3d/overlay/overlayMesh';
 import {
   IN_FRONT_OF_CITY,
@@ -1555,10 +1560,11 @@ expect(
   );
 }
 
-// A city in civil disorder, over many cities, every size and the ways their streets go, with and without sea: its fires
-//  on its own roofs behind its middle, each column's flames on the peak of one, or in the street behind its plaza
-//  where there's none; every piece keeping the room its buildings leave its units; each column's smoke rising, growing
-//  and further from them than the puff under it.
+// A city in civil disorder, over many cities, at 8 sizes, with streets out 4 sets of ways, and the sea on 2 sides or
+//  none: its fires on its own roofs behind its middle, each column's flames rising from one's eaves, within it, or on
+//  the ground behind its plaza where there's none (never, here); every piece keeping the room its buildings leave its
+//  units, and its smoke over every roof it reaches; each column's smoke rising, growing and further from them than the
+//  puff under it.
 {
   const place = squareAt(5, 5),
     centre = place.centre,
@@ -1573,11 +1579,21 @@ expect(
     seas: (readonly (readonly [number, number])[])[] = [[], [north], [west]],
     perColumn = 2 + DISORDER.puffs,
     ground = 0.02,
-    // A roof's peak as the overlay lays it, on flat land 0.02 up.
-    peakOf = (lot: Lot) => ground + lot.storeys * 0.045 + lot.width * 0.4,
-    wrong: string[] = [],
-    // How many cities of each size had no roof to burn, and how many there were.
-    street = new Map<number, [number, number]>();
+    // A roof as the overlay lays it, on flat land 0.02 up: its eaves over its storeys, and its peak over them.
+    roofOf = (lot: Lot) => {
+      const eaves = ground + lot.storeys * STOREY;
+
+      return {
+        at: lot.at,
+        width: lot.width,
+        eaves,
+        peak: eaves + lot.width * ROOF_RISE,
+      };
+    },
+    wrong: string[] = [];
+  // How many cities had no roof to burn, and how many fewer columns than their size has.
+  let behindPlaza = 0,
+    short = 0;
 
   for (let seed = 1; seed <= 30; seed++) {
     sizes.forEach((size) =>
@@ -1588,55 +1604,62 @@ expect(
             pieces = disorderPieces({
               centre,
               units,
-              roofs: lots.map((lot) => ({ at: lot.at, peak: peakOf(lot) })),
+              roofs: lots.map(roofOf),
               seed,
               columns,
               ground: () => ground,
             }),
             count = pieces.length / perColumn,
             fires = pieces.filter((piece) => piece.kind === 'fire'),
-            inStreet = fires.every(
+            onGround = fires.every(
               ({ at: [u, , v] }) =>
                 Math.abs(u - centre[0]) <= DISORDER.fireWidth &&
-                Math.abs(v - (centre[1] - DISORDER.street)) <= 1e-9
+                Math.abs(v - (centre[1] - DISORDER.behindPlaza)) <= 1e-9
             ),
-            [streets, of] = street.get(size) ?? [0, 0],
             name = `${seed} ${size} ${ways.join('|')} ${sea.join('|')}`;
 
-          street.set(size, [streets + (inStreet ? 1 : 0), of + 1]);
+          behindPlaza += onGround ? 1 : 0;
+          short += count < columns ? 1 : 0;
 
           if (!Number.isInteger(count) || count < 1 || count > columns) {
             wrong.push(`${name}: ${pieces.length} pieces`);
           }
 
-          if (inStreet ? count !== 1 : false) {
-            wrong.push(`${name}: more than one fire in the street`);
-          }
-
-          fires.forEach(({ at: [u, y, v], size: [, height] }) => {
+          // Each flame on a roof behind the middle, rising from its eaves, half as wide as it, within it.
+          fires.forEach(({ at: [u, y, v], size: [width, height] }) => {
             const base = y - height / 2;
 
             if (
-              !inStreet &&
+              !onGround &&
               !lots.some(
                 (lot) =>
                   lot.at[1] < centre[1] &&
-                  Math.hypot(u - lot.at[0], v - lot.at[1]) <=
-                    DISORDER.fireWidth &&
-                  Math.abs(base - (peakOf(lot) - DISORDER.sunk)) < 1e-9
+                  Math.hypot(u - lot.at[0], v - lot.at[1]) + width / 2 <=
+                    lot.width / 2 + 1e-9 &&
+                  Math.abs(width - lot.width / 2) < 1e-9 &&
+                  Math.abs(base - roofOf(lot).eaves) < 1e-9
               )
             ) {
               wrong.push(`${name}: a fire off a roof at ${u},${v}`);
             }
-
-            if (inStreet && Math.abs(base - ground) > 1e-9) {
-              wrong.push(`${name}: the street's fire not on the ground`);
-            }
           });
 
+          // Clear of its units, and its smoke over every roof it reaches.
           pieces.forEach((piece) => {
             if (nearestTo(piece, units) < DISORDER_ROOM - 1e-9) {
               wrong.push(`${name}: a ${piece.kind} in its units' room`);
+            }
+
+            if (
+              piece.kind === 'smoke' &&
+              lots.some(
+                (lot) =>
+                  Math.hypot(piece.at[0] - lot.at[0], piece.at[2] - lot.at[1]) <
+                    (piece.size[0] + lot.width) / 2 &&
+                  piece.at[1] - piece.size[1] / 2 < roofOf(lot).peak
+              )
+            ) {
+              wrong.push(`${name}: smoke in a roof`);
             }
           });
 
@@ -1669,9 +1692,7 @@ expect(
       disorderPieces({
         centre,
         units,
-        roofs: sprawl(place, planFor(seed, 9, [east]), units).lots.map(
-          (lot) => ({ at: lot.at, peak: peakOf(lot) })
-        ),
+        roofs: sprawl(place, planFor(seed, 9, [east]), units).lots.map(roofOf),
         seed,
         columns: 3,
         ground: () => ground,
@@ -1693,11 +1714,21 @@ expect(
       }),
       same(5) === same(5),
       same(5) !== same(6),
-      // With only a roof in front of its middle: one column, in the street behind its plaza, on the ground.
+      // Over all of them, none with no roof to burn, and none with fewer columns than its size has.
+      behindPlaza,
+      short,
+      // With only a roof in front of its middle: one column, on the ground behind its plaza.
       disorderPieces({
         centre,
         units,
-        roofs: [{ at: [centre[0] + 0.15, centre[1] + 0.05], peak: 0.2 }],
+        roofs: [
+          {
+            at: [centre[0] + 0.15, centre[1] + 0.05],
+            width: 0.05,
+            eaves: 0.18,
+            peak: 0.2,
+          },
+        ],
         seed: 1,
         columns: 2,
         ground: () => ground,
@@ -1715,9 +1746,11 @@ expect(
       [],
       true,
       true,
+      0,
+      0,
       [
-        [true, ground, DISORDER.street],
-        [true, ground, DISORDER.street],
+        [true, ground, DISORDER.behindPlaza],
+        [true, ground, DISORDER.behindPlaza],
       ],
     ]
   );
@@ -1729,14 +1762,21 @@ expect(
     disorderPieces({
       centre,
       units,
-      roofs: [{ at: [centre[0], centre[1] - 0.01], peak: 0.2 }],
+      roofs: [
+        {
+          at: [centre[0], centre[1] - 0.01],
+          width: 0.05,
+          eaves: 0.18,
+          peak: 0.2,
+        },
+      ],
       seed: 1,
       columns: 1,
       ground: () => ground,
     })
       .filter((piece) => piece.kind === 'fire')
       .map(({ at: [, , v] }) => Math.round((centre[1] - v) * 1e6) / 1e6),
-    [DISORDER.street, DISORDER.street]
+    [DISORDER.behindPlaza, DISORDER.behindPlaza]
   );
 }
 

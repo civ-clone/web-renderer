@@ -1303,17 +1303,17 @@ Landmark buildings replace ordinary lots near the middle:
     (`overlayMesh.ts`'s `city`), so a fire stays on its roof however the city's lots are laid out, and goes with its
     buildings when the towns are hidden (`t`). Its plan says how many columns (`CityPlan#disorder`): one for a city
     under size 4, two from 4 and three from 8, so its square's laid again as it goes into disorder and out of it.
-  - **Where:** fires on the peaks of roofs behind its middle, chosen by its seed, as many as its columns, of those
-    whose whole column keeps the room its buildings leave its units (`UNIT_ROOM`, 0.25 from where they stand), so smoke
-    and fire are no nearer a unit than a house is. Over 2,880 cities laid on the square grid, every size, with streets
-    out every way and the sea beside some, each had a roof to burn; with none, one burns in the street behind its
-    plaza, on the ground.
-  - **Each column:** two flames, cones 0.05 across, 0.1 and 0.075 tall, in orange and yellow, sunk a little into the
-    roof's peak. Over them, six puffs of smoke, from 0.06 over the flames, 0.09 apart, dark at the bottom and lighter
-    as they rise, from 0.076 to 0.276 across and a little flatter than round. Each leans further from where the units
-    stand the higher it is, as far as about 0.3, and is thrown a little to one side or the other, so the smoke billows
-    rather than stacks. That's big enough to tell close in; at the default zoom the city's banner, which already says
-    it's in disorder, mostly covers it.
+  - **Where:** fires on roofs behind its middle, chosen by its seed, as many as its columns, of those whose whole column
+    keeps the room its buildings leave its units (`UNIT_ROOM`, 0.25 from where they stand), so smoke and fire are no
+    nearer a unit than a house is, and whose smoke passes over every roof it reaches rather than into a taller one. In
+    the suites, over 2,880 cities laid on the square grid (8 sizes, streets out 4 sets of ways, the sea on 2 sides or
+    none), each had as many roofs to burn as it has columns; with none, one burns on the ground behind its plaza.
+  - **Each column:** two flames, cones half as wide as the roof each, side by side across it, so they're within its
+    eaves, rising from them, 0.1 and 0.075 tall, in orange and yellow. Over them, six puffs of smoke, from 0.06 over the
+    flames, 0.09 apart, dark at the bottom and lighter as they rise, from 0.076 to 0.276 across and a little flatter
+    than round. Each leans further from where the units stand the higher it is, as far as about 0.3, and is thrown a
+    little to one side or the other, so the smoke billows rather than stacks. Big enough to tell close in; at the
+    default zoom it's small.
   - **Drawn** as the land's buildings are, lit: so a flame's side away from the sun is darker than a glow would be.
   - **Still:** it doesn't drift or flicker, as smog doesn't (§5.4): that would need frames drawn all the time, as
     idling does.
