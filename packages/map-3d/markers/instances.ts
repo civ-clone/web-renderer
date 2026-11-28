@@ -21,7 +21,7 @@ import {
   Sphere,
   Sprite,
 } from 'three';
-import { BADGE_LAYER } from './badges';
+import { isBadge } from './badges';
 
 /** The layer marker meshes drawn as instances are on: not the camera's. */
 export const MARKER_LAYER = 2;
@@ -45,10 +45,8 @@ export const gatherDrawn = (root: Object3D): Drawn => {
     meshes: Mesh[] = [];
 
   root.traverseVisible((object) => {
-    if (object instanceof Sprite) {
-      if (object.layers.isEnabled(BADGE_LAYER) && object.material.visible) {
-        sprites.push(object);
-      }
+    if (isBadge(object)) {
+      sprites.push(object);
 
       return;
     }
@@ -90,17 +88,22 @@ export const batchKey = (mesh: Mesh): string =>
 const sphere = new Sphere(),
   viewing = new Matrix4();
 
-// How many of a batch there's room for at first, doubling as more are drawn.
-const ROOM = 16;
+// How many of a batch there's room for at first, doubling as more are drawn; and how many frames running one's kept,
+//  hidden, with none drawn in it, before it's let go of: so a unit blinking out and in, or a walker leaving and
+//  coming back, doesn't make it afresh each time.
+const ROOM = 16,
+  IDLE = 30;
 
 /** The markers' meshes, drawn as instances: add `group` to the scene, and `draw` them as each frame's drawn. */
 export class MarkerInstances {
   readonly group = new Group();
   #batches = new Map<string, InstancedMesh>();
+  // How many frames running each batch has had none drawn in it.
+  #idle = new Map<string, number>();
   #seen = new Frustum();
   #shadowed = new Frustum();
 
-  /** The batches drawn now, by their key (`batchKey`). */
+  /** The batches kept now, by their key (`batchKey`): those with none drawn in them hidden. */
   get batches(): ReadonlyMap<string, InstancedMesh> {
     return this.#batches;
   }
@@ -171,12 +174,28 @@ export class MarkerInstances {
       }
     });
 
-    // Those not drawn now let go of: the meshes' shapes and materials are the markers' own.
+    // Those with none drawn now hidden, and let go of once they've had none for a while: the meshes' shapes and
+    //  materials are the markers' own.
     this.#batches.forEach((batch, key) => {
-      if (!groups.has(key)) {
+      if (groups.has(key)) {
+        this.#idle.delete(key);
+        batch.visible = true;
+
+        return;
+      }
+
+      const idle = (this.#idle.get(key) ?? 0) + 1;
+
+      batch.visible = false;
+      batch.count = 0;
+
+      if (idle > IDLE) {
         this.group.remove(batch);
         batch.dispose();
         this.#batches.delete(key);
+        this.#idle.delete(key);
+      } else {
+        this.#idle.set(key, idle);
       }
     });
 
@@ -203,6 +222,7 @@ export class MarkerInstances {
   dispose(): void {
     this.#batches.forEach((batch) => batch.dispose());
     this.#batches.clear();
+    this.#idle.clear();
     this.group.clear();
   }
 

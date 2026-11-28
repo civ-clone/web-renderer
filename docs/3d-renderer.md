@@ -1941,8 +1941,8 @@ A model set is a set in the #1063 library, like a tileset [verified: `docs/asset
   (`modelKey`: the manifest's address and the model's name).
 - **Drawn** (`MarkerKit.modelFigures`):
   - **Figures:** as many as stand for one unit of the type's look (D6), in its formation, merged in a mesh for each of
-    the model's parts. So a unit is a draw call for each part, besides its stand: mostly one or two, and eight for
-    the realistic Fighter and Helicopter.
+    the model's parts: mostly one or two, and eight for the realistic Fighter and Helicopter. Each part is drawn as
+    an instance with every other unit's of the same type and owner's colour (§6.3, #1204), but while it plays a clip.
   - **Size:** the set's size, or the model's own, times twice life size and the player's choice (§6.2).
   - **Where:** on the built-in set's stand, and behind its wall when fortified. A ship sits on the water in its
     ripples, with no stand.

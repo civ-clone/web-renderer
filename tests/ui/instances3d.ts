@@ -6,12 +6,14 @@
 //    stands; those neither the camera sees nor the sun's shadows fall from aren't drawn;
 //  - a marker fading has its own materials and casts no shadow under half solid: batches of its own;
 //  - one that can't be drawn so is drawn as a mesh of its own, on the camera's layer;
-//  - batches are kept from frame to frame, grown as more are drawn, let go of when none are, and bounded round where
-//    their instances are, for three.js to cull them by.
+//  - batches are kept from frame to frame, sent again and bounded round where their instances are now, for three.js to
+//    cull them by, grown as more are drawn, hidden while none are and let go of after a while;
+//  - two owners' models of a type, the same shape, are batches of their own, in their own colours.
 
 import {
   BoxGeometry,
   Group,
+  SkinnedMesh,
   Mesh,
   MeshStandardMaterial,
   Object3D,
@@ -127,8 +129,8 @@ const meshesIn = (root: Object3D): Mesh[] => {
   return found;
 };
 
-// Every look a marker draws: on foot, mounted, a ship, an aircraft, fortified, awaiting orders with its ring, a model's,
-//  in a walled city.
+// Every look a marker draws: on foot, mounted, a ship, an aircraft, fortified, awaiting orders with its ring, a
+//  model's, in a walled city.
 const markers = [
     drawMarker(kit, { city: null, unit: unit('Spearman') }),
     drawMarker(kit, { city: null, unit: unit('Knights') }),
@@ -244,6 +246,9 @@ expect(
 );
 
 const instances = new MarkerInstances(),
+  // The batches drawn now: those with none in them are kept hidden a while.
+  shown = () =>
+    [...instances.batches.values()].filter((batch) => batch.visible),
   count = instances.draw(drawn.meshes, camera, sun),
   meshOf = (marker: Object3D): Mesh => meshesIn(marker)[0]!,
   batchOf = (marker: Object3D) =>
@@ -306,18 +311,20 @@ const before = ours,
   again = instances.draw(gatherDrawn(world).meshes, camera, sun),
   fadedBatch = batchOf(second);
 
+const rivalBatch = instances.batches.get(batchKey(meshOf(rival)));
+
 expect(
-  'next frame: a batch still drawn is kept, one none are in is let go of, and a marker fading, with its own materials and no shadow under half solid, is a batch of its own',
+  'next frame: a batch still drawn is kept, one none are in is kept hidden, and a marker fading, with its own materials and no shadow under half solid, is a batch of its own',
   [
     again,
     batchOf(first) === before,
     batchOf(first)?.count,
-    instances.batches.size,
-    instances.group.children.length,
+    shown().length,
+    [rivalBatch?.visible, rivalBatch?.count],
     fadedBatch !== undefined && fadedBatch !== before,
     fadedBatch?.castShadow,
   ],
-  [3, true, 2, 2, 2, true, false]
+  [3, true, 2, 2, [false, 0], true, false]
 );
 
 // One that can't be drawn as an instance, on their layer: drawn as a mesh of its own.
@@ -334,7 +341,7 @@ expect(
   [
     batchable(pane),
     pane.layers.isEnabled(0),
-    instances.batches.size,
+    shown().length,
     (() => {
       meshOf(first).layers.enable(0);
       instances.draw([meshOf(first)], camera, sun);
@@ -359,8 +366,10 @@ instances.draw(gatherDrawn(pair).meshes, camera, sun);
 expect(
   'the same shape and material, one casting a shadow and one not: a batch each, casting as its meshes do',
   [
-    instances.batches.size,
-    [...instances.batches.values()].map(({ castShadow }) => castShadow).sort(),
+    shown().length,
+    shown()
+      .map(({ castShadow }) => castShadow)
+      .sort(),
   ],
   [2, [false, true]]
 );
@@ -381,15 +390,140 @@ for (let index = 0; index < 40; index++) {
 
 crowd.updateMatrixWorld(true);
 
+const outgrown = batchOf(crowd.children[0]!);
+let outgrownLetGo = false;
+
+outgrown?.addEventListener('dispose', () => {
+  outgrownLetGo = true;
+});
+
+const crowdDrawn = instances.draw(gatherDrawn(crowd).meshes, camera, sun),
+  grown = batchOf(crowd.children[0]!);
+
 expect(
-  'more than a batch had room for: room made for them all',
+  'more than a batch had room for: room made for them all, in a batch made afresh, the one outgrown let go of and gone',
   [
-    instances.draw(gatherDrawn(crowd).meshes, camera, sun),
-    instances.batches.size,
-    [...instances.batches.values()][0]?.count,
-    ([...instances.batches.values()][0]?.instanceMatrix.count ?? 0) >= 40,
+    crowdDrawn,
+    shown().length,
+    grown?.count,
+    (grown?.instanceMatrix.count ?? 0) >= 40,
+    grown !== outgrown,
+    outgrownLetGo,
+    instances.group.children.includes(outgrown!),
+    instances.group.children.length === instances.batches.size,
+    grown?.instanceMatrix.updateRanges.map(({ start, count }) => [
+      start,
+      count,
+    ]),
   ],
-  [40, 1, 40, true]
+  [40, 1, 40, true, true, true, false, true, [[0, 40 * 16]]]
+);
+
+// A marker moved: where it is now sent again, and its batch bounded round it there.
+const mover = crowd.children[0]!,
+  version = grown?.instanceMatrix.version ?? 0;
+
+mover.position.set(1.8, 0, 1.4);
+crowd.updateMatrixWorld(true);
+instances.draw(gatherDrawn(crowd).meshes, camera, sun);
+
+expect(
+  'a marker moved: where it is now is sent again, and its batch is bounded round it there',
+  [
+    (grown?.instanceMatrix.version ?? 0) > version,
+    grown?.boundingSphere?.containsPoint(
+      new Vector3().setFromMatrixPosition(meshOf(mover).matrixWorld)
+    ),
+  ],
+  [true, true]
+);
+
+// Two owners' models: the same shape, in their own colours.
+const owners = new Group(),
+  ourModel = drawMarker(kit, {
+    city: null,
+    unit: unit('Musketman', { model: 'musketman' }),
+  }),
+  theirModel = drawMarker(kit, {
+    city: null,
+    unit: unit('Musketman', { model: 'musketman', colours: rivals }),
+  });
+
+theirModel.position.set(1, 0, 0);
+owners.add(ourModel, theirModel);
+owners.updateMatrixWorld(true);
+instances.draw(gatherDrawn(owners).meshes, camera, sun);
+
+const tintedPart = (marker: Object3D): Mesh =>
+  meshesIn(marker).find(
+    (mesh) => (mesh.material as { isTintedMaterial?: boolean }).isTintedMaterial
+  )!;
+
+expect(
+  'two owners’ models of a type, the same shape: a batch each, in their own colours',
+  [
+    tintedPart(ourModel).geometry === tintedPart(theirModel).geometry,
+    tintedPart(ourModel).material !== tintedPart(theirModel).material,
+    batchOf(ourModel) !== undefined &&
+      instances.batches.get(batchKey(tintedPart(ourModel))) !==
+        instances.batches.get(batchKey(tintedPart(theirModel))),
+    instances.batches.get(batchKey(tintedPart(theirModel)))?.material ===
+      tintedPart(theirModel).material,
+  ],
+  [true, true, true, true]
+);
+
+// One casting no shadow that only the sun's shadow map covers, out of the camera's sight: not drawn.
+const unseenUnlit = drawMarker(kit, { city: null, unit: unit('Spearman') }),
+  unseenGroup = new Group();
+
+unseenUnlit.position.set(-12, 0, 0);
+meshOf(unseenUnlit).castShadow = false;
+unseenGroup.add(unseenUnlit);
+unseenGroup.updateMatrixWorld(true);
+
+// A skinned mesh put on their layer: drawn as a mesh of its own.
+const skinned = instanced(
+    new SkinnedMesh(new BoxGeometry(0.1, 0.1, 0.1), new MeshStandardMaterial())
+  ),
+  skinnedGroup = new Group();
+
+skinnedGroup.add(skinned);
+skinnedGroup.updateMatrixWorld(true);
+
+expect(
+  'one casting no shadow that only the sun’s shadow map covers isn’t drawn; a skinned one is drawn as a mesh of its own',
+  [
+    instances.draw(gatherDrawn(unseenGroup).meshes, camera, sun),
+    instances.draw(gatherDrawn(skinnedGroup).meshes, camera, sun),
+    skinned.layers.isEnabled(0),
+  ],
+  [0, 0, true]
+);
+
+// None drawn for a while: the batches let go of.
+const kept = [...instances.batches.values()];
+let letGo = 0;
+
+kept.forEach((batch) =>
+  batch.addEventListener('dispose', () => {
+    letGo++;
+  })
+);
+
+for (let frame = 0; frame < 40; frame++) {
+  instances.draw([], camera, sun);
+}
+
+expect(
+  'with none drawn in them for a while, the batches are let go of',
+  [
+    kept.length > 0,
+    letGo,
+    instances.batches.size,
+    instances.group.children.length,
+  ],
+  [true, kept.length, 0, 0]
 );
 
 instances.dispose();
