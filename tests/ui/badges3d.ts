@@ -4,8 +4,10 @@
 //    marker's in the order they're made;
 //  - each as its sprite stands and is drawn: where, how big on the screen, the point of it that stands there, its
 //    colour and how solid, faded or not, and its picture;
-//  - their pictures in one atlas, each with room round it, the atlas copied afresh when one doesn't fit and grown when
-//    they still don't;
+//  - their pictures in one atlas, each with room round it and its edges drawn on into it, sent again as it changes; the
+//    atlas copied afresh when one doesn't fit or it holds many no longer drawn, and grown when they still don't fit or
+//    would take most of it; at its most, holding as many as fit and not copied afresh again for the same; a label it
+//    can't hold drawn as a sprite of its own;
 //  - all drawn in one draw call, over all as the sprites were, after the cloud and the smoke, before the pointer.
 
 import {
@@ -400,6 +402,12 @@ expect(
     drawnOn.filter(
       ({ call, args }) => call === 'drawImage' && args.length === 9
     ).length,
+    drawnOn
+      .filter(
+        ({ call, args }) =>
+          call === 'drawImage' && args.length === 9 && args[0] === first
+      )
+      .map(({ args }) => args.slice(1)),
     [plainU, plainV, plainWidth, plainHeight].map((n) => Math.round(n * 1e4)),
     px(atlas.cellOf(first)!, 1024, 256),
     px(atlas.cellOf(second)!, 1024, 256),
@@ -419,6 +427,18 @@ expect(
     ],
     // Eight edges and corners for each.
     16,
+    // Each a strip of its edge, or its corner's pixel, stretched over the room beside it: its sides, its top and
+    //  bottom, its corners.
+    (([w, h]) => [
+      [0, 0, 1, h, 0, 28, 4, h],
+      [w - 1, 0, 1, h, 4 + w, 28, 4, h],
+      [0, 0, w, 1, 4, 24, w, 4],
+      [0, h - 1, w, 1, 4, 28 + h, w, 4],
+      [0, 0, 1, 1, 0, 24, 4, 4],
+      [w - 1, 0, 1, 1, 4 + w, 24, 4, 4],
+      [0, h - 1, 1, 1, 0, 28 + h, 4, 4],
+      [w - 1, h - 1, 1, 1, 4 + w, 28 + h, 4, 4],
+    ])([first.width, first.height]),
     [Math.round((12 / 1024) * 1e4), Math.round((1 - 12 / 256) * 1e4), 0, 0],
     [4, 28, first.width, first.height],
     [4 + first.width + 8, 28, second.width, second.height],
@@ -436,6 +456,23 @@ expect(
   'held again with nothing new, nothing’s copied in and it isn’t sent again',
   [drawnOn.length, atlas.texture?.version === version],
   [0, true]
+);
+
+// A label more, with room for it: copied in alone, and sent again.
+const third = label('Roma  4');
+
+drawnOn.length = 0;
+atlas.hold([first, second, third]);
+
+expect(
+  'a label more, with room for it: copied in alone, the rest left as they are, and the atlas sent again',
+  [
+    drawnOn.filter(({ call }) => call === 'clearRect').length,
+    drawnOn.filter(({ call }) => call === 'drawImage').length,
+    atlas.cellOf(third) !== null && atlas.cellOf(first) !== null,
+    (atlas.texture?.version ?? 0) > version,
+  ],
+  [0, 9, true, true]
 );
 
 // More than the atlas holds at its first size: copied afresh, those held now alone, then on an atlas twice as tall.
@@ -473,6 +510,92 @@ expect(
   [true, true, null, false, true]
 );
 
+// Labels as wide as a row: one to a row, 48 px tall with the room round it, under the white block's row of 24.
+const wide = (index: number): BadgeImage =>
+    label(`${String(index).padStart(3, '0')}${'W'.repeat(94)}`),
+  heightOf = (held: BadgeAtlas): number =>
+    (held.texture?.image as { height: number } | undefined)?.height ?? 0;
+
+const roomy = new BadgeAtlas(),
+  fewWide = [0, 1, 2].map(wide);
+
+drawnOn.length = 0;
+roomy.hold(fewWide);
+
+const roomyHeight = heightOf(roomy);
+
+const nextWide = [3, 4, 5, 6].map(wide);
+
+drawnOn.length = 0;
+roomy.hold(nextWide);
+
+expect(
+  'copied afresh, an atlas whose rows would take most of it is grown, so a label more doesn’t copy it all again',
+  [
+    roomyHeight,
+    drawnOn.filter(({ call }) => call === 'clearRect').length > 0,
+    heightOf(roomy),
+    nextWide.every((image) => roomy.cellOf(image) !== null),
+    fewWide.every((image) => roomy.cellOf(image) === null),
+  ],
+  // Four rows of 48 under the white block's 24 take 216 of 256: grown, rather than kept nearly full.
+  [256, true, 512, true, true]
+);
+
+// More than it holds at its most, behind one too wide to hold at all.
+const crowded = new BadgeAtlas(),
+  tooWide = label('X'.repeat(110)),
+  hundred = Array.from({ length: 100 }, (_, index) => wide(index));
+
+drawnOn.length = 0;
+crowded.hold([tooWide, ...hundred]);
+
+const crowdedHeight = heightOf(crowded),
+  heldOfHundred = hundred.filter((image) => crowded.cellOf(image) !== null),
+  crowdedVersion = crowded.texture?.version;
+
+drawnOn.length = 0;
+crowded.hold([tooWide, ...hundred]);
+
+const againDrawn = drawnOn.length,
+  againVersion = crowded.texture?.version;
+
+drawnOn.length = 0;
+crowded.hold(hundred.slice(1));
+
+expect(
+  'more than it holds at its most: as many as fit held, none stopped by one too wide to hold at all; asked for the same again, not copied afresh nor sent again; asked for others, copied afresh',
+  [
+    crowdedHeight,
+    crowded.cellOf(tooWide),
+    // Rows of 48 under the white block's 24, in 4,096.
+    heldOfHundred.length,
+    heldOfHundred.every((image, index) => image === hundred[index]),
+    againDrawn,
+    againVersion === crowdedVersion,
+    drawnOn.filter(({ call }) => call === 'clearRect').length,
+  ],
+  [4096, null, Math.floor((4096 - 24) / 48), true, 0, true, 1]
+);
+
+// Labels no marker shows any more: once many more are held than drawn, copied afresh with those drawn.
+const sweeping = new BadgeAtlas(),
+  shown = Array.from({ length: 80 }, (_, index) => label(`Town ${index}`));
+
+sweeping.hold(shown);
+drawnOn.length = 0;
+sweeping.hold(shown.slice(0, 5));
+
+expect(
+  'once many more labels are held than drawn, the atlas is copied afresh with those drawn',
+  [
+    drawnOn.filter(({ call }) => call === 'clearRect').length,
+    shown.slice(0, 5).every((image) => sweeping.cellOf(image) !== null),
+    shown.slice(5).every((image) => sweeping.cellOf(image) === null),
+  ],
+  [1, true, true]
+);
+
 // All drawn together.
 const badges = new Badges(BADGES),
   { mesh } = badges;
@@ -499,14 +622,63 @@ const count = badges.gather(world, camera),
     mesh.geometry.getAttribute('anchor').array.slice(0, count * 3)
   ).map((n) => Math.round(n * 1e4) / 1e4);
 
+const written = (name: string, width: number): number[] =>
+    Array.from(
+      mesh.geometry.getAttribute(name).array.slice(0, count * width)
+    ).map((n) => Math.round(n * 1e4) / 1e4),
+  expected = badgeInstances(badgeSprites(world), camera, (image) =>
+    image === null ? badges.atlas.plain : badges.atlas.cellOf(image)
+  ),
+  rounded = (values: readonly number[]): number[] =>
+    values.map((n) => Math.round(n * 1e4) / 1e4);
+
 expect(
-  'gathered, each badge one instance, where it stands, in the order it’s drawn',
-  [count, drawnInstances, anchors],
+  'gathered, each badge one instance, where it stands, how big, the point of it there, its colour and its cell, in the order it’s drawn, drawn from the atlas',
+  [
+    count,
+    drawnInstances,
+    anchors,
+    written('size', 2),
+    written('centre', 2),
+    written('colour', 4),
+    written('cell', 4),
+    badges.material.uniforms['atlas']!.value === badges.atlas.texture &&
+      badges.atlas.texture !== null,
+  ],
   [
     10,
     10,
     instances.flatMap(({ at }) => at.map((n) => Math.round(n * 1e4) / 1e4)),
+    rounded(expected.flatMap(({ size }) => size)),
+    rounded(expected.flatMap(({ centre }) => centre)),
+    rounded(expected.flatMap(({ colour }) => colour)),
+    rounded(expected.flatMap(({ cell }) => cell)),
+    true,
   ]
+);
+
+// A badge whose label's too wide for the atlas: drawn as a sprite of its own, as they all were, the rest together.
+const overflowing = new Group(),
+  long = drawMarker(kit, {
+    city: null,
+    unit: unit({ status: 'X'.repeat(110) }),
+  }),
+  [longFlag, longLabel] = spritesIn(long);
+
+overflowing.add(long);
+overflowing.updateMatrixWorld(true);
+
+expect(
+  'a badge whose label won’t fit in the atlas is drawn as a sprite of its own, on the camera’s layer too; the rest together',
+  [
+    badges.gather(overflowing, camera),
+    longLabel!.layers.isEnabled(0),
+    longLabel!.layers.isEnabled(BADGE_LAYER),
+    longFlag!.layers.isEnabled(0),
+    // Not grown for it, as it would never fit.
+    heightOf(badges.atlas) < 4096,
+  ],
+  [1, true, true, false, true]
 );
 
 // More than there's room for at first.

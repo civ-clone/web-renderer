@@ -1150,8 +1150,11 @@ Each is looked up by its type name in the model set.
     sprite: the same size on the screen, over all, in the haze. They're in the order three.js would sort them, far
     before near, and a marker's in the order they're made.
   - The labels' pictures are copied into one atlas, each with its edges drawn round it, so it's drawn as its own picture
-    was. It's copied afresh, of those drawn, when one doesn't fit, and grown when they still don't. Flags and bars are
-    drawn from a white block in it.
+    was. Flags and bars are drawn from a white block in it.
+  - It's copied afresh with only the labels drawn when one doesn't fit, or when it holds many that aren't drawn any
+    more. It's grown when they still don't fit, or when they'd take most of it, up to 4,096 px tall: about 600 city
+    names. Past that it holds as many as fit, and isn't copied afresh again until the labels drawn change. A label it
+    can't hold is drawn as a sprite of its own, as they all were.
   - The pointer over the unit awaiting orders stays a sprite of its own, drawn after them all.
   - On a late game (a Civ2 save at turn 271, on a 52 × 130 map), it takes 302 draw calls a frame off for each copy of
     the world drawn. At the closest zoom a frame drops from 463 calls to 162, and at the default from 1,491 to 888.

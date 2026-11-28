@@ -760,7 +760,8 @@ export const createStage: StageFactory = (
     }),
     markersGroup = new Group(),
     kit = new MarkerKit(),
-    // What stands over units and cities in `markersGroup`, drawn together (`badges.ts`): gathered as each frame's drawn.
+    // What stands over units and cities in `markersGroup`, drawn together (`badges.ts`): gathered as each frame's
+    //  drawn.
     badges = new Badges(BADGES),
     // What each square yields, over the land at every copy of the world, when they're shown.
     yieldsGroup = new Group(),
@@ -811,6 +812,8 @@ export const createStage: StageFactory = (
   renderer.shadowMap.type = PCFSoftShadowMap;
 
   scene.background = new Color(SKY);
+  // Where everything is, worked out as each frame's drawn (`render`), before the badges are gathered, not again.
+  scene.matrixWorldAutoUpdate = false;
   // Haze into the distance (§9.3), so the land fades into the sky rather than ending at an edge: how far follows the
   //  camera's distance.
   scene.fog = fog;
@@ -1282,10 +1285,11 @@ export const createStage: StageFactory = (
 
   return {
     render: (): void => {
-      thinPlants();
-      // Where the badges are now, as three.js would work it out to draw them, and where the camera is.
-      markersGroup.updateMatrixWorld();
+      // Where everything is now, once, here rather than as three.js draws (`matrixWorldAutoUpdate`): the plants are
+      //  thinned and the badges gathered by it. And where the camera is, which three.js works out itself as well.
+      scene.updateMatrixWorld();
       camera.updateMatrixWorld();
+      thinPlants();
       badges.gather(markersGroup, camera);
       renderer.render(scene, camera);
     },

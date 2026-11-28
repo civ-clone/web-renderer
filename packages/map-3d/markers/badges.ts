@@ -11,6 +11,7 @@
 import {
   Camera,
   CanvasTexture,
+  DynamicDrawUsage,
   InstancedBufferAttribute,
   InstancedBufferGeometry,
   Mesh,
@@ -105,7 +106,19 @@ const ATLAS_WIDTH = 1024,
   ATLAS_MOST = 4096,
   PAD = 4,
   // The white block a plain badge is drawn from: big enough that its smaller copies' middles stay white.
-  WHITE = 16;
+  WHITE = 16,
+  // Copied afresh, how much of it may be taken before it's grown, so a label more doesn't copy it all afresh again.
+  FULL = 0.75,
+  // How many pictures it may hold that aren't drawn any more, and twice as many as are, before it's copied afresh
+  //  with those that are: labels no marker shows any more, let go of by the kit (`MarkerKit#sweep`).
+  UNDRAWN = 64;
+
+/** Whether a picture `width` by `height` fits in the atlas at the most it grows to, with room round it. */
+const fitsAtAll = ({ width, height }: { width: number; height: number }) =>
+  width > 0 &&
+  height > 0 &&
+  width + PAD * 2 <= ATLAS_WIDTH &&
+  height + PAD * 2 <= ATLAS_MOST - (WHITE + PAD * 2);
 
 /**
  * Where pictures go in an atlas `width` wide and `height` tall, each `pad` from the next and from the edges: in rows,
@@ -152,11 +165,17 @@ export class Shelves {
 
     return at;
   }
+
+  /** How far down its rows reach, in px. */
+  get used(): number {
+    return this.#below;
+  }
 }
 
 /**
  * The labels' pictures, in one texture: each copied in once, as it's first drawn, and all copied in afresh, of those
- *  drawn now, when one doesn't fit, the atlas growing if they don't. A white block for plain badges.
+ *  drawn now, when one doesn't fit, the atlas growing if they don't, up to its most (`ATLAS_MOST`). A white block for
+ *  plain badges.
  */
 export class BadgeAtlas {
   #canvas: HTMLCanvasElement | null = null;
@@ -165,6 +184,8 @@ export class BadgeAtlas {
   #cells = new Map<BadgeImage, Cell>();
   #plain: Cell = [0, 0, 0, 0];
   #changed = false;
+  // The pictures it last couldn't hold all of at its most: held as many as fit, it isn't copied afresh again for them.
+  #short: Set<BadgeImage> | null = null;
 
   /** The atlas's texture: made afresh as it grows. */
   get texture(): CanvasTexture | null {
@@ -184,24 +205,50 @@ export class BadgeAtlas {
   }
 
   /**
-   * Has `images` in the atlas: those not in it copied in, or, where one doesn't fit, these alone copied in afresh,
-   *  on an atlas twice as tall where they still don't, up to its most. Those that never fit aren't drawn.
+   * Has `images` in the atlas, as far as they fit: those not in it copied in, none stopping the rest. Where any doesn't
+   *  fit, or it holds many more than these, these alone are copied in afresh, on an atlas twice as tall where they
+   *  don't fit or take most of it, up to its most. Where they don't all fit at its most, it holds as many as do, and
+   *  isn't copied afresh again till the pictures asked for change. One too big to fit at all is never held.
    */
   hold(images: Iterable<BadgeImage>): void {
     this.#ready();
 
-    const wanted = [...new Set(images)];
+    const wanted = [...new Set(images)].filter(fitsAtAll),
+      missing = wanted.filter(
+        (image) => !this.#cells.has(image) && !this.#add(image)
+      ),
+      undrawn =
+        this.#cells.size > Math.max(UNDRAWN, wanted.length * 2) &&
+        this.#cells.size > wanted.length + UNDRAWN,
+      short = this.#short;
 
-    if (wanted.every((image) => this.#cells.has(image) || this.#add(image))) {
+    if (
+      (missing.length === 0 && !undrawn) ||
+      (missing.length > 0 &&
+        short !== null &&
+        short.size === wanted.length &&
+        wanted.every((image) => short.has(image)))
+    ) {
       this.#finish();
 
       return;
     }
 
-    for (let height = this.#shelves.height; height <= ATLAS_MOST; height *= 2) {
+    this.#short = null;
+
+    for (let height = this.#shelves.height; ; height *= 2) {
       this.#start(height);
 
-      if (wanted.every((image) => this.#add(image))) {
+      const left = wanted.filter((image) => !this.#add(image));
+
+      if (
+        height >= ATLAS_MOST ||
+        (left.length === 0 && this.#shelves.used <= height * FULL)
+      ) {
+        if (left.length > 0) {
+          this.#short = new Set(wanted);
+        }
+
         break;
       }
     }
@@ -214,6 +261,7 @@ export class BadgeAtlas {
     this.#texture = null;
     this.#canvas = null;
     this.#cells.clear();
+    this.#short = null;
   }
 
   // Made as it's first wanted: the page's canvas.
@@ -428,8 +476,9 @@ export class Badges {
   }
 
   /**
-   * Draws the badges in `root` (`gatherBadges`) as `camera` sees them, their pictures in the atlas. The world's
-   *  matrices as they are: the caller works them out first.
+   * Draws the badges in `root` (`badgeSprites`) as `camera` sees them, their pictures in the atlas. One whose picture
+   *  doesn't fit in it is drawn as a sprite of its own, as they all were, on the camera's layer too, till it does. The
+   *  world's matrices as they are: the caller works them out first.
    */
   gather(root: Object3D, camera: Camera): number {
     const sprites = badgeSprites(root);
@@ -441,6 +490,16 @@ export class Badges {
         return image === null ? [] : [image];
       })
     );
+
+    sprites.forEach((sprite) => {
+      const image = imageOf(sprite);
+
+      if (image === null || this.atlas.cellOf(image) !== null) {
+        sprite.layers.disable(0);
+      } else {
+        sprite.layers.enable(0);
+      }
+    });
 
     const badges = badgeInstances(sprites, camera, (image) =>
       image === null ? this.atlas.plain : this.atlas.cellOf(image)
@@ -477,7 +536,11 @@ export class Badges {
     ).forEach(([name, width]) =>
       geometry.setAttribute(
         name,
-        new InstancedBufferAttribute(new Float32Array(room * width), width)
+        // Written afresh as each frame's drawn.
+        new InstancedBufferAttribute(
+          new Float32Array(room * width),
+          width
+        ).setUsage(DynamicDrawUsage)
       )
     );
     geometry.instanceCount = 0;
@@ -516,8 +579,14 @@ export class Badges {
       (cell.array as Float32Array).set(badge.cell, index * 4);
     });
 
+    // Sent again as far as they're drawn.
     [anchor, size, centre, colour, cell].forEach((changed) => {
-      changed.needsUpdate = true;
+      changed.clearUpdateRanges();
+
+      if (badges.length > 0) {
+        changed.addUpdateRange(0, badges.length * changed.itemSize);
+        changed.needsUpdate = true;
+      }
     });
     geometry.instanceCount = badges.length;
   }

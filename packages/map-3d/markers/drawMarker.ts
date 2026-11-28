@@ -642,7 +642,8 @@ const flagText = (unit: UnitMarker): string =>
 
 /**
  * The order what stands over units and cities is drawn in: after the sea, the smog, the cloud and the smoke
- *  (`water.ts`), so none covers it; and among themselves the far before the near (`badges.ts`), but the pointer over all.
+ *  (`water.ts`), so none covers it; and among themselves the far before the near (`badges.ts`), but the pointer over
+ *  all.
  */
 export const BADGES = 3,
   POINTED = 4;
