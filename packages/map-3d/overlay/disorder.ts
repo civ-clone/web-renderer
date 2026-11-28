@@ -48,8 +48,8 @@ export const DISORDER = {
   billow: 0.018,
   // How solid the first puff is, and how much less each over it is, so the smoke thins as it rises and a unit behind
   //  it shows through.
-  firstAlpha: 0.85,
-  alphaFalls: 0.06,
+  firstAlpha: 0.9,
+  alphaFalls: 0.05,
   // With no roof behind the city's middle: a fire this far behind its middle, on the ground behind its plaza.
   behindPlaza: 0.2,
 } as const;

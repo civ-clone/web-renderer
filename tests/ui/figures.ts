@@ -69,6 +69,7 @@ import Water, {
   Clouds,
   SEA_ORDER,
   SMOG_ORDER,
+  SMOKE_ORDER,
 } from '@civ-clone/ui-map-3d/water';
 import {
   Part,
@@ -924,14 +925,15 @@ expect(
 );
 
 expect(
-  'what’s see-through is drawn in order: the sea, then smog over the land, then the cloud, then what stands over units',
+  'what’s see-through is drawn in order: the sea, then smog over the land, then the cloud, then smoke rising from a city, then what stands over units',
   [
     sea.mesh.renderOrder === SEA_ORDER,
     cloud.mesh.renderOrder === CLOUD_ORDER,
     SEA_ORDER < SMOG_ORDER && SMOG_ORDER < CLOUD_ORDER,
-    badges.every((sprite) => sprite.renderOrder > SMOG_ORDER),
+    CLOUD_ORDER < SMOKE_ORDER,
+    badges.every((sprite) => sprite.renderOrder > SMOKE_ORDER),
   ],
-  [true, true, true, true]
+  [true, true, true, true, true]
 );
 cloud.dispose();
 sea.dispose();

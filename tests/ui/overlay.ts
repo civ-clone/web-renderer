@@ -31,7 +31,7 @@ import overlayMesh, {
   FARMSTEAD_COLOURS,
   FORTRESS,
   FORTRESS_COLOURS,
-  HAZY_SHADE,
+  SMOKE_SHADE,
   SUN_FROM,
   MINE_COLOURS,
   RUNWAY,
@@ -3102,7 +3102,8 @@ const landOf = (
 //  its size has, so its square's laid again as it goes into disorder and out of it. Laid, at each size, as many fires
 //  as that on roofs behind its middle, each flame rising from the eaves of the roof laid there, and smoke over each
 //  fire's flames, none in them, and over every roof it passes, every point of them keeping the room its buildings leave
-//  its units; the smoke see-through, in the haze, shaded by the sun and thinning as it rises; none out of disorder.
+//  its units; the smoke see-through, a mesh of its own, shaded by the sun and thinning as it rises; none out of
+//  disorder.
 {
   const tileOf = (size: number, disorder: boolean) =>
       ({
@@ -3144,29 +3145,31 @@ const landOf = (
 
       return found;
     },
-    // Each point of the haze, back on the ground and its height, with its colour and how solid it is.
-    hazeOf = (overlay: SquareOverlay) => {
-      const { haze } = overlayMesh(16, 0, [{ overlay, place: at }]),
+    // Each point of the smoke, back on the ground and its height, with its colour and how solid it is.
+    smokeOf = (overlay: SquareOverlay) => {
+      const { smoke } = overlayMesh(16, 0, [{ overlay, place: at }]),
         found: { at: [number, number, number]; rgba: number[] }[] = [];
 
-      for (let point = 0; point * 3 < haze.positions.length; point++) {
+      for (let point = 0; point * 3 < smoke.positions.length; point++) {
         found.push({
           at: [
-            haze.positions[point * 3]! + 16,
-            haze.positions[point * 3 + 1]!,
-            haze.positions[point * 3 + 2]!,
+            smoke.positions[point * 3]! + 16,
+            smoke.positions[point * 3 + 1]!,
+            smoke.positions[point * 3 + 2]!,
           ],
-          rgba: [...haze.colours.slice(point * 4, point * 4 + 4)],
+          rgba: [...smoke.colours.slice(point * 4, point * 4 + 4)],
         });
       }
 
       return found;
     },
+    hazeOf = (overlay: SquareOverlay) =>
+      overlayMesh(16, 0, [{ overlay, place: at }]).haze.positions.length,
     // How solid a puff of smoke can be, from the lowest to the highest.
     alphas = SMOKE.map(
       (colour, puff) => DISORDER.firstAlpha - puff * DISORDER.alphaFalls
     ),
-    // How light a point of the haze is, as a share of one of the smoke's colours, the same for each part of it: none if
+    // How light a point of the smoke is, as a share of one of its colours, the same for each part of it: none if
     //  it's no smoke's colour.
     shadeOf = ([r, g, b]: number[]) =>
       SMOKE.map((css) => new Color(css))
@@ -3178,16 +3181,27 @@ const landOf = (
         ),
     // At `size`, rioting: its plan's columns, how many roofs burn, whether each flame rises from the eaves of the roof
     //  laid under it, behind the middle, whether there's smoke over each fire's flames and none in them, and over every
-    //  roof it passes, whether all of it keeps its units' room, and whether the smoke's all in the haze, none of it
-    //  laid solid, as solid as a puff can be, and shaded: no lighter than its colour and no darker than the shade away
-    //  from the sun, some of it nearly as light as its colour, facing the sun, and some as dark, away from it.
+    //  roof it passes, whether all of it keeps its units' room, and whether the smoke's all in a mesh of its own, none
+    //  of it laid solid or in the haze, every puff's solidness there, thinner the higher, and shaded: no lighter than
+    //  its colour and no darker than the shade away from the sun, some of it nearly as light as its colour, some as
+    //  dark, and its light side toward the sun.
     laidAt = (size: number) => {
       const rioting = overlayFor(tileOf(size, true), [])!,
         { lots } = sprawl(at, rioting.city!, units),
         flames = pointsOf(rioting, FLAMES),
-        haze = hazeOf(rioting),
-        smoke = haze.map(({ at: point }) => point),
-        shades = haze.map(({ rgba }) => shadeOf(rgba)),
+        laidSmoke = smokeOf(rioting),
+        smoke = laidSmoke.map(({ at: point }) => point),
+        shades = laidSmoke.map(({ rgba }) => shadeOf(rgba)),
+        // How high its points are on average at each of the puffs' solidness, from the most solid.
+        heights = alphas.map((solid) => {
+          const points = laidSmoke.filter(
+            ({ rgba: [, , , alpha] }) => Math.abs(alpha! - solid) < 1e-6
+          );
+
+          return (
+            points.reduce((sum, { at: [, y] }) => sum + y, 0) / points.length
+          );
+        }),
         roofs = pointsOf(rioting, ROOFS),
         // The lot a point's over: within its roof's eaves, its square, turned as it faces.
         lotOver = ([u, , v]: [number, number, number]) =>
@@ -3254,37 +3268,47 @@ const landOf = (
             Math.hypot(u - units[0], v - units[1]) >= DISORDER_ROOM - 1e-6
         ),
         pointsOf(rioting, SMOKE).length === 0 &&
-          haze.every(({ rgba: [, , , alpha] }) =>
+          hazeOf(rioting) === 0 &&
+          laidSmoke.every(({ rgba: [, , , alpha] }) =>
             alphas.some((solid) => Math.abs(alpha! - solid) < 1e-6)
+          ) &&
+          heights.every(
+            (height, puff) => puff === 0 || height > heights[puff - 1]!
           ) &&
           shades.every(
             (shade) =>
               shade !== undefined &&
-              shade >= HAZY_SHADE - 1e-4 &&
+              shade >= SMOKE_SHADE - 1e-4 &&
               shade <= 1 + 1e-4
           ) &&
           shades.some((shade) => shade! > 0.95) &&
-          shades.some((shade) => shade! < HAZY_SHADE + 1e-4) &&
-          // Its light side toward the sun: from the middle of its darkest points to the middle of its lightest, each
-          //  puff the same shape, so as many of each from every one.
-          [0, 1, 2]
-            .map((axis) => {
-              const middle = (lit: boolean) => {
-                const points = smoke.filter((point, index) =>
-                  lit
-                    ? shades[index]! > 0.9
-                    : shades[index]! < HAZY_SHADE + 1e-4
-                );
+          shades.some((shade) => shade! < SMOKE_SHADE + 1e-4) &&
+          // Its light side toward the sun: the way from the middle of its darkest points to the middle of its
+          //  lightest, each puff the same shape, so as many of each from every one, within a few degrees of the sun's.
+          (() => {
+            const toward = [0, 1, 2].map((axis) => {
+                const middle = (lit: boolean) => {
+                  const points = smoke.filter((point, index) =>
+                    lit
+                      ? shades[index]! > 0.9
+                      : shades[index]! < SMOKE_SHADE + 1e-4
+                  );
 
-                return (
-                  points.reduce((sum, point) => sum + point[axis]!, 0) /
-                  points.length
-                );
-              };
+                  return (
+                    points.reduce((sum, point) => sum + point[axis]!, 0) /
+                    points.length
+                  );
+                };
 
-              return (middle(true) - middle(false)) * SUN_FROM[axis]!;
-            })
-            .reduce((sum, along) => sum + along, 0) > 0,
+                return middle(true) - middle(false);
+              }),
+              along = toward.reduce(
+                (sum, part, axis) => sum + part * SUN_FROM[axis]!,
+                0
+              );
+
+            return along / Math.hypot(...toward) / Math.hypot(...SUN_FROM);
+          })() > 0.95,
       ];
     },
     calm = overlayFor(tileOf(9, false), [])!,
@@ -3298,7 +3322,7 @@ const landOf = (
       laidAt(9),
       calm.city?.disorder,
       JSON.stringify(calm) !== JSON.stringify(rioting),
-      pointsOf(calm, FLAMES).length + hazeOf(calm).length,
+      pointsOf(calm, FLAMES).length + smokeOf(calm).length,
     ],
     [
       [1, 1, true, true, true, true],

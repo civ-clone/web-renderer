@@ -3,14 +3,15 @@
 //  - roads, railroads and fields are draped over the land, sampled along it, a little above it; where a road, railroad
 //    or runway crosses a river's water, it's on a bridge, a little over it, with walls either side;
 //  - pollution is smog, a see-through haze draped higher over it, a mesh of its own;
+//  - a city in civil disorder's smoke is see-through too, a mesh of its own again;
 //  - mines, fortresses, airbases, specials and huts are small solids standing on it, specials at sea on the water;
 //  - a city's lot is its sprawl, and a city's houses spill onto its neighbours' squares as it grows;
 //  - what stands on a square stands away from its middle, where a unit stands, each at a place of its own seeded from
 //    the square, so they don't line up from square to square.
 //
 // A chunk's squares are one mesh, their colours in its vertices: one draw call a chunk at each copy of the world, like
-//  the land's (#1204), and one more for its smog, where it has any. Its points are relative to the chunk's corner, as
-//  the land's are.
+//  the land's (#1204), and one more each for its smog and its smoke, where it has any. Its points are relative to the
+//  chunk's corner, as the land's are.
 
 import {
   BoxGeometry,
@@ -116,9 +117,10 @@ export const roomOf = (place: OverlayPlace, kind: PlantKind): number => {
 
 /**
  * A chunk's overlay as three.js takes it: triangles, each point's normal and colour, relative to its corner; its haze,
- *  see-through, as smog over pollution: triangles, each point's colour and how solid it is (four numbers a point); and
- *  the plants a set of models draws, by the model: where each stands, relative to the corner, how tall it's drawn,
- *  which way it's turned, and its rank for thinning them (`PLANT_NUMBERS` numbers each).
+ *  see-through, as smog over pollution, and its smoke, see-through too, rising from a city in civil disorder: each
+ *  triangles, each point's colour and how solid it is (four numbers a point); and the plants a set of models draws, by
+ *  the model: where each stands, relative to the corner, how tall it's drawn, which way it's turned, and its rank for
+ *  thinning them (`PLANT_NUMBERS` numbers each).
  */
 export type OverlayMesh = {
   u: number;
@@ -127,6 +129,7 @@ export type OverlayMesh = {
   normals: Float32Array;
   colours: Float32Array;
   haze: { positions: Float32Array; colours: Float32Array };
+  smoke: { positions: Float32Array; colours: Float32Array };
   plants: { [model: string]: Float32Array };
 };
 
@@ -137,13 +140,14 @@ export type OverlayMesh = {
  */
 export const PLANT_NUMBERS = 6;
 
-// Triangles as they're made: three numbers a point for each; the haze's, its colours four a point; and the plants a
-//  set draws, `PLANT_NUMBERS` numbers each, by the model.
+// Triangles as they're made: three numbers a point for each; the haze's and the smoke's, their colours four a point;
+//  and the plants a set draws, `PLANT_NUMBERS` numbers each, by the model.
 export type Soup = {
   positions: number[];
   normals: number[];
   colours: number[];
   haze: { positions: number[]; colours: number[] };
+  smoke: { positions: number[]; colours: number[] };
   plants: Map<string, number[]>;
 };
 
@@ -153,6 +157,7 @@ export const soup = (): Soup => ({
   normals: [],
   colours: [],
   haze: { positions: [], colours: [] },
+  smoke: { positions: [], colours: [] },
   plants: new Map(),
 });
 
@@ -416,17 +421,18 @@ const trianglesOf = (
   return made;
 };
 
-// Worked in, a solid at a time.
 /**
- * Where the sun is, from what it lights: the stage puts its light there (`stage.ts`), and what's laid in the haze,
- *  which takes no light, is shaded as it would light it.
+ * Where the sun is, from what it lights: the stage puts its light there (`stage.ts`), and smoke, which takes no light,
+ *  is shaded as it would light it.
  */
 export const SUN_FROM = [30, 40, 20] as const;
 
 const SUN_TOWARD = new Vector3(...SUN_FROM).normalize();
 
-/** How light what's laid in the haze is on its side away from the sun, and edge on to it, as a share of its colour. */
-export const HAZY_SHADE = 0.55;
+/** How light smoke is on its side away from the sun, and edge on to it, as a share of its colour. */
+export const SMOKE_SHADE = 0.55;
+
+// Worked in, a solid at a time.
 
 const MATRIX = new Matrix4(),
   NORMALS = new Matrix3(),
@@ -1019,10 +1025,12 @@ class Layer {
   }
 
   /**
-   * A `shape` laid see-through in the haze, as `solid` lays one, as solid as `alpha`. The haze takes no light, so it's
-   *  shaded here as the sun lights the land: fully on its side facing it, darker away from it, so it keeps its shape.
+   * A `shape` laid as smoke, see-through, as `solid` lays one, as solid as `alpha`: its front faces drawn after what's
+   *  solid and the cloud, writing no depth (`stage.ts`), so what's behind it shows through it. Smoke takes no light, so
+   *  it's shaded here as the sun lights the land: fully on its side facing it, darker away from it, so it keeps its
+   *  shape.
    */
-  hazy(
+  smoke(
     shape: BufferGeometry,
     at: readonly [number, number, number],
     size: readonly [number, number, number],
@@ -1038,7 +1046,7 @@ class Layer {
       e = matrix.elements,
       n = NORMALS.getNormalMatrix(matrix).elements,
       [r, g, b] = colourOf(css),
-      haze = this.soup.haze;
+      smoke = this.soup.smoke;
 
     for (let at = 0; at < positions.length; at += 3) {
       const x = positions[at]!,
@@ -1053,14 +1061,14 @@ class Layer {
         facing =
           (tx * SUN_TOWARD.x + ty * SUN_TOWARD.y + tz * SUN_TOWARD.z) /
           (Math.hypot(tx, ty, tz) || 1),
-        lit = HAZY_SHADE + (1 - HAZY_SHADE) * Math.max(0, facing);
+        lit = SMOKE_SHADE + (1 - SMOKE_SHADE) * Math.max(0, facing);
 
-      haze.positions.push(
+      smoke.positions.push(
         e[0]! * x + e[4]! * y + e[8]! * z + e[12]!,
         e[1]! * x + e[5]! * y + e[9]! * z + e[13]!,
         e[2]! * x + e[6]! * y + e[10]! * z + e[14]!
       );
-      haze.colours.push(r * lit, g * lit, b * lit, alpha);
+      smoke.colours.push(r * lit, g * lit, b * lit, alpha);
     }
   }
 
@@ -1728,8 +1736,8 @@ const city = (layer: Layer, plan: CityPlan): void => {
   lots.forEach((lot) => house(layer, lot));
 
   // In civil disorder: fires on some of its roofs behind its middle, and smoke rising from them, leaning away from its
-  //  units (`disorder.ts`), each on the house that's laid there; the smoke see-through, in the haze, so a unit behind
-  //  it shows, whichever way the camera looks.
+  //  units (`disorder.ts`), each on the house that's laid there; the smoke see-through, so a unit behind it shows,
+  //  whichever way the camera looks.
   if ((plan.disorder ?? 0) > 0) {
     disorderPieces({
       centre: [u, v],
@@ -1745,7 +1753,7 @@ const city = (layer: Layer, plan: CityPlan): void => {
     }).forEach(({ kind, at, size, colour, alpha }) =>
       kind === 'fire'
         ? layer.solid(cone, at, size, colour)
-        : layer.hazy(sphere, at, size, colour, alpha)
+        : layer.smoke(sphere, at, size, colour, alpha)
     );
   }
 };
@@ -4516,12 +4524,17 @@ export const meshOf = (u: number, v: number, laid: Soup): OverlayMesh => {
     positions[point + 2] = positions[point + 2]! - v;
   }
 
-  const haze = new Float32Array(laid.haze.positions);
+  // The haze's and the smoke's points, relative to the corner too.
+  const relative = (points: number[]): Float32Array => {
+    const moved = new Float32Array(points);
 
-  for (let point = 0; point < haze.length; point += 3) {
-    haze[point] = haze[point]! - u;
-    haze[point + 2] = haze[point + 2]! - v;
-  }
+    for (let point = 0; point < moved.length; point += 3) {
+      moved[point] = moved[point]! - u;
+      moved[point + 2] = moved[point + 2]! - v;
+    }
+
+    return moved;
+  };
 
   return {
     u,
@@ -4529,7 +4542,14 @@ export const meshOf = (u: number, v: number, laid: Soup): OverlayMesh => {
     positions,
     normals: new Float32Array(laid.normals),
     colours: new Float32Array(laid.colours),
-    haze: { positions: haze, colours: new Float32Array(laid.haze.colours) },
+    haze: {
+      positions: relative(laid.haze.positions),
+      colours: new Float32Array(laid.haze.colours),
+    },
+    smoke: {
+      positions: relative(laid.smoke.positions),
+      colours: new Float32Array(laid.smoke.colours),
+    },
     plants: Object.fromEntries(
       [...laid.plants].map(([model, numbers]) => {
         const at = new Float32Array(numbers);
