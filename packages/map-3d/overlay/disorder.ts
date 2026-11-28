@@ -26,8 +26,8 @@ export type Roof = {
 
 /** The numbers a city's disorder is laid by. */
 export const DISORDER = {
-  // A flame's height, rising from its roof's eaves, and how wide it is on the ground behind a city's plaza, where it's
-  //  no roof to fit: on a roof, half as wide as the roof, two side by side, so they stay within it.
+  // A flame's height, rising from its roof's eaves, and how wide it is on the ground behind a city's plaza, where
+  //  there's no roof to fit: on a roof, half as wide as the roof, two side by side, so they stay within it.
   fireHeight: 0.1,
   fireWidth: 0.05,
   // A column's puffs: how many, how far over its flames the first is and how far apart they are up, how big across the
@@ -83,7 +83,16 @@ export const nearestTo = (
 ): number =>
   Math.hypot(piece.at[0] - spot[0], piece.at[2] - spot[1]) - piece.size[0] / 2;
 
-// A column from a fire whose flames, each `width` across, rise from (`u`, `base`, `v`), leaning away from `from`.
+// Where a fire burns, from the city's middle, as a number: the same for the same spot in the city wherever it stands.
+const spotOf = (
+  [u, v]: readonly [number, number],
+  centre: readonly [number, number]
+): number =>
+  Math.round((u - centre[0]) * 4096) * 65537 +
+  Math.round((v - centre[1]) * 4096);
+
+// A column from a fire whose flames, each `width` across, rise from (`u`, `base`, `v`), leaning away from `from`, its
+//  smoke billowing as the fire at `spot` in a city seeded `seed` does, so a fire that stays keeps its shape.
 const column = (
   u: number,
   base: number,
@@ -91,7 +100,7 @@ const column = (
   width: number,
   from: readonly [number, number],
   seed: number,
-  which: number
+  spot: number
 ): DisorderPiece[] => {
   const away = Math.hypot(u - from[0], v - from[1]) || 1,
     leanU = (u - from[0]) / away,
@@ -116,7 +125,7 @@ const column = (
   for (let puff = 0; puff < DISORDER.puffs; puff++) {
     const width = DISORDER.firstSize + puff * DISORDER.puffGrowth,
       lean = DISORDER.lean * puff ** 1.4,
-      thrown = (share(seed, 16 * which + puff) - 0.5) * 2 * DISORDER.billow;
+      thrown = (share(seed + 1 + puff, spot) - 0.5) * 2 * DISORDER.billow;
 
     pieces.push({
       kind: 'smoke',
@@ -140,8 +149,8 @@ const column = (
  * What a city in disorder is laid with, `columns` columns of it (`disorderColumns`): on the middle at `centre`, its
  *  units standing at `units`, its buildings' `roofs`, seeded `seed`, and `ground` the land's height at a point. Fires
  *  only on roofs behind its middle, chosen by its seed, whose whole column keeps `DISORDER_ROOM` from its units and
- *  whose smoke is over every roof it reaches; their flames rising from the eaves, half as wide as the roof each, so
- *  they're within it. With none, one on the ground behind its plaza.
+ *  whose smoke is over every roof it reaches, as far as the roof's corners; their flames rising from the eaves, half
+ *  as wide as the roof each, so they're within it. With none, one on the ground behind its plaza.
  */
 export const disorderPieces = ({
   centre,
@@ -173,22 +182,21 @@ export const disorderPieces = ({
                   piece.at[0] - roof.at[0],
                   piece.at[2] - roof.at[1]
                 ) >=
-                  (piece.size[0] + roof.width) / 2 ||
+                  piece.size[0] / 2 + roof.width * Math.SQRT1_2 ||
                 piece.at[1] - piece.size[1] / 2 >= roof.peak
             ))
       ),
     burning = roofs
-      // Ordered by where each stands, not which lot it is, so a house keeps its fire when a street clears another.
-      .map((roof) => ({
-        roof,
-        order: share(
-          seed,
-          Math.round(roof.at[0] * 4096) * 65537 + Math.round(roof.at[1] * 4096)
-        ),
-      }))
+      // Ordered by where each stands, not which lot it is, so when a street clears some of its lots, a house that's
+      //  left mostly keeps its fire, unless a lot taken further out in place of those cleared ranks ahead of it.
+      .map((roof) => {
+        const spot = spotOf(roof.at, centre);
+
+        return { roof, spot, order: share(seed, spot) };
+      })
       .filter(({ roof }) => roof.at[1] < centre[1])
       .sort((a, b) => a.order - b.order)
-      .map(({ roof }, which) =>
+      .map(({ roof, spot }) =>
         column(
           roof.at[0],
           roof.eaves,
@@ -196,7 +204,7 @@ export const disorderPieces = ({
           roof.width / 2,
           units,
           seed,
-          which
+          spot
         )
       )
       .filter(clear)
@@ -209,7 +217,15 @@ export const disorderPieces = ({
   const u = centre[0],
     v = centre[1] - DISORDER.behindPlaza;
 
-  return column(u, ground(u, v), v, DISORDER.fireWidth, units, seed, 0);
+  return column(
+    u,
+    ground(u, v),
+    v,
+    DISORDER.fireWidth,
+    units,
+    seed,
+    spotOf([u, v], centre)
+  );
 };
 
 export default disorderPieces;

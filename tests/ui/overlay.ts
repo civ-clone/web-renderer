@@ -3097,8 +3097,9 @@ const landOf = (
 
 // A city in civil disorder (spec §7.4, `disorder.ts`), as it's shown, on sloping land: its plan says how many columns
 //  its size has, so its square's laid again as it goes into disorder and out of it. Laid, at each size, as many fires
-//  as that on roofs behind its middle, each flame rising from the eaves of the roof laid there, and smoke over them and
-//  over every roof it passes, every point of them keeping the room its buildings leave its units; none out of disorder.
+//  as that on roofs behind its middle, each flame rising from the eaves of the roof laid there, and smoke over each
+//  fire's flames, none in them, and over every roof it passes, every point of them keeping the room its buildings leave
+//  its units; none out of disorder.
 {
   const tileOf = (size: number, disorder: boolean) =>
       ({
@@ -3110,7 +3111,7 @@ const landOf = (
           civilDisorderDeclared: disorder,
         },
       } as unknown as Parameters<typeof overlayFor>[0]),
-    // Land rising to the south-east, steeply enough that a roof's eaves are well over the ground at its middle.
+    // Land rising to the south-east, steeply enough that a house's highest corner stands well over its middle.
     at = place(17, 3, {
       height: (u, v) => 0.05 + 0.12 * (u - 17) + 0.08 * (v - 3),
     }),
@@ -3141,21 +3142,25 @@ const landOf = (
       return found;
     },
     // At `size`, rioting: its plan's columns, how many roofs burn, whether each flame rises from the eaves of the roof
-    //  laid under it, behind the middle, whether its smoke's over the flames and over every roof it passes, and whether
-    //  all of it keeps its units' room.
+    //  laid under it, behind the middle, whether there's smoke over each fire's flames and none in them, and over every
+    //  roof it passes, and whether all of it keeps its units' room.
     laidAt = (size: number) => {
       const rioting = overlayFor(tileOf(size, true), [])!,
         { lots } = sprawl(at, rioting.city!, units),
         flames = pointsOf(rioting, FLAMES),
         smoke = pointsOf(rioting, SMOKE),
         roofs = pointsOf(rioting, ROOFS),
-        // The lot a point's over: within its roof's eaves, as far as its corners.
+        // The lot a point's over: within its roof's eaves, its square, turned as it faces.
         lotOver = ([u, , v]: [number, number, number]) =>
-          lots.find(
-            (lot) =>
-              Math.hypot(u - lot.at[0], v - lot.at[1]) <=
-              (lot.width * Math.SQRT2) / 2 + 1e-6
-          ),
+          lots.find(({ at: [lu, lv], width, facing }) => {
+            const across =
+                (u - lu) * Math.cos(facing) - (v - lv) * Math.sin(facing),
+              ahead = (u - lu) * Math.sin(facing) + (v - lv) * Math.cos(facing);
+
+            return (
+              Math.max(Math.abs(across), Math.abs(ahead)) <= width / 2 + 1e-6
+            );
+          }),
         // The roof laid over a lot, from its eaves to its peak.
         roofOver = (lot: Lot): [number, number] => {
           const over = roofs.filter((point) => lotOver(point) === lot);
@@ -3165,14 +3170,19 @@ const landOf = (
             Math.max(...over.map(([, y]) => y)),
           ];
         },
-        // Each flame's lowest point, by the lot it's over.
-        burning = new Map<Lot, number>();
+        // Each fire's flames' lowest point and highest, by the lot they're over.
+        burning = new Map<Lot, [number, number]>();
 
       flames.forEach((point) => {
         const lot = lotOver(point);
 
         if (lot !== undefined) {
-          burning.set(lot, Math.min(burning.get(lot) ?? Infinity, point[1]));
+          const [lowest, highest] = burning.get(lot) ?? [Infinity, -Infinity];
+
+          burning.set(lot, [
+            Math.min(lowest, point[1]),
+            Math.max(highest, point[1]),
+          ]);
         }
       });
 
@@ -3181,13 +3191,20 @@ const landOf = (
         burning.size,
         flames.every((point) => lotOver(point) !== undefined) &&
           [...burning].every(
-            ([lot, lowest]) =>
+            ([lot, [lowest]]) =>
               lot.at[1] < at.centre[1] &&
               Math.abs(lowest - roofOver(lot)[0]) < 1e-4
           ),
-        smoke.length > 0 &&
-          Math.min(...smoke.map(([, y]) => y)) >
-            Math.max(...flames.map(([, y]) => y)) - 0.05 &&
+        // Over each fire, smoke as far out as its flames reach, none of it as low as their tips, and every point of it
+        //  over a roof over that roof's peak.
+        [...burning].every(([lot, [, highest]]) => {
+          const over = smoke.filter(
+            ([u, , v]) =>
+              Math.hypot(u - lot.at[0], v - lot.at[1]) <= lot.width / 2
+          );
+
+          return over.length > 0 && over.every(([, y]) => y > highest);
+        }) &&
           smoke.every((point) => {
             const lot = lotOver(point);
 

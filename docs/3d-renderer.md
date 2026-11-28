@@ -1305,11 +1305,15 @@ Landmark buildings replace ordinary lots near the middle:
     under size 4, two from 4 and three from 8, so its square's laid again as it goes into disorder and out of it.
   - **Where:** fires on roofs behind its middle, chosen by its seed, as many as its columns, of those whose whole column
     keeps the room its buildings leave its units (`UNIT_ROOM` and the gap round each house, 0.254 from where they
-    stand), so smoke and fire are no nearer a unit than a house is, and whose smoke passes over every roof it reaches
-    rather than into a taller one. In the suites, over 2,880 cities laid on the square grid (8 sizes, streets out 4 sets
-    of ways, the sea north or west or none), each had as many roofs to burn as it has columns. With none behind its
-    middle it can burn on, one burns on the ground behind its plaza, which isn't checked against its houses: it's never
-    been needed.
+    stand), so smoke and fire are no nearer a unit than a house is, and whose smoke passes over every roof it reaches,
+    as far as the roof's corners, rather than into a taller one. In the suites, over 3,600 cities laid on the square
+    grid (30 seeds at 10 sizes up to 40, streets out 4 sets of ways, the sea north or west or none), each had as many
+    roofs to burn as it has columns. With none behind its middle it can burn on, one burns on the ground behind its
+    plaza, which isn't checked against its houses: it's never been needed.
+  - **Which:** chosen by where each house stands in the city, not which lot it is, and its smoke billows by that too.
+    When a road's built and its street clears some lots, a house left standing keeps its fire and its smoke just as
+    they were, unless a lot taken further out in place of those cleared ranks ahead of it: about one in twelve did, in
+    the suites.
   - **Each column:** two flames, cones half as wide as the roof each, side by side across it, so they're within its
     eaves, rising from them, 0.1 and 0.075 tall, in orange and yellow. Over them, six puffs of smoke, from 0.06 over the
     flames, 0.09 apart, dark at the bottom and lighter as they rise, from 0.076 to 0.276 across and a little flatter
