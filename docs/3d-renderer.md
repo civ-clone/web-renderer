@@ -1156,8 +1156,9 @@ Each is looked up by its type name in the model set.
     names. Past that it holds as many as fit, and isn't copied afresh again until the labels drawn change. A label it
     can't hold is drawn as a sprite of its own, as they all were, but under the rest.
   - The pointer over the unit awaiting orders stays a sprite of its own, drawn after them all.
-  - On a late game (a Civ2 save at turn 271, on a 52 × 130 map), it takes 302 draw calls a frame off for each copy of
-    the world drawn. At the closest zoom a frame drops from 463 calls to 162, and at the default from 1,491 to 888.
+  - On a late game (a Civ2 save at turn 271, on a 52 × 130 map), it draws in one call what took 302 a frame for each
+    copy of the world drawn. At the closest zoom a frame drops from 463 calls to 162, and at the default from 1,491
+    to 888.
 - **Hidden units:** `t` hides units and cities, as it does on the 2D map, so the land shows as it is. A city's walls and
   name go, and its town: its buildings, on its square and round it, are laid with the land (§7.2), so every square with
   a city on it or beside it is laid again as though none stood there, its woods and fields whole (but for one spot,

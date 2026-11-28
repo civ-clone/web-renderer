@@ -198,9 +198,12 @@ const gathered = badgeSprites(world),
 
 // As three.js sorts what's see-through, drawn in the same order (`reversePainterSortStable`): by how deep each is on
 //  the screen, the deepest first, and by its id where they're as deep.
-const threeOrder = (sprites: readonly Sprite[]): Sprite[] => {
+const threeOrder = (
+  sprites: readonly Sprite[],
+  seenBy: PerspectiveCamera = camera
+): Sprite[] => {
   const depth = (sprite: Sprite): number =>
-    new Vector3().setFromMatrixPosition(sprite.matrixWorld).project(camera).z;
+    new Vector3().setFromMatrixPosition(sprite.matrixWorld).project(seenBy).z;
 
   return [...sprites].sort(
     (a, b) =>
@@ -244,6 +247,39 @@ expect(
       ];
     }),
   ]
+);
+
+// Looking along the world's width rather than down it: drawn by how deep each is as the camera sees it.
+const sideways = new PerspectiveCamera(40, 1, 0.1, 100),
+  across = new Group(),
+  markersAcross = [
+    [3, 1.5],
+    [0, -1],
+    [-2, 0.5],
+    [1, -2],
+  ].map(([x, z]) => {
+    const marker = drawMarker(kit, { city: null, unit: unit({ status: 'F' }) });
+
+    marker.position.set(x!, 0, z!);
+    across.add(marker);
+
+    return marker;
+  });
+
+sideways.position.set(8, 8, 0);
+sideways.lookAt(0, 0, 0);
+sideways.updateMatrixWorld();
+across.updateMatrixWorld(true);
+
+expect(
+  'looking another way, drawn by how deep each is as the camera sees it, not where it stands in the world',
+  [
+    markersAcross.length,
+    badgeInstances(badgeSprites(across), sideways, cellOf).map(({ at }) =>
+      at.map((n) => Math.round(n * 1e4) / 1e4)
+    ),
+  ],
+  [4, threeOrder(badgeSprites(across), sideways).map(at)]
 );
 
 // The garrison's copy's, as made.
@@ -511,6 +547,47 @@ expect(
   [true, true, null, false, true]
 );
 
+// On the grown atlas, each label where it was copied in, and the white block where it was drawn.
+const sinceGrown = drawnOn.slice(
+    drawnOn.map(({ call }) => call).lastIndexOf('clearRect')
+  ),
+  grownTall =
+    (atlas.texture?.image as { height: number } | undefined)?.height ?? 0,
+  copiedTo = new Map(
+    sinceGrown
+      .filter(({ call, args }) => call === 'drawImage' && args.length === 3)
+      .map(({ args }) => [args[0], [args[1], args[2]]] as const)
+  ),
+  whiteAt = sinceGrown.find(({ call }) => call === 'fillRect')?.args as
+    | number[]
+    | undefined,
+  [whiteX, whiteY] = px(atlas.plain, 1024, grownTall);
+
+expect(
+  'on the grown atlas, each label is drawn from where it was copied in, and a plain badge from inside the white block',
+  [
+    grownTall > 256,
+    many.every((image) => {
+      const [x, y, width, height] = px(atlas.cellOf(image)!, 1024, grownTall),
+        to = copiedTo.get(image);
+
+      return (
+        to !== undefined &&
+        x === to[0] &&
+        y === to[1] &&
+        width === image.width &&
+        height === image.height
+      );
+    }),
+    whiteAt !== undefined &&
+      whiteX! > whiteAt[0]! &&
+      whiteX! < whiteAt[0]! + whiteAt[2]! &&
+      whiteY! > whiteAt[1]! &&
+      whiteY! < whiteAt[1]! + whiteAt[3]!,
+  ],
+  [true, true, true]
+);
+
 // Labels as wide as a row: one to a row, 48 px tall with the room round it, under the white block's row of 24.
 const wide = (index: number): BadgeImage =>
     label(`${String(index).padStart(3, '0')}${'W'.repeat(94)}`),
@@ -579,6 +656,17 @@ expect(
   [4096, null, Math.floor((4096 - 24) / 48), true, 0, true, 1]
 );
 
+// At its most, the labels asked for changed but as many: copied afresh for them.
+crowded.hold([tooWide, ...hundred]);
+drawnOn.length = 0;
+crowded.hold([tooWide, ...hundred.slice(1), wide(100)]);
+
+expect(
+  'at its most, asked for as many labels but not the same: copied afresh for them',
+  drawnOn.filter(({ call }) => call === 'clearRect').length,
+  1
+);
+
 // Labels no marker shows any more: once many more are held than drawn, copied afresh with those drawn.
 const sweeping = new BadgeAtlas(),
   shown = Array.from({ length: 80 }, (_, index) => label(`Town ${index}`));
@@ -595,6 +683,23 @@ expect(
     shown.slice(5).every((image) => sweeping.cellOf(image) === null),
   ],
   [1, true, true]
+);
+
+// Fewer held than that past those drawn: kept as it is.
+const keeping = new BadgeAtlas(),
+  ninety = Array.from({ length: 90 }, (_, index) => label(`Fort ${index}`));
+
+keeping.hold(ninety);
+drawnOn.length = 0;
+keeping.hold(ninety.slice(0, 40));
+
+expect(
+  'holding fewer labels no longer drawn than that, the atlas is kept as it is',
+  [
+    drawnOn.filter(({ call }) => call === 'clearRect').length,
+    ninety.every((image) => keeping.cellOf(image) !== null),
+  ],
+  [0, true]
 );
 
 // All drawn together.
