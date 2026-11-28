@@ -23,6 +23,7 @@ import {
   Color,
   FrontSide,
   Group,
+  LessEqualDepth,
   Material,
   Mesh,
   Object3D,
@@ -940,8 +941,10 @@ expect(
 );
 
 // Smoke rising from a city, as the stage draws a chunk's (`smoke.ts`): two meshes of its geometry, after the cloud, its
-//  depth then its colour, so each point on the screen takes the nearest puff's surface only; each its front faces
-//  only, as its puffs are closed; its colour see-through, in the haze, writing no depth; neither casting a shadow.
+//  depth then its colour, so each point on the screen takes the nearest puff's surface only, both tested against the
+//  depth already there, the colour where it's as near as that; drawn by the one shader, as all that tells their
+//  shaders apart is the same; each its front faces only, as its puffs are closed; its colour see-through, in the haze,
+//  writing no depth; neither casting a shadow.
 {
   const geometry = new BufferGeometry(),
     materials = smokeMaterials(),
@@ -949,7 +952,7 @@ expect(
     { depth, colour } = materials;
 
   expect(
-    'smoke rising from a city is drawn as two meshes after the cloud, its depth and then its colour, front faces only, its colour see-through in the haze, writing no depth; neither casts a shadow',
+    'smoke rising from a city is drawn as two meshes after the cloud, its depth and then its colour, both tested against depth, by the one shader, front faces only, its colour see-through in the haze, writing no depth; neither casts a shadow',
     [
       meshes.map((mesh) => mesh.renderOrder),
       meshes.map((mesh) => mesh.material === depth || mesh.material === colour),
@@ -959,6 +962,21 @@ expect(
       [colour.vertexColors, colour.fog],
       [depth.side, colour.side].every((side) => side === FrontSide),
       meshes[0]?.material === depth && meshes[1]?.material === colour,
+      [depth.depthTest, colour.depthTest],
+      [depth.depthFunc, colour.depthFunc].every(
+        (test) => test === LessEqualDepth
+      ),
+      (
+        [
+          'vertexColors',
+          'transparent',
+          'fog',
+          'side',
+          'alphaTest',
+          'alphaHash',
+          'premultipliedAlpha',
+        ] as const
+      ).every((key) => depth[key] === colour[key]),
     ],
     [
       [SMOKE_DEPTH_ORDER, SMOKE_ORDER],
@@ -966,6 +984,9 @@ expect(
       true,
       [false, true, true],
       [true, false, true],
+      [true, true],
+      true,
+      true,
       [true, true],
       true,
       true,

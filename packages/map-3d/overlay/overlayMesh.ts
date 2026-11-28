@@ -10,8 +10,8 @@
 //    the square, so they don't line up from square to square.
 //
 // A chunk's squares are one mesh, their colours in its vertices: one draw call a chunk at each copy of the world, like
-//  the land's (#1204), and one more each for its smog and its smoke, where it has any. Its points are relative to the
-//  chunk's corner, as the land's are.
+//  the land's (#1204), one more for its smog, and two for its smoke, its depth then its colour, where it has any. Its
+//  points are relative to the chunk's corner, as the land's are.
 
 import {
   BoxGeometry,
@@ -1025,9 +1025,9 @@ class Layer {
 
   /**
    * A `shape` laid as smoke, see-through, as `solid` lays one, as solid as `alpha`: its front faces drawn after what's
-   *  solid and the cloud, writing no depth (`stage.ts`), so what's behind it shows through it. Smoke takes no light, so
-   *  it's shaded here as the sun lights the land: fully on its side facing it, darker away from it, so it keeps its
-   *  shape.
+   *  solid and the cloud, the nearest smoke only (`smoke.ts`), so what's behind it shows through it. Smoke takes no
+   *  light, so it's shaded here as the sun lights the land: fully on its side facing it, darker away from it, so it
+   *  keeps its shape.
    */
   smoke(
     shape: BufferGeometry,
